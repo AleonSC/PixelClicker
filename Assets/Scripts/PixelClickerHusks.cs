@@ -802,10 +802,11 @@ public partial class PixelClicker
             return;
         }
 
-        // Random direction: random heading on the ground plane, random vertical component.
+        // Random direction: random heading on the ground plane, random vertical component - or AIMED by where a manual click hit the cube (PixelBurstPop).
         Vector2 flat = UnityEngine.Random.insideUnitCircle;
         if (flat.sqrMagnitude < 0.0001f) flat = Vector2.right;
         flat.Normalize();
+        if (aimThisCopy) flat = AimedDirection(flat);
         float vertical = Mathf.Min(0f, UnityEngine.Random.Range(popVerticalRange.x, popVerticalRange.y));   // never upward: the copy leaves through a side of the cube, not over its top
         // It appears at the side face it is thrown from (not at the centre, where it could show over the top face).
         Vector3 sidePosition = copy.transform.position + new Vector3(flat.x, 0f, flat.y) * ((popSideOffset > 0f ? popSideOffset : 0.45f) * PixelBaseSize);

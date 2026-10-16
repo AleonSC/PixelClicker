@@ -1335,7 +1335,12 @@ public partial class PixelClicker : MonoBehaviour
         }
         if (tier.vacuum && VacuumThisClick(tierIndex)) Vacuum(tierIndex); // before this pixel's own old copy spawns, so it isn't sucked up too
         if (tier.type == PixelType.Seed) { SeedDigEffect(1f); for (int s = 0, n = UnityEngine.Random.Range(Mathf.Max(1, seedlingsMin), Mathf.Max(Mathf.Max(1, seedlingsMin), seedlingsMax > 0 ? seedlingsMax : 5) + 1); s < n; s++) SpawnSeedSprout(); } // the shell cracked: 1-5 seedlings (they grow plant pixels) come out instead of an old pixel
-        else if (spawnFallingCopy) SpawnFallingCopy(tierIndex, amount);
+        else if (spawnFallingCopy)
+        {
+            aimThisCopy = !automatic;   // (edge-click aiming: a manual click's husk flies towards the side of the cube that was clicked - PixelBurstPop.AimedDirection)
+            SpawnFallingCopy(tierIndex, amount);
+            aimThisCopy = false;
+        }
 
         // Roll the next pixel AFTER the click so a freshly unlocked tier can appear immediately.
         if (randomizeSpawnTier) currentTierIndex = RollTier();

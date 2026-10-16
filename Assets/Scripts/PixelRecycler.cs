@@ -36,7 +36,7 @@
 //   captured is recycled on its own recycleDelay (0.5 s) later - no button, no filling up (RecycleDue from Capture, RecycleOne). Each pays payoutShare of its
 //   value as currency AND skill XP (xpPerHusk 1 x the STREAK multiplier, PixelSkills.AddHuskXp: the husk's own skill, pure husks train Standard). The streak
 //   grows by streakStep (0.2) for each husk of the SAME type as the one before, up to streakMaxMultiplier (20), and ends after streakTimeout (6 s) without a
-//   recycled husk or on a different type; the counter above the bin shows 'Gray streak x1.4 XP', the band glows warmer and the click sound climbs with it.
+//   recycled husk; a different type keeps streakKeepOnSwitch (half) of it; the counter above the bin shows 'Gray streak x1.4 XP', the band glows warmer and the click sound climbs with it.
 //   Stats recycler.husks / paid / xp, Best recycler.streak. The idea is that husks reach it WITHOUT the player stopping (bin placed where husks land; edge-click
 //   aiming is planned). The button / capacity / lid cycle below is the old manual mode (autoRecycle off) and still works in auto mode for anything left inside.
 //   A FULL bin makes its button flash and pulse (UpdateButtonFlash, flashColor). Removing the Recycler destroys what is inside. Not a belt acceptor yet.
@@ -69,6 +69,9 @@ public class PixelRecycler : MonoBehaviour
     [SerializeField] private float xpPerHusk = 1f;
     [Tooltip("STREAK: each husk of the SAME type as the one before raises the XP multiplier by this much (0.2 = x1.2, x1.4...). A different type starts the streak again.")]
     [SerializeField] private float streakStep = 0.2f;
+    [Range(0f, 1f)]
+    [Tooltip("Share of the streak KEPT when a husk of a different type comes in (0.5 = it halves; 0 = it starts again). Testing showed a full reset makes streaks impossible once Gray is in the mix.")]
+    [SerializeField] private float streakKeepOnSwitch = 0.5f;
     [Tooltip("Highest streak multiplier.")]
     [SerializeField] private float streakMaxMultiplier = 20f;
     [Tooltip("Seconds without a recycled husk before the streak ends.")]
@@ -516,8 +519,10 @@ public class PixelRecycler : MonoBehaviour
         Destroy(b.gameObject);
         if (info == null || clicker == null || !clicker.IsValidTierIndex(info.tierIndex)) return;
         int tier = info.tierIndex;
-        bool sameStreak = tier == streakTier && Time.time - lastRecycleTime <= streakTimeout;
-        streakCount = sameStreak ? streakCount + 1 : 0;
+        bool alive = Time.time - lastRecycleTime <= streakTimeout;
+        if (!alive) streakCount = 0;
+        else if (tier == streakTier) streakCount++;
+        else streakCount = Mathf.FloorToInt(streakCount * Mathf.Clamp01(streakKeepOnSwitch));   // another type: the streak shrinks, it does not vanish
         streakTier = tier;
         lastRecycleTime = Time.time;
         float mult = StreakMultiplier;

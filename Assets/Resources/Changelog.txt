@@ -1163,3 +1163,6 @@
 [2026-10-16 12:35 UTC] Session report: Cubie's gift pack is listed under Gifts with its time and no longer counted as income.
 [2026-10-16 12:57 UTC] Session recorder: a recording now carries on through a scene reload (new game / back from the main menu), and a small REC button in the game stops and saves it.
 [2026-10-16 12:57 UTC] Recycler rework: every husk that lands in the bin is recycled by itself (no button, no 10-husk limit) for half its value plus skill XP, and husks of the same colour in a row build a streak (+0.2x XP each, up to x20, ends after 6 s) shown above the bin.
+[2026-10-16 13:29 UTC] Edge-click aiming: clicking near the edge of the cube throws its husk out of that side (within about 25 degrees), the middle still scatters at random, so husks can be aimed at the Recycler while clicking.
+[2026-10-16 13:29 UTC] Recycler streak: a husk of a different colour now halves the streak instead of ending it (Streak Keep On Switch), since full resets made streaks impossible once Gray was in the mix.
+[2026-10-16 13:29 UTC] To-do: edge-click husk aiming marked done.

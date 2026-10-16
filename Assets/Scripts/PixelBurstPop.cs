@@ -6,6 +6,10 @@
 //   a ring round the cube (any direction, burstLandRadius 0 = 1.2..3.5 pixel widths), so a click throws pixels OUT in all directions and
 //   they land spread over the floor (usable as physics items) instead of dropping straight down in one stack. Short falls and
 //   disableBurstPop keep the old pop (popSpeedRange / popVerticalRange).
+//   EDGE-CLICK AIMING (edgeAiming, 2026-10-16): a MANUAL click near the cube's edge (on the screen: aimDeadZone 0.3 .. aimFullAt 0.85 of the way from its
+//   centre to its edge) throws the husk out of that side, within aimSpread (25 deg) either way; the middle stays random (spread 180) and it blends in
+//   between. Works for long falls (burst) and short ones (pop) alike. The auto clicker and first person always scatter. AimedDirection, set up by
+//   CollectInternal (aimThisCopy). Lets the player feed a Recycler / crate while clicking.
 // ---------------------------------------------------
 using UnityEngine;
 
@@ -24,6 +28,47 @@ public partial class PixelClicker
 
     [Tooltip("How far from the cube a burst pixel lands, in pixel widths (min, max); the direction is random. (0, 0) = the default (1.2, 3.5).")]
     [SerializeField] private Vector2 burstLandRadius = Vector2.zero;
+
+    [Header("Edge-click aiming")]
+    [Tooltip("A manual click near the EDGE of the cube throws its husk out of that side (where you clicked on the screen); a click in the middle scatters it at random as before. The auto clicker always scatters.")]
+    [SerializeField] private bool edgeAiming = true;
+    [Range(0f, 1f)]
+    [Tooltip("How far from the cube's centre (0 = centre, 1 = the edge of the cube on screen) aiming STARTS; nearer the middle is fully random.")]
+    [SerializeField] private float aimDeadZone = 0.3f;
+    [Range(0f, 1.5f)]
+    [Tooltip("How far from the centre the aim is at its sharpest (the cube's edge on screen is 1).")]
+    [SerializeField] private float aimFullAt = 0.85f;
+    [Range(0f, 180f)]
+    [Tooltip("Spread either side of the aimed direction at the sharpest aim, in degrees.")]
+    [SerializeField] private float aimSpread = 25f;
+
+    private bool aimThisCopy;   // set by CollectInternal around a manual click's SpawnFallingCopy
+
+    /// <summary>
+    /// Edge-click aiming: where the click landed on the cube (on the SCREEN, so the cube's spin does not matter) picks the husk's heading on the floor.
+    /// Near the middle the random heading is kept; towards the edge it narrows to that side (aimSpread either way). Returns a normalized flat (x, z) direction.
+    /// </summary>
+    private Vector2 AimedDirection(Vector2 random)
+    {
+        Camera cam = targetCamera != null ? targetCamera : Camera.main;
+        if (!edgeAiming || cam == null || pixelTransform == null || PixelFirstPerson.Active) return random;
+        Vector3 centre = cam.WorldToScreenPoint(pixelTransform.position);
+        Vector3 edge = cam.WorldToScreenPoint(pixelTransform.position + cam.transform.right * (PixelBaseSize * 0.5f));
+        float halfPx = Mathf.Abs(edge.x - centre.x);
+        if (centre.z <= 0f || halfPx < 1f) return random;
+        Vector2 offset = (PointerPosition() - new Vector2(centre.x, centre.y)) / halfPx;
+        float sharp = Mathf.InverseLerp(aimDeadZone, Mathf.Max(aimDeadZone + 0.01f, aimFullAt), offset.magnitude);
+        if (sharp <= 0f) return random;
+        // The screen direction of the click, laid flat on the floor (camera right / up projected onto the ground plane).
+        Vector3 world = cam.transform.right * offset.x + cam.transform.up * offset.y;
+        Vector2 aim = new Vector2(world.x, world.z);
+        if (aim.sqrMagnitude < 0.0001f) return random;
+        aim.Normalize();
+        float spread = Mathf.Lerp(180f, aimSpread, sharp * sharp * (3f - 2f * sharp));
+        float angle = UnityEngine.Random.Range(-spread, spread) * Mathf.Deg2Rad;
+        float c = Mathf.Cos(angle), s = Mathf.Sin(angle);
+        return new Vector2(aim.x * c - aim.y * s, aim.x * s + aim.y * c);
+    }
 
     private readonly RaycastHit[] burstHits = new RaycastHit[12];
 
