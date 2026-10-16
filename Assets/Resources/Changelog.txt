@@ -1210,3 +1210,4 @@
 [2026-10-16 16:38 UTC] The Lumberjack's Sell tab is a new panel: pick any woodcutting currency you hold, how much (slider or 10/25/50%/All) and what to be paid in, then ask for an offer - he names a random price (rarity-based fair value x his cut x bulk discount x his mood that visit x a random roll, worse each time you ask again, better with Woodcutting level) that you accept or decline.
 [2026-10-16 16:38 UTC] Added the Lumberjack's Focus item (Supplies, right-click to drink: no Termite Hives for a minute); the Lumberjack sells it now and then (35% of visits, 1-2 in stock).
 [2026-10-16 16:48 UTC] With Info on in the Pocket window, hovering a block shows its info there even when block tooltips are switched off in game.
+[2026-10-16 16:48 UTC] Pocket tab buttons (Event log...) and the in-game event log switch keep their text on one line, shrinking it to fit a narrow window.

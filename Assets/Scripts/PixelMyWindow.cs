@@ -503,6 +503,7 @@ public class PixelMyWindow : MonoBehaviour
         logScroll.gameObject.SetActive(false);
         screenLogButton = PixelUIKit.CreateButton(Font, windowObject.transform, "In-game Log", "", new Vector2(200f, 44f), new Color(0.3f, 0.3f, 0.35f, 1f), Color.white, 22f);
         screenLogButton.onClick.AddListener(ToggleScreenLog);
+        FitOneLine(screenLogButton, 22f);
         screenLogButton.gameObject.SetActive(false);
 
         // The Keybinds tab (PixelCustomKeys builds what is in it).
@@ -694,7 +695,18 @@ public class PixelMyWindow : MonoBehaviour
         r.anchorMin = new Vector2(x0, 0f); r.anchorMax = new Vector2(x1, 1f);
         r.offsetMin = new Vector2(x0 > 0f ? 3f : 0f, 0f); r.offsetMax = new Vector2(x1 < 1f ? -3f : 0f, 0f);
         image = b.GetComponent<Image>();
+        FitOneLine(b, 22f);
         return b;
+    }
+
+    /// <summary>Keeps a button's label on one line, shrinking it to fit a narrow window ('Event log' used to wrap onto two lines).</summary>
+    private static void FitOneLine(Button b, float maxSize)
+    {
+        TMP_Text t = b.GetComponentInChildren<TMP_Text>();
+        if (t == null) return;
+        t.textWrappingMode = TextWrappingModes.NoWrap;
+        t.enableAutoSizing = true; t.fontSizeMax = maxSize; t.fontSizeMin = 10f;
+        t.margin = new Vector4(4f, 0f, 4f, 0f);
     }
 
     private static void SetTabAnchors(Button b, float x0, float x1)
