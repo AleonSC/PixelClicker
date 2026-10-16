@@ -1191,3 +1191,4 @@
 [2026-10-16 15:56 UTC] Minigames in the shop now need only their price (no 'needs pack' requirements).
 [2026-10-16 15:56 UTC] Shop rebalance: every built-in price was reset to a new curve built from the session reports (early upgrades and the first minigames now cost hundreds to a few thousand, late items far less than before); saved scenes take the new prices once.
 [2026-10-16 15:58 UTC] Texts: right-click hold is now described as each block's second action - a stake only on the six pure pixels, the block's own job on skill blocks (Pesticide charges, Whetstone...) - in the Standard tree, the intro tip, How To Play, Controls and Did You Know.
+[2026-10-16 16:05 UTC] To-do: skill tiers design (gathering -> making -> running the operation) with open questions and a 1.0 pick.
