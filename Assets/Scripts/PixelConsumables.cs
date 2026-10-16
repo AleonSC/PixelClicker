@@ -1924,15 +1924,8 @@ public class PixelConsumables : MonoBehaviour
                 case DeviceKind.Recycler:
                     root = PixelRecycler.CreateDisplay(clicker);
                     break;
-                case DeviceKind.ComboFuel:
-                case DeviceKind.GhostBait:
-                case DeviceKind.PetTreat:
-                case DeviceKind.BaitBucket:
-                case DeviceKind.Gauntlet:
-                case DeviceKind.ConveyorBelt:
-                case DeviceKind.FocusPotion:
-                case DeviceKind.PesticideSpray:
-                    root = BuildItemModel(kind, d);
+                default:
+                    if (PixelInstantItems.Find(kind) != null) root = BuildItemModel(kind, d);   // instant-use items (PixelInstantItems) have small item models
                     break;
             }
         }
@@ -2143,7 +2136,7 @@ public class PixelConsumables : MonoBehaviour
     {
         if (!IsDevice(item)) return false;
         DeviceKind k = devices[item - potions.Length].kind;
-        return k == DeviceKind.ComboFuel || k == DeviceKind.GhostBait || k == DeviceKind.PetTreat || k == DeviceKind.BaitBucket || k == DeviceKind.Gauntlet || k == DeviceKind.ConveyorBelt || k == DeviceKind.FocusPotion || k == DeviceKind.PesticideSpray;
+        return PixelInstantItems.Find(k) != null;   // (the list of instant-use items: PixelInstantItems)
     }
 
     /// <summary>0 = potion, 1 = placeable device (Utilities), 2 = seed, 3 = supply (instant-use item).</summary>
@@ -2179,64 +2172,22 @@ public class PixelConsumables : MonoBehaviour
     {
         if (!IsDevice(item)) return TryConsume(item);
         int index = item - potions.Length;
-        switch (devices[index].kind)
+        // Instant-use items (one data-driven list: PixelInstantItems); everything else is placed, or planted (seeds).
+        PixelInstantItems.Entry instant = PixelInstantItems.Find(devices[index].kind);
+        if (instant == null) return BeginPlacement(index);
+        bool ok = instant.use(this, item, out string message);
+        if (ok)
         {
-            case DeviceKind.ComboFuel:
-                PixelHints.Announce("Combo Fuel is used by itself when your combo bar runs out");
-                return false;
-            case DeviceKind.GhostBait:
-            {
-                PixelGhostMinigame ghosts = PixelFind.First<PixelGhostMinigame>();
-                if (ghosts == null || !ghosts.UseBait()) { PixelHints.Announce("Ghost Bait needs the Ghost Hunt running"); return false; }
-                if (!Inf) devices[index].owned--;
-                PixelStats.Count("bait.used");
-                PixelHints.Announce("Ghost Bait set out");
-                return true;
-            }
-            case DeviceKind.PetTreat:
-            {
-                if (PixelPets.Instance == null || !PixelPets.Instance.TryUseTreat()) { PixelHints.Announce("Pet Treat needs a pet that is out"); return false; }
-                if (!Inf) devices[index].owned--;
-                PixelStats.Count("treat.used");
-                PixelHints.Announce("Your pets are hyper!");
-                return true;
-            }
-            case DeviceKind.ConveyorBelt:
-                if (!PixelFeatureTester.StartFeature("Conveyor Belt")) return false;   // a tool: it is not used up
-                PixelHints.Announce("Click a point, then another to lay a belt. Right click stops");
-                return true;
-            case DeviceKind.Gauntlet:
-                return PixelInfinity.Open(this, item);   // the window uses up the Gauntlet when the Cubelette is forged
-            case DeviceKind.FocusPotion:
-            {
-                PixelFocus focus = PixelFocus.Instance;
-                if (focus == null || !focus.DrinkForSkill(PixelSkills.WoodcuttingId)) { PixelHints.Announce("The focus potion can't be drunk right now"); return false; }
-                if (!Inf) devices[index].owned--;
-                PixelStats.Count("focus.used");
-                PixelHints.Announce(devices[index].displayName + ": no hazards for a while");
-                return true;
-            }
-            case DeviceKind.PesticideSpray:
-            {
-                int add = Mathf.Max(1, pesticideSprayCharges);
-                PixelBlockRules.AddCharges(PixelClicker.PixelType.HornetNest, add);
-                if (!Inf) devices[index].owned--;
-                PixelStats.Count("pesticide.sprays");
-                PixelAudio.Play("purchase");
-                PixelHints.Announce("+" + add + " Pesticide charges (" + PixelBlockRules.Charges(PixelClicker.PixelType.HornetNest) + " ready)");
-                return true;
-            }
-            case DeviceKind.BaitBucket:
-            {
-                if (!PixelBaitBucket.TryPlace(out string bucketMessage)) { if (!string.IsNullOrEmpty(bucketMessage)) PixelHints.Announce(bucketMessage); return false; }
-                if (!Inf) devices[index].owned--;
-                if (!string.IsNullOrEmpty(bucketMessage)) PixelHints.Announce(bucketMessage);
-                return true;
-            }
-            default: // placeable devices, and seeds (planted with a click on the floor)
-                return BeginPlacement(index);
+            if (instant.usedUp && !Inf) devices[index].owned--;
+            if (!string.IsNullOrEmpty(instant.stat)) PixelStats.Count(instant.stat);
+            if (!string.IsNullOrEmpty(instant.sound)) PixelAudio.Play(instant.sound);
         }
+        if (!string.IsNullOrEmpty(message)) PixelHints.Announce(message);
+        return ok;
     }
+
+    /// <summary>Pesticide charges one Pesticide Spray adds (PixelInstantItems).</summary>
+    public int PesticideSprayCharges => Mathf.Max(1, pesticideSprayCharges);
 
     /// <summary>
     /// Uses one held item of this kind without the player doing anything (Combo Fuel when the combo bar runs out).

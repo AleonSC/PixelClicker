@@ -138,6 +138,7 @@
 | `PixelStorageCrate.cs` | (extends PixelPlacedDevice) Storage Crate (DeviceKind.StorageCrate 13, auto-added like the fan, Utilities card; | in the header comment of `PixelStorageCrate.cs` |
 | `PixelMagnetDevice.cs` | (extends PixelPlacedDevice) Magnet (DeviceKind.Magnet 10, auto-added like the fan by EnsureDefaultPotions, Utilities card; | in the header comment of `PixelMagnetDevice.cs` |
 | `PixelVacuumDevice.cs` | (extends PixelPlacedDevice) Runtime behaviour of a placed vacuum device (lathe-turned body PixelConsumables.BuildVacuumBody / VacuumLatheMesh: | in the header comment of `PixelVacuumDevice.cs` |
+| `PixelInstantItems.cs` | ONE data-driven list of the instant-use items (right-click consumables that are not placed: Ghost Bait, Pet Treat, Bait Bucket, Gauntlet, Conveyor Belt, Focus, Pesticide Spray, Combo Fuel): each entry = kind, used up or not, stat, sound and a Use rule; PixelConsumables reads it for TryUseItem / IsSupplyItem / item models. | in the header comment of `PixelInstantItems.cs` |
 | `PixelConsumables.cs` | Potions (one per pixel type, editable list: | `docs/systems/PixelConsumables.md` |
 | `PixelUI.cs` | "Inventory" toggle box (top-left) (rows = swatch + plain light name + right-aligned amount (Currency tab: | `docs/systems/PixelUI.md` |
 | Inventory currency groups (`PixelUI.Refresh`, `CurrencyGroup`) | The Currency tab lists the pixel rows in GROUPS under foldable headers (click a header, '- PURE' / '+ PURE'; | `docs/systems/PixelUI.md` |

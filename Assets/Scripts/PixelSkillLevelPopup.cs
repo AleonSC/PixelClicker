@@ -3,8 +3,8 @@
 //   A small LEVEL-UP popup for every skill (PixelSkills.AddXpFlat calls Show when a level is reached): a round badge in the skill's accent colour with the
 //   skill's icon spinning inside it (the real model of the skill's first block, PixelTierPicture; Standard / Offline use the White pixel), the text
 //   'WOODCUTTING  LEVEL 5' with '+1 skill point' on a pill beside it, and tiny FIREWORKS - three little bursts of coloured sparks around the badge that fly
-//   out, fall and fade. It pops in (overshoot), stays holdSeconds and fades; several level-ups queue one after another. Sits above the bottom bar
-//   (anchor / offset in the Inspector), waits while a menu is open, plays the 'achievement' sound. All on unscaled time, own canvas, no physics.
+//   out, fall and fade. It pops in (overshoot), stays showSeconds (3.6) and fades; several level-ups queue one after another. It FOLLOWS THE MOUSE, sitting
+//   above the pointer over the '+n XP' popups (followMouse, mouseOffset; its canvas 960 is above theirs 106; off = a fixed spot above the bottom bar), waits while a menu is open, plays the 'achievement' sound. All on unscaled time, own canvas, no physics.
 //   A system component (PixelSystems, UI group); disablePopup switches it off.
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -16,14 +16,18 @@ public class PixelSkillLevelPopup : MonoBehaviour
 {
     [Tooltip("Switch the level-up popups off.")]
     [SerializeField] private bool disablePopup = false;
-    [Tooltip("Where the popup sits: anchor on the screen (0.5, 0 = bottom middle).")]
-    [SerializeField] private Vector2 anchor = new Vector2(0.5f, 0f);
-    [Tooltip("Offset from the anchor in pixels at 1080p (the bottom black bar is below it).")]
+    [Tooltip("The popup follows the mouse, sitting above it (over the '+n XP' popups). Off = a fixed spot above the bottom bar.")]
+    [SerializeField] private bool followMouse = true;
+    [Tooltip("Following the mouse: where the popup's middle sits, relative to the pointer (pixels at 1080p; up = positive).")]
+    [SerializeField] private Vector2 mouseOffset = new Vector2(0f, 120f);
+    [Tooltip("Following the mouse: how snappily it follows (bigger = tighter).")]
+    [SerializeField] private float followSharpness = 14f;
+    [Tooltip("Not following the mouse: the fixed spot, as an offset from the bottom middle (pixels at 1080p).")]
     [SerializeField] private Vector2 offset = new Vector2(0f, 190f);
     [Tooltip("Size of the round badge, in pixels at 1080p.")]
     [SerializeField] private float badgeSize = 96f;
     [Tooltip("Seconds the popup stays before it fades.")]
-    [SerializeField] private float holdSeconds = 2.4f;
+    [SerializeField] private float showSeconds = 3.6f;   // (renamed from showSeconds 2.4: it lasts a little longer now)
     [Tooltip("Sparks per firework burst.")]
     [SerializeField] private int sparksPerBurst = 14;
 
@@ -77,11 +81,12 @@ public class PixelSkillLevelPopup : MonoBehaviour
         if (PixelCalm.InMenu) { if (canvasObject != null) canvasObject.SetActive(false); return; }
         if (!canvasObject.activeSelf) canvasObject.SetActive(true);
         t += dt;
-        float popIn = 0.28f, fade = 0.4f, total = popIn + holdSeconds + fade;
+        float popIn = 0.28f, fade = 0.4f, total = popIn + showSeconds + fade;
 
+        if (followMouse) FollowPointer(dt, false);
         float scale = t < popIn ? EaseOutBack(t / popIn) : 1f;
         root.localScale = Vector3.one * scale;
-        group.alpha = t > popIn + holdSeconds ? 1f - Mathf.Clamp01((t - popIn - holdSeconds) / fade) : 1f;
+        group.alpha = t > popIn + showSeconds ? 1f - Mathf.Clamp01((t - popIn - showSeconds) / fade) : 1f;
 
         // The badge breathes a little and its ring glows; the icon spins.
         float pulse = 1f + 0.05f * Mathf.Sin(t * 7f);
@@ -98,10 +103,28 @@ public class PixelSkillLevelPopup : MonoBehaviour
         if (t >= total && sparks.Count == 0) { t = -1f; canvasObject.SetActive(false); }
     }
 
+    private Vector2 followPos;
+
+    /// <summary>Keeps the popup above the mouse (inside the screen), gliding after it; 'snap' = jump straight there (a new popup).</summary>
+    private void FollowPointer(float dt, bool snap)
+    {
+        RectTransform canvasRect = (RectTransform)canvasObject.transform;
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local)) return;
+        Rect r = canvasRect.rect;
+        Vector2 size = root.sizeDelta;
+        float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
+        Vector2 want = local + mouseOffset;
+        want.x = Mathf.Clamp(want.x, r.xMin + size.x * 0.5f + 10f, r.xMax - size.x * 0.5f - 10f);
+        want.y = Mathf.Clamp(want.y, r.yMin + bar + size.y * 0.5f + 10f, r.yMax - bar - size.y * 0.5f - 10f);
+        followPos = snap ? want : Vector2.Lerp(followPos, want, 1f - Mathf.Exp(-Mathf.Max(1f, followSharpness) * dt));
+        root.anchoredPosition = followPos;
+    }
+
     private void Begin(Pending p)
     {
         if (canvasObject == null) Build();
         canvasObject.SetActive(true);
+        if (followMouse) FollowPointer(0f, true);
         t = 0f; burstsFired = 0; spin = 0f;
         accent = p.accent.a > 0f ? new Color(p.accent.r, p.accent.g, p.accent.b, 1f) : new Color(0.4f, 0.8f, 1f, 1f);
         badgeImage.color = Color.Lerp(accent, Color.black, 0.55f);
@@ -119,7 +142,7 @@ public class PixelSkillLevelPopup : MonoBehaviour
         canvasObject = PixelUIKit.CreateCanvas("Skill Level Popup", 960, new Vector2(1920f, 1080f), false);
         root = new GameObject("Popup", typeof(RectTransform), typeof(CanvasGroup)).GetComponent<RectTransform>();
         root.SetParent(canvasObject.transform, false);
-        root.anchorMin = root.anchorMax = anchor;
+        root.anchorMin = root.anchorMax = new Vector2(0.5f, followMouse ? 0.5f : 0f);
         root.pivot = new Vector2(0.5f, 0.5f);
         root.anchoredPosition = offset;
         root.sizeDelta = new Vector2(badgeSize * 5.2f, badgeSize);
