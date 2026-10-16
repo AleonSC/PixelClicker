@@ -1103,6 +1103,9 @@ public partial class PixelSkills : MonoBehaviour
     // ---- Skill tree ----
 
     /// <summary>Is this node of the STANDARD skill tree unlocked? (Block Hold, Power Click and their branches read it.)</summary>
+    /// <summary>Is this skill the one in training right now? (One check instead of comparing TrainingId by hand everywhere.)</summary>
+    public static bool IsTraining(string skillId) => Instance != null && !string.IsNullOrEmpty(skillId) && Instance.TrainingId == skillId;
+
     public static bool HasStandardNode(string nodeId) => PixelStats.Total("skill." + StandardId + ".node." + nodeId) >= 1d;
 
     public bool NodeUnlocked(SkillPack pack, TreeNode node) => pack != null && node != null && PixelStats.Total("skill." + pack.id + ".node." + node.id) >= 1d;

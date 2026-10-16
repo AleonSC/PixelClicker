@@ -161,7 +161,20 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     /// <summary>Chance (0-1) that a visit actually happens each time the visit timer runs out (a failed roll just waits for the next timer).</summary>
     protected virtual float VisitChance => 1f;
     /// <summary>Can the visit happen now? (Checked together with the chance roll; e.g. the Egg needs a pet you don't have.)</summary>
-    protected virtual bool CanVisit => true;
+    /// <summary>A vendor that only visits while one skill is in training (its id; null = any time). It also writes the vendor's Toggles note.</summary>
+    protected virtual string VisitSkillId => null;
+    protected virtual bool CanVisit => VisitSkillId == null || PixelSkills.IsTraining(VisitSkillId);
+
+    /// <summary>The orange '!' note on the vendor's Toggles row: when it visits (from VisitSkillId).</summary>
+    public override string ToggleNote
+    {
+        get
+        {
+            if (VisitSkillId == null) return null;
+            PixelSkills.SkillPack pack = PixelSkills.Instance != null ? PixelSkills.Instance.Find(VisitSkillId) : null;
+            return Pick(visitorName, DefaultName) + " only visits while you are training " + (pack != null ? pack.displayName : VisitSkillId) + ".";
+        }
+    }
     protected virtual string AcceptLabel => acceptText;
     protected virtual string RejectLabel => rejectText;
 

@@ -4,7 +4,7 @@
 //   lamp, pickaxe, grin - the test for turning vendors into cube characters): he BUYS mining goods for pure currency (RollTrades: up
 //   to offerCount 3 different ores you hold >= minHeld, each asks minSellFraction..maxSellFraction of your stock and pays a random
 //   unlocked pure pixel (White..Blue) at the rarity-based rate (UnitValue) x sellRate (0 = 0.8) x luck; the base trade rows say 'Sell'
-//   via TradePayWord / TradeText). He only visits while Mining is the skill in training (CanVisit = PixelSkills.TrainingId ==
+//   via TradePayWord / TradeText). He only visits while Mining is the skill in training (VisitSkillId = MiningId, the shared vendor rule; was CanVisit = PixelSkills.TrainingId ==
 //   MiningId; a failed check just waits for the next visit timer) and is started by PixelGuideVendor.StartVendors as soon as Mining is
 //   available (first visit after about otherFirstVisitSeconds x 0.5-1). Counter prospector.bought. Mining's whole 'sink' for now is
 //   selling to him; the Sell tab / skill upgrades are on the to-do.
@@ -65,14 +65,7 @@ public class PixelProspectorVendor : PixelVisitorMinigame
     protected override string TradePayWord => "Sell";
 
     /// <summary>He only comes while you are training Mining.</summary>
-    protected override bool CanVisit
-    {
-        get
-        {
-            PixelSkills s = PixelSkills.Instance;
-            return s != null && s.TrainingId == PixelSkills.MiningId;
-        }
-    }
+    protected override string VisitSkillId => PixelSkills.MiningId;   // only visits while it is in training (and says so in Toggles)
 
     /// <summary>Roughly how many of this pixel one unit is worth: the rarer (earned slower), the more valuable.</summary>
     private static double UnitValue(PixelClicker.PixelTier t)

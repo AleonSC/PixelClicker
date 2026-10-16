@@ -177,17 +177,8 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
     protected override string TradeText => "Sell";
     protected override string TradePayWord => "Sell";
 
-    public override string ToggleNote => "Big Tim only visits while you are training Woodcutting.";
-
     /// <summary>He only comes while you are training Woodcutting.</summary>
-    protected override bool CanVisit
-    {
-        get
-        {
-            PixelSkills s = PixelSkills.Instance;
-            return s != null && s.TrainingId == PixelSkills.WoodcuttingId;
-        }
-    }
+    protected override string VisitSkillId => PixelSkills.WoodcuttingId;   // only visits while it is in training (and says so in Toggles)
 
     /// <summary>Roughly how many of this pixel one unit is worth: the rarer (earned slower), the more valuable.</summary>
     private static double UnitValue(PixelClicker.PixelTier t)
