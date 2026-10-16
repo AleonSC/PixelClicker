@@ -190,12 +190,9 @@ What exists and what is planned, by kind. Numbers are rough.
 
 - **Built:** cubes everywhere, per-type looks (`PixelLooks.md`), code-made sounds and synths, music player with tracks, sky / floor /
   filter / bar styles, the fancy pause menu.
-
-> **Blank spot - an art direction statement.** Many looks were made one at a time. Is the target "clean neon toy", "cosy", "retro
-> pixel"? **Suggestion:** write two or three words and a reference image, and check new looks against them.
-
-> **Blank spot - music.** The tracks come from videos (the to-do has a credits item). Is the release music licensed, commissioned, or
-> code-made? This must be settled before any public build.
+- **Art direction (decided 2026-10-16): what the game already is** - smooth, clean menus with retro / 8-bit / cube visuals. There is
+  no single fixed style on purpose: new looks follow the developer's feel for what fits, so match the existing look rather than a rulebook.
+- **Music (decided 2026-10-16):** the soundtrack is generated with Suno by the developer.
 
 ## 12. Technical direction (short)
 
@@ -225,21 +222,19 @@ Grouped by how much they block other decisions. Answer them in any order; each a
 7. The hook in one sentence. (section 1)
 8. Is there a story, and who is Cubie really? (section 4)
 9. The name. (section 4)
-10. Art direction in a few words. (section 11)
-11. Which pillar wins when two clash? (section 2)
+10. Which pillar wins when two clash? (section 2)
 
 **Systems**
-12. Which systems get cut or merged (run the pruning test). (section 7)
-13. The long-term currency sink. (section 8)
-14. What counts for offline progress. (section 8)
-15. How many skills at release, and which are next. (section 9)
-16. Should every minigame feed a skill? (section 9)
-17. What to teach in the first 5 minutes. (section 10)
+11. Which systems get cut or merged (run the pruning test). (section 7)
+12. The long-term currency sink. (section 8)
+13. What counts for offline progress. (section 8)
+14. How many skills at release, and which are next. (section 9)
+15. Should every minigame feed a skill? (section 9)
+16. What to teach in the first 5 minutes. (section 10)
 
 **Before any public build**
-18. Homage rules / renaming. (section 4)
-19. Music licensing. (section 11)
-20. Save versioning and the first public build date. (section 12)
+17. Homage rules / renaming. (section 4)
+18. Save versioning and the first public build date. (section 12)
 
 Feature-level blank spots (gear, first person, the alien, legendary gear) are in `GearDesign.md`; Woodcutting's in
 `WoodcuttingProgression.md`; the husk rules' in `PixelRules.md`; the cross-system gaps in `ConnectionMap.md` section 8.
