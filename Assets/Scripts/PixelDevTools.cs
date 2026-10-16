@@ -767,65 +767,51 @@ public class PixelDevTools : MonoBehaviour
 
         BuildSpawnWidgets(content, board, inner, y);
         int ws = content.childCount;
-        if (PixelCrashLog.Available)
+
+        // ---- Dev reports: every report / snapshot tool in one card, two buttons per row. ----
         {
-            Button report = PixelUIKit.CreateButton(font, content, "Report Folder Button", "Open crash report folder", new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
-            Place(report.GetComponent<RectTransform>(), 40f, y, inner);
+            float half = (inner - 10f) * 0.5f, x2 = 40f + half + 10f, y2 = y + rowHeight + WidgetRowGap, y3 = y2 + rowHeight + WidgetRowGap;
+
+            // Row 1: crash report folder | snapshot bounds (waits so the panel can be closed first)
+            Button report = PixelUIKit.CreateButton(font, content, "Report Folder Button", "Open crash report folder", new Vector2(half, rowHeight), buttonColor, textColor, fontSize);
+            Place(report.GetComponent<RectTransform>(), 40f, y, half);
             report.onClick.AddListener(PixelCrashLog.OpenFolder);
+            report.interactable = PixelCrashLog.Available;   // (crash reports switched off: the button stays, greyed out)
             AddTip(report.gameObject, reportTipText);
-            Widget(content, board, "report", ws, y);
+            Button snap = PixelUIKit.CreateButton(font, content, "Bounds Snapshot Button", boundsSnapshotText, new Vector2(half, rowHeight), buttonColor, textColor, fontSize);
+            Place(snap.GetComponent<RectTransform>(), x2, y, half);
+            snap.onClick.AddListener(() => StartCoroutine(ProbeRoutine(() => PixelBoundsSnapshot.Capture(), "Bounds snapshot")));
+
+            // Row 2: mark this moment | UI layout dump (same wait; the keys F10 / F11 need no wait)
+            Button moment = PixelUIKit.CreateButton(font, content, "Mark Moment Button", markMomentText, new Vector2(half, rowHeight), buttonColor, textColor, fontSize);
+            Place(moment.GetComponent<RectTransform>(), 40f, y2, half);
+            moment.onClick.AddListener(() => StartCoroutine(ProbeRoutine(() => PixelDevProbe.MarkMoment(), "Marked moment")));
+            Button uiDump = PixelUIKit.CreateButton(font, content, "UI Layout Button", uiDumpText, new Vector2(half, rowHeight), buttonColor, textColor, fontSize);
+            Place(uiDump.GetComponent<RectTransform>(), x2, y2, half);
+            uiDump.onClick.AddListener(() => StartCoroutine(ProbeRoutine(() => PixelDevProbe.UiLayoutDump(), "UI layout dump")));
+
+            // Row 3: skill balance report (no wait) | session recorder (Start, then Stop & save)
+            Button balance = PixelUIKit.CreateButton(font, content, "Balance Report Button", balanceReportText, new Vector2(half, rowHeight), buttonColor, textColor, fontSize);
+            Place(balance.GetComponent<RectTransform>(), 40f, y3, half);
+            balance.onClick.AddListener(() => PixelBalanceReport.Capture(balanceManualCps, balanceAutoCps, (int[])balanceLevels.Clone()));
+            Button session = PixelUIKit.CreateButton(font, content, "Session Recorder Button", sessionStartText, new Vector2(half, rowHeight), buttonColor, textColor, fontSize);
+            Place(session.GetComponent<RectTransform>(), x2, y3, half);
+            sessionLabel = session.GetComponentInChildren<TMP_Text>();
+            session.onClick.AddListener(() =>
+            {
+                if (PixelSessionRecorder.Recording) PixelSessionRecorder.StopAndSave();
+                else PixelSessionRecorder.StartRecording();
+                RefreshSessionLabel();
+            });
+            AddTip(session.gameObject, "Records a real play session (clicking speed, income per minute, milestones, husks) and writes a report to paste to Claude. Only time in the game counts.");
+            AddTip(balance.gameObject, "Skill balance report: XP and pay per click for every skill at the reference speeds, copied to the clipboard.");
+            AddTip(moment.gameObject, "Screenshot + a report of this moment (also the F10 key).");
+            AddTip(uiDump.gameObject, "Every open UI element as text (positions, sizes, texts).");
+            AddTip(snap.gameObject, "The camera / floor / view-bounds numbers, for tuning where husks can go.");
+            Widget(content, board, "devreports", ws, y, 3);
             y += rowHeight + 24f;
             ws = content.childCount;
         }
-        // Row: snapshot of the view bounds / floor numbers (waits so the panel can be closed first)
-        Button snap = PixelUIKit.CreateButton(font, content, "Bounds Snapshot Button", boundsSnapshotText,
-                                              new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
-        Place(snap.GetComponent<RectTransform>(), 40f, y, inner);
-        snap.onClick.AddListener(() => StartCoroutine(ProbeRoutine(() => PixelBoundsSnapshot.Capture(), "Bounds snapshot")));
-        Widget(content, board, "bounds", ws, y);
-        y += rowHeight + 24f;
-        ws = content.childCount;
-
-        // Row: skill balance report (text for an AI; no wait needed)
-        Button balance = PixelUIKit.CreateButton(font, content, "Balance Report Button", balanceReportText,
-                                                 new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
-        Place(balance.GetComponent<RectTransform>(), 40f, y, inner);
-        balance.onClick.AddListener(() => PixelBalanceReport.Capture(balanceManualCps, balanceAutoCps, (int[])balanceLevels.Clone()));
-        Widget(content, board, "balance", ws, y);
-        y += rowHeight + 24f;
-        ws = content.childCount;
-
-        // Row: session recorder (records a real play session; Stop writes the report to Snapshots + clipboard)
-        Button session = PixelUIKit.CreateButton(font, content, "Session Recorder Button", sessionStartText,
-                                                 new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
-        Place(session.GetComponent<RectTransform>(), 40f, y, inner);
-        sessionLabel = session.GetComponentInChildren<TMP_Text>();
-        session.onClick.AddListener(() =>
-        {
-            if (PixelSessionRecorder.Recording) PixelSessionRecorder.StopAndSave();
-            else PixelSessionRecorder.StartRecording();
-            RefreshSessionLabel();
-        });
-        AddTip(session.gameObject, "Records a real play session (clicking speed, income per minute, milestones, husks) and writes a report to paste to Claude. Only time in the game counts.");
-        Widget(content, board, "session", ws, y);
-        y += rowHeight + 24f;
-        ws = content.childCount;
-
-        // Rows: mark this moment / UI layout dump (same wait; the keys F10 / F11 need no wait: mark this moment, inspect under the mouse)
-        Button moment = PixelUIKit.CreateButton(font, content, "Mark Moment Button", markMomentText,
-                                                new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
-        Place(moment.GetComponent<RectTransform>(), 40f, y, inner);
-        moment.onClick.AddListener(() => StartCoroutine(ProbeRoutine(() => PixelDevProbe.MarkMoment(), "Marked moment")));
-        Widget(content, board, "moment", ws, y);
-        y += rowHeight + 24f;
-        ws = content.childCount;
-        Button uiDump = PixelUIKit.CreateButton(font, content, "UI Layout Button", uiDumpText,
-                                                new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
-        Place(uiDump.GetComponent<RectTransform>(), 40f, y, inner);
-        uiDump.onClick.AddListener(() => StartCoroutine(ProbeRoutine(() => PixelDevProbe.UiLayoutDump(), "UI layout dump")));
-        Widget(content, board, "uidump", ws, y);
-        y += rowHeight + 24f;
-        ws = content.childCount;
 
         // Row: reset every pixel count (inventory, Log, Bank) but keep the unlocks - needs a second click to confirm
         resetButton = PixelUIKit.CreateButton(font, content, "Reset Counts Button", resetCountsText,
@@ -957,12 +943,7 @@ public class PixelDevTools : MonoBehaviour
             case "focus": return "Focus potions";
             case "shopunlock": return "Unlock";
             case "maxxp": return "Max XP";
-            case "report": return "Crash reports";
-            case "bounds": return "Snapshot bounds";
-            case "balance": return "Balance report";
-            case "session": return "Session recorder";
-            case "moment": return "Mark this moment";
-            case "uidump": return "UI layout dump";
+            case "devreports": return "Dev reports";
             case "superrares": return "Super Rares";
             case "reset": return "Reset counts";
             case "clear": return "Clear key";
