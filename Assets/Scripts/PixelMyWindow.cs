@@ -20,7 +20,8 @@
 //   geometry). It can only be dragged INSIDE the playfield between the black bars and the screen sides (ClampToScreen). MINIMIZE button in the header: only the
 //   header remains (still draggable); the full height is remembered. LOG button in the header (PixelMyWindow.LogDocked, kept on this machine): docks the EVENT LOG into the window as a tab (Pinned | Event log;
 //   the log lines of PixelHints.TryGetHistory, newest at the bottom, a click shows the full tip); while docked and the window is open the bottom-left log overlay stays away and the event log key opens the tab.
-//   INFO button in the header (PixelMyWindow.HoverDocked, kept on this machine): pins the block HOVER TOOLTIP into the window: while it is on and the window is open (Pinned tab, not minimized) the tooltip card
+//   INFO button in the header (PixelMyWindow.HoverDocked, kept on this machine): pins the block HOVER TOOLTIP into the window (MINIMIZED window: a small card with
+//   the block and its name hangs just under the header instead - TryGetHoverSlot's 'compact'): while it is on and the window is open (Pinned tab) the tooltip card
 //   no longer follows the mouse - PixelBlockTooltip moves its card into the window's hover slot (TryGetHoverSlot / SetHoverHeight), scaled to the window's width, and it shows whatever the mouse hovers (and stays on the last
 //   one while the mouse is over the window); a hint shows until something was hovered.
 //   TABS (always shown under the header): Pinned | Event log (only while the log is docked) | Keybinds (PixelCustomKeys.BuildView: bind items / tools to your own keys).
@@ -131,13 +132,16 @@ public class PixelMyWindow : MonoBehaviour
     private Image hoverDockImage;
     private float hoverShownH = -1f, hoverLaidH = -1f;
 
-    /// <summary>The place in the window where the pinned hover card goes (null unless the tooltip is pinned and the window is open on its Pinned tab, not minimized).</summary>
-    public static bool TryGetHoverSlot(out RectTransform slot, out float width)
+    /// <summary>The place in the window where the pinned hover card goes (null unless the tooltip is pinned and the window is open on its Pinned tab).
+    /// MINIMIZED: the slot hangs just under the header and 'compact' asks for the small card (the block and its name only).</summary>
+    public static bool TryGetHoverSlot(out RectTransform slot, out float width, out bool compact)
     {
-        slot = null; width = 0f;
+        slot = null; width = 0f; compact = false;
         PixelMyWindow w = instance;
-        if (w == null || w.canvasRoot == null || w.hoverSlot == null || !w.open || w.minimized || !HoverDocked || (LogDocked && w.showLogTab) || w.showKeysTab) return false;
+        if (w == null || w.canvasRoot == null || w.hoverSlot == null || !w.open || !HoverDocked) return false;
+        if (!w.minimized && ((LogDocked && w.showLogTab) || w.showKeysTab)) return false;
         slot = w.hoverSlot;
+        compact = w.minimized;
         width = Mathf.Max(200f, w.windowRect.sizeDelta.x - 24f);
         return true;
     }
@@ -764,14 +768,15 @@ public class PixelMyWindow : MonoBehaviour
         bool keysTab = showKeysTab && !logTab;
         float tabs = TabBarHeight;
         bool hoverOn = HoverDocked && !minimized && !logTab && !keysTab;
+        bool hoverMini = HoverDocked && minimized;   // minimized: the small card (block + name) hangs just under the header
         float hoverH = hoverOn ? Mathf.Max(hoverShownH, 64f) + 8f : 0f;   // the pinned hover card (or its hint) sits under the header / tabs
         hoverLaidH = hoverShownH;
         if (hoverSlot != null)
         {
-            hoverSlot.gameObject.SetActive(hoverOn);
-            hoverSlot.sizeDelta = new Vector2(-24f, Mathf.Max(0f, hoverH - 8f));
-            hoverSlot.anchoredPosition = new Vector2(0f, -(64f + tabs));
-            if (hoverPlaceholder != null) hoverPlaceholder.gameObject.SetActive(hoverShownH <= 0f);
+            hoverSlot.gameObject.SetActive(hoverOn || hoverMini);
+            hoverSlot.sizeDelta = new Vector2(-24f, hoverMini ? Mathf.Max(0f, hoverShownH) : Mathf.Max(0f, hoverH - 8f));
+            hoverSlot.anchoredPosition = new Vector2(0f, hoverMini ? -(HeaderHeight + 4f) : -(64f + tabs));
+            if (hoverPlaceholder != null) hoverPlaceholder.gameObject.SetActive(hoverShownH <= 0f && !hoverMini);
         }
         if (hoverDockImage != null) hoverDockImage.color = HoverDocked ? new Color(0.25f, 0.6f, 0.4f, 1f) : new Color(0.3f, 0.3f, 0.35f, 1f);
         float top = 64f + tabs + hoverH + (editing && !logTab && !keysTab ? 170f : 0f);

@@ -5,7 +5,9 @@
 //   cylinder / capsule / cone, position, size, turn, colour (16 StudioColors), opacity, optional mirror = a second copy on the other
 //   side) on a dummy: a plain grey cube or the real-look model of ANY pet they own (studioDummy; some pets look different), in a
 //   hidden studio (StudioStageHeight) shown by a RawImage (drag to turn, wheel to zoom; a yellow marker shows the selected shape's
-//   centre). Outfits (COutfit: name, forType = one pet type or -1 any) are edited live (every change saved) with a piece list, nine
+//   centre; CLICK a shape in the view to select it and DRAG it: the move locks to the X / Y / Z axis that points most along the drag on
+//   screen, a coloured line shows that axis, the position slider follows - StudioPointerDown / StudioPieceDrag, colliders on the studio copies only;
+//   a drag on empty space still turns the view). Outfits (COutfit: name, forType = one pet type or -1 any) are edited live (every change saved) with a piece list, nine
 //   sliders, swatches, duplicate / delete, New / Delete outfit, and 'Wear this outfit'. Outfit numbers 10000 + n are custom outfits
 //   (CustomBase; BuildOutfit handles them, so live pets, title-screen pets and previews all use them; deleting one renumbers / clears
 //   pets wearing it); the outfit arrows cycle OutfitChoices(type) = built-ins then the custom ones that fit that pet. Saved as JSON in
@@ -134,7 +136,7 @@ public partial class PixelPets
         }
     }
 
-    private void AddCustomPiece(Transform root, CPiece p, bool mirrored)
+    private GameObject AddCustomPiece(Transform root, CPiece p, bool mirrored)
     {
         Color c = StudioColors[Mathf.Abs(p.color) % StudioColors.Length];
         c.a = Mathf.Clamp(p.alpha, 0.1f, 1f);
@@ -144,11 +146,11 @@ public partial class PixelPets
         Vector3 scale = new Vector3(p.sx, p.sy, p.sz);
         switch (p.shape)
         {
-            case 1: Prim(root, PrimitiveType.Sphere, pos, scale, c, euler); break;
-            case 2: Prim(root, PrimitiveType.Cylinder, pos, new Vector3(scale.x, scale.y * 0.5f, scale.z), c, euler); break;   // (the primitive is 2 high)
-            case 3: Prim(root, PrimitiveType.Capsule, pos, new Vector3(scale.x, scale.y * 0.5f, scale.z), c, euler); break;
-            case 4: Prim(root, PrimitiveType.Cube, pos, scale, c, euler, true); break;
-            default: Prim(root, PrimitiveType.Cube, pos, scale, c, euler); break;
+            case 1: return Prim(root, PrimitiveType.Sphere, pos, scale, c, euler);
+            case 2: return Prim(root, PrimitiveType.Cylinder, pos, new Vector3(scale.x, scale.y * 0.5f, scale.z), c, euler);   // (the primitive is 2 high)
+            case 3: return Prim(root, PrimitiveType.Capsule, pos, new Vector3(scale.x, scale.y * 0.5f, scale.z), c, euler);
+            case 4: return Prim(root, PrimitiveType.Cube, pos, scale, c, euler, true);
+            default: return Prim(root, PrimitiveType.Cube, pos, scale, c, euler);
         }
     }
 
@@ -250,16 +252,132 @@ public partial class PixelPets
         }
         else Prim(root.transform, PrimitiveType.Cube, Vector3.zero, Vector3.one, new Color(0.62f, 0.64f, 0.7f));
 
+        // The outfit's shapes, each with a collider so a click in the view can pick it (studioPick: collider -> piece index, mirrored copy flagged).
+        studioPick.Clear();
+        studioRoot = root.transform;
         COutfit outfit = CurrentOutfit;
-        if (outfit != null) BuildCustomOutfit(root.transform, outfit, 1f);
+        if (outfit != null)
+            for (int i = 0; i < outfit.pieces.Count; i++)
+            {
+                MakePickable(AddCustomPiece(root.transform, outfit.pieces[i], false), i, false);
+                if (outfit.pieces[i].mirror) MakePickable(AddCustomPiece(root.transform, outfit.pieces[i], true), i, true);
+            }
         CPiece piece = CurrentPiece;
         if (piece != null)
         {
             // A small bright marker where the selected shape is centred.
-            GameObject marker = Prim(root.transform, PrimitiveType.Sphere, new Vector3(piece.px, piece.py, piece.pz), Vector3.one * 0.06f, new Color(1f, 0.95f, 0.2f));
+            Vector3 centre = new Vector3(piece.px, piece.py, piece.pz);
+            GameObject marker = Prim(root.transform, PrimitiveType.Sphere, centre, Vector3.one * 0.06f, new Color(1f, 0.95f, 0.2f));
             marker.name = "Marker";
+            // While a shape is dragged: a long line along the axis it moves on (red X, green Y, blue Z).
+            if (dragAxis >= 0)
+            {
+                Color[] axisColors = { new Color(1f, 0.3f, 0.3f), new Color(0.35f, 1f, 0.4f), new Color(0.35f, 0.6f, 1f) };
+                Vector3 size = dragAxis == 0 ? new Vector3(3f, 0.015f, 0.015f) : dragAxis == 1 ? new Vector3(0.015f, 3f, 0.015f) : new Vector3(0.015f, 0.015f, 3f);
+                Prim(root.transform, PrimitiveType.Cube, centre, size, axisColors[dragAxis]).name = "Axis";
+            }
         }
     }
+
+    // ---- Click a shape in the view and drag it along an axis ----
+    private readonly Dictionary<Collider, Vector2Int> studioPick = new Dictionary<Collider, Vector2Int>();   // collider -> (piece index, 1 = the mirrored copy)
+    private Transform studioRoot;
+    private RectTransform studioViewRect;
+    private bool draggingPiece, dragMirrored;
+    private int dragAxis = -1;                  // -1 = not chosen yet (or not dragging), 0 x, 1 y, 2 z
+    private Vector2 dragStartPointer;           // in the view's local units
+    private float dragStartValue;
+
+    private void MakePickable(GameObject g, int index, bool mirrored)
+    {
+        if (g == null) return;
+        MeshFilter mf = g.GetComponent<MeshFilter>();
+        if (mf == null || mf.sharedMesh == null) return;
+        MeshCollider mc = g.AddComponent<MeshCollider>();
+        mc.sharedMesh = mf.sharedMesh;
+        studioPick[mc] = new Vector2Int(index, mirrored ? 1 : 0);
+    }
+
+    /// <summary>The pointer in the view's local units (bottom left = 0,0); false when it is outside the view.</summary>
+    private bool ViewPoint(Vector2 screen, out Vector2 local, out Vector2 viewport)
+    {
+        local = viewport = Vector2.zero;
+        if (studioViewRect == null || !RectTransformUtility.ScreenPointToLocalPointInRectangle(studioViewRect, screen, null, out Vector2 p)) return false;
+        Rect r = studioViewRect.rect;
+        local = p - r.min;
+        viewport = new Vector2(local.x / r.width, local.y / r.height);
+        return true;
+    }
+
+    /// <summary>Where a studio-world point lands in the view's local units.</summary>
+    private Vector2 WorldToView(Vector3 world)
+    {
+        Vector3 vp = studioCam.WorldToViewportPoint(world);
+        Rect r = studioViewRect.rect;
+        return new Vector2(vp.x * r.width, vp.y * r.height);
+    }
+
+    private void StudioPointerDown(PointerEventData e)
+    {
+        draggingPiece = false;
+        dragAxis = -1;
+        if (studioCam == null || CurrentOutfit == null || !ViewPoint(e.position, out Vector2 local, out Vector2 vp)) return;
+        Ray ray = studioCam.ViewportPointToRay(new Vector3(vp.x, vp.y, 0f));
+        float best = float.PositiveInfinity;
+        Vector2Int hitPiece = new Vector2Int(-1, 0);
+        foreach (RaycastHit h in Physics.RaycastAll(ray, 40f, ~0, QueryTriggerInteraction.Collide))
+            if (h.distance < best && studioPick.TryGetValue(h.collider, out Vector2Int pick)) { best = h.distance; hitPiece = pick; }
+        if (hitPiece.x < 0) return;   // empty space: the drag turns the view as before
+        draggingPiece = true;
+        dragMirrored = hitPiece.y == 1;
+        dragStartPointer = local;
+        if (studioPiece != hitPiece.x) { studioPiece = hitPiece.x; RefreshStudio(); }
+    }
+
+    private void StudioPieceDrag(PointerEventData e)
+    {
+        CPiece p = CurrentPiece;
+        if (p == null || studioRoot == null || !ViewPoint(e.position, out Vector2 local, out _)) return;
+        Vector2 moved = local - dragStartPointer;
+        Vector3 centre = studioRoot.TransformPoint(new Vector3(dragMirrored ? -p.px : p.px, p.py, p.pz));
+        if (dragAxis < 0)
+        {
+            if (moved.magnitude < 6f) return;   // wait for a clear direction, then lock to the axis that points most along it on screen
+            float bestDot = -1f;
+            for (int a = 0; a < 3; a++)
+            {
+                Vector2 sd = WorldToView(centre + studioRoot.TransformVector(Axis(a)) * 0.2f) - WorldToView(centre);
+                if (sd.sqrMagnitude < 1e-4f) continue;
+                float d = Mathf.Abs(Vector2.Dot(sd.normalized, moved.normalized));
+                if (d > bestDot) { bestDot = d; dragAxis = a; }
+            }
+            if (dragAxis < 0) return;
+            dragStartValue = dragAxis == 0 ? p.px : dragAxis == 1 ? p.py : p.pz;
+            dragStartPointer = local;
+            moved = Vector2.zero;
+        }
+        // How far one unit along the axis moves on screen; the pointer's movement along that line becomes the new value.
+        Vector2 perUnit = WorldToView(centre + studioRoot.TransformVector(Axis(dragAxis))) - WorldToView(centre);
+        if (perUnit.sqrMagnitude < 1e-4f) return;
+        float units = Vector2.Dot(moved, perUnit) / perUnit.sqrMagnitude;
+        if (dragAxis == 0 && dragMirrored) units = -units;   // (the mirrored copy moves the other way along X)
+        float value = Mathf.Clamp(dragStartValue + units, SliderMin[dragAxis], SliderMax[dragAxis]);
+        if (dragAxis == 0) p.px = value; else if (dragAxis == 1) p.py = value; else p.pz = value;
+        studioSliders[dragAxis].SetValueWithoutNotify(value);
+        studioSliderValues[dragAxis].text = value.ToString("0.00");
+        RebuildStudioModel();
+    }
+
+    private void StudioPieceDragEnd()
+    {
+        if (!draggingPiece) return;
+        draggingPiece = false;
+        dragAxis = -1;
+        SaveCustomOutfits();
+        RebuildStudioModel();
+    }
+
+    private static Vector3 Axis(int a) => a == 0 ? Vector3.right : a == 1 ? Vector3.up : Vector3.forward;
 
     private void Put(RectTransform rt, float x, float y, float w, float h)
     {
@@ -309,9 +427,14 @@ public partial class PixelPets
         view.transform.SetParent(t, false);
         view.GetComponent<RawImage>().texture = studioRT;
         Put(view.GetComponent<RectTransform>(), 30f, 100f, 800f, 620f);
+        studioViewRect = view.GetComponent<RectTransform>();
         EventTrigger trig = view.GetComponent<EventTrigger>();
+        AddTrigger(trig, EventTriggerType.PointerDown, data => StudioPointerDown((PointerEventData)data));   // on a shape: select it, the drag moves it
+        AddTrigger(trig, EventTriggerType.PointerUp, _ => StudioPieceDragEnd());
+        AddTrigger(trig, EventTriggerType.EndDrag, _ => StudioPieceDragEnd());
         AddTrigger(trig, EventTriggerType.Drag, data =>
         {
+            if (draggingPiece) { StudioPieceDrag((PointerEventData)data); return; }
             Vector2 d = ((PointerEventData)data).delta;
             studioYaw += d.x * 0.6f;
             studioPitch = Mathf.Clamp(studioPitch - d.y * 0.6f, -85f, 85f);
@@ -620,6 +743,11 @@ public partial class PixelPets
         studioWorld = null;
         studioCam = null;
         studioModel = null;
+        studioRoot = null;
+        studioViewRect = null;
+        studioPick.Clear();
+        draggingPiece = false;
+        dragAxis = -1;
         if (studioRT != null) { studioRT.Release(); Destroy(studioRT); }
         studioRT = null;
         studioOpen = false;

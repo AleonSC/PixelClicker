@@ -6,6 +6,7 @@
 //   delay a card (canvas 655, glow + fancy window + accent strip in the pixel colour, real turning 3D model (PixelTierPicture), name, rarity tag from
 //   SpawnShare, worth, a bar for hits (GetLiveProgress) or old-pixel time left, PixelGuideTexts.Describe / OldPixel text, a sheen
 //   sweep) fades in beside the pointer. Hidden over UI, paused, title, first person, UFO cockpit, hose or god mode. THREE MODES (PixelBlockTooltip.Mode, Settings > Interface drop-down, PlayerPrefs BlockTipsMode, per save): 0 Full, 1 Minimal (the spinning 3D icon and the name only), 2 Off. ALT: a tap (released within altHoldSeconds 0.25) cycles Full -> Minimal -> Off -> Full and a small toast names the new mode; HOLDING Alt (longer than that) shows the other kind of the current mode while held (Full shows Minimal, Minimal shows Full, Off shows Full) and the release does not cycle. Grabbing a block keeps its tooltip open. The card keeps its spot until the pointer moves 70 units away from where it was placed, then glides there (so it no longer jitters with every mouse move).
+//   PINNED + My Window MINIMIZED: the small card (3D block + name, like Minimal) hangs under the minimized header (dockedCompact).
 //   PINNED: My Window's Info button (PixelMyWindow.HoverDocked) moves the card into the window (UpdateDocked / Undock): it stops following the mouse, is scaled to the window's width, shows whatever is hovered (it keeps the last block while the mouse is over the window) and the window grows to fit it.
 // ---------------------------------------------------
 using TMPro;
@@ -281,8 +282,9 @@ public class PixelBlockTooltip : MonoBehaviour
         else hovering = !Suppressed() && clicker.TryGetBlockAt(PointerPosition(), out tier, out live, out body);
 
         // Pinned to My Window (its Info button): the card lives in the window instead of following the mouse, and keeps the last block shown while the mouse is over the window.
-        if (PixelMyWindow.TryGetHoverSlot(out RectTransform slot, out float slotWidth) && !disableTooltip && EffectiveMode != ModeOff && !PixelCalm.InMenu)
+        if (PixelMyWindow.TryGetHoverSlot(out RectTransform slot, out float slotWidth, out bool compactSlot) && !disableTooltip && EffectiveMode != ModeOff && !PixelCalm.InMenu)
         {
+            if (compactSlot != dockedCompact) { dockedCompact = compactSlot; nextRefresh = 0f; }
             UpdateDocked(slot, slotWidth, hovering, tier, live, body);
             return;
         }
@@ -332,6 +334,7 @@ public class PixelBlockTooltip : MonoBehaviour
 
     // ---- Pinned to My Window ----
     private bool wasDocked;
+    private bool dockedCompact;   // pinned in a MINIMIZED My Window: the small card (block + name) whatever the mode
 
     private void UpdateDocked(RectTransform slot, float slotWidth, bool hovering, int tier, bool live, Rigidbody body)
     {
@@ -366,6 +369,7 @@ public class PixelBlockTooltip : MonoBehaviour
     private void Undock()
     {
         wasDocked = false;
+        dockedCompact = false;
         if (card != null && canvasObject != null)
         {
             card.SetParent(canvasObject.transform, false);
@@ -484,7 +488,7 @@ public class PixelBlockTooltip : MonoBehaviour
         }
         statsText.text = stats;
 
-        bool mini = EffectiveMode == ModeMinimal;
+        bool mini = EffectiveMode == ModeMinimal || (wasDocked && dockedCompact);
         tagText.gameObject.SetActive(!mini);
         statsText.gameObject.SetActive(!mini);
         descText.gameObject.SetActive(!mini);

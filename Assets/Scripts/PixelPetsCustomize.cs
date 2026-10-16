@@ -44,6 +44,9 @@ public partial class PixelPets
     [Tooltip("How fast the pet turns by itself in the preview while you aren't dragging it (degrees per second).")]
     [SerializeField] private float previewSpinSpeed = 25f;
 
+    [Tooltip("Text of the spin switch on the preview ({0} = on / off).")]
+    [SerializeField] private string previewSpinText = "Spin: {0}";
+
     [Tooltip("Window title.")]
     [SerializeField] private string customizeTitle = "Customize Pet";
 
@@ -214,18 +217,33 @@ public partial class PixelPets
     private static Mesh Cone()
     {
         if (coneMesh != null) return coneMesh;
-        const int n = 20;
-        Vector3[] v = new Vector3[n + 1];
+        // A unit cone (base radius 0.5 at y -0.5, tip at y 0.5). The old one was wound inside out (its sides were see-through from outside and
+        // shaded from the inside) and had no base; now each side strip has its own vertices with the cone's real slope normals, plus a flat base.
+        const int n = 24;
+        var v = new List<Vector3>();
+        var nm = new List<Vector3>();
+        var t = new List<int>();
+        for (int i = 0; i < n; i++)
+        {
+            float a0 = i * Mathf.PI * 2f / n, a1 = (i + 1) * Mathf.PI * 2f / n, am = (a0 + a1) * 0.5f;
+            int b = v.Count;
+            v.Add(new Vector3(0f, 0.5f, 0f)); nm.Add(new Vector3(Mathf.Cos(am), 0.5f, Mathf.Sin(am)).normalized);
+            v.Add(new Vector3(Mathf.Cos(a1) * 0.5f, -0.5f, Mathf.Sin(a1) * 0.5f)); nm.Add(new Vector3(Mathf.Cos(a1), 0.5f, Mathf.Sin(a1)).normalized);
+            v.Add(new Vector3(Mathf.Cos(a0) * 0.5f, -0.5f, Mathf.Sin(a0) * 0.5f)); nm.Add(new Vector3(Mathf.Cos(a0), 0.5f, Mathf.Sin(a0)).normalized);
+            t.Add(b); t.Add(b + 1); t.Add(b + 2);
+        }
+        int centre = v.Count;
+        v.Add(new Vector3(0f, -0.5f, 0f)); nm.Add(Vector3.down);
         for (int i = 0; i < n; i++)
         {
             float a = i * Mathf.PI * 2f / n;
-            v[i] = new Vector3(Mathf.Cos(a) * 0.5f, -0.5f, Mathf.Sin(a) * 0.5f);
+            v.Add(new Vector3(Mathf.Cos(a) * 0.5f, -0.5f, Mathf.Sin(a) * 0.5f)); nm.Add(Vector3.down);
         }
-        v[n] = new Vector3(0f, 0.5f, 0f);
-        int[] t = new int[n * 3];
-        for (int i = 0; i < n; i++) { t[i * 3] = n; t[i * 3 + 1] = i; t[i * 3 + 2] = (i + 1) % n; }
-        coneMesh = new Mesh { name = "Pet Cone", vertices = v, triangles = t };
-        coneMesh.RecalculateNormals();
+        for (int i = 0; i < n; i++) { t.Add(centre); t.Add(centre + 1 + i); t.Add(centre + 1 + (i + 1) % n); }
+        coneMesh = new Mesh { name = "Pet Cone" };
+        coneMesh.SetVertices(v);
+        coneMesh.SetNormals(nm);
+        coneMesh.SetTriangles(t, 0);
         coneMesh.RecalculateBounds();
         return coneMesh;
     }
@@ -743,6 +761,17 @@ public partial class PixelPets
             previewPitch = Mathf.Clamp(previewPitch - delta.y * 0.6f, -85f, 85f);
         });
 
+        // Spin switch in the preview's top right corner (the player's choice, kept between sessions).
+        Button spin = PixelUIKit.CreateButton(font, view.transform, "Spin", "", new Vector2(150f, 46f), new Color(0.25f, 0.28f, 0.38f, 0.92f), Color.white, 22f);
+        RectTransform sr = spin.GetComponent<RectTransform>();
+        sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(1f, 1f);
+        sr.sizeDelta = new Vector2(150f, 46f);
+        sr.anchoredPosition = new Vector2(-8f, -8f);
+        TMP_Text spinLabel = spin.GetComponentInChildren<TMP_Text>();
+        System.Action showSpin = () => PixelUIKit.SetText(spinLabel, string.Format(previewSpinText, PreviewSpinOn ? "on" : "off"));
+        showSpin();
+        spin.onClick.AddListener(() => { PreviewSpinOn = !PreviewSpinOn; showSpin(); PixelAudio.Play("ui_click"); });
+
         Button left = PixelUIKit.CreateButton(font, box.transform, "Previous Outfit", "<", new Vector2(110f, 170f), buttonColor, Color.white, 64f);
         Button right = PixelUIKit.CreateButton(font, box.transform, "Next Outfit", ">", new Vector2(110f, 170f), buttonColor, Color.white, 64f);
         PixelUIKit.UseArrowGlyph(left, true);
@@ -822,11 +851,15 @@ public partial class PixelPets
         if (string.IsNullOrEmpty(n)) nameField.SetTextWithoutNotify(NameOf(editPet));
     }
 
+    private const string PreviewSpinPref = "PixelClicker.Pets.PreviewSpin";
+    /// <summary>Does the pet in the Customize Pet preview turn by itself? (The 'Spin' switch on the preview; on by default.)</summary>
+    private static bool PreviewSpinOn { get => PixelPrefs.GetBool(PreviewSpinPref, true); set => PixelPrefs.SetBool(PreviewSpinPref, value); }
+
     private void UpdateCustomize()
     {
         UpdateStudio();
         if (previewModel == null) return;
-        if (!previewDragging) previewYaw += previewSpinSpeed * Time.unscaledDeltaTime;
+        if (!previewDragging && PreviewSpinOn) previewYaw += previewSpinSpeed * Time.unscaledDeltaTime;
         previewModel.localRotation = Quaternion.Euler(previewPitch, previewYaw, 0f);
     }
 

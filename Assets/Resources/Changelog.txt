@@ -1201,3 +1201,7 @@
 [2026-10-16 16:27 UTC] Fixed a held husk lowered into the ground with the scroll wheel: it now stops on the surface under it instead of sinking in, dragging very slowly and replaying the landing sound.
 [2026-10-16 16:27 UTC] The shuffle combo (tap right click on a skill's filler block) is now the Standard skill tree node 'Shuffle Combo' at the end of the Block Hold path (after High roller).
 [2026-10-16 16:27 UTC] Did you know box docking is easier to see: while moving it, both side edges show a glowing dock zone (bright when in range, heading says which edge), right after docking it says where it docked, and a small gold mark stays on that edge; the right edge now also docks when the box itself reaches it.
+[2026-10-16 16:31 UTC] Customize Pet: the preview has a Spin on / off switch in its top right corner (remembered).
+[2026-10-16 16:31 UTC] Outfit Studio: click a shape in the 3D view to select it and drag it - it moves along the X, Y or Z axis that points most along your drag, with a coloured line showing that axis; dragging empty space still turns the view.
+[2026-10-16 16:31 UTC] Fixed the Cone shape (Outfit Studio and pet accessories): it was inside out (see-through from outside, odd shading) and had no base.
+[2026-10-16 16:31 UTC] With the block tooltip pinned in the Pocket window, minimizing the window now shows a small card with the block and its name under the header instead of nothing.
