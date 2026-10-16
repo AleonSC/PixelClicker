@@ -1,12 +1,76 @@
 # Pixel Clicker - game design document
 
-Status: **living document, started 2026-10-16.** It describes the game as a whole: what it is, how the pieces fit together and where it is
-going. Detail lives in the system docs it links to (`docs/systems/*.md`); the full technical reference is `docs/GameReference.txt`.
+> **Every click leaves something behind.**
 
-Everything here is written from what is **built** or **agreed in chat**. Where nothing has been decided, the section has a
-**Blank spot** box: the question, what I'd suggest (**Suggestion**), and why it matters. The last section collects them all in one list.
+Living document (started 2026-10-16, reorganised the same day). It describes the game as a whole: what it is, how the pieces fit and
+where it is going. Detail lives in the system docs (`docs/systems/*.md`); the full technical reference is `docs/GameReference.txt`.
 
-Legend: **Built** = in the game now · **Agreed** = decided, not built · **Idea** = suggested, not agreed · **Blank** = undecided.
+**How to use it:** the open questions are first, each with a short suggestion. When one is answered, it moves to "Decided at a glance"
+and into its section. Sections point back to their questions as **(Q1)**, **(Q2)**...
+
+Legend: **Built** = in the game now · **Agreed** = decided, not built · **Idea** = suggested, not agreed.
+
+---
+
+## Open questions
+
+**Big direction**
+
+| # | Question | Suggestion |
+|---|---|---|
+| Q1 | Which cosmetics, locked behind which goals? | One per big milestone: a skill cape for the cube at max level, a full Collection Log page, each prestige, rare achievements. A Wardrobe tab in Pocket. |
+| Q2 | Prestige: what resets and what is kept? | Resets currencies, shop unlocks, devices and the floor. Keeps skill levels, the Collection Log, pets, gear and cosmetics. Each payment gives a permanent "Cubie's Goodwill" bonus and unlocks something new. |
+| Q3 | Prestige: how does Cubie's bill grow? | A ledger: interest piles up over play time and Cubie inflates it every time he mentions it. Paying later earns more goodwill. |
+| Q4 | Is there an ending at all? | No hard ending. The long tail is the end game: max every skill, finish the log, collect cosmetics, prestige again. |
+| Q5 | Exactly what is in 1.0? | The six gathering skills that exist, polished (every perk working), the core devices, the collectibles, Cubie's prestige. Tester machines and dev-only Firemaking stay out. Write a 1.0 checklist. |
+
+**Identity**
+
+| # | Question | Suggestion |
+|---|---|---|
+| Q6 | The game's name ("Pixel Clicker" is a working title?) | Decide before any public build; something with "husk", "cube" or "extract" fits the hook. |
+| Q7 | Which pillar wins when two clash (idle vs active)? | Active play is always *better*, idle play is always *possible*: machines catch up while you're away but never beat a player who is there. |
+
+**Systems**
+
+| # | Question | Suggestion |
+|---|---|---|
+| Q8 | Which systems get cut or merged? | Run the pruning test (`ConnectionMap.md`) once the tree rework and gear are designed. |
+| Q9 | The long-term currency sink? | Prestige, the alien's face sockets and relics, machine repairs. |
+| Q10 | What runs during offline progress? | Machines yes (at a reduced rate); minigames and hazards no. Today only the auto clicker counts. |
+| Q11 | How many skills at release, which come next? | Answered together with Q5. |
+| Q12 | Should every minigame feed a skill? | Yes, the way the Evil Tree feeds Woodcutting (e.g. Bomb Defusal -> Mining, Snake -> Foraging). |
+| Q13 | What does a player learn in the first 5 minutes? | Click, husks fall, Cubie arrives. Everything else is taught the first time it matters. |
+
+**Before any public build**
+
+| # | Question | Suggestion |
+|---|---|---|
+| Q14 | Homage renaming (the Golden Snitch is a trademarked name) | Rename every homage before release, as with the Prime Cubes; keep a list of the real names here so none slips through. |
+| Q15 | Save versioning and the first public build date | Pick the date, so one save version and its upgrade steps (on the to-do) land before it. |
+
+Feature-level questions: gear, first person, the alien and legendary gear in `GearDesign.md`; Woodcutting in
+`WoodcuttingProgression.md`; husk rules in `PixelRules.md`; cross-system gaps in `ConnectionMap.md` section 8.
+
+---
+
+## Decided at a glance
+
+All decided 2026-10-16 unless noted.
+
+- **Hook:** *"Every click leaves something behind."*
+- **Audience:** people who love numbers going up and collecting things; RuneScape-type players first, idle / clicker fans too.
+- **Platform and price:** Steam, about $10, one-time purchase.
+- **Concept:** no story. The game is about our real world - monotonous grinding for money - with a deliberately **simulated** feel:
+  everything is nothing in itself, and only people give it meaning. Cubie is just another guy in the world.
+- **Many ways to play:** manual clicking, auto clicking, machines, consumables and minigames are all real ways to progress.
+- **Late game:** explore every option you have and grind skills up; cosmetics as rewards are being considered (Q1).
+- **Prestige:** paying Cubie back for his small gift and the Recycler - a joke, not a theme. Interest has piled up and he keeps
+  inflating the bill.
+- **Length:** open-ended, no set playthrough time.
+- **1.0:** flesh out the systems, ship a handful of skills, add more skills as updates (Q5).
+- **Art direction:** what the game already is - smooth, clean menus with retro / 8-bit / cube visuals; no fixed rulebook.
+- **Music:** the developer's own Suno tracks (paid plan, no attribution needed).
 
 ---
 
@@ -18,64 +82,49 @@ slowly turn a single clicking cube into a small, busy world of skills, devices, 
 
 **In one line:** *Cookie Clicker's numbers, RuneScape's skills, a dash of factory building, and a cube with a lot of personality.*
 
-> **Blank spot - the hook in one sentence.** What does a stranger read on the store page? The game has many systems; it needs one
-> sentence that says why it is different from other clickers. **Suggestion:** lead with the husks - *"Every click leaves something
-> behind."* - because that is the idea no other clicker has.
+**Store hook:** *"Every click leaves something behind."* - the husks are the idea no other clicker has.
 
 ## 2. Pillars
 
-These are the rules every feature is measured against (they come from decisions already made in chat and in `PixelRules.md`):
+Every feature is measured against these:
 
 1. **Every click leaves something behind.** A click gives the block's value AND a physical husk. Husks are material, never currency by
    themselves. (Built: `PixelRules.md`.)
-2. **Each system answers a pressure.** Despawn, space, hazards, one skill at a time, the random rotation - every device, skill and
+2. **Each system answers a pressure.** Despawn, space, hazards, one skill at a time, the random rotation: every device, skill and
    consumable exists because it solves one of these (`ConnectionMap.md`, section 4).
 3. **Skills feed each other.** A skill is simple on its own and gets better through other skills (the Whetstone from Mining for
    Woodcutting, Pesticide from Farming...). (Partly built, partly agreed.)
-4. **Surprise inside structure.** Random when, designed what: you never know when a tree, a visitor or a rare drop comes, but what's
-   inside is authored (`WoodcuttingProgression.md`).
-5. **Played over days.** An idle game with numbers that keep climbing; sessions are short and frequent, and the game keeps working
-   while you are away. (Agreed in the balance direction, `docs/roadmap.md`.)
-6. **Charm everywhere.** Cubie, the vendors, the cats, the code-made sounds, the homages. The cube has a personality.
-7. **Many ways to play (decided 2026-10-16).** Manual clicking, the auto clicker, machines, consumables, minigames: each is a real way
-   to make progress, and a player can lean on the ones they enjoy. No single approach should be the only good one.
+4. **Surprise inside structure.** Random *when*, designed *what*: you never know when a tree, a visitor or a rare drop comes, but
+   what's inside is authored (`WoodcuttingProgression.md`).
+5. **Played over days.** Numbers keep climbing; sessions are short and frequent, and the game keeps working while you're away.
+6. **Many ways to play.** Manual, auto, machines, consumables, minigames: lean on whichever you enjoy. No approach is the only good one.
+7. **Charm everywhere.** The vendors, the cats, the code-made sounds, the homages. The cube has a personality.
 
-> **Blank spot - which pillar wins when two clash?** E.g. "played over days" (idle) vs "every click leaves something behind" (active
-> handling of husks). **Suggestion:** active play is always *better*, idle play is always *possible* - machines catch up while away, but
-> never beat a player who is there.
+When two pillars pull against each other, see **(Q7)**.
 
 ## 3. The player
 
-- **Who it is for (decided 2026-10-16):** people who love **numbers going up and collecting things**. The main target is
-  **RuneScape-type players** (skills to grind, rare drops, a Collection Log), with appeal to idle / clicker fans in general because the
-  game supports several ways of playing (pillar 7).
-- **Platform and price (decided 2026-10-16):** **Steam**, about **$10**, a one-time purchase.
+- **Who:** people who love numbers going up and collecting things. **RuneScape-type players** first (skills to grind, rare drops, a
+  Collection Log), with appeal to idle / clicker fans because the game supports several ways of playing.
+- **Where and how much:** Steam, about $10, one-time purchase. No ads, no microtransactions.
+- **What this means for design:** skills and collections are the heart of the game; long-term goals (max levels, full logs, cosmetics)
+  are the motivation, not a plot; the game must respect players who idle and players who click.
 
-What this means for design: skills and collections are the heart of the game; long-term goals (max levels, full logs) matter more than a
-story; the game must respect players who idle and players who click.
+## 4. Concept, world and tone
 
-## 4. The world and the tone
-
-- **Built:** a cube floating over a floor in a void, with sky styles, floors, day / night and filters. Everything is cubes: the
-  vendors, the pets, the collectibles, the alien (agreed) - even the gear joke ("one slot, you're a cube").
-- **Cubie**, the suspicious cube shopkeeper, is the guide and the voice of the game.
-- **Extraction:** the in-world reason a click gives both value and a husk - the clicker pulls the block's essence out; the husk is what
-  is left (`PixelRules.md`).
-- **Homages:** a running thread of pop-culture nods, renamed so they are nods and not the real thing (Dragon Cubes, Egyptian God Cubes,
-  Prime Cubes, the Golden Snitch; more on the to-do).
-
-- **No story - on purpose (decided 2026-10-16).** There is no ultimate story or hidden mystery, and **Cubie is just another guy in the
-  world**, like the other vendors. The game's concept is **our real world: monotonous grinding for money.** It is built to feel
-  **simulated**, to match the idea that everything is nothing in itself and only people give it meaning. The pixels, the currency, the
-  numbers mean nothing until the player decides they matter.
-- What this means for writing: characters are ordinary people with their own small concerns (Cubie wants his money back, with
-  interest), not keys to a plot. Humour comes from how mundane and transactional the world is. Nothing should promise a big reveal.
-
-> **Blank spot - the name.** "Pixel Clicker" is a working title? It is generic and hard to search for. **Suggestion:** decide before any
-> public build; something with "husk", "cube" or "extract" in it would match the hook.
-
-> **Blank spot - homage rules.** How close may a homage get? The Golden Snitch keeps a trademarked name. **Suggestion:** rename every
-> homage before release (as with "Prime Cubes"); keep a list of real names in this doc so nothing slips through.
+- **The concept:** our real world - monotonous grinding for money. The game feels **simulated** on purpose: the pixels, the currency
+  and the numbers mean nothing in themselves; only the player gives them meaning.
+- **No story.** No ultimate plot, no hidden mystery, no big reveal.
+- **Cubie is just another guy in the world**, like the other vendors: a suspicious cube shopkeeper with his own small concerns (mostly
+  getting his money back, with interest).
+- **Writing:** characters are ordinary people, not keys to a plot. The humour comes from how mundane and transactional everything is.
+- **Extraction:** the in-world reason a click gives both value and a husk - the clicker pulls the block's essence out; the husk is
+  what's left (`PixelRules.md`). It fits the concept: the value is in the counter, the thing itself is just leftovers.
+- **The world (Built):** a cube floating over a floor in a void, with sky styles, floors, day / night and filters. Everything is
+  cubes: the vendors, the pets, the collectibles, the alien (Agreed) - even the gear joke ("one slot, you're a cube").
+- **Homages:** a running thread of pop-culture nods (Dragon Cubes, Egyptian God Cubes, Prime Cubes, the Golden Snitch; more ideas on
+  the to-do). Renaming before release: **(Q14)**.
+- **The name:** **(Q6)**.
 
 ## 5. The core loop (Built)
 
@@ -98,169 +147,100 @@ story; the game must respect players who idle and players who click.
 
 ## 6. The progression arc
 
-This is the shape of a full playthrough. Early and mid game mostly exist; late and end game are mostly blank.
-
 ### Early game - the first hour (Built, being tuned)
-White -> Gray -> Black pixels by thresholds; Cubie's first visit after 50 White clicks (gift: a Recycler); the shop opens; the RGB
-pack; the Auto Clicker; the Toggles window; Standard level 2 opens the Skills window; the first skill pack (Lumberjack's Pack).
+White -> Gray -> Black pixels by thresholds; Cubie's first visit after 50 White clicks (gift: a Recycler - the bill he'll come back
+for); the shop opens; the RGB pack; the Auto Clicker; the Toggles window; Standard level 2 opens the Skills window; the first skill
+pack (Lumberjack's Pack). Teaching order: **(Q13)**.
 
 ### Mid game - skills and machines (Built, growing)
 Gathering skills (Woodcutting, Foraging, Fishing, Mining, Farming, Electrician), each with filler, hazards, specials, perks and a
 tree; devices to handle husks; minigames bought as packs; visitors and vendors; pets; crafting; the Pixel Bank.
 **Agreed next:** Woodcutting's tree mode, first person as a mid-game unlock (the Cube Visor), the gear system (`GearDesign.md`).
 
-### Late game (decided direction, 2026-10-16)
-**Exploring every option you have and grinding your skills up.** By the late game the player has all the tools (machines, consumables,
-minigames, vendors, first person, gear) and mixes them their own way while levelling skills towards the cap.
-- **Cosmetics as late-game rewards (being considered):** cosmetics locked behind long goals, so the end of the game has things worth
-  chasing. The game already has places for them: pet outfits, floor / sky / bar styles, cube looks, and gear models (`GearDesign.md`).
+### Late game - explore and grind (Decided direction)
+By now the player has every tool (machines, consumables, minigames, vendors, first person, gear) and mixes them their own way while
+grinding skills towards the cap. **Cosmetics** locked behind long goals give the late game things worth chasing - the game already has
+places for them: pet outfits, floor / sky / bar styles, cube looks, gear models. Which ones and for what: **(Q1)**.
 
-> **Blank spot - which cosmetics, behind which goals?** **Suggestion:** one cosmetic per big milestone - max level in a skill (a skill
-> cape for the cube, very RuneScape), a full Collection Log page, each prestige, rare achievements - shown in a "Wardrobe" tab in Pocket.
+### Prestige - paying Cubie back (Decided theme)
+Cubie gave you a small gift and a Recycler at the start. Prestige is paying him back, and he means it: he talks about suing you,
+*with interest*. **Keep it a joke:** the "debt" is only that small gift and a second-hand bin, but after all this time the interest has
+piled up, and Cubie inflates the bill further every time he brings it up. It is one petty guy and his absurd invoice, never a "pay your
+debts" theme. Each prestige settles the bill and resets the run - and the next bill is somehow even bigger.
+Details: what resets **(Q2)**, how the bill grows **(Q3)**.
 
-### Prestige: paying Cubie back (decided theme, 2026-10-16)
-Cubie gave you a small gift and a Recycler at the start. **Prestige is paying him back** - and he means it: he talks about suing you,
-*with interest*. **The joke (keep it a joke):** the "debt" is only that small gift and a second-hand bin, but after all this time the
-interest has piled up, and Cubie inflates the bill further every time he brings it up. It is never framed as a real debt the game is
-about (no "pay your debts" tone); it is one petty guy and his absurd invoice. Each prestige settles the bill, resets the run, and the
-next bill is somehow even bigger.
+### End game
+Open: **(Q4)**. Whatever it becomes, no story payoff - at most Cubie reacts to being paid, the way anyone would.
 
-> **Blank spot - what resets and what is kept?** **Suggestion:** reset = currencies, shop unlocks, devices, the floor; kept = skill
-> levels, the Collection Log, pets, gear and cosmetics. Each payment earns a permanent bonus (e.g. "Cubie's Goodwill", +x% to
-> everything) and unlocks something new: a fresh Cubie line, a vendor, a skill, a harder rotation.
+### Length (Decided)
+Open-ended, no set playthrough time. Pacing is tuned per skill and per goal (how long a level, a log page, a prestige should take),
+not towards a finish line.
 
-> **Blank spot - how is the debt measured?** **Suggestion:** a debt shown in Cubie's ledger that starts small and compounds over
-> play time (his "interest", a running joke); paying it needs a big pile of Pure pixels, so the ledger is also the prestige goal bar.
-> Paying early is allowed but a later payment earns more goodwill.
+## 7. Systems map
 
-### End game (Blank)
-> **Blank spot - is there an ending at all?** The developer isn't sure yet. The game is meant to be open-ended, so an ending is
-> optional. **Suggestion:** no hard ending. The "end game" is the long tail: maxing every skill, finishing the Collection Log,
-> collecting cosmetics, and prestiging again for bigger goodwill. No story payoff (section 4): at most Cubie reacts to being paid,
-> the way anyone would.
-
-### Length (decided 2026-10-16)
-**Open-ended, no set length.** There is no target playthrough time; pacing is tuned per skill and per goal (how long a level, a log
-page, a prestige should take) instead of towards one finish line.
-
-## 7. Systems map (one paragraph each)
-
-The full links between systems are in `ConnectionMap.md`; this is the short tour.
+Links between systems: `ConnectionMap.md`. The short tour:
 
 | System | Role in the game | State | Doc |
 |---|---|---|---|
 | Pixels / blocks | each type is its own currency; tags decide what a block is | Built | `PixelBlockCatalog.cs` header |
 | Husks | the material every click leaves behind | Built | `PixelRules.md` |
-| Skills | what spawns, hazards, perks, a tree; feed each other | Built (6 gathering + Standard + Offline) | `PixelSkills.md`, `SkillBlocks.md` |
+| Skills | what spawns, hazards, perks, a tree; they feed each other | Built (6 gathering + Standard + Offline) | `PixelSkills.md`, `SkillBlocks.md` |
 | Devices / machines | turn husks into XP, storage, charges, currency (Recycler) | Built; factory machines are tester features | `PixelConsumables.md`, `PixelFactory.md` |
 | Shop | packs, upgrades, Value levels, consumables, minigames | Built | `PixelShop.md` |
-| Vendors / visitors | trades, buy skill currency, sell tools; Cubie guides | Built | `PixelVisitorMinigame.md` |
-| Minigames | events that pay currency and raise the XP multiplier | Built (14+) | per-script headers |
+| Vendors / visitors | trades, buy skill currency, sell tools; Cubie | Built | `PixelVisitorMinigame.md` |
+| Minigames | events that pay currency and raise the XP multiplier | Built (14+); skill links **(Q12)** | per-script headers |
 | Collectibles | Dragon / God / Prime Cubes, the Golden Snitch, Collection Log, gallery | Built | `PixelGodCubes.md`, `PixelDragonWish.md` |
 | Pets | one per block type, perks, outfits | Built | `PixelPets.md` |
-| First person | walk the floor, handle husks, repair machines (agreed) | Built; unlock + relics Agreed | `PixelFirstPerson.md`, `GearDesign.md` |
-| Gear | one slot, relics, legendary gear | Agreed | `GearDesign.md` |
-| Offline progress | earnings while away | Built (auto clicker only) | `PixelOfflineProgress.cs` header |
+| First person | walk the floor, handle husks, repair machines (Agreed) | Built; unlock + relics Agreed | `PixelFirstPerson.md`, `GearDesign.md` |
+| Gear | one slot (you're a cube), relics, legendary gear | Agreed | `GearDesign.md` |
+| Prestige | paying Cubie back | Theme decided; details **(Q2, Q3)** | this doc |
+| Cosmetics | late-game rewards | Being considered **(Q1)** | this doc |
+| Offline progress | earnings while away | Built (auto clicker only) **(Q10)** | `PixelOfflineProgress.cs` header |
 
-> **Blank spot - which systems get cut?** `ConnectionMap.md` has a pruning test (a feature must pass 2 of: unique action, connected,
-> answers a pressure). Nobody has run it over the whole game yet. Several minigames only pay currency, several shop devices have no
-> skill home, Charcoal / Wood Chips / Magic Wood have no use. **Suggestion:** run the test once the tree rework and gear are designed,
-> and merge or cut whatever fails.
+Cutting and merging: **(Q8)** - several minigames only pay currency, several shop devices have no skill home, and Charcoal / Wood
+Chips / Magic Wood have no use yet.
 
 ## 8. Economy
 
-- **Built:** each pixel type is its own currency; Pure pixels (the six basic types) are the shop currency; Value upgrades scale payouts;
-  potions are priced from expected output; vendors buy skill currency for Pure pixels at a rarity-based rate; long number suffixes up to
-  ~1e306. Rarer pixels are deliberately slower to upgrade.
-- **Agreed direction:** idle game over days, numbers keep growing, prices re-laddered for the Value economy (`docs/roadmap.md`).
-- Tools: the Dev Hub's Balance report (per-skill XP / minutes to level), `PixelBalanceReport.cs`.
+- **Built:** each pixel type is its own currency; Pure pixels (the six basic types) are the shop currency; Value upgrades scale
+  payouts; potions are priced from expected output; vendors buy skill currency for Pure pixels at a rarity-based rate; long number
+  suffixes up to ~1e306. Rarer pixels are deliberately slower to upgrade.
+- **Agreed direction:** numbers keep growing over days; prices re-laddered for the Value economy (`docs/roadmap.md`).
+- **Tools:** the Dev Hub's Balance report (per-skill XP, minutes to level), `PixelBalanceReport.cs`.
+- Open: the long-term sink **(Q9)**, offline progress **(Q10)**.
 
-> **Blank spot - what is the long-term sink?** Currencies pile up once the shop is bought out. **Suggestion:** prestige, the alien's
-> face sockets and relics, and machine upkeep / repairs.
+## 9. Content and version 1.0
 
-> **Blank spot - how should offline progress work?** Today only the auto clicker counts while away (`docs/roadmap.md`, "Known gaps").
-> Should machines, minigames and skills run offline too? **Suggestion:** machines yes (at a reduced rate), minigames and hazards no.
+**1.0 direction (Decided):** flesh out the game's systems and ship **a handful of skills**; more skills arrive as **updates** after
+release. Exact scope: **(Q5)**, **(Q11)**.
 
-## 9. Content plan
-
-What exists and what is planned, by kind. Numbers are rough.
-
-| Kind | Built | Agreed / on the to-do | Blank |
-|---|---|---|---|
-| Gathering skills | 6 (Woodcutting, Foraging, Fishing, Mining, Farming, Electrician) + Firemaking (dev-only) | Woodcutting trees | How many skills at release? Which are next? |
-| Minigames | 14+ | Early Cube Dash | Should each feed a skill? (`ConnectionMap.md` gap 6) |
-| Vendors / visitors | Cubie, Prospector, Lumberjack, Tinkerer, Wizard, Entrepreneur, Farmer, 2 cats | the alien | One vendor per skill? |
-| Devices | ~20 | Pesticide Sprayer, factory machines as real items | Which tester machines become real? |
-| Collectibles | 7 + 3 + 6 + Cubelette + Snitch | legendary gear | More families? |
-| Homages | 5 families | ~9 ideas on the to-do | Which make the cut? |
-
-**Version 1.0 (direction, 2026-10-16):** flesh out the game's systems and ship **a handful of skills**; more skills arrive as
-**free updates** after release.
-
-> **Blank spot - exactly which skills and systems make 1.0?** **Suggestion:** the six gathering skills that already exist, polished
-> (perks working, not text-only), the core devices, the collectibles, Cubie's prestige; tester machines and dev-only Firemaking stay out
-> until they are finished. A short "1.0 checklist" in this doc would make it concrete.
+| Kind | Built | Agreed / on the to-do |
+|---|---|---|
+| Gathering skills | 6 (Woodcutting, Foraging, Fishing, Mining, Farming, Electrician) + Firemaking (dev-only) | Woodcutting trees |
+| Minigames | 14+ | Early Cube Dash |
+| Vendors / visitors | Cubie, Prospector, Lumberjack, Tinkerer, Wizard, Entrepreneur, Farmer, 2 cats | the alien |
+| Devices | ~20 | Pesticide Sprayer, factory machines as real items |
+| Collectibles | 7 Dragon + 3 God + 6 Prime Cubes, the Cubelette, the Golden Snitch | legendary gear |
+| Homages | 5 families | ~9 ideas on the to-do |
 
 ## 10. Onboarding and teaching
 
-- **Built:** Cubie's visits, the shop tutorial (only from its "?" button now), the toggles tutorial, Standard level 2 opening Skills,
-  first-time tips (`PixelHints`), Did You Know tips, the Game Guide (Controls, How To Play, Database).
+- **Built:** Cubie's visits, the shop tutorial (from its "?" button), the toggles tutorial, Standard level 2 opening Skills, first-time
+  tips (`PixelHints`), Did You Know tips, the Game Guide (Controls, How To Play, Database).
 - **Agreed:** meet one idea at a time (the to-do's first-hour notes); first person and gear arrive mid-game as reveals.
-
-> **Blank spot - what does a player need to know in the first 5 minutes, and what can wait?** There is a lot to teach (husks, Block
-> Hold, stakes, the Recycler, the shop). **Suggestion:** first 5 minutes = click, husks fall, Cubie arrives; everything else is taught
-> the first time it matters, never up front.
+- Open: what the first 5 minutes teach **(Q13)**.
 
 ## 11. Look and sound
 
-- **Built:** cubes everywhere, per-type looks (`PixelLooks.md`), code-made sounds and synths, music player with tracks, sky / floor /
-  filter / bar styles, the fancy pause menu.
-- **Art direction (decided 2026-10-16): what the game already is** - smooth, clean menus with retro / 8-bit / cube visuals. There is
-  no single fixed style on purpose: new looks follow the developer's feel for what fits, so match the existing look rather than a rulebook.
-- **Music (decided 2026-10-16):** the soundtrack is generated with Suno by the developer.
+- **Art direction (Decided):** what the game already is - smooth, clean menus with retro / 8-bit / cube visuals. No single fixed style
+  on purpose: new looks follow the developer's feel for what fits, so match the existing look rather than a rulebook.
+- **Built:** cubes everywhere, per-type looks (`PixelLooks.md`), code-made sounds and synths, a music player, sky / floor / filter /
+  bar styles, the fancy pause menu.
+- **Music (Decided):** the developer's own Suno tracks.
 
-## 12. Technical direction (short)
+## 12. Technical direction
 
-- Unity 6, everything built in code, one scene. Claude writes and maintains all code; the user tests in Unity (CLAUDE.md).
+- Unity 6, everything built in code, one scene. Claude writes and maintains all the code; the developer tests in Unity (CLAUDE.md).
 - Recent cleanups: `PixelCalm`, `PixelStatics`, `PixelPrefs`, `PixelFind.Cached`, the `PixelClicker` split, `PixelSystems` (systems in
-  the scene for editing). Next ones and the save-version plan are on the to-do.
-
-> **Blank spot - saves at release.** Save compatibility is ignored during development (CLAUDE.md). Before the first public build there
-> must be one save version and upgrade steps (on the to-do). **Suggestion:** decide the date of the "first public build" so this lands
-> before it.
-
----
-
-## 13. All blank spots in one list
-
-Grouped by how much they block other decisions. Answer them in any order; each answer gets written into its section above.
-
-**Decided (2026-10-16):** no story (the real-world grind, a simulated feel; Cubie is just another guy), who the game is for, platform and price, the late-game direction, prestige's theme (paying Cubie back),
-open-ended length, the 1.0 direction, art direction, music.
-
-**Big direction (shape everything else)**
-1. Which cosmetics, behind which goals? (section 6)
-2. Prestige: what resets and what is kept? (section 6)
-3. Prestige: how is Cubie's debt measured? (section 6)
-4. Is there an ending at all? (section 6)
-5. Exactly which skills and systems make 1.0? (section 9)
-
-**Identity**
-6. The hook in one sentence. (section 1)
-7. The name. (section 4)
-8. Which pillar wins when two clash? (section 2)
-
-**Systems**
-9. Which systems get cut or merged (run the pruning test). (section 7)
-10. The long-term currency sink. (section 8)
-11. What counts for offline progress. (section 8)
-12. How many skills at release, and which are next. (section 9)
-13. Should every minigame feed a skill? (section 9)
-14. What to teach in the first 5 minutes. (section 10)
-
-**Before any public build**
-15. Homage rules / renaming. (section 4)
-16. Save versioning and the first public build date. (section 12)
-
-Feature-level blank spots (gear, first person, the alien, legendary gear) are in `GearDesign.md`; Woodcutting's in
-`WoodcuttingProgression.md`; the husk rules' in `PixelRules.md`; the cross-system gaps in `ConnectionMap.md` section 8.
+  the scene for editing). Further cleanups and the save-version plan are on the to-do.
+- Saves before release: **(Q15)**.
