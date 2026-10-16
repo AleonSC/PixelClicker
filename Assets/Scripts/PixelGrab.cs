@@ -46,7 +46,7 @@ public class PixelGrab : MonoBehaviour
     [SerializeField] private float grabRadius = 0.25f;
 
     [Min(0f)]
-    [Tooltip("An old pixel can't be grabbed for this many seconds after it appears (it is still inside the cube's click area, so it would be grabbed straight through the cube). 0 = the default (0.35).")]
+    [Tooltip("An old pixel can't be grabbed for this many seconds after it appears (it is still inside the cube's click area, so it would be grabbed straight through the cube). 0 = the default (0.8).")]
     [SerializeField] private float grabDelaySeconds = 0f;
 
     [Min(0f)]
@@ -260,7 +260,7 @@ public class PixelGrab : MonoBehaviour
             OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
             if (despawn != null && despawn.IsDespawning) continue; // already vanishing
             OldPixelInfo bornInfo = body.GetComponent<OldPixelInfo>();
-            if (bornInfo != null && Time.unscaledTime - bornInfo.bornTime < (grabDelaySeconds > 0f ? grabDelaySeconds : 0.35f)) continue;   // too new: it has only just come out of the cube, so it can't be grabbed through it
+            if (bornInfo != null && Time.unscaledTime - bornInfo.bornTime < (grabDelaySeconds > 0f ? grabDelaySeconds : 0.8f)) continue;   // too new: it has only just come out of the cube, so it can't be grabbed through it
 
             // The cube only wins when the cursor is really on it and it is in front of this pixel under the cursor.
             // A pixel beside the cube (the cursor not on the cube) is always grabbable, even right up against it.

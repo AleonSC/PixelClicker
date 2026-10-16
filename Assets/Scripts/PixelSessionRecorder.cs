@@ -69,7 +69,7 @@ public class PixelSessionRecorder : MonoBehaviour
     private static readonly string[] HuskKeys =
         { "old.despawned", "old.capped", "old.grabbed", "old.vacuumed", "recycler.husks", "recycler.paid", "recycler.xp", "old.shredded", "old.shattered", "old.banked", "old.attached" };
 
-    private static readonly string[] HoldKeys = { "hold.count", "stake.placed", "stake.won", "stake.lost" };
+    private static readonly string[] HoldKeys = { "hold.count", "stake.placed", "stake.won", "stake.lost", "power.clicks" };
 
     private static string HoldLabel(string key)
     {
@@ -79,6 +79,7 @@ public class PixelSessionRecorder : MonoBehaviour
             case "stake.placed": return "Stakes placed";
             case "stake.won": return "Stakes won (revealed)";
             case "stake.lost": return "Stakes lost (revealed)";
+            case "power.clicks": return "Power clicks (left hold, Standard tree)";
             default: return key;
         }
     }
@@ -468,7 +469,7 @@ public class PixelSessionRecorder : MonoBehaviour
         sb.AppendLine("  Longest Recycler streak (this save): " + PixelStats.Total("recycler.streak").ToString("F0"));
         sb.AppendLine();
 
-        sb.AppendLine("== BLOCK HOLD AND STAKES ==");
+        sb.AppendLine("== BLOCK HOLD, STAKES AND POWER CLICKS ==");
         foreach (string k in HoldKeys)
         {
             statsAtStart.TryGetValue(k, out double was);
