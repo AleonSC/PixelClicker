@@ -2,11 +2,12 @@
 // PixelGoldenSnitch.cs
 //   The GOLDEN SNITCH (PixelType.GoldenSnitch 101): a very rare drop (a rareDrop tier like the Dragon Cubes, PixelClicker.EnsureGoldenSnitch, spawnWeight
 //   goldenSnitchSpawnWeight 0.00003) that is never clicked off the cube (CollectInternal ignores it, Block Hold can't grab it). Component added by PixelClicker.Awake.
-//   0. ON THE CUBE: it lands (PixelClicker.PixelMaterialized) as a polished gold cube block and waits for a MANUAL click (PixelClicker.CollectInternal ->
-//      CubeClicked; the auto clicker leaves it alone). Nobody clicks it for onCubeSeconds (120) and it slips away (counts as escaped).
-//   1. SPROUT: the click swaps it for a detailed golden cube - engraved dark edges, a middle band, bright corner studs and face gems, a soft cube glow
-//      shell, a gold point light, sparkles - and two silver feathered wings unfold out of it (sproutSeconds 1.1, fluttering faster and faster). The cube
-//      rolls a fresh block behind it (PixelClicker.ReplaceCurrentPixel) and the snitch lifts off towards the camera.
+//   0. ON THE CUBE: it lands (PixelClicker.PixelMaterialized) and already LOOKS like the snitch: the detailed golden cube model - engraved dark edges, a middle
+//      band, bright corner studs and face gems, gold wing knobs, a soft cube glow shell, a gold point light, sparkles - sits over the clicker cube (onCubeCover
+//      1.03 x its size) and follows its turn / pops every frame (LateUpdate -> FollowCube), wings folded away. It waits for a MANUAL click
+//      (PixelClicker.CollectInternal -> CubeClicked; the auto clicker leaves it alone). Nobody clicks it for onCubeSeconds (120) and it slips away (escaped).
+//   1. SPROUT: the click makes that same cube sprout two silver feathered wings right where it sits (sproutSeconds 1.1, fluttering faster and faster)
+//      while it eases off the cube towards the camera and turns to face it. The cube rolls a fresh block behind it (PixelClicker.ReplaceCurrentPixel).
 //   2. CHASE: it darts round the screen fast (viewport steering inside the black bars: quick darts to far points, little hops, feints, a flutter), leaving a gold
 //      trail, its wings buzzing (snitch_buzz). Keep the mouse ON it (hoverScale x its size on screen) and a bar above it charges (chargeSeconds 3.2 of hovering);
 //      off it the bar does NOT charge (drainPerSecond 0 = it just waits). It flies faster and more wildly the fuller the bar. A click while it is still charging
@@ -40,6 +41,8 @@ public class PixelGoldenSnitch : MonoBehaviour
     [SerializeField] private Vector2 dartSeconds = new Vector2(0.6f, 1.4f);
     [Tooltip("Speed multiplier while the capture ring closes (a little slower, so the timing is fair).")]
     [SerializeField] private float captureSlow = 0.6f;
+    [Tooltip("How much bigger than the clicker cube the snitch model is while it sits on the cube (a touch over 1 hides the plain gold block inside it).")]
+    [SerializeField] private float onCubeCover = 1.03f;
     [Tooltip("Seconds it waits on the cube for your click before it slips away unseen (0 = it waits forever).")]
     [SerializeField] private float onCubeSeconds = 120f;
     [Tooltip("Seconds before it escapes off the screen if it is not caught.")]
@@ -117,7 +120,9 @@ public class PixelGoldenSnitch : MonoBehaviour
     // flight
     private Vector2 vp, vel, target;
     private float depth, cubeDepth, stateT, life, charge, dartTimer, burstT, ringT, buzzTimer, flapPhase, spin;
-    private Vector3 sproutPos;
+    private Vector3 sproutPos, sproutFrom;
+    private Quaternion sproutFromRot;
+    private float sproutFromScale;
     private int misses;
     private bool hovering;
 
@@ -163,6 +168,28 @@ public class PixelGoldenSnitch : MonoBehaviour
         PixelAudio.Play("snitch_appear");
         PixelStatusLines.Set("snitch", "A GOLDEN SNITCH is on the cube! Click it to make it fly.", gold, 6f);
         PixelHints.Announce("A Golden Snitch landed on the cube!");
+        // It already LOOKS like the snitch on the cube (wings folded away): the model sits over the clicker cube and follows it (LateUpdate -> FollowCube).
+        BuildModel();
+        spin = 0f;
+        FollowCube();
+    }
+
+    /// <summary>On the cube: the snitch model covers the clicker cube exactly (its position, turn and size, pops and squashes included).</summary>
+    private void FollowCube()
+    {
+        Renderer r = clicker != null ? clicker.MainRenderer : null;
+        if (root == null || r == null) return;
+        Transform t = r.transform;
+        Vector3 ls = t.lossyScale;
+        root.transform.SetPositionAndRotation(r.bounds.center, t.rotation);
+        root.transform.localScale = Vector3.one * (Mathf.Max(ls.x, ls.y, ls.z) / 0.8f * onCubeCover);   // (the model's cube is 0.8 across: a touch bigger hides the plain block inside it)
+        if (body != null) body.localRotation = Quaternion.identity;
+        if (shell != null) shell.localRotation = Quaternion.identity;
+    }
+
+    private void LateUpdate()
+    {
+        if (state == State.OnCube) FollowCube();
     }
 
     /// <summary>The click: wings unfold out of the gold cube and it takes off.</summary>
@@ -172,12 +199,14 @@ public class PixelGoldenSnitch : MonoBehaviour
         if (cam == null) return;
         state = State.Sprouting;
         stateT = 0f; life = 0f; charge = 0f; misses = 0; burstT = 0f; ringT = 0f;
-        sproutPos = clicker.LiveWorldPosition - cam.transform.forward * clicker.PixelBaseSize * 0.9f;   // (just in front of the cube: the fresh block grows in behind it)
+        sproutPos = clicker.LiveWorldPosition - cam.transform.forward * clicker.PixelBaseSize * 0.9f;   // (it rises to just in front of the cube: the fresh block grows in behind it)
         cubeDepth = Vector3.Dot(sproutPos - cam.transform.position, cam.transform.forward);
         depth = cubeDepth;
-        BuildModel();
+        if (root == null) { BuildModel(); FollowCube(); }   // (normally it is already there, sitting on the cube)
         BuildUI();
-        root.transform.position = sproutPos;
+        sproutFrom = root.transform.position;
+        sproutFromRot = root.transform.rotation;
+        sproutFromScale = root.transform.localScale.x;
         replacePending = true;   // (next frame: the cube rolls a fresh block behind it - not inside the click that set it off)
         PixelAudio.Play("snitch_ready");
         PixelStatusLines.Set("snitch", "It flies! Keep your mouse on it to charge, then click when the rings meet.", gold, 6f);
@@ -229,9 +258,12 @@ public class PixelGoldenSnitch : MonoBehaviour
     private void UpdateSprout(Camera cam, float dt)
     {
         float k = Mathf.Clamp01(stateT / Mathf.Max(0.2f, sproutSeconds));
-        root.transform.position = sproutPos + cam.transform.up * (0.15f * clicker.PixelBaseSize * Mathf.Sin(k * Mathf.PI));
-        root.transform.localScale = Vector3.one * clicker.PixelBaseSize * Mathf.Lerp(0.55f, 0.75f, k);
+        // The cube itself sprouts: the wings unfold where it sat while it eases off the cube towards the camera and turns to face it.
+        float m = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(k / 0.6f));
+        root.transform.position = Vector3.Lerp(sproutFrom, sproutPos, m) + cam.transform.up * (0.15f * clicker.PixelBaseSize * Mathf.Sin(k * Mathf.PI));
+        root.transform.localScale = Vector3.one * Mathf.Lerp(sproutFromScale, clicker.PixelBaseSize * 0.75f, m);
         FaceCamera(cam, 0f);
+        root.transform.rotation = Quaternion.Slerp(sproutFromRot, root.transform.rotation, m);
         // The wings grow out of the ball with a little overshoot.
         float g = k < 0.75f ? EaseBack(k / 0.75f) : 1f;
         foreach (Transform f in feathers) if (f != null) f.localScale = new Vector3(Mathf.Max(0.001f, g), 1f, 1f);

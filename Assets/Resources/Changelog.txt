@@ -1154,3 +1154,4 @@
 [2026-10-16 12:06 UTC] Project notes: Block Hold and Power Click are now listed as unlocked by the Standard skill tree.
 [2026-10-16 12:08 UTC] To-do: added the Ultra pixel cosmetics shop (locked floors and skies, Wardrobe tab).
 [2026-10-16 12:08 UTC] To-do: the power click line now notes it is unlocked by the Standard skill tree.
+[2026-10-16 12:11 UTC] The Golden Snitch now looks like the snitch while it sits on the cube (studs, gems, engraved edges, wing knobs) and its wings sprout right there when you click it before it rises off the cube.
