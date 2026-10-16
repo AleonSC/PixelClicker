@@ -1,6 +1,6 @@
 // ---- System notes ----
 // PixelSkillsGuide.cs
-//   Part of partial class PixelSkills: SKILL GUIDES (first one: Woodcutting). The first time the player selects the Woodcutting card in the Skills window
+//   Part of partial class PixelSkills: SKILL GUIDES (first one: Woodcutting). The first time the Woodcutting card shows in the Skills window (clicked, or the window opened on it)
 //   (and no other tutorial runs), a small box over the window asks 'Want a quick tutorial?' (Yes / No; stat guide.woodcutting.asked, per save).
 //   YES = the guide: small Got it boxes beside the Skills window (PixelNotice beside windowRect, back arrow / Skip), the screen dimmed and paused
 //   (PixelTutorialDim) - the basics of Woodcutting and how its blocks spawn (filler rotation, trees and their order, Timber, infested trees, the Great Oak,
@@ -92,12 +92,16 @@ public partial class PixelSkills
         if (guideBookButton == null || detailName == null) return;
         bool show = available && HasGuide(p);
         guideBookButton.gameObject.SetActive(show);
-        if (!show) return;
         RectTransform nr = detailName.rectTransform;
+        // The name leaves room for the book so it never ends up hidden under the 'Skill tree' button at the right.
+        nr.offsetMax = new Vector2(show ? -262f : -200f, nr.offsetMax.y);
+        if (!show) return;
+        guideBookButton.transform.SetAsLastSibling();
         float avail = Mathf.Max(40f, nr.rect.width);
         float textW = Mathf.Min(avail, detailName.GetPreferredValues(detailName.text, 9999f, 0f).x);
         RectTransform r = guideBookButton.GetComponent<RectTransform>();
         r.anchoredPosition = new Vector2(22f + textW + 12f, -36f);
+        MaybeAskGuide(p);   // however Woodcutting came up in the window (a click, or opening the window on the skill in training), ask the first time
     }
 
     // ---- first-time question ----
@@ -105,7 +109,7 @@ public partial class PixelSkills
     /// <summary>A card was selected: the first time it is Woodcutting, ask whether the player wants the guide.</summary>
     private void MaybeAskGuide(SkillPack p)
     {
-        if (!askWoodGuide || !HasGuide(p) || !IsAvailable(p) || guideRunning || tutorialRunning || PixelTutorialDim.Active) return;
+        if (!askWoodGuide || !WindowOpen || !HasGuide(p) || !IsAvailable(p) || guideRunning || tutorialRunning || PixelTutorialDim.Active) return;
         if (PixelStats.Total(WoodGuideAskedKey) >= 1d || guideAskPanel != null) return;
         PixelStats.Best(WoodGuideAskedKey, 1d);
         ShowGuideAsk();

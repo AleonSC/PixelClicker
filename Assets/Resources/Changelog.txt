@@ -1223,3 +1223,4 @@
 [2026-10-16 17:08 UTC] New code-made wood chopping sounds for Wood, Bark (drier, crackly) and Heartwood (deeper, rings longer) and the axe: a sharp blade 'tock', a woody body, a thump and a crackle of splinters.
 [2026-10-16 17:08 UTC] Trees now sound like they are coming down: every block's sound rises in pitch as you work through the tree, and the trunk creaks on its last two blocks before Timber.
 [2026-10-16 17:09 UTC] Right-click a pet for a small menu with its name and 'Pet away', which switches it off (Toggles > Pets brings it back).
+[2026-10-16 17:10 UTC] Fixed the Woodcutting guide not showing: the guide book was hidden under the Skill tree button (the name now leaves room for it), and the first-time question also comes up when the Skills window opens on Woodcutting, not only on a card click.
