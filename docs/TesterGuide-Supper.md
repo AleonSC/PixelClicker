@@ -14,7 +14,8 @@ want to hear from you. Play however you like - the most useful thing is just pla
 - **Woodcutting has trees now.** The cube rolls small filler blocks (twigs, leaves...) and every so often a whole tree arrives and plays
   out on the cube block by block, with a bar at the top. Chop the last block for "Timber!". Some trees are infested - you'll see a
   warning on the bar.
-- **Block Hold:** hold the RIGHT mouse button on the cube to pull the current block out of the rotation. Holding one of the six basic
+- **Standard has a skill tree.** At level 2 you get your first skill point: spend it on Block Hold or Power Click.
+- **Block Hold** (from the Standard tree): hold the RIGHT mouse button on the cube to pull the current block out of the rotation. Holding one of the six basic
   colours puts a bet on it: it might pay a lot more later... or nothing.
 - **More skills:** Foraging and Fishing join Woodcutting, Mining, Farming and Electrician. Each has its own blocks, a nasty hazard
   block, perks and a skill tree.
