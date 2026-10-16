@@ -120,7 +120,10 @@ minigames, vendors, first person, gear) and mixes them their own way while level
 
 ### Prestige: paying Cubie back (decided theme, 2026-10-16)
 Cubie gave you a small gift and a Recycler at the start. **Prestige is paying him back** - and he means it: he talks about suing you,
-*with interest*. Each prestige settles the debt, resets the run, and the debt (and his interest) grows for next time.
+*with interest*. **The joke (keep it a joke):** the "debt" is only that small gift and a second-hand bin, but after all this time the
+interest has piled up, and Cubie inflates the bill further every time he brings it up. It is never framed as a real debt the game is
+about (no "pay your debts" tone); it is one petty guy and his absurd invoice. Each prestige settles the bill, resets the run, and the
+next bill is somehow even bigger.
 
 > **Blank spot - what resets and what is kept?** **Suggestion:** reset = currencies, shop unlocks, devices, the floor; kept = skill
 > levels, the Collection Log, pets, gear and cosmetics. Each payment earns a permanent bonus (e.g. "Cubie's Goodwill", +x% to
