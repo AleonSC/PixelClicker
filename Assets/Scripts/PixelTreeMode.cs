@@ -3,8 +3,9 @@
 //   TREE MODE (step 1 of docs/systems/WoodcuttingProgression.md; tested in Unity 2026-10-16 - it plays well, timings / numbers still being tuned; component added by PixelClicker.Awake, PixelTreeMode.Instance). While the skill
 //   named in skillId (woodcutting) is in play AND a shop pack with unlocksTreeMode is owned (the hidden 'Oak Trees (test)' pack: unlock it with the
 //   Dev Tools 'Shop unlocks' widget), the cube stops rolling the pack's blocks by weight and alternates between:
-//     - the FILLER rotation: random picks from 'fillers' (Twig, Leaf, Wood; Moss and Sap from level 2). At least minFiller (3) of them, then a
-//       growing chance per block until a tree is certain at maxFiller (10);
+//     - the FILLER rotation: random picks from 'fillers' (Twig, Leaf, Wood; Moss and Sap from level 2). At least a minimum of them, then a
+//       growing chance per block until a tree is certain at a maximum. The run SHRINKS with the level: 12-30 at level 1 (minFillerAtLevel1 /
+//       maxFillerAtLevel1) down to 3-10 at fillerLevelSpan (20) and above (minFillerAtTop / maxFillerAtTop), so trees are a treat early on;
 //     - a TREE: a species picked by weight among the unlocked ones (Oak only for now) plays out its slot list in order (Fixed / Run / Wildcard /
 //       Optional / Hazard). An INFESTED tree fills its Hazard slot (the Termite Hive, always last): chance infestedChance at infestFromLevel rising to
 //       infestedChanceAt20 at level 20, 0 while a Focus potion holds hazards off; it is announced on the tree bar from its first block.
@@ -89,12 +90,23 @@ public class PixelTreeMode : MonoBehaviour
     [Header("Filler rotation")]
     [Tooltip("The filler blocks (random picks between trees). Empty = the built-in list (Twig, Leaf, Wood; Moss and Sap from level 2).")]
     [SerializeField] private List<FillerBlock> fillers = new List<FillerBlock>();
+    // How long the filler run between trees is SHRINKS with the skill level: long at level 1 (trees are a treat), short by fillerLevelSpan.
+    // (Renamed from minFiller / maxFiller so the old saved 3 / 10 don't carry over.)
     [Min(0)]
-    [Tooltip("Filler blocks that always come before the next tree can arrive.")]
-    [SerializeField] private int minFiller = 3;
+    [Tooltip("At level 1: filler blocks that always come before the next tree can arrive.")]
+    [SerializeField] private int minFillerAtLevel1 = 12;
     [Min(1)]
-    [Tooltip("By this many filler blocks a tree is certain (the chance climbs evenly from minFiller to here).")]
-    [SerializeField] private int maxFiller = 10;
+    [Tooltip("At level 1: by this many filler blocks a tree is certain (the chance climbs evenly from the minimum to here).")]
+    [SerializeField] private int maxFillerAtLevel1 = 30;
+    [Min(0)]
+    [Tooltip("At fillerLevelSpan and above: filler blocks that always come before the next tree can arrive.")]
+    [SerializeField] private int minFillerAtTop = 3;
+    [Min(1)]
+    [Tooltip("At fillerLevelSpan and above: by this many filler blocks a tree is certain.")]
+    [SerializeField] private int maxFillerAtTop = 10;
+    [Min(2)]
+    [Tooltip("The skill level where the filler run reaches its shortest (the 'At Top' values). Between level 1 and this it shrinks evenly.")]
+    [SerializeField] private int fillerLevelSpan = 20;
 
     [Header("Species")]
     [Tooltip("The tree species. Empty = the built-in list (Oak).")]
@@ -147,7 +159,8 @@ public class PixelTreeMode : MonoBehaviour
         Instance = this;
         if (species == null || species.Count == 0) species = DefaultSpecies();
         if (fillers == null || fillers.Count == 0) fillers = DefaultFillers();
-        if (maxFiller < minFiller + 1) maxFiller = minFiller + 1;
+        if (maxFillerAtLevel1 < minFillerAtLevel1 + 1) maxFillerAtLevel1 = minFillerAtLevel1 + 1;
+        if (maxFillerAtTop < minFillerAtTop + 1) maxFillerAtTop = minFillerAtTop + 1;
     }
 
     private void OnDestroy() { if (Instance == this) Instance = null; }
@@ -225,7 +238,8 @@ public class PixelTreeMode : MonoBehaviour
 
         int level = Mathf.Max(1, PixelSkills.LevelOfId(skillId));
         bool first = false;
-        if (queue.Count == 0 && fillerCount >= minFiller && UnityEngine.Random.value < StartChance())
+        FillerRange(level, out int minFiller, out int maxFiller);
+        if (queue.Count == 0 && fillerCount >= minFiller && UnityEngine.Random.value < StartChance(minFiller, maxFiller))
             first = StartTree(clicker, level);
 
         if (queue.Count > 0)
@@ -243,7 +257,15 @@ public class PixelTreeMode : MonoBehaviour
         return true;
     }
 
-    private float StartChance()
+    /// <summary>The filler run for this skill level: the level-1 values shrinking evenly to the 'At Top' values by fillerLevelSpan.</summary>
+    private void FillerRange(int level, out int minFiller, out int maxFiller)
+    {
+        float t = Mathf.Clamp01((level - 1) / (float)Mathf.Max(1, fillerLevelSpan - 1));
+        minFiller = Mathf.RoundToInt(Mathf.Lerp(minFillerAtLevel1, minFillerAtTop, t));
+        maxFiller = Mathf.Max(minFiller + 1, Mathf.RoundToInt(Mathf.Lerp(maxFillerAtLevel1, maxFillerAtTop, t)));
+    }
+
+    private float StartChance(int minFiller, int maxFiller)
     {
         int span = Mathf.Max(1, maxFiller - minFiller + 1);
         return Mathf.Clamp01((fillerCount - minFiller + 1) / (float)span);
