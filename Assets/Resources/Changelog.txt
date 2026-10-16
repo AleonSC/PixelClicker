@@ -1186,3 +1186,4 @@
 [2026-10-16 15:01 UTC] Session report: a pack Cubie hands over (the RGB Pack) shows as 'Got (from Cubie)' in the timeline, not 'Bought'.
 [2026-10-16 15:39 UTC] To-do: redesign the shop's Consumables page as category chips + an item tile grid + one buy bar.
 [2026-10-16 15:40 UTC] The 'Next up' window shows from the start again (it had been tied to Block Hold, which now comes from the Standard skill tree); Only With Block Hold brings the old rule back.
+[2026-10-16 15:44 UTC] Session report: new 'Skill training' section per skill trained (time, levels, XP per minute and per block, blocks broken by type) with Woodcutting extras (trees started / felled / infested, Timber XP, hazards, Big Tim trades, Wood Chipper); switching skills no longer counts the other skill's total as gained XP.

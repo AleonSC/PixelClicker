@@ -294,6 +294,8 @@ public class PixelTreeMode : MonoBehaviour
         TreeSpecies s = PickSpecies(level);
         if (s == null) return false;
         bool infested = s.canBeInfested && UnityEngine.Random.value < InfestedChance(level);
+        PixelStats.Count("woodcutting.trees_started");
+        if (infested) PixelStats.Count("woodcutting.trees_infested");
         queue.Clear();
         foreach (TreeSlot slot in s.slots)
             if (slot != null) AddSlot(clicker, slot, level, infested);
@@ -396,6 +398,7 @@ public class PixelTreeMode : MonoBehaviour
         PixelSkills.SkillPack pack = skills != null ? skills.Find(skillId) : null;
         if (pack != null) skills.AddXp(pack, xp);
         PixelStats.Count("woodcutting.trees_felled");
+        PixelStats.Count("woodcutting.timber_xp", xp);
         PixelAudio.Play(timberSound);
         if (showTreeBar) PixelStatusLines.Set(BarKey, "Timber! " + liveName + " felled (+" + xp + " XP)", barColor, timberLineSeconds);
         barShown = false;

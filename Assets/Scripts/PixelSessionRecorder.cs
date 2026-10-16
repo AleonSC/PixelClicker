@@ -99,7 +99,40 @@ public class PixelSessionRecorder : MonoBehaviour
     private readonly Queue<long> lastSeconds = new Queue<long>();
     private long bestWindowClicks, totalBlocks;
     private readonly Dictionary<int, double> totalIncome = new Dictionary<int, double>();
-    private readonly List<string> gifts = new List<string>();   // "mm:ss  Cubie: +80 Gray Pixels" - gifts are kept OUT of the income numbers
+    private readonly List<string> gifts = new List<string>();
+
+    // Skill training: per skill trained this session (not Standard) - time, XP, blocks broken by type, level at the start.
+    private class SkillRun
+    {
+        public float seconds;
+        public double xp;
+        public long blocks;
+        public int levelAtStart = -1;
+        public readonly Dictionary<int, long> byTier = new Dictionary<int, long>();
+    }
+    private readonly Dictionary<string, SkillRun> skillRuns = new Dictionary<string, SkillRun>();
+    private string lastTrainingId;
+    private static readonly string[] WoodKeys =
+        { "woodcutting.trees_started", "woodcutting.trees_felled", "woodcutting.trees_infested", "woodcutting.timber_xp", "hazards.triggered", "hazards.defused", "lumberjack.bought", "old.shredded" };
+
+    private static string TrainingIdNow()
+    {
+        PixelSkills skills = PixelSkills.Instance;
+        if (skills == null || skills.TrainingId == PixelSkills.StandardId) return null;
+        return skills.TrainingId;
+    }
+
+    private SkillRun Run(string id)
+    {
+        if (!skillRuns.TryGetValue(id, out SkillRun r))
+        {
+            r = new SkillRun();
+            PixelSkills skills = PixelSkills.Instance;
+            if (skills != null) r.levelAtStart = skills.LevelOf(skills.Find(id));
+            skillRuns[id] = r;
+        }
+        return r;
+    }   // "mm:ss  Cubie: +80 Gray Pixels" - gifts are kept OUT of the income numbers
 
     /// <summary>
     /// Set by anything that hands the player currency as a GIFT (Cubie's gift pack) around its AddCurrency calls, then back to null: that currency is
@@ -222,7 +255,7 @@ public class PixelSessionRecorder : MonoBehaviour
         elapsed = 0f; secondTimer = 0f; autosaveTimer = 0f;
         cubieSeconds = 0f; tipSeconds = 0f; windowSeconds = 0f;
         startedAt = DateTime.Now;
-        minutes.Clear(); timeline.Clear(); gifts.Clear(); lastSeconds.Clear(); totalIncome.Clear(); statsAtStart.Clear(); skillLevel.Clear();
+        minutes.Clear(); timeline.Clear(); gifts.Clear(); skillRuns.Clear(); lastTrainingId = TrainingIdNow(); lastSeconds.Clear(); totalIncome.Clear(); statsAtStart.Clear(); skillLevel.Clear();
         bestWindowClicks = 0; totalBlocks = 0; blocksThisSecond = 0; cubieVisits = 0;
         shopOpenedOnce = false;
         cubieWasVisiting = PixelGuideVendor.Visiting;
@@ -233,6 +266,7 @@ public class PixelSessionRecorder : MonoBehaviour
         lastAuto = stats != null ? stats.AutoClicks : 0;
         foreach (string k in HuskKeys) statsAtStart[k] = PixelStats.Total(k);
         foreach (string k in HoldKeys) statsAtStart[k] = PixelStats.Total(k);
+        foreach (string k in WoodKeys) statsAtStart[k] = PixelStats.Total(k);
         lastStandardXp = SkillXp(PixelSkills.StandardId);
         lastSkillXp = TrainingXp();
         SnapshotPolledState();
@@ -318,6 +352,13 @@ public class PixelSessionRecorder : MonoBehaviour
         Current.blocks++;
         totalBlocks++;
         blocksThisSecond++;
+        string tid = TrainingIdNow();
+        if (tid != null)
+        {
+            SkillRun r = Run(tid);
+            r.blocks++;
+            r.byTier.TryGetValue(tierIndex, out long n); r.byTier[tierIndex] = n + 1;
+        }
     }
 
     /// <summary>Once a second: clicks, XP and the milestone checks.</summary>
@@ -339,7 +380,11 @@ public class PixelSessionRecorder : MonoBehaviour
         }
         double sx = SkillXp(PixelSkills.StandardId), tx = TrainingXp();
         m.standardXp += Math.Max(0d, sx - lastStandardXp); lastStandardXp = sx;
-        m.skillXp += Math.Max(0d, tx - lastSkillXp); lastSkillXp = tx;
+        string tid = TrainingIdNow();
+        if (tid != lastTrainingId) { lastTrainingId = tid; lastSkillXp = tx; }   // (a different skill is trained now: its XP total is a new baseline, not a gain)
+        double gain = Math.Max(0d, tx - lastSkillXp);
+        m.skillXp += gain; lastSkillXp = tx;
+        if (tid != null) { SkillRun run = Run(tid); run.xp += gain; run.seconds += 1f; }
         blocksThisSecond = 0;
         PollMilestones();
     }
@@ -478,6 +523,8 @@ public class PixelSessionRecorder : MonoBehaviour
         sb.AppendLine("  (A stake is revealed when its block comes round again, so won + lost can be lower than placed.)");
         sb.AppendLine();
 
+        AppendSkillTraining(sb);
+
         sb.AppendLine("== PER MINUTE (CSV) ==");
         sb.AppendLine("minute,manual_clicks,auto_clicks,blocks,standard_xp,skill_xp,income (type=amount; ...)");
         for (int i = 0; i < minutes.Count; i++)
@@ -523,6 +570,45 @@ public class PixelSessionRecorder : MonoBehaviour
     // ------------------------------------------------------------------
     // Helpers
     // ------------------------------------------------------------------
+
+    /// <summary>The skill training section: one block per skill trained this session (Standard has its own lines in the summary).</summary>
+    private void AppendSkillTraining(StringBuilder sb)
+    {
+        if (skillRuns.Count == 0) return;
+        PixelSkills skills = PixelSkills.Instance;
+        sb.AppendLine("== SKILL TRAINING ==");
+        foreach (KeyValuePair<string, SkillRun> kv in skillRuns)
+        {
+            SkillRun r = kv.Value;
+            PixelSkills.SkillPack pack = skills != null ? skills.Find(kv.Key) : null;
+            string name = pack != null ? pack.displayName : kv.Key;
+            int levelNow = skills != null && pack != null ? skills.LevelOf(pack) : -1;
+            double minutes = Math.Max(1d / 60d, r.seconds / 60d);
+            sb.AppendLine(name + ":");
+            sb.AppendLine("  Time trained: " + Clock(r.seconds) + "   Level " + r.levelAtStart + " -> " + levelNow);
+            if (skills != null && pack != null)
+            {
+                skills.LevelOf(pack, out double into2, out double need2);
+                sb.AppendLine("  Into the next level: " + PixelClicker.FormatNumber(into2) + " / " + PixelClicker.FormatNumber(need2) + " XP");
+            }
+            sb.AppendLine("  XP gained: " + PixelClicker.FormatNumber(r.xp) + "  (" + (r.xp / minutes).ToString("F1") + " per minute, " +
+                          (r.blocks > 0 ? (r.xp / r.blocks).ToString("F2") : "0") + " per block broken; includes tree / bonus XP)");
+            sb.AppendLine("  Blocks broken while training: " + r.blocks + "  (" + (r.blocks / minutes).ToString("F1") + " per minute)");
+            var tiers = new List<KeyValuePair<int, long>>(r.byTier);
+            tiers.Sort((a, b) => b.Value.CompareTo(a.Value));
+            foreach (KeyValuePair<int, long> t in tiers)
+                sb.AppendLine("    " + TierName(t.Key) + ": " + t.Value + "  (" + (100d * t.Value / Math.Max(1L, r.blocks)).ToString("F1") + "%)");
+            if (kv.Key == PixelSkills.WoodcuttingId)
+            {
+                double D(string k) { statsAtStart.TryGetValue(k, out double was); return PixelStats.Total(k) - was; }
+                sb.AppendLine("  Trees started: " + D("woodcutting.trees_started").ToString("F0") + ", felled (Timber!): " + D("woodcutting.trees_felled").ToString("F0") +
+                              ", infested: " + D("woodcutting.trees_infested").ToString("F0") + ", Timber XP: " + PixelClicker.FormatNumber(D("woodcutting.timber_xp")));
+                sb.AppendLine("  Hazards set off: " + D("hazards.triggered").ToString("F0") + ", cleared with right click: " + D("hazards.defused").ToString("F0") + "  (all skills)");
+                sb.AppendLine("  Big Tim (Lumberjack) trades: " + D("lumberjack.bought").ToString("F0") + ", husks shredded (Wood Chipper): " + D("old.shredded").ToString("F0"));
+            }
+        }
+        sb.AppendLine();
+    }
 
     private static double SkillXp(string id)
     {
