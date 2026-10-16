@@ -3,7 +3,9 @@
 //   The Lumberjack (id lumberjack, 'Big Tim the Lumberjack'; a cube like Cubie in a red plaid shirt with a big beard, a green beanie
 //   and an axe): BUY / SELL TABS (PixelVisitorMinigame.BuySellTabs). BUY tab = his wares: the WOOD CHIPPER (a placed device, PixelConsumables DeviceKind.WoodChipper, costs wood
 //   and bark), plain POTIONS of the Lumberjack pack's pixels (Wood, Bark, Sap, Leaf, Heartwood, Twig, Acorn, Whetstone, Pesticide) and NOW AND THEN (focusChance 35% a visit) the
-//   LUMBERJACK'S FOCUS item (DeviceKind.FocusPotion, 1-2 in stock). SELL tab (2026-10-16, its own panel - PixelVisitorMinigame.CustomSellPanel): pick ANY woodcutting currency you hold
+//   LUMBERJACK'S FOCUS item (DeviceKind.FocusPotion, 1-2 in stock). PRICES (RollVisitPrice, once per visit): a potion costs some of its own material
+//   (potionMaterialRange 10-30) + ONE random pure pixel (potionPureFraction 30-60% of its normal price); Focus costs focusHiveCost (3) Termite Hives + TWO
+//   different random pure pixels (focusPureRange 100-300 each). Each potion comes 0-2 times (potionStockLow / High) - 0 = not on sale this visit. SELL tab (2026-10-16, its own panel - PixelVisitorMinigame.CustomSellPanel): pick ANY woodcutting currency you hold
 //   (drop-down), the AMOUNT (slider + 10% / 25% / 50% / All), what to be paid in (a pure pixel you have unlocked), then 'Ask for an offer' - he names a RANDOM price; Accept or Decline.
 //   OFFER FORMULA (Offer): fair = amount x UnitValue(wood) / UnitValue(pure)   [UnitValue = 1 / (spawn weight x pay per click / clicks) - the rarer, the more it is worth]
 //     x sellRate (0.8, his cut)  x bulk = 1 - bulkDiscountMax (0.3) x amount / (amount + bulkHalfAmount 400)  [big piles get a worse rate per unit]
@@ -52,13 +54,21 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
     [Tooltip("Chance he brings Lumberjack's Focus on a visit.")]
     [SerializeField] private float focusChance = 0.35f;
 
-    [Min(1)]
-    [Tooltip("Fewest bottles of each potion he has.")]
-    [SerializeField] private int potionStockMin = 2;
-
-    [Min(1)]
-    [Tooltip("Most bottles of each potion he has.")]
-    [SerializeField] private int potionStockMax = 5;
+    [Header("Potions he sells")]
+    [Min(0)]
+    [Tooltip("Fewest bottles of each potion he brings (0 = sometimes that potion doesn't come at all).")]
+    [SerializeField] private int potionStockLow = 0;
+    [Min(0)]
+    [Tooltip("Most bottles of each potion he brings.")]
+    [SerializeField] private int potionStockHigh = 2;
+    [Tooltip("A potion's price in its own material (e.g. Wood for a Wood potion): random between min and max.")]
+    [SerializeField] private Vector2 potionMaterialRange = new Vector2(10f, 30f);
+    [Tooltip("A potion's price in one random pure pixel: this fraction (min, max) of the potion's normal shop price.")]
+    [SerializeField] private Vector2 potionPureFraction = new Vector2(0.3f, 0.6f);
+    [Tooltip("Lumberjack's Focus: how many Termite Hives it costs.")]
+    [SerializeField] private int focusHiveCost = 3;
+    [Tooltip("Lumberjack's Focus: the amount (min, max) of EACH of its two random pure pixels.")]
+    [SerializeField] private Vector2 focusPureRange = new Vector2(100f, 300f);
 
     [Min(1)]
     [Tooltip("Most Wood Chippers he has this visit.")]
@@ -68,8 +78,8 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
     public override string DisplayName => "Lumberjack";
 
     protected override bool BuySellTabs => true;
-    protected override int StockMin => potionStockMin;
-    protected override int StockMax => Mathf.Max(potionStockMax, chipperStockMax);
+    protected override int StockMin => 0;
+    protected override int StockMax => Mathf.Max(1, Mathf.Max(potionStockHigh, chipperStockMax));
 
     /// <summary>The Lumberjack pack's pixels (the ones he deals in).</summary>
     private static bool IsPackPixel(PixelClicker.PixelType t) =>
@@ -100,7 +110,39 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
     {
         if (consumables != null && consumables.IsDevice(item) && consumables.DeviceKindOf(item) == PixelConsumables.DeviceKind.FocusPotion) return Random.Range(1, 3);
         if (consumables != null && consumables.IsDevice(item)) return Random.Range(1, Mathf.Max(1, chipperStockMax) + 1);
-        return Random.Range(Mathf.Max(1, potionStockMin), Mathf.Max(potionStockMin, potionStockMax) + 1);
+        return Random.Range(Mathf.Max(0, potionStockLow), Mathf.Max(potionStockLow, potionStockHigh) + 1);   // 0 = that potion stays home this visit
+    }
+
+    /// <summary>His prices this visit: a potion costs some of its own material + a random pure pixel; Lumberjack's Focus costs Termite Hives + two random pure pixels.</summary>
+    protected override PixelShop.PackCost[] RollVisitPrice(int item)
+    {
+        if (consumables == null || clicker == null) return null;
+        List<PixelClicker.PixelType> pure = new List<PixelClicker.PixelType>();
+        foreach (PixelClicker.PixelTier t in clicker.Tiers) if (IsPure(t.type) && t.unlocked) pure.Add(t.type);
+        if (pure.Count == 0) return null;
+        if (consumables.IsDevice(item))
+        {
+            if (consumables.DeviceKindOf(item) != PixelConsumables.DeviceKind.FocusPotion) return null;   // (the Wood Chipper keeps its normal price)
+            List<PixelShop.PackCost> focus = new List<PixelShop.PackCost> { new PixelShop.PackCost { type = PixelClicker.PixelType.HornetNest, amount = Mathf.Max(1, focusHiveCost) } };
+            for (int n = 0; n < 2 && pure.Count > 0; n++)
+            {
+                int k = Random.Range(0, pure.Count);
+                focus.Add(new PixelShop.PackCost { type = pure[k], amount = Mathf.Round(Random.Range(Mathf.Min(focusPureRange.x, focusPureRange.y), Mathf.Max(focusPureRange.x, focusPureRange.y))) });
+                pure.RemoveAt(k);   // two DIFFERENT pure pixels
+            }
+            return focus.ToArray();
+        }
+        // A plain potion: its own material + one random pure pixel at a share of its normal price.
+        double normal = 0d;
+        PixelShop.PackCost[] baseCosts = consumables.ItemCosts(item);
+        if (baseCosts != null) foreach (PixelShop.PackCost c in baseCosts) if (c != null) normal += c.amount;
+        double pureAmount = System.Math.Max(1d, System.Math.Round(normal * Random.Range(Mathf.Min(potionPureFraction.x, potionPureFraction.y), Mathf.Max(potionPureFraction.x, potionPureFraction.y))));
+        float material = Mathf.Round(Random.Range(Mathf.Min(potionMaterialRange.x, potionMaterialRange.y), Mathf.Max(potionMaterialRange.x, potionMaterialRange.y)));
+        return new[]
+        {
+            new PixelShop.PackCost { type = consumables.ItemRequiredType(item), amount = Mathf.Max(1f, material) },
+            new PixelShop.PackCost { type = pure[Random.Range(0, pure.Count)], amount = pureAmount },
+        };
     }
     protected override string DefaultName => "Big Tim the Lumberjack";
     protected override string DefaultGreeting => "Timber! A fellow chopper! I sell wood chippers and potions, and I'll buy any wood you've got - tell me how much and I'll name a fair-ish price.";

@@ -295,6 +295,9 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     private bool asideDone;
     /// <summary>A ware shown glowing yellow in the list (something important).</summary>
     protected virtual bool Highlighted(int item) => false;
+    /// <summary>A visitor's OWN price for a ware this visit (rolled once when it arrives, e.g. the Lumberjack's potions cost their material + a random pure pixel). Null = the item's normal costs. The visit discount still applies.</summary>
+    protected virtual PixelShop.PackCost[] RollVisitPrice(int item) => null;
+    private readonly Dictionary<int, PixelShop.PackCost[]> visitPrice = new Dictionary<int, PixelShop.PackCost[]>();
     protected virtual int StockFor(int item) => Random.Range(Mathf.Max(1, StockMin), Mathf.Max(StockMin, StockMax) + 1);
 
     private readonly Dictionary<int, int> stock = new Dictionary<int, int>(); // ware -> how many are left this visit (only when the stock is limited)
@@ -624,7 +627,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
 
     private PixelShop.PackCost[] PriceOf(int item)
     {
-        PixelShop.PackCost[] baseCosts = consumables.ItemCosts(item);
+        PixelShop.PackCost[] baseCosts = visitPrice.TryGetValue(item, out PixelShop.PackCost[] own) ? own : consumables.ItemCosts(item);
         if (baseCosts == null) return new PixelShop.PackCost[0];
         List<PixelShop.PackCost> list = new List<PixelShop.PackCost>();
         foreach (PixelShop.PackCost c in baseCosts)
@@ -870,6 +873,10 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         if (!tradeMode) ModifyWares(wares);
         if (!tradeMode && StockMax > 0)
             foreach (int w in wares) stock[w] = StockFor(w);
+        if (!tradeMode && StockMax > 0) wares.RemoveAll(w => stock.TryGetValue(w, out int n) && n <= 0);   // a stock of 0 = he didn't bring that one this time
+        visitPrice.Clear();
+        if (!tradeMode)
+            foreach (int w in wares) { PixelShop.PackCost[] own = RollVisitPrice(w); if (own != null) visitPrice[w] = own; }
 
         // The rows: (item, trade). A buy / sell vendor lists the wares first, then the trades; the tabs show one group at a time.
         List<KeyValuePair<int, Trade>> entries = new List<KeyValuePair<int, Trade>>();

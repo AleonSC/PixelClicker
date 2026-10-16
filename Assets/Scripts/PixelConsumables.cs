@@ -912,8 +912,7 @@ public class PixelConsumables : MonoBehaviour
             requiredType = PixelClicker.PixelType.Wood,
             costs = new[]
             {
-                new PixelShop.PackCost { type = PixelClicker.PixelType.Wood, amount = 60 },
-                new PixelShop.PackCost { type = PixelClicker.PixelType.Sap,  amount = 15 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.HornetNest, amount = 3 },   // (the Lumberjack adds two random pure pixels each visit)
             },
             maxHeld = 5,
             vendorOnly = true,
