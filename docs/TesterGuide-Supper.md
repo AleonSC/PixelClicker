@@ -63,8 +63,6 @@ Thanks again - watching you play last time helped more than anything else.
 
 - **Test the build yourself first:** the code split and the Pixel Systems change (Pixel Clicker > Add Missing Systems To Scene, then
   Move Systems Off The Clicker, save the scene) are untested, and so is the new filler timing.
-- **Tree mode is behind a hidden test pack.** "Oak Trees (test)" isn't sold in the shop and the Dev Tools are off in normal builds.
-  Either unlock it in the save you give Supper, or ask me to make tree mode part of the Lumberjack's Pack so it's on for everyone.
 - **Tester features** (conveyor belts, splitter, elevator, vacuum cleaner, container hose...) live in the Dev Hub, so Supper won't see
   them unless you turn the Dev Tools on for his build.
 - The F8 key is the default; if you rebound it, update the line above.

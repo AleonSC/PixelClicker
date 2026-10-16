@@ -293,3 +293,5 @@ Wood goods today only sell to the Lumberjack. Proposed sinks, to decide later: M
 - Pesticide Sprayer: its cost, range and how many husks per Hive.
 - XP per hit vs XP per block.
 - Should the auto clicker be able to fell whole trees, or stop at the core so heartwood is always hand-chopped?
+
+**Tree mode is the normal Woodcutting (2026-10-16):** `PixelTreeMode.requireTestPack` (off) - trees play whenever Woodcutting is in play, no hidden pack needed.

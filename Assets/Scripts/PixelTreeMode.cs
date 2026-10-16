@@ -1,8 +1,8 @@
 // ---- System notes ----
 // PixelTreeMode.cs
 //   TREE MODE (step 1 of docs/systems/WoodcuttingProgression.md; tested in Unity 2026-10-16 - it plays well, timings / numbers still being tuned; component added by PixelClicker.Awake, PixelTreeMode.Instance). While the skill
-//   named in skillId (woodcutting) is in play AND a shop pack with unlocksTreeMode is owned (the hidden 'Oak Trees (test)' pack: unlock it with the
-//   Dev Tools 'Shop unlocks' widget), the cube stops rolling the pack's blocks by weight and alternates between:
+//   named in skillId (woodcutting) is in play (since 2026-10-16 always - it is how Woodcutting plays; requireTestPack on = only while the hidden
+//   'Oak Trees (test)' pack with unlocksTreeMode is owned, the old test switch), the cube stops rolling the pack's blocks by weight and alternates between:
 //     - the FILLER rotation: random picks from 'fillers' (Twig, Leaf, Wood; Moss and Sap from level 2). At least a minimum of them, then a
 //       growing chance per block until a tree is certain at a maximum. The run SHRINKS with the level: 12-30 at level 1 (minFillerAtLevel1 /
 //       maxFillerAtLevel1) down to 3-10 at fillerLevelSpan (20) and above (minFillerAtTop / maxFillerAtTop), so trees are a treat early on;
@@ -84,6 +84,8 @@ public class PixelTreeMode : MonoBehaviour
     [Header("Tree mode")]
     [Tooltip("Turns tree mode off completely (the skill rolls its blocks by weight as before, even with the test pack owned).")]
     [SerializeField] private bool disableTreeMode = false;
+    [Tooltip("Tree mode only runs while the hidden 'Oak Trees (test)' shop pack is owned (the old test switch). Off = trees are simply how Woodcutting plays.")]
+    [SerializeField] private bool requireTestPack = false;
     [Tooltip("The skill that uses tree mode (its id).")]
     [SerializeField] private string skillId = PixelSkills.WoodcuttingId;
 
@@ -221,6 +223,7 @@ public class PixelTreeMode : MonoBehaviour
         if (disableTreeMode || clicker == null) return false;
         PixelSkills skills = PixelSkills.Instance;
         if (skills == null || skills.ActiveId != skillId) return false;
+        if (!requireTestPack) return true;   // (2026-10-16: tree mode is part of the Lumberjack's Pack - Woodcutting always plays with trees)
         if (shop == null) shop = PixelFind.First<PixelShop>();
         return shop != null && shop.TreeModeOwned();
     }
