@@ -1167,3 +1167,5 @@
 [2026-10-16 13:29 UTC] Recycler streak: a husk of a different colour now halves the streak instead of ending it (Streak Keep On Switch), since full resets made streaks impossible once Gray was in the mix.
 [2026-10-16 13:29 UTC] To-do: edge-click husk aiming marked done.
 [2026-10-16 13:36 UTC] Main menu launch intro: the black screen folds down into the menu bar, then the logo drops in and the buttons pop in one after another (any key or click skips it).
+[2026-10-16 13:52 UTC] Main menu: the cube changes to a random pixel type every second; on Play it pops off like a husk that shrinks away and your own block appears before the camera intro.
+[2026-10-16 13:52 UTC] Editor menu 'Move Systems Off The Clicker' now finds hand-set system components anywhere in the scene, asks first, and moves them into Pixel Systems with their values (replacing an untouched default copy).

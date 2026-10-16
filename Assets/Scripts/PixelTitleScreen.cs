@@ -430,6 +430,7 @@ public partial class PixelTitleScreen : MonoBehaviour
         if (!Showing || canvas == null) return;
         UpdateBarGlow();
         if (PixelSaveGame.AutoStartNewGame && !playing && playButton != null) { OnPlay(); return; }
+        UpdateCubeShow();   // the menu cube changes to a random pixel type every second (PixelTitleCubeShow.cs)
         if (playButton != null)
         {
             if (Time.unscaledTime >= nextSaveCheck)
@@ -1090,6 +1091,7 @@ public partial class PixelTitleScreen : MonoBehaviour
         }
         PixelSaveGame.AutoStartNewGame = false;
         PlayedOnce = true;
+        EndCubeShow();   // (after the save is loaded: the menu cube pops off as a husk, the player's block appears)
         playing = true;
         PixelTitleWanderers wander = GetComponent<PixelTitleWanderers>();
         if (wander != null) wander.FadeOut();   // the wandering vendors vanish at once
