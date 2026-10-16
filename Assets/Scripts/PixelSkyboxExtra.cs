@@ -376,7 +376,58 @@ public partial class PixelSkybox
 
         // A SHARK circling far below - only in the bottom of the sky (straight down, never on the sides): a dark, hazy silhouette.
         if (up < -0.5f) c = Color.Lerp(c, s.groundColor * 0.35f, SharkShade(dir, t) * 0.6f * Sstep(0.5f, 0.72f, -up));
+
+        // Deep Ocean only: a bioluminescent jellyfish drifting out in the dark that lights up every few seconds.
+        if (s.name == "Deep Ocean") c += JellyGlow(dir, t);
         return c;
+    }
+
+    /// <summary>
+    /// The Deep Ocean's glowing jellyfish: it drifts slowly round the view a little below the horizon. Every jellyPeriod seconds it LIGHTS UP - the bell's rim
+    /// brightens first, then pulses of light run down its wavy tentacles - and fades back to a barely visible dark shape. Returns the light to add.
+    /// </summary>
+    private static Color JellyGlow(Vector3 dir, float t)
+    {
+        const float period = 7f;
+        float az = Mathf.Atan2(dir.x, dir.z), el = Mathf.Asin(Mathf.Clamp(dir.y, -1f, 1f));
+        float az0 = t * 0.03f + 1.2f, el0 = -0.22f + 0.05f * Mathf.Sin(t * 0.21f);   // slow drift, gentle bob
+        float dAz = Mathf.DeltaAngle(az0 * Mathf.Rad2Deg, az * Mathf.Rad2Deg) * Mathf.Deg2Rad;
+        float x = dAz * Mathf.Cos(el0), y = el - el0;                                 // local frame: x across, y up (radians)
+        if (Mathf.Abs(x) > 0.35f || y > 0.25f || y < -0.6f) return Color.clear;
+
+        // the flash: a quick rise, a slow fade, then dark until the next one
+        float phase = Mathf.Repeat(t, period);
+        float lit = phase < 0.4f ? phase / 0.4f : Mathf.Exp(-(phase - 0.4f) * 1.1f);
+        Color glow = new Color(0.25f, 1f, 0.85f);
+        Color pink = new Color(0.85f, 0.4f, 1f);
+        float lightOut = 0f, pinkOut = 0f;
+
+        // bell: a dome (upper half-ellipse) with a bright rim and a soft inner glow
+        const float bw = 0.12f, bh = 0.09f;
+        float bx = x / bw, by = y / bh;
+        float bellR = Mathf.Sqrt(bx * bx + by * by);
+        if (by > -0.15f)
+        {
+            float rim = Mathf.Exp(-Mathf.Pow((bellR - 0.92f) / 0.12f, 2f));
+            float inner = bellR < 1f ? 0.35f * (1f - bellR) : 0f;
+            lightOut += (rim * 0.9f + inner) * (0.08f + lit);
+        }
+        // tentacles: four wavy lines hanging down, with pulses of light running down them after the flash
+        for (int i = 0; i < 4; i++)
+        {
+            float tx = (i - 1.5f) * 0.05f;
+            float depth = -y;                                                        // 0 at the bell's base, more going down
+            if (depth < 0f || depth > 0.5f) continue;
+            float wave = Mathf.Sin(depth * 18f - t * 2.4f + i * 1.7f) * 0.025f * (0.3f + depth * 2f);
+            float dx = x - tx - wave;
+            float line = Mathf.Exp(-dx * dx / 0.00018f) * (1f - depth / 0.5f);
+            float pulse = Mathf.Exp(-Mathf.Pow((depth - (phase - 0.3f) * 0.22f) / 0.05f, 2f));   // light running down
+            lightOut += line * (0.05f + lit * 0.35f + pulse * 0.9f * Mathf.Clamp01(lit * 3f));
+            pinkOut += line * pulse * 0.4f * Mathf.Clamp01(lit * 3f);
+        }
+        // a faint halo round it while it is lit
+        float halo = Mathf.Exp(-(x * x + (y + 0.08f) * (y + 0.08f)) / 0.02f) * lit * 0.18f;
+        return glow * (lightOut + halo) + pink * pinkOut;
     }
 
     /// <summary>
