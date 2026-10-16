@@ -70,7 +70,7 @@ A species is an ordered **slot list**. A slot is one of:
 | **Pine** | 4 | `Leaf, Pinecone, Wood x4-8, Pinecone, Wood x1-2, (Hive)` | Tall: a long log run with cones. |
 | **Birch** | 8 | `Leaf, Bark, Wood x2-3, Bark, (Hive)` | Short and quick: Timber after Timber. |
 | **Maple** | 12 | `Leaf, Wood x2-4, Sap, Sap, Wood x1-3, [Heartwood 25% / Sap], (Hive)` | Sticky and well paid. |
-| **Great Oak** | 3, rare | `Leaf, Leaf, Wood x6-10, Bark, Wood x2-4, Heartwood` | Long, guaranteed heartwood core, never infested; its blocks stall the Block Hold meter. 1% when a tree arrives, up to 25% with acorns lying on the floor. |
+| **Great Oak** (BUILT 2026-10-16 as `Leaf, Leaf, Wood x2-4, GREAT OAK block, Heartwood`) | 3, rare | `Leaf, Leaf, Wood x6-10, Bark, Wood x2-4, Heartwood` | Long, guaranteed heartwood core, never infested; its blocks stall the Block Hold meter. 1% when a tree arrives, up to 25% with acorns lying on the floor. |
 
 ### Infested trees
 

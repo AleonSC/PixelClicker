@@ -1213,3 +1213,4 @@
 [2026-10-16 16:48 UTC] Pocket tab buttons (Event log...) and the in-game event log switch keep their text on one line, shrinking it to fit a narrow window.
 [2026-10-16 16:53 UTC] Right-clicking / holding right on the clicker cube no longer removes a placed device behind or under it (the cube in front wins).
 [2026-10-16 16:53 UTC] The Recycler's placing ghost now shows its real size with the Bin Size upgrades.
+[2026-10-16 16:56 UTC] The Great Oak is back in Woodcutting as a rare tree species (from level 3, never infested): leaves, a short trunk, then the giant Great Oak block with its bird nests and a heartwood core; its chance per tree is 1%, rising to 25% with 12 acorn husks on the field (acorns come from oak trees from level 3).

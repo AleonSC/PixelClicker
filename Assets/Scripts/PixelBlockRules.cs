@@ -177,6 +177,22 @@ public class PixelBlockRules : MonoBehaviour
         return pick;
     }
 
+    /// <summary>The special rule whose block is this type (null if none).</summary>
+    public static SpecialRule RuleFor(PixelClicker.PixelType type)
+    {
+        PixelBlockRules rules = Instance;
+        if (rules == null || rules.specialRules == null) return null;
+        foreach (SpecialRule r in rules.specialRules) if (r != null && r.tier != null && r.tier.type == type) return r;
+        return null;
+    }
+
+    /// <summary>Makes sure a special block's tier exists (first use) and returns its index, or -1 if the block has no rule. Tree mode uses it for the Great Oak species.</summary>
+    public static int EnsureSpecialBlock(PixelClicker clicker, PixelClicker.PixelType type)
+    {
+        SpecialRule r = RuleFor(type);
+        return r != null && clicker != null ? clicker.EnsureSpecialTier(r.tier) : -1;
+    }
+
     /// <summary>The rule's chance right now: its base chance, raised towards maxChance by the old pixels of the boost block lying on the field.</summary>
     public static float EffectiveChance(PixelClicker clicker, SpecialRule r)
     {

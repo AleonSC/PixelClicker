@@ -14,7 +14,10 @@
 //   block, and RollTier reports each change of the live block (OnLiveChanged): the tree bar counts the live blocks, and 'Timber!' fires when the last
 //   block leaves the cube (bonus XP = timberXpShare of the tree's blocks, a status line, timberSound, stat woodcutting.trees_felled).
 //   The tree bar is a PixelStatusLines line (key 'tree'): 'Oak  3 / 9', plus '- Termite Hive at the end - Pesticide: n' on an infested tree (the infested colour says it is infested).
-//   Not saved: a reload starts in the filler rotation. Not built yet (see the design doc): other species, the Great Oak as a species, the infested
+//   GREAT OAK (2026-10-16): a RARE species (TreeSpecies.rareFromRule = "GreatOak", from level 3, never infested): Leaf, Leaf, Wood x2-4, the GREAT OAK block
+//   (one giant 50-100 click block with bird nests), Heartwood. Rolled before the normal species with the Great Oak special rule's chance (PixelBlockRules.EffectiveChance:
+//   1%, up to 25% with 12 ACORN husks on the field) - acorns come from the Oak's Optional slot (50%, from level 3). Nothing new in the filler rotation.
+//   Not saved: a reload starts in the filler rotation. Not built yet (see the design doc): other species, the infested
 //   look and sound, lookahead past one block, Pesticide charges, Shuffle switched off inside a tree. A block pulled out with Block Hold loses its
 //   tree tag (pulling the tree's last block fires Timber early).
 // ---------------------------------------------------
@@ -67,6 +70,8 @@ public class PixelTreeMode : MonoBehaviour
         public float weight = 1f;
         [Tooltip("Can this species be infested (its Hazard slot filled)?")]
         public bool canBeInfested = true;
+        [Tooltip("A RARE species: its chance per tree is the special-block rule of this block (PixelBlockRules, e.g. GreatOak = 1%, up to 25% with Acorn husks lying on the field) instead of 'weight'. It is rolled before the normal species. Empty = a normal species.")]
+        public string rareFromRule = "";
         [Tooltip("The tree's blocks, in order.")]
         public List<TreeSlot> slots = new List<TreeSlot>();
     }
@@ -109,6 +114,8 @@ public class PixelTreeMode : MonoBehaviour
     [Min(2)]
     [Tooltip("The skill level where the filler run reaches its shortest (the 'At Top' values). Between level 1 and this it shrinks evenly.")]
     [SerializeField] private int fillerLevelSpan = 20;
+
+    [HideInInspector, SerializeField] private int speciesVersion = 0;   // fix-ups for the saved species list (1 = Great Oak species added)
 
     [Header("Species")]
     [Tooltip("The tree species. Empty = the built-in list (Oak).")]
@@ -160,6 +167,12 @@ public class PixelTreeMode : MonoBehaviour
     {
         Instance = this;
         if (species == null || species.Count == 0) species = DefaultSpecies();
+        if (speciesVersion < 1)
+        {
+            // 2026-10-16: the Great Oak became a rare SPECIES (it never showed in tree mode as a replacement block).
+            if (!species.Exists(s => s != null && s.rareFromRule == "GreatOak")) species.Add(DefaultSpecies().Find(s => s.rareFromRule == "GreatOak"));
+            speciesVersion = 1;
+        }
         if (fillers == null || fillers.Count == 0) fillers = DefaultFillers();
         if (maxFillerAtLevel1 < minFillerAtLevel1 + 1) maxFillerAtLevel1 = minFillerAtLevel1 + 1;
         if (maxFillerAtTop < minFillerAtTop + 1) maxFillerAtTop = minFillerAtTop + 1;
@@ -188,6 +201,20 @@ public class PixelTreeMode : MonoBehaviour
                 new TreeSlot { kind = SlotKind.Optional, block = "Acorn", chance = 0.5f, fromLevel = 3 },
                 new TreeSlot { kind = SlotKind.Wildcard, block = "Heartwood", altBlock = "Wood", chance = 0.2f, fromLevel = 6 },
                 new TreeSlot { kind = SlotKind.Hazard, block = "HornetNest" },
+            },
+        },
+        // Great Oak (rare, from level 3): a short canopy and trunk, then THE GREAT OAK - one giant block (50-100 clicks, shakes bird nests loose, stalls Block Hold) -
+        // and a heartwood core. Never infested. Its chance per tree is the Great Oak special rule: 1%, up to 25% with 12 Acorn husks on the field (acorns drop from oaks).
+        new TreeSpecies
+        {
+            displayName = "Great Oak", unlockLevel = 3, weight = 0f, canBeInfested = false, rareFromRule = "GreatOak",
+            slots = new List<TreeSlot>
+            {
+                new TreeSlot { kind = SlotKind.Fixed, block = "Leaf" },
+                new TreeSlot { kind = SlotKind.Fixed, block = "Leaf" },
+                new TreeSlot { kind = SlotKind.Run, block = "Wood", minCount = 2, maxCount = 4 },
+                new TreeSlot { kind = SlotKind.Fixed, block = "GreatOak" },
+                new TreeSlot { kind = SlotKind.Fixed, block = "Heartwood", altBlock = "Wood" },
             },
         },
     };
@@ -308,13 +335,22 @@ public class PixelTreeMode : MonoBehaviour
 
     private TreeSpecies PickSpecies(int level)
     {
+        // Rare species first (the Great Oak): each rolls its own chance (acorn husks on the field raise it).
+        PixelClicker c = PixelFind.Cached<PixelClicker>();
+        foreach (TreeSpecies s in species)
+        {
+            if (s == null || s.unlockLevel > level || string.IsNullOrEmpty(s.rareFromRule)) continue;
+            if (!Enum.TryParse(s.rareFromRule, out PixelClicker.PixelType rareType)) continue;
+            PixelBlockRules.SpecialRule rule = PixelBlockRules.RuleFor(rareType);
+            if (rule != null && UnityEngine.Random.value < PixelBlockRules.EffectiveChance(c, rule)) return s;
+        }
         float total = 0f;
-        foreach (TreeSpecies s in species) if (s != null && s.unlockLevel <= level) total += Mathf.Max(0f, s.weight);
+        foreach (TreeSpecies s in species) if (s != null && s.unlockLevel <= level && string.IsNullOrEmpty(s.rareFromRule)) total += Mathf.Max(0f, s.weight);
         if (total <= 0f) return null;
         float roll = UnityEngine.Random.value * total;
         foreach (TreeSpecies s in species)
         {
-            if (s == null || s.unlockLevel > level) continue;
+            if (s == null || s.unlockLevel > level || !string.IsNullOrEmpty(s.rareFromRule)) continue;
             roll -= Mathf.Max(0f, s.weight);
             if (roll <= 0f) return s;
         }
@@ -369,6 +405,7 @@ public class PixelTreeMode : MonoBehaviour
     {
         if (string.IsNullOrEmpty(block) || !Enum.TryParse(block, out PixelClicker.PixelType type)) return -1;
         int i = clicker.IndexOf(type);
+        if (i < 0) i = PixelBlockRules.EnsureSpecialBlock(clicker, type);   // a special block (Great Oak) is made on first use
         if (i < 0 || !clicker.Tiers[i].CanSpawn || PixelSkills.LeftOutOfSpawns(type)) return -1;
         if (PixelClicker.IsHazard(type) && PixelFocus.HoldsOffHazardsNow()) return -1;
         return i;
