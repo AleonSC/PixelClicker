@@ -375,8 +375,8 @@ public partial class PixelSkills : MonoBehaviour
             packs.Add(new SkillPack
             {
                 id = OfflineId, displayName = "Offline Progression", accent = new Color(0.62f, 0.45f, 0.9f),
-                description = "Pick this skill, then pick which pack's pixels you play with. Every click trains Offline Progression, which will improve what you earn while you are away. The pack you assign still earns 50% of its normal XP. With no skill pack assigned (Standard), Offline Progression earns +50% XP.",
-                replaces = "Nothing: you choose the pixel pack", spawns = "Whatever the chosen pack spawns", xpFrom = "Every click (the assigned pack earns 50%; +50% for itself with no pack assigned)",
+                description = "A PASSIVE skill: it never trains while you play. While the game is closed your Auto Clicker keeps working (offline progress), and every one of those offline clicks gives Offline Progression XP, shown in the Welcome back window. Its levels will make your time away pay more.",
+                replaces = "Nothing (passive)", spawns = "Nothing (passive)", xpFrom = "Offline progress only: each offline Auto Clicker click while the game is closed",
                 unlockHint = "Buy the Auto Clicker in the Shop",
                 baseXp = 150f, xpGrowth = 1.6f,
                 perks = new[]
@@ -524,6 +524,8 @@ public partial class PixelSkills : MonoBehaviour
             if (pack.replaces != null) pack.replaces = pack.replaces.Replace("Monochrome, RGB, Glass, Luminescent", "Monochrome, RGB");
             if (pack.id == OfflineId)
             {
+                if (pack.description != null && pack.description.StartsWith("Pick this skill"))   // (2026-10-16: offline XP only comes from offline progress)
+                { pack.description = "A PASSIVE skill: it never trains while you play. While the game is closed your Auto Clicker keeps working (offline progress), and every one of those offline clicks gives Offline Progression XP, shown in the Welcome back window. Its levels will make your time away pay more."; pack.replaces = "Nothing (passive)"; pack.spawns = "Nothing (passive)"; pack.xpFrom = "Offline progress only: each offline Auto Clicker click while the game is closed"; }
                 if (pack.description != null && pack.description.Contains("You earn no XP for that pack"))
                     pack.description = "Pick this skill, then pick which pack's pixels you play with. Every click trains Offline Progression, which will improve what you earn while you are away. The pack you assign still earns 50% of its normal XP. With no skill pack assigned (Standard), Offline Progression earns +50% XP.";
                 if (pack.xpFrom == "Every click, whichever pack is in play")
@@ -1005,15 +1007,23 @@ public partial class PixelSkills : MonoBehaviour
     private const string OfflinePref = "PixelClicker.Setting.SkillOffline";
     private static int offlineCache = -1;
 
-    /// <summary>The player chose Offline Progression as the skill to train (saved per save file). The pixel pack in play is still <see cref="ActiveId"/>.</summary>
+    /// <summary>
+    /// Offline Progression used to be trainable by clicking; since 2026-10-16 it is PASSIVE (XP only from offline progress, AddOfflineXp), so it is never
+    /// the skill in training. Kept as a property (always false) so the old checks read naturally; an old save's 'offline chosen' switch is ignored.
+    /// </summary>
     public static bool OfflineMode
     {
-        get
-        {
-            if (offlineCache < 0) offlineCache = PixelPrefs.GetInt(OfflinePref, 0) != 0 ? 1 : 0;
-            return offlineCache != 0;
-        }
-        private set { offlineCache = value ? 1 : 0; PixelPrefs.SetInt(OfflinePref, offlineCache); }
+        get => false;
+        private set { offlineCache = 0; PixelPrefs.SetInt(OfflinePref, 0); }
+    }
+
+    /// <summary>Offline progress paid out: 'xp' goes to Offline Progression (once it is available - the Auto Clicker runs). Returns the XP given.</summary>
+    public double AddOfflineXp(double xp)
+    {
+        SkillPack offline = Find(OfflineId);
+        if (disableSkills || xp <= 0d || offline == null || !IsAvailable(offline)) return 0d;
+        AddXp(offline, xp, false);
+        return xp;
     }
 
     /// <summary>A save file with its own settings was loaded: read the switch again.</summary>
@@ -1028,7 +1038,7 @@ public partial class PixelSkills : MonoBehaviour
         SkillPack pack = Find(id);
         if (pack == null || !IsAvailable(pack)) return;
         bool changed = false;
-        if (id == OfflineId) { if (!OfflineMode) { OfflineMode = true; changed = true; } }
+        if (id == OfflineId) return;   // (passive: it is never chosen to train)
         else
         {
             if (OfflineMode) { OfflineMode = false; changed = true; }
@@ -1159,17 +1169,7 @@ public partial class PixelSkills : MonoBehaviour
         SkillPack standard = Find(StandardId);
         if (standard != null) AddXpFlat(standard, StandardXpPerBlock, TrainingId == StandardId);
 
-        // Offline Progression: every click trains it; the pack assigned to it (the pixels in play) still earns half of its normal XP,
-        // and with no skill pack in play Offline Progression itself earns 50% more.
-        SkillPack offline = Find(OfflineId);
-        if (OfflineMode && IsAvailable(offline))
-        {
-            double rate = automatic ? autoXpFactor : 1d;
-            SkillPack assigned = PackForTier(tierIndex);
-            if (assigned != null && assigned.id == ActiveId) AddXp(assigned, rate * offlineAssignedShare);
-            AddXp(offline, rate * (ActiveId == StandardId ? 1d + offlineNoSkillBonus : 1d));
-            return;
-        }
+        // (Offline Progression earns nothing from clicks: its XP only comes from offline progress - AddOfflineXp, called by PixelOfflineProgress.Grant.)
         SkillPack pack = PackForTier(tierIndex);
         if (pack == null || pack.id != ActiveId) return;
         AddXp(pack, automatic ? autoXpFactor : 1d);

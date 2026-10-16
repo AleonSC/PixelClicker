@@ -8,3 +8,6 @@ Moved from CLAUDE.md. The script header comments and `CLAUDE.md` index point her
 
 
 **Perk guests (Woodcutting level 5):** `Perk.guestType` works like `TreeNode.guestType`: from that level the block is listed in the Toggles window (`UnlockedGuests` / `GuestUnlocked` also read perks) and can be switched on to spawn in every rotation (off until the player ticks it). Woodcutting level 5 = Wood ("Lumber stock"), added to saved packs by the Woodcutting perk migration.
+
+
+**Offline Progression is passive (2026-10-16):** it is never the skill in training (OfflineMode is always false, the Train button reads 'Earns while away', no pixel-pack buttons); its only XP is PixelOfflineProgress.Grant's offline clicks x offlineXpPerClick (0.25) via PixelSkills.AddOfflineXp, listed in the Welcome back window. An old save's 'offline chosen' switch is ignored.

@@ -29,6 +29,8 @@ public partial class PixelSkills
     [SerializeField] private string windowTitle = "Skills";
     [SerializeField] private string tabText = "Skills";
     [SerializeField] private string trainText = "Train";
+    [Tooltip("Train button label on Offline Progression (a passive skill: it only earns XP from offline progress).")]
+    [SerializeField] private string passiveText = "Earns while away";
     [SerializeField] private string trainingText = "Training";
     [SerializeField] private string useStandardText = "Use standard pixels";
     [SerializeField] private string activeBadgeText = "ACTIVE";
@@ -896,7 +898,7 @@ public partial class PixelSkills
         SkillPack p = packs[selected];
         bool available = IsAvailable(p);
         PixelUIKit.SetText(detailName, available ? p.displayName : lockedName);
-        PixelUIKit.SetText(detailInfo, available && p.id == OfflineId ? "<b>Base Pixel Pack:</b>" : "");
+        PixelUIKit.SetText(detailInfo, "");
 
         // The skill tree has its own window; the button only shows for a skill that has one.
         bool hasNodes = available && p.nodes != null && p.nodes.Length > 0;
@@ -912,7 +914,7 @@ public partial class PixelSkills
         {
             if (other.id == OfflineId || !IsAvailable(other)) continue;
             if (slot >= pixelPackButtons.Count) break;
-            bool show = available && p.id == OfflineId && !showTree;
+            bool show = false;   // (Offline Progression is passive now: no pixel pack to pick for it)
             pixelPackButtons[slot].gameObject.SetActive(show);
             if (show)
             {
@@ -972,8 +974,9 @@ public partial class PixelSkills
         }
 
         bool isActiveSel = p.id == TrainingId;
-        trainButton.interactable = available && !isActiveSel;
-        PixelUIKit.SetText(trainLabel, isActiveSel ? trainingText : (p.id == StandardId ? useStandardText : trainText));
+        bool passive = p.id == OfflineId;   // (trains only from offline progress)
+        trainButton.interactable = available && !isActiveSel && !passive;
+        PixelUIKit.SetText(trainLabel, passive ? passiveText : isActiveSel ? trainingText : (p.id == StandardId ? useStandardText : trainText));
         trainButton.gameObject.SetActive(available);
     }
 }

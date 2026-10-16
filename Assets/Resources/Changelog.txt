@@ -1194,3 +1194,4 @@
 [2026-10-16 16:05 UTC] To-do: skill tiers design (gathering -> making -> running the operation) with open questions and a 1.0 pick.
 [2026-10-16 16:07 UTC] Shop fix: prices of packs with two or three costs (Ghost Hunt, Black Hole, Meteor Strike...) are written on one line that shrinks to fit instead of overlapping columns.
 [2026-10-16 16:07 UTC] Shop: the Lumberjack's Pack is listed in the Pixels tab's Skill packs section (first among them), and that section now starts open.
+[2026-10-16 16:10 UTC] Offline Progression is now a passive skill: clicking while you play no longer trains it; its only XP comes from offline progress (0.25 XP per offline Auto Clicker click), shown in the Welcome back window.

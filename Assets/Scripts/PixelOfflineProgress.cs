@@ -6,6 +6,8 @@
 //   clicks-per-tick, split across unlocked tiers by spawn weight, tough pixels needing several clicks - and shows a "Welcome back"
 //   window (held back until the title screen is gone, Update + pendingGains; any later load - another slot - Dismiss()es it).
 //   Settings: max hours, efficiency, minimum away time.
+//   OFFLINE PROGRESSION XP (2026-10-16): the skill is passive - its ONLY XP is offlineXpPerClick (0.25) x the offline clicks worked out here
+//   (PixelSkills.AddOfflineXp), shown as a line in the Welcome back window; clicking while playing gives it nothing.
 // ---------------------------------------------------
 using System;
 using System.Text;
@@ -158,17 +160,22 @@ public class PixelOfflineProgress : MonoBehaviour
         if (!any) return false;
 
         if (stats != null) stats.AddAutoClicks((long)clicks);
+        double offlineXp = PixelSkills.Instance != null ? PixelSkills.Instance.AddOfflineXp(clicks * Math.Max(0f, offlineXpPerClick)) : 0d;   // the ONLY source of Offline Progression XP
         if (showSummary)
         {
             // Not while the title screen is up: the window would sit hidden behind it and pop up later (e.g. when another save is loaded from the title).
             pendingAway = away;
             pendingClicks = clicks;
+            pendingXp = offlineXp;
             pendingGains = gains;
         }
         return true;
     }
 
-    private double pendingAway, pendingClicks;
+    private double pendingAway, pendingClicks, pendingXp;
+
+    [Tooltip("Offline Progression XP for each offline Auto Clicker click (its only source of XP).")]
+    [SerializeField] private float offlineXpPerClick = 0.25f;
     private double[] pendingGains;
 
     private void Update()
@@ -294,6 +301,7 @@ public class PixelOfflineProgress : MonoBehaviour
         float lineHeight = lineFontSize * 1.3f;
         string awayText = string.Format(awayFormat, PixelStats.FormatTime(awaySeconds));
         string clicksText = string.Format(clicksFormat, PixelClicker.FormatNumber(clicks));
+        if (pendingXp >= 1d) clicksText += "\n+" + PixelClicker.FormatNumber(pendingXp) + " Offline Progression XP";
 
         // Measure each wrapped text so nothing overlaps, whatever the text lengths.
         float titleH = Measure(title, titleFontSize, FontStyles.Bold, textWidth);
