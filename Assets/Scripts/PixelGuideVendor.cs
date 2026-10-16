@@ -704,7 +704,9 @@ public class PixelGuideVendor : MonoBehaviour
             int tier = candidates[pick];
             candidates.RemoveAt(pick);
             int amount = Random.Range(giftMin, Mathf.Max(giftMin, giftMax) + 1);
+            PixelSessionRecorder.GiftFrom = characterName + "'s gift";   // (the session report lists it under Gifts, not income)
             clicker.AddCurrency(tier, amount);
+            PixelSessionRecorder.GiftFrom = null;
             if (sb.Length > 0) sb.Append('\n');
             sb.Append("<color=#").Append(ColorUtility.ToHtmlStringRGB(Color.Lerp(clicker.Tiers[tier].UIColor, Color.white, 0.4f))).Append("><b>+")
               .Append(PixelClicker.FormatNumberShort(amount)).Append(' ').Append(clicker.Tiers[tier].displayName).Append("</b></color>");

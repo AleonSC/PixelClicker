@@ -38,7 +38,7 @@ public class PixelSessionRecorder : MonoBehaviour
     public static PixelSessionRecorder Instance { get; private set; }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { Instance = null; }
+    private static void ResetStatics() { Instance = null; GiftFrom = null; }
 
     /// <summary>A session is being recorded right now.</summary>
     public static bool Recording => Instance != null && Instance.recording;
@@ -85,6 +85,13 @@ public class PixelSessionRecorder : MonoBehaviour
     private readonly Queue<long> lastSeconds = new Queue<long>();
     private long bestWindowClicks, totalBlocks;
     private readonly Dictionary<int, double> totalIncome = new Dictionary<int, double>();
+    private readonly List<string> gifts = new List<string>();   // "mm:ss  Cubie: +80 Gray Pixels" - gifts are kept OUT of the income numbers
+
+    /// <summary>
+    /// Set by anything that hands the player currency as a GIFT (Cubie's gift pack) around its AddCurrency calls, then back to null: that currency is
+    /// listed under Gifts in the report and left out of the income (which should only show what the player earned).
+    /// </summary>
+    public static string GiftFrom;
     private readonly Dictionary<string, double> statsAtStart = new Dictionary<string, double>();
     private string startState;
 
@@ -141,7 +148,7 @@ public class PixelSessionRecorder : MonoBehaviour
         elapsed = 0f; secondTimer = 0f; autosaveTimer = 0f;
         cubieSeconds = 0f; tipSeconds = 0f; windowSeconds = 0f;
         startedAt = DateTime.Now;
-        minutes.Clear(); timeline.Clear(); lastSeconds.Clear(); totalIncome.Clear(); statsAtStart.Clear(); skillLevel.Clear();
+        minutes.Clear(); timeline.Clear(); gifts.Clear(); lastSeconds.Clear(); totalIncome.Clear(); statsAtStart.Clear(); skillLevel.Clear();
         bestWindowClicks = 0; totalBlocks = 0; blocksThisSecond = 0; cubieVisits = 0;
         shopOpenedOnce = false;
         cubieWasVisiting = PixelGuideVendor.Visiting;
@@ -223,6 +230,7 @@ public class PixelSessionRecorder : MonoBehaviour
     private void OnGained(int tierIndex, double amount)
     {
         if (!recording || amount <= 0d) return;
+        if (!string.IsNullOrEmpty(GiftFrom)) { gifts.Add(Clock(elapsed) + "  " + GiftFrom + ": +" + PixelClicker.FormatNumber(amount) + " " + TierName(tierIndex)); return; }
         Minute m = Current;
         m.income.TryGetValue(tierIndex, out double a); m.income[tierIndex] = a + amount;
         totalIncome.TryGetValue(tierIndex, out double t); totalIncome[tierIndex] = t + amount;
@@ -363,9 +371,11 @@ public class PixelSessionRecorder : MonoBehaviour
         foreach (Minute m in minutes) { stdXp += m.standardXp; skXp += m.skillXp; }
         sb.AppendLine("Standard XP: " + stdXp.ToString("F0") + "  (" + (stdXp / minutesPlayed).ToString("F1") + " per minute)");
         sb.AppendLine("XP of the skill being trained: " + skXp.ToString("F0") + "  (" + (skXp / minutesPlayed).ToString("F1") + " per minute)");
-        sb.AppendLine("Income by pixel type (total, per minute):");
+        sb.AppendLine("Income by pixel type (total, per minute; gifts not included):");
         foreach (KeyValuePair<int, double> kv in Sorted(totalIncome))
             sb.AppendLine("  " + TierName(kv.Key) + ": " + PixelClicker.FormatNumber(kv.Value) + "  (" + PixelClicker.FormatNumber(kv.Value / minutesPlayed) + " / min)");
+        sb.AppendLine("Gifts (game time, not counted as income):" + (gifts.Count == 0 ? " none" : ""));
+        foreach (string g in gifts) sb.AppendLine("  " + g);
         sb.AppendLine();
 
         sb.AppendLine("== TIMELINE (game time mm:ss) ==");
