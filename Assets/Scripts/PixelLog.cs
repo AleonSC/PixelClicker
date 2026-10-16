@@ -1434,51 +1434,38 @@ public class PixelLog : MonoBehaviour
             break; // only the next one
         }
 
-        // Intro step: once the Shop appears, buying the RGB Pack is the next thing to do (the bar fills as its price is saved up).
+        // Before RGB: earn the Black that brings Cubie's second visit (he unlocks Red, Green and Blue and opens the shop).
         if (goalShop == null) goalShop = PixelFind.First<PixelShop>();
         PixelShop shop = goalShop;
-        if (shop != null && shop.ShopAvailable &&
-            shop.TryGetBuyGoal(PixelClicker.PixelType.Red, out string packName, out string costText, out double have, out double need))
+        int blackLeft = PixelGuideVendor.BlackUntilVisitTwo;
+        int blackIndex = clicker.IndexOf(PixelClicker.PixelType.Black);
+        if (blackLeft > 0 && blackIndex >= 0 && tiers[blackIndex].unlocked)
         {
+            double earned = tiers[blackIndex].totalCollected;
             goals.Add(new Goal
             {
-                title = string.Format(buyRgbGoalFormat, packName),
-                description = string.Format(buyRgbGoalDescription, costText),
-                count = have,
-                goal = need,
+                title = string.Format(nextPixelGoalFormat, "Red, Green and Blue"),
+                description = string.Format(nextPixelGoalDescription, tiers[blackIndex].displayName) + " Cubie will drop by.",
+                count = earned,
+                goal = earned + blackLeft,
                 skinTier = clicker.IndexOf(PixelClicker.PixelType.Red),
                 iconColor = new Color(1f, 0.3f, 0.3f, 1f),
             });
         }
 
-        // Next intro steps: the Combo Meter once the RGB Pack is bought, then the Auto Clicker once the Combo Meter is.
-        if (shop != null && shop.ShopAvailable && clicker.IsUnlocked(PixelClicker.PixelType.Red))
+        // After RGB the shop's first buy is the Auto Clicker (the bar fills as its price is saved up).
+        if (shop != null && shop.ShopAvailable && clicker.IsUnlocked(PixelClicker.PixelType.Red) && !shop.AutoClickerBought() &&
+            shop.TryGetAutoClickerGoal(out string autoName, out string autoCost, out double autoHave, out double autoNeed))
         {
-            if (shop.TryGetComboGoal(out string comboName, out string comboCost, out double comboHave, out double comboNeed))
+            goals.Add(new Goal
             {
-                goals.Add(new Goal
-                {
-                    title = string.Format(buyRgbGoalFormat, comboName),
-                    description = string.Format(buyRgbGoalDescription, comboCost),
-                    count = comboHave,
-                    goal = comboNeed,
-                    skinTier = -1,
-                    iconColor = new Color(1f, 0.8f, 0.25f, 1f),
-                });
-            }
-            else if (shop.ComboMeterBought() &&
-                     shop.TryGetAutoClickerGoal(out string autoName, out string autoCost, out double autoHave, out double autoNeed))
-            {
-                goals.Add(new Goal
-                {
-                    title = string.Format(buyRgbGoalFormat, autoName),
-                    description = string.Format(buyRgbGoalDescription, autoCost),
-                    count = autoHave,
-                    goal = autoNeed,
-                    skinTier = -1,
-                    iconColor = new Color(0.4f, 0.8f, 1f, 1f),
-                });
-            }
+                title = string.Format(buyRgbGoalFormat, autoName),
+                description = string.Format(buyRgbGoalDescription, autoCost),
+                count = autoHave,
+                goal = autoNeed,
+                skinTier = -1,
+                iconColor = new Color(0.4f, 0.8f, 1f, 1f),
+            });
         }
 
         // After the Auto Clicker (and Cubie's Toggles tutorial that hints at skills; with tips off straight away): buy the Lumberjack's Pack, the first skill.

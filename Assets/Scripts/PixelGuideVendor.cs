@@ -6,9 +6,12 @@
 //   smirk; slides in like the visitors, time stops, a paged speech box, Next button or Escape = next page). Visit 1 (new game, after
 //   the intro tips, calmSeconds (1.5) of calm): a shady dealer's pitch - pixels are money 'because that's what we're all told' (a
 //   fiat-currency joke), clicking is the monotonous grind you endure until the good stuff opens up - then he leaves and you click
-//   pixels (4 pages; visit 2 has 6 and ends on the same theme: the clicking never stops, it just pays better). Visit 2 (when
-//   PixelShop.ShopAvailable): introduces the shop, hands over a gift (giftTypes random unlocked pixel types, giftMin..giftMax each,
-//   given when the page containing {gift} shows, a gift box appears in his hand), says more vendors will come and can be switched off
+//   pixels (4 pages; visit 2 has 7 and ends on the same theme: the clicking never stops, it just pays better). Visit 2 (RGB UNLOCK, 2026-10-16:
+//   when visitTwoAfterBlack (100) Black pixels have been EARNED - Visit2Due, BlackUntilVisitTwo for the guide line / Log goal): he says the
+//   basics are done, GIVES THE RGB PACK for free (PixelShop.GrantPackRewarding; the pack is hidden from the shop, so everything that needs it
+//   still works) plus a taste of Red / Green / Blue (rgbGiftMin..rgbGiftMax each, AddBonusCurrency - a gift is not 'earned') when the page
+//   containing {gift} shows (a gift box appears in his hand); the shop opens with it (PixelShop.requiredTier Red); he points at the Auto
+//   Clicker as the first buy and at a skill (Big Tim) next; with Cubie off (disableGuide) RGB unlocks quietly at the same point; says more vendors will come and can be switched off
 //   in the Toggles menu, mentions the Wizard. Progress = stat counters guide.stage1/2 (saved with the game); a save that already has
 //   the shop gets no visits and no gift (stages set silently). PixelGuideVendor.Pending/Visiting hold back the shop tutorial; Settings
 //   > Replay tutorial calls PixelGuideVendor.Replay() (clears the stage counters, both visits play again, no second gift). The vendors
@@ -56,9 +59,30 @@ public class PixelGuideVendor : MonoBehaviour
     [Min(0)]
     [Tooltip("Visit 1 waits until this many White pixels have been clicked (so Cubie does not turn up the moment the game starts).")]
     [SerializeField] private int visitOneAfterWhiteClicks = 100;
-    [SerializeField, HideInInspector] private int cubieDataVersion; // 1 = visit 1 after 100 White clicks (was 50)
+    [SerializeField, HideInInspector] private int cubieDataVersion; // 1 = visit 1 after 100 White clicks (was 50); 2 = visit 2 unlocks RGB (new lines)
 
     /// <summary>How many White pixels have been clicked so far (PixelTier.timesCollected, saved).</summary>
+    /// <summary>Black pixels earned so far (the Black tier's lifetime total).</summary>
+    private double BlackEarned()
+    {
+        PixelClicker c = clicker != null ? clicker : PixelFind.Cached<PixelClicker>();
+        int i = c != null ? c.IndexOf(PixelClicker.PixelType.Black) : -1;
+        return i >= 0 ? c.Tiers[i].totalCollected : 0d;
+    }
+
+    /// <summary>Black pixels still to earn before visit 2 (0 = he is due; -1 = no guide / visit 2 already happened).</summary>
+    public static int BlackUntilVisitTwo
+    {
+        get
+        {
+            if (instance == null || instance.disableGuide || PixelStats.Total(Stage2Key) >= 1d || instance.ShopThere) return -1;
+            return Mathf.Max(0, Mathf.CeilToInt((float)(instance.visitTwoAfterBlack - instance.BlackEarned())));
+        }
+    }
+
+    /// <summary>Visit 2 is due: enough Black earned and RGB not unlocked yet (on Replay tutorial: once the shop exists, as before).</summary>
+    private bool Visit2Due => replaying ? ShopThere : !ShopThere && BlackEarned() >= visitTwoAfterBlack;
+
     private long WhiteClicks()
     {
         PixelClicker c = PixelFind.First<PixelClicker>();
@@ -95,18 +119,18 @@ public class PixelGuideVendor : MonoBehaviour
     [Tooltip("Button label on the last page.")]
     [SerializeField] private string lastText = "Okay!";
 
-    [Header("Gift")]
+    [Header("Visit 2: the RGB unlock (2026-10-16)")]
     [Min(1)]
-    [Tooltip("How many different pixel types are in the gift pack.")]
-    [SerializeField] private int giftTypes = 3;
+    [Tooltip("Visit 2 comes once this many Black pixels have been EARNED (the Black tier's lifetime total; Recycler money does not count). He unlocks Red, Green and Blue (the RGB Pack, free and no longer sold) and the shop opens.")]
+    [SerializeField] private int visitTwoAfterBlack = 100;
 
-    [Min(1)]
-    [Tooltip("Fewest pixels of one type in the gift.")]
-    [SerializeField] private int giftMin = 40;
+    [Min(0)]
+    [Tooltip("Fewest Red / Green / Blue pixels of each colour in his gift (a taste of the new currency).")]
+    [SerializeField] private int rgbGiftMin = 30;
 
-    [Min(1)]
-    [Tooltip("Most pixels of one type in the gift.")]
-    [SerializeField] private int giftMax = 120;
+    [Min(0)]
+    [Tooltip("Most Red / Green / Blue pixels of each colour in his gift.")]
+    [SerializeField] private int rgbGiftMax = 50;
 
     [Header("Free vendors")]
     [Min(1f)]
@@ -162,7 +186,7 @@ public class PixelGuideVendor : MonoBehaviour
             if (instance == null || instance.disableGuide || !PixelHints.TipsEnabled) return false;
             if (PixelStats.Total(Stage2Key) >= 1d) return false;
             bool s1 = PixelStats.Total(Stage1Key) >= 1d;
-            return instance.ShopThere || (!s1 && instance.WhiteClicks() >= instance.visitOneAfterWhiteClicks);
+            return instance.Visit2Due || (!s1 && instance.WhiteClicks() >= instance.visitOneAfterWhiteClicks);
         }
     }
 
@@ -410,6 +434,7 @@ public class PixelGuideVendor : MonoBehaviour
         EnsureDefaultPages();
         if (characterName == "Cubby") characterName = "Cubie"; // a scene saved before the rename
         if (cubieDataVersion < 1) { if (visitOneAfterWhiteClicks == 50) visitOneAfterWhiteClicks = 100; cubieDataVersion = 1; }   // (2026-10-16: Cubie comes after 100 White clicks)
+        if (cubieDataVersion < 2) { visitTwoPages = DefaultTwo; cubieDataVersion = 2; }   // (2026-10-16: visit 2 now unlocks RGB - the saved shop-intro lines are replaced)
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (shop == null) shop = PixelFind.First<PixelShop>();
     }
@@ -455,6 +480,8 @@ public class PixelGuideVendor : MonoBehaviour
 
     private void Update()
     {
+        // Cubie switched off (disableGuide): RGB still unlocks at the same point, quietly, so the game can go on.
+        if (disableGuide && clicker != null && !ShopThere && BlackEarned() >= visitTwoAfterBlack && shop != null) shop.GrantPackRewarding(PixelClicker.PixelType.Red);
         if (ShopHold) UpdateHold();
         if (ShopHold && !peeking && !disableGuide && !visiting && !narrating) peekRoutine = StartCoroutine(PeekRoutine());
         if (disableGuide || clicker == null || visiting) { if (disableGuide && lastBlocker != "disabled") { lastBlocker = "disabled"; PixelDebug.Info("Cubie is off: disableGuide is ticked", this); } return; }
@@ -483,14 +510,14 @@ public class PixelGuideVendor : MonoBehaviour
                 PixelDebug.Info("Cubie skips his visits: Show first-time tips is off", this);
                 // 'Show first-time tips' is off: Cubie does not turn up with his intros. The game carries on as if they had happened, and the starter gift still arrives once the shop is there.
                 if (!s1) PixelStats.Best(Stage1Key, 1d);
-                if (ShopThere)
+                if (Visit2Due)
                 {
                     PixelStats.Best(Stage2Key, 1d);
                     GiveGift();
                     StartVendors(false);
                 }
             }
-            else if (ShopThere) StartCoroutine(Visit(true));
+            else if (Visit2Due) StartCoroutine(Visit(true));
             else if (!s1 && WhiteClicks() < visitOneAfterWhiteClicks) { if (lastBlocker != "clicks") { lastBlocker = "clicks"; PixelDebug.Info("Cubie visit 1 waits for " + visitOneAfterWhiteClicks + " White pixel clicks", this); } }
             else if (!s1) { PixelDebug.Info("Cubie starts visit 1", this); StartCoroutine(Visit(false)); }
             else if (lastBlocker != "s1done") { lastBlocker = "s1done"; PixelDebug.Info("Cubie visit 1 is already recorded (guide.stage1) - he waits for the shop", this); }
@@ -556,10 +583,11 @@ public class PixelGuideVendor : MonoBehaviour
 
     private string[] DefaultTwo => new[]
     {
-        "Well, well... look at that pile. Real, official, everybody-agrees-it's-worth-something pixels. All that clicking paid off, huh? Welcome to my shop. The Shop button's at the top right. Don't worry, I'm not counting your pockets. Much.",
-        "Here, a little starter gift. Nothing suspicious about it. Don't ask what it's backed by.\n\n{gift}",
-        "Here's the secret nobody tells you: the clicking never really stops. It just gets better pay. Spend your pure pixels on upgrades and gadgets, and soon the work starts doing itself while you do the clever bits.",
-        "The fancy pixels, ore, crops and sparks, are goods, not coin. Worth plenty to the right buyer, worthless to the wrong one. Learn a skill and you'll meet the buyers.",
+        "Well, well... look at that pile of black. White, gray, black: you've got the basics down. Real, official, everybody-agrees-it's-worth-something money.",
+        "But that's only half of the pure stuff. Here: red, green and blue. They'll turn up on your cube from now on. Consider it a loan. A friendly one. Mostly.\n\n{gift}",
+        "Grind all six and you're as rich as plain pixels get. That's the last step before you branch off into the good stuff. And my shop's open now - the Shop button's at the top right. Don't worry, I'm not counting your pockets. Much.",
+        "Here's the secret nobody tells you: the clicking never really stops. It just gets better pay. Save up for an Auto Clicker first, and the work starts doing itself while you do the clever bits.",
+        "Then learn a skill. The fancy pixels, wood, ore, crops and sparks, are goods, not coin - worth plenty to the right buyer. Big Tim the Lumberjack is a good place to start.",
         "More vendors will wander through as you grow. Where from? Nobody asks. They pay in the same pixels, and that's good enough for everyone. You can switch them off in the Toggles menu (it opens up once you get the Auto Clicker).",
         "My friend the Wizard might drop by soon. Keep him away from my stock, he turns things into frogs. Be seeing you...",
     };
@@ -653,6 +681,7 @@ public class PixelGuideVendor : MonoBehaviour
         PixelStats.Best(Stage1Key, 1d);
         if (second)
         {
+            if (giftLine == null && !replaying) GiveGift();   // (a page list without {gift} still unlocks RGB and hands the gift over)
             PixelStats.Best(Stage2Key, 1d);
             if (shop != null && shop.ShopAvailable && PixelHints.TipsEnabled && PixelStats.Total(PixelShopTutorial.DoneKey) < 1d)
             {
@@ -689,30 +718,27 @@ public class PixelGuideVendor : MonoBehaviour
     }
 
     /// <summary>Hands over the gift (a few random unlocked pixel types, random amounts) and returns the text listing it.</summary>
+    /// <summary>Visit 2's gift: unlocks Red, Green and Blue (the RGB Pack, given for free) and hands over a taste of each (rgbGiftMin..Max).</summary>
     private string GiveGift()
     {
-        var candidates = new System.Collections.Generic.List<int>();
-        for (int i = 0; i < clicker.Tiers.Length; i++)
+        if (shop == null) shop = PixelFind.First<PixelShop>();
+        if (shop != null) shop.GrantPackRewarding(PixelClicker.PixelType.Red);   // (the pack stays 'bought', so everything that needs the RGB Pack works)
+        StringBuilder sb = new StringBuilder("<b>Red, Green and Blue pixels unlocked!</b>");
+        PixelClicker.PixelType[] rgb = { PixelClicker.PixelType.Red, PixelClicker.PixelType.Green, PixelClicker.PixelType.Blue };
+        foreach (PixelClicker.PixelType type in rgb)
         {
-            PixelClicker.PixelTier t = clicker.Tiers[i];
-            if (t.unlocked && !t.rareDrop && !t.flyAway && !PixelClicker.IsStandalone(t.type)) candidates.Add(i);
-        }
-        StringBuilder sb = new StringBuilder();
-        for (int n = 0; n < giftTypes && candidates.Count > 0; n++)
-        {
-            int pick = Random.Range(0, candidates.Count);
-            int tier = candidates[pick];
-            candidates.RemoveAt(pick);
-            int amount = Random.Range(giftMin, Mathf.Max(giftMin, giftMax) + 1);
+            int tier = clicker.IndexOf(type);
+            int amount = Random.Range(Mathf.Min(rgbGiftMin, rgbGiftMax), Mathf.Max(rgbGiftMin, rgbGiftMax) + 1);
+            if (tier < 0 || amount <= 0) continue;
             PixelSessionRecorder.GiftFrom = characterName + "'s gift";   // (the session report lists it under Gifts, not income)
-            clicker.AddCurrency(tier, amount);
+            clicker.AddBonusCurrency(tier, amount);   // (a gift is not 'earned': it does not count towards any unlock)
             PixelSessionRecorder.GiftFrom = null;
-            if (sb.Length > 0) sb.Append('\n');
+            sb.Append('\n');
             sb.Append("<color=#").Append(ColorUtility.ToHtmlStringRGB(Color.Lerp(clicker.Tiers[tier].UIColor, Color.white, 0.4f))).Append("><b>+")
               .Append(PixelClicker.FormatNumberShort(amount)).Append(' ').Append(clicker.Tiers[tier].displayName).Append("</b></color>");
         }
         PixelAudio.Play("purchase");
-        PixelHints.Announce(characterName + " gave you a gift pack!");
+        PixelHints.Announce(characterName + " unlocked Red, Green and Blue pixels!");
         return sb.ToString();
     }
 

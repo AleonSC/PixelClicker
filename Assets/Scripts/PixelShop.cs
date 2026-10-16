@@ -293,8 +293,8 @@ public partial class PixelShop : MonoBehaviour
     // ------------------------------------------------------------------
 
     [Header("Shop Button")]
-    [Tooltip("The shop button appears once this tier is unlocked.")]
-    [SerializeField] private PixelClicker.PixelType requiredTier = PixelClicker.PixelType.Black;
+    [Tooltip("The shop button appears once this tier is unlocked (Red: the shop opens when Cubie's second visit unlocks RGB).")]
+    [SerializeField] private PixelClicker.PixelType requiredTier = PixelClicker.PixelType.Red;
 
     [Tooltip("Show the shop button from the start, ignoring the required tier (handy for testing).")]
     [SerializeField] private bool alwaysShowButton = false;
@@ -1407,6 +1407,23 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
+        if (packDataVersion < 40)
+        {
+            // RGB is an unlock now (2026-10-16): Cubie's second visit gives the RGB Pack (hidden from the shop), the shop opens with it, and the Auto
+            // Clicker - the shop's first buy now - costs 150 of each of the six pure pixels (was 1,000).
+            if (requiredTier == PixelClicker.PixelType.Black) requiredTier = PixelClicker.PixelType.Red;
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null) continue;
+                    if (!IsLeveled(p) && p.rewardTiers != null && Array.FindIndex(p.rewardTiers, t => t != null && t.type == PixelClicker.PixelType.Red) >= 0)
+                    { p.hideInShop = true; p.description = CreateRgbPack().description; }
+                    if (p.unlocksAutoClicker) p.costs = CreateAutoClickerPack(-1).costs;
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 40);
+            changed = true;
+        }
+
         if (packDataVersion < 39)
         {
             // Skill packs are chosen in the Skills window only: saved descriptions still said '(Toggles or Skills window)'.
@@ -2389,6 +2406,27 @@ public partial class PixelShop : MonoBehaviour
     }
 
     // ---- Dev Tools 'Unlock' widget: one pack, or 'All shop items' = DevUnlockAll (every pack + every pixel) ----
+
+    /// <summary>
+    /// Gives the (one-off) pack that unlocks this pixel type for free, as if bought - Cubie's second visit hands over the RGB Pack this way, so
+    /// everything that needs it keeps working. False if there is no such pack or it is already owned.
+    /// </summary>
+    public bool GrantPackRewarding(PixelClicker.PixelType type)
+    {
+        if (packs == null) return false;
+        for (int i = 0; i < packs.Length; i++)
+        {
+            ShopPack p = packs[i];
+            if (p == null || IsLeveled(p) || p.purchased || p.rewardTiers == null) continue;
+            if (Array.FindIndex(p.rewardTiers, t => t != null && t.type == type) < 0) continue;
+            p.purchased = true;
+            ApplyPackEffects(p);
+            onPackPurchased?.Invoke(i);
+            RefreshRows();
+            return true;
+        }
+        return false;
+    }
 
     /// <summary>Dev tools: unlocks one shop pack for free, as if bought (an upgrade goes to its top level). Ignores requirements, costs and hideInShop.</summary>
     public void DevUnlockPack(int index)

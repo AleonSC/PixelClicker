@@ -72,6 +72,7 @@ All decided 2026-10-16 unless noted.
 - **After 1.0 (maybe):** gear, the alien vendor and its relics, combat, and first person as an unlock are parked for updates (section 9b); first person stays simple in 1.0.
 - **Art direction:** what the game already is - smooth, clean menus with retro / 8-bit / cube visuals; no fixed rulebook.
 - **Music:** the developer's own Suno tracks (paid plan, no attribution needed).
+- **Early game path:** RGB is Cubie's unlock at 100 Black, not a purchase; the Auto Clicker is the shop's first buy; a skill is nudged as the first branch (section 6).
 
 ---
 
@@ -148,10 +149,19 @@ When two pillars pull against each other, see **(Q7)**.
 
 ## 6. The progression arc
 
-### Early game - the first hour (Built, being tuned)
-White -> Gray -> Black pixels by thresholds; Cubie's first visit after 50 White clicks (gift: a Recycler - the bill he'll come back
-for); the shop opens; the RGB pack; the Auto Clicker; the Toggles window; Standard level 2 opens the Skills window; the first skill
-pack (Lumberjack's Pack). Teaching order: **(Q13)**.
+### Early game - the first hour (Decided 2026-10-16, built, being tuned)
+The agreed path (times for a normal player at about 4 clicks a second):
+
+| Time | Step | What it teaches |
+|---|---|---|
+| 0:00-1:15 | **White** (300 to unlock Gray). Cubie's first visit at 100 White clicks: the Recycler. | Clicking, husks, edge-click aiming. |
+| ~1:15-2:30 | **Gray** (200 to unlock Black). Standard level 2: the first skill point - Block Hold or Power Click. | The first choice. |
+| ~2:30-3:45 | **Black**: earn 100. | The last plain grind. |
+| ~3:45 | **Cubie's second visit:** RGB is UNLOCKED (not bought - he gives the RGB Pack), a taste of Red / Green / Blue, the shop opens. "The rest of the pure currency: grind it and you're ready to branch off." | Six currencies. |
+| ~4-8 min | **The RGB phase.** First buy: the **Auto Clicker** (150 of each pure pixel). Value upgrades on the side. | Automation, the Toggles window. |
+| ~8-15 min | **The branch.** All six pure currencies in hand. A **skill comes first** (nudged: the Lumberjack's Pack is the cheapest next buy, Cubie names Big Tim, the Toggles tutorial and the Log goal point at it); special pixels (Glass...) and minigames follow. | Skills are the heart of the game. |
+
+The RGB Pack stays in the data (everything that "needs the RGB pack" keeps working) but is never sold.
 
 ### Mid game - skills and machines (Built, growing)
 Gathering skills (Woodcutting, Foraging, Fishing, Mining, Farming, Electrician), each with filler, hazards, specials, perks and a

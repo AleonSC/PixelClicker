@@ -19,11 +19,11 @@ The meter starts short; Standard skill perks make it longer, and every few of yo
 The <b>Next up</b> window at the left shows the block coming next, the one on the cube and the one before (switch it off in Settings > Interface).
 
 # Cubie
-Cubie, a suspicious little cube, drops by now and then to show you around. After you have clicked 100 White pixels he pays his first visit and gives you a Recycler. When the Shop opens he comes back with a gift and introduces the other visitors. You can replay his visits with Settings > Replay tutorial.
+Cubie, a suspicious little cube, drops by now and then to show you around. After you have clicked 100 White pixels he pays his first visit and gives you a Recycler. Once you have earned 100 Black pixels he comes back, unlocks Red, Green and Blue pixels, opens his Shop and introduces the other visitors. You can replay his visits with Settings > Replay tutorial.
 
 # The Shop
 The Shop button appears once you unlock the Black pixel. It has four tabs:
-<b>Pixels</b> - new pixel types (RGB, Glass, Vacuum, Luminescent, Mirror, Treasure and more) and the skill packs.
+<b>Pixels</b> - new pixel types (Glass, Vacuum, Luminescent, Mirror, Treasure and more) and the skill packs.
 <b>Upgrades</b> - three sub-tabs. <i>Features</i>: the Auto Clicker, Faster Clicking, Multi-Click, Combo Meter, Pixel Bank, Time Stop and Time Slow, UFO Helper and more. <i>Value</i>: make each pixel type pay more, paid for in that same pixel; a type's Value level can't go above the level of the skill it belongs to (Standard for the basic pixels). Shift-click buys as many levels as you can afford. <i>Operation</i>: make your devices last longer, reach further, hold more.
 <b>Consumables</b> - potions, devices and supplies.
 <b>Minigames</b> - events that turn up by themselves once bought.

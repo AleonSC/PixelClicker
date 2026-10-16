@@ -292,7 +292,7 @@ public class PixelHints : MonoBehaviour
         H("god_first", "A GOD CUBE! Slifer the Sky Dragon, Ra the Winged Dragon and Obelisk the Tormentor are the rarest things in the game: roughly one pixel in millions. Only ONE of each can ever be held, so keep it safe in your backpack."),
         H("dragon_first", "A Dragon Cube! There are seven of them, each with a different number of small cubes inside, and they turn up extremely rarely among the pixels. Gather all seven and a button will appear to summon the cube dragon and make a wish."),
         H("pixel_Meteor", "Meteor Pixels unlocked! They streak away across the screen instead of falling."),
-        H("pixel_Red", "The RGB Pack unlocked Red, Green and Blue pixels! They pay the same as the black, gray and white ones, but you need them to unlock Glass pixels and more."),
+        H("pixel_Red", "Cubie unlocked Red, Green and Blue pixels! They pay the same as the black, gray and white ones; with all six pure currencies you can buy the Auto Clicker, your first skill and more."),
         H("bank_hose", "The hose is out! Scroll the mouse wheel to pick a stored pixel type. Left-click spits one out, right-click sucks up the nearest old pixel, and holding right-click sucks up everything of that type around the nozzle."),
         H("bank_suck", "Stored in the Bank! Open the Bank tab on the left edge to see what you have. Stored pixels keep their value when you spit them back out."),
         H("bank_spit", "Spat a stored pixel back out! It is worth what it was worth when you stored it."),

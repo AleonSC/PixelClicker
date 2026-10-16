@@ -228,7 +228,7 @@ public class PixelUI : MonoBehaviour
     [SerializeField] private string guideFormat = "Click {0} more {1} pixels to progress to the next tier.";
 
     [Tooltip("Hint once the last guided tier is unlocked and the next one comes from the shop.")]
-    [SerializeField] private string shopGuideText = "Buy the RGB Pack in the shop to progress to the next tier.";
+    [SerializeField] private string shopGuideText = "Open the Shop - Cubie has a few things to show you.";
 
     [Tooltip("Hint text size.")]
     [SerializeField] private float guideTextSize = 24f;
@@ -525,6 +525,7 @@ public class PixelUI : MonoBehaviour
     // Start (not Awake) so tiers appended by PixelShop during Awake are included.
     private void Start()
     {
+        if (shopGuideText == "Buy the RGB Pack in the shop to progress to the next tier.") shopGuideText = "Open the Shop - Cubie has a few things to show you.";   // (RGB is Cubie's unlock now, not a purchase)
         if (clicker == null)
         {
             clicker = PixelFind.First<PixelClicker>();
@@ -2313,7 +2314,13 @@ public class PixelUI : MonoBehaviour
         while (next < tiers.Length && tiers[next].rareDrop) next++;
         if (next < tiers.Length && !tiers[next].unlocked &&
             tiers[next].unlockMode == PixelClicker.TierUnlockMode.ShopOnly)
+        {
+            // Before RGB: Cubie's second visit unlocks it once enough Black is earned - count that down (nothing to say once he is due).
+            int black = PixelGuideVendor.BlackUntilVisitTwo;
+            if (black > 0) return string.Format(guideFormat, FormatAmount(black), PixelClicker.PixelType.Black);
+            if (black == 0) return null;
             return shopGuideText;
+        }
 
         return null;
     }

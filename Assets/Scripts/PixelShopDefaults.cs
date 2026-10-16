@@ -12,14 +12,16 @@ using UnityEngine.UI;
 /// </summary>
 public partial class PixelShop
 {
-    /// <summary>Default RGB pack: 100 White + 100 Gray + 100 Black for Red, Green and Blue.</summary>
+    /// <summary>Default RGB pack: Red, Green and Blue. Never sold (hideInShop): Cubie's second visit gives it for free (PixelShop.GrantPackRewarding), so
+    /// everything that 'needs the RGB pack' still works. The costs are only kept for the Dev Tools.</summary>
     private static ShopPack CreateRgbPack()
     {
         return new ShopPack
         {
             displayName = "RGB Pack",
             tab = ShopTab.Pixels,
-            description = "Adds Red, Green and Blue pixels to the random spawn pool.",
+            hideInShop = true,
+            description = "Red, Green and Blue pixels in the random spawn pool. Cubie hands these over on his second visit.",
             costs = new[]
             {
                 new PackCost { type = PixelClicker.PixelType.White, amount = 100 },
@@ -1209,7 +1211,7 @@ public partial class PixelShop
         };
     }
 
-    /// <summary>Default Auto Clicker pack: all six pixel types, available after the RGB pack (index 0).</summary>
+    /// <summary>Default Auto Clicker pack: 150 of each of the six pure pixel types (the shop's first buy since RGB became Cubie's unlock), after the RGB pack.</summary>
     private static ShopPack CreateAutoClickerPack(int requiresRgbIndex)
     {
         return new ShopPack
@@ -1219,12 +1221,12 @@ public partial class PixelShop
             description = "Clicks the cube for you every {interval} seconds.",
             costs = new[]
             {
-                new PackCost { type = PixelClicker.PixelType.White, amount = 1000 },
-                new PackCost { type = PixelClicker.PixelType.Gray,  amount = 1000 },
-                new PackCost { type = PixelClicker.PixelType.Black, amount = 1000 },
-                new PackCost { type = PixelClicker.PixelType.Red,   amount = 1000 },
-                new PackCost { type = PixelClicker.PixelType.Green, amount = 1000 },
-                new PackCost { type = PixelClicker.PixelType.Blue,  amount = 1000 },
+                new PackCost { type = PixelClicker.PixelType.White, amount = 150 },
+                new PackCost { type = PixelClicker.PixelType.Gray,  amount = 150 },
+                new PackCost { type = PixelClicker.PixelType.Black, amount = 150 },
+                new PackCost { type = PixelClicker.PixelType.Red,   amount = 150 },
+                new PackCost { type = PixelClicker.PixelType.Green, amount = 150 },
+                new PackCost { type = PixelClicker.PixelType.Blue,  amount = 150 },
             },
             rewardTiers = new PixelClicker.PixelTier[0],
             requirements = Needs(requiresRgbIndex),

@@ -1174,3 +1174,6 @@
 [2026-10-16 14:18 UTC] Intro fix: whether a game is new is now decided the moment Play is pressed, so clicking right after the camera swing is blocked and can no longer stop the intro.
 [2026-10-16 14:26 UTC] Aim cursor: over the cube the cursor becomes a small cube in the middle and an arrow near the edges that turns to show where the husk will fly (tinted by the block, punches on each click); the normal cursor is back anywhere else.
 [2026-10-16 14:26 UTC] Recycler: its streak now tops out at x5 XP (was x20), and the currency it pays back no longer counts towards unlocking the next tier, so unlocks come from clicking.
+[2026-10-16 14:36 UTC] RGB is now an unlock: once you have earned 100 Black pixels Cubie's second visit unlocks Red, Green and Blue (the RGB Pack is no longer sold), gives a taste of RGB pixels instead of monochrome, and the shop opens with it.
+[2026-10-16 14:36 UTC] Early game path: the Auto Clicker (now 150 of each pure pixel) is the shop's first buy and first Log goal after RGB, and Cubie points at a skill (Big Tim the Lumberjack) as the next step; the guide line counts down the Black needed for Cubie.
+[2026-10-16 14:36 UTC] Design doc: the agreed early-game path (monochrome, Cubie's RGB unlock, Auto Clicker, skill-first branch) is written into GameDesign.md.
