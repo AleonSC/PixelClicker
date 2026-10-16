@@ -11,7 +11,10 @@
 //   collisions: a carried pixel is light (carriedMassFactor 0 = 0.2 of its mass, stays light lightSecondsAfterThrow 1.5 s after the
 //   throw) and every old pixel within ~1.7 widths of a light one has its speed capped to hitReactionSpeedLimit (0 = 5) for 0.7 s
 //   (LimitReactions, MakeLight), so piles react less and nothing flies far; physics still applies (disableGentleHits). Sets
-//   PixelClicker.GrabEnabled so clicks on old pixels no longer pass through to the cube. Sounds grab/drop. PixelShop finds/adds it.
+//   PixelClicker.GrabEnabled so clicks on old pixels no longer pass through to the cube. Sounds grab/drop. Steady carrying (2026-10-16, held husks
+//   used to jitter / bounce against the floor and piles): while held a husk is interpolated, uses continuous collisions, can't tumble
+//   (freezeSpinWhileHeld), is pushed out of things gently (heldDepenetrationSpeed 2) and is lifted heldAutoLift (0.35) widths off what it
+//   rested on; all of it is put back on release. PixelShop finds/adds it.
 //   Tags: OldPixelInfo.heldByPlayer / lastHeldTime / RecentlyHeld(seconds) = 'recently held by the player' (held now, or let go within recentlyHeldSeconds 0 = 6, Inspector); the Storage Crate
 //   stores a tagged pixel that lands in its footprint from any height.
 //   Accessibility 'Drop guide for held pixels' (Settings, PixelDisplaySettings.DropGuide, on by default): while holding a pixel LateUpdate / UpdateDropGuide draws a faint line straight down
@@ -66,6 +69,22 @@ public class PixelGrab : MonoBehaviour
     [Range(0f, 1f)]
     [Tooltip("How quickly a held pixel stops spinning (0 = keeps spinning, 1 = stops at once).")]
     [SerializeField] private float spinDamping = 0.2f;
+
+    [Header("Steady carrying (stops held husks freaking out)")]
+    [Min(0f)]
+    [Tooltip("A grabbed husk is lifted this many husk widths off what it was resting on, so it doesn't scrape along the floor / other husks while dragged (scraping made it bounce). The scroll wheel still raises / lowers it.")]
+    [SerializeField] private float heldAutoLift = 0.35f;
+    [Tooltip("Stop a held husk from tumbling while it is carried (its edges catching on the floor and other husks made it jitter). It spins freely again when let go.")]
+    [SerializeField] private bool freezeSpinWhileHeld = true;
+    [Min(0.1f)]
+    [Tooltip("How fast the physics may push a held husk out of things it is pressed into (Unity's default is 10, which made it jump). Lower = calmer when pushed against a pile.")]
+    [SerializeField] private float heldDepenetrationSpeed = 2f;
+
+    // The held husk's own physics settings, put back when it is let go.
+    private RigidbodyInterpolation heldWasInterpolation;
+    private CollisionDetectionMode heldWasDetection;
+    private bool heldWasFreezeRotation;
+    private float heldWasDepenetration;
 
     [Header("Letting Go")]
     [Range(0f, 2f)]
@@ -302,6 +321,19 @@ public class PixelGrab : MonoBehaviour
 
         if (!disableGentleHits) MakeLight(body);
 
+        // Steady carrying: smooth movement (interpolated), no tunnelling at speed (continuous collisions), no tumbling, a gentle push-out
+        // when pressed into things, and a small lift so it doesn't scrape along the floor. All put back on release.
+        heldWasInterpolation = body.interpolation;
+        heldWasDetection = body.collisionDetectionMode;
+        heldWasFreezeRotation = body.freezeRotation;
+        heldWasDepenetration = body.maxDepenetrationVelocity;
+        body.interpolation = RigidbodyInterpolation.Interpolate;
+        if (!body.isKinematic) body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+        if (freezeSpinWhileHeld) { body.freezeRotation = true; if (!body.isKinematic) body.angularVelocity = Vector3.zero; }
+        body.maxDepenetrationVelocity = heldDepenetrationSpeed;
+        Collider heldCol = body.GetComponent<Collider>();
+        if (heldCol != null) liftOffset = heldAutoLift * heldCol.bounds.size.y;
+
         PixelAudio.Play("grab");
     }
 
@@ -496,6 +528,10 @@ public class PixelGrab : MonoBehaviour
         heldShatter = null;
 
         if (heldGravity != null) heldGravity.enabled = true;
+        held.interpolation = heldWasInterpolation;
+        if (!held.isKinematic) held.collisionDetectionMode = heldWasDetection;
+        held.freezeRotation = heldWasFreezeRotation;
+        held.maxDepenetrationVelocity = heldWasDepenetration;
         if (heldDespawn != null) { heldDespawn.Held = false; PixelRecycler.KeepIfOver(held); }   // let go over a Recycler: its timer can't run out before the bin takes it
         held = null;
         heldDespawn = null;
