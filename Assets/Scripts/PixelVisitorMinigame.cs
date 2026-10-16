@@ -1119,11 +1119,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     }
 
     /// <summary>A visitor's name stays on one line and shrinks to fit the box (long names like 'Big Tim the Lumberjack' used to wrap over the message).</summary>
-    private static void FitName(TMP_Text t)
-    {
-        t.textWrappingMode = TextWrappingModes.NoWrap;
-        t.enableAutoSizing = true; t.fontSizeMax = 54f; t.fontSizeMin = 24f;
-    }
+    private static void FitName(TMP_Text t) => PixelUIKit.FitOneLine(t, 24f);   // (the name is made at 54: it shrinks to 24 at most)
 
     private static void Anchor(RectTransform r, float minX, float minY, float maxX, float maxY, Vector2 offsetMin, Vector2 offsetMax)
     {

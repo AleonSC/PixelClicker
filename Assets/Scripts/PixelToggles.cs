@@ -563,24 +563,12 @@ public class PixelToggles : MonoBehaviour
         kr.offsetMax = new Vector2(-size * 0.1f, -size * 0.1f);
 
         // The orange '!' left of the tick box (rows with a note): hover it for the note.
-        GameObject info = new GameObject("Info", typeof(RectTransform), typeof(Image));
-        info.transform.SetParent(row.go.transform, false);
-        Image ii = info.GetComponent<Image>();
-        ii.color = new Color(0.95f, 0.55f, 0.12f, 1f);
-        PixelUIKit.StyleButton(ii);
         float infoSize = rowHeight * 0.62f;
-        RectTransform ir = info.GetComponent<RectTransform>();
+        RectTransform ir = PixelUIKit.CreateInfoBadge(font, row.go.transform, infoSize, () => hoveredNote = row.note, () => { if (hoveredNote == row.note) hoveredNote = null; });
         ir.anchorMin = ir.anchorMax = ir.pivot = new Vector2(1f, 0.5f);
-        ir.sizeDelta = new Vector2(infoSize, infoSize);
         ir.anchoredPosition = new Vector2(-14f - size - 10f, 0f);
-        TMP_Text mark = PixelUIKit.CreateText(font, info.transform, "Mark", "!", infoSize * 0.75f, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
-        mark.raycastTarget = false;
-        PixelUIKit.Stretch(mark.rectTransform);
-        PixelHoverTip infoHover = info.AddComponent<PixelHoverTip>();
-        infoHover.onEnter = () => hoveredNote = row.note;
-        infoHover.onExit = () => { if (hoveredNote == row.note) hoveredNote = null; };
-        row.info = info;
-        info.SetActive(false);
+        row.info = ir.gameObject;
+        row.info.SetActive(false);
 
         row.toggle = box.GetComponent<Toggle>();
         row.toggle.targetGraphic = bg;
@@ -813,18 +801,11 @@ public class PixelToggles : MonoBehaviour
         if (instance != null && instance.windowObject != null && PixelPop.IsOpen(instance.windowObject)) instance.Close();
     }
 
-    /// <summary>Keeps a text on one line, shrinking it to fit the width.</summary>
+    /// <summary>Keeps a text on one line, shrinking it to fit the width (the shared PixelUIKit.FitOneLine).</summary>
     private static void OneLine(TMP_Text t, float maxSize, float minSize)
     {
-        t.enableAutoSizing = true;
-        t.fontSizeMax = maxSize;
-        t.fontSizeMin = minSize;
-        t.overflowMode = TextOverflowModes.Overflow;
-#if UNITY_2023_1_OR_NEWER
-        t.textWrappingMode = TextWrappingModes.NoWrap;
-#else
-        t.enableWordWrapping = false;
-#endif
+        t.fontSize = maxSize;
+        PixelUIKit.FitOneLine(t, minSize);
     }
 
     private PixelShop shopRef;

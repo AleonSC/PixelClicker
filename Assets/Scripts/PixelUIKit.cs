@@ -675,6 +675,31 @@ public static class PixelUIKit
 #endif
     }
 
+    /// <summary>
+    /// The orange '!' INFO BADGE (Skills cards, Toggles rows...): a small rounded orange square with a white '!' and a drop shadow. 'onEnter' / 'onExit'
+    /// run while the pointer is over it (the caller shows its own tooltip). Returns the badge's rect (position it yourself).
+    /// </summary>
+    public static RectTransform CreateInfoBadge(TMP_FontAsset font, Transform parent, float size, System.Action onEnter, System.Action onExit)
+    {
+        GameObject info = new GameObject("Info", typeof(RectTransform), typeof(Image));
+        info.transform.SetParent(parent, false);
+        Image img = info.GetComponent<Image>();
+        img.color = new Color(0.95f, 0.55f, 0.12f, 1f);
+        StyleButton(img);
+        Shadow dropShadow = info.AddComponent<Shadow>();
+        dropShadow.effectColor = new Color(0f, 0f, 0f, 0.45f);
+        dropShadow.effectDistance = new Vector2(0f, -2f);
+        RectTransform rect = info.GetComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(size, size);
+        TMP_Text mark = CreateText(font, info.transform, "Mark", "!", size * 0.75f, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
+        mark.raycastTarget = false;
+        Stretch(mark.rectTransform);
+        PixelHoverTip tip = info.AddComponent<PixelHoverTip>();
+        tip.onEnter = onEnter;
+        tip.onExit = onExit;
+        return rect;
+    }
+
     /// <summary>A resize grip for a window's bottom-right corner: three short diagonal lines, transparent elsewhere (white; tint it with the Image colour).</summary>
     public static Sprite GripSprite()
     {

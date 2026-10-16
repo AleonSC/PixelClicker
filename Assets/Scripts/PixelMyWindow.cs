@@ -699,13 +699,13 @@ public class PixelMyWindow : MonoBehaviour
         return b;
     }
 
-    /// <summary>Keeps a button's label on one line, shrinking it to fit a narrow window ('Event log' used to wrap onto two lines).</summary>
+    /// <summary>Keeps a button's label on one line, shrinking it to fit a narrow window ('Event log' used to wrap onto two lines) - the shared PixelUIKit.FitOneLine plus a little side margin.</summary>
     private static void FitOneLine(Button b, float maxSize)
     {
         TMP_Text t = b.GetComponentInChildren<TMP_Text>();
         if (t == null) return;
-        t.textWrappingMode = TextWrappingModes.NoWrap;
-        t.enableAutoSizing = true; t.fontSizeMax = maxSize; t.fontSizeMin = 10f;
+        t.fontSize = maxSize;
+        PixelUIKit.FitOneLine(t, 10f);
         t.margin = new Vector4(4f, 0f, 4f, 0f);
     }
 
