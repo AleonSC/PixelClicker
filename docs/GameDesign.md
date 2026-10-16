@@ -155,7 +155,7 @@ pack (Lumberjack's Pack). Teaching order: **(Q13)**.
 ### Mid game - skills and machines (Built, growing)
 Gathering skills (Woodcutting, Foraging, Fishing, Mining, Farming, Electrician), each with filler, hazards, specials, perks and a
 tree; devices to handle husks; minigames bought as packs; visitors and vendors; pets; crafting; the Pixel Bank.
-**Agreed next:** Woodcutting's tree mode, first person as a mid-game unlock (the Cube Visor), the gear system (`GearDesign.md`).
+**Tested and liked (2026-10-16):** Woodcutting's tree mode (numbers still to tune). **Agreed next:** first person as a mid-game unlock (the Cube Visor), the gear system (`GearDesign.md`).
 
 ### Late game - explore and grind (Decided direction)
 By now the player has every tool (machines, consumables, minigames, vendors, first person, gear) and mixes them their own way while

@@ -3,7 +3,7 @@
 > An enemy is a tree that fights back.
 
 Status: **idea, written up 2026-10-16. Nothing built.** It is built on Woodcutting's **tree mode** (`PixelTreeMode.cs`, the "bag" of
-blocks played out in a designed order), which is itself still a TEST waiting for Unity testing. Combat waits until tree mode is proven.
+blocks played out in a designed order), which the developer has tested in Unity and likes (2026-10-16; only timings and numbers left to tune), so the base is proven.
 Overall game design: `docs/GameDesign.md`. Gear (weapons are gear): `GearDesign.md`.
 
 **How to use it:** open questions first (C1, C2...), each with a suggestion. Answered ones move into the design below.
@@ -103,7 +103,7 @@ silly. No heroes, no quest; the humour is how mundane it all is.
 
 ## Build order (when it is time)
 
-1. Prove tree mode in Unity (Woodcutting).
+1. ~~Prove tree mode in Unity (Woodcutting).~~ Done 2026-10-16: it feels good; tuning remains.
 2. Generalise it into a shared "encounter mode" (data lists of slot lists, used by Woodcutting first).
 3. Build the gear slot (`GearDesign.md`), so weapons have somewhere to go.
 4. Combat pack: the wandering rotation, 3-4 enemies, attack blocks with the "getting hit" cost (C3), the health bar, loot.

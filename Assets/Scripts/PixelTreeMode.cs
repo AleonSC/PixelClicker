@@ -1,6 +1,6 @@
 // ---- System notes ----
 // PixelTreeMode.cs
-//   TREE MODE (step 1 of docs/systems/WoodcuttingProgression.md; component added by PixelClicker.Awake, PixelTreeMode.Instance). While the skill
+//   TREE MODE (step 1 of docs/systems/WoodcuttingProgression.md; tested in Unity 2026-10-16 - it plays well, timings / numbers still being tuned; component added by PixelClicker.Awake, PixelTreeMode.Instance). While the skill
 //   named in skillId (woodcutting) is in play AND a shop pack with unlocksTreeMode is owned (the hidden 'Oak Trees (test)' pack: unlock it with the
 //   Dev Tools 'Shop unlocks' widget), the cube stops rolling the pack's blocks by weight and alternates between:
 //     - the FILLER rotation: random picks from 'fillers' (Twig, Leaf, Wood; Moss and Sap from level 2). At least minFiller (3) of them, then a

@@ -1,6 +1,6 @@
 # Woodcutting progression (design, not built yet)
 
-Status: **agreed direction; build step 1 started as a TEST (2026-10-15):** `PixelTreeMode.cs` (filler rotation + Oak trees + infested trees + tree bar + Timber), switched on by the hidden **Oak Trees (test)** shop pack (Dev Tools > Shop unlocks) while Woodcutting is in play. Data (fillers, species slot lists, infested chances) is on the PixelTreeMode component; details in its header. The "Open questions" section lists what is still a proposal.
+Status: **agreed direction; build step 1 TESTED IN UNITY and feels good (2026-10-16) - only timings and numbers still to tune.** Step 1 was built as a TEST (2026-10-15): `PixelTreeMode.cs` (filler rotation + Oak trees + infested trees + tree bar + Timber), switched on by the hidden **Oak Trees (test)** shop pack (Dev Tools > Shop unlocks) while Woodcutting is in play. Data (fillers, species slot lists, infested chances) is on the PixelTreeMode component; details in its header. The "Open questions" section lists what is still a proposal.
 Today's Woodcutting (blocks, perks, Termite Hive, filler family) is described in `SkillBlocks.md`; this doc is where it is going.
 
 ## Goals
