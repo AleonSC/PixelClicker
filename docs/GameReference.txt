@@ -63,7 +63,7 @@ PROJECT RULES (from CLAUDE.md)
 - Every variable editable in Unity ([SerializeField] private + [Tooltip]); field initializers don't reach already-serialized components (use Awake / OnValidate fix-ups).
 - Enum values are only appended. Copy the whole Assets/Scripts folder together. Compile check: tools/compile-check/check.sh.
 - Save compatibility is not a concern during development. Skill packs are chosen only in the Skills window. Player-facing texts say "husk".
-GENERATED: 2026-10-16 02:10 UTC
+GENERATED: 2026-10-16 05:20 UTC
 
 === 2. DATA MODEL (from CLAUDE.md) ===
 - PixelTier: name, colour/UIColor, PixelType enum (see PixelClicker.cs; values are only ever appended so saves stay valid), TierUnlockMode (PreviousTierThreshold / ShopOnly), spawnWeight, randomPayout + payoutMin/Max (a random whole amount per harvest, e.g. Electric 1-15; amountPerClick = the average for estimates; migrated by packDataVersion 3), clicksToCollect (tough pixels: only the last click pays; PixelClicker.PixelHit event for the others), startingAmount, translucent / materialOverride, glow + glowIntensity (emission on a runtime material copy + point light), vacuum flag, spawnSwitch (Auto = Glass, Luminescent and the IsSpecialType types get a spawn toggle in the Toggles window, see PixelTier.CanSwitchOff; spawnDisabled saved; CanSpawn used by PickSpawnTier), flyAway/flyDirection/flySpeed (old pixel streaks away in a straight camera-relative line with a smooth tapered trail instead of falling - Meteor; flyRandomDirection + flyAngleRange 10-170 deg = a random direction on the top half of the screen), count, totalCollected, unlocked.
@@ -879,6 +879,124 @@ PixelWoodChipper.cs The WOOD CHIPPER: the first thing built for the Dev Hub's Te
 PixelZoom.cs Zoom of the normal view (added by PixelClicker.Awake; set from the View window's zoom slider with PixelZoom.SetTarget - the old X key is gone; disableZoom). Old note: PRESS it to step through the zoom levels (zoomLevels, empty = 1 / 0.6 / 0.35 = fractions of the normal camera distance; the step happens when the key is let go, and only if the wheel was not used meanwhile), HOLD it and use the mouse wheel to zoom smoothly anywhere between the closest and the furthest level. The real camera slides along the line from the cube to its normal position (the cube keeps its spot on screen; orthographic cameras scale their size); `followSharpness` smooths it. While zoomed PixelZoom.HomeCamera (a hidden copy at the normal pose, also returned by PixelOrbitCamera.HomeCamera) is what PixelViewBounds / PixelFloor.FitToView read, so old pixels stay inside the NORMAL view. The zoom snaps back to normal (ResetNow) when the title screen, the camera intro, first person, the orbit camera or a takeover minigame needs the camera.
 
 === 10. SYSTEM DOCS (docs/systems/*.md) ===
+--- docs/systems/CombatDesign.md ---
+Combat (design, not built yet)
+
+> An enemy is a tree that fights back.
+
+Status: idea, written up 2026-10-16. Nothing built. It is built on Woodcutting's tree mode (PixelTreeMode.cs, the "bag" of
+blocks played out in a designed order), which is itself still a TEST waiting for Unity testing. Combat waits until tree mode is proven.
+Overall game design: docs/GameDesign.md. Gear (weapons are gear): GearDesign.md.
+
+How to use it: open questions first (C1, C2...), each with a suggestion. Answered ones move into the design below.
+
+---
+
+Open questions
+
+Shape
+
+| # | Question | Suggestion |
+|---|---|---|
+| C1 | Is Combat its own skill pack (chosen in the Skills window), or does it happen alongside every skill? | Its own pack, "Combat", like the gathering skills: it matches the existing structure and keeps each skill's rotation clean. Occasional "intruders" (C9) can visit other skills later. |
+| C2 | One Combat skill, or several (RuneScape's Attack / Strength / Defence)? | One skill. Splitting it triples the grind without adding new actions; the depth comes from gear and enemies instead. |
+| C3 | What does "getting hit" cost, with no player health? | Like hazards today: the enemy steals a little currency, scatters your floor husks, or drains the Block Hold meter, plus a short XP penalty. It hurts; nothing dies. |
+| C4 | Is there player health at all (and food to heal)? | No health bar. Food is a buff you eat before or during a fight (less damage, faster attacks), so Fishing / Farming still feed Combat the RuneScape way without a fail state. |
+| C5 | What does the auto clicker do in combat? | It fights weak enemies on its own; elites and bosses wait for your own clicks, so "many ways to play" holds and active play stays better. |
+
+Content
+
+| # | Question | Suggestion |
+|---|---|---|
+| C6 | What are the enemies - fantasy monsters or everyday nuisances? | Everyday nuisances, to fit the real-world, mundane concept: pests, stray machines, rival vendors, tax inspectors - and Cubie's debt collectors as his bill grows (prestige). |
+| C7 | What do enemies drop? | Husks of materials (scrap, bones, hides, paperwork...), combat XP, a rare drop per enemy (a trophy for the Collection Log), and cosmetics from bosses. |
+| C8 | Are there bosses? | Yes, rare: a long slot list with phases (armour, then weak spots, then a frenzy of attack blocks), announced like an infested tree, with a cosmetic drop. |
+| C9 | Do enemies ever turn up outside Combat? | Later, optionally: an "intruder" can wander into another skill's rotation now and then (like a visitor), so other skills get a taste of it. |
+| C10 | Where do weapons come from? | Crafted from other skills' materials (Mining metals, Woodcutting handles), bought from a vendor, or dropped by bosses. |
+
+Fit
+
+| # | Question | Suggestion |
+|---|---|---|
+| C11 | Does it clash with the "no story, mundane grind" concept? | Not if the enemies stay ordinary (C6). Combat becomes one more job in the grind - pest control, debt collection - not a heroic quest. |
+| C12 | Is combat in 1.0 or an update? | An update after 1.0, once tree mode, gear and the skill polish are done. It is a big new skill, the kind the 1.0 plan says comes later. |
+
+---
+
+The idea in one paragraph
+
+While Combat is in play the cube alternates between a wandering rotation (weak critters and scraps, like Woodcutting's filler) and
+an enemy arriving. Each enemy is a designed slot list played out on the cube, exactly like a tree species: armour blocks,
+weak-spot blocks, flesh blocks and attack blocks. A health bar counts it down; breaking the last block defeats it and drops loot.
+Attack blocks are the enemy's turn: clear them in time or they hit you.
+
+How it reuses tree mode
+
+Tree mode already has every piece combat needs (PixelTreeMode.cs header):
+
+| Tree mode today | Combat version |
+|---|---|
+| Filler rotation (Twig, Leaf, Wood...), a tree arrives after minFiller..maxFiller blocks | Wandering rotation (critters, scraps), an enemy arrives the same way |
+| A species picked by weight among the unlocked ones | An enemy picked by weight among the unlocked ones (level-gated) |
+| Slot kinds: Fixed, Run, Wildcard, Optional, Hazard | Fixed = set body parts, Run = several armour plates, Wildcard = random body part, Optional = a weak spot that may or may not show, Hazard = an attack block |
+| Infested trees, warned from the first block | Elite enemies, warned on the health bar from the first block |
+| Tree bar: "Oak 3 / 9" (a PixelStatusLines line) | Health bar: "Rat King 3 / 9" |
+| "Timber!" + bonus XP when the last block leaves | "Defeated!" + loot + bonus combat XP |
+| Pick tags (first / last block) | the same tags: the first block triggers the entrance, the last the defeat |
+
+So a new enemy is data, not code: one more entry in a list of slot lists, like a new tree species. The shared part should be
+generalised once ("encounter mode") so Woodcutting, Combat and later Mining veins / Fishing spots all use it (the Woodcutting doc
+already plans this: "The same system for other skills").
+
+The blocks of a fight
+
+| Block | What it does |
+|---|---|
+| Flesh | a normal block; one hit, a little damage |
+| Armour | a tough block (several hits, like tough pixels today); a better weapon breaks it faster |
+| Weak spot | a rare, high-damage block; can start a Weak Spots round for a critical hit |
+| Attack | the enemy winds up (a visible charge, like a hazard's tell); clear it in time or take a hit (C3) |
+| Finisher | the last slot; breaking it defeats the enemy |
+
+Player actions (all existing mechanics)
+
+- Left click: hit, as always.
+- Right-click clear: the existing hazard clearing works on attack blocks.
+- Block Hold as a parry: holding an attack block blocks it (no hit) and stores a counter-attack - a new use for Block Hold.
+- Weak Spots minigame: crits on weak-spot blocks, like catching fish.
+- Consumables: food buffs (C4), potions; a "smoke bomb" to skip an enemy.
+- Gear: the weapon in your one gear slot (below).
+
+Gear and other skills
+
+- Weapons are gear. With one slot ("you're a cube"), wearing a sword means not wearing the Tractor Glove or the Prime Gauntlet:
+  exactly the choice the one-slot rule is for. Weapon types change the fight, not just the numbers: a hammer smashes armour, a dagger
+  hits weak spots more often, a shield-like item parries for free.
+- Skills feed Combat (pillar 3): Mining metals and Woodcutting handles -> crafted weapons (C10); Fishing / Farming -> food buffs (C4);
+  Electrician -> powered weapons later.
+- Combat feeds skills: monster husks (scrap, bones, hides) become crafting materials and machine-repair parts; trophies fill the
+  Collection Log; bosses drop cosmetics (the late-game rewards in GameDesign.md).
+
+Tone
+
+Enemies are ordinary nuisances, not fantasy monsters (C6), so combat fits the game's concept - the real-world grind with a simulated
+feel. Combat is just another job: pest control, clearing out broken machines, and seeing off Cubie's debt collectors when his bill gets
+silly. No heroes, no quest; the humour is how mundane it all is.
+
+Build order (when it is time)
+
+1. Prove tree mode in Unity (Woodcutting).
+2. Generalise it into a shared "encounter mode" (data lists of slot lists, used by Woodcutting first).
+3. Build the gear slot (GearDesign.md), so weapons have somewhere to go.
+4. Combat pack: the wandering rotation, 3-4 enemies, attack blocks with the "getting hit" cost (C3), the health bar, loot.
+5. Then: elites, a boss, weapons from crafting, food buffs, the Block Hold parry.
+
+Fits the game / could be better
+
+- Reuses: tree mode (the whole encounter loop), hazards (attack blocks and their clearing), tough blocks (armour), the Weak Spots
+  minigame (crits), Block Hold (parry), gear (weapons), PixelStatusLines (health bar), the Collection Log and crafting.
+- New pieces: the Combat skill pack, the "getting hit" penalty, loot tables per enemy, weapons as gear items, food buffs.
+- Do first: generalise tree mode into encounter mode before writing combat, so the two never become two copies of the same system.
 --- docs/systems/ConnectionMap.md ---
 Connection map
 
@@ -2301,7 +2419,6 @@ Profiler markers (Window > Analysis > Profiler, CPU > Timeline / Hierarchy, sear
 [ ] Tutorials: audit which skills / tools have their own tip boxes and turn the ones that can be into tooltips or Game Database entries (one shared Skills tutorial; per-tool help lives in tooltips)
 [ ] Game Database: check that every skill, perk, skill-tree node, tool and hazard has a searchable entry (name + description)
 [ ] Pixel facts: one place that holds each block's attributes and description pieces with the numbers read LIVE from the real settings (today PixelGuideTexts.Describe has many hand-typed numbers that can drift from the Inspector values); tooltip, Pixel Rotation window and Game Database already all read Describe, so they would pick it up
-[ ] Credits: add credit links to the videos the music tracks came from (a credits screen / the music selector, with each track's source link)
 [ ] Early Cube Dash: introduce minigames early with a forgiving, Cubie-introduced one-time / rare Cube Dash before the RGB pack (long timer, bonus scales with performance, no penalty); buying the RGB pack later unlocks the real one. Space it from the stake / right-click tips.
 [ ] Shared widget board: Pocket (PixelMyWindow cards) and the Dev Hub (PixelWidgetBoard) each have their own draggable / foldable card board; make one shared class both use (own saved order + folded state per board, optional extra actions like favorites) and delete the duplicate.
 [ ] Woodcutting trees (design in docs/systems/WoodcuttingProgression.md): 1) shared tree mode (TEST BUILT: PixelTreeMode + hidden 'Oak Trees (test)' pack, Oak only) (filler rotation + randomly arriving species with fixed slot shapes, reusable by other skills), 2) tree bar + Timber + infested warning, 3) Woodcutting species + level gating, 4) hook Block Hold / Shuffle / Great Oak / Focus into trees, 5) XP curve bands, 6) perks + tree nodes, 7) Whetstone to Mining, 8) special trees
@@ -2320,3 +2437,4 @@ Profiler markers (Window > Analysis > Profiler, CPU > Timeline / Hierarchy, sear
 [ ] Prime Gauntlet as gear: no longer used up by forging; wear it and each Prime Cube set in it unlocks a power with a cooldown - Space (pull every floor husk into the Recycler / crate), Time (rewind the last 10 s of clicks or a free long Time Stop), Power (one punch breaks any tough block at 50x pay), Reality (turn the current block into any block), Mind (see the next 5 blocks and pick one), Soul (pets much stronger for a minute); all six = the Snap (half the husks on screen vanish and pay out, long cooldown); the Cubelette becomes what the Gauntlet turns into after so many Snaps
 [ ] Super rare gear: Dragon Radar charm (hint when a rare is about to roll; the wish stays), God Cube relics (Slifer: every 20th click chains lightning to nearby husks; Ra: a sun phase = golden hour for a minute; Obelisk: tough blocks take double hits), Seeker's Charm from the Golden Snitch (later snitches easier to catch, pay more)
 [ ] Pop culture homages (rename them so they are a nod, not the real name / logo): Heart Cube companion (Portal - a pet that asks to be 'incinerated' in the Recycler for a big payout), puzzle-cube block (Rubik's - rotate its faces to solve it), ? block (Mario - coins per click, a mushroom that grows the cube), The Slab (2001 Monolith - rises with a choir, touch it for a one-time permanent boost), assimilator cube hazard (Borg - eats floor husks until clicked apart), falling-blocks event (Tetris - husk rows clear for a bonus), Konami code secret reward + achievement, glitch event (Matrix - code rain, Cubie offers a red or blue cube), hissing blast block hazard (Creeper)
+[ ] Combat (design + open questions in docs/systems/CombatDesign.md): enemies are tree-mode slot lists on the cube (armour / weak spot / attack blocks, health bar, loot), weapons are gear, food buffs from Fishing / Farming, enemies are everyday nuisances (incl. Cubie's debt collectors); needs tree mode proven, then a shared encounter mode, then the gear slot

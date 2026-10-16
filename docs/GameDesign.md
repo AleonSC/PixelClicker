@@ -49,7 +49,7 @@ Legend: **Built** = in the game now · **Agreed** = decided, not built · **Idea
 | Q14 | Homage renaming (the Golden Snitch is a trademarked name) | Rename every homage before release, as with the Prime Cubes; keep a list of the real names here so none slips through. |
 | Q15 | Save versioning and the first public build date | Pick the date, so one save version and its upgrade steps (on the to-do) land before it. |
 
-Feature-level questions: gear, first person, the alien and legendary gear in `GearDesign.md`; Woodcutting in
+Feature-level questions: gear, first person, the alien and legendary gear in `GearDesign.md`; combat in `CombatDesign.md`; Woodcutting in
 `WoodcuttingProgression.md`; husk rules in `PixelRules.md`; cross-system gaps in `ConnectionMap.md` section 8.
 
 ---
@@ -193,6 +193,7 @@ Links between systems: `ConnectionMap.md`. The short tour:
 | Pets | one per block type, perks, outfits | Built | `PixelPets.md` |
 | First person | walk the floor, handle husks, repair machines (Agreed) | Built; unlock + relics Agreed | `PixelFirstPerson.md`, `GearDesign.md` |
 | Gear | one slot (you're a cube), relics, legendary gear | Agreed | `GearDesign.md` |
+| Combat | enemies as designed slot lists on the cube (built on tree mode), weapons as gear | Idea | `CombatDesign.md` |
 | Prestige | paying Cubie back | Theme decided; details **(Q2, Q3)** | this doc |
 | Cosmetics | late-game rewards | Being considered **(Q1)** | this doc |
 | Offline progress | earnings while away | Built (auto clicker only) **(Q10)** | `PixelOfflineProgress.cs` header |

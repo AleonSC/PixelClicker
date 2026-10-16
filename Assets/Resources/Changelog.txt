@@ -1135,3 +1135,4 @@
 [2026-10-16 03:12 UTC] Game design doc: no story on purpose - the concept is the real-world grind for money with a simulated feel (things only mean what people give them), and Cubie is just another guy in the world.
 [2026-10-16 03:14 UTC] Game design doc: prestige's 'debt' is a joke, not a theme - just Cubie's small gift and the Recycler, whose interest has piled up and which Cubie inflates further every time.
 [2026-10-16 03:17 UTC] Game design doc reorganised: the hook 'Every click leaves something behind' is decided, the 15 open questions now sit at the top as short tables with a suggestion each (Q1-Q15), followed by a 'Decided at a glance' list and the updated sections.
+[2026-10-16 05:20 UTC] Design doc: docs/systems/CombatDesign.md - combat built on Woodcutting's tree mode (an enemy is a tree that fights back), with 12 open questions at the top; linked from the game design doc and added to the to-do.
