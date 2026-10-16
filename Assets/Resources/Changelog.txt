@@ -1124,3 +1124,4 @@
 [2026-10-16 01:39 UTC] Code split 2/6: PixelClicker's data shapes (the PixelType enum, PixelTier, the block type checks) moved into PixelClickerTypes.cs, still part of the same class (no behaviour change).
 [2026-10-16 01:40 UTC] Code split 3/6: the 60-odd Pixel Looks fix-up steps moved out of PixelClicker.Awake into RunLookFixups in PixelClickerLookFixups.cs (same order, no behaviour change).
 [2026-10-16 01:41 UTC] Code split 4/6: PixelClicker's tier helpers and the rare-tier setup (Dragon / God / Prime Cubes, Golden Snitch) moved into PixelClickerTiers.cs (no behaviour change).
+[2026-10-16 01:42 UTC] Code split 5/6: PixelClicker's husk code (spawning, lifetime, vacuum, saving, device hand-offs, physics, trails) moved into PixelClickerHusks.cs and the cube's look / glow / material code into PixelClickerLooks.cs (no behaviour change).
