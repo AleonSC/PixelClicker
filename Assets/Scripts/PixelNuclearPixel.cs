@@ -17,6 +17,7 @@ using UnityEngine;
 /// </summary>
 public class OldPixelRadiation : MonoBehaviour
 {
+    private static readonly System.Collections.Generic.List<PixelHuskQuery.Husk> nearby = new System.Collections.Generic.List<PixelHuskQuery.Husk>();
     private PixelClicker clicker;
     private float radius, hastenPerSecond;
     private float tick, ringTimer;
@@ -59,16 +60,13 @@ public class OldPixelRadiation : MonoBehaviour
         if (tick > 0f) return;
         const float step = 0.15f;
         tick = step;
-        float sqr = radius * radius;
         Vector3 here = transform.position;
-        foreach (Rigidbody body in clicker.OldPixels)
+        PixelHuskQuery.Near(clicker, here, radius, nearby, false, true);
+        foreach (PixelHuskQuery.Husk h in nearby)
         {
-            if (body == null || body.gameObject == gameObject) continue;
-            if ((body.position - here).sqrMagnitude > sqr) continue;
-            OldPixelRadiation other = body.GetComponent<OldPixelRadiation>();
-            if (other != null) continue;   // Nuclear pixels are immune to each other
-            OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
-            if (despawn != null) despawn.Hasten(hastenPerSecond * step);
+            if (h.body.gameObject == gameObject) continue;
+            if (h.body.GetComponent<OldPixelRadiation>() != null) continue;   // Nuclear pixels are immune to each other
+            if (h.despawn != null) h.despawn.Hasten(hastenPerSecond * step);
         }
     }
 }

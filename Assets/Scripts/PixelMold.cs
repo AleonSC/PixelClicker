@@ -158,21 +158,15 @@ public class PixelMold : MonoBehaviour
         infectTimer = infectInterval > 0f ? infectInterval : 0.5f;
         float r2 = radius * (1f - fadeK * 0.5f);
         r2 *= r2;
-        IReadOnlyList<Rigidbody> list = clicker.OldPixels;
-        for (int i = 0; i < list.Count; i++)
+        PixelHuskQuery.Near(clicker, center, Mathf.Sqrt(r2), nearby);   // (vanishing husks are left out)
+        foreach (PixelHuskQuery.Husk h in nearby)
         {
-            Rigidbody b = list[i];
-            if (b == null) continue;
-            Vector3 d = b.position - center;
-            d.y = 0f;
-            if (d.sqrMagnitude > r2) continue;
-            OldPixelInfo info = b.GetComponent<OldPixelInfo>();
-            if (info == null || info.heldByPlayer || Time.time < info.moldImmuneUntil) continue;
-            OldPixelDespawn dsp = b.GetComponent<OldPixelDespawn>();
-            if (dsp != null && dsp.IsDespawning) continue;
-            if (b.GetComponent<PixelMoldy>() == null) b.gameObject.AddComponent<PixelMoldy>().Setup(this);
+            if (h.info == null || h.info.heldByPlayer || Time.time < h.info.moldImmuneUntil) continue;
+            if (h.body.GetComponent<PixelMoldy>() == null) h.body.gameObject.AddComponent<PixelMoldy>().Setup(this);
         }
     }
+
+    private readonly List<PixelHuskQuery.Husk> nearby = new List<PixelHuskQuery.Husk>();
 
     private void OnDestroy() { if (disc != null) Destroy(disc.gameObject); if (Instance == this) Instance = null; }
 

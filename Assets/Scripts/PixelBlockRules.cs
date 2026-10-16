@@ -198,14 +198,7 @@ public class PixelBlockRules : MonoBehaviour
     {
         if (r == null) return 0f;
         if (!r.hasBoost || clicker == null) return r.chance;
-        int count = 0;
-        var list = clicker.OldPixels;
-        for (int i = 0; i < list.Count; i++)
-        {
-            Rigidbody b = list[i];
-            OldPixelInfo info = b != null ? b.GetComponent<OldPixelInfo>() : null;
-            if (info != null && clicker.IsValidTierIndex(info.tierIndex) && clicker.Tiers[info.tierIndex].type == r.boostBlock) count++;
-        }
+        int count = PixelHuskQuery.CountOfType(clicker, r.boostBlock);
         float t = Mathf.Clamp01(count / (float)Mathf.Max(1, r.boostFullCount));
         return Mathf.Lerp(r.chance, Mathf.Max(r.chance, r.maxChance), t);
     }

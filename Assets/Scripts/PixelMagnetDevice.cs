@@ -45,7 +45,7 @@ public class PixelMagnetDevice : PixelPlacedDevice
         {
             Rigidbody body = pixels[i];
             if (body == null || body.isKinematic || !Accepts(body) || clicker.IsFlyingPixel(body)) continue;
-            OldPixelDespawn d = body.GetComponent<OldPixelDespawn>();
+            OldPixelDespawn d = PixelHuskQuery.Get(body).despawn;
             if (d != null && (d.Held || d.IsDespawning)) continue;
 
             Vector3 to = target - body.position;

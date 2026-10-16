@@ -1,0 +1,105 @@
+// ---- System notes ----
+// PixelHuskQuery.cs
+//   ONE place to look at the husks lying on the field (PixelClicker.OldPixels) without every system repeating the same work:
+//   - Get(body): the husk's OldPixelInfo / OldPixelDespawn, fetched ONCE per husk and cached (GetComponent every check was the old way). The cache prunes
+//     itself when it holds far more entries than husks exist, and is cleared on Restart.
+//   - Husk.Tier / TypeOf / Fading (vanishing or already gone) / HeldByPlayer.
+//   - Near(clicker, centre, radius, results, flat): every husk within a radius (flat = horizontal distance only), alive ones only unless asked.
+//   - CountOfType(clicker, type): how many husks of a pixel type are lying out (e.g. Acorns for the Great Oak chance).
+//   Used by the zone-style systems (Sap fields, Mold, the Great Oak boost, the Magnet, Nuclear radiation). A NEW zone effect should use Near instead of
+//   its own loop.
+// ---------------------------------------------------
+using System.Collections.Generic;
+using UnityEngine;
+
+public static class PixelHuskQuery
+{
+    /// <summary>One husk with its components (fetched once and cached).</summary>
+    public struct Husk
+    {
+        public Rigidbody body;
+        public OldPixelInfo info;
+        public OldPixelDespawn despawn;
+
+        public bool Valid => body != null;
+        public int Tier => info != null ? info.tierIndex : -1;
+        /// <summary>It is vanishing (or already destroyed): leave it alone.</summary>
+        public bool Fading => body == null || (despawn != null && despawn.IsDespawning);
+        public bool HeldByPlayer => info != null && info.heldByPlayer;
+    }
+
+    private static readonly Dictionary<int, Husk> cache = new Dictionary<int, Husk>();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { cache.Clear(); PixelStatics.ResetOnRestart(OnRestart); }
+    private static void OnRestart() => cache.Clear();
+
+    /// <summary>The husk's components (cached after the first look).</summary>
+    public static Husk Get(Rigidbody body)
+    {
+        if (body == null) return default;
+        int id = body.GetInstanceID();
+        if (cache.TryGetValue(id, out Husk h) && h.body == body) return h;
+        h = new Husk { body = body, info = body.GetComponent<OldPixelInfo>(), despawn = body.GetComponent<OldPixelDespawn>() };
+        cache[id] = h;
+        return h;
+    }
+
+    /// <summary>The pixel type of a husk (false if it has none / is not a husk).</summary>
+    public static bool TypeOf(PixelClicker clicker, Husk h, out PixelClicker.PixelType type)
+    {
+        type = default;
+        if (clicker == null || !clicker.IsValidTierIndex(h.Tier)) return false;
+        type = clicker.Tiers[h.Tier].type;
+        return true;
+    }
+
+    /// <summary>Drops cached entries of husks that are gone (when the cache has grown well past the number of husks).</summary>
+    private static void Prune(PixelClicker clicker)
+    {
+        int alive = clicker != null ? clicker.OldPixels.Count : 0;
+        if (cache.Count < 64 || cache.Count < alive * 3) return;
+        List<int> dead = null;
+        foreach (KeyValuePair<int, Husk> kv in cache) if (kv.Value.body == null) (dead ?? (dead = new List<int>())).Add(kv.Key);
+        if (dead != null) foreach (int k in dead) cache.Remove(k);
+    }
+
+    /// <summary>
+    /// Fills 'results' with the husks within 'radius' of 'centre' (flat = only the horizontal distance counts) and returns how many.
+    /// Vanishing husks are skipped unless includeFading.
+    /// </summary>
+    public static int Near(PixelClicker clicker, Vector3 centre, float radius, List<Husk> results, bool flat = true, bool includeFading = false)
+    {
+        results.Clear();
+        if (clicker == null) return 0;
+        Prune(clicker);
+        float r2 = radius * radius;
+        var list = clicker.OldPixels;
+        for (int i = 0; i < list.Count; i++)
+        {
+            Rigidbody b = list[i];
+            if (b == null) continue;
+            Vector3 d = b.position - centre;
+            if (flat) d.y = 0f;
+            if (d.sqrMagnitude > r2) continue;
+            Husk h = Get(b);
+            if (!includeFading && h.Fading) continue;
+            results.Add(h);
+        }
+        return results.Count;
+    }
+
+    /// <summary>How many husks of this pixel type are lying out (vanishing ones too).</summary>
+    public static int CountOfType(PixelClicker clicker, PixelClicker.PixelType type)
+    {
+        if (clicker == null) return 0;
+        int count = 0;
+        var list = clicker.OldPixels;
+        for (int i = 0; i < list.Count; i++)
+        {
+            Husk h = Get(list[i]);
+            if (TypeOf(clicker, h, out PixelClicker.PixelType t) && t == type) count++;
+        }
+        return count;
+    }
+}

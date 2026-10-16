@@ -53,8 +53,7 @@ public abstract class PixelPlacedDevice : MonoBehaviour
     public bool Accepts(Rigidbody body)
     {
         if (AttuneTier < 0) return true;
-        OldPixelInfo info = body != null ? body.GetComponent<OldPixelInfo>() : null;
-        return info != null && info.tierIndex == AttuneTier;
+        return PixelHuskQuery.Get(body).Tier == AttuneTier;
     }
 
     private bool usesMode;

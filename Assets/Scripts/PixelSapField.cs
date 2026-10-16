@@ -42,6 +42,7 @@ public class PixelSapField : MonoBehaviour
     private readonly Dictionary<Rigidbody, GameObject> glows = new Dictionary<Rigidbody, GameObject>();
     private readonly HashSet<Rigidbody> insideNow = new HashSet<Rigidbody>();
     private readonly List<Rigidbody> scratch = new List<Rigidbody>();
+    private readonly List<PixelHuskQuery.Husk> nearby = new List<PixelHuskQuery.Husk>();
     private float timer;
     private Material circleMaterial, glowMaterial;
     private static Mesh discMesh;
@@ -97,10 +98,9 @@ public class PixelSapField : MonoBehaviour
         scratch.Clear();
         for (int i = 0; i < husks.Count; i++)
         {
-            Rigidbody b = husks[i];
-            if (b == null || TierOf(b) != sapIndex || sapIndex < 0) continue;
-            OldPixelDespawn d = b.GetComponent<OldPixelDespawn>();
-            if (d != null && d.IsDespawning) continue;
+            PixelHuskQuery.Husk h = PixelHuskQuery.Get(husks[i]);
+            if (!h.Valid || sapIndex < 0 || h.Tier != sapIndex || h.Fading) continue;
+            Rigidbody b = h.body;
             scratch.Add(b);
             if (!saps.ContainsKey(b)) saps[b] = new Sap { body = b, circle = MakeCircle() };
         }
@@ -110,26 +110,24 @@ public class PixelSapField : MonoBehaviour
 
         // 2) the woodcutting husks inside a circle: one-time bonus, the sap's bonus, the glow
         insideNow.Clear();
-        float r = Radius, r2 = r * r;
+        float r = Radius;
         if (saps.Count > 0 && wood != null && wood.types != null)
-            for (int i = 0; i < husks.Count; i++)
+            foreach (Sap s in saps.Values)
             {
-                Rigidbody b = husks[i];
-                if (b == null || saps.ContainsKey(b)) continue;
-                int tier = TierOf(b);
-                if (tier < 0 || tier == sapIndex || System.Array.IndexOf(wood.types, clicker.Tiers[tier].type) < 0) continue;
-                OldPixelDespawn d = b.GetComponent<OldPixelDespawn>();
-                if (d == null || d.IsDespawning) continue;
-                foreach (Sap s in saps.Values)
+                if (s.body == null) continue;
+                PixelHuskQuery.Near(clicker, s.body.position, r, nearby);   // the husks inside this sap's circle (vanishing ones left out)
+                foreach (PixelHuskQuery.Husk h in nearby)
                 {
-                    if (s.body == null) continue;
-                    Vector3 off = b.position - s.body.position; off.y = 0f;
-                    if (off.sqrMagnitude > r2) continue;
+                    Rigidbody b = h.body;
+                    int tier = h.Tier;
+                    if (saps.ContainsKey(b) || tier < 0 || tier == sapIndex || System.Array.IndexOf(wood.types, clicker.Tiers[tier].type) < 0) continue;
+                    OldPixelDespawn d = h.despawn;
+                    if (d == null) continue;
                     insideNow.Add(b);
                     if (boosted.Add(b)) d.AddLifetime(huskBonusSeconds);   // once ever per husk
                     if (s.counted.Add(b))                                    // once per husk, per sap
                     {
-                        OldPixelDespawn sd = s.body.GetComponent<OldPixelDespawn>();
+                        OldPixelDespawn sd = PixelHuskQuery.Get(s.body).despawn;
                         if (sd != null) sd.AddLifetime(sapBonusPerHusk);
                     }
                 }
@@ -141,12 +139,6 @@ public class PixelSapField : MonoBehaviour
         foreach (Rigidbody key in glows.Keys) if (key == null || !insideNow.Contains(key)) scratch.Add(key);
         foreach (Rigidbody key in scratch) { if (glows[key] != null) Destroy(glows[key]); glows.Remove(key); }
         boosted.RemoveWhere(x => x == null);
-    }
-
-    private int TierOf(Rigidbody b)
-    {
-        OldPixelInfo info = b.GetComponent<OldPixelInfo>();
-        return info != null && clicker.IsValidTierIndex(info.tierIndex) ? info.tierIndex : -1;
     }
 
     private void ClearAll()
