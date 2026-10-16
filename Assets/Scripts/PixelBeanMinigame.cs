@@ -9,6 +9,9 @@ using static PixelInput;
 /// </summary>
 public class PixelBeanMinigame : PixelVisitorMinigame
 {
+    /// <summary>A very rare visitor: it can't be switched off in the Toggles window.</summary>
+    public override bool CanSwitchOff => false;
+
     [Header("Bean")]
     [Range(0f, 1f)]
     [Tooltip("Chance that she really shows up each time her visit timer runs out (a failed roll waits for the next timer). Small = rare.")]

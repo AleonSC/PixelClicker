@@ -177,6 +177,8 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
     protected override string TradeText => "Sell";
     protected override string TradePayWord => "Sell";
 
+    public override string ToggleNote => "Big Tim only visits while you are training Woodcutting.";
+
     /// <summary>He only comes while you are training Woodcutting.</summary>
     protected override bool CanVisit
     {

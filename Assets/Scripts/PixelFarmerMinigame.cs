@@ -37,6 +37,18 @@ public class PixelFarmerMinigame : PixelVisitorMinigame
 
     protected override int OfferedWares => seedsOffered;
 
+    public override string ToggleNote => "The Farmer only visits while you are training Farming.";
+
+    /// <summary>She only comes while you are training Farming (like the Lumberjack with Woodcutting).</summary>
+    protected override bool CanVisit
+    {
+        get
+        {
+            PixelSkills s = PixelSkills.Instance;
+            return s != null && s.TrainingId == PixelSkills.FarmingId;
+        }
+    }
+
     protected override void ModifyWares(System.Collections.Generic.List<int> wares)
     {
         if (consumables == null || clicker == null || (!DevAlwaysDragonSeeds && Random.value >= dragonSeedChance) || clicker.PickMissingDragonCube() < 0) return;

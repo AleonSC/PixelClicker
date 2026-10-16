@@ -268,6 +268,12 @@ public abstract class PixelMinigame : MonoBehaviour
     /// <summary>The player switched this (bought) minigame off in the shop. Saved. The shop won't start it while this is true.</summary>
     public bool UserDisabled { get; set; }
 
+    /// <summary>False = the player can't switch this one off (no switch in the Toggles window; e.g. the very rare cat visitors).</summary>
+    public virtual bool CanSwitchOff => true;
+
+    /// <summary>A short note shown as an orange '!' tooltip on this one's row in the Toggles window (null = none), e.g. when a vendor visits.</summary>
+    public virtual string ToggleNote => null;
+
     /// <summary>Starts the minigame (a shop purchase). Safe to call more than once.</summary>
     public abstract void Activate();
 

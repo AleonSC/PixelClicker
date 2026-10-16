@@ -151,6 +151,8 @@ public class PixelToggles : MonoBehaviour
         public Action<bool> setter;
         public Button edit;        // pet rows: the pencil that opens the pet's name window
         public Action editAction;
+        public GameObject info;    // the orange '!' (rows with a note)
+        public string note;
     }
 
     private struct Entry
@@ -160,6 +162,7 @@ public class PixelToggles : MonoBehaviour
         public Action<bool> setter;
         public Action editAction;   // pet rows: opens the rename window (a pencil shows at the left of the name)
         public bool skipAll;   // not switched by the 'Toggle all' row (a mode switch rather than an on / off item)
+        public string note;    // an orange '!' with this as its tooltip (e.g. 'only visits while training Woodcutting')
     }
 
     private GameObject canvasRoot, windowObject, emptyObject, hintObject, openObject;
@@ -387,10 +390,16 @@ public class PixelToggles : MonoBehaviour
             {
                 if (m == null || !(m.Running || m.UserDisabled)) continue;
                 if ((m is PixelVisitorMinigame) != vendors) continue;
+                if (!m.CanSwitchOff)
+                {
+                    if (m.UserDisabled) { m.UserDisabled = false; m.Activate(); }   // (switched off before it became unswitchable: back on)
+                    continue;   // no switch for it
+                }
                 PixelMinigame mg = m;
                 list.Add(new Entry
                 {
                     label = mg.DisplayName,
+                    note = mg.ToggleNote,
                     on = !mg.UserDisabled,
                     setter = on =>
                     {
@@ -470,6 +479,10 @@ public class PixelToggles : MonoBehaviour
             row.edit.gameObject.SetActive(row.editAction != null);
             row.label.rectTransform.offsetMin = new Vector2(row.editAction != null ? rowHeight : 16f, 0f);
             row.toggle.SetIsOnWithoutNotify(entries[i].on);
+            row.note = entries[i].note;
+            bool hasNote = !string.IsNullOrEmpty(row.note);
+            row.info.SetActive(hasNote);
+            row.label.rectTransform.offsetMax = new Vector2(-(rowHeight + 20f) - (hasNote ? rowHeight * 0.62f + 10f : 0f), 0f);
             row.go.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -i * (rowHeight + 8f));
         }
 
@@ -548,6 +561,26 @@ public class PixelToggles : MonoBehaviour
         PixelUIKit.Stretch(kr);
         kr.offsetMin = new Vector2(size * 0.1f, size * 0.1f);
         kr.offsetMax = new Vector2(-size * 0.1f, -size * 0.1f);
+
+        // The orange '!' left of the tick box (rows with a note): hover it for the note.
+        GameObject info = new GameObject("Info", typeof(RectTransform), typeof(Image));
+        info.transform.SetParent(row.go.transform, false);
+        Image ii = info.GetComponent<Image>();
+        ii.color = new Color(0.95f, 0.55f, 0.12f, 1f);
+        PixelUIKit.StyleButton(ii);
+        float infoSize = rowHeight * 0.62f;
+        RectTransform ir = info.GetComponent<RectTransform>();
+        ir.anchorMin = ir.anchorMax = ir.pivot = new Vector2(1f, 0.5f);
+        ir.sizeDelta = new Vector2(infoSize, infoSize);
+        ir.anchoredPosition = new Vector2(-14f - size - 10f, 0f);
+        TMP_Text mark = PixelUIKit.CreateText(font, info.transform, "Mark", "!", infoSize * 0.75f, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
+        mark.raycastTarget = false;
+        PixelUIKit.Stretch(mark.rectTransform);
+        PixelHoverTip infoHover = info.AddComponent<PixelHoverTip>();
+        infoHover.onEnter = () => hoveredNote = row.note;
+        infoHover.onExit = () => { if (hoveredNote == row.note) hoveredNote = null; };
+        row.info = info;
+        info.SetActive(false);
 
         row.toggle = box.GetComponent<Toggle>();
         row.toggle.targetGraphic = bg;
@@ -937,9 +970,47 @@ public class PixelToggles : MonoBehaviour
         hover.onExit = () => tip.SetActive(false);
     }
 
+    private string hoveredNote;
+    private RectTransform noteTipRect;
+    private TMP_Text noteTipLabel;
+
+    /// <summary>The tooltip of a row's orange '!' (beside the pointer while it is over one).</summary>
+    private void UpdateNoteTip()
+    {
+        if (canvasRoot == null) return;
+        bool show = !string.IsNullOrEmpty(hoveredNote) && windowObject != null && windowObject.activeInHierarchy;
+        if (noteTipRect == null)
+        {
+            if (!show) return;
+            GameObject go = new GameObject("Note Tip", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(canvasRoot.transform, false);
+            Image bg = go.GetComponent<Image>();
+            bg.color = new Color(0.04f, 0.05f, 0.09f, 0.96f);
+            bg.raycastTarget = false;
+            PixelUIKit.StyleBox(bg);
+            noteTipRect = go.GetComponent<RectTransform>();
+            noteTipRect.anchorMin = noteTipRect.anchorMax = new Vector2(0.5f, 0.5f);
+            noteTipLabel = PixelUIKit.CreateText(font, go.transform, "Text", "", fontSize * 0.85f, TextAlignmentOptions.MidlineLeft, FontStyles.Normal, Color.white);
+            noteTipLabel.raycastTarget = false;
+            noteTipLabel.textWrappingMode = TextWrappingModes.Normal;
+            PixelUIKit.Stretch(noteTipLabel.rectTransform);
+            noteTipLabel.margin = new Vector4(14f, 8f, 14f, 8f);
+        }
+        if (noteTipRect.gameObject.activeSelf != show) noteTipRect.gameObject.SetActive(show);
+        if (!show) return;
+        noteTipRect.SetAsLastSibling();
+        noteTipLabel.text = hoveredNote;
+        Vector2 pref = noteTipLabel.GetPreferredValues(hoveredNote, 360f - 28f, 0f);
+        noteTipRect.sizeDelta = new Vector2(Mathf.Min(360f, pref.x + 30f), pref.y + 20f);
+        RectTransform canvasRect = (RectTransform)canvasRoot.transform;
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local))
+            PixelUIKit.PlaceTooltip(noteTipRect, canvasRect, local);
+    }
+
     private void LateUpdate()
     {
         UpdateTabTip();
+        UpdateNoteTip();
         if (buttonGroup == null || windowObject == null) return;
         bool open = windowObject.activeSelf;
         if (open) FitBesideShop();
