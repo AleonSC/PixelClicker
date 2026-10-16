@@ -2357,6 +2357,24 @@ public class PixelPauseMenu : MonoBehaviour
         return label != null ? label.text : "";
     }
 
+    // The Floor and Sky rows (AddLookRow): searching for any floor / sky NAME finds them, and the menu search lists each matching look to pick at once.
+    private readonly Dictionary<RectTransform, System.Func<IPixelLookSource>> lookRows = new Dictionary<RectTransform, System.Func<IPixelLookSource>>();
+
+    /// <summary>Does this settings row match the search? Its label, or for the Floor / Sky rows the name of any of their looks.</summary>
+    private bool RowMatches(SettingsItem item, string query)
+    {
+        if (RowText(item).ToLowerInvariant().Contains(query)) return true;
+        if (item.rect == null || !lookRows.TryGetValue(item.rect, out System.Func<IPixelLookSource> source)) return false;
+        IPixelLookSource look = source != null ? source() : null;
+        if (look == null) return false;
+        for (int i = 0; i < look.StyleCount; i++)
+        {
+            string n = look.StyleName(i);
+            if (!string.IsNullOrEmpty(n) && n.ToLowerInvariant().Contains(query)) return true;
+        }
+        return false;
+    }
+
     private void OnMenuSearchChanged(string text)
     {
         menuSearch = (text ?? "").Trim().ToLowerInvariant();
@@ -2374,6 +2392,29 @@ public class PixelPauseMenu : MonoBehaviour
             foreach (MenuEntry e in mainEntries)
                 if (e.label.ToLowerInvariant().Contains(menuSearch)) { labels.Add(e.label); colors.Add(e.color); actions.Add(e.action); }
         int entryCount = labels.Count;
+
+        // Every floor / sky whose NAME matches: a result that switches to it straight away (it stays highlighted as the one in use).
+        int lookResults = 0;
+        const int maxLookResults = 8;   // (a short search like 'a' matches dozens: the Settings search shows the rest)
+        foreach (KeyValuePair<RectTransform, System.Func<IPixelLookSource>> lr in lookRows)
+        {
+            IPixelLookSource look = lr.Value != null ? lr.Value() : null;
+            if (look == null || !look.Usable) continue;
+            TMP_Text rowLabelText = lr.Key != null ? lr.Key.GetComponentInChildren<TMP_Text>(true) : null;
+            string kind = rowLabelText != null ? rowLabelText.text : "Look";
+            for (int i = 0; i < look.StyleCount; i++)
+            {
+                string n = look.StyleName(i);
+                if (string.IsNullOrEmpty(n) || !n.ToLowerInvariant().Contains(menuSearch)) continue;
+                if (lookResults++ >= maxLookResults) break;
+                int index = i;
+                IPixelLookSource target = look;
+                labels.Add(kind + ": " + n + (look.Current == i ? "  (in use)" : ""));
+                colors.Add(look.Current == i ? new Color(0.2f, 0.45f, 0.3f, 1f) : tickBoxColor);
+                actions.Add(() => { target.SetStyle(index); PixelAudio.Play("ui_click"); OnMenuSearchChanged(menuSearch); settingsRefreshersRun(); });
+            }
+        }
+        entryCount = labels.Count;
 
         List<string> settingLabels = new List<string>();
         foreach (SettingsItem item in settingsItems)
@@ -2443,6 +2484,7 @@ public class PixelPauseMenu : MonoBehaviour
     {
         settingsPanel = BuildSectionPanel("Settings Panel", settingsTitle, out float top);
         settingsRefreshers.Clear();
+        lookRows.Clear();
 
         // Search bar under the title: filters the rows in place (the same filter the main menu's search hands over).
         float searchH = rowHeight * 0.9f;
@@ -2674,12 +2716,12 @@ public class PixelPauseMenu : MonoBehaviour
         HashSet<string> sectionsWithMatch = new HashSet<string>();
         if (filtering)
             foreach (SettingsItem it in settingsItems)
-                if (!it.isHeader && it.wasActive && it.section != null && RowText(it).ToLowerInvariant().Contains(settingsFilter)) sectionsWithMatch.Add(it.section);
+                if (!it.isHeader && it.wasActive && it.section != null && RowMatches(it, settingsFilter)) sectionsWithMatch.Add(it.section);
         foreach (SettingsItem item in settingsItems)
         {
             bool shown = item.isHeader || item.section == null || expandedSettingsSections.Contains(item.section);
             if (filtering)   // a search shows just the matching rows (and their headings), whatever is folded
-                shown = item.isHeader ? sectionsWithMatch.Contains(item.section) : RowText(item).ToLowerInvariant().Contains(settingsFilter);
+                shown = item.isHeader ? sectionsWithMatch.Contains(item.section) : RowMatches(item, settingsFilter);
             if (item.isHeader)
             {
                 TMP_Text label = item.rect.GetComponentInChildren<TMP_Text>();
@@ -3005,6 +3047,7 @@ public class PixelPauseMenu : MonoBehaviour
     {
         TMP_Text label = AddRowLabel(parent, labelText, y, out RectTransform row);
         label.rectTransform.anchorMax = new Vector2(getToggle != null ? 0.3f : 0.4f, 1f);
+        lookRows[row] = source;   // the search finds this row by any of its look names too
 
         if (getToggle != null)
         {

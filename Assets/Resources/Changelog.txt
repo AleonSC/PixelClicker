@@ -1237,3 +1237,4 @@
 [2026-10-16 17:42 UTC] The Underwater and Deep Ocean skies now have a dark shark silhouette slowly circling far below - only at the bottom of the sky, so you see it when looking down past the cube (with the floor off), never on the sides.
 [2026-10-16 17:45 UTC] The Deep Ocean sky has a bioluminescent jellyfish drifting out in the dark that lights up every few seconds (glowing bell rim, pulses of light running down its tentacles).
 [2026-10-16 17:46 UTC] Fixed the Clear Day and Sunset skies being mirrored below the horizon (a second sun and upside-down clouds): the lower half is now a haze that fades from the horizon colour into a deeper tone.
+[2026-10-16 17:54 UTC] Every floor and sky is now searchable: the pause menu's search lists matching floors / skies (click one to switch to it), and the Settings search shows the Floor / Sky row when you type any of their style names.
