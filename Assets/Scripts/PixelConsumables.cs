@@ -119,7 +119,7 @@ public class PixelConsumables : MonoBehaviour
         Gauntlet = 17,
         /// <summary>Not consumed: a belt-laying tool on sale from Electrician level 5. Right-click starts placing conveyor belts (PixelFeatureTester.StartFeature); hold the right button on a belt to remove it.</summary>
         ConveyorBelt = 18,
-        /// <summary>Placed, permanent: an open bin (PixelRecycler). Drop husks in, press its button: the lid shuts and every husk inside pays back 50% of its value as currency.</summary>
+        /// <summary>Placed for 5 minutes (PixelRecyclerDevice; Operation upgrades): an open bin (PixelRecycler) that recycles every husk landing in it (50% back + XP with a same-type streak).</summary>
         Recycler = 19,
     }
 
@@ -618,14 +618,14 @@ public class PixelConsumables : MonoBehaviour
         {
             kind = DeviceKind.Recycler,
             displayName = "Recycler",
-            description = "Drop up to 10 husks in, then press its red button: the lid closes and each one pays back 50% of its value.",
+            description = "A bin that recycles every husk that lands in it for half its value and XP (same colour in a row = a streak). Works for {duration} s; upgrades in the shop's Operation tab.",
             requiredType = PixelClicker.PixelType.White,
             costs = new[]
             {
                 new PixelShop.PackCost { type = PixelClicker.PixelType.White, amount = 50 },
             },
             maxHeld = 2,
-            durationSeconds = 1e9f,
+            durationSeconds = 300f,   // 5 minutes (Operation: Run Time)
             radius = 1f,
             color = new Color(0.25f, 0.55f, 0.32f, 1f),
             bodyDiameter = 3f,
@@ -1073,6 +1073,10 @@ public class PixelConsumables : MonoBehaviour
         if (devices != null)
             foreach (Device d in devices)
                 if (d != null && d.kind == DeviceKind.Recycler && d.description != null && d.description.Contains("up to 12")) d.description = CreateDefaultRecycler().description;   // 10 husks / 50% now
+
+        if (devices != null)
+            foreach (Device d in devices)
+                if (d != null && d.kind == DeviceKind.Recycler && d.durationSeconds >= 1e8f) { Device fresh = CreateDefaultRecycler(); d.durationSeconds = fresh.durationSeconds; d.description = fresh.description; }   // (2026-10-16: the Recycler lasts 5 minutes)
 
         if (devices != null)
             foreach (Device d in devices)
@@ -1739,6 +1743,10 @@ public class PixelConsumables : MonoBehaviour
                 e.chargeCapacity = Mathf.Max(2f, e.chargeCapacity + B(PixelOperationStat.ChargeNeeded));
                 e.superChargeSeconds += B(PixelOperationStat.SuperSeconds);
                 break;
+            case DeviceKind.Recycler:
+                e.durationSeconds += B(PixelOperationStat.Duration);
+                e.radius = Mathf.Max(0.5f, e.radius + B(PixelOperationStat.Radius));   // (the bin's size factor)
+                break;
             case DeviceKind.LightningRod:
                 e.uses += Mathf.RoundToInt(B(PixelOperationStat.Uses));
                 e.strikeSeconds = Mathf.Max(0.6f, e.strikeSeconds + B(PixelOperationStat.StrikeInterval));
@@ -1775,6 +1783,7 @@ public class PixelConsumables : MonoBehaviour
             case PixelOperationStat.SuperSeconds: return d.superChargeSeconds;
             case PixelOperationStat.StrikeInterval: return d.strikeSeconds;
             case PixelOperationStat.Storage: return d.maxHeld;
+            case PixelOperationStat.RecyclerStreak: return PixelRecycler.DefaultStreakCap;
             case PixelOperationStat.BaitGhosts:
             {
                 PixelGhostMinigame ghosts = PixelFind.First<PixelGhostMinigame>();
@@ -2544,9 +2553,9 @@ public class PixelConsumables : MonoBehaviour
         }
         else if (d.kind == DeviceKind.Recycler)
         {
-            GameObject root = PixelRecycler.Place(clicker, point, yaw);
-            PixelChipperDevice recyclerDevice = root.AddComponent<PixelChipperDevice>();   // (the permanent-device stub; the behaviour is in PixelRecycler)
-            recyclerDevice.Init(clicker, cam, shrinkSeconds);
+            GameObject root = PixelRecycler.Place(clicker, point, yaw, d.radius);   // (d.radius = the bin's size factor, Operation: Bin Size)
+            PixelRecyclerDevice recyclerDevice = root.AddComponent<PixelRecyclerDevice>();   // (the countdown; the behaviour is in PixelRecycler)
+            recyclerDevice.Init(clicker, cam, duration, shrinkSeconds);
             result = recyclerDevice;
         }
         else if (d.kind == DeviceKind.Funnel)
@@ -2675,7 +2684,7 @@ public class PixelConsumables : MonoBehaviour
         int index = Array.FindIndex(devices, x => x != null && x.displayName == state.device);
         if (index < 0) return;
         PixelPlacedDevice restored = SpawnDevice(index, state.position, state.yaw, state.remaining, state.aim, state.bend, state.force);
-        if (restored != null && state.disarmed && !(restored is PixelStorageCrate) && !(restored is PixelChipperDevice)) restored.Disarm();
+        if (restored != null && state.disarmed && !(restored is PixelStorageCrate) && !(restored is PixelChipperDevice) && !(restored is PixelRecyclerDevice)) restored.Disarm();
         if (restored is PixelSorterDevice restoredSorter && state.forceValue > 0f) restoredSorter.SetForceValue(state.forceValue);
         if (restored is PixelMagnetSorterDevice restoredMag) restoredMag.ImportState(state.extra);
         if (restored is PixelQuantumDevice restoredOrganizer) restoredOrganizer.ImportState(state.extra);

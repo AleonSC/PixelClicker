@@ -1,7 +1,7 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelOperation.cs / PixelShopOperation.cs
 //   Upgrades > Operation (the third sub-tab of the shop's Upgrades tab, operationSubTabText; upgradesSubTab 2): one row per consumable
-//   (Vacuum Device, Fan, Sorter, Charge Booster, Lightning Rod, Combo Fuel, Ghost Bait, Pet Treat - listed once the pixel type it
+//   (Vacuum Device, Fan, Sorter, Charge Booster, Lightning Rod, Combo Fuel, Ghost Bait, Pet Treat, Recycler - listed once the pixel type it
 //   needs is unlocked or you hold one, PixelConsumables.OperationListed) with a rotating 3D picture on the left (a hidden studio per
 //   consumable far below the scene OperationStudioHeight, a camera rendering into a RenderTexture shown by a RawImage, re-rendered
 //   each frame only for visible rows, UpdateOperationPictures; the model comes from PixelConsumables.CreateDisplayModel = the real
@@ -45,6 +45,8 @@ public enum PixelOperationStat
     Storage = 9,
     /// <summary>Extra ghosts a Ghost Bait calls.</summary>
     BaitGhosts = 10,
+    /// <summary>How high a Recycler's same-type streak multiplier can climb.</summary>
+    RecyclerStreak = 11,
 }
 
 /// <summary>
@@ -93,7 +95,7 @@ public class PixelOperationUpgrade
     {
         PixelConsumables.DeviceKind V = PixelConsumables.DeviceKind.Vacuum, F = PixelConsumables.DeviceKind.Fan, S = PixelConsumables.DeviceKind.Sorter,
             B = PixelConsumables.DeviceKind.ChargeBooster, R = PixelConsumables.DeviceKind.LightningRod, C = PixelConsumables.DeviceKind.ComboFuel,
-            G = PixelConsumables.DeviceKind.GhostBait, P = PixelConsumables.DeviceKind.PetTreat;
+            G = PixelConsumables.DeviceKind.GhostBait, P = PixelConsumables.DeviceKind.PetTreat, Y = PixelConsumables.DeviceKind.Recycler;
         PixelOperationUpgrade U(string id, string name, string desc, PixelConsumables.DeviceKind kind, PixelOperationStat stat, int levels, float per, double cost, string unit = "", float growth = 1.9f)
             => new PixelOperationUpgrade { id = id, displayName = name, description = desc, device = kind, stat = stat, maxLevel = levels, perLevel = per, baseCost = cost, unit = unit, costGrowth = growth };
 
@@ -125,6 +127,10 @@ public class PixelOperationUpgrade
 
             U("treat_storage", "Storage", "How many Pet Treats you can hold.", P, PixelOperationStat.Storage, 5, 2f, 30),
             U("treat_duration", "Treat Length", "How long a Pet Treat keeps your pets hyper.", P, PixelOperationStat.Duration, 5, 15f, 40, " s"),
+
+            U("rec_duration", "Run Time", "How long a placed Recycler works before it packs up.", Y, PixelOperationStat.Duration, 5, 60f, 60, " s"),
+            U("rec_size", "Bin Size", "A bigger bin: more husks land in it by themselves.", Y, PixelOperationStat.Radius, 5, 0.15f, 80, "x"),
+            U("rec_streak", "Streak Power", "How high the same-colour streak's XP multiplier can climb.", Y, PixelOperationStat.RecyclerStreak, 5, 1f, 100, "x"),
         };
     }
 }

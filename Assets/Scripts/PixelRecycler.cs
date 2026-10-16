@@ -1,5 +1,8 @@
 // ---- System notes ----
 // PixelRecycler.cs
+//   TIMED + UPGRADES (2026-10-16): a placed Recycler lasts durationSeconds (300 s; PixelRecyclerDevice counts down, 'm:ss left' under the counter,
+//   it shrinks away with whatever is inside when time is up). Upgrades > Operation: Run Time (+60 s a level), Bin Size (+15% a level - the whole bin
+//   and its catching area scale, Place sizeFactor = the device's radius) and Streak Power (+1 to the streak cap a level, StreakCap).
 //   RECYCLER (PixelConsumables DeviceKind.Recycler 19, Utilities card - listed FIRST there - and Cubie's gift on visit 1 via the {recycler} page token): a
 //   permanent open-topped bin (PixelChipperDevice stub for removal / saving its spot; built here by Place / CreateGhost / CreateDisplay with PixelFactoryKit:
 //   plinth + feet, green walls with a dark liner, brushed-metal corner pillars and rim, a glowing band round the body and a status lamp - green idle,
@@ -164,10 +167,11 @@ public class PixelRecycler : MonoBehaviour
     private static readonly Color BodyColor = new Color(0.25f, 0.55f, 0.32f, 1f), LidColor = new Color(0.2f, 0.45f, 0.27f, 1f), ButtonColor = new Color(0.9f, 0.2f, 0.18f, 1f);
 
     /// <summary>Builds a placed Recycler at 'point' (with its behaviour).</summary>
-    public static GameObject Place(PixelClicker clicker, Vector3 point, float yaw)
+    public static GameObject Place(PixelClicker clicker, Vector3 point, float yaw, float sizeFactor = 1f)
     {
         GameObject root = Build(clicker, false, true);
         root.transform.SetPositionAndRotation(point, Quaternion.Euler(0f, yaw, 0f));
+        root.transform.localScale = Vector3.one * Mathf.Max(0.5f, sizeFactor);   // (Operation: Bin Size - everything, the catching area too, scales with it)
         PixelRecycler r = root.AddComponent<PixelRecycler>();
         r.Init(clicker);
         r.carry = root.AddComponent<PixelCarryHandles>();
@@ -337,6 +341,8 @@ public class PixelRecycler : MonoBehaviour
         if (counter != null && cam != null) counter.transform.rotation = Quaternion.LookRotation(counter.transform.position - cam.transform.position, cam.transform.up);
 
         UpdateButtonFlash();
+        if (device == null) device = GetComponent<PixelPlacedDevice>();
+        if (device != null && Mathf.CeilToInt(device.Remaining) != shownSecond) { shownSecond = Mathf.CeilToInt(device.Remaining); RefreshCounter(); }   // (the time left ticks on the counter)
         foreach (Rigidbody b in inside)   // a frozen husk you start to grab is let loose at once (Pixel Grabbing steers it with its velocity)
         {
             if (b == null || !b.isKinematic) continue;
@@ -491,7 +497,20 @@ public class PixelRecycler : MonoBehaviour
 
     // ---- Auto recycling + streak ----
 
-    private float StreakMultiplier => Mathf.Min(Mathf.Max(1f, streakMaxMultiplier), 1f + Mathf.Max(0f, streakStep) * streakCount);
+    /// <summary>The streak cap before any upgrade (the Operation tooltip starts from it).</summary>
+    public static float DefaultStreakCap => 5f;
+
+    /// <summary>The streak cap with the 'Streak Power' upgrades (Upgrades > Operation).</summary>
+    private float StreakCap
+    {
+        get
+        {
+            PixelConsumables c = PixelFind.Cached<PixelConsumables>();
+            return Mathf.Max(1f, streakMaxMultiplier) + (c != null ? c.OperationBonus(PixelConsumables.DeviceKind.Recycler, PixelOperationStat.RecyclerStreak) : 0f);
+        }
+    }
+
+    private float StreakMultiplier => Mathf.Min(StreakCap, 1f + Mathf.Max(0f, streakStep) * streakCount);
 
     /// <summary>Auto mode: every husk that has lain in the bin for recycleDelay is recycled now (not one in the player's hand).</summary>
     private void RecycleDue()
@@ -679,12 +698,24 @@ public class PixelRecycler : MonoBehaviour
         {
             // Auto mode: the counter shows the streak (type + multiplier) while it lasts.
             bool showStreak = clicker != null && clicker.IsValidTierIndex(streakTier) && streakCount > 0 && Time.time - lastRecycleTime <= streakTimeout;
-            counter.text = showStreak ? clicker.Tiers[streakTier].displayName.Replace(" Pixels", "") + " streak\n<size=80%>x" + StreakMultiplier.ToString("0.0") + " XP</size>"
-                                      : "<size=70%>drop husks in</size>";
+            counter.text = (showStreak ? clicker.Tiers[streakTier].displayName.Replace(" Pixels", "") + " streak\n<size=80%>x" + StreakMultiplier.ToString("0.0") + " XP</size>"
+                                       : "<size=70%>drop husks in</size>") + TimeLeftLine();
             return;
         }
         int cap = Mathf.Max(1, capacity);
         counter.text = inside.Count + " / " + cap + (inside.Count >= cap ? "\n<size=60%>full - press the button</size>" : "");
+    }
+
+    private PixelPlacedDevice device;
+    private int shownSecond = -1;
+
+    /// <summary>'4:32 left' under the counter while the Recycler's run time ticks down (it packs up when it reaches 0).</summary>
+    private string TimeLeftLine()
+    {
+        if (device == null) device = GetComponent<PixelPlacedDevice>();
+        if (device == null || device.Remaining > 1e7f) return "";
+        int sec = Mathf.Max(0, Mathf.CeilToInt(device.Remaining));
+        return "\n<size=60%>" + (sec / 60) + ":" + (sec % 60).ToString("00") + " left</size>";
     }
 
     // ---- Processing ----

@@ -1187,3 +1187,6 @@
 [2026-10-16 15:39 UTC] To-do: redesign the shop's Consumables page as category chips + an item tile grid + one buy bar.
 [2026-10-16 15:40 UTC] The 'Next up' window shows from the start again (it had been tied to Block Hold, which now comes from the Standard skill tree); Only With Block Hold brings the old rule back.
 [2026-10-16 15:44 UTC] Session report: new 'Skill training' section per skill trained (time, levels, XP per minute and per block, blocks broken by type) with Woodcutting extras (trees started / felled / infested, Timber XP, hazards, Big Tim trades, Wood Chipper); switching skills no longer counts the other skill's total as gained XP.
+[2026-10-16 15:56 UTC] Recycler: a placed Recycler now lasts 5 minutes (time left shown on its sign), with three upgrades in the shop's Upgrades > Operation tab: Run Time (+1 min a level), Bin Size (+15% a level) and Streak Power (+1 to the streak cap a level).
+[2026-10-16 15:56 UTC] Minigames in the shop now need only their price (no 'needs pack' requirements).
+[2026-10-16 15:56 UTC] Shop rebalance: every built-in price was reset to a new curve built from the session reports (early upgrades and the first minigames now cost hundreds to a few thousand, late items far less than before); saved scenes take the new prices once.

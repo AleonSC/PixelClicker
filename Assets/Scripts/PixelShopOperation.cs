@@ -19,6 +19,7 @@ public partial class PixelShop
         PixelConsumables.DeviceKind.Vacuum, PixelConsumables.DeviceKind.Fan, PixelConsumables.DeviceKind.Sorter,
         PixelConsumables.DeviceKind.ChargeBooster, PixelConsumables.DeviceKind.LightningRod,
         PixelConsumables.DeviceKind.ComboFuel, PixelConsumables.DeviceKind.GhostBait, PixelConsumables.DeviceKind.PetTreat,
+        PixelConsumables.DeviceKind.Recycler,
     };
 
     /// <summary>Adds any built-in Operation upgrade missing from the list (by id). Returns true if something was added.</summary>
