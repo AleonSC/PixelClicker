@@ -123,6 +123,8 @@ public class PixelConsumables : MonoBehaviour
         Recycler = 19,
         /// <summary>Not placed: right-click to drink a skill's Focus potion (PixelFocus: its hazard block stops spawning for a while). Sold now and then by the skill's vendor (the Lumberjack: Lumberjack's Focus).</summary>
         FocusPotion = 20,
+        /// <summary>Not placed: right-click to add Pesticide charges (PixelBlockRules.AddCharges for the Termite Hive: each charge clears a hive by itself). Sold by the Lumberjack.</summary>
+        PesticideSpray = 21,
     }
 
     /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
@@ -354,6 +356,8 @@ public class PixelConsumables : MonoBehaviour
     [SerializeField] private int maxPotionsHeld = 10;
 
     [Header("Devices")]
+    [Tooltip("Pesticide charges one Pesticide Spray adds (each clears a Termite Hive by itself).")]
+    [SerializeField] private int pesticideSprayCharges = 3;
     [Min(0f)]
     [Tooltip("How many seconds a placed Vacuum Device works (it overrides that device's own duration). 0 = the coded default (5).")]
     [SerializeField] private float vacuumDeviceSeconds = 0f;
@@ -920,6 +924,24 @@ public class PixelConsumables : MonoBehaviour
         };
     }
 
+    private static Device CreateDefaultPesticideSpray()
+    {
+        return new Device
+        {
+            kind = DeviceKind.PesticideSpray,
+            displayName = "Pesticide Spray",
+            description = "Right-click to use. Adds 3 Pesticide charges: each one clears a Termite Hive by itself. Sold by the Lumberjack. Hold up to 10.",
+            requiredType = PixelClicker.PixelType.Pesticide,
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Pesticide, amount = 5 },   // (the Lumberjack adds a random pure pixel each visit)
+            },
+            maxHeld = 10,
+            vendorOnly = true,
+            color = new Color(0.75f, 0.85f, 0.25f, 1f),
+        };
+    }
+
     private static Device CreateDefaultChargeBooster()
     {
         return new Device
@@ -1076,6 +1098,7 @@ public class PixelConsumables : MonoBehaviour
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ConveyorBelt, CreateDefaultConveyorBelt),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Recycler, CreateDefaultRecycler),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.FocusPotion, CreateDefaultFocusPotion),
+                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.PesticideSpray, CreateDefaultPesticideSpray),
                 })
                 {
                     DeviceKind wanted = extra.Key;
@@ -1908,6 +1931,7 @@ public class PixelConsumables : MonoBehaviour
                 case DeviceKind.Gauntlet:
                 case DeviceKind.ConveyorBelt:
                 case DeviceKind.FocusPotion:
+                case DeviceKind.PesticideSpray:
                     root = BuildItemModel(kind, d);
                     break;
             }
@@ -1962,6 +1986,22 @@ public class PixelConsumables : MonoBehaviour
             GameObject flame = MakePrimitive(PrimitiveType.Sphere, "Flame", root.transform, bright, false);
             flame.transform.localScale = new Vector3(0.22f, 0.34f, 0.22f);
             flame.transform.localPosition = new Vector3(0f, 1.2f, 0f);
+        }
+        else if (kind == DeviceKind.PesticideSpray)
+        {
+            // A spray can: a tall can, a dark cap and a little nozzle.
+            GameObject can = MakePrimitive(PrimitiveType.Cylinder, "Can", root.transform, new Color(main.r, main.g, main.b, 1f), false);
+            can.transform.localScale = new Vector3(0.42f, 0.42f, 0.42f);
+            can.transform.localPosition = new Vector3(0f, 0.42f, 0f);
+            GameObject label = MakePrimitive(PrimitiveType.Cylinder, "Label", root.transform, bright, false);
+            label.transform.localScale = new Vector3(0.44f, 0.14f, 0.44f);
+            label.transform.localPosition = new Vector3(0f, 0.42f, 0f);
+            GameObject cap = MakePrimitive(PrimitiveType.Cylinder, "Cap", root.transform, dark, false);
+            cap.transform.localScale = new Vector3(0.3f, 0.08f, 0.3f);
+            cap.transform.localPosition = new Vector3(0f, 0.9f, 0f);
+            GameObject nozzle = MakePrimitive(PrimitiveType.Cube, "Nozzle", root.transform, dark, false);
+            nozzle.transform.localScale = new Vector3(0.08f, 0.08f, 0.2f);
+            nozzle.transform.localPosition = new Vector3(0f, 0.98f, -0.12f);
         }
         else if (kind == DeviceKind.FocusPotion)
         {
@@ -2103,7 +2143,7 @@ public class PixelConsumables : MonoBehaviour
     {
         if (!IsDevice(item)) return false;
         DeviceKind k = devices[item - potions.Length].kind;
-        return k == DeviceKind.ComboFuel || k == DeviceKind.GhostBait || k == DeviceKind.PetTreat || k == DeviceKind.BaitBucket || k == DeviceKind.Gauntlet || k == DeviceKind.ConveyorBelt || k == DeviceKind.FocusPotion;
+        return k == DeviceKind.ComboFuel || k == DeviceKind.GhostBait || k == DeviceKind.PetTreat || k == DeviceKind.BaitBucket || k == DeviceKind.Gauntlet || k == DeviceKind.ConveyorBelt || k == DeviceKind.FocusPotion || k == DeviceKind.PesticideSpray;
     }
 
     /// <summary>0 = potion, 1 = placeable device (Utilities), 2 = seed, 3 = supply (instant-use item).</summary>
@@ -2174,6 +2214,16 @@ public class PixelConsumables : MonoBehaviour
                 if (!Inf) devices[index].owned--;
                 PixelStats.Count("focus.used");
                 PixelHints.Announce(devices[index].displayName + ": no hazards for a while");
+                return true;
+            }
+            case DeviceKind.PesticideSpray:
+            {
+                int add = Mathf.Max(1, pesticideSprayCharges);
+                PixelBlockRules.AddCharges(PixelClicker.PixelType.HornetNest, add);
+                if (!Inf) devices[index].owned--;
+                PixelStats.Count("pesticide.sprays");
+                PixelAudio.Play("purchase");
+                PixelHints.Announce("+" + add + " Pesticide charges (" + PixelBlockRules.Charges(PixelClicker.PixelType.HornetNest) + " ready)");
                 return true;
             }
             case DeviceKind.BaitBucket:

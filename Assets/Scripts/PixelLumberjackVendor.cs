@@ -3,7 +3,8 @@
 //   The Lumberjack (id lumberjack, 'Big Tim the Lumberjack'; a cube like Cubie in a red plaid shirt with a big beard, a green beanie
 //   and an axe): BUY / SELL TABS (PixelVisitorMinigame.BuySellTabs). BUY tab = his wares: the WOOD CHIPPER (a placed device, PixelConsumables DeviceKind.WoodChipper, costs wood
 //   and bark), plain POTIONS of the Lumberjack pack's pixels (Wood, Bark, Sap, Leaf, Heartwood, Twig, Acorn, Whetstone, Pesticide) and NOW AND THEN (focusChance 35% a visit) the
-//   LUMBERJACK'S FOCUS item (DeviceKind.FocusPotion, 1-2 in stock). PRICES (RollVisitPrice, once per visit): a potion costs some of its own material
+//   LUMBERJACK'S FOCUS item (DeviceKind.FocusPotion, 1-2 in stock), and every visit the PESTICIDE SPRAY (DeviceKind.PesticideSpray: right-click = +3 Pesticide charges;
+//   1-3 in stock, costs 3-8 Pesticide + 50-150 of one random pure pixel). PRICES (RollVisitPrice, once per visit): a potion costs some of its own material
 //   (potionMaterialRange 10-30) + ONE random pure pixel (potionPureFraction 30-60% of its normal price); Focus costs focusHiveCost (3) Termite Hives + TWO
 //   different random pure pixels (focusPureRange 100-300 each) + some of one random woodcutting pixel you have unlocked (focusWoodRange 10-30). Each potion comes 0-2 times (potionStockLow / High) - 0 = not on sale this visit. SELL tab (2026-10-16, its own panel - PixelVisitorMinigame.CustomSellPanel): pick ANY woodcutting currency you hold
 //   (drop-down), the AMOUNT (slider + 10% / 25% / 50% / All), what to be paid in (a pure pixel you have unlocked), then 'Ask for an offer' - he names a RANDOM price; Accept or Decline.
@@ -62,6 +63,13 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
     [SerializeField] private Vector2 potionMaterialRange = new Vector2(10f, 30f);
     [Tooltip("A potion's price in one random pure pixel: this fraction (min, max) of the potion's normal shop price.")]
     [SerializeField] private Vector2 potionPureFraction = new Vector2(0.3f, 0.6f);
+    [Tooltip("Pesticide Spray (3 Pesticide charges): fewest / most he brings each visit.")]
+    [SerializeField] private int sprayStockLow = 1;
+    [SerializeField, Tooltip("Pesticide Spray: most he brings each visit.")] private int sprayStockHigh = 3;
+    [Tooltip("Pesticide Spray: its price in Pesticide (min, max).")]
+    [SerializeField] private Vector2 sprayPesticideRange = new Vector2(3f, 8f);
+    [Tooltip("Pesticide Spray: its price in one random pure pixel (min, max).")]
+    [SerializeField] private Vector2 sprayPureRange = new Vector2(50f, 150f);
     [Tooltip("Lumberjack's Focus: how many Termite Hives it costs.")]
     [SerializeField] private int focusHiveCost = 3;
     [Tooltip("Lumberjack's Focus: the amount (min, max) of its random woodcutting pixel.")]
@@ -91,7 +99,7 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
         if (consumables.IsDevice(item))
         {
             PixelConsumables.DeviceKind k = consumables.DeviceKindOf(item);
-            return k == PixelConsumables.DeviceKind.WoodChipper || k == PixelConsumables.DeviceKind.FocusPotion;
+            return k == PixelConsumables.DeviceKind.WoodChipper || k == PixelConsumables.DeviceKind.FocusPotion || k == PixelConsumables.DeviceKind.PesticideSpray;
         }
         if (consumables.ItemCraftOnly(item)) return false;
         PixelClicker.PixelType t = consumables.ItemRequiredType(item);
@@ -108,6 +116,7 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
     protected override int StockFor(int item)
     {
         if (consumables != null && consumables.IsDevice(item) && consumables.DeviceKindOf(item) == PixelConsumables.DeviceKind.FocusPotion) return Random.Range(1, 3);
+        if (consumables != null && consumables.IsDevice(item) && consumables.DeviceKindOf(item) == PixelConsumables.DeviceKind.PesticideSpray) return Random.Range(Mathf.Max(1, sprayStockLow), Mathf.Max(sprayStockLow, sprayStockHigh) + 1);
         if (consumables != null && consumables.IsDevice(item)) return Random.Range(1, Mathf.Max(1, chipperStockMax) + 1);
         return Random.Range(Mathf.Max(0, potionStockLow), Mathf.Max(potionStockLow, potionStockHigh) + 1);   // 0 = that potion stays home this visit
     }
@@ -121,6 +130,15 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
         if (pure.Count == 0) return null;
         if (consumables.IsDevice(item))
         {
+            if (consumables.DeviceKindOf(item) == PixelConsumables.DeviceKind.PesticideSpray)
+            {
+                // Pesticide Spray: some Pesticide + one random pure pixel.
+                return new[]
+                {
+                    new PixelShop.PackCost { type = PixelClicker.PixelType.Pesticide, amount = Mathf.Round(Random.Range(Mathf.Min(sprayPesticideRange.x, sprayPesticideRange.y), Mathf.Max(sprayPesticideRange.x, sprayPesticideRange.y))) },
+                    new PixelShop.PackCost { type = pure[Random.Range(0, pure.Count)], amount = Mathf.Round(Random.Range(Mathf.Min(sprayPureRange.x, sprayPureRange.y), Mathf.Max(sprayPureRange.x, sprayPureRange.y))) },
+                };
+            }
             if (consumables.DeviceKindOf(item) != PixelConsumables.DeviceKind.FocusPotion) return null;   // (the Wood Chipper keeps its normal price)
             List<PixelShop.PackCost> focus = new List<PixelShop.PackCost> { new PixelShop.PackCost { type = PixelClicker.PixelType.HornetNest, amount = Mathf.Max(1, focusHiveCost) } };
             // ...plus some of one random woodcutting pixel you have unlocked (not the hive itself)
