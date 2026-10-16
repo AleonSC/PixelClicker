@@ -37,6 +37,8 @@ These are the rules every feature is measured against (they come from decisions 
 5. **Played over days.** An idle game with numbers that keep climbing; sessions are short and frequent, and the game keeps working
    while you are away. (Agreed in the balance direction, `docs/roadmap.md`.)
 6. **Charm everywhere.** Cubie, the vendors, the cats, the code-made sounds, the homages. The cube has a personality.
+7. **Many ways to play (decided 2026-10-16).** Manual clicking, the auto clicker, machines, consumables, minigames: each is a real way
+   to make progress, and a player can lean on the ones they enjoy. No single approach should be the only good one.
 
 > **Blank spot - which pillar wins when two clash?** E.g. "played over days" (idle) vs "every click leaves something behind" (active
 > handling of husks). **Suggestion:** active play is always *better*, idle play is always *possible* - machines catch up while away, but
@@ -44,13 +46,13 @@ These are the rules every feature is measured against (they come from decisions 
 
 ## 3. The player
 
-> **Blank spot - who is this for?** Not written down anywhere. It changes how hard the early game is, how much text there is, and how
-> long a session is. Candidates: idle-game fans (Cookie Clicker, Melvor Idle), RuneScape players, factory-game players taking a break.
-> **Suggestion:** Melvor Idle / RuneScape players first - the skills, the rare drops and the Collection Log speak directly to them.
+- **Who it is for (decided 2026-10-16):** people who love **numbers going up and collecting things**. The main target is
+  **RuneScape-type players** (skills to grind, rare drops, a Collection Log), with appeal to idle / clicker fans in general because the
+  game supports several ways of playing (pillar 7).
+- **Platform and price (decided 2026-10-16):** **Steam**, about **$10**, a one-time purchase.
 
-> **Blank spot - platform and price.** PC only (Steam / itch.io)? Mobile later? Free or paid? Ads or none? Nothing decided. It matters
-> for controls (the game uses right click, keys, first person) and for how the economy is tuned. **Suggestion:** PC, paid, no ads,
-> no microtransactions; mobile only if ever, and much later.
+What this means for design: skills and collections are the heart of the game; long-term goals (max levels, full logs) matter more than a
+story; the game must respect players who idle and players who click.
 
 ## 4. The world and the tone
 
@@ -104,22 +106,36 @@ Gathering skills (Woodcutting, Foraging, Fishing, Mining, Farming, Electrician),
 tree; devices to handle husks; minigames bought as packs; visitors and vendors; pets; crafting; the Pixel Bank.
 **Agreed next:** Woodcutting's tree mode, first person as a mid-game unlock (the Cube Visor), the gear system (`GearDesign.md`).
 
-### Late game (Blank)
-> **Blank spot - what does the late game look like?** Mid-game systems are rich, but nothing says what a player does at hour 30.
-> Candidates already on the table: the factory (belts, sorters, machines that break and need repairs - `PixelRules.md`), the alien
-> vendor and relics in first person, face sockets, legendary gear. **Suggestion:** the late game is *building*: a factory on the floor
-> that processes husks from several skills at once while you focus on one, with the alien's relics making first person the place you
-> maintain it.
+### Late game (decided direction, 2026-10-16)
+**Exploring every option you have and grinding your skills up.** By the late game the player has all the tools (machines, consumables,
+minigames, vendors, first person, gear) and mixes them their own way while levelling skills towards the cap.
+- **Cosmetics as late-game rewards (being considered):** cosmetics locked behind long goals, so the end of the game has things worth
+  chasing. The game already has places for them: pet outfits, floor / sky / bar styles, cube looks, and gear models (`GearDesign.md`).
 
-### End game and prestige (Blank)
-> **Blank spot - is there an end, a prestige, or both?** Prestige is "wanted" (`docs/roadmap.md`) but undesigned: what resets, what is
-> kept, what the reward is. And separately: is there an ending (a story finale, a final collectible)?
-> **Suggestion:** both. A finale tied to the story (e.g. completing the Collection Log or forging the Cubelette reveals what the cube is
-> for), then prestige as "start a new cube": currencies, unlocks and the floor reset; skills' levels, the Collection Log, pets and gear
-> are kept; each prestige adds a permanent bonus and a new twist (a new skill, a harder rotation, a new vendor).
+> **Blank spot - which cosmetics, behind which goals?** **Suggestion:** one cosmetic per big milestone - max level in a skill (a skill
+> cape for the cube, very RuneScape), a full Collection Log page, each prestige, rare achievements - shown in a "Wardrobe" tab in Pocket.
 
-> **Blank spot - how long is a full playthrough?** One week? One month? Endless? It decides every number in the shop.
-> **Suggestion:** the story finale around 2-4 weeks of normal play; prestige makes it endless.
+### Prestige: paying Cubie back (decided theme, 2026-10-16)
+Cubie gave you a small gift and a Recycler at the start. **Prestige is paying him back** - and he means it: he talks about suing you,
+*with interest*. Each prestige settles the debt, resets the run, and the debt (and his interest) grows for next time.
+
+> **Blank spot - what resets and what is kept?** **Suggestion:** reset = currencies, shop unlocks, devices, the floor; kept = skill
+> levels, the Collection Log, pets, gear and cosmetics. Each payment earns a permanent bonus (e.g. "Cubie's Goodwill", +x% to
+> everything) and unlocks something new: a fresh Cubie line, a vendor, a skill, a harder rotation.
+
+> **Blank spot - how is the debt measured?** **Suggestion:** a debt shown in Cubie's ledger that starts small and compounds over
+> play time (his "interest", a running joke); paying it needs a big pile of Pure pixels, so the ledger is also the prestige goal bar.
+> Paying early is allowed but a later payment earns more goodwill.
+
+### End game (Blank)
+> **Blank spot - is there an ending at all?** The developer isn't sure yet. The game is meant to be open-ended, so an ending is
+> optional. **Suggestion:** no hard ending. The "end game" is the long tail: maxing every skill, finishing the Collection Log,
+> collecting cosmetics, and prestiging again for bigger goodwill. A light payoff - Cubie finally admitting why he needed the money -
+> could arrive after a set number of payments, without stopping the game.
+
+### Length (decided 2026-10-16)
+**Open-ended, no set length.** There is no target playthrough time; pacing is tuned per skill and per goal (how long a level, a log
+page, a prestige should take) instead of towards one finish line.
 
 ## 7. Systems map (one paragraph each)
 
@@ -172,9 +188,12 @@ What exists and what is planned, by kind. Numbers are rough.
 | Collectibles | 7 + 3 + 6 + Cubelette + Snitch | legendary gear | More families? |
 | Homages | 5 families | ~9 ideas on the to-do | Which make the cut? |
 
-> **Blank spot - what is in version 1.0?** There is far more content than one release needs, and lots is half-finished (tester
-> machines, dev-only Firemaking, text-only perks). **Suggestion:** pick a 1.0 scope: the early game, 4-6 polished skills, the core
-> devices, the collectibles, Cubie's story through to the finale; everything else is "after 1.0".
+**Version 1.0 (direction, 2026-10-16):** flesh out the game's systems and ship **a handful of skills**; more skills arrive as
+**free updates** after release.
+
+> **Blank spot - exactly which skills and systems make 1.0?** **Suggestion:** the six gathering skills that already exist, polished
+> (perks working, not text-only), the core devices, the collectibles, Cubie's prestige; tester machines and dev-only Firemaking stay out
+> until they are finished. A short "1.0 checklist" in this doc would make it concrete.
 
 ## 10. Onboarding and teaching
 
@@ -210,13 +229,16 @@ What exists and what is planned, by kind. Numbers are rough.
 
 Grouped by how much they block other decisions. Answer them in any order; each answer gets written into its section above.
 
-**Big direction (decide first - they shape everything else)**
-1. Who is the game for? (section 3)
-2. Platform and price. (section 3)
-3. Late game: what does a player do at hour 30? (section 6)
-4. End game: a finale, prestige, or both - and what prestige keeps. (section 6)
-5. How long is a full playthrough? (section 6)
-6. What is in version 1.0? (section 9)
+**Decided (2026-10-16):** who the game is for, platform and price, the late-game direction, prestige's theme (paying Cubie back),
+open-ended length, the 1.0 direction, art direction, music.
+
+**Big direction (shape everything else)**
+1. Which cosmetics, behind which goals? (section 6)
+2. Prestige: what resets and what is kept? (section 6)
+3. Prestige: how is Cubie's debt measured? (section 6)
+4. Is there an ending at all? (section 6)
+5. Exactly which skills and systems make 1.0? (section 9)
+6. (closed)
 
 **Identity**
 7. The hook in one sentence. (section 1)
