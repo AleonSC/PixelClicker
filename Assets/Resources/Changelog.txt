@@ -1195,3 +1195,5 @@
 [2026-10-16 16:07 UTC] Shop fix: prices of packs with two or three costs (Ghost Hunt, Black Hole, Meteor Strike...) are written on one line that shrinks to fit instead of overlapping columns.
 [2026-10-16 16:07 UTC] Shop: the Lumberjack's Pack is listed in the Pixels tab's Skill packs section (first among them), and that section now starts open.
 [2026-10-16 16:10 UTC] Offline Progression is now a passive skill: clicking while you play no longer trains it; its only XP comes from offline progress (0.25 XP per offline Auto Clicker click), shown in the Welcome back window.
+[2026-10-16 16:16 UTC] Offline Progression now also trains a chosen skill pack while you're away (the pack buttons on the Offline card pick your character's offline task; it gets a small share of the offline clicks as XP, shown in the Welcome back window).
+[2026-10-16 16:16 UTC] Added a small level-up popup for every skill: a round badge in the skill's colour with its block spinning inside, the new level, +1 skill point and tiny fireworks around it.

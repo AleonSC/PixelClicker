@@ -83,6 +83,7 @@
 | `PixelSkillsMinigames.cs` | Part of partial class PixelSkills: the minigame XP multiplier. | in the header comment of `PixelSkillsMinigames.cs` |
 | `PixelSkillsBonus.cs` | Part of partial class PixelSkills: the bonus XP bank. | in the header comment of `PixelSkillsBonus.cs` |
 | `PixelSkillsTracker.cs` | Part of partial class PixelSkills: the pinned skill tracker. | in the header comment of `PixelSkillsTracker.cs` |
+| `PixelSkillLevelPopup.cs` | Skill level-up popup: a round badge in the skill's colour with its icon spinning inside, 'SKILL LEVEL N' + '+1 skill point', tiny fireworks around it; queued from PixelSkills.AddXpFlat, waits while a menu is open. | in the header comment of `PixelSkillLevelPopup.cs` |
 | `PixelSkillsPopups.cs` | Part of partial class PixelSkills: '+n <Skill> XP' popups while a skill trains (AddXp calls QueueXpPopup; | in the header comment of `PixelSkillsPopups.cs` |
 | `PixelTube.cs` | Static PixelTube.Build(points, radius, sides, mesh): | in the header comment of `PixelTube.cs` |
 | `PixelStatusBox.cs` | Shared top status box: potion timer, placing line and the takeover minigames' status lines sit in a window-style box that slides out from under the black bar (over its edge effect) and back; PixelStatusBox.Create / Show / IsShown. | in the header comment of `PixelStatusBox.cs` |

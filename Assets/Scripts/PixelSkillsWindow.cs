@@ -317,7 +317,7 @@ public partial class PixelSkills
                 foreach (SkillPack pack in packs)
                 {
                     if (pack.id == OfflineId || !IsAvailable(pack)) continue;
-                    if (n++ == slot) { SetPixelPack(pack.id); break; }
+                    if (n++ == slot) { OfflineTask = pack.id; break; }   // (what your character does while you are away)
                 }
                 RefreshWindow();
             });
@@ -898,7 +898,7 @@ public partial class PixelSkills
         SkillPack p = packs[selected];
         bool available = IsAvailable(p);
         PixelUIKit.SetText(detailName, available ? p.displayName : lockedName);
-        PixelUIKit.SetText(detailInfo, "");
+        PixelUIKit.SetText(detailInfo, available && p.id == OfflineId ? "<b>While you're away, your character does:</b>" : "");
 
         // The skill tree has its own window; the button only shows for a skill that has one.
         bool hasNodes = available && p.nodes != null && p.nodes.Length > 0;
@@ -914,12 +914,12 @@ public partial class PixelSkills
         {
             if (other.id == OfflineId || !IsAvailable(other)) continue;
             if (slot >= pixelPackButtons.Count) break;
-            bool show = false;   // (Offline Progression is passive now: no pixel pack to pick for it)
+            bool show = available && p.id == OfflineId && !showTree;   // Offline Progression: pick what your character does while you are away
             pixelPackButtons[slot].gameObject.SetActive(show);
             if (show)
             {
-                bool current = other.id == ActiveId;
-                PixelUIKit.SetText(pixelPackLabels[slot], other.displayName + (current ? "   (playing)" : ""));
+                bool current = other.id == OfflineTaskPack.id;
+                PixelUIKit.SetText(pixelPackLabels[slot], other.displayName + (current ? "   (offline task)" : ""));
                 pixelPackButtons[slot].GetComponent<Image>().color = current ? new Color(0.2f, 0.5f, 0.3f, 1f) : cardColor;
             }
             slot++;

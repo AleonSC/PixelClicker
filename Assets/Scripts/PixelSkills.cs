@@ -375,7 +375,7 @@ public partial class PixelSkills : MonoBehaviour
             packs.Add(new SkillPack
             {
                 id = OfflineId, displayName = "Offline Progression", accent = new Color(0.62f, 0.45f, 0.9f),
-                description = "A PASSIVE skill: it never trains while you play. While the game is closed your Auto Clicker keeps working (offline progress), and every one of those offline clicks gives Offline Progression XP, shown in the Welcome back window. Its levels will make your time away pay more.",
+                description = "A PASSIVE skill: it never trains while you play. Pick what your character does while the game is closed: your Auto Clicker keeps working (offline progress), every offline click gives Offline Progression XP and a little XP to the skill you picked, shown in the Welcome back window. Its levels will make your time away pay more.",
                 replaces = "Nothing (passive)", spawns = "Nothing (passive)", xpFrom = "Offline progress only: each offline Auto Clicker click while the game is closed",
                 unlockHint = "Buy the Auto Clicker in the Shop",
                 baseXp = 150f, xpGrowth = 1.6f,
@@ -524,8 +524,8 @@ public partial class PixelSkills : MonoBehaviour
             if (pack.replaces != null) pack.replaces = pack.replaces.Replace("Monochrome, RGB, Glass, Luminescent", "Monochrome, RGB");
             if (pack.id == OfflineId)
             {
-                if (pack.description != null && pack.description.StartsWith("Pick this skill"))   // (2026-10-16: offline XP only comes from offline progress)
-                { pack.description = "A PASSIVE skill: it never trains while you play. While the game is closed your Auto Clicker keeps working (offline progress), and every one of those offline clicks gives Offline Progression XP, shown in the Welcome back window. Its levels will make your time away pay more."; pack.replaces = "Nothing (passive)"; pack.spawns = "Nothing (passive)"; pack.xpFrom = "Offline progress only: each offline Auto Clicker click while the game is closed"; }
+                if (pack.description != null && (pack.description.StartsWith("Pick this skill") || pack.description.StartsWith("A PASSIVE skill: it never trains while you play. While")))   // (2026-10-16: offline XP only comes from offline progress)
+                { pack.description = "A PASSIVE skill: it never trains while you play. Pick what your character does while the game is closed: your Auto Clicker keeps working (offline progress), every offline click gives Offline Progression XP and a little XP to the skill you picked, shown in the Welcome back window. Its levels will make your time away pay more."; pack.replaces = "Nothing (passive)"; pack.spawns = "Nothing (passive)"; pack.xpFrom = "Offline progress only: each offline Auto Clicker click while the game is closed"; }
                 if (pack.description != null && pack.description.Contains("You earn no XP for that pack"))
                     pack.description = "Pick this skill, then pick which pack's pixels you play with. Every click trains Offline Progression, which will improve what you earn while you are away. The pack you assign still earns 50% of its normal XP. With no skill pack assigned (Standard), Offline Progression earns +50% XP.";
                 if (pack.xpFrom == "Every click, whichever pack is in play")
@@ -1017,6 +1017,37 @@ public partial class PixelSkills : MonoBehaviour
         private set { offlineCache = 0; PixelPrefs.SetInt(OfflinePref, 0); }
     }
 
+    private const string OfflineTaskPref = "PixelClicker.Setting.SkillOfflineTask";
+
+    /// <summary>
+    /// What your character does while the game is closed: the skill that gets a little XP from offline progress (picked on Offline Progression's card;
+    /// saved per save file). '' = Standard.
+    /// </summary>
+    public static string OfflineTask
+    {
+        get => PixelPrefs.GetString(OfflineTaskPref, "");
+        set => PixelPrefs.SetString(OfflineTaskPref, value ?? "");
+    }
+
+    /// <summary>The offline task's pack (Standard when none / not available).</summary>
+    public SkillPack OfflineTaskPack
+    {
+        get
+        {
+            SkillPack p = Find(OfflineTask);
+            return p != null && p.id != OfflineId && IsAvailable(p) ? p : Find(StandardId);
+        }
+    }
+
+    /// <summary>Offline progress: a little XP for the offline task skill. Returns the XP given.</summary>
+    public double AddOfflineTaskXp(double xp)
+    {
+        SkillPack task = OfflineTaskPack;
+        if (disableSkills || xp <= 0d || task == null) return 0d;
+        AddXpFlat(task, xp, false);
+        return xp;
+    }
+
     /// <summary>Offline progress paid out: 'xp' goes to Offline Progression (once it is available - the Auto Clicker runs). Returns the XP given.</summary>
     public double AddOfflineXp(double xp)
     {
@@ -1301,6 +1332,7 @@ public partial class PixelSkills : MonoBehaviour
         if (popup) QueueXpPopup(pack, xp);
         int after = LevelOf(pack);
         if (after > before) QueuePerkNotices(pack, before, after);
+        if (after > before && (pack.id != StandardId || after > 2)) PixelSkillLevelPopup.Show(pack, after, pack.id == OfflineId ? 0 : after - before);   // the small badge popup (Standard's level 2 has its own big popup)
         if (after > before)
             PixelHints.Announce(pack.displayName + " level " + after, "Your " + pack.displayName + " skill reached level " + after + " (+" + (after - before) + " skill point" + (after - before == 1 ? "" : "s") + ").");
         Changed?.Invoke();

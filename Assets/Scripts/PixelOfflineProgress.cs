@@ -8,6 +8,8 @@
 //   Settings: max hours, efficiency, minimum away time.
 //   OFFLINE PROGRESSION XP (2026-10-16): the skill is passive - its ONLY XP is offlineXpPerClick (0.25) x the offline clicks worked out here
 //   (PixelSkills.AddOfflineXp), shown as a line in the Welcome back window; clicking while playing gives it nothing.
+//   OFFLINE TASK: the skill pack picked on the Offline card (PixelSkills.OfflineTask, per save; Standard if none / not owned) is what the character does
+//   while away - it also gets offlineTaskXpPerClick (0.1) x the offline clicks (PixelSkills.AddOfflineTaskXp), its own Welcome back line.
 // ---------------------------------------------------
 using System;
 using System.Text;
@@ -161,18 +163,26 @@ public class PixelOfflineProgress : MonoBehaviour
 
         if (stats != null) stats.AddAutoClicks((long)clicks);
         double offlineXp = PixelSkills.Instance != null ? PixelSkills.Instance.AddOfflineXp(clicks * Math.Max(0f, offlineXpPerClick)) : 0d;   // the ONLY source of Offline Progression XP
+        double taskXp = PixelSkills.Instance != null ? PixelSkills.Instance.AddOfflineTaskXp(clicks * Math.Max(0f, offlineTaskXpPerClick)) : 0d;   // a little XP for what your character did while away
+        string taskName = PixelSkills.Instance != null && PixelSkills.Instance.OfflineTaskPack != null ? PixelSkills.Instance.OfflineTaskPack.displayName : "";
         if (showSummary)
         {
             // Not while the title screen is up: the window would sit hidden behind it and pop up later (e.g. when another save is loaded from the title).
             pendingAway = away;
             pendingClicks = clicks;
             pendingXp = offlineXp;
+            pendingTaskXp = taskXp;
+            pendingTaskName = taskName;
             pendingGains = gains;
         }
         return true;
     }
 
-    private double pendingAway, pendingClicks, pendingXp;
+    private double pendingAway, pendingClicks, pendingXp, pendingTaskXp;
+    private string pendingTaskName;
+
+    [Tooltip("XP for the OFFLINE TASK skill (picked on Offline Progression's card) for each offline Auto Clicker click - a small amount.")]
+    [SerializeField] private float offlineTaskXpPerClick = 0.1f;
 
     [Tooltip("Offline Progression XP for each offline Auto Clicker click (its only source of XP).")]
     [SerializeField] private float offlineXpPerClick = 0.25f;
@@ -302,6 +312,7 @@ public class PixelOfflineProgress : MonoBehaviour
         string awayText = string.Format(awayFormat, PixelStats.FormatTime(awaySeconds));
         string clicksText = string.Format(clicksFormat, PixelClicker.FormatNumber(clicks));
         if (pendingXp >= 1d) clicksText += "\n+" + PixelClicker.FormatNumber(pendingXp) + " Offline Progression XP";
+        if (pendingTaskXp >= 1d) clicksText += "\n+" + PixelClicker.FormatNumber(pendingTaskXp) + " " + pendingTaskName + " XP (your offline task)";
 
         // Measure each wrapped text so nothing overlaps, whatever the text lengths.
         float titleH = Measure(title, titleFontSize, FontStyles.Bold, textWidth);
