@@ -1184,3 +1184,4 @@
 [2026-10-16 15:00 UTC] Session report: power clicks are counted in the Block Hold / stakes section (now 'Block hold, stakes and power clicks').
 [2026-10-16 15:00 UTC] Husks now take 0.8 seconds (was 0.35) after popping out of the cube before they can be grabbed.
 [2026-10-16 15:01 UTC] Session report: a pack Cubie hands over (the RGB Pack) shows as 'Got (from Cubie)' in the timeline, not 'Bought'.
+[2026-10-16 15:39 UTC] To-do: redesign the shop's Consumables page as category chips + an item tile grid + one buy bar.
