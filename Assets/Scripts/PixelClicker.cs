@@ -1106,6 +1106,18 @@ public partial class PixelClicker : MonoBehaviour
     public void Collect() => CollectInternal(false);
 
     /// <summary>
+    /// Power click (PixelPowerClick, TEST): ONE manual click that counts as 'clicks' clicks - payout x clicks, tough blocks take that many hits,
+    /// the combo grows by that many (the same path the dev 'clicks per click' setting uses, DevClickCount).
+    /// </summary>
+    public void PowerClick(int clicks)
+    {
+        int was = DevClickCount;
+        DevClickCount = Mathf.Max(1, was) * Mathf.Max(1, clicks);
+        try { CollectInternal(false); }
+        finally { DevClickCount = was; }
+    }
+
+    /// <summary>
     /// A manual click from first person mode: the player aims at the cube from any distance. Follows the same rules as a mouse click
     /// (paused, blocked, intro lock, the minimum time between clicks). Returns true if it clicked.
     /// </summary>
