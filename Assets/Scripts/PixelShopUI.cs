@@ -1131,7 +1131,7 @@ public partial class PixelShop
         {
             int d = SectionOf(packs[a]).CompareTo(SectionOf(packs[b]));
             if (d != 0) return d;
-            if (IsWoodcutterPack(packs[a]) != IsWoodcutterPack(packs[b])) return IsWoodcutterPack(packs[a]) ? -1 : 1;   // the Lumberjack's Pack stands first in the Pixels tab
+            if (IsWoodcutterPack(packs[a]) != IsWoodcutterPack(packs[b])) return IsWoodcutterPack(packs[a]) ? -1 : 1;   // the Lumberjack's Pack stands first (in the Skill packs section)
             return a.CompareTo(b);
         });
         int lastSection = -1;
@@ -1265,15 +1265,15 @@ public partial class PixelShop
     private static readonly string[] SectionNames = { "RGB", "Toggleables", "Skill packs" };   // section 0 (the RGB pack) has no header: it stands above the other two
     private Button[] sectionHeaders;
     private TMP_Text[] sectionLabels;
-    private readonly bool[] sectionCollapsed = { false, true, true };   // the two sections start collapsed
+    private readonly bool[] sectionCollapsed = { false, true, false };   // Toggleables start collapsed; Skill packs start open (the Lumberjack's Pack, the first skill, is the nudge after the Auto Clicker)
 
     /// <summary>Which Pixels-tab section a pack belongs to: 0 = the RGB pack (listed above the sections, hidden once bought), 1 = single toggleable pixels (Glass, Luminescent, Obsidian...), 2 = skill packs (many pixels at once).</summary>
-    /// <summary>The Lumberjack's Pack (the first skill pack): it is listed FIRST in the Pixels tab, above the RGB pack and the sections, and stays listed once bought.</summary>
+    /// <summary>The Lumberjack's Pack (the first skill pack): listed in the Skill packs section, first among them.</summary>
     private static bool IsWoodcutterPack(ShopPack pack) => pack != null && Rewards(pack, PixelClicker.PixelType.Wood);
 
     private static int SectionOf(ShopPack pack)
     {
-        if (IsWoodcutterPack(pack)) return 0;   // (with the RGB pack, but sorted before it)
+        if (IsWoodcutterPack(pack)) return 2;   // (2026-10-16: with the other skill packs - sorted first among them)
         if (!string.IsNullOrEmpty(pack.skillId)) return 2;   // a skill pack, even without reward pixels of its own
         if (pack.rewardTiers == null || pack.rewardTiers.Length == 0) return 1;
         if (pack.rewardTiers.Length >= 4) return 2;
@@ -1444,7 +1444,8 @@ public partial class PixelShop
         if (costs == null || costs.Length == 0) return prefix + "Free";
 
         // Pack rows: a tidy grid, three prices to a line in fixed columns ("1K White"), instead of one long ragged sentence.
-        bool grid = !capsPrefix && costs.Length > 1;
+        // Two or three prices go on one plain line (autosize shrinks it to fit): fixed columns overlapped as soon as a name was long ("150K Obsidian").
+        bool grid = !capsPrefix && costs.Length > 3;
         StringBuilder sb = new StringBuilder(prefix);
         for (int i = 0; i < costs.Length; i++)
         {
@@ -1463,6 +1464,7 @@ public partial class PixelShop
                 continue;
             }
 
+            if (!capsPrefix) { if (name.EndsWith(" Pixels")) name = name.Substring(0, name.Length - 7); else if (name.EndsWith(" Pixel")) name = name.Substring(0, name.Length - 6); }
             string part = string.Format(costEntryFormat, PixelClicker.FormatNumberShort(cost.amount), name);
             sb.Append("<color=#")
               .Append(ColorUtility.ToHtmlStringRGB(enough ? affordableColor : unaffordableColor))
