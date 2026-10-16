@@ -6,6 +6,7 @@
 //   delay a card (canvas 655, glow + fancy window + accent strip in the pixel colour, real turning 3D model (PixelTierPicture), name, rarity tag from
 //   SpawnShare, worth, a bar for hits (GetLiveProgress) or old-pixel time left, PixelGuideTexts.Describe / OldPixel text, a sheen
 //   sweep) fades in beside the pointer. Hidden over UI, paused, title, first person, UFO cockpit, hose or god mode. THREE MODES (PixelBlockTooltip.Mode, Settings > Interface drop-down, PlayerPrefs BlockTipsMode, per save): 0 Full, 1 Minimal (the spinning 3D icon and the name only), 2 Off. ALT: a tap (released within altHoldSeconds 0.25) cycles Full -> Minimal -> Off -> Full and a small toast names the new mode; HOLDING Alt (longer than that) shows the other kind of the current mode while held (Full shows Minimal, Minimal shows Full, Off shows Full) and the release does not cycle. Grabbing a block keeps its tooltip open. The card keeps its spot until the pointer moves 70 units away from where it was placed, then glides there (so it no longer jitters with every mouse move).
+//   PINNED works whatever the tooltip mode: with the floating tooltip Off, the Pocket's Info card still shows what is hovered.
 //   PINNED + My Window MINIMIZED: the small card (3D block + name, like Minimal) hangs under the minimized header (dockedCompact).
 //   PINNED: My Window's Info button (PixelMyWindow.HoverDocked) moves the card into the window (UpdateDocked / Undock): it stops following the mouse, is scaled to the window's width, shows whatever is hovered (it keeps the last block while the mouse is over the window) and the window grows to fit it.
 // ---------------------------------------------------
@@ -256,9 +257,9 @@ public class PixelBlockTooltip : MonoBehaviour
         altWas = alt;
     }
 
-    private bool Suppressed(bool whileHeld = false)
+    private bool Suppressed(bool whileHeld = false, bool pinned = false)
     {
-        return disableTooltip || EffectiveMode == ModeOff || clicker == null || PixelCalm.InMenu ||
+        return disableTooltip || (EffectiveMode == ModeOff && !pinned) || clicker == null || PixelCalm.InMenu ||
                PixelFirstPerson.Active || PixelRobotWorker.Piloting || PixelClicker.GodMode || PixelCameraIntro.Moving ||
                (!whileHeld && (PointerOverUI() || (grab != null && grab.HeldBody != null))) || PixelBank.HoseOn;
     }
@@ -270,19 +271,21 @@ public class PixelBlockTooltip : MonoBehaviour
         UpdateAlt();
         if (EffectiveMode != lastMode) { lastMode = EffectiveMode; nextRefresh = 0f; }   // (peeking at the other kind re-lays the card at once)
 
+        // Pinned to My Window (its Info button) shows the info even while the floating tooltip is switched Off.
+        bool pinned = PixelMyWindow.TryGetHoverSlot(out RectTransform slot, out float slotWidth, out bool compactSlot) && !disableTooltip && !PixelCalm.InMenu;
         int tier = -1; bool live = false; Rigidbody body = null;
         bool hovering;
         Rigidbody heldBody = grab != null ? grab.HeldBody : null;
         OldPixelInfo heldInfo = heldBody != null ? heldBody.GetComponent<OldPixelInfo>() : null;
-        if (heldInfo != null && clicker.IsValidTierIndex(heldInfo.tierIndex) && !Suppressed(true))
+        if (heldInfo != null && clicker.IsValidTierIndex(heldInfo.tierIndex) && !Suppressed(true, pinned))
         {
             // Grabbing a block keeps its tooltip open (it follows the block you carry).
             tier = heldInfo.tierIndex; live = false; body = heldBody; hovering = true;
         }
-        else hovering = !Suppressed() && clicker.TryGetBlockAt(PointerPosition(), out tier, out live, out body);
+        else hovering = !Suppressed(false, pinned) && clicker.TryGetBlockAt(PointerPosition(), out tier, out live, out body);
 
         // Pinned to My Window (its Info button): the card lives in the window instead of following the mouse, and keeps the last block shown while the mouse is over the window.
-        if (PixelMyWindow.TryGetHoverSlot(out RectTransform slot, out float slotWidth, out bool compactSlot) && !disableTooltip && EffectiveMode != ModeOff && !PixelCalm.InMenu)
+        if (pinned)
         {
             if (compactSlot != dockedCompact) { dockedCompact = compactSlot; nextRefresh = 0f; }
             UpdateDocked(slot, slotWidth, hovering, tier, live, body);
