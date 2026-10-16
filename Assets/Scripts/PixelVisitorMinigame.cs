@@ -836,6 +836,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         // --- Greeting box (left of the visitor).
         greetingPanel = Panel("Greeting", new Vector2(720f, 470f), visitorRect.sizeDelta.x + 90f);
         TMP_Text title = PixelUIKit.CreateText(Font, greetingPanel, "Name", Pick(visitorName, DefaultName), 54f, TextAlignmentOptions.Center, FontStyles.Bold, TitleColor);
+        FitName(title);
         PixelUIKit.Caps(title);
         Anchor(title.rectTransform, 0f, 1f, 1f, 1f, new Vector2(20f, -78f), new Vector2(-20f, -16f));
 
@@ -843,7 +844,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
                                                  TextAlignmentOptions.Center, FontStyles.Normal, Color.white);
         message.enableAutoSizing = true;
         message.fontSizeMax = 34f;
-        message.fontSizeMin = 18f;
+        message.fontSizeMin = 14f;   // (a long greeting shrinks instead of being cut off)
         greetMessage = message;
         Anchor(message.rectTransform, 0f, 0f, 1f, 1f, new Vector2(36f, 130f), new Vector2(-36f, -92f));
 
@@ -1006,6 +1007,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         {
             asidePanel = Panel("Aside", new Vector2(720f, 400f), visitorRect.sizeDelta.x + 90f);
             TMP_Text at = PixelUIKit.CreateText(Font, asidePanel, "Name", Pick(visitorName, DefaultName), 54f, TextAlignmentOptions.Center, FontStyles.Bold, TitleColor);
+        FitName(at);
             PixelUIKit.Caps(at);
             Anchor(at.rectTransform, 0f, 1f, 1f, 1f, new Vector2(20f, -78f), new Vector2(-20f, -16f));
             TMP_Text am = PixelUIKit.CreateText(Font, asidePanel, "Message", AsideText, 34f, TextAlignmentOptions.Center, FontStyles.Normal, Color.white);
@@ -1094,6 +1096,13 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         r.sizeDelta = size;
         r.anchoredPosition = new Vector2(-(rightOffset + 40f), 0f);
         return r;
+    }
+
+    /// <summary>A visitor's name stays on one line and shrinks to fit the box (long names like 'Big Tim the Lumberjack' used to wrap over the message).</summary>
+    private static void FitName(TMP_Text t)
+    {
+        t.textWrappingMode = TextWrappingModes.NoWrap;
+        t.enableAutoSizing = true; t.fontSizeMax = 54f; t.fontSizeMin = 24f;
     }
 
     private static void Anchor(RectTransform r, float minX, float minY, float maxX, float maxY, Vector2 offsetMin, Vector2 offsetMax)

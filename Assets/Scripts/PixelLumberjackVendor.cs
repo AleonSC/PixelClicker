@@ -103,7 +103,7 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
         return Random.Range(Mathf.Max(1, potionStockMin), Mathf.Max(potionStockMin, potionStockMax) + 1);
     }
     protected override string DefaultName => "Big Tim the Lumberjack";
-    protected override string DefaultGreeting => "Timber! A fellow chopper, I see. I sell wood chippers and potions for all things woodcutting, and I'll buy any wood you've got for good, honest pixels - tell me how much and I'll name a price. Fair-ish. Take a look!";
+    protected override string DefaultGreeting => "Timber! A fellow chopper! I sell wood chippers and potions, and I'll buy any wood you've got - tell me how much and I'll name a fair-ish price.";
     protected override string DefaultWaresTitle => "Big Tim's Yard";
     protected override string SaleFormat => "Fair-ish prices!";
     protected override string DefaultArrivedLog => "The Lumberjack is here!";

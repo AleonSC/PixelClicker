@@ -1215,3 +1215,4 @@
 [2026-10-16 16:53 UTC] The Recycler's placing ghost now shows its real size with the Bin Size upgrades.
 [2026-10-16 16:56 UTC] The Great Oak is back in Woodcutting as a rare tree species (from level 3, never infested): leaves, a short trunk, then the giant Great Oak block with its bird nests and a heartwood core; its chance per tree is 1%, rising to 25% with 12 acorn husks on the field (acorns come from oak trees from level 3).
 [2026-10-16 16:59 UTC] Woodcutting guide: the first time you select Woodcutting in the Skills window a box asks if you want a tutorial (the basics, filler, trees and their order, Timber, infested trees, the Great Oak, skill points and the Lumberjack); No points you to the new guide book button next to the skill's name, which replays it any time.
+[2026-10-16 17:00 UTC] Visitor names (Big Tim the Lumberjack...) stay on one line and shrink to fit their box, long greetings shrink instead of being cut off, and Big Tim's greeting is shorter.
