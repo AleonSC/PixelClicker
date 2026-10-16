@@ -79,6 +79,7 @@
 | `PixelSkillsTutorial.cs` / `PixelTutorialDim.cs` | Skills tutorial (part of partial class PixelSkills, started from the window's Update by UpdateTutorialStart the first time a skill pack is available and the screen is calm: | in the header comment of `PixelSkillsTutorial.cs` |
 | `PixelSkillsStandard.cs` | Part of partial class PixelSkills: Standard is a real skill. | in the header comment of `PixelSkillsStandard.cs` |
 | Skill tree window (`PixelSkillsWindow.cs`, `PixelScrollFadeX.cs`) | The tree's nodes sit in a SIDEWAYS scroll view (nodeView + nodeScroll, wheel / drag; | in the header comment of `PixelSkillsWindow.cs` |
+| `PixelSkillsGuide.cs` | Part of partial class PixelSkills: skill guides - the first time the Woodcutting card is selected a box asks 'want a tutorial?' (Yes = Got it boxes on the basics and how its blocks spawn; No = points at the guide book button after the skill's name, which replays it any time). | in the header comment of `PixelSkillsGuide.cs` |
 | `PixelSkillsMastery.cs` | Part of partial class PixelSkills: Mastery, one bar for the progress of ALL skills together, along the bottom of the Skills window (BuildMasteryBar, RefreshMastery, gold fill, 'Mastery 12.5% - x / y XP', tooltip). | in the header comment of `PixelSkillsMastery.cs` |
 | `PixelSkillsMinigames.cs` | Part of partial class PixelSkills: the minigame XP multiplier. | in the header comment of `PixelSkillsMinigames.cs` |
 | `PixelSkillsBonus.cs` | Part of partial class PixelSkills: the bonus XP bank. | in the header comment of `PixelSkillsBonus.cs` |

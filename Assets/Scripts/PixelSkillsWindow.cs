@@ -214,6 +214,7 @@ public partial class PixelSkills
         detailName.enableAutoSizing = true;   // one line: a long name ("Offline Progression") shrinks instead of wrapping over the text below
         detailName.fontSizeMax = 44f;
         detailName.fontSizeMin = 20f;
+        BuildGuideBook(detail.transform);   // the guide book after the name (PixelSkillsGuide)
 #if UNITY_2023_1_OR_NEWER
         detailName.textWrappingMode = TextWrappingModes.NoWrap;
 #else
@@ -775,6 +776,7 @@ public partial class PixelSkills
             selectedNode = 0;
             if (doubleClick && captured >= 0 && captured < packs.Count) SetActive(packs[captured].id);
             RefreshWindow();
+            if (captured >= 0 && captured < packs.Count) MaybeAskGuide(packs[captured]);   // first time on Woodcutting: 'want a tutorial?' (PixelSkillsGuide)
         });
         return c;
     }
@@ -900,6 +902,7 @@ public partial class PixelSkills
         SkillPack p = packs[selected];
         bool available = IsAvailable(p);
         PixelUIKit.SetText(detailName, available ? p.displayName : lockedName);
+        RefreshGuideBook(p, available);
         PixelUIKit.SetText(detailInfo, available && p.id == OfflineId ? "<b>While you're away, your character does:</b>" : "");
 
         // The skill tree has its own window; the button only shows for a skill that has one.
