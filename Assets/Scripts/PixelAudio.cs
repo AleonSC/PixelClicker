@@ -413,7 +413,7 @@ public partial class PixelAudio : MonoBehaviour
             case "snitch_ready": return new[] { PixelSnitchSynth.Ready() };
             case "snitch_catch": return new[] { PixelSnitchSynth.Catch() };
             case "snitch_miss": return new[] { PixelSnitchSynth.Miss() };
-            case "rack_store": return new[] { PixelSynth.Wood(0, 1), PixelSynth.Wood(4, 2) };
+            case "rack_store": return new[] { PixelAxeSynth.WoodChop(1, 1f, 0.5f, 1f), PixelAxeSynth.WoodChop(8, 0.72f, 0.6f, 1.8f) };
             case "fish_splash": return new[] { PixelSynth.Fishing(0, 1), PixelSynth.Fishing(0, 2), PixelSynth.Fishing(0, 3) };
             case "pixel_fish": return new[] { PixelSynth.Fishing(0, 4), PixelSynth.Fishing(0, 5), PixelSynth.Fishing(0, 6) };
             case "pixel_seaweed": return new[] { PixelSynth.Fishing(1, 1), PixelSynth.Fishing(1, 2), PixelSynth.Fishing(1, 3) };
@@ -1634,16 +1634,15 @@ public static class PixelSynth
         return clip;
     }
 
-    /// <summary>Woodcutting sounds. kind: 0 chop, 1 bark crack, 2 sap squelch, 3 leaf rustle, 4 heartwood knock + ring, 5 twig snap, 6 hornet buzz.</summary>
+    /// <summary>Woodcutting sounds. kind: 2 sap squelch, 3 leaf rustle, 5 twig snap, 6 hornet buzz (Wood / Bark / Heartwood chops are PixelAxeSynth.WoodChop now).</summary>
     public static AudioClip Wood(int kind, int seed)
     {
         const int rate = 22050;
-        float len = kind == 4 ? 0.5f : kind == 6 ? 0.45f : 0.22f;
+        float len = kind == 6 ? 0.45f : 0.22f;
         int n = (int)(rate * len);
         float[] data = new float[n];
         System.Random rng = new System.Random(2100 + kind * 97 + seed * 19);
         float lp = 0f, lp2 = 0f, phase = 0f;
-        float knockHz = 150f + seed * 22f;
         for (int i = 0; i < n; i++)
         {
             float t = i / (float)rate;
@@ -1651,13 +1650,6 @@ public static class PixelSynth
             float v = 0f;
             switch (kind)
             {
-                case 0: // a woody chop: a low thock with a short crack on top
-                    lp += (noise - lp) * 0.25f;
-                    v = Mathf.Sin(t * knockHz * Mathf.PI * 2f) * Mathf.Exp(-t * 28f) + lp * Mathf.Exp(-t * 55f) * 0.9f;
-                    break;
-                case 1: // bark: a dry crackle
-                    v = (rng.NextDouble() < 0.18 ? noise : 0f) * Mathf.Exp(-t * 16f) + Mathf.Sin(t * 110f * Mathf.PI * 2f) * Mathf.Exp(-t * 30f) * 0.6f;
-                    break;
                 case 2: // sap: a wet squelch
                     lp += (noise - lp) * 0.15f;
                     v = lp * Mathf.Exp(-t * 14f) + Mathf.Sin(t * (170f + 120f * Mathf.Sin(t * 26f)) * Mathf.PI * 2f) * Mathf.Exp(-t * 15f) * 0.7f;
@@ -1665,10 +1657,6 @@ public static class PixelSynth
                 case 3: // leaf: a soft rustle
                     lp += (noise - lp) * 0.5f;
                     v = (noise - lp) * Mathf.Sin(Mathf.Clamp01(t / 0.2f) * Mathf.PI) * 0.55f;
-                    break;
-                case 4: // heartwood: a deep knock with a ringing tail
-                    phase += (210f + seed * 18f) / rate;
-                    v = Mathf.Sin(t * 95f * Mathf.PI * 2f) * Mathf.Exp(-t * 14f) + Mathf.Sin(phase * Mathf.PI * 2f) * Mathf.Exp(-t * 6f) * 0.5f;
                     break;
                 case 5: // twig: a sharp snap
                     lp += (noise - lp) * 0.6f;

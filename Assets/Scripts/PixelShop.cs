@@ -2125,18 +2125,9 @@ public partial class PixelShop : MonoBehaviour
     public bool ShopAvailable => clicker != null && (alwaysShowButton || clicker.IsUnlocked(requiredTier));
 
     /// <summary>
-    /// Progress towards buying the pack that unlocks 'rewardType' (e.g. Red = the RGB Pack), for the Log's Goals tab:
-    /// 'have' / 'need' add up every price line (each line counts at most its own price), 'costText' lists the price.
-    /// False if there is no such pack or it is already bought.
+    /// The Log's Goals tab: progress towards buying the Auto Clicker (shown once Red, Green and Blue are unlocked) - 'have' / 'need' add up every price line
+    /// (each line counts at most its own price), 'costText' lists the price. False if there is no such pack or it is already bought.
     /// </summary>
-    public bool TryGetBuyGoal(PixelClicker.PixelType rewardType, out string packName, out string costText, out double have, out double need)
-        => TryGetPackGoal(p => p.rewardTiers != null && Array.Exists(p.rewardTiers, r => r.type == rewardType), false, out packName, out costText, out have, out need);
-
-    /// <summary>The Combo Meter goal (shown once the RGB Pack is bought): progress towards its first level.</summary>
-    public bool TryGetComboGoal(out string packName, out string costText, out double have, out double need)
-        => TryGetPackGoal(p => p.upgradeEffect == UpgradeEffect.ComboMeter, true, out packName, out costText, out have, out need);
-
-    /// <summary>The Auto Clicker goal (shown once the Combo Meter is bought).</summary>
     public bool TryGetAutoClickerGoal(out string packName, out string costText, out double have, out double need)
         => TryGetPackGoal(p => p.unlocksAutoClicker, false, out packName, out costText, out have, out need);
 
@@ -2149,14 +2140,6 @@ public partial class PixelShop : MonoBehaviour
     {
         if (packs == null) return false;
         for (int i = 0; i < packs.Length; i++) if (packs[i] != null && packs[i].unlocksAutoClicker) return IsPurchased(i);
-        return false;
-    }
-
-    /// <summary>Is the first level of the Combo Meter bought?</summary>
-    public bool ComboMeterBought()
-    {
-        if (packs == null) return false;
-        foreach (ShopPack p in packs) if (p != null && p.upgradeEffect == UpgradeEffect.ComboMeter) return p.level >= 1;
         return false;
     }
 
