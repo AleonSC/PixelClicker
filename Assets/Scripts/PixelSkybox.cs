@@ -495,10 +495,29 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
         return new Vector3(Mathf.Cos(el) * Mathf.Sin(az), Mathf.Sin(el), Mathf.Cos(el) * Mathf.Cos(az));
     }
 
+    /// <summary>
+    /// Below the horizon of a sky that is not mirrored (Clear Day, Sunset): the horizon colour (with the sunset's warm glow towards the sun) right at
+    /// the horizon, fading down into a deeper haze - a mix of the ground colour and the top colour - so there is no second sun or upside-down clouds.
+    /// </summary>
+    private static Color LowerHaze(SkyStyle s, Vector3 dir, Vector3 sun)
+    {
+        float down = Mathf.Clamp01(-dir.y);
+        Color deep = Color.Lerp(s.groundColor, s.topColor, 0.35f);
+        Color c = Color.Lerp(s.horizonColor, deep, Mathf.Pow(down, 0.45f));
+        if (s.pattern == SkyPattern.Sunset)
+        {
+            float towards = Mathf.Max(0f, Vector3.Dot(new Vector3(dir.x, 0f, dir.z).normalized, new Vector3(sun.x, 0f, sun.z).normalized));
+            c = Color.Lerp(c, s.accentA, Mathf.Exp(-down * 12f) * (0.3f + 0.5f * towards) * 0.7f);   // the warm band carries on just under the horizon
+        }
+        return c;
+    }
+
     private static Color Shade(SkyStyle s, Vector3 dir, Vector3 sun, float sinLat, int x, int y, int w)
     {
-        // The sky fills the whole view (the main menu shows no floor): below the horizon it is the same sky mirrored,
-        // never a flat ground colour.
+        // The sky fills the whole view (the main menu shows no floor): below the horizon most skies are the same sky mirrored.
+        // Clear Day and Sunset are NOT mirrored (a second sun and upside-down clouds below looked wrong): below the horizon they fade into a hazy
+        // lower sky instead (LowerHaze).
+        if (dir.y < 0f && (s.pattern == SkyPattern.ClearDay || s.pattern == SkyPattern.Sunset)) return LowerHaze(s, dir, sun);
         if (dir.y < 0f && s.pattern != SkyPattern.TestGrid && s.pattern != SkyPattern.Underwater) dir.y = -dir.y;   // (the test grid and the underwater depths live below the horizon)
         float d = Vector3.Dot(dir, sun);
         float res = w / 1024f; // so stars look about the same at any size

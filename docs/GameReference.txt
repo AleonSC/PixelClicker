@@ -63,7 +63,7 @@ PROJECT RULES (from CLAUDE.md)
 - Every variable editable in Unity ([SerializeField] private + [Tooltip]); field initializers don't reach already-serialized components (use Awake / OnValidate fix-ups).
 - Enum values are only appended. Copy the whole Assets/Scripts folder together. Compile check: tools/compile-check/check.sh.
 - Save compatibility is not a concern during development. Skill packs are chosen only in the Skills window. Player-facing texts say "husk".
-GENERATED: 2026-10-16 17:45 UTC
+GENERATED: 2026-10-16 17:46 UTC
 
 === 2. DATA MODEL (from CLAUDE.md) ===
 - PixelTier: name, colour/UIColor, PixelType enum (see PixelClicker.cs; values are only ever appended so saves stay valid), TierUnlockMode (PreviousTierThreshold / ShopOnly), spawnWeight, randomPayout + payoutMin/Max (a random whole amount per harvest, e.g. Electric 1-15; amountPerClick = the average for estimates; migrated by packDataVersion 3), clicksToCollect (tough pixels: only the last click pays; PixelClicker.PixelHit event for the others), startingAmount, translucent / materialOverride, glow + glowIntensity (emission on a runtime material copy + point light), vacuum flag, spawnSwitch (Auto = Glass, Luminescent and the IsSpecialType types get a spawn toggle in the Toggles window, see PixelTier.CanSwitchOff; spawnDisabled saved; CanSpawn used by PickSpawnTier), flyAway/flyDirection/flySpeed (old pixel streaks away in a straight camera-relative line with a smooth tapered trail instead of falling - Meteor; flyRandomDirection + flyAngleRange 10-170 deg = a random direction on the top half of the screen), count, totalCollected, unlocked.
@@ -1990,6 +1990,8 @@ Sky styles (added by PixelClicker.Awake, implements IPixelLookSource): panoramas
 Shark (2026-10-16): the Underwater / Deep Ocean skies draw a dark, hazy shark silhouette circling far below (SharkShade: directions below about 30 degrees down projected onto a flat sea-floor plane, a slow wobbly lap in about 26 s, swaying tail, fins) - only in the bottom of the sky, faded in from dir.y -0.5 to -0.72, never on the sides. It is part of the animated redraw (no extra objects).
 
 Glowing jellyfish (2026-10-16): Deep Ocean only (by style name): a bioluminescent jellyfish (JellyGlow) drifts slowly round the view a little below the horizon; every 7 s it lights up - the bell's rim brightens, pulses of cyan / pink light run down its wavy tentacles - then fades back to a faint shape.
+
+Not mirrored (2026-10-16): Clear Day and Sunset no longer mirror below the horizon (there was a second sun and upside-down clouds): LowerHaze fades from the horizon colour (plus the sunset's warm band towards the sun) into a deeper haze of ground and top colour.
 --- docs/systems/PixelSorterDevice.md ---
 PixelSorterDevice
 

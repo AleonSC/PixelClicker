@@ -10,3 +10,5 @@ Sky styles (added by `PixelClicker.Awake`, implements `IPixelLookSource`): panor
 **Shark (2026-10-16):** the Underwater / Deep Ocean skies draw a dark, hazy shark silhouette circling far below (`SharkShade`: directions below about 30 degrees down projected onto a flat sea-floor plane, a slow wobbly lap in about 26 s, swaying tail, fins) - only in the bottom of the sky, faded in from dir.y -0.5 to -0.72, never on the sides. It is part of the animated redraw (no extra objects).
 
 **Glowing jellyfish (2026-10-16):** Deep Ocean only (by style name): a bioluminescent jellyfish (`JellyGlow`) drifts slowly round the view a little below the horizon; every 7 s it lights up - the bell's rim brightens, pulses of cyan / pink light run down its wavy tentacles - then fades back to a faint shape.
+
+**Not mirrored (2026-10-16):** Clear Day and Sunset no longer mirror below the horizon (there was a second sun and upside-down clouds): `LowerHaze` fades from the horizon colour (plus the sunset's warm band towards the sun) into a deeper haze of ground and top colour.
