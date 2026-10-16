@@ -411,6 +411,13 @@ public partial class PixelTitleScreen : MonoBehaviour
     public static bool PlayedOnce { get; private set; }
 
     /// <summary>Starts a brand-new game in this slot (from the Load window on an empty slot).</summary>
+    /// <summary>The Load window on the main menu loaded a save: go straight into it (no second press of Play), the same as New Game.</summary>
+    public static void PlayFromMenu()
+    {
+        PixelTitleScreen title = PixelFind.First<PixelTitleScreen>();
+        if (title != null && Showing && !title.playing) title.OnPlay();
+    }
+
     public static void StartNewGame(int slot)
     {
         PixelTitleScreen title = PixelFind.First<PixelTitleScreen>();
@@ -421,6 +428,7 @@ public partial class PixelTitleScreen : MonoBehaviour
         PixelSaveGame.AutoStartNewGame = true;   // (no Continue detour: OnPlay clears it)
         PixelSaveGame.NewGameKeepsDefaults = true;   // (the save's startup check must not bring an old save's settings back either)
         PixelSettingsSync.ResetToDefaults();   // a new game starts with the default settings
+        PixelDebug.Info("New Game in slot " + slot + ": " + (PlayedOnce ? "the game was played this run - the scene reloads and the title presses Play by itself" : "starts at once"), title);
         if (!PlayedOnce) { title.OnPlay(); return; }
         // The game has been played already: reload the scene fresh, the title presses Play by itself.
         PixelHints.ResetSeen();
@@ -433,7 +441,7 @@ public partial class PixelTitleScreen : MonoBehaviour
     {
         if (!Showing || canvas == null) return;
         UpdateBarGlow();
-        if (PixelSaveGame.AutoStartNewGame && !playing && playButton != null) { OnPlay(); return; }
+        if (PixelSaveGame.AutoStartNewGame && !playing && playButton != null) { PixelDebug.Info("Title: a New Game was asked for - pressing Play by itself", this); OnPlay(); return; }
         UpdateCubeShow();   // the menu cube changes to a random pixel type every second (PixelTitleCubeShow.cs)
         if (playButton != null)
         {

@@ -1179,3 +1179,4 @@
 [2026-10-16 14:36 UTC] Design doc: the agreed early-game path (monochrome, Cubie's RGB unlock, Auto Clicker, skill-first branch) is written into GameDesign.md.
 [2026-10-16 14:41 UTC] Fix: husks clicked off the cube while a loaded game's husks are still fading in no longer stay invisible for good.
 [2026-10-16 14:42 UTC] Standard level 2 popup (the skills intro beside the Skills window) now pauses time until you press Got it.
+[2026-10-16 14:46 UTC] Main menu Save / Load: loading a save now goes straight into the game like New Game does (no second press of Play); the New Game path is logged in the Console (dev builds) to track down the times it asked for Play.
