@@ -2,7 +2,7 @@
 
 > An enemy is a tree that fights back.
 
-Status: **idea, written up 2026-10-16. Nothing built.** It is built on Woodcutting's **tree mode** (`PixelTreeMode.cs`, the "bag" of
+Status: **idea, written up 2026-10-16. Nothing built.** **Parked for AFTER 1.0, maybe (2026-10-16)** - see `docs/GameDesign.md` section 9b. It is built on Woodcutting's **tree mode** (`PixelTreeMode.cs`, the "bag" of
 blocks played out in a designed order), which the developer has tested in Unity and likes (2026-10-16; only timings and numbers left to tune), so the base is proven.
 Overall game design: `docs/GameDesign.md`. Gear (weapons are gear): `GearDesign.md`.
 

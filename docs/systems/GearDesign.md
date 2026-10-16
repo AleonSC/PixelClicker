@@ -1,6 +1,6 @@
 # Gear, first person unlock and the alien vendor (design, not built yet)
 
-Status: **ideas agreed in chat (2026-10-15/16), nothing built.** The to-do list has one line per step (`Assets/Resources/Todo.txt`, "Gear system" onwards).
+Status: **ideas agreed in chat (2026-10-15/16), nothing built.** **Parked for AFTER 1.0, maybe (2026-10-16)** - see `docs/GameDesign.md` section 9b. The to-do list has one line per step (`Assets/Resources/Todo.txt`, "Gear system" onwards).
 This doc collects what was agreed and, more importantly, the **blank spots**: the decisions nobody has made yet. Each blank spot has a
 suggested default (marked **Suggestion**) so building can start without waiting, but the user decides.
 

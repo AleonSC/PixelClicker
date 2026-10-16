@@ -1139,3 +1139,4 @@
 [2026-10-16 08:16 UTC] Notes: tree mode was tested in Unity and plays well (only timings and numbers left to tune); the Woodcutting, Combat and game design docs and the PixelTreeMode header say so.
 [2026-10-16 08:32 UTC] Woodcutting tree mode: trees come much less often at low levels - the filler run between trees is 12-30 blocks at level 1 and shrinks evenly to 3-10 by level 20 (all five numbers on the PixelTreeMode component).
 [2026-10-16 09:35 UTC] Wrote docs/TesterGuide-Supper.md: a tester guide for Supper's next playtest (what changed, what to try, how to send feedback with F8, the questions to answer) plus a pre-send checklist for the developer.
+[2026-10-16 10:44 UTC] Game design doc: new section 'After 1.0 (maybe)' parks gear, the alien vendor and its relics, combat and first person as an unlock for possible updates after release; first person stays simple in 1.0; the matching to-do lines are tagged [POST-1.0, MAYBE] and the Gear / Combat docs say so.

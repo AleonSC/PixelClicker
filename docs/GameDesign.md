@@ -69,6 +69,7 @@ All decided 2026-10-16 unless noted.
   inflating the bill.
 - **Length:** open-ended, no set playthrough time.
 - **1.0:** flesh out the systems, ship a handful of skills, add more skills as updates (Q5).
+- **After 1.0 (maybe):** gear, the alien vendor and its relics, combat, and first person as an unlock are parked for updates (section 9b); first person stays simple in 1.0.
 - **Art direction:** what the game already is - smooth, clean menus with retro / 8-bit / cube visuals; no fixed rulebook.
 - **Music:** the developer's own Suno tracks (paid plan, no attribution needed).
 
@@ -155,7 +156,7 @@ pack (Lumberjack's Pack). Teaching order: **(Q13)**.
 ### Mid game - skills and machines (Built, growing)
 Gathering skills (Woodcutting, Foraging, Fishing, Mining, Farming, Electrician), each with filler, hazards, specials, perks and a
 tree; devices to handle husks; minigames bought as packs; visitors and vendors; pets; crafting; the Pixel Bank.
-**Tested and liked (2026-10-16):** Woodcutting's tree mode (numbers still to tune). **Agreed next:** first person as a mid-game unlock (the Cube Visor), the gear system (`GearDesign.md`).
+**Tested and liked (2026-10-16):** Woodcutting's tree mode (numbers still to tune). First person as a mid-game unlock and the gear system are parked for after 1.0 (section 9b).
 
 ### Late game - explore and grind (Decided direction)
 By now the player has every tool (machines, consumables, minigames, vendors, first person, gear) and mixes them their own way while
@@ -191,9 +192,9 @@ Links between systems: `ConnectionMap.md`. The short tour:
 | Minigames | events that pay currency and raise the XP multiplier | Built (14+); skill links **(Q12)** | per-script headers |
 | Collectibles | Dragon / God / Prime Cubes, the Golden Snitch, Collection Log, gallery | Built | `PixelGodCubes.md`, `PixelDragonWish.md` |
 | Pets | one per block type, perks, outfits | Built | `PixelPets.md` |
-| First person | walk the floor, handle husks, repair machines (Agreed) | Built; unlock + relics Agreed | `PixelFirstPerson.md`, `GearDesign.md` |
-| Gear | one slot (you're a cube), relics, legendary gear | Agreed | `GearDesign.md` |
-| Combat | enemies as designed slot lists on the cube (built on tree mode), weapons as gear | Idea | `CombatDesign.md` |
+| First person | walk the floor, handle husks | Built; kept simple in 1.0 (unlock + relics after 1.0, maybe) | `PixelFirstPerson.md` |
+| Gear | one slot (you're a cube), relics, legendary gear | After 1.0, maybe (9b) | `GearDesign.md` |
+| Combat | enemies as designed slot lists on the cube (built on tree mode), weapons as gear | After 1.0, maybe (9b) | `CombatDesign.md` |
 | Prestige | paying Cubie back | Theme decided; details **(Q2, Q3)** | this doc |
 | Cosmetics | late-game rewards | Being considered **(Q1)** | this doc |
 | Offline progress | earnings while away | Built (auto clicker only) **(Q10)** | `PixelOfflineProgress.cs` header |
@@ -223,6 +224,23 @@ release. Exact scope: **(Q5)**, **(Q11)**.
 | Devices | ~20 | Pesticide Sprayer, factory machines as real items |
 | Collectibles | 7 Dragon + 3 God + 6 Prime Cubes, the Cubelette, the Golden Snitch | legendary gear |
 | Homages | 5 families | ~9 ideas on the to-do |
+
+## 9b. After 1.0 (maybe)
+
+Content parked for **after 1.0** (decided 2026-10-16). These are ideas the developer will **probably** add in updates after release,
+but **might not**. Nothing here is built, and none of it blocks 1.0. Their to-do lines are tagged `[POST-1.0, MAYBE]`.
+
+| Idea | What it is | Doc |
+|---|---|---|
+| **Gear** | One gear slot ("you're a cube"), free swapping, face sockets for more slots later; legendary gear from super rares (the Prime Gauntlet's stone powers and the Snap, God Cube relics, the Dragon Radar, the Seeker's Charm) | `GearDesign.md` |
+| **The alien vendor** | A 3D alien whose UFO lands at the floor's edge, reached in first person; sells first-person relics (Grav Boots, Tractor Glove, Xeno Lens, Blink Core, Probe Drone) and face sockets | `GearDesign.md` |
+| **Combat** | Enemies as tree-mode slot lists on the cube (armour, weak spots, attack blocks, a health bar, loot); weapons as gear; food buffs | `CombatDesign.md` |
+| **First person as a mid-game unlock** | The Cube Visor gift and a camera-dive reveal. Parked with gear | `GearDesign.md` |
+
+**First person in 1.0: keep it simple.** First person stays what it is now - walk the floor, handle husks, break them by hand - without
+relics, an unlock reveal or extra systems on top. (Whether it stays available from the start or unlocks later is still open.)
+
+The Gear and Combat docs keep their open questions; they only need answering if and when that content is picked up.
 
 ## 10. Onboarding and teaching
 
