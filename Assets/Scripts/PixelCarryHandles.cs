@@ -7,7 +7,7 @@
 //     (PixelHandCursor), left-drag moves the root over the floor plane (kept on screen) with the fist cursor, scroll / Q / E turn it while dragging
 //     (PixelConsumables.TurnInput). Over(ray) / Dragging tell the owner the pointer is the handles'; static Hot (hovering or dragging any handles)
 //     is part of PixelClicker.ExternalClickBlock and PixelGrab's guard. 'Blocked' (a Func the owner sets) pauses it, e.g. while the Recycler works.
-//   Moves go through a kinematic Rigidbody on the root (MovePosition / MoveRotation in FixedUpdate) so loose husks are pushed, not passed through; it moves at most maxCarrySpeed (7 u/s) and husks it shoves are slowed to pushedSpeedCap (2.5 u/s) so they slide aside instead of flying. The position / yaw are the root's own, so the saved PlacedState picks up where it was carried to.
+//   Moves go through a kinematic Rigidbody on the root (MovePosition / MoveRotation in FixedUpdate) so loose husks are pushed, not passed through; it follows the mouse tightly (followSharpness 25 = closes the gap fast, capped at carrySpeedLimit 60 u/s; the old 7 u/s cap made it crawl and keep sliding after the drag) and husks it shoves are slowed to pushedSpeedCap (2.5 u/s) so they slide aside instead of flying. The position / yaw are the root's own, so the saved PlacedState picks up where it was carried to.
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -43,8 +43,11 @@ public class PixelCarryHandles : MonoBehaviour
     private Vector3 targetPos;
     private Quaternion targetRot;
 
-    [Tooltip("Fastest the carried thing moves towards the mouse (units per second): slower = gentler pushes on husks in the way.")]
-    [SerializeField] private float maxCarrySpeed = 7f;
+    // (Renamed from maxCarrySpeed: its old 7 u/s made the carried thing crawl after the mouse and keep sliding after a quick drag.)
+    [Tooltip("How snappily the carried thing follows the mouse: it closes this share of the gap per second (bigger = tighter).")]
+    [SerializeField] private float followSharpness = 25f;
+    [Tooltip("Fastest the carried thing may move (units per second), so a fling of the mouse can't throw it through things.")]
+    [SerializeField] private float carrySpeedLimit = 60f;
     [Tooltip("Husks shoved by the carried thing are slowed to at most this speed (units per second), so they slide aside instead of flying off.")]
     [SerializeField] private float pushedSpeedCap = 2.5f;
 
@@ -55,7 +58,10 @@ public class PixelCarryHandles : MonoBehaviour
         if (body == null) return;
         if (hasTarget)
         {
-            float step = Mathf.Max(0.1f, maxCarrySpeed) * Time.fixedDeltaTime;
+            // Follow the mouse tightly: close most of the gap each step (a far target moves fast, a near one settles), capped at carrySpeedLimit.
+            float dist = Vector3.Distance(body.position, targetPos);
+            float speed = Mathf.Min(Mathf.Max(0.5f, carrySpeedLimit), Mathf.Max(2f, dist * Mathf.Max(1f, followSharpness)));
+            float step = speed * Time.fixedDeltaTime;
             Vector3 next = Vector3.MoveTowards(body.position, targetPos, step);
             body.MovePosition(next);
             body.MoveRotation(Quaternion.RotateTowards(body.rotation, targetRot, 360f * Time.fixedDeltaTime));

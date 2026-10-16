@@ -1225,3 +1225,4 @@
 [2026-10-16 17:09 UTC] Right-click a pet for a small menu with its name and 'Pet away', which switches it off (Toggles > Pets brings it back).
 [2026-10-16 17:10 UTC] Fixed the Woodcutting guide not showing: the guide book was hidden under the Skill tree button (the name now leaves room for it), and the first-time question also comes up when the Skills window opens on Woodcutting, not only on a card click.
 [2026-10-16 17:14 UTC] The Woodcutting guide book now sits just left of the Skill tree button (measured), so it no longer clips into it; the skill name shrinks to fit before it.
+[2026-10-16 17:16 UTC] Carrying the Recycler / Storage Crate by its handles now follows the mouse tightly instead of crawling after it and sliding on after you stop.
