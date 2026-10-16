@@ -64,9 +64,12 @@ story; the game must respect players who idle and players who click.
 - **Homages:** a running thread of pop-culture nods, renamed so they are nods and not the real thing (Dragon Cubes, Egyptian God Cubes,
   Prime Cubes, the Golden Snitch; more on the to-do).
 
-> **Blank spot - is there a story?** Who is Cubie, where is this void, why are we extracting pixels, what is the cube? Today there is
-> flavour but no story. **Suggestion:** a light mystery told through Cubie and the visitors (what is the cube for? who is buying all this
-> colour?), revealed bit by bit at milestones and finished by the end game (section 9). No cutscenes; lines in speech boxes.
+- **No story - on purpose (decided 2026-10-16).** There is no ultimate story or hidden mystery, and **Cubie is just another guy in the
+  world**, like the other vendors. The game's concept is **our real world: monotonous grinding for money.** It is built to feel
+  **simulated**, to match the idea that everything is nothing in itself and only people give it meaning. The pixels, the currency, the
+  numbers mean nothing until the player decides they matter.
+- What this means for writing: characters are ordinary people with their own small concerns (Cubie wants his money back, with
+  interest), not keys to a plot. Humour comes from how mundane and transactional the world is. Nothing should promise a big reveal.
 
 > **Blank spot - the name.** "Pixel Clicker" is a working title? It is generic and hard to search for. **Suggestion:** decide before any
 > public build; something with "husk", "cube" or "extract" in it would match the hook.
@@ -130,8 +133,8 @@ Cubie gave you a small gift and a Recycler at the start. **Prestige is paying hi
 ### End game (Blank)
 > **Blank spot - is there an ending at all?** The developer isn't sure yet. The game is meant to be open-ended, so an ending is
 > optional. **Suggestion:** no hard ending. The "end game" is the long tail: maxing every skill, finishing the Collection Log,
-> collecting cosmetics, and prestiging again for bigger goodwill. A light payoff - Cubie finally admitting why he needed the money -
-> could arrive after a set number of payments, without stopping the game.
+> collecting cosmetics, and prestiging again for bigger goodwill. No story payoff (section 4): at most Cubie reacts to being paid,
+> the way anyone would.
 
 ### Length (decided 2026-10-16)
 **Open-ended, no set length.** There is no target playthrough time; pacing is tuned per skill and per goal (how long a level, a log
@@ -229,7 +232,7 @@ What exists and what is planned, by kind. Numbers are rough.
 
 Grouped by how much they block other decisions. Answer them in any order; each answer gets written into its section above.
 
-**Decided (2026-10-16):** who the game is for, platform and price, the late-game direction, prestige's theme (paying Cubie back),
+**Decided (2026-10-16):** no story (the real-world grind, a simulated feel; Cubie is just another guy), who the game is for, platform and price, the late-game direction, prestige's theme (paying Cubie back),
 open-ended length, the 1.0 direction, art direction, music.
 
 **Big direction (shape everything else)**
@@ -241,21 +244,20 @@ open-ended length, the 1.0 direction, art direction, music.
 
 **Identity**
 6. The hook in one sentence. (section 1)
-7. Is there a story, and who is Cubie really? (section 4)
-8. The name. (section 4)
-9. Which pillar wins when two clash? (section 2)
+7. The name. (section 4)
+8. Which pillar wins when two clash? (section 2)
 
 **Systems**
-10. Which systems get cut or merged (run the pruning test). (section 7)
-11. The long-term currency sink. (section 8)
-12. What counts for offline progress. (section 8)
-13. How many skills at release, and which are next. (section 9)
-14. Should every minigame feed a skill? (section 9)
-15. What to teach in the first 5 minutes. (section 10)
+9. Which systems get cut or merged (run the pruning test). (section 7)
+10. The long-term currency sink. (section 8)
+11. What counts for offline progress. (section 8)
+12. How many skills at release, and which are next. (section 9)
+13. Should every minigame feed a skill? (section 9)
+14. What to teach in the first 5 minutes. (section 10)
 
 **Before any public build**
-16. Homage rules / renaming. (section 4)
-17. Save versioning and the first public build date. (section 12)
+15. Homage rules / renaming. (section 4)
+16. Save versioning and the first public build date. (section 12)
 
 Feature-level blank spots (gear, first person, the alien, legendary gear) are in `GearDesign.md`; Woodcutting's in
 `WoodcuttingProgression.md`; the husk rules' in `PixelRules.md`; the cross-system gaps in `ConnectionMap.md` section 8.
