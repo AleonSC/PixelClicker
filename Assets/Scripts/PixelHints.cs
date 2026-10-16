@@ -871,13 +871,16 @@ public class PixelHints : MonoBehaviour
         }
     }
 
-    private static bool AnyCollected()
+    [Tooltip("A game still counts as NEW (so the intro tips play) while fewer than this many pixels have been collected in it - a few early clicks never cost the player the intro.")]
+    [SerializeField] private int introFreshClicks = 60;
+
+    private bool AnyCollected()
     {
         PixelClicker clicker = PixelFind.First<PixelClicker>();
         if (clicker == null) return false;
-        foreach (PixelClicker.PixelTier t in clicker.Tiers)
-            if (t.totalCollected > 0d) return true;
-        return false;
+        double sum = 0d;
+        foreach (PixelClicker.PixelTier t in clicker.Tiers) sum += t.totalCollected;
+        return sum >= Mathf.Max(1, introFreshClicks);
     }
     private float introWait;
     private bool freshJudged;   // freshAtStart has been worked out (on the title screen, or at the first update after it)
@@ -933,17 +936,20 @@ public class PixelHints : MonoBehaviour
                     : introEarnText;
                 PixelNotice.Show(earn, 0f, compact: true, onClosed: () =>
                 {
+                    System.Action finish = () =>
+                    {
+                        introRunning = false; // the tier guide may show now (and the cube can be clicked: PixelClicker.ExternalClickBlock)
+                        MarkSeen("intro_log"); // only counts once the player has been through all the tips
+                        if (replay) ShowEventLogTip(); // the tutorial's last step: what the event log is
+                    };
+                    PixelBlockHold hold = PixelFind.Cached<PixelBlockHold>();
+                    if (hold == null || !hold.Active) { finish(); return; }   // Block Hold comes from the Standard skill tree now: no right-click tip until it is unlocked
                     // Fourth tip, right after the one about clicking: the right click (Block Hold + stake).
                     string right = string.IsNullOrEmpty(introRightClickText)
                         ? "Try the right mouse button too: HOLD it on the block on the cube to pull the block out of the rotation. On the basic blocks (black, gray, white, red, green and blue) the longer you hold (watch the meter by your cursor), the more the block is worth when it comes round again - but the stake can also go bad and pay nothing."
                         : introRightClickText;
                     MarkSeen("stake_intro");   // (the later 25-click reminder is not needed now)
-                    PixelNotice.Show(right, 0f, compact: true, onClosed: () =>
-                    {
-                        introRunning = false; // the tier guide may show now
-                        MarkSeen("intro_log"); // only counts once the player has been through all the tips
-                        if (replay) ShowEventLogTip(); // the tutorial's last step: what the event log is
-                    });
+                    PixelNotice.Show(right, 0f, compact: true, onClosed: () => finish());
                 });
             });
         });

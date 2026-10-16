@@ -595,6 +595,13 @@ public class PixelUI : MonoBehaviour
         PixelUI ui = inventoryInstance;
         if (ui == null || ui.boxObject == null) return;
         if (!open && Compact && !force) return;   // the pinned Inventory is put away by Update (UpdatePinnedHierarchy) when other windows open, not here
+        if (open)
+        {
+            // Lay the window out for the CURRENT mode before it shows (the intro switches the pinned view off right before opening it: without this
+            // the pinned layout / spot showed for one frame).
+            ui.UpdatePinnedPlacement();
+            ui.Refresh();
+        }
         if (open) PixelPop.Show(ui.boxObject); else PixelPop.Hide(ui.boxObject);
         if (open)
         {
@@ -1233,7 +1240,8 @@ public class PixelUI : MonoBehaviour
     {
         get
         {
-            if (compactCache < 0) compactCache = PixelPrefs.GetInt(PrefCompact, 0);
+            // Read every time (not cached): a new game / loaded save puts its own value in the prefs, and a stale cache showed the pinned view.
+            compactCache = PixelPrefs.GetInt(PrefCompact, 0);
             return compactCache;
         }
         set

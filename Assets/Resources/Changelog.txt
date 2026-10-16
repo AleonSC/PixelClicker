@@ -1169,3 +1169,5 @@
 [2026-10-16 13:36 UTC] Main menu launch intro: the black screen folds down into the menu bar, then the logo drops in and the buttons pop in one after another (any key or click skips it).
 [2026-10-16 13:52 UTC] Main menu: the cube changes to a random pixel type every second; on Play it pops off like a husk that shrinks away and your own block appears before the camera intro.
 [2026-10-16 13:52 UTC] Editor menu 'Move Systems Off The Clicker' now finds hand-set system components anywhere in the scene, asks first, and moves them into Pixel Systems with their values (replacing an untouched default copy).
+[2026-10-16 14:07 UTC] Intro fix: the Inventory no longer flashes its pinned version for a frame when the intro opens it.
+[2026-10-16 14:07 UTC] Intro fix: the cube can't be clicked until the new-game intro boxes are done (the click guide shows after them), a few early clicks no longer skip the intro, and the right-click tip waits until Block Hold is unlocked.
