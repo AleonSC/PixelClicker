@@ -1325,10 +1325,18 @@ public partial class PixelClicker : MonoBehaviour
         tiers[tierIndex].count += amount;
         tiers[tierIndex].totalCollected += amount;
         CurrencyGained?.Invoke(tierIndex, amount);
-        if (firstOfRareDrop) AnnounceDragonCube(tierIndex);
+        if (firstOfRareDrop) StartCoroutine(AnnounceAfterShow(tierIndex));   // the find show plays first, then the text box
 
         CheckUnlocks();
         NotifyChanged();
+    }
+
+    /// <summary>Waits for the find show (Dragon Cube / God / Prime Cube) to finish, so its text box doesn't pop up on top of the animation.</summary>
+    private IEnumerator AnnounceAfterShow(int tierIndex)
+    {
+        yield return null;   // (the show starts in the same click)
+        while (PixelDragonFind.Playing || PixelGodFind.Playing) yield return null;
+        AnnounceDragonCube(tierIndex);
     }
 
     /// <summary>The first time each Dragon Cube turns up: a log line (and a tip the very first time), plus a note when all seven are held.</summary>

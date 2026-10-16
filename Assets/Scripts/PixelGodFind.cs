@@ -95,6 +95,9 @@ public class PixelGodFind : MonoBehaviour
         Cleanup();
     }
 
+    /// <summary>A God / Prime Cube show is playing right now.</summary>
+    public static bool Playing => instance != null && instance.playing;
+
     /// <summary>Starts (or queues) the show of this God Cube tier.</summary>
     public static void Play(int tierIndex, Vector3 worldPosition)
     {
