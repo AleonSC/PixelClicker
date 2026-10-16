@@ -379,7 +379,7 @@ public class PixelSessionRecorder : MonoBehaviour
             {
                 bool owned = shop.GetPackPurchased(i);
                 int level = shop.GetPackLevel(i);
-                if (owned && !packOwned[i]) Mark("Bought " + shop.GetPackName(i));
+                if (owned && !packOwned[i]) Mark((PixelGuideVendor.Visiting ? "Got (from Cubie) " : "Bought ") + shop.GetPackName(i));   // (Cubie hands over the RGB Pack on visit 2)
                 else if (level > packLevel[i]) Mark(shop.GetPackName(i) + " to level " + level);
                 packOwned[i] = owned; packLevel[i] = level;
             }
