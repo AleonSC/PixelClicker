@@ -89,7 +89,10 @@ public class PixelStatusBox : MonoBehaviour
     private void Layout(float t)
     {
         float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        Vector2 pref = label.GetPreferredValues(string.IsNullOrEmpty(label.text) ? " " : label.text);
+        string text = string.IsNullOrEmpty(label.text) ? " " : label.text;
+        Vector2 pref = label.GetPreferredValues(text);
+        if (pref.x + Padding.x * 2f > MaxWidth)
+            pref = new Vector2(MaxWidth - Padding.x * 2f, label.GetPreferredValues(text, MaxWidth - Padding.x * 2f, 0f).y);   // too wide for one line: measure the wrapped height so the box grows to fit every line
         float w = Mathf.Min(pref.x + Padding.x * 2f, MaxWidth), h = pref.y + Padding.y * 2f + AccentHeight;
 
         clip.anchorMin = new Vector2(0f, 1f); clip.anchorMax = new Vector2(1f, 1f); clip.pivot = new Vector2(0.5f, 1f);

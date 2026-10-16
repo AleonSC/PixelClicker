@@ -13,7 +13,7 @@
 //   (TakeTag: 1 = tree block, 2 = the tree's last block, 4 = the tree's first block) that PixelClicker keeps with the pre-rolled block and the live
 //   block, and RollTier reports each change of the live block (OnLiveChanged): the tree bar counts the live blocks, and 'Timber!' fires when the last
 //   block leaves the cube (bonus XP = timberXpShare of the tree's blocks, a status line, timberSound, stat woodcutting.trees_felled).
-//   The tree bar is a PixelStatusLines line (key 'tree'): 'Oak  3 / 9', plus '- infested: Termite Hive at the end'.
+//   The tree bar is a PixelStatusLines line (key 'tree'): 'Oak  3 / 9', plus '- Termite Hive at the end - Pesticide: n' on an infested tree (the infested colour says it is infested).
 //   Not saved: a reload starts in the filler rotation. Not built yet (see the design doc): other species, the Great Oak as a species, the infested
 //   look and sound, lookahead past one block, Pesticide charges, Shuffle switched off inside a tree. A block pulled out with Block Hold loses its
 //   tree tag (pulling the tree's last block fires Timber early).
@@ -403,7 +403,7 @@ public class PixelTreeMode : MonoBehaviour
     {
         if (!showTreeBar || liveName == null) return;
         string text = liveName + "  " + liveIndex + " / " + liveTotal
-                      + (liveInfested ? "  -  infested: Termite Hive at the end (Pesticide charges: " + PixelBlockRules.Charges(PixelClicker.PixelType.HornetNest) + ")" : "");
+                      + (liveInfested ? "  -  Termite Hive at the end  -  Pesticide: " + PixelBlockRules.Charges(PixelClicker.PixelType.HornetNest) : "");
         PixelStatusLines.Set(BarKey, text, liveInfested ? infestedColor : barColor);
         barShown = true;
     }
