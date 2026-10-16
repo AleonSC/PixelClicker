@@ -1152,3 +1152,4 @@
 [2026-10-16 12:05 UTC] Monochrome pixels now take 250 Gray and 250 Black (was 100) to unlock the next tier - a trial to see how the slower start plays.
 [2026-10-16 12:05 UTC] Standard got a skill tree: the level 2 skill point goes on Block Hold or Power Click (both locked until then), each with two upgrades (Lucky stake / High roller, Quick charge / Aftershock); the level 2 popup now tells you where to spend the point.
 [2026-10-16 12:06 UTC] Project notes: Block Hold and Power Click are now listed as unlocked by the Standard skill tree.
+[2026-10-16 12:08 UTC] To-do: added the Ultra pixel cosmetics shop (locked floors and skies, Wardrobe tab).
