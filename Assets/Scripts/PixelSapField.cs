@@ -26,7 +26,8 @@ public class PixelSapField : MonoBehaviour
     [Tooltip("Lifetime the sap gets for every different husk that has been inside its circle (seconds, once per husk).")]
     [SerializeField] private float sapBonusPerHusk = 1f;
     [Tooltip("Colour of the circle (alpha = how see-through).")]
-    [SerializeField] private Color circleColor = new Color(1f, 0.85f, 0.2f, 0.22f);
+    [SerializeField] private Color circleColor = new Color(1f, 0.85f, 0.2f, 0.1f);
+    [HideInInspector, SerializeField] private int lookVersion = 0;   // 1 = the subtler circle (alpha 0.22 -> 0.1)
     [Tooltip("Colour of the glow shell on husks inside a circle (alpha = how strong).")]
     [SerializeField] private Color glowColor = new Color(1f, 0.85f, 0.25f, 0.28f);
     [Min(0.05f)]
@@ -46,7 +47,11 @@ public class PixelSapField : MonoBehaviour
     private static Mesh discMesh;
     private int sapIndex = -2;
 
-    private void Awake() { clicker = GetComponent<PixelClicker>(); if (clicker == null) clicker = PixelFind.First<PixelClicker>(); }
+    private void Awake()
+    {
+        clicker = GetComponent<PixelClicker>(); if (clicker == null) clicker = PixelFind.First<PixelClicker>();
+        if (lookVersion < 1) { if (circleColor.a > 0.15f) circleColor.a = 0.1f; lookVersion = 1; }   // (a saved scene keeps the old, stronger alpha otherwise)
+    }
 
     private void OnDestroy()
     {
@@ -213,8 +218,9 @@ public class PixelSapField : MonoBehaviour
             {
                 float dx = (x + 0.5f) / n * 2f - 1f, dy = (y + 0.5f) / n * 2f - 1f;
                 float d = Mathf.Sqrt(dx * dx + dy * dy);
-                float fill = d < 1f ? 0.45f : 0f;
-                float rim = Mathf.Clamp01(1f - Mathf.Abs(d - 0.95f) / 0.05f);
+                // a faint fill that fades towards the middle, and a soft thin rim
+                float fill = d < 1f ? Mathf.Lerp(0.08f, 0.3f, d * d) : 0f;
+                float rim = Mathf.Clamp01(1f - Mathf.Abs(d - 0.96f) / 0.04f) * 0.7f;
                 float a = Mathf.Clamp01(fill + rim) * Mathf.Clamp01((1f - d) / 0.02f + (d < 1f ? 1f : 0f));
                 px[y * n + x] = new Color32(255, 255, 255, (byte)(Mathf.Clamp01(d <= 1f ? a : 0f) * 255f));
             }
