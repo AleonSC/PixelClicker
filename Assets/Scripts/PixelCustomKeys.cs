@@ -5,8 +5,10 @@
 //   starts placing the device), tool:<id> -> PixelMyWindow.TryGetTool (the hose, or PixelMenuKeys.Click). One potion per key is fine (a black potion on one key, a white one on another).
 //   The bindings (target + KeyCode) are saved per save file as JSON in PlayerPrefs PixelClicker.Setting.CustomKeys (listed in PixelSettingsSync, ReloadFromPrefs). A key used by one of the normal
 //   actions (Settings > Key Bindings) is refused; a key used by another custom binding moves to the new one. Escape cancels a capture, Backspace / Delete clears the key.
-//   The window is the KEYBINDS TAB of My Window (PixelMyWindow builds a container and calls BuildView; Refresh / SetVisible keep it current): a drop-down of everything bindable + Add, then one row
-//   per binding (name, key box = click then press a key, X removes it).
+//   The window is the KEYBINDS TAB of My Window (PixelMyWindow builds a container and calls BuildView; Refresh / SetVisible keep it current): a search bar, a drop-down of everything bindable,
+//   then one row per binding (name, key box, X removes it). PICKING an item in the drop-down (or pressing Enter in the search bar = its first match) opens a small KEY PROMPT over the tab:
+//   press a key, it is shown big (pressing another replaces it; a key of the normal actions is refused there, a key of another custom binding says it will move), Confirm adds the binding
+//   to the list (no Add button), Cancel / Escape closes it. A row's key box opens the same prompt to change that binding (Backspace clears it).
 // ----------------------
 using System;
 using System.Collections.Generic;
@@ -84,8 +86,12 @@ public class PixelCustomKeys : MonoBehaviour
     // Firing
     // ------------------------------------------------------------------
 
+    /// <summary>The keybind prompt is waiting for a key (the game's own keys stay quiet meanwhile, through PixelKeys.Typing).</summary>
+    public static bool CapturingKey => instance != null && (instance.promptOpen || instance.capturing >= 0);
+
     private void Update()
     {
+        if (promptOpen) { UpdatePrompt(); return; }
         if (capturing >= 0) { UpdateCapture(); return; }
         if (viewVisible && (dirty || (scroll != null && Mathf.Abs(scroll.GetComponent<RectTransform>().rect.height - lastViewHeight) > 0.5f))) RebuildRows();
         if (bindings.Count == 0 || PixelKeys.Typing || PixelCalm.InMenu) return;
@@ -160,17 +166,15 @@ public class PixelCustomKeys : MonoBehaviour
         dropdown = PixelUIKit.CreateDropdown(font, root, "Targets", new Vector2(100f, 50f), new Color(0.2f, 0.3f, 0.5f, 1f), new Color(0.1f, 0.12f, 0.18f, 1f), Color.white, 22f);
         RectTransform dr = dropdown.GetComponent<RectTransform>();
         dr.anchorMin = new Vector2(0f, 1f); dr.anchorMax = new Vector2(1f, 1f); dr.pivot = new Vector2(0.5f, 1f);
-        dr.offsetMin = new Vector2(4f, -54f); dr.offsetMax = new Vector2(-124f, -4f);
-        Button add = PixelUIKit.CreateButton(font, root, "Add", "Add", new Vector2(110f, 50f), new Color(0.2f, 0.6f, 0.3f, 1f), Color.white, 24f);
-        RectTransform ar = add.GetComponent<RectTransform>();
-        ar.anchorMin = ar.anchorMax = ar.pivot = new Vector2(1f, 1f);
-        ar.anchoredPosition = new Vector2(-4f, -4f);
-        add.onClick.AddListener(AddSelected);
+        dr.offsetMin = new Vector2(4f, -54f); dr.offsetMax = new Vector2(-4f, -4f);
+        dropdown.onValueChanged.AddListener(PickedInDropdown);   // picking an item opens the key prompt (the first entry is just the 'choose...' line)
+        searchField.onSubmit.AddListener(_ => { if (targets.Count > 0) OpenPrompt(targets[0], -1); });   // Enter in the search bar = bind its first match
 
         scroll = PixelUIKit.CreateScrollView(root, "Bindings", new Color(1f, 1f, 1f, 0.35f), 12f, 60f, out content, out scrollBar);
         RectTransform sr = scroll.GetComponent<RectTransform>();
         sr.anchorMin = Vector2.zero; sr.anchorMax = Vector2.one;
         sr.offsetMin = new Vector2(0f, 0f); sr.offsetMax = new Vector2(0f, -150f);
+        BuildPrompt(root);
         dirty = true;
     }
 
@@ -179,7 +183,7 @@ public class PixelCustomKeys : MonoBehaviour
     {
         viewVisible = visible;
         if (visible) { FillTargets(); dirty = true; }
-        else if (capturing >= 0) capturing = -1;
+        else { if (capturing >= 0) capturing = -1; ClosePrompt(); }
     }
 
     private void FillTargets()
@@ -197,22 +201,146 @@ public class PixelCustomKeys : MonoBehaviour
         if (consumables != null)
             for (int i = 0; i < consumables.ItemCount; i++)
                 if (consumables.ItemListable(i) && (search.Length == 0 || consumables.ItemName(i).ToLowerInvariant().Contains(search))) { names.Add(consumables.ItemName(i)); targets.Add("item:" + consumables.ItemName(i)); }
-        if (names.Count == 0) { names.Add("(nothing matches)"); }
-        int keep = dropdown.value;
+        names.Insert(0, names.Count == 0 ? "(nothing matches)" : search.Length > 0 ? "Choose one of " + names.Count + " matches to bind..." : "Choose an item or tool to bind...");
         dropdown.ClearOptions();
         dropdown.AddOptions(names);
-        dropdown.SetValueWithoutNotify(Mathf.Clamp(keep, 0, Mathf.Max(0, names.Count - 1)));
+        dropdown.SetValueWithoutNotify(0);
         dropdown.RefreshShownValue();
     }
 
-    private void AddSelected()
+    private void PickedInDropdown(int value)
     {
-        if (dropdown == null || targets.Count == 0) return;
-        string target = targets[Mathf.Clamp(dropdown.value, 0, targets.Count - 1)];
-        bindings.Add(new Binding { target = target, key = (int)KeyCode.None });
+        dropdown.SetValueWithoutNotify(0);   // back to the 'choose...' line, so the same item can be picked again later
+        dropdown.RefreshShownValue();
+        if (value <= 0 || value - 1 >= targets.Count) return;
+        OpenPrompt(targets[value - 1], -1);
+    }
+
+    // ------------------------------------------------------------------
+    // The key prompt: press a key, see it, Confirm
+    // ------------------------------------------------------------------
+
+    private GameObject promptRoot;
+    private TMP_Text promptTitle, promptKey, promptMsg;
+    private Button promptConfirm;
+    private bool promptOpen;
+    private string promptTarget;
+    private int promptIndex = -1;        // -1 = a new binding, else the binding being changed
+    private KeyCode promptPending = KeyCode.None;
+    private bool promptCleared;          // (changing a binding: Backspace chose 'no key')
+
+    private void BuildPrompt(RectTransform root)
+    {
+        promptRoot = new GameObject("Key Prompt", typeof(RectTransform), typeof(Image));
+        promptRoot.transform.SetParent(root, false);
+        PixelUIKit.Stretch(promptRoot.GetComponent<RectTransform>());
+        promptRoot.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.55f);   // dims the tab and catches clicks behind the box
+
+        GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image));
+        box.transform.SetParent(promptRoot.transform, false);
+        Image bi = box.GetComponent<Image>();
+        PixelUIKit.StyleWindow(bi, new Color(0.1f, 0.12f, 0.18f, 0.98f));
+        RectTransform br = box.GetComponent<RectTransform>();
+        br.anchorMin = new Vector2(0f, 1f); br.anchorMax = new Vector2(1f, 1f); br.pivot = new Vector2(0.5f, 1f);
+        br.offsetMin = new Vector2(10f, -330f); br.offsetMax = new Vector2(-10f, -20f);
+
+        promptTitle = PixelUIKit.CreateText(font, box.transform, "Title", "", 24f, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
+        Row(promptTitle.rectTransform, -14f, 34f);
+        promptTitle.enableAutoSizing = true; promptTitle.fontSizeMax = 24f; promptTitle.fontSizeMin = 12f;
+
+        GameObject keyBox = new GameObject("Key", typeof(RectTransform), typeof(Image));
+        keyBox.transform.SetParent(box.transform, false);
+        Image ki = keyBox.GetComponent<Image>();
+        ki.color = new Color(0.18f, 0.22f, 0.34f, 1f);
+        PixelUIKit.StyleBox(ki);
+        RectTransform kr = keyBox.GetComponent<RectTransform>();
+        kr.anchorMin = kr.anchorMax = kr.pivot = new Vector2(0.5f, 1f);
+        kr.sizeDelta = new Vector2(240f, 84f); kr.anchoredPosition = new Vector2(0f, -58f);
+        promptKey = PixelUIKit.CreateText(font, keyBox.transform, "Key Name", "", 40f, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 0.85f, 0.35f, 1f));
+        PixelUIKit.Stretch(promptKey.rectTransform);
+        promptKey.enableAutoSizing = true; promptKey.fontSizeMax = 40f; promptKey.fontSizeMin = 14f;
+
+        promptMsg = PixelUIKit.CreateText(font, box.transform, "Message", "", 19f, TextAlignmentOptions.Center, FontStyles.Italic, new Color(1f, 1f, 1f, 0.75f));
+        Row(promptMsg.rectTransform, -152f, 60f);
+        promptMsg.textWrappingMode = TextWrappingModes.Normal;
+
+        Button cancel = PixelUIKit.CreateButton(font, box.transform, "Cancel", "Cancel", new Vector2(150f, 50f), new Color(0.35f, 0.35f, 0.42f, 1f), Color.white, 22f);
+        RectTransform cr = cancel.GetComponent<RectTransform>();
+        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(0.5f, 0f);
+        cr.anchoredPosition = new Vector2(-85f, 18f);
+        cancel.onClick.AddListener(() => { PixelAudio.Play("ui_click"); ClosePrompt(); });
+        promptConfirm = PixelUIKit.CreateButton(font, box.transform, "Confirm", "Confirm", new Vector2(150f, 50f), new Color(0.2f, 0.6f, 0.3f, 1f), Color.white, 22f);
+        RectTransform fr = promptConfirm.GetComponent<RectTransform>();
+        fr.anchorMin = fr.anchorMax = fr.pivot = new Vector2(0.5f, 0f);
+        fr.anchoredPosition = new Vector2(85f, 18f);
+        promptConfirm.onClick.AddListener(() => { PixelAudio.Play("ui_click"); ConfirmPrompt(); });
+        promptRoot.SetActive(false);
+    }
+
+    private static void Row(RectTransform r, float y, float h)
+    {
+        r.anchorMin = new Vector2(0f, 1f); r.anchorMax = new Vector2(1f, 1f); r.pivot = new Vector2(0.5f, 1f);
+        r.sizeDelta = new Vector2(-24f, h); r.anchoredPosition = new Vector2(0f, y);
+    }
+
+    /// <summary>Opens the key prompt for this target (index -1 = add it as a new binding, else change that binding's key).</summary>
+    private void OpenPrompt(string target, int index)
+    {
+        if (promptRoot == null || string.IsNullOrEmpty(target)) return;
+        capturing = -1;
+        promptTarget = target;
+        promptIndex = index;
+        promptPending = KeyCode.None;
+        promptCleared = false;
+        promptOpen = true;
+        promptRoot.SetActive(true);
+        promptRoot.transform.SetAsLastSibling();
+        if (UnityEngine.EventSystems.EventSystem.current != null) UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(null);   // (so the key isn't typed into the search bar)
+        PixelUIKit.SetText(promptTitle, "Key for " + DisplayName(target));
+        ShowPrompt("Press the key you want" + (index >= 0 ? " (Backspace = no key)" : "") + ". Escape cancels.");
+        PixelAudio.Play("ui_click");
+    }
+
+    private void ShowPrompt(string message)
+    {
+        bool has = promptPending != KeyCode.None;
+        PixelUIKit.SetText(promptKey, has ? PixelKeys.KeyName(promptPending) : promptCleared ? "(none)" : "...");
+        PixelUIKit.SetText(promptMsg, message);
+        promptConfirm.interactable = has || promptCleared;
+    }
+
+    private void UpdatePrompt()
+    {
+        if (!viewVisible) { ClosePrompt(); return; }
+        if (!PixelKeys.TryCapture(out KeyCode key)) return;
+        if (key == KeyCode.Escape) { ClosePrompt(); return; }
+        if ((key == KeyCode.Backspace || key == KeyCode.Delete) && promptIndex >= 0) { promptPending = KeyCode.None; promptCleared = true; ShowPrompt("Confirm to leave it without a key."); return; }
+        for (int a = 0; a < PixelKeys.Count; a++)
+            if (PixelKeys.Get((PixelAction)a) == key) { ShowPrompt(PixelKeys.KeyName(key) + " is already used by " + ((PixelAction)a) + " (Settings > Key Bindings). Try another key."); return; }
+        promptPending = key;
+        promptCleared = false;
+        string other = null;
+        for (int i = 0; i < bindings.Count; i++) if (i != promptIndex && bindings[i].key == (int)key) { other = DisplayName(bindings[i].target); break; }
+        ShowPrompt(other != null ? PixelKeys.KeyName(key) + " is used by " + other + " - confirming moves it here." : "Press Confirm to use it, or press another key.");
+    }
+
+    private void ConfirmPrompt()
+    {
+        if (!promptOpen || (promptPending == KeyCode.None && !promptCleared)) return;
+        int key = (int)promptPending;
+        if (key != (int)KeyCode.None)
+            for (int i = 0; i < bindings.Count; i++) if (i != promptIndex && bindings[i].key == key) bindings[i].key = (int)KeyCode.None;   // the newest choice takes the key
+        if (promptIndex >= 0 && promptIndex < bindings.Count) bindings[promptIndex].key = key;
+        else bindings.Add(new Binding { target = promptTarget, key = key });
         Save();
-        capturing = bindings.Count - 1;   // press the key right away
-        status = "";
+        status = key != (int)KeyCode.None ? PixelKeys.KeyName((KeyCode)key) + " is set for " + DisplayName(promptTarget) : "Key cleared";
+        ClosePrompt();
+    }
+
+    private void ClosePrompt()
+    {
+        promptOpen = false;
+        if (promptRoot != null) promptRoot.SetActive(false);
         dirty = true;
     }
 
@@ -254,7 +382,7 @@ public class PixelCustomKeys : MonoBehaviour
             kr.anchoredPosition = new Vector2(-64f, 0f);
             TMP_Text kl = keyBox.GetComponentInChildren<TMP_Text>();
             kl.enableAutoSizing = true; kl.fontSizeMax = 20f; kl.fontSizeMin = 10f; kl.textWrappingMode = TextWrappingModes.NoWrap;
-            keyBox.onClick.AddListener(() => { capturing = index; status = "Press the key for " + DisplayName(bindings[index].target) + " (Esc cancels, Backspace clears)"; dirty = true; });
+            keyBox.onClick.AddListener(() => OpenPrompt(bindings[index].target, index));
 
             Button remove = PixelUIKit.CreateButton(font, rt, "Remove", "X", new Vector2(44f, 40f), new Color(0.55f, 0.22f, 0.2f, 1f), Color.white, 22f);
             RectTransform xr = remove.GetComponent<RectTransform>();
@@ -267,7 +395,7 @@ public class PixelCustomKeys : MonoBehaviour
         PixelUIKit.UpdateScrollView(scroll, scrollBar, y, lastViewHeight);
         if (statusLabel != null)
             statusLabel.text = !string.IsNullOrEmpty(status) ? status
-                : bindings.Count == 0 ? "Pick an item or tool above and press Add, then press the key you want for it."
+                : bindings.Count == 0 ? "Pick an item or tool above, press the key you want for it and Confirm."
                 : "Click a key box to change its key.";
     }
 }

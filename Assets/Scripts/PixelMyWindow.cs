@@ -18,8 +18,9 @@
 //   to changes.
 //   Layout (current): opens as a tall window (defaultSize 0 = 450 x 660) at the right side just above the bottom black bar (layout version 2 ignores older saved
 //   geometry). It can only be dragged INSIDE the playfield between the black bars and the screen sides (ClampToScreen). MINIMIZE button in the header: only the
-//   header remains (still draggable); the full height is remembered. LOG button in the header (PixelMyWindow.LogDocked, kept on this machine): docks the EVENT LOG into the window as a tab (Pinned | Event log;
-//   the log lines of PixelHints.TryGetHistory, newest at the bottom, a click shows the full tip); while docked and the window is open the bottom-left log overlay stays away and the event log key opens the tab.
+//   header remains (still draggable); the full height is remembered. EVENT LOG TAB (always there, Pinned | Event log | Keybinds; the old header LOG dock button is gone):
+//   the log lines of PixelHints.TryGetHistory, newest at the bottom, a click shows the full tip; a switch at its top turns the IN-GAME (bottom-left) event log on / off (= PixelHints.EventLogEnabled,
+//   Settings > Event log). While the tab is showing the overlay stays away (LogTabShowing); with the in-game log off, the event log key opens the tab.
 //   INFO button in the header (PixelMyWindow.HoverDocked, kept on this machine): pins the block HOVER TOOLTIP into the window (MINIMIZED window: a small card with
 //   the block and its name hangs just under the header instead - TryGetHoverSlot's 'compact'): while it is on and the window is open (Pinned tab) the tooltip card
 //   no longer follows the mouse - PixelBlockTooltip moves its card into the window's hover slot (TryGetHoverSlot / SetHoverHeight), scaled to the window's width, and it shows whatever the mouse hovers (and stays on the last
@@ -139,7 +140,7 @@ public class PixelMyWindow : MonoBehaviour
         slot = null; width = 0f; compact = false;
         PixelMyWindow w = instance;
         if (w == null || w.canvasRoot == null || w.hoverSlot == null || !w.open || !HoverDocked) return false;
-        if (!w.minimized && ((LogDocked && w.showLogTab) || w.showKeysTab)) return false;
+        if (!w.minimized && (w.showLogTab || w.showKeysTab)) return false;
         slot = w.hoverSlot;
         compact = w.minimized;
         width = Mathf.Max(200f, w.windowRect.sizeDelta.x - 24f);
@@ -155,15 +156,13 @@ public class PixelMyWindow : MonoBehaviour
         if (Mathf.Abs(height - w.hoverLaidH) > 1f) w.Layout();
     }
 
-    private const string PrefLogDocked = "PixelClicker.MyWindow.LogDocked";
+    /// <summary>Is the window open on its Event log tab right now? (The bottom-left log overlay stays away meanwhile, so the log doesn't show twice.)</summary>
+    public static bool LogTabShowing => instance != null && instance.canvasRoot != null && instance.open && !instance.minimized && instance.showLogTab;
 
-    /// <summary>Is the event log docked into My Window as a tab (the player's own choice, kept on this machine)? While it is and My Window is open, the log overlay at the bottom left stays away.</summary>
-    public static bool LogDocked => PixelPrefs.GetInt(PrefLogDocked, 0) != 0;
-
-    /// <summary>Opens My Window on its Event log tab (the event log key does this while the log is docked).</summary>
+    /// <summary>Opens My Window on its Event log tab (the event log key does this while the on-screen log is switched off).</summary>
     public static void ShowLogTab()
     {
-        if (instance == null || instance.canvasRoot == null || !LogDocked) return;
+        if (instance == null || instance.canvasRoot == null) return;
         instance.showLogTab = true;
         if (instance.minimized) instance.SetMinimized(false);
         if (!instance.open) { instance.open = true; instance.ApplyOpen(); }
@@ -216,11 +215,12 @@ public class PixelMyWindow : MonoBehaviour
     private float restoreHeight = 660f;
     private int dockSide;          // 0 = free, -1 = docked on the left edge, 1 = docked on the right edge
     private float dockY, dockSlide;
-    private Button minimizeButton, undockButton, closeButton, logDockButton, tabPinnedButton, tabLogButton, tabKeysButton;
+    private Button minimizeButton, undockButton, closeButton, tabPinnedButton, tabLogButton, tabKeysButton;
     private Image tabKeysImage;
     private RectTransform keysRoot;
     private bool showKeysTab;         // the Keybinds tab is showing (PixelCustomKeys builds its contents)
-    private Image logDockImage, tabPinnedImage, tabLogImage;
+    private Image tabPinnedImage, tabLogImage;
+    private Button screenLogButton;   // top of the Event log tab: the in-game event log on / off
     private GameObject editButtonObject, resizeHandleObject, tabBar;
     private TMP_Text titleLabel;
     private ScrollRect logScroll;
@@ -430,13 +430,6 @@ public class PixelMyWindow : MonoBehaviour
         undockButton.onClick.AddListener(Undock);
         undockButton.gameObject.SetActive(false);
 
-        // Log: docks the event log into this window as a tab (and takes it out again).
-        logDockButton = PixelUIKit.CreateButton(Font, header.transform, "Dock Log", "Log", new Vector2(76f, 44f), new Color(0.3f, 0.3f, 0.35f, 1f), Color.white, 22f);
-        RectTransform lr0 = logDockButton.GetComponent<RectTransform>();
-        lr0.anchorMin = lr0.anchorMax = lr0.pivot = new Vector2(1f, 0.5f);
-        logDockImage = logDockButton.GetComponent<Image>();
-        logDockButton.onClick.AddListener(ToggleLogDock);
-
         // Info: pins the hover tooltip into this window (and unpins it).
         hoverDockButton = PixelUIKit.CreateButton(Font, header.transform, "Dock Info", "Info", new Vector2(76f, 44f), new Color(0.3f, 0.3f, 0.35f, 1f), Color.white, 22f);
         RectTransform hr0 = hoverDockButton.GetComponent<RectTransform>();
@@ -508,6 +501,9 @@ public class PixelMyWindow : MonoBehaviour
         PixelScrollBarFade logFade = logScrollBar != null ? logScrollBar.GetComponent<PixelScrollBarFade>() : null;
         if (logFade != null) logFade.hideBar = true;
         logScroll.gameObject.SetActive(false);
+        screenLogButton = PixelUIKit.CreateButton(Font, windowObject.transform, "In-game Log", "", new Vector2(200f, 44f), new Color(0.3f, 0.3f, 0.35f, 1f), Color.white, 22f);
+        screenLogButton.onClick.AddListener(ToggleScreenLog);
+        screenLogButton.gameObject.SetActive(false);
 
         // The Keybinds tab (PixelCustomKeys builds what is in it).
         GameObject keysGo = new GameObject("Keybinds", typeof(RectTransform));
@@ -716,21 +712,26 @@ public class PixelMyWindow : MonoBehaviour
         Layout();
     }
 
-    private void ToggleLogDock()
+    /// <summary>The switch at the top of the Event log tab: the in-game (bottom-left) event log on / off - the same setting as Settings > 'Event log'.</summary>
+    private void ToggleScreenLog()
     {
-        bool now = !LogDocked;
-        PixelPrefs.SetInt(PrefLogDocked, now ? 1 : 0);
-        showLogTab = now;   // docking it opens the tab straight away
-        Layout();
-        if (now) RebuildLog();
-        geometryDirty = true;
+        PixelHints.EventLogEnabled = !PixelHints.EventLogEnabled;
+        UpdateScreenLogLabel();
+        PixelAudio.Play("ui_click");
+    }
+
+    private void UpdateScreenLogLabel()
+    {
+        if (screenLogButton == null) return;
+        bool on = PixelHints.EventLogEnabled;
+        PixelUIKit.SetText(screenLogButton.GetComponentInChildren<TMP_Text>(), "In-game event log: " + (on ? "ON" : "OFF"));
+        screenLogButton.GetComponent<Image>().color = on ? new Color(0.25f, 0.6f, 0.4f, 1f) : new Color(0.3f, 0.3f, 0.35f, 1f);
     }
 
     /// <summary>Places the header buttons side by side from the right (close, minimize, undock while docked, Log, Edit), so none of them can overlap whatever is showing.</summary>
     private void LayoutHeaderButtons()
     {
         if (closeButton == null) return;
-        bool logTab = LogDocked && showLogTab;
         float x = -10f;
         float Place(Button b, float width, bool visible)
         {
@@ -745,7 +746,6 @@ public class PixelMyWindow : MonoBehaviour
         Place(closeButton, 44f, true);
         Place(minimizeButton, 44f, true);
         Place(undockButton, 44f, dockSide != 0);
-        Place(logDockButton, 76f, !minimized);
         Place(hoverDockButton, 76f, !minimized);
         GameObject editObject = editButtonObject;
         if (editObject != null)
@@ -761,8 +761,7 @@ public class PixelMyWindow : MonoBehaviour
     private void Layout()
     {
         if (scroll == null) return;
-        bool docked = LogDocked;
-        if (!docked) showLogTab = false;
+        const bool docked = true;   // (the Event log tab is always there now)
         if (showLogTab) showKeysTab = false;
         bool logTab = docked && showLogTab;
         bool keysTab = showKeysTab && !logTab;
@@ -797,7 +796,6 @@ public class PixelMyWindow : MonoBehaviour
         }
         Color tabOff = new Color(0.2f, 0.24f, 0.34f, 1f), tabOn = new Color(0.25f, 0.45f, 0.8f, 1f);
         if (tabKeysImage != null) tabKeysImage.color = keysTab ? tabOn : tabOff;
-        if (logDockImage != null) logDockImage.color = docked ? new Color(0.25f, 0.6f, 0.4f, 1f) : new Color(0.3f, 0.3f, 0.35f, 1f);
         if (tabPinnedImage != null) tabPinnedImage.color = logTab || keysTab ? new Color(0.2f, 0.24f, 0.34f, 1f) : new Color(0.25f, 0.45f, 0.8f, 1f);
         if (tabLogImage != null) tabLogImage.color = logTab ? new Color(0.25f, 0.45f, 0.8f, 1f) : new Color(0.2f, 0.24f, 0.34f, 1f);
         if (resizeHandleObject != null) resizeHandleObject.SetActive(!minimized);
@@ -810,7 +808,15 @@ public class PixelMyWindow : MonoBehaviour
         {
             RectTransform lr = logScroll.GetComponent<RectTransform>();
             lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one;
-            lr.offsetMin = new Vector2(12f, 34f); lr.offsetMax = new Vector2(-12f, -top);
+            lr.offsetMin = new Vector2(12f, 34f); lr.offsetMax = new Vector2(-12f, -(top + 52f));
+        }
+        if (screenLogButton != null)
+        {
+            screenLogButton.gameObject.SetActive(!minimized && logTab);
+            RectTransform br = screenLogButton.GetComponent<RectTransform>();
+            br.anchorMin = new Vector2(0f, 1f); br.anchorMax = new Vector2(1f, 1f); br.pivot = new Vector2(0.5f, 1f);
+            br.offsetMin = new Vector2(12f, -(top + 44f)); br.offsetMax = new Vector2(-12f, -top);
+            if (logTab) UpdateScreenLogLabel();
         }
         addBar.anchoredPosition = new Vector2(0f, -(64f + tabs + hoverH));
         addBar.gameObject.SetActive(editing && !minimized && !logTab && !keysTab);
@@ -1709,7 +1715,7 @@ public class PixelMyWindow : MonoBehaviour
         refreshTimer -= Time.unscaledDeltaTime;
         if (refreshTimer > 0f) return;
         refreshTimer = refreshSeconds > 0f ? refreshSeconds : 0.4f;
-        if (LogDocked && showLogTab && PixelHints.HistoryVersion != logVersionShown) RebuildLog();   // new events show up in the docked log
+        if (showLogTab && PixelHints.HistoryVersion != logVersionShown) RebuildLog();   // new events show up in the docked log
         if (Signature() != rowSignature) RebuildRows();
         else RefreshValues();
     }

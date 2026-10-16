@@ -226,7 +226,7 @@ public static class PixelKeys
             UnityEngine.EventSystems.EventSystem es = UnityEngine.EventSystems.EventSystem.current;
             GameObject selected = es != null ? es.currentSelectedGameObject : null;
             TMPro.TMP_InputField field = selected != null ? selected.GetComponent<TMPro.TMP_InputField>() : null;
-            typingCached = (field != null && field.isFocused) || PixelFeedback.Open;   // the feedback window mutes the game's keys while it is open
+            typingCached = (field != null && field.isFocused) || PixelFeedback.Open || PixelCustomKeys.CapturingKey;   // the feedback window and the keybind prompt mute the game's keys while it is open
             return typingCached;
         }
     }

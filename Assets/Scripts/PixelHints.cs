@@ -617,7 +617,7 @@ public class PixelHints : MonoBehaviour
     private void DisplayOverlay(bool showAll = false)
     {
         if (history.Count == 0 || !EventLogEnabled) return;
-        if (PixelMyWindow.LogDocked && PixelMyWindow.IsOpen) return;   // the log lives in My Window's Event log tab while that is open
+        if (PixelMyWindow.LogTabShowing) return;   // the log is on show in My Window's Event log tab
         if (overlayRoot == null) BuildOverlay();
         if (fullView != showAll) { fullView = showAll; rowsDirty = true; }
         forceFade = false;
@@ -796,12 +796,12 @@ public class PixelHints : MonoBehaviour
         bool typing = es != null && es.currentSelectedGameObject != null && es.currentSelectedGameObject.GetComponent<TMP_InputField>() != null;
 
         bool visible = overlayRoot != null && overlayRoot.activeSelf;
-        if (!typing && PixelMyWindow.LogDocked && PixelMyWindow.Available && ReopenKeyPressed())
+        if (!typing && !EventLogEnabled && PixelMyWindow.Available && ReopenKeyPressed())
         {
-            PixelMyWindow.ShowLogTab();   // docked: the log key opens My Window on the Event log tab
+            PixelMyWindow.ShowLogTab();   // the on-screen log is off: the log key opens My Window on its Event log tab
             return;
         }
-        if (PixelMyWindow.LogDocked && PixelMyWindow.IsOpen)
+        if (PixelMyWindow.LogTabShowing)
         {
             if (visible) overlayRoot.SetActive(false);
             return;
