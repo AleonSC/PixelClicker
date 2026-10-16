@@ -920,6 +920,9 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         foreach (Transform t in propList)
         {
             if (t == null) continue;
+            // A husk clicked off the cube DURING the fade is still growing from its tiny pop-in size: its size then is not its real one (remembering it
+            // left the husk tiny for good - an 'invisible' husk after loading). It grows normally and is left out until it is full size.
+            if (!propScales.ContainsKey(t) && t.GetComponent<OldPixelPopIn>() != null) continue;
             if (!propScales.TryGetValue(t, out Vector3 baseScale)) { baseScale = t.localScale; propScales[t] = baseScale; }
             t.localScale = done ? baseScale : baseScale * k;
         }

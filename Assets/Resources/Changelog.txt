@@ -1177,3 +1177,4 @@
 [2026-10-16 14:36 UTC] RGB is now an unlock: once you have earned 100 Black pixels Cubie's second visit unlocks Red, Green and Blue (the RGB Pack is no longer sold), gives a taste of RGB pixels instead of monochrome, and the shop opens with it.
 [2026-10-16 14:36 UTC] Early game path: the Auto Clicker (now 150 of each pure pixel) is the shop's first buy and first Log goal after RGB, and Cubie points at a skill (Big Tim the Lumberjack) as the next step; the guide line counts down the Black needed for Cubie.
 [2026-10-16 14:36 UTC] Design doc: the agreed early-game path (monochrome, Cubie's RGB unlock, Auto Clicker, skill-first branch) is written into GameDesign.md.
+[2026-10-16 14:41 UTC] Fix: husks clicked off the cube while a loaded game's husks are still fading in no longer stay invisible for good.
