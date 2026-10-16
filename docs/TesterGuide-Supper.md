@@ -66,3 +66,7 @@ Thanks again - watching you play last time helped more than anything else.
 - **Tester features** (conveyor belts, splitter, elevator, vacuum cleaner, container hose...) live in the Dev Hub, so Supper won't see
   them unless you turn the Dev Tools on for his build.
 - The F8 key is the default; if you rebound it, update the line above.
+- **Session recorder:** tick **Record Every Play** on the PixelSessionRecorder component (Pixel Systems > Core) in Supper's build. His
+  session is then written into the same Feedback folder he sends you (every 5 minutes and on quit) - paste that report to me and I'll
+  set balance numbers from his real pace. In your own testing, use the Dev Hub's Session recorder widget (Start, then Stop & save).
+- Run **Pixel Clicker > Add Missing Systems To Scene** once more so the new recorder is in the scene (the Console warns until you do).

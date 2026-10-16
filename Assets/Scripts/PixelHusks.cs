@@ -296,7 +296,7 @@ public class OldPixelDespawn : MonoBehaviour
             rateRefresh -= Time.deltaTime;
             if (rateRefresh <= 0f) { rateRefresh = 0.5f; ageRate = CurrentAgeRate(); }
             age += Time.deltaTime * ageRate;
-            if (lifetime > 0f && age >= lifetime) { naturalEnd = true; Begin(); }   // its own timer ran out (not the cap, a minigame or a device)
+            if (lifetime > 0f && age >= lifetime) { naturalEnd = true; PixelStats.Count("old.despawned"); Begin(); }   // its own timer ran out (not the cap, a minigame or a device)
             return;
         }
 

@@ -36,6 +36,7 @@ public static class PixelSystems
         new Entry(typeof(PixelCrashLog), "Core"),
         new Entry(typeof(PixelViewBounds), "Core"),
         new Entry(typeof(PixelMinigameLimits), "Core"),
+        new Entry(typeof(PixelSessionRecorder), "Core"),
         new Entry(typeof(PixelPets), "Characters"),
         new Entry(typeof(PixelSkills), "Skills"),
         new Entry(typeof(PixelBlockTooltip), "UI"),

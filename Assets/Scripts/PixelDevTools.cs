@@ -422,8 +422,23 @@ public class PixelDevTools : MonoBehaviour
         clicker.DevSwapCurrentPixel(swapChoices[v]);
     }
 
+    private TMP_Text sessionLabel;
+    private int sessionShownSecond = -1;
+
+    /// <summary>The session recorder button shows Start, or Stop with the time recorded so far.</summary>
+    private void RefreshSessionLabel()
+    {
+        if (sessionLabel == null) return;
+        if (!PixelSessionRecorder.Recording) { sessionLabel.text = sessionStartText; sessionShownSecond = -1; return; }
+        int s = Mathf.FloorToInt(PixelSessionRecorder.ElapsedSeconds);
+        if (s == sessionShownSecond) return;
+        sessionShownSecond = s;
+        sessionLabel.text = sessionStopText.Replace("{time}", (s / 60).ToString("00") + ":" + (s % 60).ToString("00"));
+    }
+
     private void Update()
     {
+        if (sessionLabel != null && (PixelSessionRecorder.Recording || sessionShownSecond != -1)) RefreshSessionLabel();
         if (!PixelTitleScreen.Showing)
         {
             if (PixelKeys.Pressed(PixelAction.DevTools)) { if (IsOpen) Close(); else Open(); }
@@ -476,6 +491,12 @@ public class PixelDevTools : MonoBehaviour
         else GiveAmount(PickedPixelTier, amount);
     }
 
+
+    [Header("Session recorder")]
+    [Tooltip("Label of the session recorder button while nothing is recorded (PixelSessionRecorder).")]
+    [SerializeField] private string sessionStartText = "Start session recording";
+    [Tooltip("Label of the session recorder button while recording ({time} = game time recorded so far).")]
+    [SerializeField] private string sessionStopText = "Stop & save session ({time})";
 
     [Header("Balance report")]
     [Tooltip("Label of the Tools tab button that writes the skill balance report (PixelBalanceReport) - paste the file / clipboard into any AI.")]
@@ -774,6 +795,22 @@ public class PixelDevTools : MonoBehaviour
         y += rowHeight + 24f;
         ws = content.childCount;
 
+        // Row: session recorder (records a real play session; Stop writes the report to Snapshots + clipboard)
+        Button session = PixelUIKit.CreateButton(font, content, "Session Recorder Button", sessionStartText,
+                                                 new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
+        Place(session.GetComponent<RectTransform>(), 40f, y, inner);
+        sessionLabel = session.GetComponentInChildren<TMP_Text>();
+        session.onClick.AddListener(() =>
+        {
+            if (PixelSessionRecorder.Recording) PixelSessionRecorder.StopAndSave();
+            else PixelSessionRecorder.StartRecording();
+            RefreshSessionLabel();
+        });
+        AddTip(session.gameObject, "Records a real play session (clicking speed, income per minute, milestones, husks) and writes a report to paste to Claude. Only time in the game counts.");
+        Widget(content, board, "session", ws, y);
+        y += rowHeight + 24f;
+        ws = content.childCount;
+
         // Rows: mark this moment / UI layout dump (same wait; the keys F10 / F11 need no wait: mark this moment, inspect under the mouse)
         Button moment = PixelUIKit.CreateButton(font, content, "Mark Moment Button", markMomentText,
                                                 new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
@@ -923,6 +960,7 @@ public class PixelDevTools : MonoBehaviour
             case "report": return "Crash reports";
             case "bounds": return "Snapshot bounds";
             case "balance": return "Balance report";
+            case "session": return "Session recorder";
             case "moment": return "Mark this moment";
             case "uidump": return "UI layout dump";
             case "superrares": return "Super Rares";
