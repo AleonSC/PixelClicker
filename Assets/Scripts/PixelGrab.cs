@@ -17,6 +17,8 @@
 //   rested on; all of it is put back on release. PixelShop finds/adds it.
 //   Tags: OldPixelInfo.heldByPlayer / lastHeldTime / RecentlyHeld(seconds) = 'recently held by the player' (held now, or let go within recentlyHeldSeconds 0 = 6, Inspector); the Storage Crate
 //   stores a tagged pixel that lands in its footprint from any height.
+//   GROUND CLAMP (2026-10-16): a held husk is never pushed into the surface under it (TryGroundUnder: highest still collider straight below, husks skipped);
+//   lowering it with the scroll wheel stops at the ground (it used to sink in, crawl after the mouse and replay the landing sound).
 //   Accessibility 'Drop guide for held pixels' (Settings, PixelDisplaySettings.DropGuide, on by default): while holding a pixel LateUpdate / UpdateDropGuide draws a faint line straight down
 //   from it to the first surface a sphere of its size would land on (ignores itself, triggers and the live cube) and a ring on that surface = where it drops if let go standing still.
 // ---------------------------------------------------
@@ -505,12 +507,44 @@ public class PixelGrab : MonoBehaviour
             target = ray.GetPoint(enter) + grabOffset + Vector3.up * liftOffset;
         }
 
+        // Never pushed INTO the ground: the scroll wheel used to lower a held husk below the floor, where it ground against it (crawled after the
+        // mouse and played the landing sound over and over). Its bottom stays on the surface under it, and the wheel's lowering stops there too.
+        if (TryGroundUnder(target, out float groundY))
+        {
+            float minY = groundY + HeldHalfHeight() * 1.05f;
+            if (target.y < minY) { liftOffset += minY - target.y; target.y = minY; }
+        }
+
         // While time is slowed, velocities are per slowed second: scale so the pixel still follows the mouse at normal speed.
         float slow = PixelTimeStop.SlowFactor;
         Vector3 velocity = (target - held.position) * followSharpness / slow;
         if (velocity.magnitude > maxFollowSpeed / slow) velocity = velocity.normalized * (maxFollowSpeed / slow);
         SetVelocity(held, velocity);
         if (!held.isKinematic) held.angularVelocity *= 1f - spinDamping;
+    }
+
+    private readonly RaycastHit[] groundHits = new RaycastHit[16];
+
+    /// <summary>The highest still surface (floor, device, anything without a rigidbody) straight under this point; husks and other moving bodies are skipped.</summary>
+    private bool TryGroundUnder(Vector3 point, out float y)
+    {
+        y = 0f;
+        bool found = false;
+        int n = Physics.RaycastNonAlloc(point + Vector3.up * 3f, Vector3.down, groundHits, 60f, ~0, QueryTriggerInteraction.Ignore);
+        float best = float.PositiveInfinity;
+        for (int i = 0; i < n; i++)
+        {
+            RaycastHit h = groundHits[i];
+            if (h.rigidbody != null || h.distance >= best) continue;
+            best = h.distance; y = h.point.y; found = true;
+        }
+        return found;
+    }
+
+    private float HeldHalfHeight()
+    {
+        Collider c = held != null ? held.GetComponent<Collider>() : null;
+        return c != null ? c.bounds.extents.y : 0.05f;
     }
 
     private void Release()

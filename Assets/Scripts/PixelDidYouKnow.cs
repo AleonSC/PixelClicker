@@ -14,6 +14,10 @@
 //   click puts it down - within dockSnap of the left / right screen edge it DOCKS to that edge at that height, anywhere else it floats there; a right
 //   click puts it back to the default (docked right, top), as does Settings > Accessibility 'Reset tips location' (ResetLocation). A quick click (no hold) just
 //   dismisses the tip. Kept inside the black bars.
+//   DOCK FEEDBACK (2026-10-16): while moving, both side edges show a glowing dock zone (the one in range glows brightly and the heading reads 'Click to dock
+//   it on the right edge'); in range = the mouse OR the box's edge is within dockSnap (the box is clamped inside the screen, so the mouse test alone could miss).
+//   Right after docking the box says where it went (dockedText, dockedShowSeconds 2.5) before sliding in, and while tucked away a small gold mark sits on
+//   that edge at its height (showDockMark).
 // ---------------------------------------------------
 using System.Collections.Generic;
 using TMPro;
@@ -44,6 +48,10 @@ public class PixelDidYouKnow : MonoBehaviour
     [SerializeField] private string placeHeading = "Click to put it here";
     [Tooltip("The hint under the heading while the box is being moved.")]
     [SerializeField] private string placeText = "Put it at the left or right screen edge to dock it there. Right-click puts it back.";
+    [Tooltip("Heading while the box is close enough to a side edge to dock there ({side} = left / right).")]
+    [SerializeField] private string dockHereHeading = "Click to dock it on the {side} edge";
+    [Tooltip("Text shown for a moment right after docking ({side} = left / right).")]
+    [SerializeField] private string dockedText = "Docked on the {side} edge. New tips slide out from here; the small gold mark shows where it is.";
     [Tooltip("Font size of the heading.")]
     [SerializeField] private float headingFontSize = 24f;
     [Tooltip("Font size of the tip.")]
@@ -57,7 +65,11 @@ public class PixelDidYouKnow : MonoBehaviour
     [Tooltip("Gap from the screen edge / black bar when shown (canvas units).")]
     [SerializeField] private float edgeGap = 16f;
     [Tooltip("Seconds a freshly docked box stays out before it slides into the side (so you see where it went).")]
-    [SerializeField] private float dockedShowSeconds = 0.8f;
+    [SerializeField] private float dockedShowSeconds = 2.5f;
+    [Tooltip("Width of the glowing dock zones shown at both side edges while the box is being moved (canvas units).")]
+    [SerializeField] private float dockZoneWidth = 26f;
+    [Tooltip("Show a small gold mark at the docked edge while the box is tucked away, so you can see where tips will come from.")]
+    [SerializeField] private bool showDockMark = true;
     [Tooltip("Putting the box down this close to the left / right screen edge docks it there (canvas units).")]
     [SerializeField] private float dockSnap = 120f;
     [Tooltip("Hold the left mouse button this long on the box to pick it up (seconds).")]
@@ -114,7 +126,7 @@ public class PixelDidYouKnow : MonoBehaviour
     // ---- UI ----
     private TMP_FontAsset font;
     private RectTransform canvasRect, box, iconRect;
-    private Image boxImage;
+    private Image boxImage, zoneLeft, zoneRight, dockMark;
     private CanvasGroup group;
     private TMP_Text headingLabel, bodyLabel, iconLabel;
     private float boxHeight = 120f;
@@ -149,6 +161,7 @@ public class PixelDidYouKnow : MonoBehaviour
         if (!Enabled)
         {
             if (box != null && box.gameObject.activeSelf) { showing = false; placing = false; shown = 0f; box.gameObject.SetActive(false); }
+            if (box != null) UpdateMarks(true);   // (hides the dock zones / mark)
             return;
         }
         if (box == null) Build();
@@ -157,6 +170,7 @@ public class PixelDidYouKnow : MonoBehaviour
         // The box shows only while a tip is out (docked: sliding out of / back into its side); it hides on the menus.
         bool visible = !inMenu && (showing || shown > 0.001f || placing);
         if (box.gameObject.activeSelf != visible) box.gameObject.SetActive(visible);
+        UpdateMarks(inMenu);
         if (inMenu) return;
 
         float dt = Time.unscaledDeltaTime;
@@ -252,7 +266,12 @@ public class PixelDidYouKnow : MonoBehaviour
         box.anchorMin = box.anchorMax = new Vector2(0.5f, 0.5f);
         box.pivot = new Vector2(0.5f, 0.5f);
         box.anchoredPosition = ClampFloat(local);
-        bool nearRight = local.x > r.width * 0.5f - dockSnap, nearLeft = local.x < -r.width * 0.5f + dockSnap;
+        // In range of a side: the mouse OR the box's own edge is near it (the box is kept inside the screen, so its edge is the surer test).
+        float boxRight = box.anchoredPosition.x + boxWidth * 0.5f, boxLeft = box.anchoredPosition.x - boxWidth * 0.5f;
+        bool nearRight = local.x > r.width * 0.5f - dockSnap || boxRight > r.width * 0.5f - dockSnap * 0.5f;
+        bool nearLeft = !nearRight && (local.x < -r.width * 0.5f + dockSnap || boxLeft < -r.width * 0.5f + dockSnap * 0.5f);
+        placeNear = nearRight ? 1 : nearLeft ? 2 : 0;
+        headingLabel.text = placeNear != 0 ? dockHereHeading.Replace("{side}", SideName(placeNear)) : placeHeading;
         boxImage.color = Color.Lerp(boxColor, new Color(0.35f, 0.3f, 0.1f, 0.98f), (nearLeft || nearRight ? 0.85f : 0.5f) + 0.15f * Mathf.Sin(Time.unscaledTime * 6f));
         group.alpha = 1f;
 
@@ -280,8 +299,10 @@ public class PixelDidYouKnow : MonoBehaviour
         PixelAudio.Play("ui_click");
         placing = false;
         boxImage.color = boxColor;
-        // Back to the tip it was showing. Floating: it stays a moment where it was put. Docked: it starts out at the edge and slides into the side.
-        SetTexts(heading, PixelKeys.Replace(lastTip ?? ""));
+        placeNear = 0;
+        // Back to the tip it was showing. Floating: it stays a moment where it was put. Docked: it says where it went, then slides into the side.
+        if (docked) SetTexts(heading, dockedText.Replace("{side}", SideName(dock)));
+        else SetTexts(heading, PixelKeys.Replace(lastTip ?? ""));
         showing = docked || !string.IsNullOrEmpty(lastTip);
         showTimer = docked ? Mathf.Max(0.1f, dockedShowSeconds) : 3f;
         shown = 1f;
@@ -339,6 +360,58 @@ public class PixelDidYouKnow : MonoBehaviour
         float awayX = boxWidth + 40f, outX = -edgeGap;
         float x = Mathf.Lerp(awayX, outX, ease);
         box.anchoredPosition = new Vector2(right ? x : -x, Mathf.Clamp(y, -hy, hy));
+    }
+
+    private int placeNear;   // while moving: 0 = no side in range, 1 = right, 2 = left
+
+    private static string SideName(int side) => side == 2 ? "left" : "right";
+
+    /// <summary>The dock zones while moving the box (both edges glow, the one in range brightly) and the small gold mark at the docked edge while the box is tucked away.</summary>
+    private void UpdateMarks(bool inMenu)
+    {
+        if (zoneLeft == null) return;
+        Rect r = canvasRect.rect;
+        float bar = TopLimit;
+        float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 6f);
+        bool zones = placing && !inMenu;
+        for (int i = 0; i < 2; i++)
+        {
+            Image z = i == 0 ? zoneRight : zoneLeft;
+            if (z.gameObject.activeSelf != zones) z.gameObject.SetActive(zones);
+            if (!zones) continue;
+            bool hot = placeNear == (i == 0 ? 1 : 2);
+            RectTransform zr = z.rectTransform;
+            zr.sizeDelta = new Vector2(dockZoneWidth * (hot ? 1.6f : 1f), Mathf.Max(0f, r.height - bar * 2f));
+            Color c = accentColor; c.a = hot ? 0.55f + 0.35f * pulse : 0.18f + 0.1f * pulse;
+            z.color = c;
+        }
+        bool mark = showDockMark && !inMenu && !placing && dock != 0 && shown < 0.05f;
+        if (dockMark.gameObject.activeSelf != mark) dockMark.gameObject.SetActive(mark);
+        if (!mark) return;
+        bool right = dock != 2;
+        float hy = Mathf.Max(0f, r.height * 0.5f - bar - boxHeight * 0.5f);
+        float y = float.IsNaN(dockY) ? hy - edgeGap : dockY;
+        RectTransform mr = dockMark.rectTransform;
+        mr.anchorMin = mr.anchorMax = mr.pivot = new Vector2(right ? 1f : 0f, 0.5f);
+        mr.anchoredPosition = new Vector2(0f, Mathf.Clamp(y, -hy, hy));
+        mr.sizeDelta = new Vector2(7f, Mathf.Clamp(boxHeight * 0.6f, 40f, 90f));
+        Color mc = accentColor; mc.a = 0.55f;
+        dockMark.color = mc;
+    }
+
+    private Image MakeEdgeImage(string name, bool right)
+    {
+        GameObject go = new GameObject(name, typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(canvasRect, false);
+        go.transform.SetAsFirstSibling();   // (under the box)
+        Image img = go.GetComponent<Image>();
+        img.raycastTarget = false;
+        PixelUIKit.StyleBox(img, true);
+        RectTransform rt = img.rectTransform;
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(right ? 1f : 0f, 0.5f);
+        rt.anchoredPosition = Vector2.zero;
+        go.SetActive(false);
+        return img;
     }
 
     /// <summary>Settings > 'Reset tips location' (and a right click while moving it): docked at the right edge near the top again.</summary>
@@ -405,6 +478,10 @@ public class PixelDidYouKnow : MonoBehaviour
         b.anchorMin = Vector2.zero; b.anchorMax = Vector2.one;
         b.offsetMin = Vector2.zero; b.offsetMax = new Vector2(0f, -headingFontSize * 1.35f);
         bodyLabel.textWrappingMode = TextWrappingModes.Normal;
+
+        zoneRight = MakeEdgeImage("Dock Zone Right", true);
+        zoneLeft = MakeEdgeImage("Dock Zone Left", false);
+        dockMark = MakeEdgeImage("Dock Mark", dock != 2);
 
         SetTexts(heading, "");
         shown = 0f;

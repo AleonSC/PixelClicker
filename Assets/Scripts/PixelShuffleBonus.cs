@@ -6,6 +6,7 @@
 //   (waiting = true until a PixelCollected arrives); when the filler comes back, shuffle it again before the bar runs out for x2, x3... (no cap yet). BREAKING the filler instead cashes the
 //   combo in: bonus XP = xpPerShuffle (3) x the combo, on top of the normal XP (PixelSkills.AddShuffleXp). If the bar runs out first the filler breaks by itself (dropped from the queue, or
 //   auto-collected if it is on the cube) and a smaller consolation bonus (expireFactor 0.35 of the cash-out) is paid. The combo block on the cube (the shuffled filler that came back from the queue, not a freshly rolled one) lights up gold: PixelClickerAura.ComboHighlight forces the cube's glow aura on in gold and makes it pulse. A skill switch (other filler) or the title screen ends the combo.
+//   UNLOCK (2026-10-16): Standard skill tree node 'Shuffle Combo' (shuffle, after High roller on the Block Hold path; requireTreeNode off = with Block Hold).
 //   Fields are Inspector values on this component (0 = the coded default); disableShuffleBonus switches the whole thing off. Not saved.
 // ---------------------------------------------------
 using TMPro;
@@ -17,6 +18,8 @@ public class PixelShuffleBonus : MonoBehaviour
     [Header("Shuffle bonus (test)")]
     [SerializeField, Tooltip("Turns the shuffle bonus off.")]
     private bool disableShuffleBonus;
+    [SerializeField, Tooltip("The shuffle combo needs the Standard skill tree node 'Shuffle Combo' (the end of the Block Hold path). Off = it works as soon as Block Hold does.")]
+    private bool requireTreeNode = true;
     [Min(0f)]
     [SerializeField, Tooltip("Seconds the combo bar lasts before the filler breaks by itself. Every shuffle fills it again. 0 = 6.")]
     private float barSeconds;
@@ -61,7 +64,7 @@ public class PixelShuffleBonus : MonoBehaviour
 
     private void Shuffled(int tierIndex, float heldFor)
     {
-        if (disableShuffleBonus || clicker == null || heldFor > TapSeconds || !clicker.IsValidTierIndex(tierIndex)) return;
+        if (disableShuffleBonus || (requireTreeNode && !PixelSkills.HasStandardNode("shuffle")) || clicker == null || heldFor > TapSeconds || !clicker.IsValidTierIndex(tierIndex)) return;
         if (!PixelSkills.TryGetFiller(out PixelClicker.PixelType filler, out float share) || !PixelSkills.IsFillerType(clicker.Tiers[tierIndex].type)) return;   // (any filler of the pack counts: Twig, Pinecone, Moss)
         if (chain > 0 && fillerType != filler) EndCombo();   // another skill's filler: start over
         if (chain == 0) { chain = 1; fillerType = filler; comboTier = tierIndex; waiting = true; Refill(true); return; }
