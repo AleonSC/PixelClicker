@@ -301,16 +301,15 @@ public partial class PixelClicker
             return queued.x;
         }
         int pick, tag;
-        if (UpcomingValid()) { pick = upcomingTier; tag = upcomingTreeTag; }   // the block the 'Next up' window showed (if it was still valid)
+        TrimUpcoming();
+        if (upcoming.Count > 0) { pick = upcoming[0].x; tag = upcoming[0].y; upcoming.RemoveAt(0); }   // the block the 'Next up' window showed (if it was still valid)
         else { pick = PickSpawnTier(); tag = PixelTreeMode.TakeTag(); }
-        upcomingTier = -1;
-        upcomingTreeTag = 0;
         PixelTreeMode.OnLiveChanged(outgoingTreeTag, tag);   // tree mode: the tree bar counts live tree blocks, Timber when the last one leaves
         liveTreeTag = tag;
         return pick;
     }
 
-    private int upcomingTreeTag, liveTreeTag;   // tree mode (PixelTreeMode): the tag of the pre-rolled block and of the block on the cube
+    private int liveTreeTag;   // tree mode (PixelTreeMode): the tag of the block on the cube
 
     // ---- Block Hold (PixelBlockHold.cs) ----
 
@@ -337,25 +336,45 @@ public partial class PixelClicker
         currentTierIndex = RollTier();
         Materialize(GetClickTier());
     }
-    private int upcomingTier = -1, previousTier = -1;   // the pre-rolled next block (only while the 'Next up' window asks for it) and the block that was on the cube before this one
+    // The pre-rolled blocks (tier, tree tag), in the order they will come - only rolled while the 'Next up' window asks for them (PeekTierAhead), so normal play rolls as before.
+    private readonly System.Collections.Generic.List<Vector2Int> upcoming = new System.Collections.Generic.List<Vector2Int>();
+    private int previousTier = -1;   // the block that was on the cube before this one
 
-    /// <summary>Is the pre-rolled next block still a legal spawn (a potion, skill or switch may have changed the rules since)?</summary>
-    private bool UpcomingValid()
+    /// <summary>Forgets every pre-rolled block (the rules changed, e.g. Fishing's bait must be seen by the next roll).</summary>
+    private void ClearUpcoming() => upcoming.Clear();
+
+    /// <summary>Is this pre-rolled block still a legal spawn (a potion, skill or switch may have changed the rules since)?</summary>
+    private bool UpcomingValid(int tier)
     {
-        if (!IsValidTier(upcomingTier) || devSpawnTiers != null) return false;
+        if (!IsValidTier(tier) || devSpawnTiers != null) return false;
         if (IsValidTier(forcedTierIndex) && tiers[forcedTierIndex].unlocked)
-            return upcomingTier == forcedTierIndex || upcomingTier == forcedTierIndex2 || upcomingTier == forcedTierIndex3;
-        if (IsHazard(tiers[upcomingTier].type) && PixelFocus.HoldsOffHazardsNow()) return false;   // a focus potion drunk after the roll: the pre-rolled hazard is dropped
-        return tiers[upcomingTier].CanSpawn && !PixelSkills.LeftOutOfSpawns(tiers[upcomingTier].type);
+            return tier == forcedTierIndex || tier == forcedTierIndex2 || tier == forcedTierIndex3;
+        if (IsHazard(tiers[tier].type) && PixelFocus.HoldsOffHazardsNow()) return false;   // a focus potion drunk after the roll: the pre-rolled hazard is dropped
+        return tiers[tier].CanSpawn && !PixelSkills.LeftOutOfSpawns(tiers[tier].type);
     }
 
-    /// <summary>The block that comes after this one: a block waiting in line from Block Hold, else the pre-rolled one (rolled now if needed; -1 when the cube does not roll random blocks).</summary>
-    public int PeekNextTier()
+    /// <summary>Drops the pre-rolled blocks from the first one that is no longer legal (the ones after it were rolled under the old rules too).</summary>
+    private void TrimUpcoming()
     {
-        if (!randomizeSpawnTier || tiers == null || tiers.Length == 0) return -1;
-        if (nextInLine.Count > 0 && IsValidTier(nextInLine[0].x)) return nextInLine[0].x;
-        if (!UpcomingValid()) { upcomingTier = PickSpawnTier(); upcomingTreeTag = PixelTreeMode.TakeTag(); }
-        return upcomingTier;
+        for (int i = 0; i < upcoming.Count; i++)
+            if (!UpcomingValid(upcoming[i].x)) { upcoming.RemoveRange(i, upcoming.Count - i); return; }
+    }
+
+    /// <summary>The block that comes after this one (see PeekTierAhead).</summary>
+    public int PeekNextTier() => PeekTierAhead(0);
+
+    /// <summary>The block 'ahead' places after the one on the cube (0 = next): blocks waiting in line from Block Hold first, then the pre-rolled ones (rolled now if
+    /// needed, and RollTier hands out exactly these, so the preview is true). -1 when the cube does not roll random blocks.</summary>
+    public int PeekTierAhead(int ahead)
+    {
+        if (!randomizeSpawnTier || tiers == null || tiers.Length == 0 || ahead < 0) return -1;
+        int queued = 0;
+        for (int i = 0; i < nextInLine.Count; i++)
+            if (IsValidTier(nextInLine[i].x)) { if (queued == ahead) return nextInLine[i].x; queued++; }
+        int want = ahead - queued;
+        TrimUpcoming();
+        while (upcoming.Count <= want && upcoming.Count < 8) upcoming.Add(new Vector2Int(PickSpawnTier(), PixelTreeMode.TakeTag()));
+        return want < upcoming.Count ? upcoming[want].x : -1;
     }
 
     /// <summary>The block that was on the cube before the current one (-1 = none yet).</summary>
@@ -389,14 +408,14 @@ public partial class PixelClicker
         nextInLine.Insert(0, new Vector2Int(tierIndex, hits));
         nextInLineStake.Insert(0, stake);
         while (nextInLine.Count > 3) { nextInLine.RemoveAt(nextInLine.Count - 1); if (nextInLineStake.Count > 0) nextInLineStake.RemoveAt(nextInLineStake.Count - 1); }
-        upcomingTier = -1;
+        // (the pre-rolled blocks stay: they now simply come after the waiting ones, so holding never rerolls what the Next up window showed)
     }
 
     /// <summary>Takes one waiting copy of this block out of the line (Block Hold's queue). True if there was one.</summary>
     public bool DropQueuedTier(int tierIndex)
     {
         for (int i = 0; i < nextInLine.Count; i++)
-            if (nextInLine[i].x == tierIndex) { nextInLine.RemoveAt(i); if (i < nextInLineStake.Count) nextInLineStake.RemoveAt(i); upcomingTier = -1; return true; }
+            if (nextInLine[i].x == tierIndex) { nextInLine.RemoveAt(i); if (i < nextInLineStake.Count) nextInLineStake.RemoveAt(i); return true; }
         return false;
     }
 

@@ -240,8 +240,9 @@ public static class PixelDatabase
                     if (Enum.TryParse(n.guestType, out PixelClicker.PixelType guest)) Link(ne, "Unlocks the block toggle for", PixelOf(guest), "Toggle unlocked by tree node");
                 }
                 foreach (PixelSkills.TreeNode n in s.nodes)
-                    if (n != null && !string.IsNullOrEmpty(n.requires) && nodeEntries.TryGetValue(n.id, out Entry mine) && nodeEntries.TryGetValue(n.requires, out Entry needed))
-                        Link(mine, "Needs node", needed, "Needed by node");
+                    if (n != null && !string.IsNullOrEmpty(n.requires) && nodeEntries.TryGetValue(n.id, out Entry mine))
+                        foreach (string req in n.requires.Split(','))
+                            if (nodeEntries.TryGetValue(req.Trim(), out Entry needed)) Link(mine, "Needs node", needed, "Needed by node");
             }
 
         // ---- Special and hold blocks (the rules from PixelBlockRules) ----

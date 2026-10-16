@@ -397,7 +397,7 @@ public partial class PixelSkills
         fadeX.view = nodeView;
         fadeX.content = nodeArea;
 
-        for (int i = 0; i < 30; i++)   // connector lines first so the nodes draw over them
+        for (int i = 0; i < 45; i++)   // connector lines first so the nodes draw over them
         {
             GameObject g = new GameObject("Line " + i, typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
             g.transform.SetParent(nodeArea, false);
@@ -408,7 +408,7 @@ public partial class PixelSkills
             g.SetActive(false);
             treeLines.Add(im);
         }
-        for (int i = 0; i < 8; i++)
+        for (int i = 0; i < 12; i++)
         {
             Button b = PixelUIKit.CreateButton(Font, nodeArea, "Node " + i, "", nodeSize, cardColor, textColor, 26f);
             b.gameObject.AddComponent<CanvasGroup>();
@@ -513,19 +513,21 @@ public partial class PixelSkills
             nodeImages[i].color = c;
             PixelUIKit.SetText(nodeLabels[i], n.displayName + "\n<size=70%>" + (owned ? "OWNED" : n.cost + (n.cost == 1 ? " point" : " points")) + "</size>");
 
-            // Connector from the parent: right edge -> a vertical step -> this node's left edge.
-            TreeNode parent = ParentOf(p, n);
-            int pi = parent != null ? System.Array.IndexOf(p.nodes, parent) : -1;
-            if (pi < 0 || pi >= count) continue;
-            Color lc = NodeUnlocked(p, parent) ? perkUnlockedColor : new Color(1f, 1f, 1f, 0.3f);
-            float x0 = pos[pi].x + nodeSize.x, y0 = pos[pi].y + nodeSize.y * 0.5f;
-            float x1 = pos[i].x, y1 = pos[i].y + nodeSize.y * 0.5f;
-            float mid = (x0 + x1) * 0.5f;
-            if (line + 3 <= treeLines.Count)
+            // Connector from each parent: right edge -> a vertical step -> this node's left edge.
+            foreach (TreeNode parent in ParentsOf(p, n))
             {
-                SetLine(treeLines[line++], x0, y0, mid, y0, lc);
-                SetLine(treeLines[line++], mid, y0, mid, y1, lc);
-                SetLine(treeLines[line++], mid, y1, x1, y1, lc);
+                int pi = System.Array.IndexOf(p.nodes, parent);
+                if (pi < 0 || pi >= count) continue;
+                Color lc = NodeUnlocked(p, parent) ? perkUnlockedColor : new Color(1f, 1f, 1f, 0.3f);
+                float x0 = pos[pi].x + nodeSize.x, y0 = pos[pi].y + nodeSize.y * 0.5f;
+                float x1 = pos[i].x, y1 = pos[i].y + nodeSize.y * 0.5f;
+                float mid = (x0 + x1) * 0.5f;
+                if (line + 3 <= treeLines.Count)
+                {
+                    SetLine(treeLines[line++], x0, y0, mid, y0, lc);
+                    SetLine(treeLines[line++], mid, y0, mid, y1, lc);
+                    SetLine(treeLines[line++], mid, y1, x1, y1, lc);
+                }
             }
         }
         for (int i = line; i < treeLines.Count; i++) treeLines[i].gameObject.SetActive(false);
@@ -533,7 +535,7 @@ public partial class PixelSkills
         if (count == 0) { PixelUIKit.SetText(nodeInfoLabel, ""); unlockButton.gameObject.SetActive(false); return; }
         TreeNode sel = p.nodes[selectedNode];
         bool own = NodeUnlocked(p, sel);
-        TreeNode par = ParentOf(p, sel);
+        string missing = MissingParents(p, sel);
         string soon = sel.implemented ? "" : "  <color=#ffffff80>(coming soon)</color>";
         string guest = string.IsNullOrEmpty(sel.guestType) ? "" : "\n<color=#9be08c>Unlocks " + sel.guestType + " as a toggle for every rotation (Toggles window).</color>";
         PixelUIKit.SetText(nodeInfoLabel, "<b>" + sel.displayName + "</b>" + soon + "\n" + sel.description + guest);
@@ -541,7 +543,7 @@ public partial class PixelSkills
         bool canUnlock = CanUnlock(p, sel);
         unlockButton.interactable = canUnlock;
         PixelUIKit.SetText(unlockLabel, own ? "Unlocked" : canUnlock ? "Unlock (" + sel.cost + " pt)"
-            : (par != null && !NodeUnlocked(p, par) ? "Needs " + par.displayName : "Not enough points"));
+            : (missing.Length > 0 ? "Needs " + missing : "Not enough points"));
     }
 
     private static void SetLine(Image img, float x0, float y0, float x1, float y1, Color color)

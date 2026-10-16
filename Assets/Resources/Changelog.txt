@@ -1197,3 +1197,4 @@
 [2026-10-16 16:10 UTC] Offline Progression is now a passive skill: clicking while you play no longer trains it; its only XP comes from offline progress (0.25 XP per offline Auto Clicker click), shown in the Welcome back window.
 [2026-10-16 16:16 UTC] Offline Progression now also trains a chosen skill pack while you're away (the pack buttons on the Offline card pick your character's offline task; it gets a small share of the offline clicks as XP, shown in the Welcome back window).
 [2026-10-16 16:16 UTC] Added a small level-up popup for every skill: a round badge in the skill's colour with its block spinning inside, the new level, +1 skill point and tiny fireworks around it.
+[2026-10-16 16:24 UTC] The Next up window is now an unlock in the Standard skill tree: 'What's Next' needs both Block Hold and Power Click (tree nodes can need several nodes now), and two extensions, Look Further and Foresight, each show one more block ahead (up to three).

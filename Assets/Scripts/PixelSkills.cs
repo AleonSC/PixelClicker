@@ -37,7 +37,7 @@ public partial class PixelSkills : MonoBehaviour
         public string id = "";
         public string displayName = "";
         [TextArea(1, 3)] public string description = "";
-        [Tooltip("Id of the node that must be unlocked first (empty = a root node).")]
+        [Tooltip("Id of the node that must be unlocked first (empty = a root node). Several ids separated by commas = ALL of them are needed (e.g. 'hold,power').")]
         public string requires = "";
         [Tooltip("Row in the tree (0 = top, 1 = middle, 2 = bottom). The column follows from how many nodes lie above it.")]
         public int row = 1;
@@ -606,6 +606,10 @@ public partial class PixelSkills : MonoBehaviour
                 new TreeNode { id = "power", displayName = "Power Click", description = "Hold the LEFT mouse button on the cube to charge, let go at full charge: one click worth 25 clicks. Long cooldown.", row = 2, cost = 1, implemented = true },
                 new TreeNode { id = "quick", displayName = "Quick charge", description = "Power clicks charge 40% faster.", requires = "power", row = 2, cost = 1, implemented = true },
                 new TreeNode { id = "aftershock", displayName = "Aftershock", description = "The power click cooldown is a third shorter.", requires = "quick", row = 2, cost = 2, implemented = true },
+                // Needs BOTH first nodes: the block predictor (PixelNextUp.requireTreeNode).
+                new TreeNode { id = "nextup", displayName = "What's Next", description = "Shows the Next up window: the block coming next, the one on the cube now and the one before - plan your holds and power clicks ahead.", requires = "hold,power", row = 1, cost = 1, implemented = true },
+                new TreeNode { id = "nextup2", displayName = "Look Further", description = "The Next up window shows one more block ahead (the next two).", requires = "nextup", row = 1, cost = 2, implemented = true },
+                new TreeNode { id = "nextup3", displayName = "Foresight", description = "The Next up window shows one more block ahead (the next three).", requires = "nextup2", row = 1, cost = 2, implemented = true },
             };
         if (id == WoodcuttingId)
             return new[]
@@ -1102,20 +1106,44 @@ public partial class PixelSkills : MonoBehaviour
 
     public bool NodeUnlocked(SkillPack pack, TreeNode node) => pack != null && node != null && PixelStats.Total("skill." + pack.id + ".node." + node.id) >= 1d;
 
-    public TreeNode ParentOf(SkillPack pack, TreeNode node)
+    /// <summary>Every node this one needs ('requires' can list several ids, comma separated; all of them must be unlocked).</summary>
+    public System.Collections.Generic.List<TreeNode> ParentsOf(SkillPack pack, TreeNode node)
     {
-        if (pack == null || node == null || string.IsNullOrEmpty(node.requires) || pack.nodes == null) return null;
-        foreach (TreeNode n in pack.nodes) if (n.id == node.requires) return n;
-        return null;
+        var list = new System.Collections.Generic.List<TreeNode>();
+        if (pack == null || node == null || string.IsNullOrEmpty(node.requires) || pack.nodes == null) return list;
+        foreach (string raw in node.requires.Split(','))
+        {
+            string id = raw.Trim();
+            if (id.Length == 0) continue;
+            foreach (TreeNode n in pack.nodes) if (n != null && n.id == id) { list.Add(n); break; }
+        }
+        return list;
     }
 
-    /// <summary>Column of a node: how many parents lie above it.</summary>
-    public int Depth(SkillPack pack, TreeNode node)
+    /// <summary>The first node this one needs (null for a root node).</summary>
+    public TreeNode ParentOf(SkillPack pack, TreeNode node)
     {
+        var parents = ParentsOf(pack, node);
+        return parents.Count > 0 ? parents[0] : null;
+    }
+
+    /// <summary>Column of a node: the longest chain of parents above it.</summary>
+    public int Depth(SkillPack pack, TreeNode node) => DepthOf(pack, node, 0);
+
+    private int DepthOf(SkillPack pack, TreeNode node, int guard)
+    {
+        if (guard > 12) return 0;   // (a loop in hand-edited data)
         int d = 0;
-        TreeNode cur = ParentOf(pack, node);
-        while (cur != null && d < 12) { d++; cur = ParentOf(pack, cur); }
+        foreach (TreeNode p in ParentsOf(pack, node)) d = Mathf.Max(d, 1 + DepthOf(pack, p, guard + 1));
         return d;
+    }
+
+    /// <summary>The parents not unlocked yet, as 'A and B' (empty when nothing is missing).</summary>
+    public string MissingParents(SkillPack pack, TreeNode node)
+    {
+        var names = new System.Collections.Generic.List<string>();
+        foreach (TreeNode p in ParentsOf(pack, node)) if (!NodeUnlocked(pack, p)) names.Add(p.displayName);
+        return string.Join(" and ", names);
     }
 
     public int PointsSpent(SkillPack pack)
@@ -1132,8 +1160,7 @@ public partial class PixelSkills : MonoBehaviour
     public bool CanUnlock(SkillPack pack, TreeNode node)
     {
         if (pack == null || node == null || NodeUnlocked(pack, node)) return false;
-        TreeNode parent = ParentOf(pack, node);
-        if (parent != null && !NodeUnlocked(pack, parent)) return false;
+        foreach (TreeNode parent in ParentsOf(pack, node)) if (!NodeUnlocked(pack, parent)) return false;
         return PointsAvailable(pack) >= Mathf.Max(0, node.cost);
     }
 
