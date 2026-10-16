@@ -902,12 +902,12 @@ public partial class PixelSkills
         SkillPack p = packs[selected];
         bool available = IsAvailable(p);
         PixelUIKit.SetText(detailName, available ? p.displayName : lockedName);
-        RefreshGuideBook(p, available);
         PixelUIKit.SetText(detailInfo, available && p.id == OfflineId ? "<b>While you're away, your character does:</b>" : "");
 
         // The skill tree has its own window; the button only shows for a skill that has one.
         bool hasNodes = available && p.nodes != null && p.nodes.Length > 0;
         treeToggle.gameObject.SetActive(hasNodes);
+        RefreshGuideBook(p, available);   // (after the tree button, so the book sits left of it)
         PixelUIKit.SetText(treeToggleLabel, treeButtonText);
         if (!hasNodes && TreeOpen) PixelPop.Hide(treeWindow);
         if (hasNodes && TreeOpen) RefreshTree(p);

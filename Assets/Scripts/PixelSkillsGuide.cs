@@ -5,7 +5,7 @@
 //   YES = the guide: small Got it boxes beside the Skills window (PixelNotice beside windowRect, back arrow / Skip), the screen dimmed and paused
 //   (PixelTutorialDim) - the basics of Woodcutting and how its blocks spawn (filler rotation, trees and their order, Timber, infested trees, the Great Oak,
 //   skill points / the Lumberjack). The texts are the Inspector list woodGuideSteps (empty = the built-ins).
-//   NO = one box pointing at the GUIDE BOOK button that now sits right after the skill's name in the detail panel (framed with the shared gold
+//   NO = one box pointing at the GUIDE BOOK button that sits between the skill's name and the 'Skill tree' button in the detail panel (framed with the shared gold
 //   PixelHighlight until Got it). The book (a code-drawn little book) shows for every skill that has a guide (HasGuide) and replays it any time.
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -86,21 +86,23 @@ public partial class PixelSkills
         r.anchoredPosition = pos;
     }
 
-    /// <summary>Shows the book right after the skill's name for a skill with a guide (called from RefreshWindow).</summary>
+    /// <summary>Shows the book left of the 'Skill tree' button for a skill with a guide (called from RefreshWindow).</summary>
     private void RefreshGuideBook(SkillPack p, bool available)
     {
         if (guideBookButton == null || detailName == null) return;
         bool show = available && HasGuide(p);
         guideBookButton.gameObject.SetActive(show);
+        // The book sits just LEFT of the 'Skill tree' button (measured, so it never clips into it) and the name ends before the book.
         RectTransform nr = detailName.rectTransform;
-        // The name leaves room for the book so it never ends up hidden under the 'Skill tree' button at the right.
-        nr.offsetMax = new Vector2(show ? -262f : -200f, nr.offsetMax.y);
+        float treeW = treeToggle != null && treeToggle.gameObject.activeSelf ? treeToggle.GetComponent<RectTransform>().rect.width : 0f;
+        float bookRight = treeW > 0f ? 18f + treeW + 10f : 18f;
+        nr.offsetMax = new Vector2(show ? -(bookRight + 48f + 10f) : (treeW > 0f ? -(18f + treeW + 10f) : -200f), nr.offsetMax.y);
         if (!show) return;
         guideBookButton.transform.SetAsLastSibling();
-        float avail = Mathf.Max(40f, nr.rect.width);
-        float textW = Mathf.Min(avail, detailName.GetPreferredValues(detailName.text, 9999f, 0f).x);
         RectTransform r = guideBookButton.GetComponent<RectTransform>();
-        r.anchoredPosition = new Vector2(22f + textW + 12f, -36f);
+        r.anchorMin = r.anchorMax = new Vector2(1f, 1f);
+        r.pivot = new Vector2(1f, 0.5f);
+        r.anchoredPosition = new Vector2(-bookRight, -38f);
         MaybeAskGuide(p);   // however Woodcutting came up in the window (a click, or opening the window on the skill in training), ask the first time
     }
 
