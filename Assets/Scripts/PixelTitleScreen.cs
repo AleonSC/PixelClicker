@@ -25,11 +25,15 @@ public partial class PixelTitleScreen : MonoBehaviour
         Reversing = false;
         PlayTime = 0f;
         PlayedOnce = false;
+        NewGameStarted = false;
         PixelStatics.ResetOnRestart(OnSceneUnloaded);
     }
 
     // (a reloaded scene has not been played yet: a New Game from its title can start at once instead of reloading again)
-    private static void OnSceneUnloaded() { PlayedOnce = false; }
+    private static void OnSceneUnloaded() { PlayedOnce = false; NewGameStarted = false; }
+
+    /// <summary>The last Play started a NEW game (nothing was loaded): the new-game intro tips play. Set once in OnPlay.</summary>
+    public static bool NewGameStarted { get; private set; }
 
     /// <summary>Game time (Time.time) when the game last started running: Awake, then each time Play is pressed.</summary>
     public static float PlayTime { get; private set; }
@@ -1086,8 +1090,10 @@ public partial class PixelTitleScreen : MonoBehaviour
         if (!PixelSaveGame.HasLoadedSave)
         {
             if (saveGame == null) saveGame = PixelFind.First<PixelSaveGame>();
-            if (saveGame != null && saveGame.TryGetMostRecentSlot(out int _) && !PixelSaveGame.AutoStartNewGame) saveGame.ContinueMostRecent();
+            bool loaded = false;
+            if (saveGame != null && saveGame.TryGetMostRecentSlot(out int _) && !PixelSaveGame.AutoStartNewGame) loaded = saveGame.ContinueMostRecent();
             else PixelSaveGame.HasLoadedSave = true;   // a NEW game has started (New Game, or no save at all): from now on Play / Continue resumes it, it must not load the newest old save over it
+            NewGameStarted = !loaded;   // (PixelHints plays the new-game intro from this - decided here, so early clicks can never change it)
         }
         PixelSaveGame.AutoStartNewGame = false;
         PlayedOnce = true;

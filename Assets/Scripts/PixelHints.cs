@@ -867,7 +867,7 @@ public class PixelHints : MonoBehaviour
             if (introRunning) return true;
             if (introChecked) return false;
             if (!showIntro || !hintsEnabled || !TipsEnabled) return false;
-            return forceIntro || (freshAtStart && !Seen("intro_log"));
+            return forceIntro || PixelTitleScreen.NewGameStarted || (freshAtStart && !Seen("intro_log"));
         }
     }
 
@@ -904,7 +904,8 @@ public class PixelHints : MonoBehaviour
         introWait += Time.unscaledDeltaTime; // counts from the moment the game starts (after Play) and the camera intro has finished
         if (introWait < introDelay) return;
         introChecked = true;
-        if (!showIntro || !hintsEnabled || !TipsEnabled || Seen("intro_log"))
+        bool newGame = PixelTitleScreen.NewGameStarted;   // Play started a new game (decided when Play was pressed): the intro plays, whatever was clicked since
+        if (!showIntro || !hintsEnabled || !TipsEnabled || (Seen("intro_log") && !newGame))
         {
             PixelDebug.Info("Intro tips not started: showIntro " + showIntro + ", hintsEnabled " + hintsEnabled + ", TipsEnabled " + TipsEnabled + ", intro_log already seen " + Seen("intro_log"), this);
             return;
@@ -912,7 +913,7 @@ public class PixelHints : MonoBehaviour
 
         PixelClicker clicker = PixelFind.First<PixelClicker>();
         if (clicker == null) return;
-        if (!forceIntro && !freshAtStart) { PixelDebug.Info("Intro tips not started: not a new game (something was already collected when the title screen was left) and no replay was asked for", this); return; } // not a new game
+        if (!forceIntro && !freshAtStart && !newGame) { PixelDebug.Info("Intro tips not started: not a new game (something was already collected when the title screen was left) and no replay was asked for", this); return; } // not a new game
         PixelDebug.Info("Intro tips start (replay " + forceIntro + ")", this);
         bool replay = forceIntro;
         forceIntro = false;
