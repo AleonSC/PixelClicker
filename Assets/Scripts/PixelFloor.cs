@@ -117,11 +117,12 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         PrairieGrass,    // tall golden wind-swept grass with green patches, purple wildflowers and rocks
         NeonLasers,      // see-through floor: neon laser beams drifting and pulsing over nothing (3D beams, PixelFloorOverlay)
         LaserTracker,    // see-through floor: laser beams from emitters round the cube that all converge on the mouse pointer
-        PicnicBlanket    // a gingham picnic blanket on grass, with a little 3D ant that follows the mouse
+        PicnicBlanket,   // a gingham picnic blanket on grass, with a little 3D ant that follows the mouse
+        CrumbleTiles     // see-through floor: real stone tiles that crack loose and fall away one by one, then rebuild (PixelFloorOverlay Crumble)
     }
 
     /// <summary>Live 3D extras drawn on top of (or instead of) the floor picture, updated every frame (PixelFloorOverlay).</summary>
-    public enum FloorOverlay { None = 0, Lasers = 1, LaserTracker = 2, Ant = 3 }
+    public enum FloorOverlay { None = 0, Lasers = 1, LaserTracker = 2, Ant = 3, Crumble = 4 }
 
     [Serializable]
     public class FloorStyle

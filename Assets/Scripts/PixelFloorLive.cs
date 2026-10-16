@@ -15,6 +15,9 @@
 //   PICNIC BLANKET: a gingham blanket with a woven texture, fringe, folds and crumbs on meadow grass, plus overlay Ant: a small 3D ant (built from
 //     primitives, no colliders) that walks to the mouse's point on the floor with a tripod leg gait and wiggling antennae, and wanders when the mouse is
 //     off the floor. The overlay fades with the floor (Display floor / the menu fade) and follows FloorStyle.overlay.
+//   CRUMBLING FLOOR (hideBase, overlay Crumble): real stone tiles (cubes, no colliders - the floor's collider stays, so husks still rest on it) over the
+//     visible floor circle; on a clock cycle they stay whole, then crack loose one by one (rim first, shuffled: a shake with a warm crack glow, then they
+//     drop away tumbling and shrinking), the floor stays empty a moment, then rebuilds in a ripple from the cube outwards. Timings on PixelFloorOverlay.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -48,6 +51,9 @@ public partial class PixelFloor
         FloorStyle picnic = Big("Picnic Blanket", FloorPattern.PicnicBlanket, new Color(0.82f, 0.12f, 0.14f), new Color(0.98f, 0.96f, 0.9f), new Color(0.2f, 0.5f, 0.15f), 39);
         picnic.overlay = FloorOverlay.Ant;
         yield return picnic;
+        FloorStyle crumble = S("Crumbling Floor", FloorPattern.CrumbleTiles, new Color(0.42f, 0.4f, 0.38f), new Color(0.55f, 0.52f, 0.48f), new Color(1f, 0.6f, 0.25f), 160, false, 8f, 1);
+        crumble.hideBase = true; crumble.overlay = FloorOverlay.Crumble;
+        yield return crumble;
     }
 
     private PixelFloorOverlay liveOverlay;
@@ -95,6 +101,7 @@ public partial class PixelFloor
             case FloorPattern.PicnicBlanket: return ShadePicnic(s, u, v, x, y);
         }
         if (s.pattern == FloorPattern.NeonLasers || s.pattern == FloorPattern.LaserTracker) return ShadeLaserPicture(s, u, v, s.pattern == FloorPattern.LaserTracker);
+        if (s.pattern == FloorPattern.CrumbleTiles) return ShadeCrumblePicture(s, u, v);
         return s.colorA;
     }
 
@@ -423,6 +430,22 @@ public partial class PixelFloor
         return Fin(c);
     }
 
+    /// <summary>The Crumbling Floor's icon / title picture (the game shows real 3D tiles instead): a grid of stone tiles with a few missing and glowing cracks.</summary>
+    private static Color ShadeCrumblePicture(FloorStyle s, float u, float v)
+    {
+        const int n = 6;
+        int cx = Mathf.FloorToInt(u * n), cy = Mathf.FloorToInt(v * n);
+        float fx = u * n - cx, fy = v * n - cy;
+        float h = PixelNoise.Hash(cx, cy, 77);
+        if (h > 0.78f) return new Color(0.02f, 0.02f, 0.03f, 1f);                     // a missing tile: the void
+        Color c = Color.Lerp(s.colorA, s.colorB, h * 1.2f);
+        float edge = Mathf.Min(Mathf.Min(fx, 1f - fx), Mathf.Min(fy, 1f - fy));
+        if (edge < 0.05f) c *= 0.45f;                                                  // the gaps between tiles
+        float crack = Mathf.Abs(fx - fy * (0.6f + h) - 0.2f);
+        if (h > 0.5f && crack < 0.025f) c = Color.Lerp(c, s.colorC, 0.8f);             // a glowing crack
+        return c;
+    }
+
     // 5. Picnic Blanket ------------------------------------------------------------------
 
     private static Color ShadePicnic(FloorStyle s, float u, float v, int x, int y)
@@ -506,6 +529,18 @@ public class PixelFloorOverlay : MonoBehaviour
     [Tooltip("How close to the mouse the ant stops (world units).")]
     [SerializeField] private float antStopDistance = 0.25f;
 
+    [Header("Crumbling Floor")]
+    [Tooltip("Size of one stone tile (world units).")]
+    [SerializeField] private float crumbleTileSize = 0.9f;
+    [Tooltip("Seconds for the whole floor to crumble away, tile by tile.")]
+    [SerializeField] private float crumbleSeconds = 45f;
+    [Tooltip("Seconds of nothing once the last tile has fallen, before the floor rebuilds.")]
+    [SerializeField] private float crumbleEmptySeconds = 3f;
+    [Tooltip("Seconds the rebuild takes (a ripple from the cube outwards).")]
+    [SerializeField] private float crumbleRebuildSeconds = 4f;
+    [Tooltip("Seconds the rebuilt floor stays whole before it starts crumbling again.")]
+    [SerializeField] private float crumbleWholeSeconds = 6f;
+
     private PixelFloor.FloorStyle style;
     private GameObject root;
     private Material lineMat;
@@ -527,6 +562,7 @@ public class PixelFloorOverlay : MonoBehaviour
         if (s == null || s.overlay == PixelFloor.FloorOverlay.None) return;
         root = new GameObject("Floor Overlay (" + s.name + ")");
         if (s.overlay == PixelFloor.FloorOverlay.Ant) BuildAnt();
+        else if (s.overlay == PixelFloor.FloorOverlay.Crumble) { /* built on the first frame, when the floor's size is known (BuildCrumble) */ }
         else BuildBeams(s.overlay == PixelFloor.FloorOverlay.Lasers ? Mathf.Max(1, laserCount) : Mathf.Max(1, trackerCount), s.overlay == PixelFloor.FloorOverlay.LaserTracker);
     }
 
@@ -534,7 +570,7 @@ public class PixelFloorOverlay : MonoBehaviour
     {
         if (root != null) Destroy(root);
         root = null;
-        cores.Clear(); glows.Clear(); beamState.Clear(); antLegs.Clear();
+        cores.Clear(); glows.Clear(); beamState.Clear(); antLegs.Clear(); tiles.Clear(); crumbleBuiltReach = 0f;
         ring = null; ant = null; trackInit = false;
     }
 
@@ -739,6 +775,116 @@ public class PixelFloorOverlay : MonoBehaviour
         if (antAntennaR != null) antAntennaR.localRotation = Quaternion.Euler(-wig, 0f, 0f);
     }
 
+    // ---- the crumbling floor ----
+    // One cycle: WHOLE (crumbleWholeSeconds) -> CRUMBLING (crumbleSeconds: each tile has its own moment, the outer ring first with some randomness; it shakes
+    // for a moment, then drops, tumbling and shrinking) -> EMPTY (crumbleEmptySeconds) -> REBUILD (crumbleRebuildSeconds: the tiles grow back up out of the
+    // void in a ripple from the cube outwards, with a warm glow that fades) -> whole again. All driven by the clock, so it costs only moving a few hundred tiles.
+
+    private class Tile { public Transform t; public Vector3 home; public float dropAt, rebuildAt, spinX, spinZ, drift; public Renderer r; public int mat; }
+    private readonly List<Tile> tiles = new List<Tile>();
+    private float crumbleBuiltReach;
+    private Material[] tileMats;
+    private Material glowMat;
+
+    private void BuildCrumble(Vector3 centre, float reach)
+    {
+        foreach (Tile old in tiles) if (old.t != null) Destroy(old.t.gameObject);
+        tiles.Clear();
+        crumbleBuiltReach = reach;
+        PixelClicker clicker = PixelFind.First<PixelClicker>();
+        if (tileMats == null && clicker != null)
+        {
+            tileMats = new Material[3];
+            for (int i = 0; i < 3; i++) tileMats[i] = clicker.CreateVisualMaterial(Color.Lerp(style.colorA, style.colorB, i / 2f), false);
+            glowMat = clicker.CreateVisualMaterial(style.colorC, false);
+        }
+        float size = Mathf.Max(0.2f, crumbleTileSize), thick = size * 0.22f;
+        int n = Mathf.CeilToInt(reach / size);
+        for (int ix = -n; ix <= n; ix++)
+            for (int iz = -n; iz <= n; iz++)
+            {
+                Vector3 off = new Vector3((ix + 0.5f) * size, 0f, (iz + 0.5f) * size);
+                float d = off.magnitude;
+                if (d > reach) continue;
+                GameObject g = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                g.name = "Tile";
+                Collider col = g.GetComponent<Collider>();
+                if (col != null) Destroy(col);
+                g.transform.SetParent(root.transform, false);
+                g.transform.localScale = new Vector3(size * 0.96f, thick, size * 0.96f);
+                Renderer r = g.GetComponent<Renderer>();
+                int matIndex = Mathf.Abs(ix * 7 + iz * 13) % 3;
+                if (tileMats != null) r.sharedMaterial = tileMats[matIndex];
+                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                float edge = d / reach;   // 0 at the cube .. 1 at the rim
+                tiles.Add(new Tile
+                {
+                    t = g.transform, r = r, mat = matIndex, home = off + Vector3.down * thick * 0.5f,
+                    dropAt = Mathf.Clamp01((1f - edge) * 0.75f + Random.value * 0.25f),   // the rim goes first, with a random shuffle
+                    rebuildAt = Mathf.Clamp01(edge * 0.85f + Random.value * 0.15f),         // the rebuild ripples outwards from the cube
+                    spinX = Random.Range(-220f, 220f), spinZ = Random.Range(-220f, 220f), drift = Random.Range(-0.4f, 0.4f),
+                });
+            }
+    }
+
+    private void UpdateCrumble(Vector3 centre, float reach, float time)
+    {
+        if (tiles.Count == 0 || Mathf.Abs(reach - crumbleBuiltReach) > crumbleTileSize) BuildCrumble(centre, reach);
+        float whole = Mathf.Max(0.5f, crumbleWholeSeconds), fall = Mathf.Max(5f, crumbleSeconds), empty = Mathf.Max(0f, crumbleEmptySeconds), rebuild = Mathf.Max(0.5f, crumbleRebuildSeconds);
+        float cycle = whole + fall + empty + rebuild;
+        float c = Mathf.Repeat(time, cycle);
+        const float shakeTime = 0.7f, dropTime = 1.6f;
+        float size = Mathf.Max(0.2f, crumbleTileSize);
+        foreach (Tile tile in tiles)
+        {
+            if (tile.t == null) continue;
+            Vector3 pos = centre + tile.home;
+            Quaternion rot = Quaternion.identity;
+            float scale = 1f;
+            bool glowing = false;
+            if (c >= whole && c < whole + fall + empty)
+            {
+                // crumbling: this tile's moment comes at dropAt through the crumble time
+                float since = (c - whole) - tile.dropAt * (fall - shakeTime - dropTime);
+                if (since > 0f && since < shakeTime)
+                {
+                    float k = since / shakeTime;   // shaking harder as it comes loose, a crack glow showing
+                    pos += new Vector3(Mathf.Sin(time * 61f + tile.drift * 30f), 0f, Mathf.Cos(time * 53f + tile.drift * 20f)) * 0.03f * size * k;
+                    rot = Quaternion.Euler(Mathf.Sin(time * 47f) * 4f * k, 0f, Mathf.Cos(time * 43f) * 4f * k);
+                    glowing = k > 0.5f;
+                }
+                else if (since >= shakeTime)
+                {
+                    float f = since - shakeTime;
+                    if (f >= dropTime) { if (tile.t.gameObject.activeSelf) tile.t.gameObject.SetActive(false); continue; }
+                    pos += new Vector3(tile.drift * f, -4.5f * f * f, tile.drift * 0.6f * f);       // falls away into the void, tumbling
+                    rot = Quaternion.Euler(tile.spinX * f, 0f, tile.spinZ * f);
+                    scale = 1f - f / dropTime * 0.7f;
+                }
+            }
+            else if (c >= whole + fall + empty)
+            {
+                // rebuilding: grows back up out of the void, glowing warm for a moment
+                float since = (c - whole - fall - empty) - tile.rebuildAt * (rebuild - 0.8f);
+                if (since <= 0f) { if (tile.t.gameObject.activeSelf) tile.t.gameObject.SetActive(false); continue; }
+                float k = Mathf.Clamp01(since / 0.8f);
+                float ease = 1f - (1f - k) * (1f - k);
+                pos += Vector3.down * (1f - ease) * size * 1.5f;
+                scale = Mathf.Lerp(0.2f, 1f, ease);
+                glowing = k < 0.9f;
+            }
+            if (!tile.t.gameObject.activeSelf) tile.t.gameObject.SetActive(true);
+            tile.t.SetPositionAndRotation(pos, rot);
+            float thick = size * 0.22f;
+            tile.t.localScale = new Vector3(size * 0.96f * scale, thick * scale, size * 0.96f * scale);
+            if (tileMats != null && glowMat != null)
+            {
+                Material want = glowing ? glowMat : tileMats[tile.mat];
+                if (tile.r.sharedMaterial != want) tile.r.sharedMaterial = want;
+            }
+        }
+    }
+
     // ---- every frame ----
 
     private bool TryMousePoint(float floorY, out Vector3 point)
@@ -776,6 +922,7 @@ public class PixelFloorOverlay : MonoBehaviour
         {
             case PixelFloor.FloorOverlay.Lasers: UpdateLasers(centre, reach, alpha, time); break;
             case PixelFloor.FloorOverlay.LaserTracker: UpdateTracker(centre, reach, alpha, time, hasMouse ? mouse : centre); break;
+            case PixelFloor.FloorOverlay.Crumble: UpdateCrumble(centre, reach, time); break;
             case PixelFloor.FloorOverlay.Ant:
                 if (ant != null) ant.localScale = Vector3.one * Mathf.Clamp01(alpha);   // (fades by shrinking with the floor)
                 UpdateAnt(centre, reach, hasMouse, mouse, PixelTimeStop.IsStopped ? 0f : Time.unscaledDeltaTime);
