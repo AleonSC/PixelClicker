@@ -238,25 +238,24 @@ open-ended length, the 1.0 direction, art direction, music.
 3. Prestige: how is Cubie's debt measured? (section 6)
 4. Is there an ending at all? (section 6)
 5. Exactly which skills and systems make 1.0? (section 9)
-6. (closed)
 
 **Identity**
-7. The hook in one sentence. (section 1)
-8. Is there a story, and who is Cubie really? (section 4)
-9. The name. (section 4)
-10. Which pillar wins when two clash? (section 2)
+6. The hook in one sentence. (section 1)
+7. Is there a story, and who is Cubie really? (section 4)
+8. The name. (section 4)
+9. Which pillar wins when two clash? (section 2)
 
 **Systems**
-11. Which systems get cut or merged (run the pruning test). (section 7)
-12. The long-term currency sink. (section 8)
-13. What counts for offline progress. (section 8)
-14. How many skills at release, and which are next. (section 9)
-15. Should every minigame feed a skill? (section 9)
-16. What to teach in the first 5 minutes. (section 10)
+10. Which systems get cut or merged (run the pruning test). (section 7)
+11. The long-term currency sink. (section 8)
+12. What counts for offline progress. (section 8)
+13. How many skills at release, and which are next. (section 9)
+14. Should every minigame feed a skill? (section 9)
+15. What to teach in the first 5 minutes. (section 10)
 
 **Before any public build**
-17. Homage rules / renaming. (section 4)
-18. Save versioning and the first public build date. (section 12)
+16. Homage rules / renaming. (section 4)
+17. Save versioning and the first public build date. (section 12)
 
 Feature-level blank spots (gear, first person, the alien, legendary gear) are in `GearDesign.md`; Woodcutting's in
 `WoodcuttingProgression.md`; the husk rules' in `PixelRules.md`; the cross-system gaps in `ConnectionMap.md` section 8.
