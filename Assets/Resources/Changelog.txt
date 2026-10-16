@@ -1159,3 +1159,4 @@
 [2026-10-16 12:21 UTC] Cubie's first visit now comes after 100 White pixel clicks (was 50).
 [2026-10-16 12:21 UTC] Monochrome retuned for the mixed spawn pool: Gray unlocks at 300 White and Black at 200 Gray (was 250 each); the RGB step still asks 100 Black.
 [2026-10-16 12:33 UTC] To-do: edge-click husk aiming, to build after the two Recycler test runs.
+[2026-10-16 12:34 UTC] Session report: shows reading time (Cubie's visits, tip boxes), time with a window open, and the clicking speed outside reading time.

@@ -73,6 +73,7 @@ public class PixelSessionRecorder : MonoBehaviour
     private PixelClicker clicker;
     private bool recording, autoMode, autoStarted;
     private float elapsed, secondTimer, autosaveTimer;
+    private float cubieSeconds, tipSeconds, windowSeconds;   // reading time inside the game time: Cubie's visits, tip / tutorial boxes, other open windows
     private DateTime startedAt;
     private string autoPath;
     private long lastManual, lastAuto;
@@ -138,6 +139,7 @@ public class PixelSessionRecorder : MonoBehaviour
         recording = true;
         autoMode = auto;
         elapsed = 0f; secondTimer = 0f; autosaveTimer = 0f;
+        cubieSeconds = 0f; tipSeconds = 0f; windowSeconds = 0f;
         startedAt = DateTime.Now;
         minutes.Clear(); timeline.Clear(); lastSeconds.Clear(); totalIncome.Clear(); statsAtStart.Clear(); skillLevel.Clear();
         bestWindowClicks = 0; totalBlocks = 0; blocksThisSecond = 0; cubieVisits = 0;
@@ -191,6 +193,10 @@ public class PixelSessionRecorder : MonoBehaviour
 
         float dt = Mathf.Min(Time.unscaledDeltaTime, 0.25f);
         elapsed += dt;
+        // Reading time (each second counts once, Cubie first): the player is reading rather than clicking.
+        if (PixelGuideVendor.Visiting) cubieSeconds += dt;
+        else if (PixelNotice.IsShowing) tipSeconds += dt;
+        else if (PixelWindows.AnyOpen()) windowSeconds += dt;
         secondTimer += dt;
         if (secondTimer >= 1f)
         {
@@ -347,6 +353,11 @@ public class PixelSessionRecorder : MonoBehaviour
         sb.AppendLine("Manual clicks: " + manual + "  (" + (manual / (elapsed > 0f ? elapsed : 1f)).ToString("F2") + " per second on average, best " +
                       (bestWindowClicks / (float)bestWindowSeconds).ToString("F2") + " per second over " + bestWindowSeconds + " s)");
         sb.AppendLine("Auto clicks: " + auto + "  (" + (auto / (elapsed > 0f ? elapsed : 1f)).ToString("F2") + " per second on average)");
+        float reading = cubieSeconds + tipSeconds;
+        float active = Mathf.Max(1f, elapsed - reading);
+        sb.AppendLine("Reading time inside the game time: " + Clock(reading) + "  (Cubie's visits " + Clock(cubieSeconds) + ", tip / tutorial boxes " + Clock(tipSeconds) +
+                      "); a window (Inventory, Shop, Skills...) was open for another " + Clock(windowSeconds) + " (you can still click with most of those)");
+        sb.AppendLine("Time not reading: " + Clock(elapsed - reading) + "  (manual clicks per second in that time: " + (manual / active).ToString("F2") + ")");
         sb.AppendLine("Blocks broken (= husks dropped): " + totalBlocks + "  (" + (totalBlocks / minutesPlayed).ToString("F1") + " per minute)");
         double stdXp = 0d, skXp = 0d;
         foreach (Minute m in minutes) { stdXp += m.standardXp; skXp += m.skillXp; }
