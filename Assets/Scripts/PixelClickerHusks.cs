@@ -797,7 +797,7 @@ public partial class PixelClicker
             {
                 Rigidbody oldest = oldPixels[0];
                 oldPixels.RemoveAt(0);
-                if (oldest != null) DespawnOldPixel(oldest.gameObject);
+                if (oldest != null) { DespawnOldPixel(oldest.gameObject); PixelStats.Count("old.capped"); }   // (removed by the floor cap: counted for the session recorder)
             }
             return;
         }
@@ -840,7 +840,7 @@ public partial class PixelClicker
         {
             Rigidbody oldest = oldPixels[0];
             oldPixels.RemoveAt(0);
-            if (oldest != null) DespawnOldPixel(oldest.gameObject);
+            if (oldest != null) { DespawnOldPixel(oldest.gameObject); PixelStats.Count("old.capped"); }
         }
     }
 

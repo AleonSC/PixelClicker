@@ -428,7 +428,10 @@ public class PixelBlockHold : MonoBehaviour
         float stake = 1f;
         float heldFor = Time.unscaledTime - holdStartedAt;
         if (heldTier >= 0 && heldFor >= StakeMin && StakeEligible())
-            stake = Random.value < StakeWin(heldFor) ? StakeValue(heldFor) : stakeLossValue;   // the outcome is decided now but only shown when the block comes round again
+        {
+            stake = Random.value < StakeWin(heldFor) ? StakeValue(heldFor) : stakeLossValue;
+            PixelStats.Count("stake.placed");   // (the session recorder and Stats: stakes made; won / lost are counted when they are revealed)
+        }   // the outcome is decided now but only shown when the block comes round again
         if (heldTier >= 0 && clicker != null) clicker.ReturnHeldTier(heldTier, heldHits, stake);
         heldTier = -1;
         returning = holder != null;

@@ -10,7 +10,7 @@
 //   What it records: only time in the game counts (not the pause menu / title screen). Clicks per second (manual and auto, per minute and the
 //   best 10 s), blocks broken, income per pixel type per minute, Standard and training-skill XP per minute, a TIMELINE of milestones found by
 //   polling once a second (pixel types unlocked, shop packs bought / levelled, skill level-ups, Cubie's visits, the shop window first opened),
-//   husk counts (blocks broken = husks dropped; despawned unused 'old.despawned', grabbed, vacuumed, recycled, shredded, banked - PixelStats
+//   Block Hold and stakes (hold.count, stake.placed, stake.won / lost), husk counts (blocks broken = husks dropped; despawned unused 'old.despawned', removed by the floor cap 'old.capped', grabbed, vacuumed, recycled, shredded, banked - PixelStats
 //   counters), and the state at the start and end.
 // ---------------------------------------------------
 using System;
@@ -54,7 +54,21 @@ public class PixelSessionRecorder : MonoBehaviour
     }
 
     private static readonly string[] HuskKeys =
-        { "old.despawned", "old.grabbed", "old.vacuumed", "recycler.husks", "recycler.paid", "old.shredded", "old.shattered", "old.banked", "old.attached" };
+        { "old.despawned", "old.capped", "old.grabbed", "old.vacuumed", "recycler.husks", "recycler.paid", "old.shredded", "old.shattered", "old.banked", "old.attached" };
+
+    private static readonly string[] HoldKeys = { "hold.count", "stake.placed", "stake.won", "stake.lost" };
+
+    private static string HoldLabel(string key)
+    {
+        switch (key)
+        {
+            case "hold.count": return "Blocks held (right mouse)";
+            case "stake.placed": return "Stakes placed";
+            case "stake.won": return "Stakes won (revealed)";
+            case "stake.lost": return "Stakes lost (revealed)";
+            default: return key;
+        }
+    }
 
     private PixelClicker clicker;
     private bool recording, autoMode, autoStarted;
@@ -135,6 +149,7 @@ public class PixelSessionRecorder : MonoBehaviour
         lastManual = stats != null ? stats.ManualClicks : 0;
         lastAuto = stats != null ? stats.AutoClicks : 0;
         foreach (string k in HuskKeys) statsAtStart[k] = PixelStats.Total(k);
+        foreach (string k in HoldKeys) statsAtStart[k] = PixelStats.Total(k);
         lastStandardXp = SkillXp(PixelSkills.StandardId);
         lastSkillXp = TrainingXp();
         SnapshotPolledState();
@@ -356,6 +371,15 @@ public class PixelSessionRecorder : MonoBehaviour
         }
         sb.AppendLine();
 
+        sb.AppendLine("== BLOCK HOLD AND STAKES ==");
+        foreach (string k in HoldKeys)
+        {
+            statsAtStart.TryGetValue(k, out double was);
+            sb.AppendLine("  " + HoldLabel(k) + ": " + (PixelStats.Total(k) - was).ToString("F0"));
+        }
+        sb.AppendLine("  (A stake is revealed when its block comes round again, so won + lost can be lower than placed.)");
+        sb.AppendLine();
+
         sb.AppendLine("== PER MINUTE (CSV) ==");
         sb.AppendLine("minute,manual_clicks,auto_clicks,blocks,standard_xp,skill_xp,income (type=amount; ...)");
         for (int i = 0; i < minutes.Count; i++)
@@ -428,7 +452,8 @@ public class PixelSessionRecorder : MonoBehaviour
     {
         switch (key)
         {
-            case "old.despawned": return "Despawned unused";
+            case "old.despawned": return "Despawned unused (timer ran out)";
+            case "old.capped": return "Removed by the floor cap (oldest first, floor full)";
             case "old.grabbed": return "Grabbed by hand";
             case "old.vacuumed": return "Vacuumed";
             case "recycler.husks": return "Recycled";
