@@ -1,6 +1,7 @@
 // ---- System notes ----
 // PixelPowerClick.cs
-//   POWER CLICK (TEST - may be removed, parked, or turned into a Standard perk later). Hold the LEFT mouse button on the cube: the press is a normal
+//   POWER CLICK (TEST - may be removed or parked). Unlocked by the Standard skill tree node 'power' (requireTreeNode); branches 'quick' (charge 40%
+//   faster) -> 'aftershock' (cooldown a third shorter). Hold the LEFT mouse button on the cube: the press is a normal
 //   click as always, and if you keep holding for holdDelay (0.25 s) a charge builds (chargeSeconds 1.2): a ring fills round the cube, the cube
 //   trembles harder and harder, and at full charge the ring turns gold and pulses. Let go at full charge and it fires: one click worth
 //   clicksWorth (25) clicks (PixelClicker.PowerClick - payout x25, tough blocks take 25 hits, the combo grows by 25), a white flash, a shockwave
@@ -20,6 +21,8 @@ public class PixelPowerClick : MonoBehaviour
     [Header("Power click (TEST)")]
     [Tooltip("Turn the power click off completely.")]
     [SerializeField] private bool disablePowerClick = false;
+    [Tooltip("The power click is unlocked by the 'Power Click' node of the Standard skill tree. Off = available from the start (for testing).")]
+    [SerializeField] private bool requireTreeNode = true;
     [Min(0.05f)]
     [Tooltip("Seconds you must keep holding after the press before the charge starts (so normal clicking never charges).")]
     [SerializeField] private float holdDelay = 0.25f;
@@ -47,6 +50,10 @@ public class PixelPowerClick : MonoBehaviour
     [Tooltip("How far the cube trembles at full charge, as a share of its size.")]
     [SerializeField] private float shakeAtFull = 0.06f;
 
+    // Standard tree branches: 'quick' charges 40% faster, 'aftershock' cuts the cooldown by a third.
+    private float ChargeSeconds => chargeSeconds * (PixelSkills.HasStandardNode("quick") ? 0.6f : 1f);
+    private float CooldownSeconds => cooldownSeconds * (PixelSkills.HasStandardNode("aftershock") ? 2f / 3f : 1f);
+
     private PixelClicker clicker;
     private enum State { Idle, Pressed, Charging, Ready }
     private State state = State.Idle;
@@ -73,7 +80,7 @@ public class PixelPowerClick : MonoBehaviour
     private void Update()
     {
         if (cooldownLeft > 0f && !PixelCalm.InMenu) cooldownLeft -= Time.unscaledDeltaTime;
-        if (disablePowerClick || clicker == null) { Cancel(); UpdateFx(); return; }
+        if (disablePowerClick || clicker == null || (requireTreeNode && !PixelSkills.HasStandardNode("power"))) { Cancel(); UpdateFx(); return; }
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         if (cam == null) return;
 
@@ -104,7 +111,7 @@ public class PixelPowerClick : MonoBehaviour
                 }
                 if (state == State.Charging)
                 {
-                    charge = Mathf.Clamp01(charge + Time.unscaledDeltaTime / chargeSeconds);
+                    charge = Mathf.Clamp01(charge + Time.unscaledDeltaTime / ChargeSeconds);
                     if (charge >= 1f) { state = State.Ready; PixelAudio.Play("snitch_ready", 1.3f); }
                 }
                 Shake(state == State.Ready ? 1f : charge * charge);
@@ -147,7 +154,7 @@ public class PixelPowerClick : MonoBehaviour
         StopShake();
         state = State.Idle;
         charge = 0f;
-        cooldownLeft = cooldownSeconds;
+        cooldownLeft = CooldownSeconds;
         Vector2 centre = CubeCanvasPoint(cam, out float radius);
         clicker.PowerClick(clicksWorth);
         PixelStats.Count("power.clicks");
@@ -261,7 +268,7 @@ public class PixelPowerClick : MonoBehaviour
         {
             cooldownRect.anchoredPosition = centre;
             cooldownRect.sizeDelta = Vector2.one * radius * 3f;
-            float left = cooldownSeconds > 0f ? Mathf.Clamp01(cooldownLeft / cooldownSeconds) : 0f;
+            float left = CooldownSeconds > 0f ? Mathf.Clamp01(cooldownLeft / CooldownSeconds) : 0f;
             cooldownRing.StartDegrees = 0f;
             cooldownRing.EndDegrees = Mathf.Max(1f, 359.5f * left);
         }

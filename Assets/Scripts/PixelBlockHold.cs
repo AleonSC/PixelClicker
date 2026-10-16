@@ -10,7 +10,8 @@
 //   A partly broken block keeps its hits through the hold (TryPullLive -> ReturnHeldTier -> pendingHits), so a whetstone you only noticed after a click or two can still be grabbed.
 //   A right press within rightSpamGapSeconds (0.45) of another right press or of a hazard right click never starts a hold (spamming a hazard away must not grab the next block).
 //   STALL: PixelTier.stallsHold / stallSeconds (Great Oak): every click on such a block freezes the drain for stallSeconds and adds stallRefill (0.04) of the meter (PixelBlockHold.Stall), the meter turns icy while frozen.
-//   AVAILABLE FROM THE START (requireShopPack off; the shop pack is no longer needed). STAKE (disableStake, stake* fields): holding one of the SIX BASIC blocks (IsStakeBlock: Black, Gray, White, Red, Green, Blue - nothing else)  for at least stakeMinSeconds
+//   UNLOCKED BY THE STANDARD SKILL TREE (node 'hold', requireTreeNode on; 2026-10-16 - before that it was available from the start; requireShopPack off; the shop pack is no longer needed).
+//   Tree branches: 'lucky' (+10% stake win chance) -> 'highroller' (stakes grow 50% faster). STAKE (disableStake, stake* fields): holding one of the SIX BASIC blocks (IsStakeBlock: Black, Gray, White, Red, Green, Blue - nothing else)  for at least stakeMinSeconds
 //   (0.75) puts a stake on it: the value grows 1 + stakeGrowthPerSecond (0.6) x seconds held; on release the outcome is rolled (stakeWinChance 0.6, +/- stakeWinChanceChangeAtFullHold over a full meter) -
 //   pays that multiplier or stakeLossValue (0 = nothing) - and travels with the block through the queue (PixelClicker.nextInLineStake -> liveStake, payout x liveStake). It is revealed when the block comes
 //   round again: its aura glows green / red (PixelClickerAura.StakeHighlight), a top status line says what it is worth and a good / bad sound plays. While holding, the label by the meter shows the value and the chance.
@@ -51,6 +52,8 @@ public class PixelBlockHold : MonoBehaviour
     [Header("Availability")]
     [Tooltip("Off (default) = Block Hold works from the very start of the game. On = it needs the shop pack (unlocksBlockHold) first, like it used to.")]
     [SerializeField] private bool requireShopPack = false;
+    [Tooltip("Block Hold is unlocked by the 'Block Hold' node of the Standard skill tree (the first skill point at Standard level 2). Off = available from the start.")]
+    [SerializeField] private bool requireTreeNode = true;
 
     [Header("Stake (hold a basic block - black, gray, white, red, green, blue - to gamble on it)")]
     [Tooltip("Turn the stake off (holding then only pulls the block out of the rotation).")]
@@ -173,7 +176,7 @@ public class PixelBlockHold : MonoBehaviour
     private static Sprite dotSprite;
     private const float ArcHalfDegrees = 55f;
 
-    public bool Active => (unlocked || !requireShopPack) && !disableBlockHold;
+    public bool Active => (unlocked || !requireShopPack) && !disableBlockHold && (!requireTreeNode || PixelSkills.HasStandardNode("hold"));
     public bool Holding => holding;
 
     /// <summary>A click landed on a stalling block (PixelTier.stallsHold): the hold meter stops draining for this many seconds.</summary>
@@ -305,7 +308,7 @@ public class PixelBlockHold : MonoBehaviour
 
     private float holdStartedAt;
 
-    private float StakeGrowth => stakeGrowthPerSecond > 0f ? stakeGrowthPerSecond : 0.6f;
+    private float StakeGrowth => (stakeGrowthPerSecond > 0f ? stakeGrowthPerSecond : 0.6f) * (PixelSkills.HasStandardNode("highroller") ? 1.5f : 1f);   // Standard tree 'High roller': +50%
     private float StakeMin => stakeMinSeconds > 0f ? stakeMinSeconds : 0.75f;
     private float StakeBaseWin => stakeWinChance > 0f ? stakeWinChance : 0.6f;
 
@@ -341,7 +344,7 @@ public class PixelBlockHold : MonoBehaviour
 
     private float StakeProgress(float heldSeconds) => Mathf.Clamp01(heldSeconds / HoldSeconds);
     private float StakeValue(float heldSeconds) => 1f + StakeGrowth * heldSeconds + stakeClickBonus;   // (+ stakePerClick for every click during the hold)
-    private float StakeWin(float heldSeconds) => Mathf.Clamp(StakeBaseWin + stakeWinChanceChangeAtFullHold * StakeProgress(heldSeconds), 0.05f, 0.95f);
+    private float StakeWin(float heldSeconds) => Mathf.Clamp(StakeBaseWin + (PixelSkills.HasStandardNode("lucky") ? 0.1f : 0f) + stakeWinChanceChangeAtFullHold * StakeProgress(heldSeconds), 0.05f, 0.95f);   // Standard tree 'Lucky stake': +10%
 
     // ---- Charge blocks (PixelBlockRules.HoldRule.chargesWhenHeld: Pesticide) ----
 

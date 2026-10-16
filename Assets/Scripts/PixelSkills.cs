@@ -508,7 +508,7 @@ public partial class PixelSkills : MonoBehaviour
                 if (string.IsNullOrEmpty(pack.hazardType)) pack.hazardType = hazard.ToString();
             }
             // Built-in trees: add any default node the saved pack is missing (ones you edited are kept).
-            if (pack.id != MiningId && pack.id != OfflineId && pack.id != FarmingId && pack.id != ElectricianId && pack.id != WoodcuttingId) continue;
+            if (pack.id != MiningId && pack.id != OfflineId && pack.id != FarmingId && pack.id != ElectricianId && pack.id != WoodcuttingId && pack.id != StandardId) continue;
             System.Collections.Generic.List<TreeNode> merged = new System.Collections.Generic.List<TreeNode>(pack.nodes ?? new TreeNode[0]);
             foreach (TreeNode def in DefaultNodes(pack.id))
                 if (!merged.Exists(n => n.id == def.id)) merged.Add(def);
@@ -543,7 +543,7 @@ public partial class PixelSkills : MonoBehaviour
                 }   // level 2 now takes the 380 XP level 4 used to (the whole curve x4.75, growth stays 1.5)
                 if (pack.perks != null)   // the level 2 popup that introduces the skill
                     foreach (Perk perk in pack.perks)
-                        if (perk != null && perk.level == 2 && (string.IsNullOrEmpty(perk.noticeText) || perk.noticeText.Contains("Every pixel you click gives Standard XP"))) perk.noticeText = StandardLevel2Notice;
+                        if (perk != null && perk.level == 2 && (string.IsNullOrEmpty(perk.noticeText) || perk.noticeText.Contains("Every pixel you click gives Standard XP") || perk.noticeText.Contains("every level unlocks a perk.\n\nYour first perk"))) perk.noticeText = StandardLevel2Notice;
                 if (perkWindowVersion < 1 && pack.perks != null)   // the level 2 popup opens the Skills window and frames the Standard card
                     foreach (Perk perk in pack.perks)
                         if (perk != null && perk.level == 2) perk.noticeInWindow = true;
@@ -592,6 +592,17 @@ public partial class PixelSkills : MonoBehaviour
                 new TreeNode { id = "compost", displayName = "Compost heap", description = "Fertilizer blocks can be switched on in the Toggles window to spawn in any rotation.", requires = "seeds", row = 2, implemented = true, guestType = "Fertilizer" },
                 new TreeNode { id = "hive", displayName = "Beehive", description = "Pollen blocks can be switched on in the Toggles window to spawn in any rotation.", requires = "rain", row = 0, cost = 2, implemented = true, guestType = "Pollen" },
                 new TreeNode { id = "thumb", displayName = "Green thumb", description = "Sprouts grow a little faster.", requires = "compost", row = 2, cost = 2 },
+            };
+        if (id == StandardId)
+            return new[]
+            {
+                // Two ways to vary plain clicking - the first skill point picks one, later points can take the other and branch on.
+                new TreeNode { id = "hold", displayName = "Block Hold", description = "Hold the RIGHT mouse button on the cube to pull its block out of the rotation while a meter drains. Holding a basic block puts a stake on it: it may pay much more when it comes round again... or nothing.", row = 0, cost = 1, implemented = true },
+                new TreeNode { id = "lucky", displayName = "Lucky stake", description = "Stakes pay off 10% more often.", requires = "hold", row = 0, cost = 1, implemented = true },
+                new TreeNode { id = "highroller", displayName = "High roller", description = "Stakes grow 50% faster while you hold.", requires = "lucky", row = 0, cost = 2, implemented = true },
+                new TreeNode { id = "power", displayName = "Power Click", description = "Hold the LEFT mouse button on the cube to charge, let go at full charge: one click worth 25 clicks. Long cooldown.", row = 2, cost = 1, implemented = true },
+                new TreeNode { id = "quick", displayName = "Quick charge", description = "Power clicks charge 40% faster.", requires = "power", row = 2, cost = 1, implemented = true },
+                new TreeNode { id = "aftershock", displayName = "Aftershock", description = "The power click cooldown is a third shorter.", requires = "quick", row = 2, cost = 2, implemented = true },
             };
         if (id == WoodcuttingId)
             return new[]
@@ -1043,6 +1054,9 @@ public partial class PixelSkills : MonoBehaviour
     }
 
     // ---- Skill tree ----
+
+    /// <summary>Is this node of the STANDARD skill tree unlocked? (Block Hold, Power Click and their branches read it.)</summary>
+    public static bool HasStandardNode(string nodeId) => PixelStats.Total("skill." + StandardId + ".node." + nodeId) >= 1d;
 
     public bool NodeUnlocked(SkillPack pack, TreeNode node) => pack != null && node != null && PixelStats.Total("skill." + pack.id + ".node." + node.id) >= 1d;
 
