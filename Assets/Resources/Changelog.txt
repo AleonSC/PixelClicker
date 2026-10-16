@@ -1138,3 +1138,4 @@
 [2026-10-16 05:20 UTC] Design doc: docs/systems/CombatDesign.md - combat built on Woodcutting's tree mode (an enemy is a tree that fights back), with 12 open questions at the top; linked from the game design doc and added to the to-do.
 [2026-10-16 08:16 UTC] Notes: tree mode was tested in Unity and plays well (only timings and numbers left to tune); the Woodcutting, Combat and game design docs and the PixelTreeMode header say so.
 [2026-10-16 08:32 UTC] Woodcutting tree mode: trees come much less often at low levels - the filler run between trees is 12-30 blocks at level 1 and shrinks evenly to 3-10 by level 20 (all five numbers on the PixelTreeMode component).
+[2026-10-16 09:35 UTC] Wrote docs/TesterGuide-Supper.md: a tester guide for Supper's next playtest (what changed, what to try, how to send feedback with F8, the questions to answer) plus a pre-send checklist for the developer.
