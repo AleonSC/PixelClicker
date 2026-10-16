@@ -44,6 +44,39 @@ public partial class PixelClicker
     [Tooltip("Spawn weight of the Golden Snitch (a very rare drop that flies off the cube). 0 = the coded default (0.00003; a Dragon Cube is 0.0001).")]
     [SerializeField] private float goldenSnitchSpawnWeight = 0f;
 
+    [Min(0.01f)]
+    [Tooltip("Rare drops (Dragon / God / Prime Cubes, the Golden Snitch) get a FIXED chance per block = their spawn weight / this number, " +
+             "no matter how many pixel types are unlocked. (They used to share the normal weighted roll, so at the start - only White unlocked - " +
+             "a Dragon Cube was about 1 in 1,400 blocks instead of 1 in 70,000.) 7 = the odds the weights were chosen for.")]
+    [SerializeField] private float rareReferenceWeight = 7f;
+
+    /// <summary>The fixed chance per block of this rare drop (0 if it is not a rare drop or can't spawn).</summary>
+    private float RareChance(int i) =>
+        IsValidTier(i) && tiers[i].rareDrop && tiers[i].CanSpawn ? SpawnWeightOf(i) / Mathf.Max(0.01f, rareReferenceWeight) : 0f;
+
+    /// <summary>The chance per block that SOME rare drop comes up.</summary>
+    private float RareChanceTotal()
+    {
+        float sum = 0f;
+        for (int i = 0; i < tiers.Length; i++) sum += RareChance(i);
+        return Mathf.Clamp01(sum);
+    }
+
+    /// <summary>Rolls the rare drops on their own, before the normal pick: each has its fixed chance (RareChance).</summary>
+    private bool TryPickRare(out int pick)
+    {
+        pick = -1;
+        float roll = UnityEngine.Random.value;
+        for (int i = 0; i < tiers.Length; i++)
+        {
+            float p = RareChance(i);
+            if (p <= 0f) continue;
+            roll -= p;
+            if (roll < 0f) { pick = i; return true; }
+        }
+        return false;
+    }
+
     /// <summary>The Golden Snitch tier: a very rare drop with no requirements; it never stays on the cube (PixelGoldenSnitch makes it fly).</summary>
     private void EnsureGoldenSnitch()
     {
@@ -478,6 +511,12 @@ public partial class PixelClicker
     public float SpawnShareBase(int i)
     {
         if (!IsValidTier(i) || !tiers[i].CanSpawn || PixelSkills.LeftOutOfSpawns(tiers[i].type)) return 0f;
+        if (tiers[i].rareDrop) return RareChance(i);   // a rare drop's own fixed chance
+        return (1f - RareChanceTotal()) * SpawnShareNonRare(i);   // everything else shares what the rare roll leaves
+    }
+
+    private float SpawnShareNonRare(int i)
+    {
         // The pack's fillers (Twig, Pinecone, Moss) split the filler's share evenly.
         if (PixelSkills.GetFillerFamily(fillerFamilyScratch) && fillerFamilyScratch.Contains(tiers[i].type))
         {
@@ -495,7 +534,7 @@ public partial class PixelClicker
         SpecialInfo(out int fillerIndex, out float fillerWeight, out int hazardIndex, out float hazardWeight);
         float total = 0f;
         for (int k = 0; k < tiers.Length; k++)
-            if (tiers[k].CanSpawn && !PixelSkills.LeftOutOfSpawns(tiers[k].type)) total += k == fillerIndex ? fillerWeight : k == hazardIndex ? hazardWeight : SpawnWeightOf(k);
+            if (tiers[k].CanSpawn && !tiers[k].rareDrop && !PixelSkills.LeftOutOfSpawns(tiers[k].type)) total += k == fillerIndex ? fillerWeight : k == hazardIndex ? hazardWeight : SpawnWeightOf(k);
         float mine = i == fillerIndex ? fillerWeight : i == hazardIndex ? hazardWeight : SpawnWeightOf(i);
         return total > 0f ? mine / total : 0f;
     }
@@ -519,7 +558,7 @@ public partial class PixelClicker
         if (f < 0 && h < 0) return;
         float others = 0f;
         for (int k = 0; k < tiers.Length; k++)
-            if (k != f && k != h && tiers[k].CanSpawn && !PixelSkills.LeftOutOfSpawns(tiers[k].type)) others += SpawnWeightOf(k);
+            if (k != f && k != h && tiers[k].CanSpawn && !tiers[k].rareDrop && !PixelSkills.LeftOutOfSpawns(tiers[k].type)) others += SpawnWeightOf(k);   // (rare drops roll on their own)
         if (others <= 0f) return;
         float basis = others;
         if (f >= 0) { fillerIndex = f; fillerWeight = others * fShare / (1f - fShare); basis += fillerWeight; }
@@ -529,6 +568,8 @@ public partial class PixelClicker
     private int PickSpawnTier()
     {
         PixelTreeMode.TakeTag();   // (clears a stale tag)
+        // Rare drops first, at a fixed chance per block (not weighted against whatever else is unlocked); never while dev spawning or a potion forces a type.
+        if (devSpawnTiers == null && !(IsValidTier(forcedTierIndex) && tiers[forcedTierIndex].unlocked) && TryPickRare(out int rarePick)) return rarePick;
         // Tree mode (Woodcutting with the Oak Trees test pack): filler rotation and trees in their designed order; no filler swap or special-block replacement.
         if (devSpawnTiers == null && !(IsValidTier(forcedTierIndex) && tiers[forcedTierIndex].unlocked) && PixelTreeMode.TryPick(this, out int treePick)) return treePick;
         int pick = PickSpawnTierBase();
@@ -587,14 +628,14 @@ public partial class PixelClicker
         SpecialInfo(out int fillerIndex, out float fillerWeight, out int hazardIndex, out float hazardWeight);
         float total = 0f;
         for (int i = 0; i < tiers.Length; i++)
-            if (tiers[i].CanSpawn && !PixelSkills.LeftOutOfSpawns(tiers[i].type)) total += i == fillerIndex ? fillerWeight : i == hazardIndex ? hazardWeight : SpawnWeightOf(i);
+            if (tiers[i].CanSpawn && !tiers[i].rareDrop && !PixelSkills.LeftOutOfSpawns(tiers[i].type)) total += i == fillerIndex ? fillerWeight : i == hazardIndex ? hazardWeight : SpawnWeightOf(i);
 
         if (total <= 0f) return GetHighestUnlockedIndex();
 
         float roll = UnityEngine.Random.value * total;
         for (int i = 0; i < tiers.Length; i++)
         {
-            if (!tiers[i].CanSpawn || PixelSkills.LeftOutOfSpawns(tiers[i].type)) continue;
+            if (!tiers[i].CanSpawn || tiers[i].rareDrop || PixelSkills.LeftOutOfSpawns(tiers[i].type)) continue;   // (rare drops have their own roll: TryPickRare)
             roll -= i == fillerIndex ? fillerWeight : i == hazardIndex ? hazardWeight : SpawnWeightOf(i);
             if (roll <= 0f) return i;
         }
