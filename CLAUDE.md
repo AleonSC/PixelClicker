@@ -6,7 +6,7 @@
 
 | Script / system | What it is (first sentence) | Details |
 |---|---|---|
-| `PixelClicker.cs` | Core. Click-me hint: while the Inventory UI's guide text ("Click N more...") shows and nothing has been collected yet (PixelClicker.ClickHint, set by PixelUI.UpdateGuide; | in the header comment of `PixelClicker.cs` |
+| `PixelClicker.cs` (+ `PixelClickerTypes/Tiers/Looks/LookFixups/Husks/SkillBlocks/Hazards.cs`, `PixelHusks.cs`) | Core (one partial class over several files; the list is in the header of PixelClicker.cs). Click-me hint: while the Inventory UI's guide text ("Click N more...") shows and nothing has been collected yet (PixelClicker.ClickHint, set by PixelUI.UpdateGuide; | in the header comment of `PixelClicker.cs` |
 | Game reference (for AIs) | docs/GameReference.txt: the whole game in one plain-text file for another AI to read (hand-written overview + enums, block catalog, packs, devices, skills, every script note and system doc). Rebuild it after changes with `python3 tools/game-reference/build.py` (overview text in tools/game-reference/overview.txt). | `docs/GameReference.txt` |
 | Connection map (design) | What every skill, machine, consumable, minigame and special pixel gives, needs and answers, plus the open gaps and the pruning test. Update it when something gains or loses a link. | `docs/systems/ConnectionMap.md` |
 | Pixel rules (design) | A click gives a block's currency (its value) and drops its husk (old pixel = material, never currency); holding a utility block gives charges. Step 1 built (PixelClicker.husksPayCurrency off: husks give XP / their effect, never currency); Recycler and charges not built. | `docs/systems/PixelRules.md` |
