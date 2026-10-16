@@ -1172,3 +1172,5 @@
 [2026-10-16 14:07 UTC] Intro fix: the Inventory no longer flashes its pinned version for a frame when the intro opens it.
 [2026-10-16 14:07 UTC] Intro fix: the cube can't be clicked until the new-game intro boxes are done (the click guide shows after them), a few early clicks no longer skip the intro, and the right-click tip waits until Block Hold is unlocked.
 [2026-10-16 14:18 UTC] Intro fix: whether a game is new is now decided the moment Play is pressed, so clicking right after the camera swing is blocked and can no longer stop the intro.
+[2026-10-16 14:26 UTC] Aim cursor: over the cube the cursor becomes a small cube in the middle and an arrow near the edges that turns to show where the husk will fly (tinted by the block, punches on each click); the normal cursor is back anywhere else.
+[2026-10-16 14:26 UTC] Recycler: its streak now tops out at x5 XP (was x20), and the currency it pays back no longer counts towards unlocking the next tier, so unlocks come from clicking.

@@ -1350,6 +1350,18 @@ public partial class PixelClicker : MonoBehaviour
     }
 
     /// <summary>Adds to a tier's amount (use negative via <see cref="TrySpend"/> instead) and checks unlocks.</summary>
+    /// <summary>
+    /// Currency that does NOT count as earned: it is added to what you hold, but not to the lifetime total that unlocks the next tier (and shows
+    /// in the Log). Used by the Recycler, so tier unlocks come from clicking, with recycling as a bonus on top.
+    /// </summary>
+    public void AddBonusCurrency(int tierIndex, double amount)
+    {
+        if (!IsValidTier(tierIndex) || amount <= 0 || IsGodCube(tiers[tierIndex].type)) return;
+        tiers[tierIndex].count += amount;
+        CurrencyGained?.Invoke(tierIndex, amount);
+        NotifyChanged();
+    }
+
     public void AddCurrency(int tierIndex, double amount)
     {
         if (!IsValidTier(tierIndex) || amount <= 0) return;

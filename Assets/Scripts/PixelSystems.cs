@@ -41,6 +41,7 @@ public static class PixelSystems
         new Entry(typeof(PixelPets), "Characters"),
         new Entry(typeof(PixelSkills), "Skills"),
         new Entry(typeof(PixelBlockTooltip), "UI"),
+        new Entry(typeof(PixelAimCursor), "UI"),
         new Entry(typeof(PixelShopNudge), "UI"),
         new Entry(typeof(PixelTreasureMap), "Skills"),
         new Entry(typeof(PixelWhaleFight), "Skills"),

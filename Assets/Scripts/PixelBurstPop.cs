@@ -48,17 +48,31 @@ public partial class PixelClicker
     /// Edge-click aiming: where the click landed on the cube (on the SCREEN, so the cube's spin does not matter) picks the husk's heading on the floor.
     /// Near the middle the random heading is kept; towards the edge it narrows to that side (aimSpread either way). Returns a normalized flat (x, z) direction.
     /// </summary>
-    private Vector2 AimedDirection(Vector2 random)
+    /// <summary>
+    /// Edge-click aiming as seen from a screen point: the on-screen direction from the cube's centre to the point and how sharp the aim is there
+    /// (0 = the random middle, 1 = fully aimed). Shared by the throw (AimedDirection) and the aim cursor (PixelAimCursor). False when aiming is off.
+    /// </summary>
+    public bool TryGetAim(Vector2 screen, out Vector2 screenDir, out float sharp)
     {
+        screenDir = Vector2.right;
+        sharp = 0f;
         Camera cam = targetCamera != null ? targetCamera : Camera.main;
-        if (!edgeAiming || cam == null || pixelTransform == null || PixelFirstPerson.Active) return random;
+        if (!edgeAiming || cam == null || pixelTransform == null || PixelFirstPerson.Active) return false;
         Vector3 centre = cam.WorldToScreenPoint(pixelTransform.position);
         Vector3 edge = cam.WorldToScreenPoint(pixelTransform.position + cam.transform.right * (PixelBaseSize * 0.5f));
         float halfPx = Mathf.Abs(edge.x - centre.x);
-        if (centre.z <= 0f || halfPx < 1f) return random;
-        Vector2 offset = (PointerPosition() - new Vector2(centre.x, centre.y)) / halfPx;
-        float sharp = Mathf.InverseLerp(aimDeadZone, Mathf.Max(aimDeadZone + 0.01f, aimFullAt), offset.magnitude);
-        if (sharp <= 0f) return random;
+        if (centre.z <= 0f || halfPx < 1f) return false;
+        Vector2 offset = (screen - new Vector2(centre.x, centre.y)) / halfPx;
+        if (offset.sqrMagnitude > 0.0001f) screenDir = offset.normalized;
+        sharp = Mathf.InverseLerp(aimDeadZone, Mathf.Max(aimDeadZone + 0.01f, aimFullAt), offset.magnitude);
+        return true;
+    }
+
+    private Vector2 AimedDirection(Vector2 random)
+    {
+        Camera cam = targetCamera != null ? targetCamera : Camera.main;
+        if (!TryGetAim(PointerPosition(), out Vector2 screenDir, out float sharp) || sharp <= 0f) return random;
+        Vector2 offset = screenDir;
         // The screen direction of the click, laid flat on the floor (camera right / up projected onto the ground plane).
         Vector3 world = cam.transform.right * offset.x + cam.transform.up * offset.y;
         Vector2 aim = new Vector2(world.x, world.z);
