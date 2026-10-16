@@ -1234,3 +1234,4 @@
 [2026-10-16 17:34 UTC] The rare cat visitors (Egg and Bean) can no longer be switched off in Toggles > Vendors.
 [2026-10-16 17:34 UTC] The Farmer now only visits while you are training Farming; the Lumberjack and Farmer rows in Toggles > Vendors have an orange '!' whose tooltip says when they visit.
 [2026-10-16 17:40 UTC] The Sap husk's yellow circle is more transparent and subtle: a faint fill that fades towards the middle and a soft thin rim.
+[2026-10-16 17:42 UTC] The Underwater and Deep Ocean skies now have a dark shark silhouette slowly circling far below - only at the bottom of the sky, so you see it when looking down past the cube (with the floor off), never on the sides.

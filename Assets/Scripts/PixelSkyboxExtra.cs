@@ -373,7 +373,61 @@ public partial class PixelSkybox
             float d = (new Vector3(p.x - cx, p.y - cy, p.z - cz) - centre).magnitude;
             c += Color.white * Mathf.Clamp01(1f - d / 0.45f) * (0.25f + 0.5f * PixelNoise.Hash(cx, cy, s.seed + 404)) * Mathf.Clamp01(0.4f + up);
         }
+
+        // A SHARK circling far below - only in the bottom of the sky (straight down, never on the sides): a dark, hazy silhouette.
+        if (up < -0.5f) c = Color.Lerp(c, s.groundColor * 0.35f, SharkShade(dir, t) * 0.6f * Sstep(0.5f, 0.72f, -up));
         return c;
+    }
+
+    /// <summary>
+    /// 0..1: how much of a swimming shark covers this direction. The directions below are projected onto a flat 'sea floor' plane (the nadir = its middle);
+    /// the shark swims a slow wobbly circle round it, its body / tail / fins tested in its own frame, the tail half swaying as it swims.
+    /// </summary>
+    private static float SharkShade(Vector3 dir, float t)
+    {
+        float k = 1f / -dir.y;
+        Vector2 q = new Vector2(dir.x * k, dir.z * k);
+        float theta = t * 0.24f;                                          // one lap in about 26 s
+        float radius = 0.42f + 0.06f * Mathf.Sin(t * 0.37f);
+        Vector2 pos = new Vector2(Mathf.Cos(theta), Mathf.Sin(theta)) * radius;
+        Vector2 fwd = new Vector2(-Mathf.Sin(theta), Mathf.Cos(theta));   // swimming along the circle
+        Vector2 side = new Vector2(fwd.y, -fwd.x);
+        const float length = 0.42f;
+        Vector2 d = q - pos;
+        float u = Vector2.Dot(d, fwd) / length, v = Vector2.Dot(d, side) / length;
+        if (Mathf.Abs(u) > 1f || Mathf.Abs(v) > 1f) return 0f;
+        v -= Mathf.Sin(t * 3.2f - u * 4f) * 0.05f * Mathf.Clamp01(0.4f - u);   // the swimming sway, stronger towards the tail
+
+        // body: a long rounded spindle from the tail stalk (u -0.45) to the pointed snout (u 0.6)
+        float bodyHalf = 0f;
+        if (u > -0.45f && u < 0.6f)
+        {
+            float a = (u - 0.05f) / (u > 0.05f ? 0.55f : 0.5f);
+            bodyHalf = 0.12f * Mathf.Sqrt(Mathf.Clamp01(1f - a * a));
+        }
+        float av = Mathf.Abs(v);
+        float shape = av < bodyHalf ? 1f : 0f;
+        // tail: a forked crescent behind the stalk
+        if (u <= -0.42f && u > -0.72f)
+        {
+            float span = (-0.42f - u) * 0.75f;
+            if (av < span && av > span * 0.25f - 0.01f) shape = 1f;
+            if (av < 0.025f) shape = 1f;
+        }
+        // pectoral fins: swept-back triangles either side
+        if (InTri(new Vector2(u, av), new Vector2(0.16f, 0.08f), new Vector2(-0.02f, 0.08f), new Vector2(-0.12f, 0.3f))) shape = 1f;
+        // the dorsal fin seen from above: a short dark ridge along the back
+        if (u > -0.08f && u < 0.12f && av < 0.03f) shape = 1f;
+        return shape;
+    }
+
+    private static bool InTri(Vector2 p, Vector2 a, Vector2 b, Vector2 c)
+    {
+        float d1 = (p.x - b.x) * (a.y - b.y) - (a.x - b.x) * (p.y - b.y);
+        float d2 = (p.x - c.x) * (b.y - c.y) - (b.x - c.x) * (p.y - c.y);
+        float d3 = (p.x - a.x) * (c.y - a.y) - (c.x - a.x) * (p.y - a.y);
+        bool neg = d1 < 0f || d2 < 0f || d3 < 0f, pos = d1 > 0f || d2 > 0f || d3 > 0f;
+        return !(neg && pos);
     }
 
     /// <summary>Square clouds drawn on cells of a flat layer overhead (cube-world style).</summary>
