@@ -43,6 +43,16 @@ public static class PixelFind
         return found;
     }
 
+    /// <summary>The first object of the given component type in the scene (or null) - for code that only has a Type, like PixelSystems.</summary>
+    public static UnityEngine.Object First(Type type)
+    {
+#if UNITY_2023_1_OR_NEWER
+        return UnityEngine.Object.FindFirstObjectByType(type);
+#else
+        return UnityEngine.Object.FindObjectOfType(type);
+#endif
+    }
+
     /// <summary>Every object of type T in the scene (a new array each call: for dev tools / one-off dumps, not for Update).</summary>
     public static T[] All<T>() where T : UnityEngine.Object
     {

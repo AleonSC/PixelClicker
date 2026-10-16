@@ -889,53 +889,7 @@ public partial class PixelClicker : MonoBehaviour
 
     private void Awake()
     {
-        if (PixelFind.First<PixelTitleScreen>() == null) gameObject.AddComponent<PixelTitleScreen>(); // start screen (Play button)
-        if (PixelFind.First<PixelHints>() == null) gameObject.AddComponent<PixelHints>(); // first-time tips
-        if (PixelFind.First<PixelCrashLog>() == null) gameObject.AddComponent<PixelCrashLog>(); // writes error / crash reports
-        if (PixelFind.First<PixelViewBounds>() == null) gameObject.AddComponent<PixelViewBounds>(); // keeps old pixels on screen
-        if (PixelFind.First<PixelMinigameLimits>() == null) gameObject.AddComponent<PixelMinigameLimits>(); // how many minigames run at once
-        if (PixelFind.First<PixelPets>() == null) gameObject.AddComponent<PixelPets>(); // rare pet versions of the pixels you click
-        if (PixelFind.First<PixelSkills>() == null) gameObject.AddComponent<PixelSkills>();   // skill packs: Standard / Mining, the Skills window
-        if (PixelFind.First<PixelBlockTooltip>() == null) gameObject.AddComponent<PixelBlockTooltip>();   // hover tooltip for blocks
-        if (PixelFind.First<PixelShopNudge>() == null) gameObject.AddComponent<PixelShopNudge>();   // points the player at the Shop button after Cubie's second visit
-        if (PixelFind.First<PixelTreasureMap>() == null) gameObject.AddComponent<PixelTreasureMap>();   // Fishing: the treasure map from a message in a bottle
-        if (PixelFind.First<PixelWhaleFight>() == null) gameObject.AddComponent<PixelWhaleFight>();   // Fishing: the whale that fights the line
-        if (PixelFind.First<PixelGodFind>() == null) gameObject.AddComponent<PixelGodFind>();   // the God Cubes' shows
-        if (PixelFind.First<PixelInfinity>() == null) gameObject.AddComponent<PixelInfinity>();
-        if (PixelFind.First<PixelCustomKeys>() == null) gameObject.AddComponent<PixelCustomKeys>();   // custom keybinds (My Window > Keybinds)
-        if (PixelFind.First<PixelCollectionLog>() == null) gameObject.AddComponent<PixelCollectionLog>();   // the Collection Log book (opened from the Log window)   // the Prime Cubes' Gauntlet window
-        if (PixelFind.First<PixelDragonFind>() == null) gameObject.AddComponent<PixelDragonFind>();   // the show when a Dragon Cube turns up
-        if (PixelFind.First<PixelPixelGuide>() == null) gameObject.AddComponent<PixelPixelGuide>();   // the Pixel Guide window
-        if (PixelFind.First<PixelShuffleBonus>() == null) gameObject.AddComponent<PixelShuffleBonus>();   // the shuffle bonus test (tap right click on filler blocks)
-        if (PixelFind.First<PixelFocus>() == null) gameObject.AddComponent<PixelFocus>();
-        if (PixelFind.First<PixelTreeMode>() == null) gameObject.AddComponent<PixelTreeMode>();   // tree mode (Woodcutting trees, test pack)   // Focus potions (Lumberjack's Focus...: hold off a skill's hazard for a while)
-        if (PixelFind.First<PixelBaitBucket>() == null) gameObject.AddComponent<PixelBaitBucket>();   // Fishing's bait bucket consumable
-        if (PixelFind.First<PixelViewWindow>() == null) gameObject.AddComponent<PixelViewWindow>();   // the View window (key V): views, flat view, zoom, orbit controls
-        if (PixelFind.First<PixelZoom>() == null) gameObject.AddComponent<PixelZoom>();   // zoom key (X): three levels, hold + wheel for any
-        if (PixelFind.First<PixelOrbitCamera>() == null) gameObject.AddComponent<PixelOrbitCamera>();   // orbital camera (third step of the view key)
-        if (PixelFind.First<PixelClickerAura>() == null) gameObject.AddComponent<PixelClickerAura>();   // the soft glow behind the clicker cube (Settings)
-        if (PixelFind.First<PixelDayNight>() == null) gameObject.AddComponent<PixelDayNight>();   // day / night cycle (sun, ambient, sky tint)
-        if (PixelFind.First<PixelMyWindow>() == null) gameObject.AddComponent<PixelMyWindow>();   // the player's own window
-        if (PixelFind.First<PixelDaylight>() == null) gameObject.AddComponent<PixelDaylight>();   // Solar's daylight bar
-        if (PixelFind.First<PixelNextUp>() == null) gameObject.AddComponent<PixelNextUp>();   // the 'Next up' window (Block Hold)
-        if (PixelFind.First<PixelDidYouKnow>() == null) gameObject.AddComponent<PixelDidYouKnow>();   // random 'Did you know?' tips
-        if (PixelFind.First<PixelFilters>() == null) gameObject.AddComponent<PixelFilters>();   // the screen filters (CRT, VHS...)
-        if (PixelFind.First<PixelBlockHold>() == null) gameObject.AddComponent<PixelBlockHold>();   // the Block Hold upgrade
-        if (PixelFind.First<PixelHazardTell>() == null) gameObject.AddComponent<PixelHazardTell>();   // hazard blocks get warning tells (glow, sign, sound)
-        if (PixelFind.First<PixelBlockRules>() == null) gameObject.AddComponent<PixelBlockRules>();   // special blocks + hold blocks (data rules)
-        if (PixelFind.First<PixelGreatOak>() == null) gameObject.AddComponent<PixelGreatOak>();   // Woodcutting's Great Oak bird nests
-        if (PixelFind.First<PixelMold>() == null) gameObject.AddComponent<PixelMold>();
-        if (PixelFind.First<PixelGoldenSnitch>() == null) gameObject.AddComponent<PixelGoldenSnitch>();   // the very rare Golden Snitch that flies off the cube   // Foraging's mold zone and glowing finds
-        if (PixelFind.First<PixelEggHatch>() == null) gameObject.AddComponent<PixelEggHatch>();   // the egg's hatching show
-        if (PixelFind.First<PixelFirstPerson>() == null) gameObject.AddComponent<PixelFirstPerson>(); // run about on the floor at half the size of an old pixel
-        if (PixelFind.First<PixelGuideVendor>() == null) gameObject.AddComponent<PixelGuideVendor>(); // Cubie, the shopkeeper who introduces the shop and the vendors
-        if (PixelFind.First<PixelDragonWish>() == null) gameObject.AddComponent<PixelDragonWish>(); // the Dragon Cube wish (all seven cubes)
-        if (PixelFind.First<PixelOvercharge>() == null) gameObject.AddComponent<PixelOvercharge>(); // clicking an Electric pixel overcharges the auto clicker
-        if (PixelFind.First<PixelElectricLinks>() == null) gameObject.AddComponent<PixelElectricLinks>(); // Electric old pixels arc to nearby devices
-        if (PixelFind.First<PixelCameraIntro>() == null) gameObject.AddComponent<PixelCameraIntro>();       // start close up, then zoom out
-        if (PixelFind.First<PixelFloor>() == null) gameObject.AddComponent<PixelFloor>(); // floor styles (Settings)
-        if (PixelFind.First<PixelSkybox>() == null) gameObject.AddComponent<PixelSkybox>(); // skybox styles (Settings, title screen)
-        if (PixelFind.First<PixelOrthoView>() == null) gameObject.AddComponent<PixelOrthoView>();   // optional flat (orthographic) view
+        PixelSystems.AddMissing(gameObject);   // every system component not already in the scene (the list and their groups: PixelSystems.cs)
         if (pixelTransform == null) pixelTransform = transform;
         if (pixelRenderer == null) pixelRenderer = pixelTransform.GetComponentInChildren<Renderer>();
         if (targetCamera == null) targetCamera = Camera.main;

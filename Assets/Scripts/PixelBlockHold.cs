@@ -237,7 +237,7 @@ public class PixelBlockHold : MonoBehaviour
     private float SlideSeconds => slideSeconds > 0f ? slideSeconds : 0.25f;
     private float SideDistance => sideDistance > 0f ? sideDistance : 2.3f;
 
-    private void Awake() { Instance = this; clicker = GetComponent<PixelClicker>(); }
+    private void Awake() { Instance = this; clicker = GetComponent<PixelClicker>(); if (clicker == null) clicker = PixelFind.First<PixelClicker>(); }
 
     /// <summary>The shop upgrade was bought.</summary>
     public void Activate() { unlocked = true; }
@@ -445,7 +445,7 @@ public class PixelBlockHold : MonoBehaviour
         DestroyVisual();
     }
 
-    private void OnEnable() { if (clicker == null) clicker = GetComponent<PixelClicker>(); if (clicker != null) clicker.StakeAppeared += OnStakeAppeared; }
+    private void OnEnable() { if (clicker == null) clicker = GetComponent<PixelClicker>(); if (clicker == null) clicker = PixelFind.First<PixelClicker>(); if (clicker != null) clicker.StakeAppeared += OnStakeAppeared; }
     private void OnDisable() { if (clicker != null) clicker.StakeAppeared -= OnStakeAppeared; PixelClickerAura.StakeHighlight = new Color(0f, 0f, 0f, 0f); }
 
     private bool introTried;

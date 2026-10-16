@@ -59,6 +59,7 @@ public class PixelGreatOak : MonoBehaviour
     private void OnEnable()
     {
         clicker = GetComponent<PixelClicker>();
+        if (clicker == null) clicker = PixelFind.First<PixelClicker>();   // (works on its own object too)
         if (clicker != null) clicker.PixelHit += OnHit;
     }
 

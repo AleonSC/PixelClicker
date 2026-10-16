@@ -34,7 +34,7 @@ public class PixelHazardTell : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() { signSprite = null; }
 
-    private void Awake() { clicker = GetComponent<PixelClicker>(); }
+    private void Awake() { clicker = GetComponent<PixelClicker>(); if (clicker == null) clicker = PixelFind.First<PixelClicker>(); }   // (works on its own object too)
 
     private void OnDisable() { Hide(); }
 

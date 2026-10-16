@@ -70,7 +70,7 @@ public class PixelNextUp : MonoBehaviour
     private readonly Chip[] slot = new Chip[3];   // 0 = next (top), 1 = now, 2 = before (bottom)
     private bool built, synced;
 
-    private void Awake() { clicker = GetComponent<PixelClicker>(); }
+    private void Awake() { clicker = GetComponent<PixelClicker>(); if (clicker == null) clicker = PixelFind.First<PixelClicker>(); }
 
     private void Update()
     {

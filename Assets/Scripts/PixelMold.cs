@@ -94,7 +94,7 @@ public class PixelMold : MonoBehaviour
     private Transform disc;
     private Material discMaterial;
 
-    private void Awake() { Instance = this; clicker = GetComponent<PixelClicker>(); }
+    private void Awake() { Instance = this; clicker = GetComponent<PixelClicker>(); if (clicker == null) clicker = PixelFind.First<PixelClicker>(); }
 
     /// <summary>A click on the Mold block: the mold zone around 'pos' (the cube) grows by 'steps' steps.</summary>
     public static void Spread(Vector3 pos, float steps = 1f)
