@@ -16,7 +16,7 @@
 //   still skips Standard.
 //   Standard's XP popups and level-up log lines show from the very FIRST click (no longer only once a skill pack exists). Its level 2 perk carries the
 //   intro popup (StandardLevel2Notice, the perk's noticeText: 'you have been training a skill all along...'), shown once through the perk notices.
-//   The level 2 popup opens the Skills window on Standard, sits small to its right (PixelNotice beside the window) and frames the Standard card with
+//   The level 2 popup opens the Skills window on Standard, sits small to its right (PixelNotice beside the window, time frozen until Got it) and frames the Standard card with
 //   the shared pulsing gold frame (PixelHighlight) until Got it (Perk.noticeInWindow, any perk can use it; perkWindowVersion 1 switched it on).
 //   The Skills window has a '?' button next to the X that plays Cubie's skills intro again (StartTutorial).
 // ---------------------------------------------------

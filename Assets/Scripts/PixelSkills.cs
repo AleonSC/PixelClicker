@@ -1233,14 +1233,14 @@ public partial class PixelSkills : MonoBehaviour
         if (!PixelCalm.ForTip) return;
         PerkNotice notice = perkNotices.Dequeue();
         int index = packs.FindIndex(p => p.id == notice.packId);
-        if (!notice.inWindow || !built || index < 0 || PixelTutorialDim.Active) { PixelNotice.Show(notice.text); return; }
+        if (!notice.inWindow || !built || index < 0 || PixelTutorialDim.Active) { PixelNotice.Show(notice.text, freezeTime: notice.inWindow); return; }
         // Beside the Skills window: it opens on this skill, the small box sits to its right and the skill's card pulses gold until Got it.
         OpenWindow();
         selected = index;
         RefreshWindow();
         RectTransform card = index < cards.Count && cards[index].button != null ? cards[index].button.GetComponent<RectTransform>() : null;
         if (card != null) PixelHighlight.Set(perkHighlightKey, card);
-        PixelNotice.Show(notice.text, 0f, () => PixelHighlight.Clear(perkHighlightKey), small: true, beside: windowRect);
+        PixelNotice.Show(notice.text, 0f, () => PixelHighlight.Clear(perkHighlightKey), small: true, beside: windowRect, freezeTime: true);   // (time stands still while the player reads it - Standard level 2's skill intro)
     }
 
     /// <summary>
