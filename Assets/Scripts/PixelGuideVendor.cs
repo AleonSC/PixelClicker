@@ -18,7 +18,7 @@
 //   vendor the player switched off in Toggles is never restarted; PixelVisitorMinigame.ScheduleFirstVisit). All texts / numbers are
 //   Inspector fields (disableGuide turns it all off). The page lists (visitOnePages / visitTwoPages) are filled with the built-in lines when empty
 //   (EnsureDefaultPages in Awake and the editor's OnValidate, like PixelHints), so Cubie's lines are edited in the Inspector.
-//   Visit 1 waits until visitOneAfterWhiteClicks (50) White pixels have been clicked (the White tier's timesCollected). A visit-1 page containing {recycler} hands over a Recycler
+//   Visit 1 waits until visitOneAfterWhiteClicks (100) White pixels have been clicked (the White tier's timesCollected). A visit-1 page containing {recycler} hands over a Recycler
 //   (PixelConsumables.GiveDevice; text recyclerGiftText); a page list without the token still gets it when the visit ends.
 // ---------------------------------------------------
 using System.Collections;
@@ -55,7 +55,8 @@ public class PixelGuideVendor : MonoBehaviour
 
     [Min(0)]
     [Tooltip("Visit 1 waits until this many White pixels have been clicked (so Cubie does not turn up the moment the game starts).")]
-    [SerializeField] private int visitOneAfterWhiteClicks = 50;
+    [SerializeField] private int visitOneAfterWhiteClicks = 100;
+    [SerializeField, HideInInspector] private int cubieDataVersion; // 1 = visit 1 after 100 White clicks (was 50)
 
     /// <summary>How many White pixels have been clicked so far (PixelTier.timesCollected, saved).</summary>
     private long WhiteClicks()
@@ -408,6 +409,7 @@ public class PixelGuideVendor : MonoBehaviour
         instance = this;
         EnsureDefaultPages();
         if (characterName == "Cubby") characterName = "Cubie"; // a scene saved before the rename
+        if (cubieDataVersion < 1) { if (visitOneAfterWhiteClicks == 50) visitOneAfterWhiteClicks = 100; cubieDataVersion = 1; }   // (2026-10-16: Cubie comes after 100 White clicks)
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (shop == null) shop = PixelFind.First<PixelShop>();
     }

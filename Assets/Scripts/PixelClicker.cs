@@ -140,7 +140,7 @@ public partial class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
-    [SerializeField, HideInInspector] private int tierDataVersion; // 1 = Gray / Black unlock at 250 (was 100)
+    [SerializeField, HideInInspector] private int tierDataVersion; // 1 = Gray / Black unlock at 250 (was 100); 2 = Gray at 300 White, Black at 200 Gray
     [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission; 22 = Vacuum vortex marks + violet rim; 23 = RGB lost their rim, Gray rim darker; 24 = Black / Gray lost their rim, Obsidian rim darker; 25 = Fire + ore looks added; 26 = Treasure chest look added; 27 = Nuclear look added; 35 = Meteor / Solar looks; 36 = rocky pixels jagged, no outlines; 38 = Vacuum glass container; 39 = Ghost gel blob; 49 = RGB lost their faint emission, Mirror no longer leans on reflections / emission
 
     [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
@@ -267,9 +267,9 @@ public partial class PixelClicker : MonoBehaviour
         new PixelTier { type = PixelType.White, displayName = "White Pixels", color = Color.white,
                         amountPerClick = 1, unlockedAtStart = true, unlockThreshold = 0 },
         new PixelTier { type = PixelType.Gray,  displayName = "Gray Pixels",  color = new Color(0.5f, 0.5f, 0.5f),
-                        amountPerClick = 1, unlockThreshold = 250 },
+                        amountPerClick = 1, unlockThreshold = 300 },
         new PixelTier { type = PixelType.Black, displayName = "Black Pixels", color = Color.black,
-                        amountPerClick = 1, unlockThreshold = 250 },
+                        amountPerClick = 1, unlockThreshold = 200 },
     };
 
     [Tooltip("Each new pixel spawns as a random UNLOCKED tier (weighted by each tier's Spawn Weight). Clicking it gives that tier's currency. Overrides the two settings below.")]
@@ -908,6 +908,18 @@ public partial class PixelClicker : MonoBehaviour
                 if (t != null && (t.type == PixelType.Gray || t.type == PixelType.Black) && t.unlockMode == TierUnlockMode.PreviousTierThreshold && t.unlockThreshold == 100d)
                     t.unlockThreshold = 250d;
             tierDataVersion = 1;
+        }
+        if (tierDataVersion < 2)
+        {
+            // Fewer of each later tier (2026-10-16): the spawn pool gets more mixed with every tier, so Gray needs 300 White, Black 200 Gray
+            // (and the RGB step asks 100 Black). Only an untouched 100 / 250 is changed.
+            foreach (PixelTier t in tiers)
+            {
+                if (t == null || t.unlockMode != TierUnlockMode.PreviousTierThreshold || (t.unlockThreshold != 100d && t.unlockThreshold != 250d)) continue;
+                if (t.type == PixelType.Gray) t.unlockThreshold = 300d;
+                else if (t.type == PixelType.Black) t.unlockThreshold = 200d;
+            }
+            tierDataVersion = 2;
         }
 
         if (pixelRenderer != null)

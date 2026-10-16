@@ -7,7 +7,7 @@ want to hear from you. Play however you like - the most useful thing is just pla
 
 - **Husks (the little cubes that fall off when you click) are material now, not money.** A click gives you that block's pixels; the
   husk that drops is a leftover. Husks give skill XP when you use them up, and they're what machines work with.
-- **Cubie shows up after you've clicked 50 White pixels** and gives you a gift, including a **Recycler**: drop husks in the bin, press
+- **Cubie shows up after you've clicked 100 White pixels** and gives you a gift, including a **Recycler**: drop husks in the bin, press
   its button, and you get some pixels back for them. (Remember he gave you that. He will too.)
 - **Skills come much earlier.** Your Standard skill levels from every block; at level 2 the Skills window opens and you can start
   working towards your first skill pack.

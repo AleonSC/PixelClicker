@@ -19,7 +19,7 @@ The meter starts short; Standard skill perks make it longer, and every few of yo
 The <b>Next up</b> window at the left shows the block coming next, the one on the cube and the one before (switch it off in Settings > Interface).
 
 # Cubie
-Cubie, a suspicious little cube, drops by now and then to show you around. After you have clicked 50 White pixels he pays his first visit and gives you a Recycler. When the Shop opens he comes back with a gift and introduces the other visitors. You can replay his visits with Settings > Replay tutorial.
+Cubie, a suspicious little cube, drops by now and then to show you around. After you have clicked 100 White pixels he pays his first visit and gives you a Recycler. When the Shop opens he comes back with a gift and introduces the other visitors. You can replay his visits with Settings > Replay tutorial.
 
 # The Shop
 The Shop button appears once you unlock the Black pixel. It has four tabs:

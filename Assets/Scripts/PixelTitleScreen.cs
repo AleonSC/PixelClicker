@@ -447,6 +447,7 @@ public class PixelTitleScreen : MonoBehaviour
 
         if (!menuOpen) foreach (LookPicker p in lookPickers) RefreshPicker(p, false);
         UpdatePickerFade();
+        UpdateRecordLabel();
         UpdateLookTip(lookFont);
 
         if (logoRect != null && !playing)
@@ -602,6 +603,8 @@ public class PixelTitleScreen : MonoBehaviour
             }
         }
 
+        if (showRecordButton && PixelDevTools.Available) BuildRecordButton(font);
+
     }
 
     [Header("Music selector")]
@@ -689,6 +692,45 @@ public class PixelTitleScreen : MonoBehaviour
         RefreshPicker(picker, true);
     }
 
+    // ---- dev: the session recorder's Start / Stop & save button at the top left (fades in on hover like the pickers) ----
+    [Tooltip("Dev builds (where the Dev Tools exist): a hidden 'Record session' button at the top left of the start screen that fades in when the mouse comes near, the same as the floor / sky pickers.")]
+    [SerializeField] private bool showRecordButton = true;
+    [Tooltip("Size of the dev Record session button.")]
+    [SerializeField] private Vector2 recordButtonSize = new Vector2(300f, 54f);
+    private TMP_Text recordLabel;
+
+    private void BuildRecordButton(TMP_FontAsset font)
+    {
+        GameObject root = new GameObject("Record Session (dev)", typeof(RectTransform));
+        root.transform.SetParent(foreground.transform, false);
+        RectTransform rr = root.GetComponent<RectTransform>();
+        rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(0f, 1f);
+        rr.sizeDelta = recordButtonSize;
+        rr.anchoredPosition = new Vector2(pickerCornerMargin.x, -pickerCornerMargin.y);
+        shrinkRects.Add(rr);
+        LookPicker fade = new LookPicker { source = null, rect = rr, group = root.AddComponent<CanvasGroup>() };
+        fade.group.alpha = 0f;
+        Button b = PixelUIKit.CreateButton(font, root.transform, "Button", "", recordButtonSize, smallButtonColor, buttonTextColor, Mathf.Max(16f, lookNameFontSize));
+        PixelUIKit.Stretch(b.GetComponent<RectTransform>());
+        recordLabel = b.GetComponentInChildren<TMP_Text>();
+        b.onClick.AddListener(() => { if (PixelSessionRecorder.Recording) PixelSessionRecorder.StopAndSave(); else PixelSessionRecorder.StartRecording(); UpdateRecordLabel(); });
+        lookPickers.Add(fade);
+        UpdateRecordLabel();
+    }
+
+    private void UpdateRecordLabel()
+    {
+        if (recordLabel == null) return;
+        string text;
+        if (PixelSessionRecorder.Recording)
+        {
+            int sec = Mathf.FloorToInt(PixelSessionRecorder.ElapsedSeconds);
+            text = "STOP & SAVE " + (sec / 60) + ":" + (sec % 60).ToString("00");
+        }
+        else text = "RECORD SESSION";
+        if (recordLabel.text != text) recordLabel.text = text;
+    }
+
     // ---- the picker's name shows in a small tooltip while the mouse is over it ----
     private LookPicker hoveredPicker;
 
@@ -750,6 +792,7 @@ public class PixelTitleScreen : MonoBehaviour
     /// <summary>Updates a picker's picture and name when the look changed (from here, Settings, or the look waking up).</summary>
     private static void RefreshPicker(LookPicker p, bool force)
     {
+        if (p.source == null) return;   // (the dev Record session button shares the pickers' fade but has no look)
         IPixelLookSource look = p.source();
         bool usable = look != null && look.Usable;
         int index = usable ? look.Current : -1;

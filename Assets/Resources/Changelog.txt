@@ -1155,3 +1155,6 @@
 [2026-10-16 12:08 UTC] To-do: added the Ultra pixel cosmetics shop (locked floors and skies, Wardrobe tab).
 [2026-10-16 12:08 UTC] To-do: the power click line now notes it is unlocked by the Standard skill tree.
 [2026-10-16 12:11 UTC] The Golden Snitch now looks like the snitch while it sits on the cube (studs, gems, engraved edges, wing knobs) and its wings sprout right there when you click it before it rises off the cube.
+[2026-10-16 12:21 UTC] Dev builds: a hidden Record session button at the top left of the main menu (fades in when the mouse comes near) starts and stops the session recorder.
+[2026-10-16 12:21 UTC] Cubie's first visit now comes after 100 White pixel clicks (was 50).
+[2026-10-16 12:21 UTC] Monochrome retuned for the mixed spawn pool: Gray unlocks at 300 White and Black at 200 Gray (was 250 each); the RGB step still asks 100 Black.
