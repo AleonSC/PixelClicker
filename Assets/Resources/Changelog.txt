@@ -1220,3 +1220,5 @@
 [2026-10-16 17:05 UTC] Lumberjack's Focus now costs 3 Termite Hives plus two different random pure pixels (rolled each visit).
 [2026-10-16 17:05 UTC] Lumberjack's Focus also costs some of one random woodcutting pixel (with the Termite Hives and two random pure pixels).
 [2026-10-16 17:05 UTC] Fixed rerolling Big Tim's offers by spamming 'Ask for an offer': his random roll is now fixed per wood / pay pair for the whole visit (a new visit rolls again).
+[2026-10-16 17:08 UTC] New code-made wood chopping sounds for Wood, Bark (drier, crackly) and Heartwood (deeper, rings longer) and the axe: a sharp blade 'tock', a woody body, a thump and a crackle of splinters.
+[2026-10-16 17:08 UTC] Trees now sound like they are coming down: every block's sound rises in pitch as you work through the tree, and the trunk creaks on its last two blocks before Timber.

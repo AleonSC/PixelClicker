@@ -151,6 +151,20 @@ public class PixelTreeMode : MonoBehaviour
 
     public static PixelTreeMode Instance { get; private set; }
 
+    /// <summary>How far along the live tree the block on the cube is: 0 = its first block .. 1 = its last (-1 = no tree on the cube). PixelAudio raises the block sounds with it.</summary>
+    public static float LiveProgress
+    {
+        get
+        {
+            PixelTreeMode m = Instance;
+            if (m == null || m.liveName == null) return -1f;
+            return m.liveTotal <= 1 ? 1f : Mathf.Clamp01((m.liveIndex - 1) / (float)(m.liveTotal - 1));
+        }
+    }
+
+    /// <summary>Blocks of the live tree still to come after the one on the cube, counting it (1 = the last block is on the cube; 0 = no tree).</summary>
+    public static int LiveBlocksLeft => Instance == null || Instance.liveName == null ? 0 : Instance.liveTotal - Instance.liveIndex + 1;
+
     private const string BarKey = "tree";
     private const int TagTree = 1, TagLast = 2, TagFirst = 4;
 

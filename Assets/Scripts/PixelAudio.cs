@@ -275,6 +275,7 @@ public partial class PixelAudio : MonoBehaviour
             Make("axe_swing", 0.1f, 0.95f, 1.08f),
             Make("axe_chop", 0.05f, 0.92f, 1.08f),
             Make("nest_fall", 0.1f, 0.95f, 1.1f),
+            Make("tree_creak", 0.4f, 0.95f, 1.05f),   // a tree's last blocks: the trunk creaks (PixelTreeMode.LiveBlocksLeft)
             Make("nest_catch", 0.1f, 0.97f, 1.05f),
             Make("remove_buildup", 0.05f, 1f, 1f),   // the rising whine while the right mouse button is held on a placed device (PixelHold)
             Make("sorter_button", 0.2f, 1f, 1f),
@@ -430,12 +431,12 @@ public partial class PixelAudio : MonoBehaviour
             case "pixel_weeds": return new[] { PixelSynth.Forage(4, 1), PixelSynth.Forage(4, 2), PixelSynth.Forage(4, 3) };
             case "pixel_mold":
             case "pixel_toadstool": return new[] { PixelSynth.Forage(5, 1), PixelSynth.Forage(5, 2) };
-            case "wood_chop": return new[] { PixelSynth.Wood(0, 1), PixelSynth.Wood(0, 2), PixelSynth.Wood(0, 3) };
-            case "pixel_wood": return new[] { PixelSynth.Wood(0, 1), PixelSynth.Wood(0, 2), PixelSynth.Wood(0, 3) };
-            case "pixel_bark": return new[] { PixelSynth.Wood(1, 1), PixelSynth.Wood(1, 2), PixelSynth.Wood(1, 3) };
+            case "wood_chop": return new[] { PixelAxeSynth.WoodChop(1, 1f, 1f, 1f), PixelAxeSynth.WoodChop(2, 1f, 1f, 1f), PixelAxeSynth.WoodChop(3, 1f, 1f, 1f) };
+            case "pixel_wood": return new[] { PixelAxeSynth.WoodChop(1, 1f, 1f, 1f), PixelAxeSynth.WoodChop(2, 1f, 1f, 1f), PixelAxeSynth.WoodChop(3, 1f, 1f, 1f) };   // an axe biting into a log
+            case "pixel_bark": return new[] { PixelAxeSynth.WoodChop(4, 1.15f, 2.6f, 0.7f), PixelAxeSynth.WoodChop(5, 1.15f, 2.6f, 0.7f), PixelAxeSynth.WoodChop(6, 1.15f, 2.6f, 0.7f) };   // drier, crackly, shorter
+            case "pixel_heartwood": return new[] { PixelAxeSynth.WoodChop(7, 0.72f, 0.6f, 1.8f), PixelAxeSynth.WoodChop(8, 0.72f, 0.6f, 1.8f) };   // deep, dense, rings longer
             case "pixel_sap": return new[] { PixelSynth.Wood(2, 1), PixelSynth.Wood(2, 2), PixelSynth.Wood(2, 3) };
             case "pixel_leaf": return new[] { PixelSynth.Wood(3, 1), PixelSynth.Wood(3, 2), PixelSynth.Wood(3, 3) };
-            case "pixel_heartwood": return new[] { PixelSynth.Wood(4, 1), PixelSynth.Wood(4, 2) };
             case "pixel_twig": return new[] { PixelSynth.Wood(5, 1), PixelSynth.Wood(5, 2), PixelSynth.Wood(5, 3) };
             case "pixel_hornetnest": return new[] { PixelSynth.Wood(6, 1), PixelSynth.Wood(6, 2) };
             case "farm_hit": return new[] { PixelSynth.Farm(0, 1), PixelSynth.Farm(0, 2), PixelSynth.Farm(0, 3) };
@@ -1011,8 +1012,12 @@ public partial class PixelAudio : MonoBehaviour
         if (clicker != null && tierIndex >= 0 && tierIndex < clicker.Tiers.Length)
         {
             PixelClicker.PixelType type = clicker.Tiers[tierIndex].type;
-            // Obsidian: the clicks climb in pitch, the breaking one is the highest.
-            PlaySound("pixel_" + PixelBlockCatalog.SoundType(type).ToString().ToLowerInvariant(), type == PixelClicker.PixelType.Obsidian ? 1.6f : 1f);   // (a card can borrow another block's sounds: soundAs)
+            // Obsidian: the clicks climb in pitch, the breaking one is the highest. Inside a TREE every block sounds a little higher the further
+            // along the tree you are, and the trunk creaks on the last two blocks - an audible 'nearly down' cue before Timber.
+            float pitch = type == PixelClicker.PixelType.Obsidian ? 1.6f : TreePitch();
+            PlaySound("pixel_" + PixelBlockCatalog.SoundType(type).ToString().ToLowerInvariant(), pitch);   // (a card can borrow another block's sounds: soundAs)
+            int left = PixelTreeMode.LiveBlocksLeft;
+            if (left == 1 || left == 2) PlaySound("tree_creak", left == 1 ? 1.08f : 0.95f, left == 1 ? 1f : 0.6f);
         }
     }
 
@@ -1025,9 +1030,16 @@ public partial class PixelAudio : MonoBehaviour
         {
             float ramp = Mathf.Clamp01(hits / (float)Mathf.Max(1, needed));
             PixelClicker.PixelType type = clicker.Tiers[tierIndex].type;
-            float pitch = type == PixelClicker.PixelType.Obsidian ? Mathf.Lerp(0.6f, 1.45f, ramp) : 1f;   // starts low, rises each click
+            float pitch = type == PixelClicker.PixelType.Obsidian ? Mathf.Lerp(0.6f, 1.45f, ramp) : TreePitch();   // starts low, rises each click
             PlaySound("pixel_" + PixelBlockCatalog.SoundType(type).ToString().ToLowerInvariant(), pitch, Mathf.Max(0.1f, ramp * ramp));
         }
+    }
+
+    /// <summary>Inside a tree: the block sounds rise from 0.9x on its first block to 1.25x on its last (1 outside a tree).</summary>
+    private static float TreePitch()
+    {
+        float p = PixelTreeMode.LiveProgress;
+        return p < 0f ? 1f : Mathf.Lerp(0.9f, 1.25f, p);
     }
 
     private void OnVacuumed(int tierIndex, double total, int count) => PlaySound("vacuum", 1f);
