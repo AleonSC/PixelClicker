@@ -1211,3 +1211,5 @@
 [2026-10-16 16:38 UTC] Added the Lumberjack's Focus item (Supplies, right-click to drink: no Termite Hives for a minute); the Lumberjack sells it now and then (35% of visits, 1-2 in stock).
 [2026-10-16 16:48 UTC] With Info on in the Pocket window, hovering a block shows its info there even when block tooltips are switched off in game.
 [2026-10-16 16:48 UTC] Pocket tab buttons (Event log...) and the in-game event log switch keep their text on one line, shrinking it to fit a narrow window.
+[2026-10-16 16:53 UTC] Right-clicking / holding right on the clicker cube no longer removes a placed device behind or under it (the cube in front wins).
+[2026-10-16 16:53 UTC] The Recycler's placing ghost now shows its real size with the Bin Size upgrades.

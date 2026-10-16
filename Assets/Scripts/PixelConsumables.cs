@@ -1400,8 +1400,14 @@ public class PixelConsumables : MonoBehaviour
         if (cam == null) return null;
         Ray ray = cam.ScreenPointToRay(PointerPosition());
 
+        // The clicker cube in front of a device wins: a right click / hold on the cube (Block Hold) must not remove the device under it.
+        float cubeDistance = float.MaxValue;
+        if (clicker.PixelTransform != null)
+            foreach (RaycastHit h in Physics.RaycastAll(ray, 1000f, ~0, QueryTriggerInteraction.Collide))
+                if (h.transform.IsChildOf(clicker.PixelTransform) && h.distance < cubeDistance) cubeDistance = h.distance;
+
         PixelPlacedDevice best = null;
-        float bestDistance = float.MaxValue;
+        float bestDistance = cubeDistance;   // (a device only counts when it is nearer than the cube)
         foreach (PixelPlacedDevice device in PixelPlacedDevice.All)
         {
             if (device == null || device.IsRemoving || (onlyDisarmed && device.Armed)) continue;
@@ -2802,7 +2808,13 @@ public class PixelConsumables : MonoBehaviour
         if (d.kind == DeviceKind.Recycler)
         {
             suckPoint = null; timer = null;
-            return isPreview ? PixelRecycler.CreateGhost(clicker) : displayOnly ? PixelRecycler.CreateDisplay(clicker) : PixelRecycler.Place(clicker, Vector3.zero, 0f);
+            if (isPreview)
+            {
+                GameObject ghost = PixelRecycler.CreateGhost(clicker);
+                ghost.transform.localScale = Vector3.one * Mathf.Max(0.5f, d.radius > 0f ? d.radius : 1f);   // the placing ghost shows the real size (Operation: Bin Size), like Place does
+                return ghost;
+            }
+            return displayOnly ? PixelRecycler.CreateDisplay(clicker) : PixelRecycler.Place(clicker, Vector3.zero, 0f);
         }
 
         GameObject root = new GameObject(isPreview ? d.displayName + " (Preview)" : d.displayName);
