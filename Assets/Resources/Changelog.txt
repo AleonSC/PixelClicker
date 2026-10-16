@@ -1151,3 +1151,4 @@
 [2026-10-16 11:54 UTC] New TEST feature: the power click - hold left mouse on the cube to charge it (a ring fills and the cube trembles), let go at full charge for one dramatic click worth 25 clicks (flash, shockwave, popup, boom), then a 45 s cooldown shown as a ring while hovering the cube; normal clicking is unchanged. Added to the to-do as a decide-after-testing item.
 [2026-10-16 12:05 UTC] Monochrome pixels now take 250 Gray and 250 Black (was 100) to unlock the next tier - a trial to see how the slower start plays.
 [2026-10-16 12:05 UTC] Standard got a skill tree: the level 2 skill point goes on Block Hold or Power Click (both locked until then), each with two upgrades (Lucky stake / High roller, Quick charge / Aftershock); the level 2 popup now tells you where to spend the point.
+[2026-10-16 12:06 UTC] Project notes: Block Hold and Power Click are now listed as unlocked by the Standard skill tree.
