@@ -259,6 +259,18 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     /// <summary>True for a vendor that both SELLS wares and BUYS pixels: the window gets a Buy tab (the wares) and a Sell tab (the trades from <see cref="RollTrades"/>).</summary>
     protected virtual bool BuySellTabs => false;
 
+    /// <summary>A vendor with its OWN Sell tab (BuySellTabs): BuildSellPanel fills a container in place of the trade rows (e.g. the Lumberjack's 'choose an amount, get an offer' panel).</summary>
+    protected virtual bool CustomSellPanel => false;
+    /// <summary>Height the custom Sell panel needs (the window grows to fit it).</summary>
+    protected virtual float SellPanelHeight => 0f;
+    /// <summary>Builds the custom Sell tab into 'parent' (stretched over the list area). Called once per visit when the window is built.</summary>
+    protected virtual void BuildSellPanel(RectTransform parent) { }
+    /// <summary>The custom Sell tab became visible (refresh what you hold, etc.).</summary>
+    protected virtual void OnSellPanelShown() { }
+    /// <summary>The shared UI font, for a subclass that builds its own UI.</summary>
+    protected TMP_FontAsset VendorFont => Font;
+    private RectTransform sellPanelRoot;
+
     /// <summary>Label of a trade's button.</summary>
     protected virtual string TradeText => "Trade";
 
@@ -870,7 +882,8 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         int tallest = tabsMode ? Mathf.Max(wares.Count, trades != null ? trades.Count : 0) : rowCount;
         float rowH = 104f;
         float tabsH = tabsMode ? 64f : 0f;
-        float height = Mathf.Min(1080f - 2f * barH - 30f, 190f + tabsH + tallest * (rowH + 8f) + 110f);
+        float listH = Mathf.Max(tallest * (rowH + 8f), tabsMode && CustomSellPanel ? SellPanelHeight : 0f);
+        float height = Mathf.Min(1080f - 2f * barH - 30f, 190f + tabsH + listH + 110f);
         waresPanel = Panel("Wares", new Vector2(900f, Mathf.Max(420f, height)), visitorRect.sizeDelta.x + 90f);
         TMP_Text wt = PixelUIKit.CreateText(Font, waresPanel, "Title", Pick(waresTitle, DefaultWaresTitle), 50f, TextAlignmentOptions.Center, FontStyles.Bold, TitleColor);
         PixelUIKit.Caps(wt);
@@ -905,6 +918,19 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         vr.anchorMax = Vector2.one;
         vr.offsetMin = new Vector2(24f, 110f);
         vr.offsetMax = new Vector2(-24f, -132f - tabsH);
+
+        // A vendor's own Sell tab (in place of the trade rows), over the same area as the list.
+        sellPanelRoot = null;
+        if (tabsMode && CustomSellPanel)
+        {
+            GameObject sp = new GameObject("Sell Panel", typeof(RectTransform));
+            sp.transform.SetParent(waresPanel, false);
+            sellPanelRoot = sp.GetComponent<RectTransform>();
+            sellPanelRoot.anchorMin = Vector2.zero; sellPanelRoot.anchorMax = Vector2.one;
+            sellPanelRoot.offsetMin = vr.offsetMin; sellPanelRoot.offsetMax = vr.offsetMax;
+            BuildSellPanel(sellPanelRoot);
+            sp.SetActive(false);
+        }
 
         rows.Clear();
         float y = 0f;
@@ -1034,6 +1060,12 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             y += rowH + 8f;
         }
         PixelUIKit.UpdateScrollView(waresScroll, waresBar, Mathf.Max(0f, y - 8f), waresViewHeight);
+        if (sellPanelRoot != null)
+        {
+            bool sellShown = shopTab == 1;
+            waresScroll.gameObject.SetActive(!sellShown);
+            if (sellPanelRoot.gameObject.activeSelf != sellShown) { sellPanelRoot.gameObject.SetActive(sellShown); if (sellShown) OnSellPanelShown(); }
+        }
         if (tabButtons != null)
             for (int i = 0; i < tabButtons.Length; i++)
                 tabButtons[i].GetComponent<Image>().color = i == shopTab ? new Color(0.25f, 0.5f, 0.75f, 1f) : new Color(0.22f, 0.24f, 0.32f, 1f);

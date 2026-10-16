@@ -121,6 +121,8 @@ public class PixelConsumables : MonoBehaviour
         ConveyorBelt = 18,
         /// <summary>Placed for 5 minutes (PixelRecyclerDevice; Operation upgrades): an open bin (PixelRecycler) that recycles every husk landing in it (50% back + XP with a same-type streak).</summary>
         Recycler = 19,
+        /// <summary>Not placed: right-click to drink a skill's Focus potion (PixelFocus: its hazard block stops spawning for a while). Sold now and then by the skill's vendor (the Lumberjack: Lumberjack's Focus).</summary>
+        FocusPotion = 20,
     }
 
     /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
@@ -900,6 +902,25 @@ public class PixelConsumables : MonoBehaviour
         };
     }
 
+    private static Device CreateDefaultFocusPotion()
+    {
+        return new Device
+        {
+            kind = DeviceKind.FocusPotion,
+            displayName = "Lumberjack's Focus",
+            description = "Right-click to drink. For a minute no Termite Hive turns up while you train Woodcutting. Sold now and then by the Lumberjack. Hold up to 5.",
+            requiredType = PixelClicker.PixelType.Wood,
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Wood, amount = 60 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Sap,  amount = 15 },
+            },
+            maxHeld = 5,
+            vendorOnly = true,
+            color = new Color(0.45f, 0.85f, 0.35f, 1f),
+        };
+    }
+
     private static Device CreateDefaultChargeBooster()
     {
         return new Device
@@ -1055,6 +1076,7 @@ public class PixelConsumables : MonoBehaviour
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Gauntlet, CreateDefaultGauntlet),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ConveyorBelt, CreateDefaultConveyorBelt),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Recycler, CreateDefaultRecycler),
+                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.FocusPotion, CreateDefaultFocusPotion),
                 })
                 {
                     DeviceKind wanted = extra.Key;
@@ -1880,6 +1902,7 @@ public class PixelConsumables : MonoBehaviour
                 case DeviceKind.BaitBucket:
                 case DeviceKind.Gauntlet:
                 case DeviceKind.ConveyorBelt:
+                case DeviceKind.FocusPotion:
                     root = BuildItemModel(kind, d);
                     break;
             }
@@ -1934,6 +1957,22 @@ public class PixelConsumables : MonoBehaviour
             GameObject flame = MakePrimitive(PrimitiveType.Sphere, "Flame", root.transform, bright, false);
             flame.transform.localScale = new Vector3(0.22f, 0.34f, 0.22f);
             flame.transform.localPosition = new Vector3(0f, 1.2f, 0f);
+        }
+        else if (kind == DeviceKind.FocusPotion)
+        {
+            // A round bottle with a long neck, a cork and a bright band.
+            GameObject body = MakePrimitive(PrimitiveType.Sphere, "Bottle", root.transform, new Color(main.r, main.g, main.b, 1f), false);
+            body.transform.localScale = new Vector3(0.7f, 0.7f, 0.7f);
+            body.transform.localPosition = new Vector3(0f, 0.38f, 0f);
+            GameObject neck = MakePrimitive(PrimitiveType.Cylinder, "Neck", root.transform, bright, false);
+            neck.transform.localScale = new Vector3(0.22f, 0.2f, 0.22f);
+            neck.transform.localPosition = new Vector3(0f, 0.85f, 0f);
+            GameObject cork = MakePrimitive(PrimitiveType.Cylinder, "Cork", root.transform, new Color(0.55f, 0.38f, 0.22f, 1f), false);
+            cork.transform.localScale = new Vector3(0.18f, 0.08f, 0.18f);
+            cork.transform.localPosition = new Vector3(0f, 1.1f, 0f);
+            GameObject band = MakePrimitive(PrimitiveType.Cylinder, "Band", root.transform, dark, false);
+            band.transform.localScale = new Vector3(0.72f, 0.04f, 0.72f);
+            band.transform.localPosition = new Vector3(0f, 0.4f, 0f);
         }
         else if (kind == DeviceKind.GhostBait)
         {
@@ -2059,7 +2098,7 @@ public class PixelConsumables : MonoBehaviour
     {
         if (!IsDevice(item)) return false;
         DeviceKind k = devices[item - potions.Length].kind;
-        return k == DeviceKind.ComboFuel || k == DeviceKind.GhostBait || k == DeviceKind.PetTreat || k == DeviceKind.BaitBucket || k == DeviceKind.Gauntlet || k == DeviceKind.ConveyorBelt;
+        return k == DeviceKind.ComboFuel || k == DeviceKind.GhostBait || k == DeviceKind.PetTreat || k == DeviceKind.BaitBucket || k == DeviceKind.Gauntlet || k == DeviceKind.ConveyorBelt || k == DeviceKind.FocusPotion;
     }
 
     /// <summary>0 = potion, 1 = placeable device (Utilities), 2 = seed, 3 = supply (instant-use item).</summary>
@@ -2123,6 +2162,15 @@ public class PixelConsumables : MonoBehaviour
                 return true;
             case DeviceKind.Gauntlet:
                 return PixelInfinity.Open(this, item);   // the window uses up the Gauntlet when the Cubelette is forged
+            case DeviceKind.FocusPotion:
+            {
+                PixelFocus focus = PixelFocus.Instance;
+                if (focus == null || !focus.DrinkForSkill(PixelSkills.WoodcuttingId)) { PixelHints.Announce("The focus potion can't be drunk right now"); return false; }
+                if (!Inf) devices[index].owned--;
+                PixelStats.Count("focus.used");
+                PixelHints.Announce(devices[index].displayName + ": no hazards for a while");
+                return true;
+            }
             case DeviceKind.BaitBucket:
             {
                 if (!PixelBaitBucket.TryPlace(out string bucketMessage)) { if (!string.IsNullOrEmpty(bucketMessage)) PixelHints.Announce(bucketMessage); return false; }

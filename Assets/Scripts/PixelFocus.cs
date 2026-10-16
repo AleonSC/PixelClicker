@@ -4,7 +4,8 @@
 //   active, the HAZARD block of its skill stops spawning (PixelSkills.TryGetHazard returns false, so SpecialInfo gives the hazard no weight and the rest of the rotation renormalises;
 //   the pre-rolled Next-up block is dropped too, PixelClicker.UpcomingValid). A hazard that is already on the cube is NOT removed. The filler is untouched (the shuffle bonus still works).
 //   Only the skill named in skillId is affected, and only while that skill is in play; the timer keeps running if the player switches away.
-//   First potion: Lumberjack's Focus (woodcutting, 60 s, holds off the Termite Hive, the Hornet Nest block's new name). NOT sold anywhere yet: for now it is consumed from Dev Tools (the 'Focus potions' widget: drop-down +
+//   First potion: Lumberjack's Focus (woodcutting, 60 s, holds off the Termite Hive, the Hornet Nest block's new name). Now an ITEM too (PixelConsumables DeviceKind.FocusPotion, Supplies, vendorOnly: the Lumberjack sells it now
+//   and then, focusChance; right-click drinks it through DrinkForSkill). Also consumed from Dev Tools (the 'Focus potions' widget: drop-down +
 //   Drink + Cancel) through Drink(index) / Cancel(). A shop / crafting recipe from the skill's own materials is the intended source later.
 //   Runs on game time (pauses with the game), one potion at a time (drinking another replaces it), not saved. The countdown shows as a PixelStatusLines line (key 'focus').
 // ---------------------------------------------------
@@ -79,6 +80,14 @@ public class PixelFocus : MonoBehaviour
     }
 
     /// <summary>Drinks the potion at this index of <see cref="Potions"/> (replaces the one that is active). False if there is no such potion or focus is switched off.</summary>
+    /// <summary>Drinks the first focus potion of this skill (the item in the inventory does this). False if there is none or focus is switched off.</summary>
+    public bool DrinkForSkill(string skillId)
+    {
+        if (potions == null) return false;
+        for (int i = 0; i < potions.Count; i++) if (potions[i] != null && potions[i].skillId == skillId) return Drink(i);
+        return false;
+    }
+
     public bool Drink(int index)
     {
         if (disableFocus || potions == null || index < 0 || index >= potions.Count || potions[index] == null) return false;

@@ -113,7 +113,7 @@ public class PixelSessionRecorder : MonoBehaviour
     private readonly Dictionary<string, SkillRun> skillRuns = new Dictionary<string, SkillRun>();
     private string lastTrainingId;
     private static readonly string[] WoodKeys =
-        { "woodcutting.trees_started", "woodcutting.trees_felled", "woodcutting.trees_infested", "woodcutting.timber_xp", "hazards.triggered", "hazards.defused", "lumberjack.bought", "old.shredded" };
+        { "woodcutting.trees_started", "woodcutting.trees_felled", "woodcutting.trees_infested", "woodcutting.timber_xp", "hazards.triggered", "hazards.defused", "lumberjack.bought", "lumberjack.sold", "focus.used", "old.shredded" };
 
     private static string TrainingIdNow()
     {
@@ -604,7 +604,7 @@ public class PixelSessionRecorder : MonoBehaviour
                 sb.AppendLine("  Trees started: " + D("woodcutting.trees_started").ToString("F0") + ", felled (Timber!): " + D("woodcutting.trees_felled").ToString("F0") +
                               ", infested: " + D("woodcutting.trees_infested").ToString("F0") + ", Timber XP: " + PixelClicker.FormatNumber(D("woodcutting.timber_xp")));
                 sb.AppendLine("  Hazards set off: " + D("hazards.triggered").ToString("F0") + ", cleared with right click: " + D("hazards.defused").ToString("F0") + "  (all skills)");
-                sb.AppendLine("  Big Tim (Lumberjack) trades: " + D("lumberjack.bought").ToString("F0") + ", husks shredded (Wood Chipper): " + D("old.shredded").ToString("F0"));
+                sb.AppendLine("  Big Tim (Lumberjack) buys: " + D("lumberjack.bought").ToString("F0") + ", wood sold to him: " + D("lumberjack.sold").ToString("F0") + ", focus potions drunk: " + D("focus.used").ToString("F0") + ", husks shredded (Wood Chipper): " + D("old.shredded").ToString("F0"));
             }
         }
         sb.AppendLine();
