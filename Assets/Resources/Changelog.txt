@@ -1119,3 +1119,4 @@
 [2026-10-15 18:14 UTC] Code cleanup: every PlayerPrefs call (392 in all scripts) now goes through PixelPrefs, which warns in the Editor when a setting is read as the wrong type (the bug that once wiped colours and the skill pack on load); per-save settings can declare themselves with PixelPrefs.DeclarePerSave instead of being typed into PixelSettingsSync's list.
 [2026-10-15 18:22 UTC] Dev Hub: every remembered choice (Super Rares, Unlock, Focus, middle-click swap, Max XP - which is now remembered too - and the double floor tick box) is now kept per save like the older ones; PixelDevTools declares its keys in one list.
 [2026-10-16 01:31 UTC] Notes: CLAUDE.md now records that the user never edits the code (Claude writes all of it), so cleanups are judged by what keeps Claude's work safe across sessions.
+[2026-10-16 01:33 UTC] Notes: the user reads the code now and then to learn, so it stays readable and commented (second to keeping Claude's work safe).
