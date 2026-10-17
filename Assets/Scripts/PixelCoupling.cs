@@ -102,6 +102,20 @@ public class PixelCoupling : MonoBehaviour
         foreach (PixelSocket s in d.Sockets) if (s != null && s.fitted && On(d, s) == null) Fit(d, s);
     }
 
+    /// <summary>Takes every coupling off this device at once (a piece that rebuilds its model: its fitted couplings are made again after).</summary>
+    public static void RemoveAll(IPixelSocketDevice d)
+    {
+        for (int i = all.Count - 1; i >= 0; i--)
+        {
+            PixelCoupling c = all[i];
+            if (c == null) { all.RemoveAt(i); continue; }
+            if (c.device != d) continue;
+            all.RemoveAt(i);
+            c.gameObject.SetActive(false);
+            Destroy(c.gameObject);
+        }
+    }
+
     /// <summary>On a Both socket: In (true) or Out (false). Other sockets keep their own direction.</summary>
     public void SetDirection(bool intake)
     {

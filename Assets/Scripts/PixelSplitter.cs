@@ -2,14 +2,14 @@
 // PixelSplitter.cs
 //   SPLITTER BLOCK (a Dev Hub > Tester feature, PixelFeatureTester 'Splitter'): a low square block that SNAPS to the end of a conveyor belt (PixelSplitter.TrySnap: bring the ghost near a belt end and it
 //   latches on, turned the belt's way, its entry face meeting the belt's end, at the belt's height) and shares what the belt brings out of the OTHER THREE sides (front +Z, right +X, left -X). A new
-//   belt snaps to any of the three output points (PixelConveyor.Snap offers SplitterOutputs). It is an IPixelBeltAcceptor: a pixel handed in is sent to the next output in turn (round robin), but
-//   only among the sides that have a belt starting there (output points within ~1 cube of a belt start); if no side has a belt, all three are used and the pixels are flung out. Each side has its
+//   belt snaps to any of the three outputs. SOCKETS (PixelSockets.cs, couplings built in): 'in' (the entry) and 'out0..2' (the sides). A husk handed in (AcceptHusk) is sent to the next output in turn (round robin), but
+//   only among the sides whose Out coupling has a belt starting at it (PixelCouplings.OutputConnected; Emit puts it on); if no side has a belt, all three are used and the pixels are flung out. Each side has its
 //   own PixelPathCarrier (entry -> centre -> out), so a side that is full (maxQueuedPerSide) is skipped and, if all are full, the belt keeps (ejects) the pixel. Raised splitters get posts to the floor. Saved with the tester save.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelSplitter : MonoBehaviour, IPixelBeltAcceptor
+public class PixelSplitter : MonoBehaviour, IPixelSocketDevice
 {
     [Min(0f)]
     [Tooltip("How fast pixels cross the block, in cube widths per second. 0 = the coded default (2.5).")]
@@ -42,8 +42,24 @@ public class PixelSplitter : MonoBehaviour, IPixelBeltAcceptor
 
     private static Vector3 SideDir(int i) => i == 0 ? Vector3.forward : i == 1 ? Vector3.right : Vector3.left;
 
-    /// <summary>The point where a belt starts on output side i (0 front, 1 right, 2 left): the middle of that face at the block's level (a belt's bottom).</summary>
-    public Vector3 OutputPoint(int i) => transform.TransformPoint(SideDir(i) * (HalfCubes * unit));
+    // ---- Sockets (PixelSockets.cs): the entry (In) and the three sides (Out), each with a coupling built in ----
+    private PixelSocket[] sockets = new PixelSocket[0];
+    public Transform SocketRoot => transform;
+    public IReadOnlyList<PixelSocket> Sockets => sockets;
+    public Color SocketTint => new Color(0.55f, 0.58f, 0.64f, 1f);
+    private static string OutId(int side) => "out" + side;
+
+    private void MakeSockets()
+    {
+        float half = HalfCubes * unit;
+        sockets = new[]
+        {
+            new PixelSocket("in", new Vector3(0f, 0f, -half), Vector3.back, PixelSocketFlow.Intake, true),
+            new PixelSocket(OutId(0), SideDir(0) * half, SideDir(0), PixelSocketFlow.Output, true),
+            new PixelSocket(OutId(1), SideDir(1) * half, SideDir(1), PixelSocketFlow.Output, true),
+            new PixelSocket(OutId(2), SideDir(2) * half, SideDir(2), PixelSocketFlow.Output, true),
+        };
+    }
 
     // ---------------- building ----------------
 
@@ -66,12 +82,14 @@ public class PixelSplitter : MonoBehaviour, IPixelBeltAcceptor
         s.clicker = c;
         s.ghost = ghostMode;
         s.unit = Mathf.Max(0.05f, c.OldPixelWorldSize);
+        if (!ghostMode) s.MakeSockets();
         s.Rebuild();
         return root;
     }
 
     private void Rebuild()
     {
+        PixelCoupling.RemoveAll(this);   // (its built-in couplings are children: made again below)
         for (int i = transform.childCount - 1; i >= 0; i--) { GameObject old = transform.GetChild(i).gameObject; old.SetActive(false); Destroy(old); }
         builtY = transform.position.y;
         float u = unit, half = HalfCubes * u, plate = PlateCubes * u;
@@ -93,6 +111,7 @@ public class PixelSplitter : MonoBehaviour, IPixelBeltAcceptor
             for (int sz = -1; sz <= 1; sz += 2)
                 k.Box("Post", transform, new Vector3(sx * o, (floorLocal + 0.5f * u) * 0.5f, sz * o), new Vector3(0.14f * u, 0.5f * u - floorLocal, 0.14f * u), steel, default, false, 0.7f, 0.5f);
         paths = null;
+        if (!ghost) PixelCoupling.FitBuiltIn(this);
     }
 
     // ---------------- placing ----------------
@@ -129,8 +148,8 @@ public class PixelSplitter : MonoBehaviour, IPixelBeltAcceptor
 
     // ---------------- behaviour ----------------
 
-    private void OnEnable() { if (!ghost) { if (clicker == null) clicker = PixelFind.First<PixelClicker>(); PixelConveyorSystem.Register(this); } if (!all.Contains(this)) all.Add(this); }
-    private void OnDisable() { PixelConveyorSystem.Unregister(this); all.Remove(this); }
+    private void OnEnable() { if (clicker == null) clicker = PixelFind.First<PixelClicker>(); PixelCouplings.Register(this); if (!all.Contains(this)) all.Add(this); }
+    private void OnDisable() { PixelCouplings.Unregister(this); all.Remove(this); }
     private void OnDestroy() { foreach (PixelPathCarrier c in carriers) c.ReleaseAll(); }
 
     private void Update()
@@ -138,24 +157,8 @@ public class PixelSplitter : MonoBehaviour, IPixelBeltAcceptor
         if (ghost && Mathf.Abs(transform.position.y - builtY) > 0.01f) Rebuild();   // (the ghost's posts follow its height above the floor)
     }
 
-    public bool AcceptsAt(Vector3 world)
-    {
-        if (ghost) return false;
-        Vector3 l = transform.InverseTransformPoint(world) / Mathf.Max(0.0001f, unit);
-        return Mathf.Abs(l.x) < HalfCubes + 0.3f && l.z > -HalfCubes - 0.7f && l.z < -HalfCubes + 1.0f && l.y > -0.4f && l.y < 1.5f;
-    }
-
-    private bool Connected(int side)
-    {
-        Vector3 o = OutputPoint(side);
-        foreach (PixelConveyor belt in PixelConveyor.All)
-        {
-            if (belt == null || belt.IsGhost) continue;
-            Vector3 d = belt.StartPoint - o;
-            if (new Vector3(d.x, 0f, d.z).magnitude < unit && Mathf.Abs(d.y) < 0.6f * unit) return true;
-        }
-        return false;
-    }
+    /// <summary>Does a belt start at this side's Out coupling?</summary>
+    private bool Connected(int side) => PixelCouplings.OutputConnected(this, OutId(side));
 
     private void EnsurePaths()
     {
@@ -174,8 +177,8 @@ public class PixelSplitter : MonoBehaviour, IPixelBeltAcceptor
         }
     }
 
-    /// <summary>A belt hands a pixel in: it goes to the next output in turn (among the sides with a belt, or all three if none has one).</summary>
-    public bool AcceptFromBelt(Rigidbody pixel)
+    /// <summary>A husk comes in through the entry coupling: it goes to the next output in turn (among the sides with a belt, or all three if none has one).</summary>
+    public bool AcceptHusk(PixelSocket socket, Rigidbody pixel)
     {
         if (ghost || pixel == null || clicker == null) return false;
         EnsurePaths();
@@ -203,24 +206,11 @@ public class PixelSplitter : MonoBehaviour, IPixelBeltAcceptor
         }
     }
 
-    /// <summary>A pixel reaches the edge of its side: onto a belt that starts there, or flung outwards.</summary>
+    /// <summary>A pixel reaches the edge of its side: out through that side's coupling onto the belt there (PixelCouplings.Emit), or flung outwards.</summary>
     private void PutOut(Rigidbody rb, int side)
     {
-        Vector3 end = paths[side][2], outward = transform.TransformDirection(SideDir(side));
-        float oldSize = clicker.OldPixelWorldSize;
-        Vector3 velocity = outward * unit * 2f;
-        Vector3 o = OutputPoint(side);
-        foreach (PixelConveyor belt in PixelConveyor.All)
-        {
-            if (belt == null || belt.IsGhost) continue;
-            Vector3 d = belt.StartPoint - o;
-            if (new Vector3(d.x, 0f, d.z).magnitude > 1.3f * unit || Mathf.Abs(d.y) > 1.2f * unit) continue;
-            Vector3 over = belt.PointAt(0.6f * oldSize);
-            end = new Vector3(over.x, over.y + belt.SurfaceHeight + oldSize * 0.7f, over.z);
-            velocity = belt.Direction * belt.Speed * 0.5f;
-            break;
-        }
-        rb.position = end;
-        PixelPathCarrier.SetVelocity(rb, velocity);
+        if (PixelCouplings.Emit(this, OutId(side), rb)) return;
+        rb.position = paths[side][2];
+        PixelPathCarrier.SetVelocity(rb, transform.TransformDirection(SideDir(side)) * unit * 2f);
     }
 }

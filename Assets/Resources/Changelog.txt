@@ -1302,3 +1302,4 @@
 [2026-10-17 13:05 UTC] Couplings step 2 (Storage Crate): the crate now connects through a 'front' socket - an In coupling takes belts in, an Out coupling lets a hose pull from it; its old belt intake is gone.
 [2026-10-17 13:06 UTC] Couplings step 2 (Kiln): the Kiln's mouth is now an In socket and its back chute an Out socket (charcoal goes onto a belt starting at an Out coupling there); its old belt intake and connector port are gone.
 [2026-10-17 13:07 UTC] Couplings step 2 (Trash Can): the Trash Can now takes belts, connectors and hoses through two In sockets (front / back); its old belt intake is gone.
+[2026-10-17 13:08 UTC] Couplings step 2 (Splitter): the Splitter's entry and three sides are now sockets with couplings built in (their arrows show in / out); it hands husks out through them, and its own belt-finding code is gone.
