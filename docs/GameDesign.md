@@ -390,7 +390,7 @@ Chips / Magic Wood have no use yet.
 - **Tools:** the Dev Hub's Balance report (per-skill XP, minutes to level), `PixelBalanceReport.cs`.
 - Open: the long-term sink **(Q9)**, offline progress **(Q10)**.
 
-### Shop consumable pricing (Agreed 2026-10-17, not built)
+### Shop consumable pricing (Agreed 2026-10-17, built 2026-10-17)
 Why: the early devices cost White (or Gray) only, but the shop opens after all six pure colours are unlocked (the 10:50 report: RGB at
 3:59, shop at 4:29), so White drains while the other five pile up. Income in that report (per minute, session average): White 113,
 Gray 85, Black 80, Red 135, Green 128, Blue 160.

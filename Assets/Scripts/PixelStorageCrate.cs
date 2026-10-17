@@ -1,6 +1,6 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelStorageCrate.cs
-//   (extends PixelPlacedDevice) Storage Crate (DeviceKind.StorageCrate 13, auto-added like the fan, Utilities card; 300 Gray, hold 3,
+//   (extends PixelPlacedDevice) Storage Crate (DeviceKind.StorageCrate 13, auto-added like the fan, Utilities card; 300 Black + 200 Blue, hold 3,
 //   bodyDiameter 2.5 = width, bodyHeight 0.3; model PixelConsumables.BuildCrateBody: a wooden tray with two rows of five
 //   compartments): permanent and never disarmed (no countdown: duration 1e9, timer text hidden; PlaceDevice / RestorePlacedDevice skip
 //   Disarm). Drag old pixels over it with Pixel Grabbing and left-click the crate: loose old pixels lying within its footprint

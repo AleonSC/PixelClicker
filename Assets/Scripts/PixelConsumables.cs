@@ -387,6 +387,8 @@ public class PixelConsumables : MonoBehaviour
     [Tooltip("Add the default Vacuum Device if the list has none (e.g. when this component was added before devices existed).")]
     [SerializeField] private bool addDefaultDevices = true;
 
+    [SerializeField, HideInInspector] private int consumablePriceVersion;   // 1 = the 2026-10-17 repricing (2-3 pure colours per item); see ResetDefaultDevicePrices
+
     [Header("Prices")]
     [Tooltip("Potion and device prices paid in a pixel type are multiplied by that pixel's Value upgrade multiplier, so they stay worth the same as its payout grows. Off = the prices typed above, always.")]
     [SerializeField] private bool scalePricesWithValue = false;   // (renamed from pricesScaleWithValue so it starts off: Value is capped by skill levels now, prices stay as typed)
@@ -574,7 +576,8 @@ public class PixelConsumables : MonoBehaviour
             costs = new[]
             {
                 new PixelShop.PackCost { type = PixelClicker.PixelType.Glass, amount = 150 },
-                new PixelShop.PackCost { type = PixelClicker.PixelType.Green, amount = 100 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Gray, amount = 150 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Green, amount = 80 },
             },
             radius = 6f,
             color = new Color(0.4f, 0.85f, 1f, 1f),
@@ -617,7 +620,8 @@ public class PixelConsumables : MonoBehaviour
             requiredType = PixelClicker.PixelType.Gray,
             costs = new[]
             {
-                new PixelShop.PackCost { type = PixelClicker.PixelType.Gray, amount = 300 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Black, amount = 300 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Blue, amount = 200 },
             },
             maxHeld = 3,
             durationSeconds = 1e9f,
@@ -640,10 +644,11 @@ public class PixelConsumables : MonoBehaviour
             requiredType = PixelClicker.PixelType.White,
             costs = new[]
             {
-                new PixelShop.PackCost { type = PixelClicker.PixelType.White, amount = 50 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.White, amount = 75 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Green, amount = 50 },
             },
             maxHeld = 3,
-            priceGrowthPerOwned = 1.8f,   // each Recycler you hold or have standing makes the next one cost 1.8x more (a rising ladder)
+            priceGrowthPerOwned = 2f,   // each Recycler you hold or have standing doubles the next one's price (Cubie's free one makes the 2nd 150 White + 100 Green)
             durationSeconds = 300f,   // 5 minutes (Operation: Run Time)
             radius = 1f,
             color = new Color(0.25f, 0.55f, 0.32f, 1f),
@@ -663,7 +668,8 @@ public class PixelConsumables : MonoBehaviour
             requiredType = PixelClicker.PixelType.White,
             costs = new[]
             {
-                new PixelShop.PackCost { type = PixelClicker.PixelType.White, amount = 150 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Gray, amount = 200 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Red, amount = 150 },
             },
             maxHeld = 2,
             durationSeconds = 1e9f,
@@ -688,7 +694,9 @@ public class PixelConsumables : MonoBehaviour
             requiredType = PixelClicker.PixelType.Gray,
             costs = new[]
             {
-                new PixelShop.PackCost { type = PixelClicker.PixelType.Gray, amount = 600 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Gray, amount = 350 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Black, amount = 300 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Blue, amount = 200 },
             },
             maxHeld = 1,
             durationSeconds = 1e9f,
@@ -823,7 +831,8 @@ public class PixelConsumables : MonoBehaviour
             costs = new[]
             {
                 new PixelShop.PackCost { type = PixelClicker.PixelType.Glass, amount = 200 },
-                new PixelShop.PackCost { type = PixelClicker.PixelType.Black, amount = 300 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Black, amount = 160 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.White, amount = 200 },
             },
             durationSeconds = 45f,
             color = new Color(1f, 0.7f, 0.25f, 1f),
@@ -861,7 +870,8 @@ public class PixelConsumables : MonoBehaviour
             costs = new[]
             {
                 new PixelShop.PackCost { type = PixelClicker.PixelType.Glass, amount = 500 },
-                new PixelShop.PackCost { type = PixelClicker.PixelType.Black, amount = 500 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Red, amount = 250 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Blue, amount = 300 },
             },
             maxHeld = 1,
             color = new Color(0.8f, 0.85f, 1f, 1f),
@@ -913,7 +923,12 @@ public class PixelConsumables : MonoBehaviour
             displayName = "Sweeper",
             description = "A little wind-up clockwork cube with a broom. It rolls out from its pad and rescues husks that are about to fade, carrying each one to the NEAREST Storage Crate, Sorting Hopper or Recycler with room - so where you put it decides where strays go. It runs about a minute, then slows to a stop: click it to wind it again. It stays until you remove it.",
             requiredType = PixelClicker.PixelType.White,
-            costs = new[] { new PixelShop.PackCost { type = PixelClicker.PixelType.White, amount = 400 } },
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.White, amount = 400 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Gray, amount = 300 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Red, amount = 200 },
+            },
             maxHeld = 2,
             durationSeconds = 1e9f,
             radius = 1f,
@@ -935,7 +950,11 @@ public class PixelConsumables : MonoBehaviour
             displayName = "Coupling",
             description = "The piece that joins belts and hoses to a machine. Right-click to fit couplings: bring one near a device and it snaps onto a free socket (teal rings) - the Recycler's back hatch, the Storage Crate's in / out ports, the Funnel's output... Its arrow shows the way husks go (green in, orange out; click an organizer's coupling dot to switch). One is used up per coupling fitted.",
             requiredType = PixelClicker.PixelType.White,
-            costs = new[] { new PixelShop.PackCost { type = PixelClicker.PixelType.White, amount = 30 } },
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Gray, amount = 40 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Black, amount = 40 },
+            },
             maxHeld = 10,
             color = new Color(0.62f, 0.66f, 0.7f, 1f),
         };
@@ -949,7 +968,11 @@ public class PixelConsumables : MonoBehaviour
             displayName = "Container Hose",
             description = "A see-through hose that pumps stored husks from a Storage Crate or Quantum Organizer (an Out coupling) into any In coupling - the Recycler, another crate, a Trash Can... Right-click to lay one: click the start coupling, click bend points to lead it round things, then click the end coupling. A quick right click on a laid hose turns its flow round. One is used up per hose.",
             requiredType = PixelClicker.PixelType.White,
-            costs = new[] { new PixelShop.PackCost { type = PixelClicker.PixelType.White, amount = 120 } },
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.White, amount = 80 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Black, amount = 80 },
+            },
             maxHeld = 3,
             color = new Color(0.6f, 0.9f, 1f, 1f),
         };
@@ -986,8 +1009,8 @@ public class PixelConsumables : MonoBehaviour
             requiredType = PixelClicker.PixelType.Black,
             costs = new[]
             {
-                new PixelShop.PackCost { type = PixelClicker.PixelType.White, amount = 2000 },
-                new PixelShop.PackCost { type = PixelClicker.PixelType.Gray,  amount = 1000 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Red, amount = 1500 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Blue, amount = 1800 },
             },
             maxHeld = 5,
             color = new Color(1f, 0.85f, 0.4f, 1f),
@@ -1130,6 +1153,73 @@ public class PixelConsumables : MonoBehaviour
         return list.ToArray();
     }
 
+    /// <summary>
+    /// Every built-in device kind and the method that makes its default (one entry per kind; seeds are made per pixel type
+    /// elsewhere). Used to add missing devices to a saved list and by the price reset (consumablePriceVersion).
+    /// </summary>
+    private static readonly System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>[] DefaultDeviceMakers =
+    {
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Vacuum, CreateDefaultDevice),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Fan, CreateDefaultFan),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Sorter, CreateDefaultSorter),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ComboFuel, CreateDefaultComboFuel),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.GhostBait, CreateDefaultGhostBait),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.PetTreat, CreateDefaultPetTreat),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ChargeBooster, CreateDefaultChargeBooster),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.LightningRod, CreateDefaultLightningRod),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Sprinkler, CreateDefaultSprinkler),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Magnet, CreateDefaultMagnet),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.MagnetSorter, CreateDefaultMagnetSorter),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.QuantumOrganizer, CreateDefaultQuantumOrganizer),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.StorageCrate, CreateDefaultStorageCrate),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.BaitBucket, CreateDefaultBaitBucket),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.WoodChipper, CreateDefaultWoodChipper),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Funnel, CreateDefaultFunnel),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Gauntlet, CreateDefaultGauntlet),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ConveyorBelt, CreateDefaultConveyorBelt),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Recycler, CreateDefaultRecycler),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.FocusPotion, CreateDefaultFocusPotion),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.PesticideSpray, CreateDefaultPesticideSpray),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.SortingHopper, CreateDefaultSortingHopper),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Coupling, CreateDefaultCoupling),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ContainerHose, CreateDefaultContainerHose),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Sweeper, CreateDefaultSweeper),
+    };
+
+    /// <summary>
+    /// One-time price reset: every built-in device in the saved list takes its coded default price (costs and the rising-price
+    /// factor), since the Inspector list keeps the old typed prices otherwise. Bump consumablePriceVersion to run it again after a
+    /// repricing. Seeds and potions are priced from their pixel at run time, so they are not touched.
+    /// </summary>
+    private bool ResetDefaultDevicePrices()
+    {
+        if (devices == null) return false;
+        bool changed = false;
+        foreach (Device d in devices)
+        {
+            if (d == null || d.attuned || d.kind == DeviceKind.Seed) continue;
+            foreach (System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>> maker in DefaultDeviceMakers)
+            {
+                if (maker.Key != d.kind) continue;
+                Device fresh = maker.Value();
+                d.costs = fresh.costs;
+                d.priceGrowthPerOwned = fresh.priceGrowthPerOwned;
+                changed = true;
+                break;
+            }
+        }
+        return changed;
+    }
+
+#if UNITY_EDITOR
+    [ContextMenu("Reset Built-in Device Prices")]
+    private void ResetDevicePricesMenu()
+    {
+        UnityEditor.Undo.RecordObject(this, "Reset Built-in Device Prices");
+        if (ResetDefaultDevicePrices()) UnityEditor.EditorUtility.SetDirty(this);
+    }
+#endif
+
     /// <summary>Adds a potion for every pixel type that doesn't have one. Returns true if anything was added.</summary>
     private bool EnsureDefaultPotions()
     {
@@ -1167,31 +1257,7 @@ public class PixelConsumables : MonoBehaviour
                     devices[devices.Length - 1] = CreateDefaultSorter();
                     added = true;
                 }
-                foreach (System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>> extra in new[]
-                {
-                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ComboFuel, CreateDefaultComboFuel),
-                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.GhostBait, CreateDefaultGhostBait),
-                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.PetTreat, CreateDefaultPetTreat),
-                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ChargeBooster, CreateDefaultChargeBooster),
-                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.LightningRod, CreateDefaultLightningRod),
-                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Sprinkler, CreateDefaultSprinkler),
-                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Magnet, CreateDefaultMagnet),
-                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.MagnetSorter, CreateDefaultMagnetSorter),
-                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.QuantumOrganizer, CreateDefaultQuantumOrganizer),
-                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.StorageCrate, CreateDefaultStorageCrate),
-                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.BaitBucket, CreateDefaultBaitBucket),
-                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.WoodChipper, CreateDefaultWoodChipper),
-                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Funnel, CreateDefaultFunnel),
-                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Gauntlet, CreateDefaultGauntlet),
-                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ConveyorBelt, CreateDefaultConveyorBelt),
-                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Recycler, CreateDefaultRecycler),
-                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.FocusPotion, CreateDefaultFocusPotion),
-                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.PesticideSpray, CreateDefaultPesticideSpray),
-                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.SortingHopper, CreateDefaultSortingHopper),
-                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Coupling, CreateDefaultCoupling),
-                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ContainerHose, CreateDefaultContainerHose),
-                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Sweeper, CreateDefaultSweeper),
-                })
+                foreach (System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>> extra in DefaultDeviceMakers)
                 {
                     DeviceKind wanted = extra.Key;
                     if (Array.Exists(devices, d => d != null && d.kind == wanted)) continue;
@@ -1217,6 +1283,14 @@ public class PixelConsumables : MonoBehaviour
         if (devices != null)
             foreach (Device d in devices)
                 if (d != null && d.kind == DeviceKind.Recycler && d.priceGrowthPerOwned <= 0f) { Device fresh = CreateDefaultRecycler(); d.priceGrowthPerOwned = fresh.priceGrowthPerOwned; d.maxHeld = Mathf.Max(d.maxHeld, fresh.maxHeld); d.description = fresh.description; }   // (2026-10-17 rework: currency only, suction, a rising price for more Recyclers)
+
+        if (consumablePriceVersion < 1 && devices != null)
+        {
+            // Shop consumable repricing (2026-10-17, GameDesign section 8): every pure-currency item costs 2-3 of the six pure colours.
+            ResetDefaultDevicePrices();
+            consumablePriceVersion = 1;
+            added = true;
+        }
 
         if (devices != null)
             foreach (Device d in devices)
