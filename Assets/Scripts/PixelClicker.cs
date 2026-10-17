@@ -1092,7 +1092,20 @@ public partial class PixelClicker : MonoBehaviour
     /// </summary>
     public RaycastHit[] PointerHits(Vector2 screen, out int count)
     {
-        if (pointerHitFrame == Time.frameCount && pointerHitScreen == screen && pointerHitCamera == targetCamera) { count = pointerHitCount; return pointerHits; }
+        if (pointerHitFrame == Time.frameCount && pointerHitScreen == screen && pointerHitCamera == targetCamera)
+        {
+            // Something hit earlier this frame may have been destroyed since (Unity destroys objects between Update and LateUpdate): its hit
+            // then has no collider / transform, so it is dropped here (keeping the order) instead of every caller checking for null.
+            int kept = 0;
+            for (int i = 0; i < pointerHitCount; i++)
+            {
+                if (pointerHits[i].collider == null) continue;
+                if (kept != i) pointerHits[kept] = pointerHits[i];
+                kept++;
+            }
+            pointerHitCount = count = kept;
+            return pointerHits;
+        }
         count = 0;
         if (targetCamera != null)
         {
