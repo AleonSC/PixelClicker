@@ -268,12 +268,12 @@ public class PixelCustomKeys : MonoBehaviour
         RectTransform cr = cancel.GetComponent<RectTransform>();
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(0.5f, 0f);
         cr.anchoredPosition = new Vector2(-85f, 18f);
-        cancel.onClick.AddListener(() => { PixelAudio.Play("ui_click"); ClosePrompt(); });
+        cancel.onClick.AddListener(ClosePrompt);
         promptConfirm = PixelUIKit.CreateButton(font, box.transform, "Confirm", "Confirm", new Vector2(150f, 50f), new Color(0.2f, 0.6f, 0.3f, 1f), Color.white, 22f);
         RectTransform fr = promptConfirm.GetComponent<RectTransform>();
         fr.anchorMin = fr.anchorMax = fr.pivot = new Vector2(0.5f, 0f);
         fr.anchoredPosition = new Vector2(85f, 18f);
-        promptConfirm.onClick.AddListener(() => { PixelAudio.Play("ui_click"); ConfirmPrompt(); });
+        promptConfirm.onClick.AddListener(ConfirmPrompt);
         promptRoot.SetActive(false);
     }
 

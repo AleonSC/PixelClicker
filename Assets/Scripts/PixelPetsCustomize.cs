@@ -770,7 +770,7 @@ public partial class PixelPets
         TMP_Text spinLabel = spin.GetComponentInChildren<TMP_Text>();
         System.Action showSpin = () => PixelUIKit.SetText(spinLabel, string.Format(previewSpinText, PreviewSpinOn ? "on" : "off"));
         showSpin();
-        spin.onClick.AddListener(() => { PreviewSpinOn = !PreviewSpinOn; showSpin(); PixelAudio.Play("ui_click"); });
+        spin.onClick.AddListener(() => { PreviewSpinOn = !PreviewSpinOn; showSpin(); });
 
         Button left = PixelUIKit.CreateButton(font, box.transform, "Previous Outfit", "<", new Vector2(110f, 170f), buttonColor, Color.white, 64f);
         Button right = PixelUIKit.CreateButton(font, box.transform, "Next Outfit", ">", new Vector2(110f, 170f), buttonColor, Color.white, 64f);
