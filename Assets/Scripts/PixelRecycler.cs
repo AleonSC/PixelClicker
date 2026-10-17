@@ -46,8 +46,9 @@
 //   SORTING HOPPER (2026-10-17): a PixelSortingHopper snaps onto the back wall (BackEdgeLocalZ, SizeFactor) and keeps the back hatch open (SetHatchOpen);
 //   it slides its chosen husk type through the hatch (HatchOutside -> HatchInside) and lets it fall into the bin, where Capture takes it as usual.
 //   Capturing / letting go / freezing use the shared PixelHuskHolder steps.
-//   TOP PULL (2026-10-17): a weak sideways pull (FixedUpdate, topPullReach / topPullStrength) draws husks in the AIR near the opening towards its middle,
-//   so ones falling past or bouncing off the rim drop in; husks on the floor beside the bin are left alone.
+//   SUCK-IN (2026-10-17, like the Storage Crate): a husk in the air over the opening or a NEAR MISS just past the rim (suckReach) is sucked in - it glides
+//   into the middle of the bin (SuckOne, suckSeconds) and is caught as usual; further out husks still miss. TOP PULL (off by default): an extra weak sideways
+//   pull further out (topPullReach / topPullStrength). Husks lying on the floor beside the bin are left alone by both.
 //   SOCKET (PixelSockets.cs): the back hatch is an In socket ('hatch'). With no hopper latched (a latched hopper OCCUPIES it), a coupling there takes belts / connectors / hoses:
 //   AcceptHusk counts the husk at once and lets it fall in behind the back wall (HatchInside); refused while working or full (HuskRoom).
 // ---------------------------------------------------
@@ -70,9 +71,19 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     [SerializeField] private float processSeconds = 2f;
     [Tooltip("Strongest shake at the end of processing, in husk widths.")]
     [SerializeField] private float shakeStrength = 0.12f;
+    [Header("Suck-in (2026-10-17)")]
+    [Tooltip("Like the Storage Crate: a husk in the air over the opening or just past the rim (a near miss) is SUCKED IN - it glides into the bin and is caught. Off = only husks that fall in by themselves.")]
+    [SerializeField] private bool suckIn = true;
+    [Min(0f)]
+    [Tooltip("How far past the rim (sideways, in husk widths) a near miss is still sucked in. Bigger = fewer misses.")]
+    [SerializeField] private float suckReach = 1f;
+    [Min(0.05f)]
+    [Tooltip("Seconds a sucked husk takes to glide into the bin.")]
+    [SerializeField] private float suckSeconds = 0.3f;
+
     [Header("Top pull (2026-10-17)")]
-    [Tooltip("A weak pull at the top: husks in the air near the opening (falling past, bouncing off the rim) drift in. Off = no pull.")]
-    [SerializeField] private bool topPull = true;
+    [Tooltip("An extra weak pull further out: husks in the air near the opening drift towards it. Off by default (the suck-in does the job).")]
+    [SerializeField] private bool topPull = false;
     [Min(0f)]
     [Tooltip("How far past the rim (sideways, in husk widths) the pull reaches.")]
     [SerializeField] private float topPullReach = 2f;
@@ -402,6 +413,8 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
 
     private void OnDestroy()
     {
+        foreach (Rigidbody b in sucking) if (b != null) PixelHuskHolder.Unreserve(b, Vector3.zero);   // (half way in when the bin went: it falls where it is)
+        sucking.Clear();
         foreach (Rigidbody b in inside) if (b != null) Destroy(b.gameObject);   // (not saved: what was inside is lost with the bin)
         inside.Clear();
     }
@@ -415,8 +428,64 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     /// the rim) are nudged sideways towards the middle of the opening, so ones falling past or bouncing off the rim drop in. Husks lying on the floor
     /// next to the bin, held ones, kinematic ones (riding / kept by machines) and fading ones are left alone. Not while working, carried or fading in.
     /// </summary>
+    private readonly HashSet<Rigidbody> sucking = new HashSet<Rigidbody>();
+
+    /// <summary>
+    /// The suck-in: a husk in the air over the opening (above the rim) or a near miss just past the rim (within suckReach, from half the wall height up to
+    /// a few husk widths above the rim) is taken - kept from anything else (PixelHuskHolder.Reserve) - and glides down into the middle of the bin, where the
+    /// usual Capture catches it. Husks lying on the floor beside the bin, held ones, kinematic ones and fading ones are left alone.
+    /// </summary>
+    private void SuckIn()
+    {
+        if (!suckIn || clicker == null || processing || Fading || (carry != null && carry.Dragging)) return;
+        float u = Unit(clicker);
+        float s = transform.lossyScale.x;
+        float halfDiag = (Mathf.Sqrt(innerW * innerW + innerD * innerD) * 0.5f + suckReach * u) * s;
+        PixelHuskQuery.Near(clicker, transform.position, halfDiag, pullScratch);
+        foreach (PixelHuskQuery.Husk h in pullScratch)
+        {
+            Rigidbody b = h.body;
+            if (b == null || b.isKinematic || h.HeldByPlayer || inside.Contains(b) || sucking.Contains(b) || !PixelHuskHolder.Takeable(clicker, b)) continue;
+            Vector3 local = transform.InverseTransformPoint(b.position);
+            bool overOpening = Mathf.Abs(local.x) <= innerW * 0.5f && Mathf.Abs(local.z) <= innerD * 0.5f;
+            if (overOpening ? local.y < wallH : local.y < wallH * 0.5f) continue;   // (already inside the walls / lying low beside the bin)
+            if (local.y > wallH + 4f * u) continue;
+            if (Mathf.Abs(local.x) > innerW * 0.5f + suckReach * u || Mathf.Abs(local.z) > innerD * 0.5f + suckReach * u) continue;
+            StartCoroutine(SuckOne(b));
+        }
+    }
+
+    private IEnumerator SuckOne(Rigidbody b)
+    {
+        sucking.Add(b);
+        PixelHuskHolder.Reserve(b);
+        Vector3 start = b.position, startScale = b.transform.localScale;
+        float t = 0f, length = Mathf.Max(0.05f, suckSeconds);
+        while (t < 1f)
+        {
+            if (b == null) { sucking.Remove(b); yield break; }
+            if (PixelHuskQuery.Get(b).HeldByPlayer) { sucking.Remove(b); yield break; }   // (the player grabbed it on the way: theirs)
+            if (processing) break;
+            t += Time.deltaTime / length;
+            float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t));
+            Vector3 end = transform.TransformPoint(new Vector3(0f, wallH * 0.55f, 0f));
+            Vector3 p = Vector3.Lerp(start, end, k) + Vector3.up * Mathf.Sin(k * Mathf.PI) * 0.4f * Unit(clicker);   // a little arc over the rim
+            b.position = p;
+            b.transform.localScale = startScale * (1f - 0.25f * Mathf.Sin(k * Mathf.PI));   // squeezed as it is drawn in
+            yield return null;
+        }
+        sucking.Remove(b);
+        if (b == null) yield break;
+        b.transform.localScale = startScale;
+        Vector3 down = Vector3.down * 0.5f;
+        if (inside.Contains(b)) { b.isKinematic = false; PixelHuskHolder.SetVelocity(b, down); }   // (the bin already caught it)
+        else PixelHuskHolder.Unreserve(b, down);
+        PixelAudio.Play("click", 1.3f, 0.5f);
+    }
+
     private void FixedUpdate()
     {
+        SuckIn();
         if (!topPull || clicker == null || processing || Fading || (carry != null && carry.Dragging) || topPullStrength <= 0f) return;
         float u = Unit(clicker) * transform.lossyScale.x;
         float halfDiag = Mathf.Sqrt(innerW * innerW + innerD * innerD) * 0.5f * transform.lossyScale.x;
