@@ -1343,3 +1343,4 @@
 [2026-10-17 15:49 UTC] The combo meter now sits inside the bottom black bar (centred, scaled to fit, its tier effects scale with it); untick 'In Bottom Bar' on PixelCombo to float it above the bar as before.
 [2026-10-17 15:52 UTC] Design + to-do: shop consumable pricing rules - every pure-currency item costs 2-3 of the six colours (monochrome for machines, RGB for boosts), priced in minutes of income from the session report, with example prices for the early devices.
 [2026-10-17 15:56 UTC] Shop consumables repriced: every pure-currency item now costs 2-3 of the six pure colours (machines in White / Gray / Black with an RGB accent, boosts in RGB), priced in minutes of income, and existing scenes get the new prices once; to-do item marked done.
+[2026-10-17 16:23 UTC] Crushing a husk now has its own sound (a code-made crack, thump and skittering chunks, four variants) - it used the 'hit' sound before, which has no built-in clip, so crushes were silent.

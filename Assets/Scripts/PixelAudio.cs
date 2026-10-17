@@ -233,6 +233,7 @@ public partial class PixelAudio : MonoBehaviour
             Make("glass_shatter", 0.04f, 0.9f, 1.1f),
             Make("auto_click", 0.06f, 0.92f, 1.08f),
             Make("hit", 0.03f, 0.92f, 1.08f),
+            Make("husk_crush", 0.03f, 0.94f, 1.06f),
             Make("vacuum", 0.2f),
             Make("combo", 0.02f, 1f, 1f),
             Make("purchase", 0.08f),
@@ -380,6 +381,7 @@ public partial class PixelAudio : MonoBehaviour
             case "dragon_summon": return new[] { PixelSynth.Summon() };
             case "seed_dig": return new[] { PixelSynth.Dig(1), PixelSynth.Dig(2), PixelSynth.Dig(3) };
             case "seed_plant": return new[] { PixelSynth.Crunch(1), PixelSynth.Crunch(2), PixelSynth.Crunch(3) };
+            case "husk_crush": return new[] { PixelSynth.HuskCrush(1), PixelSynth.HuskCrush(2), PixelSynth.HuskCrush(3), PixelSynth.HuskCrush(4) };
             case "pixel_water": return new[] { PixelSynth.WaterClick(1), PixelSynth.WaterClick(2), PixelSynth.WaterClick(3), PixelSynth.WaterClick(4), PixelSynth.WaterClick(5), PixelSynth.WaterClick(6), PixelSynth.WaterClick(7), PixelSynth.WaterClick(8), PixelSynth.WaterClick(9), PixelSynth.WaterClick(10), PixelSynth.WaterClick(11), PixelSynth.WaterClick(12) };   // a pool: every click sounds different
             case "water_splash": return new[] { PixelSynth.Splash(1), PixelSynth.Splash(2), PixelSynth.Splash(3) };
             case "chest_hit": return new[] { PixelSynth.ChestHit(1), PixelSynth.ChestHit(2), PixelSynth.ChestHit(3) };
@@ -1452,6 +1454,40 @@ public static class PixelSynth
         for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
         for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.7f;
         AudioClip clip = AudioClip.Create("Crunch " + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>A husk crushed by hand (Husk Crush): a sharp crack, a short low thump as it gives way, then a few chunks skittering apart. 'seed' picks a variant.</summary>
+    public static AudioClip HuskCrush(int seed)
+    {
+        const int rate = 22050;
+        int n = (int)(rate * 0.32f);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(700 + seed * 37);
+        // The chunks: small clicks scattered after the break, quieter and further apart as they fly off.
+        float[] chunkAt = new float[5];
+        for (int k = 0; k < chunkAt.Length; k++) chunkAt[k] = 0.05f + k * 0.035f + (float)rng.NextDouble() * 0.025f + seed * 0.002f;
+        float lp = 0f, hp = 0f, prev = 0f;
+        float thumpHz = 82f - seed * 6f;
+        for (int i = 0; i < n; i++)
+        {
+            float sec = i / (float)rate;
+            float noise = (float)rng.NextDouble() * 2f - 1f;
+            lp += (noise - lp) * 0.35f;              // darker noise for the body of the crunch
+            hp = noise - prev; prev = noise;          // brighter noise for the crack and the chunks
+            float crack = hp * Mathf.Exp(-sec * 90f) * 0.9f;
+            float crunch = lp * Mathf.Exp(-sec * 22f) * (0.6f + 0.4f * Mathf.Sin(sec * 260f + seed)) * 0.8f;
+            float thump = Mathf.Sin(sec * thumpHz * (1f - sec * 1.2f) * Mathf.PI * 2f) * Mathf.Exp(-sec * 28f) * 0.7f;
+            float chunks = 0f;
+            for (int k = 0; k < chunkAt.Length; k++)
+                if (sec >= chunkAt[k]) chunks += hp * Mathf.Exp(-(sec - chunkAt[k]) * 160f) * (0.55f - k * 0.08f);
+            data[i] = (crack + crunch + thump + chunks) * Mathf.Clamp01(sec / 0.0015f);
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.75f;
+        AudioClip clip = AudioClip.Create("Husk Crush " + seed, n, 1, rate, false);
         clip.SetData(data, 0);
         return clip;
     }

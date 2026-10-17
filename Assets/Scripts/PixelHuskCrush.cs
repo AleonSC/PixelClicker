@@ -23,7 +23,7 @@
 //   - CanCrush: a loose husk ON the floor's husk list that a container could take (PixelHuskHolder.Takeable: not vanishing, not held / reserved by a
 //     machine - Recycler, Storage Crate, Sorting Hopper, Bait Bucket -, not riding a belt, not in the hand, not a fly-away), not a rare collectible
 //     (Dragon / God / Prime Cubes, the Golden Snitch) and not in neverCrush.
-//   - Feedback: shards of the husk itself (OldPixelShatter.SpawnShards, the glass shatter's burst), crushSoundId with a little pitch spread.
+//   - Feedback: shards of the husk itself (OldPixelShatter.SpawnShards, the glass shatter's burst), crushSoundId ('husk_crush', code-made PixelSynth.HuskCrush: crack + thump + skittering chunks, 4 variants) with a little pitch spread.
 //   - STANDARD TREE (DefaultNodes(StandardId), bottom row, beside the twists): 'chaincrush' Chain Crush (level 4): the husks of the SAME type
 //     touching the crushed one (centre within chainTouch husk widths, PixelHuskQuery.Near), and the ones touching those, crush too in quick waves
 //     (chainStepSeconds), at most chainMax extra; 'cleanbreak' Clean Break (level 6): every crush gives the husks within cleanBreakRadius widths
@@ -102,10 +102,10 @@ public class PixelHuskCrush : MonoBehaviour
 
     [Header("Feedback")]
     [Tooltip("Sound of a crush (a PixelAudio id).")]
-    [SerializeField] private string crushSoundId = "hit";
+    [SerializeField] private string crushSoundId = "husk_crush";
 
     [Tooltip("Pitch of the crush sound (min, max: a random pitch in between each time).")]
-    [SerializeField] private Vector2 crushPitch = new Vector2(1.1f, 1.35f);
+    [SerializeField] private Vector2 crushPitch = new Vector2(0.95f, 1.1f);
 
     [Min(0)]
     [Tooltip("Chunks the husk breaks into.")]
@@ -269,6 +269,13 @@ public class PixelHuskCrush : MonoBehaviour
     {
         instance = this;
         if (crushDataVersion < 1) { if (Mathf.Approximately(xpShare, 0.25f)) xpShare = 0.5f; crushDataVersion = 1; }   // (the crush bonuses: a plain crush is half a click now)
+        if (crushDataVersion < 2)
+        {
+            // Its own sound (2026-10-17): 'hit' has no code-made clip, so crushes were silent. Only the untouched old defaults are changed.
+            if (crushSoundId == "hit") crushSoundId = "husk_crush";
+            if (Mathf.Approximately(crushPitch.x, 1.1f) && Mathf.Approximately(crushPitch.y, 1.35f)) crushPitch = new Vector2(0.95f, 1.1f);
+            crushDataVersion = 2;
+        }
         clicker = GetComponent<PixelClicker>();
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
     }
