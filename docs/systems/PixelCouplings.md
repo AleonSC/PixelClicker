@@ -13,7 +13,7 @@ hooks, the registry) and `PixelCoupling.cs` (the snap-on coupling piece). Placed
 
 ## The design
 - **Sockets (data).** Every device declares its SOCKETS: a few lines each - `id`, local position (the PORT, where a belt end / hose end meets
-  it, at belt-underside height), outward facing, `flow` = Intake / Output / Both, and a `kind`. Sockets sit on openings the device already has:
+  it, at belt-underside height), outward facing, `flow` = Intake / Output / Both, and a `kind`. Free sockets always show a small PORT PLATE (`PixelSocketPlates`: a chevron, green In / orange Out / teal Both). Sockets sit on openings the device already has:
   Kiln mouth, Storage Crate front, Trash Can side, Recycler back hatch (shared with the Sorting Hopper: a latched hopper occupies it), Sorting
   Hopper back wall, Quantum Organizer side, Wood Chipper chute, Funnel output, Elevator entry / top, Splitter entry / three sides, Belt Sorter chute.
 - **Couplings (one shared piece).** ONE model (PixelFactoryKit) and ONE component. Placing it near a free socket snaps it on; it is parented to
@@ -64,7 +64,7 @@ chute (the same "find a belt that starts here" copy) moved onto a built-in bare 
 ## Where each device's sockets are
 | Device | Sockets |
 |---|---|
-| Storage Crate | `front` (Both: In = belts / hoses in, Out = a hose pulls stored husks) |
+| Storage Crate | `in` (In, front left: belts / hoses in) and `out` (Out, front right: a hose pulls stored husks) |
 | Quantum Organizer | `side` (Both, like the crate; In drops husks onto the pad) |
 | Kiln | `mouth` (In, burns it), `chute` (Out, charcoal) |
 | Trash Can | `front`, `back` (In) |

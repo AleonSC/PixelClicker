@@ -13,8 +13,8 @@
 //   Cursor.SetCursor, requested per frame, normal cursor returns when nobody asks), left-drag moves the crate over the floor plane
 //   (DragTo, kept on screen) with the fist cursor, and while dragging scroll / Q / E turn it (PixelConsumables.TurnInput; also when placing it; the yaw is saved in PlacedState). PixelStorageCrate.ClaimsPointer() makes PixelGrab step aside when the click belongs
 //   to the crate; PixelPointerClaim blocks cube clicks. Removing it (Ended) lets everything out. Saved in PlacedState.extra
-//   ('S,slot,tier,amount;'). Tip device_StorageCrate. SOCKET (PixelSockets.cs): one 'front' socket (Both): an In coupling takes belts / hoses in (AcceptHusk),
-//   an Out coupling lets a Container Hose pull stored husks (TakeHuskOut / HuskRoom). Which husks it may take, the fly-in and taking one out into the hand are the shared PixelHuskHolder steps.
+//   ('S,slot,tier,amount;'). Tip device_StorageCrate. SOCKETS (PixelSockets.cs): two on the front - 'in' (left, Intake): a coupling there takes belts / hoses in
+//   (AcceptHusk); 'out' (right, Output): a coupling there lets a Container Hose pull stored husks (TakeHuskOut / HuskRoom). Which husks it may take, the fly-in and taking one out into the hand are the shared PixelHuskHolder steps.
 // ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
@@ -60,14 +60,19 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelSocketDevice, IPixelHu
         carry = gameObject.AddComponent<PixelCarryHandles>();
         carry.Init(() => cam);
         carry.Blocked = () => IsDying;
-        sockets = new[] { new PixelSocket("front", new Vector3(0f, 0.1f, -depth * 0.5f), Vector3.back, PixelSocketFlow.Both) };
+        // Two sockets on the front: 'in' (left) takes belts / hoses in, 'out' (right) lets a hose pull stored husks.
+        sockets = new[]
+        {
+            new PixelSocket("in", new Vector3(-width * 0.25f, 0.1f, -depth * 0.5f), Vector3.back, PixelSocketFlow.Intake),
+            new PixelSocket("out", new Vector3(width * 0.25f, 0.1f, -depth * 0.5f), Vector3.back, PixelSocketFlow.Output),
+        };
         Ended += _ => { ReleaseAll(); PixelCouplings.Unregister(this); };
-        PixelCouplings.Register(this);   // its FRONT socket: a coupling there takes belts / hoses in, or (set to Out) lets a hose pull stored husks
+        PixelCouplings.Register(this);
     }
 
     private void OnDestroy() { PixelCouplings.Unregister(this); }
 
-    // ---- Socket (PixelSockets.cs): one 'front' socket, In or Out ----
+    // ---- Sockets (PixelSockets.cs): 'in' and 'out' on the front ----
     private PixelSocket[] sockets = new PixelSocket[0];
     public Transform SocketRoot => transform;
     public IReadOnlyList<PixelSocket> Sockets => sockets;

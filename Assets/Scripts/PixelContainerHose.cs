@@ -2,7 +2,7 @@
 // PixelContainerHose.cs
 //   CONTAINER HOSE (a Dev Hub > Tester feature, PixelFeatureTester 'Container Hose', placed as a ROUTE: start, any bend points, end): a see-through hose like the
 //   Funnel's that joins one device to another THROUGH COUPLINGS (PixelSockets.cs / PixelCoupling.cs, docs/systems/PixelCouplings.md). Click an OUT coupling on a device a
-//   hose can pull from (IPixelHuskSource: Storage Crate, Quantum Organizer - set a crate / organizer coupling to Out with its teal dot), then an IN coupling on the target
+//   hose can pull from (IPixelHuskSource: Storage Crate, Quantum Organizer - the crate's 'out' socket, or an organizer coupling set to Out with its teal dot), then an IN coupling on the target
 //   (Recycler back hatch, Storage Crate, Quantum Organizer, Trash Can, Kiln, Sorting Hopper...); coupling clicks magnetize (Snap). Between them the player clicks any number of
 //   BEND points (scroll sets their height; PixelFeatureTester.RegisterRoute) and the hose runs through them as a smooth Catmull-Rom curve (straight with none) - no forced arc.
 //   Routed the other way round it runs the right way anyway. An idle hose says why over its middle (IdleReason). A quick RIGHT CLICK on a placed hose (PixelRightTap; a hold
@@ -209,7 +209,7 @@ public class PixelContainerHose : MonoBehaviour
         carrier.ReleaseAll();
         PixelCoupling oldSource = source;
         source = target; target = oldSource;
-        source.SetDirection(false);   // (a crate / organizer coupling flips to Out, the other to In; fixed sockets keep theirs)
+        source.SetDirection(false);   // (an organizer coupling flips to Out, the other to In; fixed sockets keep theirs)
         target.SetDirection(true);
         Vector3 t = a; a = b; b = t;
         bends.Reverse();

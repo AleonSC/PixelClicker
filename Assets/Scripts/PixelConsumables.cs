@@ -928,7 +928,7 @@ public class PixelConsumables : MonoBehaviour
         {
             kind = DeviceKind.Coupling,
             displayName = "Coupling",
-            description = "The piece that joins belts and hoses to a machine. Right-click to fit couplings: bring one near a device and it snaps onto a free socket (teal rings) - the Recycler's back hatch, the Storage Crate's front, the Funnel's output... Its arrow shows the way husks go (green in, orange out; click a crate's coupling dot to switch). One is used up per coupling fitted.",
+            description = "The piece that joins belts and hoses to a machine. Right-click to fit couplings: bring one near a device and it snaps onto a free socket (teal rings) - the Recycler's back hatch, the Storage Crate's in / out ports, the Funnel's output... Its arrow shows the way husks go (green in, orange out; click an organizer's coupling dot to switch). One is used up per coupling fitted.",
             requiredType = PixelClicker.PixelType.White,
             costs = new[] { new PixelShop.PackCost { type = PixelClicker.PixelType.White, amount = 30 } },
             maxHeld = 10,
