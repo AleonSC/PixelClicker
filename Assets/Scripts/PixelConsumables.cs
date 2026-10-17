@@ -1414,30 +1414,38 @@ public class PixelConsumables : MonoBehaviour
     }
 
     private PixelPlacedDevice glowDevice;
+    private static readonly RaycastHit[] cubeHits = new RaycastHit[64];   // (reused by DeviceUnderPointer)
 
     /// <summary>The placed device under the mouse (nearest first). Looks at the device's visible parts, not its range markings. 'onlyDisarmed' = only devices still waiting for their first click.</summary>
     private PixelPlacedDevice DeviceUnderPointer(bool onlyDisarmed = false)
     {
         Camera cam = clicker.ViewCamera;
         if (cam == null) return null;
+        // (this runs every frame: with no devices, or none under the mouse, nothing else is done - the ray against the cube is only cast when a device was hit)
+        System.Collections.Generic.IReadOnlyList<PixelPlacedDevice> all = PixelPlacedDevice.All;
+        if (all.Count == 0) return null;
         Ray ray = cam.ScreenPointToRay(PointerPosition());
 
-        // The clicker cube in front of a device wins: a right click / hold on the cube (Block Hold) must not remove the device under it.
-        float cubeDistance = float.MaxValue;
-        if (clicker.PixelTransform != null)
-            foreach (RaycastHit h in Physics.RaycastAll(ray, 1000f, ~0, QueryTriggerInteraction.Collide))
-                if (h.transform.IsChildOf(clicker.PixelTransform) && h.distance < cubeDistance) cubeDistance = h.distance;
-
         PixelPlacedDevice best = null;
-        float bestDistance = cubeDistance;   // (a device only counts when it is nearer than the cube)
-        foreach (PixelPlacedDevice device in PixelPlacedDevice.All)
+        float bestDistance = float.MaxValue;
+        for (int i = 0; i < all.Count; i++)
         {
+            PixelPlacedDevice device = all[i];
             if (device == null || device.IsRemoving || (onlyDisarmed && device.Armed)) continue;
             if (device.HitTest(ray, out float distance) && distance < bestDistance)
             {
                 bestDistance = distance;
                 best = device;
             }
+        }
+        if (best == null) return null;
+
+        // The clicker cube in front of a device wins: a right click / hold on the cube (Block Hold) must not remove the device under it.
+        if (clicker.PixelTransform != null)
+        {
+            int n = Physics.RaycastNonAlloc(ray, cubeHits, 1000f, ~0, QueryTriggerInteraction.Collide);
+            for (int i = 0; i < n; i++)
+                if (cubeHits[i].distance <= bestDistance && cubeHits[i].transform.IsChildOf(clicker.PixelTransform)) return null;   // (a device only counts when it is nearer than the cube)
         }
         return best;
     }

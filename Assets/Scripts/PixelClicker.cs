@@ -1037,11 +1037,10 @@ public partial class PixelClicker : MonoBehaviour
     {
         tierIndex = -1; isLive = false; body = null;
         if (targetCamera == null || pixelTransform == null || tiers == null || tiers.Length == 0) return false;
-        Ray ray = targetCamera.ScreenPointToRay(screen);
-        RaycastHit[] hits = Physics.RaycastAll(ray, maxRayDistance, clickableLayers, QueryTriggerInteraction.Collide);
-        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-        foreach (RaycastHit hit in hits)
+        RaycastHit[] hits = PointerHits(screen, out int count);
+        for (int i = 0; i < count; i++)
         {
+            RaycastHit hit = hits[i];
             if (PixelRobotWorker.BelongsToUfo(hit.transform)) continue;
             if (hit.transform == hitbox || hit.transform == pixelTransform || hit.transform.IsChildOf(pixelTransform))
             {
@@ -1053,7 +1052,7 @@ public partial class PixelClicker : MonoBehaviour
             Rigidbody rb = hit.rigidbody;
             if (rb != null && (oldPixels.Contains(rb) || PixelRecycler.Holds(rb)))   // (husks in a Recycler left the old-pixel list but still show their tooltip)
             {
-                OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
+                OldPixelInfo info = PixelHuskQuery.Get(rb).info;
                 if (info == null || info.tierIndex < 0 || info.tierIndex >= tiers.Length) return false;
                 tierIndex = info.tierIndex;
                 body = rb;
@@ -1067,14 +1066,55 @@ public partial class PixelClicker : MonoBehaviour
     public bool IsLiveCubeAt(Vector2 screen)
     {
         if (targetCamera == null || pixelTransform == null || isSpawning || CubeHidden) return false;
-        Ray ray = targetCamera.ScreenPointToRay(screen);
-        RaycastHit[] hits = Physics.RaycastAll(ray, maxRayDistance, clickableLayers, QueryTriggerInteraction.Collide);
-        foreach (RaycastHit hit in hits)
+        RaycastHit[] hits = PointerHits(screen, out int count);
+        for (int i = 0; i < count; i++)
         {
+            RaycastHit hit = hits[i];
             if (PixelRobotWorker.BelongsToUfo(hit.transform)) continue;
             if (hit.transform == hitbox || hit.transform == pixelTransform || hit.transform.IsChildOf(pixelTransform)) return true;
         }
         return false;
+    }
+
+    // ---- the shared pointer ray ----
+    // The tooltip, aim cursor, Block Hold and Power Click each asked "what is under the pointer?" every frame, each with its own Physics.RaycastAll
+    // (a new array every time) and sort. PointerHits does the cast ONCE per frame per screen point into a reused buffer, nearest first.
+
+    private RaycastHit[] pointerHits = new RaycastHit[64];   // (per clicker: the title preview has its own)
+    private int pointerHitCount, pointerHitFrame = -1;
+    private Vector2 pointerHitScreen;
+    private Camera pointerHitCamera;
+
+    /// <summary>
+    /// Everything on the clickable layers under this screen point (triggers included), nearest first: hits[0 .. count-1].
+    /// Cached for the rest of the frame (same point, same camera). The array is shared and reused: read it right away, do not keep it.
+    /// </summary>
+    public RaycastHit[] PointerHits(Vector2 screen, out int count)
+    {
+        if (pointerHitFrame == Time.frameCount && pointerHitScreen == screen && pointerHitCamera == targetCamera) { count = pointerHitCount; return pointerHits; }
+        count = 0;
+        if (targetCamera != null)
+        {
+            Ray ray = targetCamera.ScreenPointToRay(screen);
+            count = Physics.RaycastNonAlloc(ray, pointerHits, maxRayDistance, clickableLayers, QueryTriggerInteraction.Collide);
+            if (count == pointerHits.Length)   // (full: there may be more - cast again into a bigger buffer)
+            {
+                pointerHits = new RaycastHit[pointerHits.Length * 2];
+                count = Physics.RaycastNonAlloc(ray, pointerHits, maxRayDistance, clickableLayers, QueryTriggerInteraction.Collide);
+            }
+            for (int i = 1; i < count; i++)   // nearest first (a few hits: a simple insertion sort, nothing allocated)
+            {
+                RaycastHit h = pointerHits[i];
+                int j = i - 1;
+                while (j >= 0 && pointerHits[j].distance > h.distance) { pointerHits[j + 1] = pointerHits[j]; j--; }
+                pointerHits[j + 1] = h;
+            }
+        }
+        pointerHitFrame = Time.frameCount;
+        pointerHitScreen = screen;
+        pointerHitCamera = targetCamera;
+        pointerHitCount = count;
+        return pointerHits;
     }
 
     /// <summary>Hits already put into the pixel on the cube, and how many it needs (for the hover tooltip).</summary>

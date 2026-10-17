@@ -133,12 +133,35 @@ public abstract class PixelPlacedDevice : MonoBehaviour
     {
         distance = float.MaxValue;
         bool hit = false;
-        foreach (Renderer r in GetComponentsInChildren<Renderer>())
+        foreach (Renderer r in HitRenderers())
         {
-            if (!r.enabled || r.name == "Range" || r.name == "Blow Area") continue;
+            if (r == null || !r.enabled || !r.gameObject.activeInHierarchy) continue;
             if (r.bounds.IntersectRay(ray, out float d) && d < distance) { distance = d; hit = true; }
         }
         return hit;
+    }
+
+    /// <summary>Does this part count as 'on the device' for HitTest? (Default: every visible part except the range markings.) Read once per part, when the list is made.</summary>
+    protected virtual bool CountsForHit(Renderer r) => r.name != "Range" && r.name != "Blow Area";
+
+    private Renderer[] hitRenderers;
+    private float hitRenderersTime = -10f;
+    private static readonly List<Renderer> hitScratch = new List<Renderer>();
+
+    /// <summary>
+    /// The parts HitTest looks at. HitTest runs every frame for every device (the mouse-over check for arming / removing), so the list is made
+    /// once and refreshed only once a second (in case parts were added or swapped) instead of GetComponentsInChildren + name checks every call.
+    /// </summary>
+    protected Renderer[] HitRenderers()
+    {
+        if (hitRenderers == null || Time.unscaledTime - hitRenderersTime > 1f)
+        {
+            hitRenderersTime = Time.unscaledTime;
+            hitScratch.Clear();
+            foreach (Renderer r in GetComponentsInChildren<Renderer>(true)) if (CountsForHit(r)) hitScratch.Add(r);
+            hitRenderers = hitScratch.ToArray();
+        }
+        return hitRenderers;
     }
 
     private void ApplyTint()

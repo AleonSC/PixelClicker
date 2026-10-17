@@ -174,10 +174,13 @@ public class PixelBeltSorter : MonoBehaviour
     {
         Ray ray = PointerRay(out bool ok);
         if (!ok) return false;
-        foreach (RaycastHit h in Physics.RaycastAll(ray, 500f, ~0, QueryTriggerInteraction.Ignore))
-            if (h.transform.IsChildOf(transform)) return true;
+        int n = Physics.RaycastNonAlloc(ray, pointerHits, 500f, ~0, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < n; i++)
+            if (pointerHits[i].transform.IsChildOf(transform)) return true;
         return false;
     }
+
+    private static readonly RaycastHit[] pointerHits = new RaycastHit[32];   // (reused every frame by PointerOnMe)
 
     /// <summary>The sorter turns round: it moves to the other side of the belt and its chute (the output side) goes with it.</summary>
     private void Flip()
