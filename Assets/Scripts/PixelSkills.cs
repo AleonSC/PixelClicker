@@ -240,7 +240,7 @@ public partial class PixelSkills : MonoBehaviour
             packs.Insert(0, new SkillPack
             {
                 id = StandardId, displayName = "Standard", accent = new Color(0.5f, 0.55f, 0.65f),
-                baseXp = 380f, xpGrowth = 1.5f, perks = StandardPerks(),   // (level 2 at 380 XP: what level 4 used to take)
+                baseXp = 600f, xpGrowth = 1.5f, perks = StandardPerks(),   // (level 2 at 600 x xpCurveScale: retuned 2026-10-17 for the Recycler + Husk Crush XP, see the Standard notes)
                 description = StandardDescription,
                 replaces = "-", spawns = "White, Gray, Black, Red, Green, Blue (+ Glass, Luminescent once bought)", xpFrom = "1 XP for every block you collect, whatever skill is trained",
             });
@@ -535,6 +535,7 @@ public partial class PixelSkills : MonoBehaviour
             {
                 if (pack.perks == null || pack.perks.Length == 0) pack.perks = StandardPerks();
                 if (Mathf.Approximately(pack.baseXp, 80f)) pack.baseXp = 380f;
+                if (Mathf.Approximately(pack.baseXp, 380f)) pack.baseXp = 600f;   // (2026-10-17: the Recycler's streak XP + Husk Crush levelled Standard ~2x too fast - level 4 at 8:21 in the 10:50 report)
                 if (pack.perks != null && !System.Array.Exists(pack.perks, pk => pk != null && pk.text != null && pk.text.StartsWith("Steady grip")))
                 {
                     // The grip perks (Block Hold starts at half length; level 3 and level 5 each add 10% of it): added to a saved Standard pack, kept in level order.
@@ -1261,13 +1262,16 @@ public partial class PixelSkills : MonoBehaviour
     /// (wood husks Woodcutting, ores Mining...), pure husks train Standard. Popups only once the Skills tab exists, like Standard's click XP - except a
     /// crush (crushed = true), which always shows its popup, small amounts with decimals: it is the crush's feedback.
     /// </summary>
-    public void AddHuskXp(int tierIndex, double xp, bool crushed = false)
+    /// popupText (Husk Crush's bonuses): shown INSTEAD of the '+n XP' popup ('Air crush bonus!'); noPopup = give the XP silently.
+    public void AddHuskXp(int tierIndex, double xp, bool crushed = false, string popupText = null, bool noPopup = false)
     {
         if (disableSkills || xp <= 0d) return;
         SkillPack pack = PackForTier(tierIndex) ?? Find(StandardId);
+        bool popup = pack != null && !noPopup && popupText == null && (crushed || pack.id != StandardId || AnyTrainable);
         xpPopupDecimals = crushed;   // (read by QueueXpPopup: the crush's popup shows decimals)
-        AddXp(pack, xp, pack != null && (crushed || pack.id != StandardId || AnyTrainable));
+        AddXp(pack, xp, popup);
         xpPopupDecimals = false;
+        if (pack != null && popupText != null && !hideXpPopups) ShowPopupText(pack, popupText, false);
     }
 
     /// <summary>The XP one manual click on this block gives its skill before multipliers: 1 for a skill's block, Standard's flat XP per block for a pure one (Husk Crush pays a share of it).</summary>

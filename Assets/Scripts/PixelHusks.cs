@@ -100,8 +100,14 @@ public class OldPixelImpact : MonoBehaviour, IHuskTick
 
     private static readonly RaycastHit[] downHits = new RaycastHit[16];   // (reused by Tick)
 
+    private OldPixelInfo landInfo;
+
     private void OnCollisionEnter(Collision collision)
     {
+        // Its first touch of anything (the floor, a device, a pile of husks): it has landed (Husk Crush's air crush bonus ends).
+        if (landInfo == null) landInfo = GetComponent<OldPixelInfo>();
+        if (landInfo != null && !landInfo.landed) landInfo.landed = true;
+
         if (collision.collider.GetComponentInParent<OldPixelInfo>() != null) return; // another old pixel
         if (collision.collider.GetComponent<WaterSplashPiece>() != null) return;      // a splash piece
 
@@ -356,6 +362,9 @@ public class OldPixelInfo : MonoBehaviour
 
     /// <summary>Unscaled time the player last let go of this pixel (-99 = never held).</summary>
     [HideInInspector] public float lastHeldTime = -99f;
+
+    /// <summary>It has touched something since it dropped (set by OldPixelImpact's first collision). Husk Crush's AIR CRUSH bonus needs it false.</summary>
+    [HideInInspector] public bool landed;
 
     /// <summary>Game time until which mold can't infect this pixel (it was just shaken clean).</summary>
     [HideInInspector] public float moldImmuneUntil;

@@ -222,7 +222,8 @@ minute. **Base crush is FREE** (not a tree node): RIGHT-CLICK a husk lying on th
   Click (hold left on the cube to charge). Needs Chain Crush; about Standard 7-8 (~60 min). Short cooldown after a charged crush so it
   never out-earns clicking. Right-click priority is unchanged: holding on the cube = Block Hold, holding on a husk = the charge (the
   target decides, `PixelRightClick`). Maybe later: a **Wide Arc** node lets the arc jump to any husk type.
-- **Crush bonuses (Agreed 2026-10-17 from the 10:50 session report, not built):** the report showed why crushing felt flat - a crush
+- **Crush bonuses (Agreed 2026-10-17 from the 10:50 session report, built 2026-10-17 - `PixelHuskCrush.CrushXp`; Standard retuned with them:
+  baseXp 380 -> 600 and the Recycler gives pure husks half its XP, see `PixelSkillsStandard.cs`):** the report showed why crushing felt flat - a crush
   paid 0.25 XP while a recycled husk paid ~2.6 (Recycler streaks), and HALF of all husks were wasted (340 faded, 823 removed by the
   floor cap, of 2,357). Crushing's job: use the husks the Recycler misses. Numbers (C = a click's XP on that block):
   plain crush **0.5 C** (was 0.25); **air crush** (husk crushed before it lands) **x2 = 1 C**; **last-gasp** (its last ~2 s, while it

@@ -4,9 +4,19 @@
 //   node): RIGHT-CLICK a husk lying on the floor and it breaks apart for a little skill XP - never currency (pixel rules: husks are never currency;
 //   only the Recycler turns them into currency, at a loss). Who gets the right click is decided by PixelRightClick (the cube, the hose, the
 //   conveyor kit, pets and device parts come first); this script only acts when PixelRightClick.Current is Husk.
-//   - XP: xpShare (0.25) of the XP a manual click on that block gives (PixelSkills.ClickXpOf: 1 for a skill block, Standard's flat XP for a pure
-//     one), to the husk's own skill via PixelSkills.AddHuskXp(crushed: true) - pure husks train Standard, wood husks Woodcutting... The crush's popup
-//     always shows, small amounts with decimals (PixelSkillsPopups).
+//   - XP: xpShare (0.5; 0.25 before the 2026-10-17 crush bonuses) of the XP a manual click on that block gives (C = PixelSkills.ClickXpOf: 1 for a
+//     skill block, Standard's flat XP for a pure one), to the husk's own skill via PixelSkills.AddHuskXp(crushed: true) - pure husks train Standard,
+//     wood husks Woodcutting... The crush's popup always shows, small amounts with decimals (PixelSkillsPopups).
+//   - CRUSH BONUSES (2026-10-17, design 'Crush bonuses', numbers from the 10:50 session report; CrushXp): multiplied together, then CAPPED at
+//     clickXpCap (1.0) x C - a crush never pays more than a click, so swapping clicks for crushes never pays:
+//       AIR CRUSH x airMultiplier (2): the husk has not touched anything yet (OldPixelInfo.landed, set by OldPixelImpact's first collision);
+//       LAST-GASP x lastGaspMultiplier (1.5): its last lastGaspSeconds (2) of real lifetime (OldPixelDespawn.RemainingReal);
+//       CRUSH STREAK +streakStep (10%) for each crush within streakWindow (1 s) of the one before, up to streakCap (x1.5); 1 s without one resets it -
+//         every husk a Chain / Charge Crush breaks counts as one crush;
+//       Hard Hands (below) multiplies in too, under the same cap.
+//     A bonus REPLACES the crush's XP popup with a short text (PixelSkills.AddHuskXp popupText: 'Air crush bonus!', 'Last-gasp bonus!' or
+//     'Crush streak x1.4!' - the biggest one), at most one text every bonusPopupGap (0.35 s; the XP of crushes in between shows no popup). Stats
+//     husk.crushed.air, husk.crushed.lastgasp; BestStreak (since ResetBestStreak) for the session recorder.
 //   - PICKING (PickAt, used by PixelRightClick): the husk exactly under the pointer, else the nearest crushable husk whose on-screen edge is
 //     within pickMarginPixels (28 at 1080p) - PixelHuskQuery.NearestOnScreen - so small, far and moving husks are easy to hit; never while the
 //     pointer is on the cube (even mid-materialize).
@@ -44,8 +54,44 @@ public class PixelHuskCrush : MonoBehaviour
     [SerializeField] private bool crushEnabled = true;
 
     [Min(0f)]
-    [Tooltip("XP a crushed husk gives its skill, as a share of the XP a manual click on that block gives (0.25 = a quarter of a click). Pure husks train Standard, a skill's husks that skill. Never currency.")]
-    [SerializeField] private float xpShare = 0.25f;
+    [Tooltip("XP a crushed husk gives its skill, as a share of the XP a manual click on that block gives (0.5 = half a click; the bonuses multiply it, never past clickXpCap). Pure husks train Standard, a skill's husks that skill. Never currency.")]
+    [SerializeField] private float xpShare = 0.5f;
+
+    [Tooltip("Data version of the crush numbers (1 = the 2026-10-17 crush bonuses raised xpShare from 0.25 to 0.5). Raised by code; lower it to apply the new default again.")]
+    [SerializeField] private int crushDataVersion = 0;
+
+    [Header("Crush bonuses (all multiply, then the cap)")]
+    [Min(0f)]
+    [Tooltip("HARD CAP: a crush never gives more than this share of the XP a click on that block gives, whatever bonuses stack (1 = a click). Keeps swapping clicks for crushes from ever paying. 0 = the coded default (1).")]
+    [SerializeField] private float clickXpCap = 1f;
+
+    [Min(1f)]
+    [Tooltip("AIR CRUSH: XP multiplier for a husk crushed before it has landed (it has not touched anything since it dropped).")]
+    [SerializeField] private float airMultiplier = 2f;
+
+    [Min(1f)]
+    [Tooltip("LAST-GASP: XP multiplier for a husk crushed in its last seconds before it fades (lastGaspSeconds).")]
+    [SerializeField] private float lastGaspMultiplier = 1.5f;
+
+    [Min(0f)]
+    [Tooltip("LAST-GASP window: a husk with this many real seconds (or fewer) left before it starts to fade counts.")]
+    [SerializeField] private float lastGaspSeconds = 2f;
+
+    [Min(0f)]
+    [Tooltip("CRUSH STREAK: XP added for each crush in a row (0.1 = +10% per crush), up to streakCap.")]
+    [SerializeField] private float streakStep = 0.1f;
+
+    [Min(1f)]
+    [Tooltip("CRUSH STREAK: the most the streak can multiply a crush by.")]
+    [SerializeField] private float streakCap = 1.5f;
+
+    [Min(0.05f)]
+    [Tooltip("CRUSH STREAK window: a crush within this many seconds of the one before keeps the streak going; longer without one resets it.")]
+    [SerializeField] private float streakWindow = 1f;
+
+    [Min(0f)]
+    [Tooltip("Shortest gap (seconds) between two bonus texts ('Air crush bonus!'...); crushes in between give their XP without a popup, so a chain is not a flood of texts.")]
+    [SerializeField] private float bonusPopupGap = 0.35f;
 
     [Tooltip("Pixel types whose husks can never be crushed (the rare collectibles - Dragon, God and Prime Cubes, the Golden Snitch - never can, whatever this list says).")]
     [SerializeField] private PixelClicker.PixelType[] neverCrush = new PixelClicker.PixelType[0];
@@ -105,7 +151,7 @@ public class PixelHuskCrush : MonoBehaviour
 
     [Header("Hard Hands (Standard tree, level 9)")]
     [Min(1f)]
-    [Tooltip("Crush XP is multiplied by this (1.6 with the 0.25 share = 40% of a click: still well below a click).")]
+    [Tooltip("Crush XP is multiplied by this (1.6 with the 0.5 share = 80% of a click; with the bonuses it still never passes clickXpCap = a click).")]
     [SerializeField] private float hardHandsFactor = 1.6f;
 
     [Header("Charge Crush (Standard tree, level 7)")]
@@ -167,11 +213,62 @@ public class PixelHuskCrush : MonoBehaviour
     private readonly List<Rigidbody> chain = new List<Rigidbody>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { instance = null; }
+    private static void ResetStatics() { instance = null; bestStreak = 0; PixelStatics.ResetOnRestart(() => bestStreak = 0); }
+
+    // ---- Crush streak (CrushXp) ----
+    private float lastCrushTime = -99f;
+    private int streakCount;          // crushes in a row after the first one (0 = no streak)
+    private float lastBonusPopup = -99f;
+    private static int bestStreak;    // the longest run of crushes in a row since ResetBestStreak (crushes, the first one included)
+
+    /// <summary>The longest crush streak (crushes in a row, each within the streak window of the one before) since ResetBestStreak.</summary>
+    public static int BestStreak => bestStreak;
+
+    /// <summary>Starts counting the best streak again (the session recorder calls it when a recording starts).</summary>
+    public static void ResetBestStreak() { bestStreak = 0; }
+
+    /// <summary>What a crush's streak multiplies it by at 'count' crushes in a row after the first (for the report).</summary>
+    public static float StreakMultiplierAt(int count)
+    {
+        PixelHuskCrush c = instance;
+        float step = c != null ? c.streakStep : 0.1f, cap = c != null ? c.streakCap : 1.5f;
+        return Mathf.Min(Mathf.Max(1f, cap), 1f + Mathf.Max(0f, step) * Mathf.Max(0, count));
+    }
+
+    /// <summary>
+    /// The XP one crush gives (bonuses multiplied, then capped at clickXpCap x a click's XP) and the bonus text that replaces its popup (null = none).
+    /// Moves the crush streak on: call it once per crushed husk.
+    /// </summary>
+    private double CrushXp(PixelSkills skills, int tier, Rigidbody body, out string bonusText, out bool air, out bool gasp)
+    {
+        double click = skills.ClickXpOf(tier);
+        double xp = click * Mathf.Max(0f, xpShare) * (PixelSkills.HasStandardNode(HardNode) ? Mathf.Max(1f, hardHandsFactor) : 1f);
+
+        float now = Time.unscaledTime;
+        streakCount = now - lastCrushTime <= Mathf.Max(0.05f, streakWindow) ? streakCount + 1 : 0;
+        lastCrushTime = now;
+        bestStreak = Mathf.Max(bestStreak, streakCount + 1);
+        float streak = StreakMultiplierAt(streakCount);
+
+        PixelHuskQuery.Husk h = PixelHuskQuery.Get(body);
+        air = h.info != null && !h.info.landed;
+        float left = h.despawn != null ? h.despawn.RemainingReal : -1f;
+        gasp = !air && left >= 0f && left <= Mathf.Max(0f, lastGaspSeconds);
+        float airM = air ? Mathf.Max(1f, airMultiplier) : 1f, gaspM = gasp ? Mathf.Max(1f, lastGaspMultiplier) : 1f;
+        xp *= airM * gaspM * streak;
+        xp = System.Math.Min(xp, click * (clickXpCap > 0f ? clickXpCap : 1f));   // HARD CAP: never more than a click
+
+        bonusText = null;
+        if (air && airM >= gaspM && airM >= streak) bonusText = "Air crush bonus!";
+        else if (gasp && gaspM >= streak) bonusText = "Last-gasp bonus!";
+        else if (streak > 1.001f) bonusText = "Crush streak x" + streak.ToString("0.0") + "!";
+        return xp;
+    }
 
     private void Awake()
     {
         instance = this;
+        if (crushDataVersion < 1) { if (Mathf.Approximately(xpShare, 0.25f)) xpShare = 0.5f; crushDataVersion = 1; }   // (the crush bonuses: a plain crush is half a click now)
         clicker = GetComponent<PixelClicker>();
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
     }
@@ -242,7 +339,7 @@ public class PixelHuskCrush : MonoBehaviour
         if (!CrushableType(type)) return "";
         PixelSkills skills = PixelSkills.Instance;
         string skill = skills != null ? skills.HuskSkillName(type) : "Standard";
-        return " Right-click it to crush it for a little " + skill + " XP." + (PixelSkills.HasStandardNode(ChargeNode) ? " Hold right on it to charge a Charge Crush: every husk of its type inside the ring is crushed too." : "");
+        return " Right-click it to crush it for " + skill + " XP (half a click's; more in the air before it lands, in its last seconds, or in a quick crush streak - never more than a click)." + (PixelSkills.HasStandardNode(ChargeNode) ? " Hold right on it to charge a Charge Crush: every husk of its type inside the ring is crushed too." : "");
     }
 
     private void Update()
@@ -527,8 +624,12 @@ public class PixelHuskCrush : MonoBehaviour
         double xp = 0d;
         if (skills != null)
         {
-            xp = skills.ClickXpOf(tier) * Mathf.Max(0f, xpShare) * (PixelSkills.HasStandardNode(HardNode) ? Mathf.Max(1f, hardHandsFactor) : 1f);
-            skills.AddHuskXp(tier, xp, true);
+            xp = CrushXp(skills, tier, body, out string bonusText, out bool air, out bool gasp);
+            bool textNow = bonusText != null && Time.unscaledTime - lastBonusPopup >= bonusPopupGap;
+            if (textNow) lastBonusPopup = Time.unscaledTime;
+            skills.AddHuskXp(tier, xp, true, textNow ? bonusText : null, bonusText != null && !textNow);   // (a bonus replaces the popup; too soon after the last text: no popup)
+            if (air) PixelStats.Count("husk.crushed.air");
+            if (gasp) PixelStats.Count("husk.crushed.lastgasp");
             string skillId = skills.HuskSkillId(tier);
             PixelStats.Count("husk.crushed." + skillId);
             PixelStats.Count("husk.crushed.xp." + skillId, xp);

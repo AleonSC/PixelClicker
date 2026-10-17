@@ -6,7 +6,7 @@
 //   OnCollected, FlushAutoXpPopup, CubeScreenPoint, rises beside the cube and follows it); text in the pack's accent colour, hangs
 //   just under the mouse cursor and follows it (drifting a little further down as it fades), on its own canvas 106 so it never mixes
 //   with the other +n texts; hideXpPopups, xpPopupSize). A Husk Crush (AddHuskXp crushed) marks its XP 'show decimals' (xpPopupDecimals ->
-//   xpPendingDecimals): that popup shows the gathered amount even under 1, rounded to 2 decimals ('+0.25 Standard XP'), so every crush is seen.
+//   AddHuskXp(popupText) shows a short text INSTEAD of the '+n XP' line (Husk Crush's bonuses, ShowPopupText). xpPendingDecimals): that popup shows the gathered amount even under 1, rounded to 2 decimals ('+0.25 Standard XP'), so every crush is seen.
 // ---------------------------------------------------
 using System.Collections;
 using TMPro;
@@ -131,7 +131,11 @@ public partial class PixelSkills
         return new Vector2(sp.x + half + 70f, sp.y + 30f);
     }
 
-    private void ShowXpPopup(SkillPack pack, double amount, bool nearCube)
+    private void ShowXpPopup(SkillPack pack, double amount, bool nearCube) =>
+        ShowPopupText(pack, "+" + amount.ToString(amount == System.Math.Floor(amount) ? "0" : "0.##") + " " + pack.displayName + " XP", nearCube);
+
+    /// <summary>The popup itself, with any text (the '+n XP' line, or a Husk Crush bonus text that replaces it).</summary>
+    private void ShowPopupText(SkillPack pack, string text, bool nearCube)
     {
         if (xpCanvas == null)
         {
@@ -142,7 +146,7 @@ public partial class PixelSkills
         float xJitter = Random.Range(-24f, 24f);
 
         float size = xpPopupSize > 1f ? xpPopupSize : 34f;
-        TMP_Text t = PixelUIKit.CreateText(Font, xpCanvas.transform, "Skill XP", "+" + amount.ToString(amount == System.Math.Floor(amount) ? "0" : "0.##") + " " + pack.displayName + " XP", size, TextAlignmentOptions.Center, FontStyles.Bold, pack.accent);
+        TMP_Text t = PixelUIKit.CreateText(Font, xpCanvas.transform, "Skill XP", text, size, TextAlignmentOptions.Center, FontStyles.Bold, pack.accent);
         t.raycastTarget = false;
         RectTransform r = t.rectTransform;
         r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);

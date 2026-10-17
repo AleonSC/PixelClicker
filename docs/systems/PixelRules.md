@@ -46,7 +46,7 @@ Machines exist to turn husks into something useful; despawning hurts because unu
 | Machine / system | Turns husks into |
 |---|---|
 | **Recycler** (built: `PixelRecycler.cs`) | currency, at **50%** of each husk's value |
-| **Husk Crush** (built 2026-10-17: `PixelHuskCrush.cs`, free from the start) | right-click a floor husk: ~25% of a click's XP to its own skill, never currency |
+| **Husk Crush** (built 2026-10-17: `PixelHuskCrush.cs`, free from the start) | right-click a floor husk: half a click's XP to its own skill (bonuses for air / last-gasp / streak crushes, capped at a click's XP), never currency |
 | Wood Chipper | skill XP (and Wood Chips) |
 | Kiln | Charcoal (fuel / material) |
 | Storage Crate | stored material for later |

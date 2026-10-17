@@ -37,7 +37,7 @@
 //   again after the cycle) and tips any UNCOUNTED husk lying in the bin out over the front / back rim (EjectUncounted), also again before paying.
 //   AUTO RECYCLING (autoRecycle, on by default since 2026-10-16 - the session reports showed nobody stopped clicking to fill the bin): every husk that is
 //   captured is recycled on its own recycleDelay (0.5 s) later - no button, no filling up (RecycleDue from Capture, RecycleOne). Each pays payoutShare of its
-//   value as BONUS currency (AddBonusCurrency: it does not count towards the next tier's unlock) AND skill XP (xpPerHusk 1 x the STREAK multiplier, PixelSkills.AddHuskXp: the husk's own skill, pure husks train Standard). The streak
+//   value as BONUS currency (AddBonusCurrency: it does not count towards the next tier's unlock) AND skill XP (xpPerHusk 1 x the STREAK multiplier, PixelSkills.AddHuskXp: the husk's own skill, pure husks train Standard - at standardXpShare 0.5 since the 2026-10-17 Standard retune). The streak
 //   grows by streakStep (0.2) for each husk of the SAME type as the one before, up to streakMaxMultiplier (5; was 20 - a long all-White streak made the Recycler out-earn clicking), and ends after streakTimeout (6 s) without a
 //   recycled husk; a different type keeps streakKeepOnSwitch (half) of it; the counter above the bin shows 'Gray streak x1.4 XP', the band glows warmer and the click sound climbs with it.
 //   Stats recycler.husks / paid / xp, Best recycler.streak. The idea is that husks reach it WITHOUT the player stopping (bin placed where husks land; edge-click
@@ -75,6 +75,9 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     [SerializeField] private float recycleDelay = 0.5f;
     [Tooltip("Skill XP per recycled husk before the streak bonus (it trains the husk's own skill; pure husks train Standard).")]
     [SerializeField] private float xpPerHusk = 1f;
+    [Min(0f)]
+    [Tooltip("Share of that XP a PURE husk gives Standard (skill husks keep all of theirs). The Recycler's streak XP levelled Standard about twice as fast as planned (2026-10-17 report), so Standard gets half. Even at half, a streak husk (~1.3 clicks' XP + currency) still beats the best crush (capped at 1 click). 0 = the coded default (0.5).")]
+    [SerializeField] private float standardXpShare = 0f;
     [Tooltip("STREAK: each husk of the SAME type as the one before raises the XP multiplier by this much (0.2 = x1.2, x1.4...). A different type starts the streak again.")]
     [SerializeField] private float streakStep = 0.2f;
     [Range(0f, 1f)]
@@ -602,7 +605,9 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
         double pay = CurrentValue(tier) * payoutShare;
         if (pay > 0d) clicker.AddBonusCurrency(tier, pay);
         double xp = Mathf.Max(0f, xpPerHusk) * mult;
-        if (xp > 0d && PixelSkills.Instance != null) PixelSkills.Instance.AddHuskXp(tier, xp);
+        PixelSkills skills = PixelSkills.Instance;
+        if (skills != null && skills.HuskSkillId(tier) == PixelSkills.StandardId) xp *= standardXpShare > 0f ? standardXpShare : 0.5f;   // (pure husks: Standard gets half, see the tooltip)
+        if (xp > 0d && skills != null) skills.AddHuskXp(tier, xp);
         PixelStats.Count("recycler.husks");
         PixelStats.Count("recycler.paid", pay);
         PixelStats.Count("recycler.xp", xp);

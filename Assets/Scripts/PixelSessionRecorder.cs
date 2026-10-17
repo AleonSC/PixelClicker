@@ -12,7 +12,7 @@
 //   polling once a second (pixel types unlocked, shop packs bought / levelled, skill level-ups, Cubie's visits, the shop window first opened),
 //   Block Hold and stakes (hold.count, stake.placed, stake.won / lost), husk counts (blocks broken = husks dropped; despawned unused 'old.despawned', removed by the floor cap 'old.capped', grabbed, vacuumed, recycled, shredded, banked - PixelStats
 //   counters), HUSK CRUSH (right-click a husk, PixelHuskCrush: crushes and base crush XP per minute, plain click vs Chain Crush vs Charge Crush, per skill, the share
-//   of dropped husks crushed and of Standard XP that came from crushing; the first crush and the Chain Crush / Clean Break / Hard Hands / Charge Crush nodes go on
+//   of dropped husks crushed and of Standard XP that came from crushing, XP per crush, the crush bonuses: air / last-gasp counts and the best streak; the first crush and the Chain Crush / Clean Break / Hard Hands / Charge Crush nodes go on
 //   the timeline), and the state at the start and end.
 // ---------------------------------------------------
 using System;
@@ -76,7 +76,7 @@ public class PixelSessionRecorder : MonoBehaviour
     // Husk Crush (PixelHuskCrush): the Standard tree nodes that change it, shown on the timeline when bought
     private static readonly string[] CrushNodes = { PixelHuskCrush.ChainNode, PixelHuskCrush.CleanNode, PixelHuskCrush.HardNode, PixelHuskCrush.ChargeNode };
     private static readonly string[] CrushNodeNames = { "Chain Crush", "Clean Break", "Hard Hands", "Charge Crush" };
-    private static readonly string[] CrushKeys = { "husk.crushed", "husk.crushed.chain", "husk.crushed.charge", "husk.chargecrush", "husk.crushed.xp" };
+    private static readonly string[] CrushKeys = { "husk.crushed", "husk.crushed.chain", "husk.crushed.charge", "husk.chargecrush", "husk.crushed.xp", "husk.crushed.air", "husk.crushed.lastgasp" };
 
     private static readonly string[] HoldKeys = { "hold.count", "stake.placed", "stake.won", "stake.lost", "power.clicks" };
 
@@ -281,6 +281,7 @@ public class PixelSessionRecorder : MonoBehaviour
         foreach (string k in HoldKeys) statsAtStart[k] = PixelStats.Total(k);
         foreach (string k in WoodKeys) statsAtStart[k] = PixelStats.Total(k);
         foreach (string k in CrushKeys) statsAtStart[k] = PixelStats.Total(k);
+        PixelHuskCrush.ResetBestStreak();   // (the crush streak's best is counted per recording)
         PixelSkills skillsNow = PixelSkills.Instance;
         if (skillsNow != null)
             foreach (PixelSkills.SkillPack p in skillsNow.Packs)
@@ -602,7 +603,11 @@ public class PixelSessionRecorder : MonoBehaviour
             if (minutes[i].crushes > best) { best = minutes[i].crushes; bestMinute = i + 1; }
         }
         sb.AppendLine("  Used in " + minutesUsed + " of " + minutes.Count + " minutes" + (best > 0 ? "; most in one minute: " + best + " (minute " + bestMinute + ")" : ""));
-        sb.AppendLine("Crush XP (base, before XP multipliers): " + xp.ToString("F1") + "  (" + (xp / minutesPlayed).ToString("F2") + " per minute)");
+        sb.AppendLine("Crush XP (base, before XP multipliers): " + xp.ToString("F1") + "  (" + (xp / minutesPlayed).ToString("F2") + " per minute" +
+                      (crushed > 0d ? ", " + (xp / crushed).ToString("F2") + " per crush" : "") + ")");
+        int bestStreak = PixelHuskCrush.BestStreak;
+        sb.AppendLine("Crush bonuses: air crushes " + Since("husk.crushed.air").ToString("F0") + ", last-gasp crushes " + Since("husk.crushed.lastgasp").ToString("F0") +
+                      ", best crush streak " + bestStreak + " in a row" + (bestStreak > 1 ? " (x" + PixelHuskCrush.StreakMultiplierAt(bestStreak - 1).ToString("0.0") + ")" : ""));
         PixelSkills skills = PixelSkills.Instance;
         if (skills != null)
             foreach (PixelSkills.SkillPack p in skills.Packs)

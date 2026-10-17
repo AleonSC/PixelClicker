@@ -9,6 +9,11 @@
 //   PixelClicker.OldPixelCap), Steady grip (level 3) and Firm grip (level 5): Block Hold's meter starts at half length and each adds 10% of that
 //   (PixelBlockHold.GripFactor reads the Standard level); 'Sharper clicks' (level 7) is still 'coming soon'. Standard shows level / XP bars in the Skills window
 //   and the tracker like any skill, has no bonus bank, filler or hazard and does not count towards Mastery.
+//   XP CURVE RETUNE (2026-10-17, from the 10:50 session report: level 4 at 8:21, plan ~20 min; Recycler streak XP 2,620 out-earned click XP 2,357):
+//   Standard's baseXp 380 -> 600 (x xpCurveScale 2 = 1,200 XP to level 2; growth stays 1.5) AND the Recycler gives a pure husk only
+//   standardXpShare (0.5) of its XP (PixelRecycler; skill husks keep it all). Modelled at the report's pace (clicks ~218 XP/min + half the Recycler's
+//   ~242 + some crushing ~ 360/min): levels 2-7 at about 3 / 8 / 16 / 27 / 44 / 69 min - Auto Clicker upgrades raise the pace later, pulling 6-7
+//   towards the 45 / 60 min targets. Check the next report's Standard timeline and nudge baseXp / standardXpShare from there.
 //   SKILL TREE (2026-10-16, DefaultNodes(StandardId), PixelSkills.HasStandardNode): the first point (level 2) goes on 'Block Hold' (hold; Block Hold
 //   is no longer available from the start - PixelBlockHold.requireTreeNode) or 'Power Click' (power, PixelPowerClick.requireTreeNode); branches
 //   hold -> lucky (+10% stake win) -> highroller (cost 2, stakes grow 50% faster) and power -> quick (charge 40% faster) -> aftershock (cost 2,
