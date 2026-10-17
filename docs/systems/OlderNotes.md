@@ -1,6 +1,6 @@
-# Roadmap / open notes
+# Older notes (formerly docs/roadmap.md)
 
-Moved from CLAUDE.md.
+History and system notes moved from CLAUDE.md long ago. The open IDEAS from here now live in `Assets/Resources/Ideas.txt` (Dev Hub > Docs > Ideas); this file keeps the background (balance decisions, reworks, profiling).
 
 - **Handoff + optimization review written (2026-10-07): see `HANDOFF.md` in the repo root** (working rules recap, unverified items, lessons, and a prioritized optimization list). Done so far: #1-6, 9, 10, 11, 14, 22, 24, 27 (see git log). Remaining items are still open.
 - The UI helper (`PixelUIKit`) and minigame base (`PixelMinigame`) refactors are verified in Unity by the user.

@@ -1,10 +1,11 @@
 // ---- System notes ----
 // PixelDevDocs.cs
-//   The 'Docs' tab of the Dev Hub (PixelDevHub): the DOCUMENTATION section with three permanent sub-tabs: To-Do (0), Changelog (1) and Notes (2).
+//   The 'Docs' tab of the Dev Hub (PixelDevHub): the DOCUMENTATION section with four permanent sub-tabs: To-Do (0), Changelog (1), Notes (2) and Ideas (3).
 //   * To-Do and Changelog: PixelDevDocs only provides their content roots (PixelDevDocs.Root(0) / Root(1)); PixelDevTools fills them (Resources/Todo.txt, Resources/Changelog.txt)
 //     and rebuilds them when PixelDevDocs.Shown(sub) fires (the Docs tab is visible and that sub-tab is showing).
 //   * Notes: your own notes, typed in-game. A list of notes on the left ('+ New note'), the selected note's title and text on the right (multi-line, scrolls), Delete (a second click
 //     confirms). Saved automatically a moment after every change, when the Docs tab is hidden and when the game closes, to <persistentDataPath>/DevNotes.json (not part of the game save).
+//   * Ideas: Resources/Ideas.txt (the project's 'maybe someday' ideas, kept by Claude) shown read-only; '#' lines are headings, '- ' lines bullets.
 //   The selected sub-tab is remembered (PlayerPrefs PixelClicker.Dev.DocsSub).
 // ---------------------------------------------------
 using System;
@@ -41,8 +42,9 @@ public class PixelDevDocs : MonoBehaviour
                                   On = new Color(0.25f, 0.45f, 0.8f, 1f), Off = new Color(0.2f, 0.24f, 0.34f, 1f);
 
     private TMP_FontAsset font;
-    private readonly RectTransform[] roots = new RectTransform[3];
-    private readonly Image[] subImages = new Image[3];
+    private const int SubCount = 4;   // To-Do, Changelog, Notes, Ideas
+    private readonly RectTransform[] roots = new RectTransform[SubCount];
+    private readonly Image[] subImages = new Image[SubCount];
     private int sub;
     private bool visible;
 
@@ -77,9 +79,9 @@ public class PixelDevDocs : MonoBehaviour
         PixelUIKit.EnsureEventSystem();
         RectTransform root = PixelDevHub.TabRoot("docs");
 
-        string[] names = { "To-Do", "Changelog", "Notes" };
-        float bw = (W - 20f - 12f) / 3f;
-        for (int i = 0; i < 3; i++)
+        string[] names = { "To-Do", "Changelog", "Notes", "Ideas" };
+        float bw = (W - 20f - 6f * (SubCount - 1)) / SubCount;
+        for (int i = 0; i < SubCount; i++)
         {
             int index = i;
             Button b = PixelUIKit.CreateButton(font, root, names[i] + " Sub Tab", names[i], new Vector2(bw, SubH - 4f), Off, TextColor, 22f);
@@ -95,7 +97,8 @@ public class PixelDevDocs : MonoBehaviour
         }
         LoadNotes();
         BuildNotes(roots[2]);
-        sub = Mathf.Clamp(PixelPrefs.GetInt(PrefSub, 0), 0, 2);
+        BuildIdeas(roots[3]);
+        sub = Mathf.Clamp(PixelPrefs.GetInt(PrefSub, 0), 0, SubCount - 1);
         ApplySub();
         PixelDevHub.SetTabCallback("docs", SetVisible);
     }
@@ -111,7 +114,7 @@ public class PixelDevDocs : MonoBehaviour
     private void SetVisible(bool on)
     {
         visible = on;
-        if (on) Shown?.Invoke(sub);
+        if (on) { Shown?.Invoke(sub); if (sub == 3) RebuildIdeas(); }
         else SaveNow();
     }
 
@@ -120,16 +123,55 @@ public class PixelDevDocs : MonoBehaviour
         sub = index;
         PixelPrefs.SetInt(PrefSub, sub);
         ApplySub();
-        if (visible) Shown?.Invoke(sub);
+        if (visible) { Shown?.Invoke(sub); if (sub == 3) RebuildIdeas(); }
     }
 
     private void ApplySub()
     {
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < SubCount; i++)
         {
             roots[i].gameObject.SetActive(i == sub);
             subImages[i].color = i == sub ? On : Off;
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Ideas (Resources/Ideas.txt, read-only here: Claude keeps the file)
+    // ------------------------------------------------------------------
+
+    private ScrollRect ideasScroll;
+    private GameObject ideasBar;
+    private TMP_Text ideasText;
+
+    private void BuildIdeas(RectTransform root)
+    {
+        float h = H - SubH - 4f;
+        ideasScroll = PixelUIKit.CreateScrollView(root, "Ideas", PixelDevUI.Accent, 10f, 40f, out RectTransform content, out ideasBar);
+        PixelDevUI.PlaceTL(ideasScroll.GetComponent<RectTransform>(), 10f, 6f, W - 20f, h - 14f);
+        ideasText = PixelDevUI.WrapText(content, "Ideas Text", 8f, 0f, W - 46f, 10f, 19f, TextColor);
+        ideasText.richText = true;
+    }
+
+    /// <summary>Shows Resources/Ideas.txt: '#' lines as headings, '- ' lines as bullets, everything else as written.</summary>
+    private void RebuildIdeas()
+    {
+        if (ideasText == null) return;
+        TextAsset asset = Resources.Load<TextAsset>("Ideas");
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        if (asset == null) sb.Append("No Ideas.txt in Assets/Resources yet.");
+        else
+            foreach (string raw in asset.text.Split('\n'))
+            {
+                string line = raw.TrimEnd('\r');
+                string esc = line.Replace("<", "<noparse><</noparse>");
+                if (line.StartsWith("#")) sb.Append("\n<b><color=#66b3ff>").Append(esc.TrimStart('#', ' ')).Append("</color></b>\n");
+                else if (line.TrimStart().StartsWith("- ")) sb.Append("  - ").Append(esc.TrimStart().Substring(2)).Append('\n');
+                else sb.Append(esc).Append('\n');
+            }
+        ideasText.text = sb.ToString().TrimStart('\n');
+        float height = ideasText.GetPreferredValues(ideasText.text, W - 46f, 0f).y + 16f;
+        ideasText.rectTransform.sizeDelta = new Vector2(W - 46f, height);
+        PixelUIKit.UpdateScrollView(ideasScroll, ideasBar, height, H - SubH - 18f);
     }
 
     // ------------------------------------------------------------------

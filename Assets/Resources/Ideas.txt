@@ -1,0 +1,20 @@
+# Ideas (maybe someday)
+Loose ideas that are NOT on the to-do yet. Claude adds to this when an idea comes up; when you decide to build one, it moves to the to-do (Todo.txt). Older system notes that used to live here are in docs/systems/OlderNotes.md.
+
+# Big features
+- Prestige: reset for a lasting bonus (wanted, from the balance plan).
+- Passive production (things that make pixels without clicking).
+- Offline progress for more than the auto clicker (minigames, devices).
+- Formula-based auto clicker levels instead of a fixed list.
+- Minigame goals measured in hours, for the idle-over-days pace.
+
+# Content
+- More shop packs and pixel tiers.
+- A balancing pass on spawn weights and costs.
+- Particle polish and filling in missing sound clips.
+
+# Code clean-ups worth doing some day
+- Split PixelShop further into separate logic and UI classes.
+- One shared game object that owns the references, instead of scene searches.
+- PixelLog keeps its own number formatter (FormatAmount) next to PixelClicker.FormatNumber - could be one.
+- Pool the husk objects themselves (only if a profile with ~150 husks shows it matters).

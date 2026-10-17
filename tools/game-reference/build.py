@@ -116,11 +116,11 @@ section('10. SYSTEM DOCS (docs/systems/*.md)')
 for f in sorted(glob.glob(os.path.join(ROOT, 'docs', 'systems', '*.md'))):
     out.append('--- docs/systems/' + os.path.basename(f) + ' ---\n' + plain(read(f)))
 
-# 11. Roadmap + open to-dos
-road = os.path.join(ROOT, 'docs', 'roadmap.md')
-if os.path.exists(road):
-    section('11. ROADMAP / OPEN IDEAS (docs/roadmap.md)')
-    out.append(plain(read(road)))
+# 11. Ideas + open to-dos (the older roadmap notes are docs/systems/OlderNotes.md, in section 10)
+ideas = os.path.join(ROOT, 'Assets', 'Resources', 'Ideas.txt')
+if os.path.exists(ideas):
+    section('11. IDEAS - MAYBE SOMEDAY (Assets/Resources/Ideas.txt)')
+    out.append(plain(read(ideas)))
 todo = os.path.join(ROOT, 'Assets', 'Resources', 'Todo.txt')
 if os.path.exists(todo):
     section('12. OPEN TO-DO ITEMS (Assets/Resources/Todo.txt, unchecked only)')

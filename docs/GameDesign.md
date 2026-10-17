@@ -217,7 +217,7 @@ Chips / Magic Wood have no use yet.
 - **Built:** each pixel type is its own currency; Pure pixels (the six basic types) are the shop currency; Value upgrades scale
   payouts; potions are priced from expected output; vendors buy skill currency for Pure pixels at a rarity-based rate; long number
   suffixes up to ~1e306. Rarer pixels are deliberately slower to upgrade.
-- **Agreed direction:** numbers keep growing over days; prices re-laddered for the Value economy (`docs/roadmap.md`).
+- **Agreed direction:** numbers keep growing over days; prices re-laddered for the Value economy (`docs/systems/OlderNotes.md`).
 - **Tools:** the Dev Hub's Balance report (per-skill XP, minutes to level), `PixelBalanceReport.cs`.
 - Open: the long-term sink **(Q9)**, offline progress **(Q10)**.
 
