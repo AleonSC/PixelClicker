@@ -186,9 +186,8 @@ public class PixelSweeper : MonoBehaviour
     /// <summary>A husk it may pick up: loose, not touched by anything else, not high above the floor.</summary>
     private bool Fetchable(Rigidbody rb)
     {
-        if (rb == null || rb.isKinematic || clicker.IsFlyingPixel(rb) || PixelAttachment.IsAttached(rb)) return false;
-        PixelHuskQuery.Husk h = PixelHuskQuery.Get(rb);
-        if (h.info == null || h.info.heldByPlayer || h.despawn == null || h.despawn.IsDespawning || h.despawn.Held) return false;
+        if (!PixelHuskHolder.Takeable(clicker, rb) || PixelAttachment.IsAttached(rb)) return false;   // (one owner per husk: held, reserved or kept by another machine = not ours)
+        if (PixelHuskQuery.Get(rb).despawn == null) return false;
         if (rb.position.y > FloorY + 2.5f * unit) return false;
         Vector3 c = rb.worldCenterOfMass;
         foreach (PixelConveyor b in PixelConveyor.All) if (b != null && !b.IsGhost && b.Carries(c)) return false;   // riding a belt (or about to be)

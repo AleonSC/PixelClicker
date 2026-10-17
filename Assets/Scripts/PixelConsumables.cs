@@ -163,6 +163,10 @@ public class PixelConsumables : MonoBehaviour
         public int maxHeld = 0;
 
         [Min(0f)]
+        [Tooltip("A rising price: every one of this item you already hold or have standing multiplies the next one's price by this (1.8 = x1.8, x3.24...). 0 or 1 = a flat price.")]
+        public float priceGrowthPerOwned = 0f;
+
+        [Min(0f)]
         [Tooltip("Sprinkler only: seconds between waterings of the seeds in reach (0 = 1).")]
         public float sprayInterval = 1f;
 
@@ -632,13 +636,14 @@ public class PixelConsumables : MonoBehaviour
         {
             kind = DeviceKind.Recycler,
             displayName = "Recycler",
-            description = "A bin that recycles every husk that lands in it for half its value and XP (same colour in a row = a streak). Works for {duration} s; upgrades in the shop's Operation tab.",
+            description = "A bin that recycles every husk that lands in it - or that its suction ring draws in from close by - for half its value as currency (same colour in a row = a streak that raises the pay, never above a click). Works for {duration} s; upgrades in the shop's Operation tab. Several can stand at once; each extra one costs more.",
             requiredType = PixelClicker.PixelType.White,
             costs = new[]
             {
                 new PixelShop.PackCost { type = PixelClicker.PixelType.White, amount = 50 },
             },
-            maxHeld = 2,
+            maxHeld = 3,
+            priceGrowthPerOwned = 1.8f,   // each Recycler you hold or have standing makes the next one cost 1.8x more (a rising ladder)
             durationSeconds = 300f,   // 5 minutes (Operation: Run Time)
             radius = 1f,
             color = new Color(0.25f, 0.55f, 0.32f, 1f),
@@ -1208,6 +1213,10 @@ public class PixelConsumables : MonoBehaviour
         if (devices != null)
             foreach (Device d in devices)
                 if (d != null && d.kind == DeviceKind.Recycler && d.durationSeconds >= 1e8f) { Device fresh = CreateDefaultRecycler(); d.durationSeconds = fresh.durationSeconds; d.description = fresh.description; }   // (2026-10-16: the Recycler lasts 5 minutes)
+
+        if (devices != null)
+            foreach (Device d in devices)
+                if (d != null && d.kind == DeviceKind.Recycler && d.priceGrowthPerOwned <= 0f) { Device fresh = CreateDefaultRecycler(); d.priceGrowthPerOwned = fresh.priceGrowthPerOwned; d.maxHeld = Mathf.Max(d.maxHeld, fresh.maxHeld); d.description = fresh.description; }   // (2026-10-17 rework: currency only, suction, a rising price for more Recyclers)
 
         if (devices != null)
             foreach (Device d in devices)
@@ -1809,6 +1818,26 @@ public class PixelConsumables : MonoBehaviour
     /// What one of an item costs right now. Potions: from their expected output (see <see cref="potionPriceFromOutput"/>).
     /// Devices (and potions with that off): the typed prices, scaled by each pixel's Value multiplier when that is on.
     /// </summary>
+    /// <summary>A device with a rising price (Device.priceGrowthPerOwned): its costs times growth ^ (how many are held + standing).</summary>
+    private PixelShop.PackCost[] Laddered(int item, PixelShop.PackCost[] costs)
+    {
+        if (!IsDevice(item) || costs == null) return costs;
+        int index = item - potions.Length;
+        Device d = devices[index];
+        if (d == null || d.priceGrowthPerOwned <= 1f) return costs;
+        int have = d.owned;
+        foreach (PixelPlacedDevice p in PixelPlacedDevice.All) if (p != null && !p.IsRemoving && p.DeviceIndex == index) have++;
+        if (have <= 0) return costs;
+        double factor = System.Math.Pow(d.priceGrowthPerOwned, have);
+        PixelShop.PackCost[] up = new PixelShop.PackCost[costs.Length];
+        for (int i = 0; i < costs.Length; i++)
+        {
+            PixelShop.PackCost c = costs[i];
+            up[i] = c == null ? null : new PixelShop.PackCost { type = c.type, amount = System.Math.Ceiling(c.amount * factor), minigameCurrency = c.minigameCurrency };
+        }
+        return up;
+    }
+
     public PixelShop.PackCost[] ItemCosts(int item)
     {
         if (IsDevice(item) && devices[item - potions.Length].kind == DeviceKind.Seed && clicker != null && !IsDragonSeed(item))
@@ -1829,6 +1858,7 @@ public class PixelConsumables : MonoBehaviour
         }
 
         PixelShop.PackCost[] baseCosts = IsDevice(item) ? devices[item - potions.Length].costs : potions[item].costs;
+        baseCosts = Laddered(item, baseCosts);
         if (!scalePricesWithValue || clicker == null || baseCosts == null) return baseCosts;
 
         PixelShop.PackCost[] scaled = new PixelShop.PackCost[baseCosts.Length];
@@ -1929,6 +1959,7 @@ public class PixelConsumables : MonoBehaviour
             case PixelOperationStat.StrikeInterval: return d.strikeSeconds;
             case PixelOperationStat.Storage: return d.maxHeld;
             case PixelOperationStat.RecyclerStreak: return PixelRecycler.DefaultStreakCap;
+            case PixelOperationStat.RecyclerSuction: return PixelRecycler.DefaultSuctionRadius;
             case PixelOperationStat.BaitGhosts:
             {
                 PixelGhostMinigame ghosts = PixelFind.First<PixelGhostMinigame>();

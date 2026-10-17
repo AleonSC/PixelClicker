@@ -724,7 +724,7 @@ public class PixelSessionRecorder : MonoBehaviour
             case "old.vacuumed": return "Vacuumed";
             case "recycler.husks": return "Recycled";
             case "recycler.paid": return "Recycler paid (currency)";
-            case "recycler.xp": return "Recycler XP (with streaks)";
+            case "recycler.xp": return "Recycler XP (0 since the currency-only rework)";
             case "old.shredded": return "Shredded";
             case "old.shattered": return "Shattered";
             case "old.banked": return "Stored in the Pixel Bank";

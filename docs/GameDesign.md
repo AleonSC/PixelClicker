@@ -300,7 +300,7 @@ A little wind-up clockwork cube with a broom: early automation for stray husks t
   last 12 s); the nearest container is measured from where the husk was picked up; no carry handles (it roams from its pad: remove and place it
   again to move it). Open: the Standard range / speed upgrades and the Electrician motor (`motorFitted` is the hook).
 
-### Husk routing rework: aiming becomes a skill, the Recycler pays currency (Agreed 2026-10-17, not built)
+### Husk routing rework: aiming becomes a skill, the Recycler pays currency (Agreed 2026-10-17; the Recycler part BUILT 2026-10-17, Aimed Clicks not yet)
 Why: the 10:50 session report showed the early husk setup was too automatic - edge-click aiming (free from the start) sent husks
 straight into the Recycler (1,017 recycled, an 89-husk streak), and the Recycler paid MORE Standard XP (2,620) than clicking (2,357)
 while also paying currency, so Standard levelled ~2x too fast and Husk Crush had no job.
@@ -325,6 +325,12 @@ while also paying currency, so Standard levelled ~2x too fast and Husk Crush had
    it, through `PixelHuskHolder`, never a special case per device.
 6. **Re-check after building:** Standard's pace against the curve (levels 2-7 at about 3 / 8-10 / 20 / 30-35 / 45 / 60 min) with a new
    session report - removing the Recycler's XP should bring it close to clicking-only.
+7. **As built (Recycler part, 2026-10-17):** 50% currency x the streak (+0.1 a same-type husk, cap 1.6 = 80% of a click; Streak Power +0.06 a
+   level), hard ceiling 95% of a click; no XP (xpPerHusk 0). Suction ring 2 husk widths past the rim + the new Operation row **Suction** (+0.75 a
+   level) - a separate row rather than folded into Bin Size, so the player chooses between a bigger bin (more lands in by itself) and a longer
+   reach (draws more in from the floor), and Bin Size keeps meaning one thing. Price ladder x1.8 per Recycler held or standing. One owner per husk
+   = PixelHuskHolder.Takeable (Recycler, Magnet, Sweeper, hopper). Note for the pace check: Standard's baseXp was raised 380 -> 600 (Skills
+   session) partly to absorb the Recycler's XP, which is now gone - the next report says whether to lower it again.
 
 ### Mid game - skills and machines (Built, growing)
 Gathering skills (Woodcutting, Foraging, Fishing, Mining, Farming, Electrician), each with filler, hazards, specials, perks and a

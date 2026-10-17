@@ -47,6 +47,8 @@ public enum PixelOperationStat
     BaitGhosts = 10,
     /// <summary>How high a Recycler's same-type streak multiplier can climb.</summary>
     RecyclerStreak = 11,
+    /// <summary>How far past a Recycler's rim its suction ring reaches (husk widths).</summary>
+    RecyclerSuction = 12,
 }
 
 /// <summary>
@@ -130,7 +132,8 @@ public class PixelOperationUpgrade
 
             U("rec_duration", "Run Time", "How long a placed Recycler works before it packs up.", Y, PixelOperationStat.Duration, 5, 60f, 60, " s"),
             U("rec_size", "Bin Size", "A bigger bin: more husks land in it by themselves.", Y, PixelOperationStat.Radius, 5, 0.15f, 80, "x"),
-            U("rec_streak", "Streak Power", "How high the same-colour streak's XP multiplier can climb.", Y, PixelOperationStat.RecyclerStreak, 5, 1f, 100, "x"),
+            U("rec_streak", "Streak Power", "How high the same-colour streak's CURRENCY multiplier can climb (a recycled husk still never pays more than 95% of a click).", Y, PixelOperationStat.RecyclerStreak, 5, 0.06f, 100, "x"),
+            U("rec_suction", "Suction", "How far past the rim the suction ring draws loose husks in.", Y, PixelOperationStat.RecyclerSuction, 5, 0.75f, 70, " husk widths"),
         };
     }
 }

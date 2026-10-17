@@ -13,7 +13,10 @@
 //   - FlyIn(go, target, point, growTarget): the "shrink into the container" animation for containers that keep a husk as DATA (Storage Crate,
 //     Bait Bucket): the body is switched off, slides to the target and is destroyed while the container's display model grows in its place.
 //   - SpawnIntoHand(clicker, tier, amount, at): a stored husk taken back out straight into the mouse's hand (Pixel Grabbing).
-//   Users: PixelRecycler, PixelStorageCrate, PixelBaitBucket, PixelSortingHopper.
+//   ONE OWNER PER HUSK (2026-10-17 Recycler rework): every machine that reaches for a husk - the Recycler's suction / suck-in / Capture, the Magnet, the
+//   Sweeper, the Sorting Hopper - asks Takeable first, and the one that takes it marks it (Capture or Reserve: its timer Held, kinematic while carried);
+//   from then on Takeable says no to everyone else, so whoever captures a husk first owns it. No device-to-device special cases.
+//   Users: PixelRecycler, PixelStorageCrate, PixelBaitBucket, PixelSortingHopper, PixelSweeper, PixelMagnetDevice.
 // ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;

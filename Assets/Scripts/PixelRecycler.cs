@@ -2,7 +2,8 @@
 // PixelRecycler.cs
 //   TIMED + UPGRADES (2026-10-16): a placed Recycler lasts durationSeconds (300 s; PixelRecyclerDevice counts down, 'm:ss left' under the counter,
 //   it shrinks away with whatever is inside when time is up). Upgrades > Operation: Run Time (+60 s a level), Bin Size (+15% a level - the whole bin
-//   and its catching area scale, Place sizeFactor = the device's radius) and Streak Power (+1 to the streak cap a level, StreakCap).
+//   and its catching area scale, Place sizeFactor = the device's radius), Streak Power (+0.06 to the streak cap a level, StreakCap) and Suction (+0.75 husk
+//   widths of suction ring a level, SuctionReach).
 //   RECYCLER (PixelConsumables DeviceKind.Recycler 19, Utilities card - listed FIRST there - and Cubie's gift on visit 1 via the {recycler} page token): a
 //   permanent open-topped bin (PixelChipperDevice stub for removal / saving its spot; built here by Place / CreateGhost / CreateDisplay with PixelFactoryKit:
 //   plinth + feet, green walls with a dark liner, brushed-metal corner pillars and rim, a glowing band round the body and a status lamp - green idle,
@@ -36,19 +37,26 @@
 //   Pressing the button freezes every counted husk into the bin first (a still-settling one could be jostled out by the shake, let go and caught
 //   again after the cycle) and tips any UNCOUNTED husk lying in the bin out over the front / back rim (EjectUncounted), also again before paying.
 //   AUTO RECYCLING (autoRecycle, on by default since 2026-10-16 - the session reports showed nobody stopped clicking to fill the bin): every husk that is
-//   captured is recycled on its own recycleDelay (0.5 s) later - no button, no filling up (RecycleDue from Capture, RecycleOne). Each pays payoutShare of its
-//   value as BONUS currency (AddBonusCurrency: it does not count towards the next tier's unlock) AND skill XP (xpPerHusk 1 x the STREAK multiplier, PixelSkills.AddHuskXp: the husk's own skill, pure husks train Standard - at standardXpShare 0.5 since the 2026-10-17 Standard retune). The streak
-//   grows by streakStep (0.2) for each husk of the SAME type as the one before, up to streakMaxMultiplier (5; was 20 - a long all-White streak made the Recycler out-earn clicking), and ends after streakTimeout (6 s) without a
-//   recycled husk; a different type keeps streakKeepOnSwitch (half) of it; the counter above the bin shows 'Gray streak x1.4 XP', the band glows warmer and the click sound climbs with it.
+//   captured is recycled on its own recycleDelay (0.5 s) later - no button, no filling up (RecycleDue from Capture, RecycleOne).
+//   CURRENCY ONLY (2026-10-17 rework, docs/GameDesign.md section 6 'Husk routing rework' - the 10:50 report had the Recycler paying more Standard XP than
+//   clicking): each husk pays payoutShare (50%) of what a click on it pays now as BONUS currency (AddBonusCurrency: not towards the next tier's unlock),
+//   times the same-type STREAK, but never more than maxShareOfClick (95%) of a click. NO skill XP (xpPerHusk 0; a small value can be set, the streak does
+//   not multiply it). The streak grows by streakStep (0.1) for each husk of the SAME type as the one before, up to streakMaxMultiplier (1.6 = 80% of a
+//   click; Streak Power upgrades raise it, the 95% ceiling holds), ends after streakTimeout (6 s) without a recycled husk; a different type keeps
+//   streakKeepOnSwitch (half) of it; the counter shows 'Gray streak x1.4 pay', the band glows warmer and the click sound climbs with it.
+//   SEVERAL RECYCLERS: any number can stand at once; the shop price rises with every one held or standing (Device.priceGrowthPerOwned 1.8, PixelConsumables
+//   Laddered). ONE OWNER PER HUSK: Capture, the suction and the suck-in only take husks PixelHuskHolder.Takeable says are free (a husk the Sweeper / hopper /
+//   another bin has reserved or captured is left alone).
 //   Stats recycler.husks / paid / xp, Best recycler.streak. The idea is that husks reach it WITHOUT the player stopping (bin placed where husks land; edge-click
 //   aiming is planned). The button / capacity / lid cycle below is the old manual mode (autoRecycle off) and still works in auto mode for anything left inside.
 //   A FULL bin makes its button flash and pulse (UpdateButtonFlash, flashColor). Removing the Recycler destroys what is inside. Not a belt acceptor yet.
 //   SORTING HOPPER (2026-10-17): a PixelSortingHopper snaps onto the back wall (BackEdgeLocalZ, SizeFactor) and keeps the back hatch open (SetHatchOpen);
 //   it slides its chosen husk type through the hatch (HatchOutside -> HatchInside) and lets it fall into the bin, where Capture takes it as usual.
 //   Capturing / letting go / freezing use the shared PixelHuskHolder steps.
-//   SUCK-IN (2026-10-17, like the Storage Crate): a husk in the air over the opening or a NEAR MISS just past the rim (suckReach) is sucked in - it glides
-//   into the middle of the bin (SuckOne, suckSeconds) and is caught as usual; further out husks still miss. TOP PULL (off by default): an extra weak sideways
-//   pull further out (topPullReach / topPullStrength). Husks lying on the floor beside the bin are left alone by both.
+//   SUCTION RING + SUCK-IN (2026-10-17): a modest ring (suctionRadius 2 husk widths past the rim + the Suction upgrades, suctionStrength) draws LOOSE
+//   husks nearby towards the bin (a little lift by the wall); a husk over the opening or right by the rim (suckReach) is SUCKED IN like the Storage
+//   Crate - it glides into the middle of the bin (SuckOne, suckSeconds) and is caught as usual. Modest on purpose: one bin catches some of a random
+//   scatter, not all of it. The Sorting Hopper's tray behind a latched hopper is left alone (BehindHopper).
 //   SOCKET (PixelSockets.cs): the back hatch is an In socket ('hatch'). With no hopper latched (a latched hopper OCCUPIES it), a coupling there takes belts / connectors / hoses:
 //   AcceptHusk counts the husk at once and lets it fall in behind the back wall (HatchInside); refused while working or full (HuskRoom).
 // ---------------------------------------------------
@@ -81,33 +89,36 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     [Tooltip("Seconds a sucked husk takes to glide into the bin.")]
     [SerializeField] private float suckSeconds = 0.3f;
 
-    [Header("Top pull (2026-10-17)")]
-    [Tooltip("An extra weak pull further out: husks in the air near the opening drift towards it. Off by default (the suck-in does the job).")]
-    [SerializeField] private bool topPull = false;
+    [Header("Suction ring (2026-10-17 rework)")]
+    [Tooltip("A modest pull round the rim: LOOSE husks lying or flying near the bin are drawn towards it, and the suck-in takes them once they reach the rim. Off = only husks that land in (or near-miss) it.")]
+    [SerializeField] private bool suction = true;
     [Min(0f)]
-    [Tooltip("How far past the rim (sideways, in husk widths) the pull reaches.")]
-    [SerializeField] private float topPullReach = 2f;
+    [Tooltip("How far past the rim (in husk widths) the suction ring reaches, before the Operation 'Suction' upgrades. Small on purpose: one bin catches SOME of a random scatter, not all of it.")]
+    [SerializeField] private float suctionRadius = 2f;
     [Min(0f)]
-    [Tooltip("How strong the pull is (an acceleration, in husk widths per second squared). Gravity is about 20 here, so this stays a nudge.")]
-    [SerializeField] private float topPullStrength = 6f;
+    [Tooltip("How strong the ring's pull is (an acceleration in husk widths per second squared; stronger close to the rim, weaker at the edge of the ring).")]
+    [SerializeField] private float suctionStrength = 6f;
 
     [Header("Auto recycling (2026-10-16)")]
     [Tooltip("Every husk that lands in the bin is recycled on its own a moment later - no button, no filling up. Off = the old way (fill the bin, press the button).")]
     [SerializeField] private bool autoRecycle = true;
     [Tooltip("Seconds a husk lies in the bin before it is recycled.")]
     [SerializeField] private float recycleDelay = 0.5f;
-    [Tooltip("Skill XP per recycled husk before the streak bonus (it trains the husk's own skill; pure husks train Standard).")]
-    [SerializeField] private float xpPerHusk = 1f;
+    [Tooltip("Skill XP per recycled husk (it trains the husk's own skill; pure husks train Standard). 0 since the 2026-10-17 rework: the Recycler is CURRENCY ONLY - husk XP comes from Husk Crush and the skill machines. The streak does not multiply it.")]
+    [SerializeField] private float xpPerHusk = 0f;
     [Min(0f)]
     [Tooltip("Share of that XP a PURE husk gives Standard (skill husks keep all of theirs). The Recycler's streak XP levelled Standard about twice as fast as planned (2026-10-17 report), so Standard gets half. Even at half, a streak husk (~1.3 clicks' XP + currency) still beats the best crush (capped at 1 click). 0 = the coded default (0.5).")]
     [SerializeField] private float standardXpShare = 0f;
-    [Tooltip("STREAK: each husk of the SAME type as the one before raises the XP multiplier by this much (0.2 = x1.2, x1.4...). A different type starts the streak again.")]
-    [SerializeField] private float streakStep = 0.2f;
+    [Tooltip("STREAK: each husk of the SAME type as the one before raises the CURRENCY multiplier by this much (0.1 = x1.1, x1.2...). A different type keeps only part of it.")]
+    [SerializeField] private float streakStep = 0.1f;
     [Range(0f, 1f)]
     [Tooltip("Share of the streak KEPT when a husk of a different type comes in (0.5 = it halves; 0 = it starts again). Testing showed a full reset makes streaks impossible once Gray is in the mix.")]
     [SerializeField] private float streakKeepOnSwitch = 0.5f;
-    [Tooltip("Highest streak multiplier.")]
-    [SerializeField] private float streakMaxMultiplier = 5f;
+    [Tooltip("Highest streak multiplier on the currency (before the Streak Power upgrades). 1.6 x the 50% share = 80% of a click.")]
+    [SerializeField] private float streakMaxMultiplier = 1.6f;
+    [Range(0.1f, 1f)]
+    [Tooltip("The most a recycled husk may ever pay, as a share of what a click on that block pays (streak and upgrades included): it never out-earns clicking.")]
+    [SerializeField] private float maxShareOfClick = 0.95f;
     [Tooltip("Seconds without a recycled husk before the streak ends.")]
     [SerializeField] private float streakTimeout = 6f;
 
@@ -423,17 +434,12 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
 
     private static readonly List<PixelHuskQuery.Husk> pullScratch = new List<PixelHuskQuery.Husk>();
 
-    /// <summary>
-    /// The weak top pull: husks in the air near the opening (from half the wall height up to a few husk widths above the rim, within topPullReach of
-    /// the rim) are nudged sideways towards the middle of the opening, so ones falling past or bouncing off the rim drop in. Husks lying on the floor
-    /// next to the bin, held ones, kinematic ones (riding / kept by machines) and fading ones are left alone. Not while working, carried or fading in.
-    /// </summary>
     private readonly HashSet<Rigidbody> sucking = new HashSet<Rigidbody>();
 
     /// <summary>
-    /// The suck-in: a husk in the air over the opening (above the rim) or a near miss just past the rim (within suckReach, from half the wall height up to
-    /// a few husk widths above the rim) is taken - kept from anything else (PixelHuskHolder.Reserve) - and glides down into the middle of the bin, where the
-    /// usual Capture catches it. Husks lying on the floor beside the bin, held ones, kinematic ones and fading ones are left alone.
+    /// The suck-in: a husk over the opening (above the rim) or right by the rim (within suckReach - in the air, or low by the wall where the suction ring
+    /// brings it) is taken - kept from anything else (PixelHuskHolder.Reserve) - and glides down into the middle of the bin, where the usual Capture catches
+    /// it. Only husks nobody else owns (Takeable); never the Sorting Hopper's tray behind a latched hopper.
     /// </summary>
     private void SuckIn()
     {
@@ -445,10 +451,12 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
         foreach (PixelHuskQuery.Husk h in pullScratch)
         {
             Rigidbody b = h.body;
-            if (b == null || b.isKinematic || h.HeldByPlayer || inside.Contains(b) || sucking.Contains(b) || !PixelHuskHolder.Takeable(clicker, b)) continue;
+            if (b == null || inside.Contains(b) || sucking.Contains(b) || !PixelHuskHolder.Takeable(clicker, b)) continue;   // (one owner per husk: Takeable)
             Vector3 local = transform.InverseTransformPoint(b.position);
             bool overOpening = Mathf.Abs(local.x) <= innerW * 0.5f && Mathf.Abs(local.z) <= innerD * 0.5f;
-            if (overOpening ? local.y < wallH : local.y < wallH * 0.5f) continue;   // (already inside the walls / lying low beside the bin)
+            if (overOpening && local.y < wallH) continue;   // (already inside the walls: Capture takes it)
+            if (!overOpening && local.y < wallH * 0.5f && !suction) continue;   // (lying low beside the bin: only taken with the suction ring on)
+            if (BehindHopper(local)) continue;   // (the Sorting Hopper's tray)
             if (local.y > wallH + 4f * u) continue;
             if (Mathf.Abs(local.x) > innerW * 0.5f + suckReach * u || Mathf.Abs(local.z) > innerD * 0.5f + suckReach * u) continue;
             StartCoroutine(SuckOne(b));
@@ -483,28 +491,54 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
         PixelAudio.Play("click", 1.3f, 0.5f);
     }
 
+    /// <summary>How far past the rim the suction ring reaches now: suctionRadius + the Operation 'Suction' upgrades (husk widths).</summary>
+    private float SuctionReach
+    {
+        get
+        {
+            PixelConsumables c = PixelFind.Cached<PixelConsumables>();
+            return Mathf.Max(0f, suctionRadius) + (c != null ? c.OperationBonus(PixelConsumables.DeviceKind.Recycler, PixelOperationStat.RecyclerSuction) : 0f);
+        }
+    }
+
+    /// <summary>The suction base before any upgrade (the Operation tooltip starts from it).</summary>
+    public static float DefaultSuctionRadius => 2f;
+
+    /// <summary>Behind the back wall while a Sorting Hopper is latched there: that is the hopper's tray, the bin leaves it alone.</summary>
+    private bool BehindHopper(Vector3 local) => local.z > innerD * 0.5f && PixelCouplings.Occupied(this, HatchSocket);
+
+    /// <summary>
+    /// The SUCTION RING: loose husks (on the floor or in the air) outside the walls within SuctionReach of the rim are pulled towards the bin - harder
+    /// near the rim - and get a little lift close to the wall so they hop up to it, where the suck-in takes them. Modest: a far husk drifts, it is not
+    /// yanked. Only husks nobody else owns (PixelHuskHolder.Takeable): one owner per husk.
+    /// </summary>
     private void FixedUpdate()
     {
         SuckIn();
-        if (!topPull || clicker == null || processing || Fading || (carry != null && carry.Dragging) || topPullStrength <= 0f) return;
-        float u = Unit(clicker) * transform.lossyScale.x;
-        float halfDiag = Mathf.Sqrt(innerW * innerW + innerD * innerD) * 0.5f * transform.lossyScale.x;
-        PixelHuskQuery.Near(clicker, transform.position, halfDiag + topPullReach * u, pullScratch);
+        if (!suction || clicker == null || processing || Fading || (carry != null && carry.Dragging) || suctionStrength <= 0f) return;
+        float u = Unit(clicker), s = transform.lossyScale.x, reach = SuctionReach;
+        if (reach <= 0f) return;
+        PixelHuskQuery.Near(clicker, transform.position, (Mathf.Sqrt(innerW * innerW + innerD * innerD) * 0.5f + reach * u) * s, pullScratch);
         float dt = Time.fixedDeltaTime;
         foreach (PixelHuskQuery.Husk h in pullScratch)
         {
             Rigidbody b = h.body;
-            if (b == null || b.isKinematic || h.HeldByPlayer || inside.Contains(b)) continue;
+            if (b == null || inside.Contains(b) || sucking.Contains(b) || !PixelHuskHolder.Takeable(clicker, b)) continue;
             Vector3 local = transform.InverseTransformPoint(b.position);
-            if (local.y < wallH * 0.5f || local.y > wallH + 4f * Unit(clicker)) continue;   // (in the air round the top only)
-            if (Mathf.Abs(local.x) <= innerW * 0.5f && Mathf.Abs(local.z) <= innerD * 0.5f) continue;   // (already over the opening: it falls in by itself)
+            if (local.y > wallH + 4f * u || BehindHopper(local)) continue;
+            float ox = Mathf.Max(0f, Mathf.Abs(local.x) - innerW * 0.5f), oz = Mathf.Max(0f, Mathf.Abs(local.z) - innerD * 0.5f);
+            float past = Mathf.Sqrt(ox * ox + oz * oz) / u;   // husk widths past the rim (0 = over the opening)
+            if (past <= 0f || past > reach) continue;
+            float k = 1f - past / Mathf.Max(0.01f, reach);   // 1 at the rim, 0 at the edge of the ring
             Vector3 toMiddle = transform.TransformPoint(new Vector3(0f, local.y, 0f)) - b.position;
             toMiddle.y = 0f;
             if (toMiddle.sqrMagnitude < 1e-6f) continue;
+            Vector3 dv = toMiddle.normalized * suctionStrength * u * s * (0.3f + 0.7f * k) * dt;
+            if (local.y < wallH * 0.5f && past < 1.5f) dv += Vector3.up * suctionStrength * u * s * 0.6f * k * dt;   // (near the wall: a little lift towards the rim)
 #if UNITY_6000_0_OR_NEWER
-            b.linearVelocity += toMiddle.normalized * topPullStrength * u * dt;
+            b.linearVelocity += dv;
 #else
-            b.velocity += toMiddle.normalized * topPullStrength * u * dt;
+            b.velocity += dv;
 #endif
         }
     }
@@ -651,11 +685,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
                 if (keep != null && !keep.IsDespawning) keep.KeepAlive();
                 continue;
             }
-            OldPixelInfo info = PixelHuskQuery.Get(b).info;
-            if (info == null) continue;
-            OldPixelDespawn despawn = PixelHuskQuery.Get(b).despawn;
-            if (despawn != null && despawn.IsDespawning) continue;   // already vanishing
-            if (info.heldByPlayer) continue;                          // still in the player's hand
+            if (!PixelHuskHolder.Takeable(clicker, b)) continue;      // one owner per husk: in the player's hand, vanishing or reserved by another machine (a hopper / Sweeper on its way) = not ours
             if (!PixelHuskHolder.Capture(clicker, b)) continue;      // (off the floor's list, its timer held: it never shrinks away while it is in the bin)
             inside.Add(b);
             capturedAt[b] = Time.time;
@@ -668,7 +698,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     // ---- Auto recycling + streak ----
 
     /// <summary>The streak cap before any upgrade (the Operation tooltip starts from it).</summary>
-    public static float DefaultStreakCap => 5f;
+    public static float DefaultStreakCap => 1.6f;
 
     /// <summary>The streak cap with the 'Streak Power' upgrades (Upgrades > Operation).</summary>
     private float StreakCap
@@ -701,7 +731,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
         }
     }
 
-    /// <summary>One husk: currency back (payoutShare of what a click on it pays now) and skill XP x the same-type streak; the husk is gone.</summary>
+    /// <summary>One husk: currency back (payoutShare of what a click on it pays now x the same-type STREAK, never more than maxShareOfClick of a click); the husk is gone. XP only if xpPerHusk is set (0 by default).</summary>
     private void RecycleOne(Rigidbody b, OldPixelInfo info)
     {
         Vector3 at = b.position;
@@ -715,15 +745,16 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
         streakTier = tier;
         lastRecycleTime = Time.time;
         float mult = StreakMultiplier;
-        double pay = CurrentValue(tier) * payoutShare;
+        double share = System.Math.Min(payoutShare * mult, Mathf.Clamp(maxShareOfClick, 0.1f, 1f));   // (the streak boosts the CURRENCY, capped below a click)
+        double pay = CurrentValue(tier) * share;
         if (pay > 0d) clicker.AddBonusCurrency(tier, pay);
-        double xp = Mathf.Max(0f, xpPerHusk) * mult;
+        double xp = Mathf.Max(0f, xpPerHusk);
         PixelSkills skills = PixelSkills.Instance;
         if (skills != null && skills.HuskSkillId(tier) == PixelSkills.StandardId) xp *= standardXpShare > 0f ? standardXpShare : 0.5f;   // (pure husks: Standard gets half, see the tooltip)
         if (xp > 0d && skills != null) skills.AddHuskXp(tier, xp);
         PixelStats.Count("recycler.husks");
         PixelStats.Count("recycler.paid", pay);
-        PixelStats.Count("recycler.xp", xp);
+        if (xp > 0d) PixelStats.Count("recycler.xp", xp);
         PixelStats.Best("recycler.streak", streakCount + 1);
         PixelAudio.Play("ui_click", 0.6f + 0.05f * Mathf.Min(streakCount, 12));   // (the pitch climbs with the streak)
         SetGlow(Color.Lerp(IdleGlow, WorkGlow, Mathf.Clamp01(streakCount / 10f)), 1.4f);
@@ -855,7 +886,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
         {
             // Auto mode: the counter shows the streak (type + multiplier) while it lasts.
             bool showStreak = clicker != null && clicker.IsValidTierIndex(streakTier) && streakCount > 0 && Time.time - lastRecycleTime <= streakTimeout;
-            counter.text = (showStreak ? clicker.Tiers[streakTier].displayName.Replace(" Pixels", "") + " streak\n<size=80%>x" + StreakMultiplier.ToString("0.0") + " XP</size>"
+            counter.text = (showStreak ? clicker.Tiers[streakTier].displayName.Replace(" Pixels", "") + " streak\n<size=80%>x" + StreakMultiplier.ToString("0.0") + " pay</size>"
                                        : "<size=70%>drop husks in</size>") + TimeLeftLine();
             return;
         }

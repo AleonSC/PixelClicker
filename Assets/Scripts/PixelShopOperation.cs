@@ -29,7 +29,9 @@ public partial class PixelShop
         bool changed = false;
         foreach (PixelOperationUpgrade def in PixelOperationUpgrade.CreateDefaults())
         {
-            if (operationUpgrades.Exists(u => u != null && u.id == def.id)) continue;
+            PixelOperationUpgrade have = operationUpgrades.Find(u => u != null && u.id == def.id);
+            if (have != null && have.id == "rec_streak" && have.perLevel > 0.5f) { have.perLevel = def.perLevel; have.description = def.description; changed = true; }   // (2026-10-17 rework: the streak now boosts currency, +0.06 a level, not +1 XP)
+            if (have != null) continue;
             operationUpgrades.Add(def);
             changed = true;
         }

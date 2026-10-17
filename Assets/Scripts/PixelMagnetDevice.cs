@@ -44,9 +44,7 @@ public class PixelMagnetDevice : PixelPlacedDevice
         for (int i = pixels.Count - 1; i >= 0; i--)
         {
             Rigidbody body = pixels[i];
-            if (body == null || body.isKinematic || !Accepts(body) || clicker.IsFlyingPixel(body)) continue;
-            OldPixelDespawn d = PixelHuskQuery.Get(body).despawn;
-            if (d != null && (d.Held || d.IsDespawning)) continue;
+            if (!PixelHuskHolder.Takeable(clicker, body) || !Accepts(body)) continue;   // (one owner per husk: held, reserved or kept by another machine = not ours)
 
             Vector3 to = target - body.position;
             float distance = to.magnitude;
