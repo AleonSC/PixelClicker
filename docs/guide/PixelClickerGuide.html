@@ -1,0 +1,1084 @@
+<title>Pixel Clicker Field Guide</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a floating "cube in the void" page. Sticky section rail on wide screens, one column on phones.
+   Every section is a floor tile of the same void; the cube demo at the top is the one loud moment. */
+:root {
+  --bg: #f2f1f8;
+  --surface: #ffffff;
+  --surface-2: #e8e7f3;
+  --ink: #17162b;
+  --muted: #5d5b7c;
+  --line: #d6d4e8;
+  --accent: #a87600;
+  --accent-ink: #ffffff;
+  --accent-soft: #fff2c9;
+  --hazard: #c0392b;
+  --rare: #7a3fc8;
+  --good: #1f8a4c;
+  --floor: #dddcee;
+  --font-display: "Pixelify Sans", "Courier New", monospace;
+  --font-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e0f1f; --surface: #171932; --surface-2: #20233f; --ink: #e9e9f6; --muted: #a2a3c6; --line: #2d3052;
+  --accent: #ffcd3c; --accent-ink: #1a1400; --accent-soft: #3a3214; --hazard: #ff6b5b; --rare: #b98bff; --good: #4fd18a; --floor: #1b1d38;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0e0f1f; --surface: #171932; --surface-2: #20233f; --ink: #e9e9f6; --muted: #a2a3c6; --line: #2d3052;
+  --accent: #ffcd3c; --accent-ink: #1a1400; --accent-soft: #3a3214; --hazard: #ff6b5b; --rare: #b98bff; --good: #4fd18a; --floor: #1b1d38;
+  color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.6; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 1240px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 64px; }
+.layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 40px; }
+@media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } .rail { display: none; } }
+.rail { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 20px); align-self: start; display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.rail a { color: var(--muted); text-decoration: none; padding: 5px 10px; border-left: 2px solid var(--line); }
+.rail a:hover, .rail a:focus-visible { color: var(--ink); border-left-color: var(--accent); outline: none; }
+.rail a.on { color: var(--ink); border-left-color: var(--accent); font-weight: 700; }
+.rail .brand { font-family: var(--font-display); font-size: 20px; color: var(--ink); border: 0; padding: 0 10px 12px; }
+main { min-width: 0; display: flex; flex-direction: column; gap: 72px; }
+section { scroll-margin-top: 20px; display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(34px, 6vw, 60px); }
+h2 { font-size: clamp(26px, 3.4vw, 36px); }
+h3 { font-size: 20px; }
+p { margin: 0; max-width: 68ch; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+.lede { font-size: 18px; color: var(--muted); }
+.muted { color: var(--muted); }
+code, .mono { font-family: var(--font-mono); font-size: 0.88em; }
+code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+a { color: var(--accent); }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* hero */
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 32px; align-items: center; }
+@media (max-width: 1050px) { .hero { grid-template-columns: minmax(0, 1fr); } }
+.hero-text { display: flex; flex-direction: column; gap: 16px; }
+.tagline { font-family: var(--font-display); font-size: clamp(20px, 2.4vw, 26px); color: var(--accent); }
+.facts { display: flex; flex-wrap: wrap; gap: 8px; }
+.fact { font-family: var(--font-mono); font-size: 12px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); }
+.demo { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+.demo canvas { display: block; width: 100%; height: 340px; cursor: pointer; touch-action: manipulation; }
+.demo-bar { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 10px 14px; border-top: 1px solid var(--line); font-family: var(--font-mono); font-size: 13px; font-variant-numeric: tabular-nums; align-items: center; }
+.cur { display: inline-flex; align-items: center; gap: 6px; }
+.cur i { width: 10px; height: 10px; display: inline-block; border-radius: 2px; border: 1px solid var(--line); }
+.demo-msg { padding: 8px 14px 12px; font-size: 14px; color: var(--muted); min-height: 2.6em; }
+.demo-msg b { color: var(--ink); }
+.demo-reset { margin-left: auto; background: none; border: 1px solid var(--line); border-radius: 6px; padding: 2px 10px; cursor: pointer; color: var(--muted); }
+
+/* generic */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; min-width: 0; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 760px) { .grid2, .grid3 { grid-template-columns: minmax(0, 1fr); } }
+@media (min-width: 761px) and (max-width: 1100px) { .grid3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; font-size: 14px; }
+.kv dt { font-family: var(--font-mono); color: var(--muted); }
+.kv dd { margin: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; font-size: 13px; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+.chip .n { font-family: var(--font-mono); opacity: 0.7; margin-left: 4px; }
+.tag { display: inline-block; font-family: var(--font-mono); font-size: 11px; padding: 1px 7px; border-radius: 4px; background: var(--surface-2); color: var(--muted); letter-spacing: 0.03em; }
+.tag.hz { background: var(--hazard); color: #fff; }
+.tag.rr { background: var(--rare); color: #fff; }
+.tag.ac { background: var(--accent); color: var(--accent-ink); }
+.tag.dv { border: 1px dashed var(--muted); background: none; }
+.scroll-x { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+td.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* loop diagram */
+.loop svg { width: 100%; height: auto; display: block; }
+.loop text { font-family: var(--font-body); fill: var(--ink); font-size: 14px; }
+.loop .lbl { font-family: var(--font-mono); fill: var(--muted); font-size: 12px; }
+.loop .box { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+.loop .box.hot { stroke: var(--accent); stroke-width: 2; }
+.loop .arrow { stroke: var(--muted); stroke-width: 1.6; fill: none; }
+.loop .ah { fill: var(--muted); }
+.loop .node { cursor: pointer; }
+.loop .node:hover .box, .loop .node:focus .box { stroke: var(--accent); }
+.loop-note { min-height: 3em; }
+
+/* block explorer */
+.blocks { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.blk { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 6px 8px; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; font-size: 12.5px; text-align: center; line-height: 1.2; min-width: 0; }
+.blk:hover { border-color: var(--muted); }
+.blk[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.blk svg { width: 40px; height: 44px; }
+.blk .hzdot { font-size: 10px; color: var(--hazard); font-family: var(--font-mono); }
+.blk-detail { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 18px; align-items: start; }
+.blk-detail svg { width: 90px; height: 100px; }
+.blk-detail .meta { display: flex; flex-direction: column; gap: 8px; }
+
+/* skills */
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--line); }
+.tab { background: none; border: 0; border-bottom: 3px solid transparent; padding: 8px 12px; cursor: pointer; color: var(--muted); font-weight: 700; display: inline-flex; gap: 6px; align-items: center; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tab .sw { width: 10px; height: 10px; border-radius: 2px; }
+.skill-body { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 20px; padding-top: 18px; }
+@media (max-width: 860px) { .skill-body { grid-template-columns: minmax(0, 1fr); } }
+.mini-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.mini { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; padding: 3px 8px 3px 4px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+.mini svg { width: 18px; height: 20px; }
+.role { display: flex; flex-direction: column; gap: 6px; }
+.role h4 { margin: 0; font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+.tree-row { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.tree-row:last-child { border-bottom: 0; }
+.tree-row .nm { font-weight: 700; font-size: 14px; }
+.tree-row .nm small { display: block; font-weight: 400; color: var(--muted); font-family: var(--font-mono); font-size: 11px; }
+.slots { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; }
+.slot { width: 18px; height: 18px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.25); position: relative; }
+.slot.opt { opacity: 0.55; border-style: dashed; }
+.slot-x { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin: 0 2px; }
+.std-tree { display: flex; flex-wrap: wrap; gap: 8px; }
+.node-card { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-size: 13px; background: var(--surface-2); }
+.node-card b { display: block; font-size: 14px; }
+
+/* hold sim */
+.hold { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+@media (max-width: 760px) { .hold { grid-template-columns: minmax(0, 1fr); } }
+.hold-stage { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+.btn { border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; padding: 10px 16px; cursor: pointer; font-weight: 700; user-select: none; -webkit-user-select: none; touch-action: none; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn:active { transform: translateY(1px); }
+.meter { width: 100%; height: 12px; background: var(--surface-2); border-radius: 999px; overflow: hidden; border: 1px solid var(--line); }
+.meter > div { height: 100%; background: var(--accent); width: 100%; transition: width 0.05s linear; }
+.big { font-family: var(--font-display); font-size: 40px; line-height: 1; font-variant-numeric: tabular-nums; }
+.hist { display: flex; flex-wrap: wrap; gap: 6px; }
+.res { font-family: var(--font-mono); font-size: 12px; padding: 3px 8px; border-radius: 6px; border: 1px solid; }
+.res.win { color: var(--good); border-color: var(--good); }
+.res.lose { color: var(--hazard); border-color: var(--hazard); }
+
+/* timeline */
+.tl { display: flex; flex-direction: column; gap: 0; position: relative; }
+.tl-item { display: grid; grid-template-columns: 92px 22px minmax(0, 1fr); gap: 12px; }
+.tl-time { font-family: var(--font-mono); font-size: 13px; color: var(--muted); text-align: right; padding-top: 2px; }
+.tl-dot { position: relative; }
+.tl-dot::before { content: ""; position: absolute; left: 10px; top: 0; bottom: 0; width: 2px; background: var(--line); }
+.tl-dot::after { content: ""; position: absolute; left: 4px; top: 6px; width: 12px; height: 12px; background: var(--c, var(--accent)); border: 2px solid var(--bg); outline: 1px solid var(--line); }
+.tl-body { padding-bottom: 22px; display: flex; flex-direction: column; gap: 4px; }
+.tl-body b { font-size: 16px; }
+.tl-body .teach { font-size: 13px; font-family: var(--font-mono); color: var(--accent); }
+
+/* shop */
+.shop-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.pack { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; min-width: 0; }
+.pack .hd { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.pack .hd b { font-size: 15px; }
+.pack p { color: var(--muted); font-size: 13.5px; }
+.calc { display: grid; grid-template-columns: minmax(0, 260px) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 760px) { .calc { grid-template-columns: minmax(0, 1fr); } }
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.field input[type=number] { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); width: 100%; }
+.field input[type=range] { width: 100%; accent-color: var(--accent); }
+.chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.chart text { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); }
+.chart .gridl { stroke: var(--line); stroke-width: 1; }
+.chart .ln { stroke: var(--accent); stroke-width: 2; fill: none; }
+.chart .ar { fill: var(--accent); opacity: 0.14; }
+.chart .pt { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
+
+/* cards */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.card h3 { font-size: 18px; }
+.card p { font-size: 14px; color: var(--muted); }
+.card .top { display: flex; gap: 12px; align-items: center; }
+.card .top svg { width: 46px; height: 52px; flex: none; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+
+/* odds */
+.odds .row { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 12px; align-items: center; padding: 6px 0; }
+@media (max-width: 560px) { .odds .row { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
+.odds .nm { font-size: 14px; font-weight: 700; }
+.odds .nm small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+.odds .track { position: relative; height: 22px; background: linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / calc(100% / 7) 100%; border-left: 1px solid var(--line); }
+.odds .bar { position: absolute; left: 0; top: 4px; height: 14px; background: var(--accent); border-radius: 0 4px 4px 0; }
+.odds .bar.rr { background: var(--rare); }
+.odds .val { position: absolute; top: 2px; font-family: var(--font-mono); font-size: 12px; color: var(--ink); white-space: nowrap; padding-left: 6px; }
+.odds .axis { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 12px; }
+@media (max-width: 560px) { .odds .axis { grid-template-columns: minmax(0, 1fr); } .odds .axis > span:first-child { display: none; } }
+.odds .ticks { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.tip { position: fixed; pointer-events: none; z-index: 20; background: var(--ink); color: var(--bg); font-size: 12.5px; padding: 6px 9px; border-radius: 6px; max-width: 260px; }
+
+/* pillars */
+.pillars { counter-reset: p; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.pillar { counter-increment: p; border-top: 3px solid var(--accent); background: var(--surface); padding: 14px 16px; border-radius: 0 0 10px 10px; font-size: 14px; display: flex; flex-direction: column; gap: 6px; }
+.pillar b::before { content: counter(p) ". "; font-family: var(--font-mono); color: var(--accent); }
+details { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+details > summary { cursor: pointer; padding: 12px 16px; font-weight: 700; list-style: none; display: flex; justify-content: space-between; gap: 10px; }
+details > summary::-webkit-details-marker { display: none; }
+details > summary::after { content: "+"; font-family: var(--font-mono); color: var(--muted); }
+details[open] > summary::after { content: "–"; }
+details > div { padding: 0 16px 14px; }
+.qs { display: flex; flex-direction: column; gap: 8px; }
+.qs .q { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 10px; font-size: 14px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.qs .q:last-child { border-bottom: 0; }
+.qs .q span { font-family: var(--font-mono); color: var(--accent); }
+.qs .q em { display: block; color: var(--muted); font-style: normal; font-size: 13px; }
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+.stat .v { font-family: var(--font-display); font-size: 30px; line-height: 1.1; }
+.stat .l { font-size: 13px; color: var(--muted); }
+footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 18px; }
+</style>
+
+<div class="wrap">
+<div class="layout">
+<nav class="rail" aria-label="Sections">
+  <a class="brand" href="#top">Pixel Clicker</a>
+  <a href="#loop">Core loop</a>
+  <a href="#blocks">Blocks</a>
+  <a href="#hold">Block Hold</a>
+  <a href="#skills">Skills</a>
+  <a href="#path">First hour</a>
+  <a href="#shop">Shop &amp; economy</a>
+  <a href="#devices">Devices</a>
+  <a href="#minigames">Minigames</a>
+  <a href="#cast">Characters &amp; pets</a>
+  <a href="#rares">Rares</a>
+  <a href="#world">World &amp; UI</a>
+  <a href="#design">Design</a>
+  <a href="#tech">Under the hood</a>
+</nav>
+
+<main>
+<!-- HERO -->
+<section id="top" class="hero">
+  <div class="hero-text">
+    <span class="eyebrow">Game field guide · Unity 6 · in development</span>
+    <h1>Pixel Clicker</h1>
+    <p class="tagline">Every click leaves something behind.</p>
+    <p class="lede">A 3D incremental clicker about a cube. Each click <b>extracts</b> a block's colour into your counter and drops its drained <b>husk</b> to the floor. Husks are material: you sort, store, carry and process them with machines and skills, until one clicking cube turns into a small busy world.</p>
+    <p class="muted">Cookie Clicker's numbers, RuneScape's skills, a dash of factory building, and a cube with a lot of personality.</p>
+    <div class="facts">
+      <span class="fact">Steam · ~$10 · one-time</span>
+      <span class="fact">no story, no ads</span>
+      <span class="fact">open-ended</span>
+      <span class="fact">100+ block types</span>
+      <span class="fact">8 skills</span>
+      <span class="fact">15+ minigames</span>
+    </div>
+  </div>
+  <figure class="demo" style="margin:0">
+    <canvas id="demo" aria-label="Playable mini version of the core loop: click the cube to extract its colour; husks drop to the floor" role="img"></canvas>
+    <div class="demo-bar" id="demoBar"></div>
+    <div class="demo-msg" id="demoMsg" aria-live="polite"><b>Try it:</b> click the cube. Each click pays that block's currency and drops a husk. Husks fade after 15 s.</div>
+  </figure>
+</section>
+
+<!-- CORE LOOP -->
+<section id="loop">
+  <span class="eyebrow">01 · how a click works</span>
+  <h2>The core loop</h2>
+  <p>The cube shows one block at a time, picked at random (weighted) from the block types you have unlocked. Breaking it pays that block's own currency. The husk it drops is never currency by itself; it is the raw material the rest of the game runs on. Click a box to read what it does.</p>
+  <div class="panel loop">
+    <svg viewBox="0 0 860 330" role="img" aria-label="Core loop diagram">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+      <g class="node" tabindex="0" data-k="click"><rect class="box hot" x="20" y="130" width="150" height="64" rx="8"/><text x="95" y="158" text-anchor="middle" font-weight="700">Click the cube</text><text class="lbl" x="95" y="178" text-anchor="middle">manual · auto · minigame</text></g>
+      <g class="node" tabindex="0" data-k="currency"><rect class="box" x="260" y="40" width="170" height="64" rx="8"/><text x="345" y="68" text-anchor="middle" font-weight="700">Currency</text><text class="lbl" x="345" y="88" text-anchor="middle">the block's own type</text></g>
+      <g class="node" tabindex="0" data-k="husk"><rect class="box" x="260" y="220" width="170" height="64" rx="8"/><text x="345" y="248" text-anchor="middle" font-weight="700">A husk drops</text><text class="lbl" x="345" y="268" text-anchor="middle">physical cube, 15 s</text></g>
+      <g class="node" tabindex="0" data-k="shop"><rect class="box" x="520" y="40" width="150" height="64" rx="8"/><text x="595" y="68" text-anchor="middle" font-weight="700">Shop</text><text class="lbl" x="595" y="88" text-anchor="middle">packs · upgrades</text></g>
+      <g class="node" tabindex="0" data-k="machines"><rect class="box" x="520" y="170" width="150" height="56" rx="8"/><text x="595" y="194" text-anchor="middle" font-weight="700">Machines &amp; hands</text><text class="lbl" x="595" y="212" text-anchor="middle">store · carry · recycle</text></g>
+      <g class="node" tabindex="0" data-k="xp"><rect class="box" x="520" y="250" width="150" height="56" rx="8"/><text x="595" y="274" text-anchor="middle" font-weight="700">Skill XP</text><text class="lbl" x="595" y="292" text-anchor="middle">husk XP · perks</text></g>
+      <g class="node" tabindex="0" data-k="despawn"><rect class="box" x="720" y="220" width="120" height="64" rx="8"/><text x="780" y="248" text-anchor="middle" font-weight="700">Despawn</text><text class="lbl" x="780" y="268" text-anchor="middle">the pressure</text></g>
+      <path class="arrow" d="M170,150 C210,120 220,80 258,74" marker-end="url(#ah)"/>
+      <path class="arrow" d="M170,175 C210,200 220,245 258,250" marker-end="url(#ah)"/>
+      <path class="arrow" d="M430,72 L518,72" marker-end="url(#ah)"/>
+      <path class="arrow" d="M430,245 C470,235 480,205 518,200" marker-end="url(#ah)"/>
+      <path class="arrow" d="M430,260 C470,268 480,278 518,278" marker-end="url(#ah)"/>
+      <path class="arrow" d="M430,252 C560,320 650,320 718,265" marker-end="url(#ah)" stroke-dasharray="4 4"/>
+      <path class="arrow" d="M595,40 C595,6 95,6 95,128" marker-end="url(#ah)"/>
+      <text class="lbl" x="345" y="20" text-anchor="middle">better blocks, faster clicking</text>
+    </svg>
+    <p class="loop-note muted" id="loopNote" aria-live="polite">Click a box for details.</p>
+  </div>
+  <div class="grid3">
+    <div class="panel"><h3>Husk rules</h3><dl class="kv" style="margin-top:10px">
+      <dt>lifetime</dt><dd>15 s, +5 s per Standard level</dd>
+      <dt>floor cap</dt><dd>50 husks, +5 per Standard level from 4</dd>
+      <dt>husk XP</dt><dd>0.5 × a click's XP when consumed</dd>
+      <dt>currency</dt><dd>never, by themselves</dd></dl></div>
+    <div class="panel"><h3>Block kinds</h3><dl class="kv" style="margin-top:10px">
+      <dt>normal</dt><dd>one click, one payout</dd>
+      <dt>tough</dt><dd>several hits; only the last pays</dd>
+      <dt>hazard</dt><dd>pays nothing; right-click to clear</dd>
+      <dt>special</dt><dd>rare replacement of a rolled block</dd>
+      <dt>filler</dt><dd>skill padding that shrinks with level</dd></dl></div>
+    <div class="panel"><h3>Payout</h3><p style="font-size:14px;margin-top:10px">amount per click (or a random <code>min..max</code> roll) × Ultra × Value level × wish × click multiplier. Auto clicks give 0.25× skill XP, but Standard always gets its flat 1 XP.</p></div>
+  </div>
+</section>
+
+<!-- BLOCKS -->
+<section id="blocks">
+  <span class="eyebrow">02 · block catalog</span>
+  <h2>Every block on the cube</h2>
+  <p>Each pixel type is its own currency and has a card in the catalog (tags, Pixel Guide text, husk behaviour). Filter by family, then pick a block to read its card.</p>
+  <div class="chips" id="blkFilters" role="group" aria-label="Filter blocks"></div>
+  <div class="blocks" id="blkGrid"></div>
+  <div class="panel blk-detail" id="blkDetail" aria-live="polite"></div>
+</section>
+
+<!-- HOLD -->
+<section id="hold">
+  <span class="eyebrow">03 · the first skill-tree choice</span>
+  <h2>Block Hold and staking</h2>
+  <p>Hold the right mouse button on the cube: the block floats out of the rotation while a meter drains (5 s; 10 s for hold blocks) and the cube rolls a new one so you keep clicking. Let go and it goes back next in line. Hold one of the six pure blocks for at least 0.75 s and you <b>stake</b> it: its value grows with time and with clicks during the hold, then a 60% roll decides whether it later pays the multiplier or nothing.</p>
+  <div class="panel hold">
+    <div class="hold-stage">
+      <div class="meter" aria-label="Hold meter"><div id="hMeter"></div></div>
+      <div><div class="big" id="hMult">×1.00</div><div class="muted" id="hState" style="font-size:14px">Press and hold the button (or the H key).</div></div>
+      <div class="chips">
+        <button class="btn primary" id="hBtn">Hold block</button>
+        <button class="btn" id="hClick">Click cube (+0.1)</button>
+      </div>
+      <p class="muted" style="font-size:13px">Formula: 1 + 0.6 × seconds held + 0.1 per click during the hold. Recharge 8 s in the game; every 5 own clicks refill 1% of the meter.</p>
+    </div>
+    <div class="role"><h4>Your stakes</h4><div class="hist" id="hHist"><span class="muted" style="font-size:13px">No stakes yet.</span></div>
+      <h4 style="margin-top:14px">Hold blocks</h4>
+      <p style="font-size:14px">Some skill blocks are made to be held: the <b>Whetstone</b> turns your clicks into extra rapid clicks, <b>Pesticide</b> gives charges that clear Termite Hives. These are data rules in <code>PixelBlockRules</code>, so a new one is a single list entry.</p></div>
+  </div>
+</section>
+
+<!-- SKILLS -->
+<section id="skills">
+  <span class="eyebrow">04 · the heart of the game</span>
+  <h2>Skills</h2>
+  <p>Standard trains from every block. Gathering skills are chosen in the Skills window: the chosen pack replaces the basic rotation with its own blocks, and you train that skill. Each pack has a filler that shrinks as you level, a hazard, specials, perks and a tree. Skills are meant to feed each other.</p>
+  <div class="tabs" role="tablist" id="skTabs"></div>
+  <div id="skPanel" role="tabpanel"></div>
+</section>
+
+<!-- PATH -->
+<section id="path">
+  <span class="eyebrow">05 · onboarding, decided 2026-10-16</span>
+  <h2>The first hour</h2>
+  <p>Times are for a normal player at about 4 clicks a second. Each step teaches one idea.</p>
+  <div class="tl" id="tl"></div>
+</section>
+
+<!-- SHOP -->
+<section id="shop">
+  <span class="eyebrow">06 · spending</span>
+  <h2>Shop and economy</h2>
+  <p>The shop opens on Cubie's second visit. Pure pixels (White, Gray, Black, Red, Green, Blue) are the shop currency. Tabs: Pixels, Upgrades (Features, Value, Operation), Consumables and Minigames. Numbers run with long suffixes up to about 1e306.</p>
+  <div class="chips" id="shopFilters" role="group" aria-label="Filter shop packs"></div>
+  <div class="shop-list" id="shopList"></div>
+  <div class="panel">
+    <h3>Value upgrade cost</h3>
+    <p class="muted" style="font-size:14px;margin:6px 0 16px">Each pixel type has its own Value level, paid in that type: <code>25 × amount per click × 1.15<sup>level</sup></code>. A type's Value level can never pass the level of the skill that owns it (pure types are owned by Standard).</p>
+    <div class="calc">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <label class="field" for="vApc">Amount per click<input type="number" id="vApc" value="1" min="0.1" step="0.5"></label>
+        <label class="field" for="vLvl">Level <span class="mono" id="vLvlOut">10</span><input type="range" id="vLvl" min="0" max="100" value="10"></label>
+        <div><div class="big" id="vCost">101</div><div class="muted" style="font-size:13px">cost of the next level</div></div>
+      </div>
+      <div class="chart" id="vChart"></div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="panel"><h3>Vendors</h3><p style="font-size:14px;margin-top:8px" class="muted">The Lumberjack and the Prospector buy skill blocks for pure pixels at a rarity rate (1 ÷ (spawn weight × amount per click ÷ clicks)) × 0.8 × luck, and sell devices and potions. Visitors offer their wares at 20% off.</p></div>
+    <div class="panel"><h3>Consumables</h3><p style="font-size:14px;margin-top:8px" class="muted">One potion per pixel type forces that type to spawn for a while. Crafting makes 2-type combo potions, 3-type ones (non-standalone types) and attuned devices (device + potion). Potions can be priced from their expected return.</p></div>
+  </div>
+</section>
+
+<!-- DEVICES -->
+<section id="devices">
+  <span class="eyebrow">07 · the husk economy</span>
+  <h2>Devices and machines</h2>
+  <p>Every device answers a pressure: despawning, floor space, hazards, the random rotation. Place them by right-clicking them in the Inventory. Factory machines (belts, kiln, splitter, elevator, robot) are tester features for now.</p>
+  <div class="cards" id="devCards"></div>
+</section>
+
+<!-- MINIGAMES -->
+<section id="minigames">
+  <span class="eyebrow">08 · interruptions worth having</span>
+  <h2>Minigames</h2>
+  <p>Bought as packs in the Minigames tab. Each one you switch on raises the global XP multiplier. Takeover minigames own the screen; <code>PixelMinigameLimits</code> caps how many run at once.</p>
+  <div class="cards" id="mgCards"></div>
+</section>
+
+<!-- CAST -->
+<section id="cast">
+  <span class="eyebrow">09 · everyone is a cube</span>
+  <h2>Characters and pets</h2>
+  <p>No story and no big reveal. The characters are ordinary people with small concerns, drawn in code as block-built cubes. When a visitor arrives the screen darkens and time stops until you accept or send them away.</p>
+  <div class="cards" id="castCards"></div>
+</section>
+
+<!-- RARES -->
+<section id="rares">
+  <span class="eyebrow">10 · the long tail</span>
+  <h2>Rare drops and collectibles</h2>
+  <p>Rares sit at the end of the tier list and fill the Collection Log and a walkable gallery. The chart shows one chance in N per block (log scale); hover a bar for the expected time at 4 clicks a second.</p>
+  <div class="panel odds" id="odds"></div>
+  <div class="cards" id="rareCards"></div>
+</section>
+
+<!-- WORLD -->
+<section id="world">
+  <span class="eyebrow">11 · look, camera, interface</span>
+  <h2>World and UI</h2>
+  <div class="grid3">
+    <div class="panel"><h3>World</h3><p class="muted" style="font-size:14px;margin-top:8px">A cube floating over a floor in a void. Floor styles, sky styles, day and night, screen filters, bar edge styles and a flat view. Per-type 3D looks (wood grain, ore cracks, glow, glass) live in <code>PixelLooks</code>, separate from each tier's UI colour.</p></div>
+    <div class="panel"><h3>Camera</h3><p class="muted" style="font-size:14px;margin-top:8px">A camera intro on start, then the View window (V): orbit, zoom, top-down, orthographic, free cam and first person, where you walk the floor, carry and stack husks and break them by hand. View bounds keep the camera in the world.</p></div>
+    <div class="panel"><h3>Interface</h3><p class="muted" style="font-size:14px;margin-top:8px">All UI is built in code with one shared font: HUD bars, Inventory, Log with goals, Toggles, Pocket with custom keybinds, tooltips, Pixel Guide, Game Database, notices and "Did you know" tips, a pause menu with save / load, and a title screen with music.</p></div>
+    <div class="panel"><h3>Sound</h3><p class="muted" style="font-size:14px;margin-top:8px">Code-made sounds and synths (<code>PixelAudio</code>), audio cues for minigames, skills, night, first person and the title screen, and the developer's own music tracks.</p></div>
+    <div class="panel"><h3>Saves</h3><p class="muted" style="font-size:14px;margin-top:8px">JSON in persistent data, per-save settings, autosave history with screenshots, and offline progress on load (today the auto clicker counts, plus Offline Progression XP).</p></div>
+    <div class="panel"><h3>Teaching</h3><p class="muted" style="font-size:14px;margin-top:8px">Cubie's visits, the shop and Toggles tutorials, the Standard level 2 popup that opens Skills, first-time tips, skill guides (Woodcutting first) and the Game Guide with Controls, How To Play and Database.</p></div>
+  </div>
+</section>
+
+<!-- DESIGN -->
+<section id="design">
+  <span class="eyebrow">12 · game design document</span>
+  <h2>Design direction</h2>
+  <p>The world is ours: monotonous grinding for money, with a deliberately <b>simulated</b> feel. The pixels and numbers mean nothing in themselves; only the player gives them meaning. Cubie is just another guy.</p>
+  <h3>Pillars</h3>
+  <div class="pillars">
+    <div class="pillar"><b>Every click leaves something behind</b><span class="muted">Value and a physical husk on every click.</span></div>
+    <div class="pillar"><b>Each system answers a pressure</b><span class="muted">Despawn, space, hazards, one skill at a time, the random rotation.</span></div>
+    <div class="pillar"><b>Skills feed each other</b><span class="muted">The Whetstone from Mining for Woodcutting, Pesticide from Farming.</span></div>
+    <div class="pillar"><b>Surprise inside structure</b><span class="muted">Random when, designed what: you never know when a tree comes, but its shape is authored.</span></div>
+    <div class="pillar"><b>Played over days</b><span class="muted">Short, frequent sessions; the game keeps working while you are away.</span></div>
+    <div class="pillar"><b>Many ways to play</b><span class="muted">Manual, auto, machines, consumables, minigames. None is the only good one.</span></div>
+    <div class="pillar"><b>Charm everywhere</b><span class="muted">The vendors, the cats, the code-made sounds, the homages.</span></div>
+  </div>
+  <div class="grid2">
+    <details open><summary>Decided</summary><div><ul style="margin:0;padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:6px">
+      <li><b>Audience:</b> people who love numbers going up and collecting; RuneScape-type players first, idle fans too.</li>
+      <li><b>Prestige:</b> paying Cubie back for his small gift and a second-hand Recycler, with interest he keeps inflating. A joke, not a theme.</li>
+      <li><b>Length:</b> open-ended; pacing tuned per skill and goal.</li>
+      <li><b>1.0:</b> flesh out the systems, ship a handful of skills, add more as updates.</li>
+      <li><b>Art:</b> smooth, clean menus with retro / 8-bit / cube visuals.</li>
+      <li><b>Early path:</b> RGB is Cubie's gift at 100 Black; the Auto Clicker is the first buy; a skill is nudged as the first branch.</li>
+    </ul></div></details>
+    <details><summary>After 1.0, maybe</summary><div><ul style="margin:0;padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:6px">
+      <li><b>Gear:</b> one slot ("you're a cube"), face sockets later; legendary gear from the super rares.</li>
+      <li><b>The alien vendor:</b> a UFO at the floor's edge, reached in first person, selling relics.</li>
+      <li><b>Combat:</b> enemies as tree-mode slot lists on the cube, weapons as gear.</li>
+      <li><b>First person as an unlock:</b> the Cube Visor reveal. In 1.0 it stays simple.</li>
+    </ul></div></details>
+  </div>
+  <details><summary>Open questions (15)</summary><div class="qs" id="qs"></div></details>
+</section>
+
+<!-- TECH -->
+<section id="tech">
+  <span class="eyebrow">13 · under the hood</span>
+  <h2>How it is built</h2>
+  <div class="stat-row">
+    <div class="stat"><div class="v">293</div><div class="l">C# scripts in <code>Assets/Scripts</code></div></div>
+    <div class="stat"><div class="v">133k</div><div class="l">lines of code</div></div>
+    <div class="stat"><div class="v">1 scene</div><div class="l">no prefabs; UI and models built in code</div></div>
+    <div class="stat"><div class="v">1,259</div><div class="l">changelog entries</div></div>
+  </div>
+  <div class="grid2">
+    <div class="panel"><h3>Shared foundations</h3><dl class="kv" style="margin-top:10px">
+      <dt>PixelSystems</dt><dd>the one list of system components</dd>
+      <dt>PixelFind</dt><dd>cached component lookup with version guard</dd>
+      <dt>PixelPrefs</dt><dd>all settings, per-save declarations</dd>
+      <dt>PixelStatics</dt><dd>clears static state on Restart</dd>
+      <dt>PixelCalm</dt><dd>"in a menu / camera busy" checks</dd>
+      <dt>PixelHuskQuery</dt><dd>finding husks near a point</dd>
+      <dt>PixelUIKit</dt><dd>labels, buttons, badges, tooltips</dd>
+      <dt>PixelBlockCatalog</dt><dd>one card per block type</dd></dl></div>
+    <div class="panel"><h3>Dev Hub (F9)</h3><p class="muted" style="font-size:14px;margin-top:8px">Widgets and cheats, Docs (to-do, changelog, ideas, notes), Tester, Inspector, Look Studio, Setups, Events, Sounds, Console, snapshots (F10 / F11), a balance report with per-skill XP and minutes to level, a session recorder and crash logs.</p>
+      <p class="muted" style="font-size:14px;margin-top:8px">Code is checked without Unity by <code>tools/compile-check/check.sh</code>; the developer tests in the editor.</p></div>
+  </div>
+  <footer>Built from the repository's design docs (<code>docs/GameDesign.md</code>, <code>docs/GameReference.txt</code>, <code>docs/Index.md</code>) as of 17 October 2026. Numbers are code defaults and still being tuned.</footer>
+</section>
+</main>
+</div>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+(function () {
+"use strict";
+// ---------- colour helpers ----------
+function hexToRgb(h) { h = h.replace("#", ""); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; }
+function shade(h, f) { var c = hexToRgb(h); return "rgb(" + c.map(function (v) { return Math.round(f >= 1 ? v + (255 - v) * (f - 1) : v * f); }).join(",") + ")"; }
+function iso(color, opts) {
+  opts = opts || {};
+  var a = opts.alpha == null ? 1 : opts.alpha, s = "stroke=\"rgba(0,0,0,.28)\" stroke-width=\"0.8\" stroke-linejoin=\"round\"";
+  return "<svg viewBox=\"0 0 40 44\" aria-hidden=\"true\"><g opacity=\"" + a + "\">" +
+    "<path d=\"M20 2 L37.3 12 L20 22 L2.7 12 Z\" fill=\"" + shade(color, 1.28) + "\" " + s + "/>" +
+    "<path d=\"M2.7 12 L20 22 L20 42 L2.7 32 Z\" fill=\"" + shade(color, 0.92) + "\" " + s + "/>" +
+    "<path d=\"M37.3 12 L20 22 L20 42 L37.3 32 Z\" fill=\"" + shade(color, 0.68) + "\" " + s + "/>" +
+    (opts.hazard ? "<path d=\"M20 27 L26 37 L14 37 Z\" fill=\"#fff\" opacity=\".9\"/><rect x=\"19.2\" y=\"30\" width=\"1.6\" height=\"4\" fill=\"#c0392b\"/>" : "") +
+    (opts.rare ? "<path d=\"M20 6 l1.6 3.4 3.6.4-2.7 2.4.8 3.6-3.3-1.9-3.3 1.9.8-3.6-2.7-2.4 3.6-.4z\" fill=\"#fff\" opacity=\".85\"/>" : "") +
+    "</g></svg>";
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[c]; }); }
+function el(id) { return document.getElementById(id); }
+
+// ---------- data ----------
+var FAM = {
+  pure: "Pure", special: "Special pixels", wood: "Woodcutting", forage: "Foraging", fish: "Fishing", mine: "Mining",
+  farm: "Farming", elec: "Electrician", fire: "Firemaking (dev)", rare: "Collectibles"
+};
+// [name, colour, family, text, flags]  flags: h = hazard, r = rare, s = special/filler notes, t = tough
+var B = [
+  ["White", "#f4f4f4", "pure", "A plain pixel: one click, one payout. The very first block; 300 of them unlock Gray, and Cubie's first visit comes along the way."],
+  ["Gray", "#9a9aa2", "pure", "A plain pixel. 200 Gray unlock Black, and Standard level 2 brings the first skill point."],
+  ["Black", "#26262c", "pure", "A plain pixel. Earn 100 and Cubie returns with the RGB pixels and opens the shop."],
+  ["Red", "#e0453a", "pure", "An RGB pixel. In Bomb Defusal the wire to cut is the colour of the RGB pixel you hold the most of."],
+  ["Green", "#3fb35a", "pure", "An RGB pixel. In Bomb Defusal the wire to cut is the colour of the RGB pixel you hold the most of."],
+  ["Blue", "#3a6fe0", "pure", "An RGB pixel. In Bomb Defusal the wire to cut is the colour of the RGB pixel you hold the most of."],
+  ["Glass", "#bfe6f2", "special", "See-through. The material for potions and the Pixel Bank's storage upgrade; buying it unlocks Crafting."],
+  ["Vacuum", "#9e80f2", "special", "Clicking it sucks up every husk lying around; they swirl into it and stay floating inside its glass body. Vacuumed husks give husk XP."],
+  ["Luminescent", "#a8ffd8", "special", "A glowing pixel. Its husk stays bright as it falls and leaves a fading trail of light."],
+  ["Singularity", "#2a0d40", "special", "Rare and tough. Its husk becomes a gravity well for 5 minutes, dragging up to 20 nearby husks in, keeping them alive and capturing meteors. Forged from what the Black Hole swallowed.", "r"],
+  ["Ghost", "#9ea8b5", "special", "A gray, gelatinous blob. Clicking it is just a payout; its husk is the one that drifts away."],
+  ["Meteor", "#8a5a3a", "special", "A cratered rock that needs 3 hits; the lava cracks glow brighter with each. Its husk streaks off across the screen and may knock a star (Stardust) loose.", "t"],
+  ["Solar", "#ffb320", "special", "A blazing sun. Every click raises Daylight, which speeds up seeds. Solar husks hover and pay 8% of their value every 4 s; five touching ones never despawn."],
+  ["Electric", "#1f4fb0", "special", "Pays a random 1-15 every harvest, overcharges the auto clicker and arcs to nearby devices to keep them running. Also Electrician's signature block."],
+  ["Mirror", "#c9ced6", "special", "Polished chrome: pays its own value, then repeats the last payout of the previous different pixel you clicked."],
+  ["Treasure", "#b07a2a", "special", "A chest that needs a random 1-20 hits. Pays value × hits × (1 + 0.15 × hits) and pours out 2 + one pixel per hit, up to 24.", "t"],
+  ["Nuclear", "#80ff33", "special", "Test pack. Its husk ages every husk within about 4 widths 40× faster, so they vanish without paying."],
+  ["Wood", "#8a5a2b", "wood", "A solid log. A couple of chops, a fair payout. The core of every tree.", "t"],
+  ["Bark", "#6b4a2e", "wood", "Rough bark. One chop, pays a little."],
+  ["Sap", "#ffb833", "wood", "Pays well for one chop. A Sap husk doesn't bounce and keeps woodcutting husks inside its yellow circle fresh (+5 s each)."],
+  ["Leaf", "#4f9e3a", "wood", "A flat green leaf. Its husk drifts down slowly. Every tree opens with leaves."],
+  ["Heartwood", "#c2332b", "wood", "Rare: the glowing red core of a tree. Tough and well paid.", "t"],
+  ["Twig", "#9c7a50", "wood", "Filler. Almost no pay. Shares the filler spot with Pinecone and Moss; shrinks as you level.", "s"],
+  ["Pinecone", "#7a5532", "wood", "Filler sibling of Twig. Pine trees carry cones in their log run.", "s"],
+  ["Moss", "#5f8f3e", "wood", "Filler sibling of Twig: a soft cushion of moss.", "s"],
+  ["Acorn", "#a77a3f", "wood", "Its husk is the trick: every acorn lying on the field raises the chance a tree becomes a Great Oak."],
+  ["Whetstone", "#8e9296", "wood", "A hold block: hold it with Block Hold and your clicks count for more."],
+  ["Pesticide", "#b8e038", "wood", "A hold block: holding it gives charges; a left click on a Termite Hive with a charge clears it."],
+  ["Great Oak", "#4a6b2a", "wood", "Very rare special tree: a long log run, a Great Oak block and a guaranteed Heartwood core.", "r"],
+  ["Termite Hive", "#b58a3a", "wood", "HAZARD. Never worth breaking. An infested tree warns you from its first block; Focus potions keep hives away.", "h"],
+  ["Berry", "#bf2659", "forage", "One pick, pays a little. It squelches."],
+  ["Mushroom", "#d1664d", "forage", "Takes a few picks; a fair payout.", "t"],
+  ["Herb", "#4db359", "forage", "Light and leafy; its husk drifts down slowly."],
+  ["Truffle", "#291a12", "forage", "Rare buried treasure. Tough and valuable.", "t"],
+  ["Weeds", "#8c9e59", "forage", "Filler. Almost no pay; the good finds take over as you level.", "s"],
+  ["Toadstool", "#9e40a6", "forage", "HAZARD. A left click makes you dizzy: the cube jerks away after every click for a while, and Foraging XP drops 10% for a minute. One right click clears it.", "h"],
+  ["Mold", "#9eebc7", "forage", "HAZARD. A left click covers EVERY husk in mold; moldy husks die unless you grab and shake them clean. Right-click to clear safely.", "h"],
+  ["Water", "#4099ff", "fish", "Very common in Fishing, and a Farming block: its husk splashes once and speeds up every growing sprout nearby."],
+  ["Seaweed", "#339966", "fish", "See-through; its husk sinks slowly."],
+  ["Shell", "#f2b3bf", "fish", "A glossy shell. One click, a fair payout."],
+  ["Pearl", "#f7f7ff", "fish", "Rare and tough: a shining pearl.", "t"],
+  ["Fish", "#73a6d9", "fish", "Rare. Clicking it starts a Weak Spots round: the camera zooms, time slows, hit every spot to land it. The auto clicker leaves fish for you."],
+  ["Driftwood", "#9e9480", "fish", "Filler. Almost no pay.", "s"],
+  ["Bait", "#cc8c47", "fish", "Bait pellets on the floor draw fish."],
+  ["Bottle", "#8ce6cc", "fish", "Special: a message in a bottle holding a treasure map.", "r"],
+  ["Whale", "#3d5a80", "fish", "Very rare special. Hook it and it yanks the line and dashes about the screen while you chase and click.", "r"],
+  ["Jellyfish", "#e673cc", "fish", "HAZARD, and an electric one. Right-click it away.", "h"],
+  ["Rock", "#7d7a75", "mine", "Mining's filler. Most of what appears at low level, rarer as ores take over.", "s"],
+  ["Copper", "#db7542", "mine", "A tough ore that chips with every hit. 8% of fresh ores are a glittering rich vein paying 5×.", "t"],
+  ["Tin", "#bfccd6", "mine", "Tough ore; rich veins pay 5×.", "t"],
+  ["Iron", "#9e5c4d", "mine", "Tough ore; rich veins pay 5×.", "t"],
+  ["Lead", "#7585a8", "mine", "Tough ore; rich veins pay 5×.", "t"],
+  ["Zinc", "#b3e0f2", "mine", "Tough ore; rich veins pay 5×.", "t"],
+  ["Nickel", "#d1c294", "mine", "Tough ore; rich veins pay 5×.", "t"],
+  ["Silver", "#e0e6f2", "mine", "Tough ore; rich veins pay 5×.", "t"],
+  ["Gold", "#ffd140", "mine", "Tough ore; rich veins pay 5×.", "t"],
+  ["Obsidian", "#1c1726", "mine", "Black volcanic glass that takes many hits but pays more.", "t"],
+  ["Bedrock", "#525466", "mine", "The toughest rock: a random, large number of hits.", "t"],
+  ["Gas Pocket", "#c7d940", "mine", "HAZARD. Break it and the gas blows husks away; Mining XP drops 10% for a minute. Drifts off by itself; right-click to clear.", "h"],
+  ["Dirt", "#6b4a30", "farm", "Farming's filler: a few digs, almost no pay. Dirt husks near a sprout help it grow.", "s"],
+  ["Seed", "#8a6236", "farm", "A shell you dig open. The cracking click plants three sprouts that each grow a random unlocked pixel over ~6 s.", "t"],
+  ["Fertilizer", "#80a840", "farm", "Gives every growing sprout and Seed pet an instant jump in growth."],
+  ["Pollen", "#ffe64d", "farm", "Floats. A Pollen husk near a sprout when it pops doubles that pixel's pay."],
+  ["Wheat", "#edc24d", "farm", "Pays more for every sprout currently growing (up to a cap)."],
+  ["Golden Fruit", "#ffd138", "farm", "A sprout has a 3% chance to grow one instead of a normal pixel. Pays a lot.", "r"],
+  ["Weevil", "#38261c", "farm", "A pest: while it sits on the cube it eats a sprout every few seconds until you click it away."],
+  ["Pest", "#667324", "farm", "HAZARD. Break it and a swarm eats your sprouts; Farming XP drops 10%. Flies off by itself; right-click to clear.", "h"],
+  ["Wire", "#db8042", "elec", "A conductor: Wire husks carry the arcs that link devices."],
+  ["Battery", "#80e64d", "elec", "A tough conductor.", "t"],
+  ["Capacitor", "#4d8cf2", "elec", "Every other click stores a charge (up to 40); clicking it pays value × (1 + 0.15 per charge)."],
+  ["Resistor", "#d1ad73", "elec", "A tough conductor.", "t"],
+  ["Transistor", "#2e3342", "elec", "Clicking it makes the NEXT pixel you collect pay double."],
+  ["Fuse", "#f27333", "elec", "Pays 3× if collected within 3 s of appearing, 0.3× if slower."],
+  ["Bulb", "#fff299", "elec", "Pays 10% more per conductor husk lying around (up to 30)."],
+  ["Tinder", "#d9c27a", "fire", "Test skill: a tuft of dry grass. Mechanics still to come."],
+  ["Kindling", "#a8814f", "fire", "A bundle of thin, dry sticks."],
+  ["Firewood", "#7a4f2a", "fire", "A split log, ready for the fire.", "t"],
+  ["Flint", "#6f6f78", "fire", "A hard striker stone that throws sparks."],
+  ["Ember", "#ff5a1f", "fire", "A glowing coal, still hot."],
+  ["Fire", "#ff6b14", "fire", "Clicking it blasts a ring of flames out from the cube."],
+  ["Charcoal", "#333333", "fire", "Made by the Kiln. Still looking for a use."],
+  ["Ash", "#b5b5b5", "fire", "Filler: grey ash.", "s"],
+  ["Wildfire", "#ff3b1f", "fire", "HAZARD of the Firemaking test skill.", "h"],
+  ["Dragon Cubes ×7", "#ff9a1f", "rare", "Seven stars, about 1 in 70,000 each. Collect all seven and Summon the Dragon for a wish.", "r"],
+  ["Slifer", "#eb1f1a", "rare", "Egyptian God Cube: the Sky Dragon, a red cube held together by storm lightning. ~1 in 7 million; one ever.", "r"],
+  ["Ra", "#ffd126", "rare", "Egyptian God Cube: the Winged Dragon, wrapped in a sun's corona. ~1 in 7 million.", "r"],
+  ["Obelisk", "#3361f2", "rare", "Egyptian God Cube: the Tormentor, a deep blue stone cube that sheds dust. ~1 in 7 million.", "r"],
+  ["Prime Cubes ×6", "#b44cff", "rare", "Space, Mind, Reality, Power, Time, Soul. ~1 in 7 million each; hold all six and the Wizard offers a Gauntlet.", "r"],
+  ["Prime Cubelette", "#ffe68c", "rare", "Forged in the Prime Gauntlet from all six Prime Cubes. Never drops; only one can exist.", "r"],
+  ["Golden Snitch", "#ffc738", "rare", "Never stays on the cube: it darts around the screen. Keep the mouse on it to charge, then click as the rings meet.", "r"]
+];
+function blkColor(name) { for (var i = 0; i < B.length; i++) if (B[i][0] === name) return B[i][1]; return "#888888"; }
+
+// ---------- HERO DEMO ----------
+var cv = el("demo"), ctx = cv.getContext("2d");
+var CUR = ["White", "Gray", "Black", "Red", "Green", "Blue"];
+var st, husks, pops, cubeScale, W = 600, H = 340, dpr = 1;
+function resetDemo() {
+  st = { cur: { White: 0, Gray: 0, Black: 0, Red: 0, Green: 0, Blue: 0 }, unlocked: ["White"], clicks: {}, block: "White", recycler: false, rgb: false, recycled: 0, streak: 0, lastRec: "" };
+  husks = []; pops = []; cubeScale = 1; renderBar();
+  el("demoMsg").innerHTML = "<b>Try it:</b> click the cube. Each click pays that block's currency and drops a husk. Husks fade after 15 s. (Thresholds here are ten times smaller than the game's.)";
+}
+function msg(h) { el("demoMsg").innerHTML = h; }
+function renderBar() {
+  var h = "";
+  CUR.forEach(function (c) { if (st.unlocked.indexOf(c) >= 0) h += "<span class=\"cur\"><i style=\"background:" + blkColor(c) + "\"></i>" + c + " " + fmt(st.cur[c]) + "</span>"; });
+  h += "<span class=\"cur muted\">husks " + husks.length + "/50</span>";
+  if (st.recycler) h += "<span class=\"cur muted\">recycled " + st.recycled + (st.streak > 1 ? " · streak ×" + st.streak : "") + "</span>";
+  h += "<button class=\"demo-reset\" id=\"demoReset\">Reset</button>";
+  el("demoBar").innerHTML = h; el("demoReset").onclick = resetDemo;
+}
+function fmt(n) { return n % 1 ? n.toFixed(1) : String(n); }
+function roll() { var u = st.unlocked; return u[Math.floor(Math.random() * u.length)]; }
+function size() { var r = cv.getBoundingClientRect(); dpr = window.devicePixelRatio || 1; W = r.width; H = r.height; cv.width = W * dpr; cv.height = H * dpr; }
+function cubeGeom() { var s = Math.min(70, W * 0.13) * cubeScale; return { x: W * 0.5, y: H * 0.40, s: s }; }
+function floorY() { return H - 34; }
+function binGeom() { return { x: W - 70, y: floorY() - 46, w: 54, h: 46 }; }
+function drawCube(x, y, s, col, a) {
+  ctx.globalAlpha = a;
+  var k = s * 0.866;
+  ctx.lineJoin = "round"; ctx.strokeStyle = "rgba(0,0,0,.3)"; ctx.lineWidth = Math.max(0.6, s / 40);
+  ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + k, y - s / 2); ctx.lineTo(x, y); ctx.lineTo(x - k, y - s / 2); ctx.closePath(); ctx.fillStyle = shade(col, 1.28); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - k, y - s / 2); ctx.lineTo(x, y); ctx.lineTo(x, y + s); ctx.lineTo(x - k, y + s / 2); ctx.closePath(); ctx.fillStyle = shade(col, 0.92); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + k, y - s / 2); ctx.lineTo(x, y); ctx.lineTo(x, y + s); ctx.lineTo(x + k, y + s / 2); ctx.closePath(); ctx.fillStyle = shade(col, 0.68); ctx.fill(); ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+var last = performance.now(), t0 = performance.now();
+function frame(now) {
+  var dt = Math.min(0.05, (now - last) / 1000); last = now;
+  var T = (now - t0) / 1000;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  var fy = floorY(), ink = css("--ink"), muted = css("--muted");
+  // floor
+  ctx.fillStyle = css("--floor"); ctx.fillRect(0, fy, W, H - fy);
+  ctx.strokeStyle = css("--line"); ctx.beginPath(); ctx.moveTo(0, fy); ctx.lineTo(W, fy); ctx.stroke();
+  // recycler bin
+  if (st.recycler) {
+    var b = binGeom();
+    ctx.fillStyle = css("--good"); ctx.globalAlpha = 0.85; ctx.fillRect(b.x, b.y, b.w, b.h); ctx.globalAlpha = 1;
+    ctx.fillStyle = css("--surface"); ctx.font = "11px JetBrains Mono, monospace"; ctx.textAlign = "center"; ctx.fillText("♻", b.x + b.w / 2, b.y + 28);
+    ctx.fillStyle = muted; ctx.fillText("Recycler", b.x + b.w / 2, fy + 18);
+  }
+  // shadow + cube
+  var g = cubeGeom();
+  cubeScale += (1 - cubeScale) * Math.min(1, dt * 12);
+  ctx.fillStyle = "rgba(0,0,0,.12)"; ctx.beginPath(); ctx.ellipse(g.x, fy, g.s * 0.9, 6, 0, 0, Math.PI * 2); ctx.fill();
+  drawCube(g.x, g.y + Math.sin(T * 1.6) * 3, g.s, blkColor(st.block), 1);
+  ctx.fillStyle = muted; ctx.font = "12px JetBrains Mono, monospace"; ctx.textAlign = "center";
+  ctx.fillText(st.block.toUpperCase(), g.x, g.y - g.s - 14);
+  // husks
+  for (var i = husks.length - 1; i >= 0; i--) {
+    var p = husks[i];
+    if (p.fly) { // flying into the recycler
+      var bb = binGeom(); p.x += (bb.x + bb.w / 2 - p.x) * Math.min(1, dt * 8); p.y += (bb.y + 6 - p.y) * Math.min(1, dt * 8);
+      if (Math.abs(p.x - (bb.x + bb.w / 2)) < 3) { husks.splice(i, 1); continue; }
+    } else {
+      p.vy += 900 * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+      if (p.y > fy - 9) { p.y = fy - 9; p.vy *= -0.35; p.vx *= 0.82; if (Math.abs(p.vy) < 30) p.vy = 0; }
+      if (p.x < 10) { p.x = 10; p.vx *= -0.5; } if (p.x > W - 10) { p.x = W - 10; p.vx *= -0.5; }
+    }
+    var age = (now - p.born) / 1000;
+    if (age > 15 && !p.fly) { husks.splice(i, 1); renderBar(); continue; }
+    drawCube(p.x, p.y, 9, p.c, age > 12 ? Math.max(0, (15 - age) / 3) : 1);
+  }
+  // pops
+  ctx.font = "bold 15px Pixelify Sans, monospace";
+  for (var j = pops.length - 1; j >= 0; j--) {
+    var q = pops[j]; q.t += dt; if (q.t > 1) { pops.splice(j, 1); continue; }
+    ctx.globalAlpha = 1 - q.t; ctx.fillStyle = q.col || ink; ctx.fillText(q.txt, q.x, q.y - q.t * 40); ctx.globalAlpha = 1;
+  }
+  requestAnimationFrame(frame);
+}
+function hitCube(x, y) { var g = cubeGeom(); return Math.abs(x - g.x) < g.s * 0.9 && y > g.y - g.s - 4 && y < g.y + g.s + 4; }
+function clickDemo(x, y) {
+  // husk click -> recycle
+  if (st.recycler) {
+    for (var i = husks.length - 1; i >= 0; i--) { var p = husks[i]; if (!p.fly && Math.abs(p.x - x) < 14 && Math.abs(p.y - y) < 16) {
+      p.fly = true; st.recycled++;
+      st.streak = st.lastRec === p.t ? st.streak + 1 : 1; st.lastRec = p.t;
+      st.cur[p.t] += 0.5; pops.push({ x: p.x, y: p.y - 14, txt: "+0.5 " + p.t + (st.streak > 1 ? " ×" + st.streak : ""), t: 0, col: css("--good") });
+      renderBar(); return; } }
+  }
+  if (!hitCube(x, y)) return;
+  var g = cubeGeom(), t = st.block;
+  st.cur[t] += 1; st.clicks[t] = (st.clicks[t] || 0) + 1;
+  pops.push({ x: g.x + (Math.random() * 40 - 20), y: g.y - g.s - 30, txt: "+1 " + t, t: 0 });
+  husks.push({ x: g.x + (Math.random() * 20 - 10), y: g.y + g.s * 0.6, vx: (Math.random() * 2 - 1) * 160, vy: -120 - Math.random() * 120, c: blkColor(t), t: t, born: performance.now() });
+  if (husks.length > 50) husks.shift();
+  // progression (game thresholds / 10)
+  var W0 = st.clicks.White || 0;
+  if (W0 === 10 && !st.recycler) { st.recycler = true; msg("<b>Cubie:</b> \"Here, a second-hand Recycler. Click a husk on the floor to toss it in: half its value back, same colour in a row builds a streak.\" (In the game: visit 1, after 100 White clicks.)"); }
+  if (st.cur.White >= 30 && st.unlocked.indexOf("Gray") < 0) { st.unlocked.push("Gray"); msg("<b>Gray unlocked.</b> New blocks join the weighted random rotation. (Game: 300 White.)"); }
+  if ((st.clicks.Gray || 0) >= 20 && st.unlocked.indexOf("Black") < 0) { st.unlocked.push("Black"); msg("<b>Black unlocked.</b> In the game Standard reaches level 2 around here: Block Hold or Power Click. (Game: 200 Gray.)"); }
+  if ((st.clicks.Black || 0) >= 10 && !st.rgb) { st.rgb = true; st.unlocked.push("Red", "Green", "Blue"); msg("<b>Cubie's second visit:</b> he hands over the RGB pixels and the shop opens. Six currencies. Next buy in the game: the Auto Clicker. (Game: 100 Black.)"); }
+  st.block = roll(); cubeScale = 0.7; renderBar();
+}
+cv.addEventListener("pointerdown", function (e) { var r = cv.getBoundingClientRect(); clickDemo(e.clientX - r.left, e.clientY - r.top); });
+cv.addEventListener("pointermove", function (e) { var r = cv.getBoundingClientRect(); cv.style.cursor = hitCube(e.clientX - r.left, e.clientY - r.top) ? "pointer" : "default"; });
+resetDemo(); size();
+if (window.ResizeObserver) new ResizeObserver(size).observe(cv); else window.addEventListener("resize", size);
+requestAnimationFrame(frame);
+
+// ---------- loop notes ----------
+var LOOP = {
+  click: "Left click = hit. Normal blocks break in one click, tough ones need several. The Auto Clicker clicks on a timer, minigames add their own clicks, and Block Hold lets you pull a block aside.",
+  currency: "Every pixel type is its own currency. The six pure types pay for the shop; skill blocks are sold to vendors or used for that skill's Value upgrades.",
+  husk: "A small physical cube of the same type falls to the floor. You can grab and throw it, and some husks do things: Sap keeps others fresh, Acorns call a Great Oak, Solar hovers and pays, Singularity becomes a gravity well.",
+  shop: "Packs add block types, skills, minigames and features; upgrades raise the auto clicker, combo meter, bank and husk cap; Value levels scale each type's payout.",
+  machines: "Recycler, Storage Crate, Quantum Organizer, Funnel, Magnet, Fan, Sorters, Vacuum, conveyors. Hands in first person are free but slow; machines are faster but cost something.",
+  xp: "A consumed husk gives half a click's XP to the skill it belongs to. Standard gets a flat 1 XP per block from every source.",
+  despawn: "Husks fade after 15 s and the floor holds 50. That pressure is why devices, skills and consumables exist: each one solves a pressure."
+};
+document.querySelectorAll(".loop .node").forEach(function (n) {
+  function show() { document.querySelectorAll(".loop .box").forEach(function (b) { b.classList.remove("hot"); }); n.querySelector(".box").classList.add("hot"); el("loopNote").textContent = LOOP[n.dataset.k]; }
+  n.addEventListener("click", show); n.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); show(); } });
+});
+
+// ---------- block explorer ----------
+var filt = "all", selected = "Sap";
+function flagTags(b) {
+  var f = b[4] || "", t = "<span class=\"tag\">" + FAM[b[2]] + "</span> ";
+  if (f.indexOf("h") >= 0) t += "<span class=\"tag hz\">hazard</span> ";
+  if (f.indexOf("r") >= 0) t += "<span class=\"tag rr\">rare</span> ";
+  if (f.indexOf("t") >= 0) t += "<span class=\"tag\">tough</span> ";
+  if (f.indexOf("s") >= 0) t += "<span class=\"tag\">filler</span> ";
+  if (b[2] === "fire") t += "<span class=\"tag dv\">dev-only</span> ";
+  return t;
+}
+function renderFilters() {
+  var keys = ["all"].concat(Object.keys(FAM), ["hazard"]), h = "";
+  keys.forEach(function (k) {
+    var n = B.filter(function (b) { return k === "all" || b[2] === k || (k === "hazard" && (b[4] || "").indexOf("h") >= 0); }).length;
+    var lbl = k === "all" ? "All" : k === "hazard" ? "Hazards" : FAM[k];
+    h += "<button class=\"chip\" data-f=\"" + k + "\" aria-pressed=\"" + (filt === k) + "\">" + lbl + "<span class=\"n\">" + n + "</span></button>";
+  });
+  el("blkFilters").innerHTML = h;
+  el("blkFilters").querySelectorAll(".chip").forEach(function (c) { c.onclick = function () { filt = c.dataset.f; renderFilters(); renderBlocks(); }; });
+}
+function renderBlocks() {
+  var h = "";
+  B.forEach(function (b) {
+    if (!(filt === "all" || b[2] === filt || (filt === "hazard" && (b[4] || "").indexOf("h") >= 0))) return;
+    var f = b[4] || "";
+    h += "<button class=\"blk\" data-n=\"" + esc(b[0]) + "\" aria-pressed=\"" + (b[0] === selected) + "\">" + iso(b[1], { hazard: f.indexOf("h") >= 0, rare: f.indexOf("r") >= 0 }) + "<span>" + esc(b[0]) + "</span></button>";
+  });
+  el("blkGrid").innerHTML = h;
+  el("blkGrid").querySelectorAll(".blk").forEach(function (c) { c.onclick = function () { selected = c.dataset.n; renderBlocks(); renderDetail(); }; });
+}
+function renderDetail() {
+  var b = B.filter(function (x) { return x[0] === selected; })[0]; if (!b) return;
+  var f = b[4] || "";
+  el("blkDetail").innerHTML = iso(b[1], { hazard: f.indexOf("h") >= 0, rare: f.indexOf("r") >= 0 }) +
+    "<div class=\"meta\"><h3>" + esc(b[0]) + "</h3><div>" + flagTags(b) + "</div><p>" + esc(b[3]) + "</p></div>";
+}
+renderFilters(); renderBlocks(); renderDetail();
+
+// ---------- Block Hold sim ----------
+(function () {
+  var holding = false, start = 0, clicks = 0, raf = 0, hist = [], cool = 0;
+  var btn = el("hBtn"), mEl = el("hMeter"), mult = el("hMult"), state = el("hState");
+  function cur() { var s = (performance.now() - start) / 1000; return { s: Math.min(5, s), m: 1 + 0.6 * Math.min(5, s) + 0.1 * clicks }; }
+  function tick() {
+    if (!holding) return; var c = cur();
+    mEl.style.width = (100 - c.s / 5 * 100) + "%"; mult.textContent = "×" + c.m.toFixed(2);
+    state.textContent = c.s < 0.75 ? "Holding… stake locks in at 0.75 s" : "Staked. Keep holding or clicking to grow it.";
+    if (c.s >= 5) { release(true); return; } raf = requestAnimationFrame(tick);
+  }
+  function down(e) { if (e) e.preventDefault(); if (holding || performance.now() < cool) return; holding = true; start = performance.now(); clicks = 0; tick(); }
+  function release(dry) {
+    if (!holding) return; holding = false; cancelAnimationFrame(raf);
+    var c = cur(); mEl.style.width = "100%";
+    if (c.s < 0.75) { state.textContent = "Let go too soon: the block just goes back in line, no stake."; mult.textContent = "×1.00"; return; }
+    var win = Math.random() < 0.6; hist.unshift({ m: c.m, win: win }); if (hist.length > 12) hist.pop();
+    state.innerHTML = (dry ? "The meter ran dry. " : "") + (win ? "<b style=\"color:var(--good)\">Green aura:</b> it will pay ×" + c.m.toFixed(2) + " when it comes round." : "<b style=\"color:var(--hazard)\">Red aura:</b> it pays nothing this time.");
+    el("hHist").innerHTML = hist.map(function (h) { return "<span class=\"res " + (h.win ? "win" : "lose") + "\">" + (h.win ? "×" + h.m.toFixed(2) : "×0") + "</span>"; }).join("");
+    if (dry) cool = performance.now() + 1500;
+  }
+  btn.addEventListener("pointerdown", down);
+  ["pointerup", "pointerleave", "pointercancel"].forEach(function (ev) { btn.addEventListener(ev, function () { release(false); }); });
+  el("hClick").addEventListener("click", function () { if (holding) { clicks++; } else state.textContent = "Clicks only count while a block is held."; });
+  document.addEventListener("keydown", function (e) { if ((e.key === "h" || e.key === "H") && !e.repeat && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) down(); if (holding && (e.key === "c" || e.key === " ")) { e.preventDefault(); clicks++; } });
+  document.addEventListener("keyup", function (e) { if (e.key === "h" || e.key === "H") release(false); });
+})();
+
+// ---------- skills ----------
+var SK = [
+  { id: "standard", name: "Standard", c: "#c9c9d6", sum: "The always-on skill. Every collected block gives a flat 1 XP, manual or auto, from any skill, with no multipliers. Level 2 opens the Skills window and gives the first skill point.",
+    blocks: ["White", "Gray", "Black", "Red", "Green", "Blue"], perks: ["Husks last +5 s per level", "The floor holds +5 husks per level from level 4", "Owns the Value cap for the pure and shop pixels"],
+    tree: [["Block Hold", "Pull the block aside with the right mouse button and stake pure blocks."], ["Power Click", "The other first-choice node."], ["Next up", "A window that shows the coming block."], ["Shuffle", "Re-roll the rotation."]] },
+  { id: "woodcutting", name: "Woodcutting", c: "#8a5a2b", sum: "Tree mode, tested and liked: the cube rolls filler (Twig, Leaf, Wood) until a tree of a random species arrives, then plays it out in a designed order with a tree bar and a Timber reward. Infested trees carry a Termite Hive and warn you from their first block.",
+    blocks: ["Wood", "Bark", "Sap", "Leaf", "Heartwood", "Acorn", "Whetstone", "Pesticide"], filler: ["Twig", "Pinecone", "Moss"], hazard: ["Termite Hive"], special: ["Great Oak"],
+    extra: "trees", perks: ["Level 5: Wood can spawn in every rotation (\"Lumber stock\")", "Evil Tree minigame feeds Woodcutting XP", "Wood Chipper turns wood husks into XP and Wood Chips", "Big Tim the Lumberjack buys wood and sells Focus and Pesticide"] },
+  { id: "foraging", name: "Foraging", c: "#bf2659", sum: "A truly random rotation: a pure reaction check. Two hazards that a right click clears and a left click sets off.",
+    blocks: ["Berry", "Mushroom", "Herb", "Truffle"], filler: ["Weeds"], hazard: ["Toadstool", "Mold"], perks: ["Open link: Herbs to potions, Mushrooms to Farming fertilizer"] },
+  { id: "fishing", name: "Fishing", c: "#4099ff", sum: "Water is very common; rare Fish start a Weak Spots catch round. Two special finds: a message in a bottle with a treasure map, and a whale you chase around the screen.",
+    blocks: ["Water", "Seaweed", "Shell", "Pearl", "Fish", "Bait"], filler: ["Driftwood"], hazard: ["Jellyfish"], special: ["Bottle", "Whale"], perks: ["Bait Bucket stores fish and water with their value", "Treasure map from the bottle"] },
+  { id: "mining", name: "Mining", c: "#db7542", sum: "Ores chip and crack with every hit and break in a shower of nuggets; 8% are rich veins paying 5×. Pip the Prospector buys ores and sells tools.",
+    blocks: ["Copper", "Tin", "Iron", "Lead", "Zinc", "Nickel", "Silver", "Gold", "Obsidian", "Bedrock"], filler: ["Rock"], hazard: ["Gas Pocket"], perks: ["Mastery node: a small permanent bonus to every pixel", "Copper samples: Copper can be switched on in any rotation", "Planned: the Whetstone moves here, feeding Woodcutting"] },
+  { id: "farming", name: "Farming", c: "#80a840", sum: "A farm in itself: Seeds plant sprouts that grow random pixels; Water, Dirt, Fertilizer and Solar Daylight speed them; Pollen doubles a sprout's pay; Wheat pays per sprout growing; pests eat them.",
+    blocks: ["Seed", "Water", "Fertilizer", "Pollen", "Wheat", "Golden Fruit", "Weevil"], filler: ["Dirt"], hazard: ["Pest"], perks: ["Sprinkler waters sprouts in a radius", "Planned: Pesticide made by Farming for Woodcutting"] },
+  { id: "electrician", name: "Electrician", c: "#1f4fb0", sum: "Eight electrical blocks. Conductor husks (Electric, Wire, Battery, Resistor) carry arcs that link and power devices. Candidate home of the factory machines.",
+    blocks: ["Electric", "Wire", "Battery", "Capacitor", "Resistor", "Transistor", "Fuse", "Bulb"], perks: ["Charge Booster: Electric pixels fill it for super-charged auto clicking", "Lightning Rod turns nearby husks Electric"] },
+  { id: "firemaking", name: "Firemaking", c: "#ff6b14", dev: true, sum: "A dev-only test skill: blocks exist, the mechanics are still to come. Charcoal from the Kiln belongs here.",
+    blocks: ["Tinder", "Kindling", "Firewood", "Flint", "Ember", "Fire", "Charcoal"], filler: ["Ash"], hazard: ["Wildfire"] },
+  { id: "offline", name: "Offline", c: "#9a9cc0", sum: "Passive: never the skill in training. It earns XP only from offline clicks (0.25 XP each), shown in the Welcome back window.", blocks: [] }
+];
+var TREES = [
+  ["Oak", "level 1", [["Leaf"], ["Leaf"], ["Wood", "3-6"], ["Sap", "", 1], ["Acorn", "", 1], ["Heartwood", "", 1], ["Termite Hive", "", 1]], "The all-rounder; feeds the Great Oak through acorns."],
+  ["Pine", "level 4", [["Leaf"], ["Pinecone"], ["Wood", "4-8"], ["Pinecone"], ["Wood", "1-2"], ["Termite Hive", "", 1]], "Tall: a long log run with cones."],
+  ["Birch", "level 8", [["Leaf"], ["Bark"], ["Wood", "2-3"], ["Bark"], ["Termite Hive", "", 1]], "Short and quick: Timber after Timber."],
+  ["Maple", "level 12", [["Leaf"], ["Wood", "2-4"], ["Sap"], ["Sap"], ["Wood", "1-3"], ["Heartwood", "", 1], ["Termite Hive", "", 1]], "Sticky and well paid."],
+  ["Great Oak", "level 3, rare", [["Leaf"], ["Leaf"], ["Wood", "2-4"], ["Great Oak"], ["Heartwood"]], "Guaranteed heartwood core, never infested."]
+];
+function mini(n) { return "<span class=\"mini\">" + iso(blkColor(n)) + esc(n) + "</span>"; }
+function slot(s) { return "<span class=\"slot" + (s[2] ? " opt" : "") + "\" style=\"background:" + blkColor(s[0]) + "\" title=\"" + esc(s[0]) + (s[2] ? " (chance / optional)" : "") + "\"></span>" + (s[1] ? "<span class=\"slot-x\">×" + s[1] + "</span>" : ""); }
+var curSk = "woodcutting";
+function renderSkills() {
+  el("skTabs").innerHTML = SK.map(function (s) { return "<button class=\"tab\" role=\"tab\" aria-selected=\"" + (s.id === curSk) + "\" data-id=\"" + s.id + "\"><span class=\"sw\" style=\"background:" + s.c + "\"></span>" + s.name + (s.dev ? " <span class=\"tag dv\">dev</span>" : "") + "</button>"; }).join("");
+  el("skTabs").querySelectorAll(".tab").forEach(function (t) { t.onclick = function () { curSk = t.dataset.id; renderSkills(); }; });
+  var s = SK.filter(function (x) { return x.id === curSk; })[0], left = "<div class=\"role\" style=\"gap:16px\"><p>" + esc(s.sum) + "</p>";
+  if (s.blocks.length) left += "<div class=\"role\"><h4>Blocks</h4><div class=\"mini-row\">" + s.blocks.map(mini).join("") + "</div></div>";
+  if (s.filler) left += "<div class=\"role\"><h4>Filler (shrinks with level)</h4><div class=\"mini-row\">" + s.filler.map(mini).join("") + "</div></div>";
+  if (s.hazard) left += "<div class=\"role\"><h4>Hazard</h4><div class=\"mini-row\">" + s.hazard.map(mini).join("") + "</div></div>";
+  if (s.special) left += "<div class=\"role\"><h4>Specials</h4><div class=\"mini-row\">" + s.special.map(mini).join("") + "</div></div>";
+  left += "</div>";
+  var right = "<div class=\"panel\">";
+  if (s.extra === "trees") {
+    right += "<h3>Tree species</h3><p class=\"muted\" style=\"font-size:13px;margin:4px 0 8px\">Each species is an ordered slot list. Dashed slots are chance or optional (Sap 30%, Heartwood 20-25%, the Hive only on infested trees).</p>";
+    right += TREES.map(function (t) { return "<div class=\"tree-row\"><div class=\"nm\">" + t[0] + "<small>" + t[1] + "</small></div><div><div class=\"slots\">" + t[2].map(slot).join("") + "</div><div class=\"muted\" style=\"font-size:12.5px;margin-top:3px\">" + t[3] + "</div></div></div>"; }).join("");
+    right += "</div><div class=\"panel\" style=\"margin-top:12px\"><h3>Links and perks</h3><ul style=\"margin:8px 0 0;padding-left:18px;font-size:14px\">" + s.perks.map(function (p) { return "<li>" + esc(p) + "</li>"; }).join("") + "</ul>";
+  } else if (s.tree) {
+    right += "<h3>Skill tree</h3><div class=\"std-tree\" style=\"margin:10px 0 14px\">" + s.tree.map(function (n) { return "<div class=\"node-card\"><b>" + n[0] + "</b>" + esc(n[1]) + "</div>"; }).join("") + "</div><h3>Perks</h3><ul style=\"margin:8px 0 0;padding-left:18px;font-size:14px\">" + s.perks.map(function (p) { return "<li>" + esc(p) + "</li>"; }).join("") + "</ul>";
+  } else if (s.perks) {
+    right += "<h3>Links and perks</h3><ul style=\"margin:8px 0 0;padding-left:18px;font-size:14px\">" + s.perks.map(function (p) { return "<li>" + esc(p) + "</li>"; }).join("") + "</ul>";
+  } else {
+    right += "<h3>Status</h3><p class=\"muted\" style=\"font-size:14px;margin-top:6px\">" + (s.dev ? "Test pack, hidden in the shop. Mechanics still to come." : "Grows while you are away; nothing to choose.") + "</p>";
+  }
+  right += "</div>";
+  el("skPanel").innerHTML = "<div class=\"skill-body\">" + left + "<div>" + right + "</div></div>";
+}
+renderSkills();
+
+// ---------- timeline ----------
+var TL = [
+  ["0:00", "White", "300 White unlock Gray. Cubie's first visit at 100 White clicks brings the Recycler.", "clicking, husks, edge-click aiming", "#f4f4f4"],
+  ["~1:15", "Gray", "200 Gray unlock Black. Standard level 2: the first skill point, Block Hold or Power Click.", "the first choice", "#9a9aa2"],
+  ["~2:30", "Black", "Earn 100. The last plain grind.", "patience", "#26262c"],
+  ["~3:45", "Cubie's second visit", "RGB is given, not bought. A taste of Red, Green and Blue, and the shop opens.", "six currencies", "#e0453a"],
+  ["4-8 min", "The RGB phase", "First buy: the Auto Clicker (150 of each pure pixel). Value upgrades on the side.", "automation, the Toggles window", "#3a6fe0"],
+  ["8-15 min", "The branch", "All six pure currencies in hand. A skill comes first: the Lumberjack's Pack is the cheapest next buy and Cubie names Big Tim. Special pixels and minigames follow.", "skills are the heart of the game", "#8a5a2b"]
+];
+el("tl").innerHTML = TL.map(function (t) { return "<div class=\"tl-item\"><div class=\"tl-time\">" + t[0] + "</div><div class=\"tl-dot\" style=\"--c:" + t[4] + "\"></div><div class=\"tl-body\"><b>" + t[1] + "</b><span>" + t[2] + "</span><span class=\"teach\">teaches: " + t[3] + "</span></div></div>"; }).join("");
+
+// ---------- shop ----------
+var PK = [
+  ["Auto Clicker", "up", "Clicks the cube for you on a timer. The first buy."],
+  ["Faster Clicking", "up", "Shorter auto clicker interval."],
+  ["Multi-Click", "up", "More clicks per auto click."],
+  ["Combo Meter", "up", "Click fast to build a combo; each milestone boosts your clicks."],
+  ["Pixel Bank", "up", "Store husks in a bank; B gives a hose that sucks up and spits out pixels."],
+  ["Bank Storage", "up", "More Pixel Bank capacity."],
+  ["Husk Capacity", "up", "More husks may lie around at once."],
+  ["Time Stop", "up", "T freezes everything, even countdowns."],
+  ["Time Slow", "up", "S slows time so meteors can be grabbed."],
+  ["UFO Helper", "up", "A UFO re-places spent devices and abducts loose husks into the bank."],
+  ["Glass Pixel", "px", "See-through pixel; unlocks Crafting."],
+  ["Vacuum Pixel", "px", "Rare: sucks up every husk."],
+  ["Obsidian Pixel", "px", "Tough, pays more."],
+  ["Luminescent Pixel", "px", "Glows; pays more per click."],
+  ["Ghost Pixel", "px", "Faint, see-through, pays well."],
+  ["Meteor Pixel", "px", "Streaks away instead of falling."],
+  ["Solar Pixel", "px", "Forged from stardust; raises Daylight."],
+  ["Electric Pixel", "px", "Random payout; overcharges and powers devices."],
+  ["Seed Pixel", "px", "Dig it open; sprouts grow random husks."],
+  ["Water Pixel", "px", "Splashing husks speed up sprouts."],
+  ["Mirror Pixel", "px", "Repeats your last other payout."],
+  ["Treasure Pixel", "px", "A 1-20 hit chest that pours out pixels."],
+  ["Singularity Pixel", "px", "Forged from the Black Hole; pays hugely."],
+  ["Lumberjack's Pack", "sk", "Woodcutting and the wood blocks."],
+  ["Forager's Pack", "sk", "Foraging: five foraged blocks, two hazards."],
+  ["Angler's Pack", "sk", "Fishing, with a bottle and a whale."],
+  ["Prospector's Pack", "sk", "Mining and ten ores."],
+  ["Farmer's Pack", "sk", "Farming: eight farm blocks."],
+  ["Electrician's Pack", "sk", "Electrician and eight pixels."],
+  ["Ghost Hunt", "mg", "Click a passing ghost for a random buff."],
+  ["Black Hole", "mg", "Swallows husks, feeding the singularity."],
+  ["Meteor Strike", "mg", "Chip chunks off a huge drifting meteor."],
+  ["Evil Tree", "mg", "Fell a flailing giant for Magic Wood."],
+  ["Sorting Race", "mg", "Swap frozen husks into groups."],
+  ["Snake", "mg", "Eat every frozen husk for 10× their worth."],
+  ["Breakout", "mg", "30+ husks become bricks worth 10×."],
+  ["Cube Dash", "mg", "The cube zips around; click it."],
+  ["Red Light Green Light", "mg", "Click on green, never on red."],
+  ["Cube Evasion", "mg", "Corner the fleeing cube."],
+  ["Cube Blink", "mg", "Catch the teleporting cube."],
+  ["Bomb Defusal", "mg", "Cut the wire of your most-held RGB colour."],
+  ["Ultra Pad", "mg", "Drop the wanted pixel in the marked hole."],
+  ["RGB Pack", "hd", "Given by Cubie, never sold."],
+  ["Block Hold", "hd", "Now a Standard skill node."],
+  ["Firemaker's Pack", "hd", "Test skill."],
+  ["Nuclear Pixel", "hd", "Test pixel."],
+  ["Oak Trees (test)", "hd", "Tree-mode test pack."]
+];
+var PKF = { all: "All", px: "Pixels", sk: "Skill packs", mg: "Minigames", up: "Upgrades", hd: "Hidden / test" };
+var shopF = "all";
+function renderShop() {
+  el("shopFilters").innerHTML = Object.keys(PKF).map(function (k) { var n = PK.filter(function (p) { return k === "all" || p[1] === k; }).length; return "<button class=\"chip\" data-f=\"" + k + "\" aria-pressed=\"" + (shopF === k) + "\">" + PKF[k] + "<span class=\"n\">" + n + "</span></button>"; }).join("");
+  el("shopFilters").querySelectorAll(".chip").forEach(function (c) { c.onclick = function () { shopF = c.dataset.f; renderShop(); }; });
+  el("shopList").innerHTML = PK.filter(function (p) { return shopF === "all" || p[1] === shopF; }).map(function (p) { return "<div class=\"pack\"><div class=\"hd\"><b>" + esc(p[0]) + "</b><span class=\"tag" + (p[1] === "hd" ? " dv" : "") + "\">" + PKF[p[1]] + "</span></div><p>" + esc(p[2]) + "</p></div>"; }).join("");
+}
+renderShop();
+
+// value calculator
+function nfmt(n) { if (n < 1e4) return Math.round(n).toLocaleString("en-US"); var s = ["", "K", "M", "B", "T", "Qa", "Qi"], i = Math.floor(Math.log10(n) / 3); return (n / Math.pow(10, i * 3)).toFixed(2) + (s[i] || "e" + i * 3); }
+function renderCalc() {
+  var apc = Math.max(0.1, parseFloat(el("vApc").value) || 1), L = parseInt(el("vLvl").value, 10);
+  el("vLvlOut").textContent = L; el("vCost").textContent = nfmt(25 * apc * Math.pow(1.15, L));
+  var w = 520, h = 200, pl = 48, pb = 24, pt = 8, maxL = 100;
+  var maxV = Math.log10(25 * apc * Math.pow(1.15, maxL)), minV = Math.log10(25 * apc);
+  var lo = Math.floor(minV), hi = Math.ceil(maxV);
+  function X(l) { return pl + (w - pl - 4) * l / maxL; }
+  function Y(v) { return pt + (h - pt - pb) * (1 - (Math.log10(v) - lo) / (hi - lo)); }
+  var d = "", a = "";
+  for (var l = 0; l <= maxL; l += 2) { var v = 25 * apc * Math.pow(1.15, l); d += (l ? "L" : "M") + X(l).toFixed(1) + "," + Y(v).toFixed(1); }
+  a = d + "L" + X(maxL) + "," + (h - pb) + "L" + X(0) + "," + (h - pb) + "Z";
+  var g = "";
+  var step = Math.max(1, Math.ceil((hi - lo) / 4));
+  for (var e = lo; e <= hi; e += step) { var y = Y(Math.pow(10, e)); g += "<line class=\"gridl\" x1=\"" + pl + "\" x2=\"" + w + "\" y1=\"" + y + "\" y2=\"" + y + "\"/><text x=\"" + (pl - 6) + "\" y=\"" + (y + 4) + "\" text-anchor=\"end\">" + nfmt(Math.pow(10, e)) + "</text>"; }
+  [0, 25, 50, 75, 100].forEach(function (l) { g += "<text x=\"" + X(l) + "\" y=\"" + (h - 6) + "\" text-anchor=\"middle\">L" + l + "</text>"; });
+  var cv2 = 25 * apc * Math.pow(1.15, L);
+  el("vChart").innerHTML = "<svg viewBox=\"0 0 " + w + " " + h + "\" role=\"img\" aria-label=\"Cost of each Value level, log scale\">" + g + "<path class=\"ar\" d=\"" + a + "\"/><path class=\"ln\" d=\"" + d + "\"/><circle class=\"pt\" r=\"5\" cx=\"" + X(L) + "\" cy=\"" + Y(cv2) + "\"/></svg><p class=\"muted\" style=\"font-size:12px;margin-top:4px\">Cost per level, log scale. Every ~5 levels the price doubles.</p>";
+}
+el("vApc").addEventListener("input", renderCalc); el("vLvl").addEventListener("input", renderCalc); renderCalc();
+
+// ---------- devices ----------
+var DV = [
+  ["Recycler", "#2f9e5b", "A bin that recycles every husk that lands in it for half its value and XP; same colour in a row builds a streak. Cubie's first gift."],
+  ["Storage Crate", "#a8814f", "10 sections (2 rows of 5). Drag husks onto it to store them; carry it by its handles."],
+  ["Quantum Organizer", "#7a5cff", "Bind up to three types; every loose husk of those types glitches into its box (up to 60)."],
+  ["Funnel", "#bfe6f2", "Hangs under the cube, catches falling husks and pipes them to an output on the floor or a belt."],
+  ["Magnet", "#c0392b", "Pulls every loose husk in range into a heap around it."],
+  ["Fan", "#9ab0c0", "Blows husks along a cone; place it and turn it."],
+  ["Sorter", "#6f6f78", "Wraps the cube and streams every collected pixel out of an aimable pipe."],
+  ["Magnetized Sorter", "#9e5c4d", "Crafted from a Sorter and a Magnet: pulls husks into a box with aimable exit pipes."],
+  ["Sprinkler", "#4099ff", "Waters every sprout and Seed pet in range once a second."],
+  ["Wood Chipper", "#8a5a2b", "From the Lumberjack. Shreds wood husks for XP and makes Wood Chips."],
+  ["Bait Bucket", "#cc8c47", "Fishing: stores fish and water husks with their value."],
+  ["Charge Booster", "#1f4fb0", "Electric husks fill it; when full, a burst of super-charged auto clicking."],
+  ["Lightning Rod", "#ffe64d", "Every few seconds lightning turns husks around it into Electric pixels."],
+  ["Conveyor Belt Kit", "#525466", "Tester: click two points to lay a belt; husks ride along it."],
+  ["Magic Beans", "#4f9e3a", "A beanstalk with random cubes along it, one a Dragon Cube you don't hold yet."],
+  ["Pet Treat", "#f2b3bf", "Pets go hyper for a minute and double their spawn bonus."]
+];
+el("devCards").innerHTML = DV.map(function (d) { return "<div class=\"card\"><div class=\"top\">" + iso(d[1]) + "<h3>" + d[0] + "</h3></div><p>" + esc(d[2]) + "</p></div>"; }).join("");
+
+// ---------- minigames ----------
+var MG = [
+  ["Black Hole", "Opens on the floor and swallows husks, feeding the Singularity.", "husks"],
+  ["Ghost Hunt", "A ghost cube floats by; click it for a random pixel buff. Ghost Bait calls three.", "buff"],
+  ["Meteor Strike", "A huge meteor drifts across; every click chips off a chunk.", "currency"],
+  ["Stardust", "Passive: Meteor husks knock stars down beside the cube, the material for Solar.", "passive"],
+  ["Evil Tree", "A giant flails on the floor; chop its health bar for Magic Wood and Woodcutting XP.", "skill"],
+  ["Snake", "Every husk freezes; steer a snake with the arrow keys and eat them for 10×.", "husks"],
+  ["Sorting Race", "Husks freeze in a jumbled grid; swap pairs to group each type.", "husks"],
+  ["Breakout", "With 30+ husks out they become bricks worth 10× each.", "husks"],
+  ["Cube Dash", "The cube zips between spots; the auto clicker stops. 10× per hit.", "takeover"],
+  ["Red Light Green Light", "Click on green, never red; on yellow click in time with a closing ring.", "takeover"],
+  ["Cube Evasion", "The cube runs from your mouse; corner it and click.", "takeover"],
+  ["Cube Blink", "The cube teleports and hides; click it whenever it shows.", "takeover"],
+  ["Bomb Defusal", "Cut the wire of the RGB colour you hold most, or it blows up your husks.", "currency"],
+  ["Ultra Pad", "Four floor holes; drop the wanted pixel in the marked one for a shot at an Ultra pixel.", "husks"],
+  ["Weak Spots", "Fishing's catch round: hit every spot while time slows.", "skill"]
+];
+el("mgCards").innerHTML = MG.map(function (m) { return "<div class=\"card\"><div style=\"display:flex;justify-content:space-between;gap:8px;align-items:baseline\"><h3>" + m[0] + "</h3><span class=\"tag" + (m[2] === "skill" ? " ac" : "") + "\">" + m[2] + "</span></div><p>" + esc(m[1]) + "</p></div>"; }).join("");
+
+// ---------- cast ----------
+var CA = [
+  ["Cubie", "#ffcd3c", "The guide and shopkeeper. A suspicious cube with his own small concerns, mostly getting his money back, with interest. Visit 1: the Recycler. Visit 2: RGB and the shop. Prestige will be paying him back."],
+  ["Big Tim the Lumberjack", "#8a5a2b", "Buys wood blocks for pure pixels; sells the Wood Chipper, Focus potions and Pesticide Spray."],
+  ["Pip the Prospector", "#ff8a1f", "Hard hat and pickaxe. Buys ores at a rarity rate and sells mining gear."],
+  ["The Wizard", "#7a3fc8", "Pointy star hat, long beard, glowing staff. Offers the Prime Gauntlet when you hold all six Prime Cubes."],
+  ["The Tinkerer", "#c87533", "Goggles, cap, gear backpack and wrench. Sells devices."],
+  ["The Entrepreneur", "#24346b", "A navy suit cube with a tie, briefcase and coin cube."],
+  ["The Farmer", "#5f9e3a", "Straw hat, sideburns, wheat stalk and a seed sack."],
+  ["Egg and Bean", "#f08a3a", "Two very rare cat visitors. Egg's first visit brings an egg that stands in for the cube; Bean wears a sun hat. Later visits bring pixel presents."],
+  ["Pets", "#f2b3bf", "One per block type, rolled at 0.03% per click. They hop around the floor with perks, names, outfits and an Outfit Studio."]
+];
+el("castCards").innerHTML = CA.map(function (c) { return "<div class=\"card\"><div class=\"top\">" + iso(c[1]) + "<h3>" + c[0] + "</h3></div><p>" + esc(c[2]) + "</p></div>"; }).join("");
+
+// ---------- rares (odds chart) ----------
+var OD = [
+  ["Rich vein", "any fresh ore", 12.5, 0],
+  ["Golden Fruit", "per sprout", 33, 0],
+  ["A pet", "per click, one per type", 3333, 0],
+  ["Dragon Cube", "each of seven", 70000, 1],
+  ["God Cube", "each of three", 7000000, 1],
+  ["Prime Cube", "each of six", 7000000, 1]
+];
+function hrs(n) { var s = n / 4; if (s < 60) return s.toFixed(0) + " s"; if (s < 3600) return (s / 60).toFixed(0) + " min"; var h = s / 3600; return h < 48 ? h.toFixed(1) + " h" : (h / 24).toFixed(0) + " days of non-stop clicking"; }
+el("odds").innerHTML = OD.map(function (o) {
+  var pct = Math.log10(o[2]) / 7 * 100;
+  return "<div class=\"row\"><div class=\"nm\">" + o[0] + "<small>" + o[1] + "</small></div><div class=\"track\" data-tip=\"1 in " + o[2].toLocaleString("en-US") + " · about " + hrs(o[2]) + " at 4 clicks/s\"><div class=\"bar" + (o[3] ? " rr" : "") + "\" style=\"width:" + pct + "%\"></div><span class=\"val\" style=\"left:" + Math.min(pct, 78) + "%\">1 in " + o[2].toLocaleString("en-US") + "</span></div></div>";
+}).join("") + "<div class=\"axis\"><span></span><div class=\"ticks\"><span>1</span><span>10</span><span>100</span><span>1K</span><span>10K</span><span>100K</span><span>1M</span><span>10M</span></div></div>";
+var tip = el("tip");
+el("odds").querySelectorAll(".track").forEach(function (t) {
+  t.addEventListener("pointermove", function (e) { tip.hidden = false; tip.textContent = t.dataset.tip; tip.style.left = Math.min(e.clientX + 12, window.innerWidth - 270) + "px"; tip.style.top = (e.clientY + 14) + "px"; });
+  t.addEventListener("pointerleave", function () { tip.hidden = true; });
+});
+var RA = [
+  ["Dragon Cubes", "#ff9a1f", "Seven stars. Gather all seven, Summon the Dragon and make a wish. Magic Beans and Dragon Seeds can grow one you are missing."],
+  ["Egyptian God Cubes", "#eb1f1a", "Slifer, Ra and Obelisk. The rarest drops in the game; one of each, each with its own show."],
+  ["Prime Cubes", "#b44cff", "Six one-of-each drops. The Wizard's Gauntlet binds them into the Prime Cubelette."],
+  ["Golden Snitch", "#ffc738", "Sprouts wings and darts around the screen. Hover to charge, click when the rings meet, for a huge reward."],
+  ["Treasure maps", "#8ce6cc", "A message in a bottle from Fishing holds a map to dig up."],
+  ["Collection Log", "#c9ced6", "A book of everything rare, plus a walkable gallery to show it off."]
+];
+el("rareCards").innerHTML = RA.map(function (c) { return "<div class=\"card\"><div class=\"top\">" + iso(c[1], { rare: true }) + "<h3>" + c[0] + "</h3></div><p>" + esc(c[2]) + "</p></div>"; }).join("");
+
+// ---------- open questions ----------
+var QS = [
+  ["Q1", "Which cosmetics, locked behind which goals?", "One per big milestone: a skill cape, a full log page, each prestige; a Wardrobe tab in Pocket."],
+  ["Q2", "Prestige: what resets and what is kept?", "Reset currencies, unlocks, devices, floor; keep skills, log, pets, cosmetics."],
+  ["Q3", "How does Cubie's bill grow?", "Interest over play time, inflated every time he mentions it."],
+  ["Q4", "Is there an ending?", "No hard ending; the long tail is the end game."],
+  ["Q5", "Exactly what is in 1.0?", "The six gathering skills polished, core devices, collectibles, prestige."],
+  ["Q6", "The game's name?", "Something with husk, cube or extract."],
+  ["Q7", "Idle vs active?", "Active is always better, idle is always possible."],
+  ["Q8", "What gets cut or merged?", "Run the pruning test from the connection map."],
+  ["Q9", "The long-term currency sink?", "Prestige, the alien's sockets and relics, machine repairs."],
+  ["Q10", "What runs offline?", "Machines at a reduced rate; minigames and hazards no."],
+  ["Q11", "How many skills at release?", "Answered with Q5."],
+  ["Q12", "Should every minigame feed a skill?", "Yes, like the Evil Tree feeds Woodcutting."],
+  ["Q13", "What do the first 5 minutes teach?", "Click, husks fall, Cubie arrives."],
+  ["Q14", "Homage renaming", "Rename every homage before release."],
+  ["Q15", "Save versioning and first public build", "Pick the date so one save version lands first."]
+];
+el("qs").innerHTML = QS.map(function (q) { return "<div class=\"q\"><span>" + q[0] + "</span><div>" + esc(q[1]) + "<em>Suggestion: " + esc(q[2]) + "</em></div></div>"; }).join("");
+
+// ---------- rail highlight ----------
+var links = document.querySelectorAll(".rail a[href^='#']");
+if ("IntersectionObserver" in window) {
+  var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) links.forEach(function (a) { a.classList.toggle("on", a.getAttribute("href") === "#" + e.target.id); }); }); }, { rootMargin: "-30% 0px -60% 0px" });
+  document.querySelectorAll("main > section").forEach(function (s) { io.observe(s); });
+}
+})();
+</script>
