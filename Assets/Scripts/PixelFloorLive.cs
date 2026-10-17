@@ -10,7 +10,8 @@
 //   SEE-THROUGH LASERS (FloorStyle.hideBase: the floor picture is hidden - ApplyVisibility / the edge fade read HideBaseNow - but the collider stays):
 //     Neon Lasers (overlay Lasers: beams drifting / turning / pulsing over nothing, neon colours from the style), Laser Tracker (overlay LaserTracker:
 //     emitters round the cube shoot beams that all converge on the mouse's point on the floor, with a pulsing ring there).
-//     The beams are flat LineRenderer ribbons (TransformZ alignment, the transform turned Euler(90,0,0) so they face the camera from above), never thinner
+//     The beams are ONE flat mesh rebuilt every frame (Ribbon: quads lying on the floor with vertex colours, a solid core over a soft glow; it was
+//     LineRenderers with TransformZ alignment, which never showed in the game), never thinner
 //     on screen than coreMinPixels / glowMinPixels (WorldPerPixel: the floor is far below the cube, so 0.05 world units was about a pixel). The style's
 //     still picture (ShadeLaserPicture, 160 px) is never on the floor; it is the menu icon and the title screen's background picture (shown ONCE there,
 //     PixelFloor.TryGetTitlePicture: it does not tile).
@@ -551,9 +552,13 @@ public class PixelFloorOverlay : MonoBehaviour
     private GameObject root;
     private float coreNow, glowNow;   // this frame's beam widths (world units), at least the minimum pixels
     private Material lineMat;
-    private readonly List<LineRenderer> cores = new List<LineRenderer>(), glows = new List<LineRenderer>();
     private readonly List<Vector4> beamState = new List<Vector4>();   // per beam: centre offset x / z (0..1 of the reach), angle, speed
-    private LineRenderer ring;
+    private bool trackerRing;           // the Laser Tracker's pulsing ring where the beams meet
+    // The beams are ONE flat mesh rebuilt every frame (quads lying on the floor, vertex colours), like the edge-fade wireframe.
+    private Mesh beamMesh;
+    private readonly List<Vector3> beamVerts = new List<Vector3>();
+    private readonly List<Color32> beamColors = new List<Color32>();
+    private readonly List<int> beamTris = new List<int>();
     private Vector3 trackPoint;
     private bool trackInit;
     private Transform ant;
@@ -577,53 +582,83 @@ public class PixelFloorOverlay : MonoBehaviour
     {
         if (root != null) Destroy(root);
         root = null;
-        cores.Clear(); glows.Clear(); beamState.Clear(); antLegs.Clear(); tiles.Clear(); crumbleBuiltReach = 0f;
-        ring = null; ant = null; trackInit = false;
+        beamState.Clear(); antLegs.Clear(); tiles.Clear(); crumbleBuiltReach = 0f;
+        if (beamMesh != null) { Destroy(beamMesh); beamMesh = null; }
+        trackerRing = false; ant = null; trackInit = false;
     }
 
     private void OnDestroy() { Clear(); if (lineMat != null) Destroy(lineMat); }
 
     // ---- lasers ----
 
-    private LineRenderer Line(string name, float width)
+    private void BuildBeams(int count, bool tracker)
     {
         if (lineMat == null)
         {
             Shader sh = PixelShaders.SpriteDefault();
             lineMat = sh != null ? new Material(sh) { name = "Floor Lasers", renderQueue = 3100 } : null;
         }
-        GameObject g = new GameObject(name);
+        GameObject g = new GameObject("Beams", typeof(MeshFilter), typeof(MeshRenderer));
         g.transform.SetParent(root.transform, false);
-        // TransformZ alignment: the ribbon faces along the transform's Z, so Z must point straight down for the beam to lie flat on the floor.
-        // (LookRotation(Vector3.up) was degenerate - forward parallel to its 'up' - and left the ribbons standing on edge: invisible from above.)
-        g.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-        LineRenderer lr = g.AddComponent<LineRenderer>();
-        lr.sharedMaterial = lineMat;
-        lr.useWorldSpace = true;
-        lr.alignment = LineAlignment.TransformZ;
-        lr.widthMultiplier = width;
-        lr.numCapVertices = 4;
-        lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        lr.receiveShadows = false;
-        lr.positionCount = 2;
-        return lr;
-    }
-
-    private void BuildBeams(int count, bool tracker)
-    {
+        beamMesh = new Mesh { name = "Floor Lasers" };
+        beamMesh.MarkDynamic();
+        g.GetComponent<MeshFilter>().sharedMesh = beamMesh;
+        MeshRenderer mr = g.GetComponent<MeshRenderer>();
+        mr.sharedMaterial = lineMat;
+        mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        mr.receiveShadows = false;
         for (int i = 0; i < count; i++)
         {
-            glows.Add(Line("Beam Glow " + i, glowWidth));
-            cores.Add(Line("Beam " + i, coreWidth));
             float a = tracker ? i / (float)count * Mathf.PI * 2f : Random.value * Mathf.PI;
             beamState.Add(new Vector4(Random.Range(-0.7f, 0.7f), Random.Range(-0.7f, 0.7f), a, Random.Range(-0.25f, 0.25f)));
         }
-        if (tracker)
+        trackerRing = tracker;
+    }
+
+    private static readonly float[] RibbonAlong = { 0f, 0.25f, 0.75f, 1f };   // where along a ribbon its cross-sections sit (the ends fade over the outer quarters)
+
+    private void BeginBeams() { beamVerts.Clear(); beamColors.Clear(); beamTris.Clear(); }
+
+    private void EndBeams()
+    {
+        if (beamMesh == null) return;
+        beamMesh.Clear();
+        beamMesh.SetVertices(beamVerts);
+        beamMesh.SetColors(beamColors);
+        beamMesh.SetTriangles(beamTris, 0);
+        beamMesh.RecalculateBounds();
+    }
+
+    /// <summary>
+    /// One flat ribbon from a to b on the floor, 'width' across. The alpha fades to alpha * endFade at both ends (over the outer quarters);
+    /// 'soft' = the alpha also fades to 0 at the sides (a glow), else the ribbon is solid across (a core).
+    /// </summary>
+    private void Ribbon(Vector3 a, Vector3 b, float width, Color c, float alpha, float endFade, bool soft)
+    {
+        Vector3 dir = b - a;
+        dir.y = 0f;
+        if (dir.sqrMagnitude < 1e-8f || alpha <= 0.001f) return;
+        Vector3 side = Vector3.Cross(Vector3.up, dir.normalized) * (width * 0.5f);
+        int across = soft ? 3 : 2;
+        int start = beamVerts.Count;
+        float[] along = RibbonAlong;
+        for (int k = 0; k < along.Length; k++)
         {
-            ring = Line("Focus Ring", coreWidth * 1.4f);
-            ring.loop = true;
-            ring.positionCount = 32;
+            Vector3 p = Vector3.Lerp(a, b, along[k]);
+            float al = alpha * (k == 0 || k == along.Length - 1 ? endFade : 1f);
+            Color32 edge = new Color(c.r, c.g, c.b, soft ? 0f : Mathf.Clamp01(al));
+            Color32 mid = new Color(c.r, c.g, c.b, Mathf.Clamp01(al));
+            beamVerts.Add(p - side); beamColors.Add(edge);
+            if (soft) { beamVerts.Add(p); beamColors.Add(mid); }
+            beamVerts.Add(p + side); beamColors.Add(edge);
         }
+        for (int k = 0; k < along.Length - 1; k++)
+            for (int j = 0; j < across - 1; j++)
+            {
+                int i0 = start + k * across + j, i1 = i0 + 1, i2 = i0 + across, i3 = i2 + 1;
+                beamTris.Add(i0); beamTris.Add(i2); beamTris.Add(i1);
+                beamTris.Add(i1); beamTris.Add(i2); beamTris.Add(i3);
+            }
     }
 
     private Color BeamColor(int i, float time)
@@ -633,18 +668,11 @@ public class PixelFloorOverlay : MonoBehaviour
         return Color.Lerp(a, b, 0.5f + 0.5f * Mathf.Sin(time * 0.6f + i * 1.7f));
     }
 
-    private static void Paint(LineRenderer lr, Color c, float alpha, float endFade)
-    {
-        Gradient g = new Gradient();
-        g.SetKeys(new[] { new GradientColorKey(c, 0f), new GradientColorKey(c, 1f) },
-                  new[] { new GradientAlphaKey(alpha * endFade, 0f), new GradientAlphaKey(alpha, 0.25f), new GradientAlphaKey(alpha, 0.75f), new GradientAlphaKey(alpha * endFade, 1f) });
-        lr.colorGradient = g;
-    }
-
     private void UpdateLasers(Vector3 centre, float reach, float alpha, float time)
     {
         float y = centre.y + 0.02f;
-        for (int i = 0; i < cores.Count; i++)
+        BeginBeams();
+        for (int i = 0; i < beamState.Count; i++)
         {
             Vector4 st = beamState[i];
             float ang = st.z + time * st.w;
@@ -655,13 +683,10 @@ public class PixelFloorOverlay : MonoBehaviour
             a.y = b.y = y;
             float pulse = 0.65f + 0.35f * Mathf.Sin(time * (1.5f + (i % 4) * 0.6f) + i);
             Color c = BeamColor(i, time);
-            cores[i].SetPosition(0, a); cores[i].SetPosition(1, b);
-            glows[i].SetPosition(0, a); glows[i].SetPosition(1, b);
-            Paint(cores[i], Color.Lerp(c, Color.white, 0.45f), alpha * pulse, 0f);
-            Paint(glows[i], c, alpha * pulse * 0.22f, 0f);
-            cores[i].widthMultiplier = coreNow;
-            glows[i].widthMultiplier = glowNow * (0.8f + 0.4f * pulse);
+            Ribbon(a, b, glowNow * (0.8f + 0.4f * pulse), c, alpha * pulse * 0.45f, 0f, true);
+            Ribbon(a, b, coreNow, Color.Lerp(c, Color.white, 0.45f), alpha * pulse, 0f, false);
         }
+        EndBeams();
     }
 
     private void UpdateTracker(Vector3 centre, float reach, float alpha, float time, Vector3 target)
@@ -671,31 +696,29 @@ public class PixelFloorOverlay : MonoBehaviour
         trackPoint = Vector3.Lerp(trackPoint, target, 1f - Mathf.Exp(-trackerFollow * Time.unscaledDeltaTime));
         trackPoint.y = y;
         float emitR = reach * 0.85f;
-        for (int i = 0; i < cores.Count; i++)
+        BeginBeams();
+        for (int i = 0; i < beamState.Count; i++)
         {
             float ang = beamState[i].z + time * 0.12f;   // the emitters slowly circle the cube
             Vector3 from = centre + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * emitR;
             from.y = y;
             float flicker = 0.75f + 0.25f * Mathf.Sin(time * 9f + i * 2.3f);
             Color c = BeamColor(i, time);
-            cores[i].SetPosition(0, from); cores[i].SetPosition(1, trackPoint);
-            glows[i].SetPosition(0, from); glows[i].SetPosition(1, trackPoint);
-            Paint(cores[i], Color.Lerp(c, Color.white, 0.5f), alpha * flicker, 0.35f);
-            Paint(glows[i], c, alpha * flicker * 0.25f, 0.2f);
-            cores[i].widthMultiplier = coreNow;
-            glows[i].widthMultiplier = glowNow;
+            Ribbon(from, trackPoint, glowNow, c, alpha * flicker * 0.5f, 0.2f, true);
+            Ribbon(from, trackPoint, coreNow, Color.Lerp(c, Color.white, 0.5f), alpha * flicker, 0.35f, false);
         }
-        if (ring != null)
+        if (trackerRing)
         {
-            float r = 0.25f + 0.08f * Mathf.Sin(time * 6f);
-            for (int k = 0; k < ring.positionCount; k++)
+            float r = Mathf.Max(0.25f + 0.08f * Mathf.Sin(time * 6f), coreNow * 3f);
+            const int segments = 32;
+            Color rc = Color.Lerp(style.colorA, Color.white, 0.6f);
+            for (int k = 0; k < segments; k++)
             {
-                float a = k / (float)ring.positionCount * Mathf.PI * 2f;
-                ring.SetPosition(k, trackPoint + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * r);
+                float a0 = k / (float)segments * Mathf.PI * 2f, a1 = (k + 1) / (float)segments * Mathf.PI * 2f;
+                Ribbon(trackPoint + new Vector3(Mathf.Cos(a0), 0f, Mathf.Sin(a0)) * r, trackPoint + new Vector3(Mathf.Cos(a1), 0f, Mathf.Sin(a1)) * r, coreNow * 1.4f, rc, alpha, 1f, false);
             }
-            Paint(ring, Color.Lerp(style.colorA, Color.white, 0.6f), alpha, 1f);
-            ring.widthMultiplier = coreNow * 1.4f;
         }
+        EndBeams();
     }
 
     // ---- the ant ----
