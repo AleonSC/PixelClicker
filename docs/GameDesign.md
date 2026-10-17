@@ -300,7 +300,7 @@ A little wind-up clockwork cube with a broom: early automation for stray husks t
   last 12 s); the nearest container is measured from where the husk was picked up; no carry handles (it roams from its pad: remove and place it
   again to move it). Open: the Standard range / speed upgrades and the Electrician motor (`motorFitted` is the hook).
 
-### Husk routing rework: aiming becomes a skill, the Recycler pays currency (Agreed 2026-10-17, not built)
+### Husk routing rework: aiming becomes a skill, the Recycler pays currency (Agreed 2026-10-17; point 1 Aimed Clicks built 2026-10-17 - node `aimed`, Standard 3, row 1 col 0)
 Why: the 10:50 session report showed the early husk setup was too automatic - edge-click aiming (free from the start) sent husks
 straight into the Recycler (1,017 recycled, an 89-husk streak), and the Recycler paid MORE Standard XP (2,620) than clicking (2,357)
 while also paying currency, so Standard levelled ~2x too fast and Husk Crush had no job.

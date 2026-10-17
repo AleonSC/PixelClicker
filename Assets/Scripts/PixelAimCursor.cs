@@ -6,7 +6,7 @@
 //   - towards an edge (PixelClicker.TryGetAim sharpness > 0) an ARROW pointing the way the husk will fly, turning smoothly as the pointer moves round
 //     the edge; the cube fades into the arrow as the aim sharpens (the arrow grows with it), tinted by the current block's colour;
 //   - each click gives it a little punch; it pops in when the pointer reaches the cube.
-//   Anywhere else (off the cube, over UI, menus, first person, clicks blocked, edge aiming off) the normal cursor is back. Only shows the cursor it
+//   Anywhere else (off the cube, over UI, menus, first person, clicks blocked, edge aiming off or the Standard node Aimed Clicks not owned - TryGetAim says no) the normal cursor is back. Only shows the cursor it
 //   hid (Cursor.visible) - first person keeps its own. disableAimCursor switches it off. A system component (PixelSystems, UI group).
 // ---------------------------------------------------
 using UnityEngine;

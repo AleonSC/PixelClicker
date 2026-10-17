@@ -75,7 +75,7 @@ Hold right-click on a placed device | Remove it (no refund)
 # Device controls
 Drag a carry handle | Move a Storage Crate, Recycler or Bait Bucket
 Mouse wheel / {key:RotateLeft} / {key:RotateRight} (dragging) | Turn it
-Click near the cube's edge | Its husk flies out of that side (aim husks at the Recycler)
+Click near the cube's edge | With Aimed Clicks (Standard tree): its husk flies out of that side
 Recycler | Husks that land in it are recycled by themselves (the red button empties anything left inside)
 Click the Storage Crate | Store the husks lying on it
 Click a stored pixel | Take it back out

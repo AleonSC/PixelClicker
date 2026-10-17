@@ -547,7 +547,10 @@ public partial class PixelSkills : MonoBehaviour
                 }   // level 2 now takes the 380 XP level 4 used to (the whole curve x4.75, growth stays 1.5)
                 if (pack.perks != null)   // the level 2 popup that introduces the skill
                     foreach (Perk perk in pack.perks)
-                        if (perk != null && perk.level == 2 && (string.IsNullOrEmpty(perk.noticeText) || perk.noticeText.Contains("Every pixel you click gives Standard XP") || perk.noticeText.Contains("every level unlocks a perk.\n\nYour first perk"))) perk.noticeText = StandardLevel2Notice;
+                        if (perk != null && perk.level == 2 && (string.IsNullOrEmpty(perk.noticeText) || perk.noticeText.Contains("Every pixel you click gives Standard XP") || perk.noticeText.Contains("every level unlocks a perk.\n\nYour first perk") || perk.noticeText.Contains("Later points take the other one and branch further."))) perk.noticeText = StandardLevel2Notice;
+                if (pack.perks != null)   // the level 3 popup: the second point is a choice - the skipped move or Aimed Clicks (2026-10-17)
+                    foreach (Perk perk in pack.perks)
+                        if (perk != null && perk.level == 3 && string.IsNullOrEmpty(perk.noticeText) && perk.text != null && perk.text.StartsWith("Steady grip")) { perk.noticeText = StandardLevel3Notice; perk.noticeInWindow = true; }
                 if (perkWindowVersion < 1 && pack.perks != null)   // the level 2 popup opens the Skills window and frames the Standard card
                     foreach (Perk perk in pack.perks)
                         if (perk != null && perk.level == 2) perk.noticeInWindow = true;
@@ -608,6 +611,8 @@ public partial class PixelSkills : MonoBehaviour
                 new TreeNode { id = "power", displayName = "Power Click", description = "Hold the LEFT mouse button on the cube to charge, let go at full charge: one click worth 25 clicks. Long cooldown.", row = 2, cost = 1, implemented = true },
                 new TreeNode { id = "quick", displayName = "Quick charge", description = "Power clicks charge 40% faster.", requires = "power", row = 2, cost = 1, implemented = true },
                 new TreeNode { id = "aftershock", displayName = "Aftershock", description = "The power click cooldown is a third shorter.", requires = "quick", row = 2, cost = 2, implemented = true },
+                // The third new way to click, the alternative to the second move at Standard 3 (row 1, column 0: between the two first moves). PixelBurstPop.AimingOwned.
+                new TreeNode { id = AimedClicksNode, displayName = "Aimed Clicks", description = "Click near the EDGE of the cube and its husk flies out of that side (an arrow cursor shows where); a click in the middle still scatters it. Without this, every husk scatters at random round the cube. Aim husks at a Recycler, a crate or a clear spot to crush them.", row = 1, cost = 1, minLevel = 3, implemented = true },
                 // Needs BOTH first nodes: the block predictor (PixelNextUp.requireTreeNode).
                 new TreeNode { id = "nextup", displayName = "What's Next", description = "Shows the Next up window: the block coming next, the one on the cube now and the one before - plan your holds and power clicks ahead.", requires = "hold,power", row = 1, cost = 1, implemented = true },
                 new TreeNode { id = "nextup2", displayName = "Look Further", description = "The Next up window shows one more block ahead (the next two).", requires = "nextup", row = 1, cost = 2, implemented = true },
@@ -1123,6 +1128,9 @@ public partial class PixelSkills : MonoBehaviour
     /// <summary>Is this skill the one in training right now? (One check instead of comparing TrainingId by hand everywhere.)</summary>
     public static bool IsTraining(string skillId) => Instance != null && !string.IsNullOrEmpty(skillId) && Instance.TrainingId == skillId;
 
+    /// <summary>Id of the Standard tree node 'Aimed Clicks' (edge-click aiming, PixelBurstPop.AimingOwned).</summary>
+    public const string AimedClicksNode = "aimed";
+
     public static bool HasStandardNode(string nodeId) => PixelStats.Total("skill." + StandardId + ".node." + nodeId) >= 1d;
 
     public bool NodeUnlocked(SkillPack pack, TreeNode node) => pack != null && node != null && PixelStats.Total("skill." + pack.id + ".node." + node.id) >= 1d;
@@ -1193,6 +1201,7 @@ public partial class PixelSkills : MonoBehaviour
         if (!CanUnlock(pack, node)) return false;
         PixelStats.Best("skill." + pack.id + ".node." + node.id, 1d);
         PixelHints.Announce(pack.displayName + ": " + node.displayName, "You unlocked '" + node.displayName + "' in the " + pack.displayName + " skill tree.");
+        PixelHints.Trigger("node_" + pack.id + "_" + node.id);   // a node's first-time tip, if it has one (e.g. node_standard_aimed); unknown ids do nothing
         Changed?.Invoke();
         return true;
     }
