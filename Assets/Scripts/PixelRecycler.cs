@@ -46,6 +46,8 @@
 //   SORTING HOPPER (2026-10-17): a PixelSortingHopper snaps onto the back wall (BackEdgeLocalZ, SizeFactor) and keeps the back hatch open (SetHatchOpen);
 //   it slides its chosen husk type through the hatch (HatchOutside -> HatchInside) and lets it fall into the bin, where Capture takes it as usual.
 //   Capturing / letting go / freezing use the shared PixelHuskHolder steps.
+//   TOP PULL (2026-10-17): a weak sideways pull (FixedUpdate, topPullReach / topPullStrength) draws husks in the AIR near the opening towards its middle,
+//   so ones falling past or bouncing off the rim drop in; husks on the floor beside the bin are left alone.
 //   SOCKET (PixelSockets.cs): the back hatch is an In socket ('hatch'). With no hopper latched (a latched hopper OCCUPIES it), a coupling there takes belts / connectors / hoses:
 //   AcceptHusk counts the husk at once and lets it fall in behind the back wall (HatchInside); refused while working or full (HuskRoom).
 // ---------------------------------------------------
@@ -68,6 +70,16 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     [SerializeField] private float processSeconds = 2f;
     [Tooltip("Strongest shake at the end of processing, in husk widths.")]
     [SerializeField] private float shakeStrength = 0.12f;
+    [Header("Top pull (2026-10-17)")]
+    [Tooltip("A weak pull at the top: husks in the air near the opening (falling past, bouncing off the rim) drift in. Off = no pull.")]
+    [SerializeField] private bool topPull = true;
+    [Min(0f)]
+    [Tooltip("How far past the rim (sideways, in husk widths) the pull reaches.")]
+    [SerializeField] private float topPullReach = 2f;
+    [Min(0f)]
+    [Tooltip("How strong the pull is (an acceleration, in husk widths per second squared). Gravity is about 20 here, so this stays a nudge.")]
+    [SerializeField] private float topPullStrength = 6f;
+
     [Header("Auto recycling (2026-10-16)")]
     [Tooltip("Every husk that lands in the bin is recycled on its own a moment later - no button, no filling up. Off = the old way (fill the bin, press the button).")]
     [SerializeField] private bool autoRecycle = true;
@@ -392,6 +404,38 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     }
 
     // ---- Every frame ----
+
+    private static readonly List<PixelHuskQuery.Husk> pullScratch = new List<PixelHuskQuery.Husk>();
+
+    /// <summary>
+    /// The weak top pull: husks in the air near the opening (from half the wall height up to a few husk widths above the rim, within topPullReach of
+    /// the rim) are nudged sideways towards the middle of the opening, so ones falling past or bouncing off the rim drop in. Husks lying on the floor
+    /// next to the bin, held ones, kinematic ones (riding / kept by machines) and fading ones are left alone. Not while working, carried or fading in.
+    /// </summary>
+    private void FixedUpdate()
+    {
+        if (!topPull || clicker == null || processing || Fading || (carry != null && carry.Dragging) || topPullStrength <= 0f) return;
+        float u = Unit(clicker) * transform.lossyScale.x;
+        float halfDiag = Mathf.Sqrt(innerW * innerW + innerD * innerD) * 0.5f * transform.lossyScale.x;
+        PixelHuskQuery.Near(clicker, transform.position, halfDiag + topPullReach * u, pullScratch);
+        float dt = Time.fixedDeltaTime;
+        foreach (PixelHuskQuery.Husk h in pullScratch)
+        {
+            Rigidbody b = h.body;
+            if (b == null || b.isKinematic || h.HeldByPlayer || inside.Contains(b)) continue;
+            Vector3 local = transform.InverseTransformPoint(b.position);
+            if (local.y < wallH * 0.5f || local.y > wallH + 4f * Unit(clicker)) continue;   // (in the air round the top only)
+            if (Mathf.Abs(local.x) <= innerW * 0.5f && Mathf.Abs(local.z) <= innerD * 0.5f) continue;   // (already over the opening: it falls in by itself)
+            Vector3 toMiddle = transform.TransformPoint(new Vector3(0f, local.y, 0f)) - b.position;
+            toMiddle.y = 0f;
+            if (toMiddle.sqrMagnitude < 1e-6f) continue;
+#if UNITY_6000_0_OR_NEWER
+            b.linearVelocity += toMiddle.normalized * topPullStrength * u * dt;
+#else
+            b.velocity += toMiddle.normalized * topPullStrength * u * dt;
+#endif
+        }
+    }
 
     private void Update()
     {

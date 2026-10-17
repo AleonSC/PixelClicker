@@ -1331,3 +1331,4 @@
 [2026-10-17 14:54 UTC] Design + to-do: crush bonuses from the session report - plain crush raised to half a click's XP, air crush x3, last-gasp x2 and a crush streak, each shown as a short bonus text instead of a new UI - plus a note to retune Standard, which levelled about twice as fast as planned because of Recycler XP.
 [2026-10-17 14:57 UTC] Crush bonuses revised: air crush x2, last-gasp x1.5, streak capped at x1.5, and a hard cap so a crush never pays more than a click (no reward for swapping clicks for crushes).
 [2026-10-17 15:02 UTC] Recycler: the bin is a bit taller (walls 3 -> 3.6 husk widths; the lid, rim, lamp, button and counter rise with it, the back hatch stays where it was).
+[2026-10-17 15:06 UTC] Recycler: a weak pull at the top - husks in the air near the opening (falling past or bouncing off the rim) drift towards the middle and drop in; husks lying on the floor beside it are left alone (topPullReach / topPullStrength in the Inspector).
