@@ -5,12 +5,12 @@
 //   and its chute / output swaps with it. FILTER SLOT: a tray on top of the beam holds ONE block, shown spinning above it (like a Storage Crate section): let go of a pixel you are dragging over the tray (or throw / drop one onto it: PixelGrab's 'recently held' tag) and it
 //   goes into the slot (a block already there is handed back); the slot's type is the filter. LEFT CLICK the shown block to take it out again (it jumps into your hand; PixelBeltSorter.ClaimsPointer makes PixelGrab step aside). With an empty slot the sorter lets everything
 //   pass. While a pixel of the filter type rides under the beam, PixelConveyorSystem asks PixelBeltSorter.TryDivert (called from its rider loop): the pixel leaves the belt (a paddle sweeps across), and is thrown out of the side - or put onto a belt that STARTS at the chute's
-//   mouth (within ~1.3 cubes), so a second belt can be fed from the side. Other types are untouched. The spot is stored as a distance along the belt (it follows the belt); saved with the tester save (spot, yaw, slot type + amount).
+//   mouth through its built-in bare 'chute' socket (PixelCouplings.Emit, within ~1.3 cubes), so a second belt can be fed from the side. Other types are untouched. The spot is stored as a distance along the belt (it follows the belt); saved with the tester save (spot, yaw, slot type + amount).
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelBeltSorter : MonoBehaviour
+public class PixelBeltSorter : MonoBehaviour, IPixelSocketDevice
 {
     [Min(0f)]
     [Tooltip("How hard a kicked pixel is thrown out of the side, in cube widths per second. 0 = the coded default (3).")]
@@ -67,6 +67,9 @@ public class PixelBeltSorter : MonoBehaviour
         Vector3 p = belt.PointAt(s);
         root.transform.SetPositionAndRotation(new Vector3(p.x, p.y + belt.SurfaceHeight, p.z), Quaternion.Euler(0f, yaw, 0f));
         b.sideDir = root.transform.right;
+        // Socket (PixelSockets.cs, built in and bare): the CHUTE's mouth, an Out socket on the model's +X side (it turns with the sorter when it swaps sides).
+        b.sockets = new[] { new PixelSocket("chute", new Vector3(belt.Width * 0.5f + 1.0f * b.unit, 0f, 0f), Vector3.right, PixelSocketFlow.Output, true) { bare = true } };
+        PixelCoupling.FitBuiltIn(b);
         if (withFilter) b.SetFilter(c.IndexOf(type), amount);
         PixelAudio.Play("device_place");
         return root;
@@ -108,8 +111,15 @@ public class PixelBeltSorter : MonoBehaviour
 
     // ---------------- behaviour ----------------
 
-    private void OnEnable() { if (!all.Contains(this)) all.Add(this); }
-    private void OnDisable() { all.Remove(this); }
+    private void OnEnable() { if (!all.Contains(this)) all.Add(this); PixelCouplings.Register(this); }
+    private void OnDisable() { all.Remove(this); PixelCouplings.Unregister(this); }
+
+    // ---- Socket ----
+    private PixelSocket[] sockets = new PixelSocket[0];
+    public Transform SocketRoot => transform;
+    public IReadOnlyList<PixelSocket> Sockets => sockets;
+    public Color SocketTint => new Color(0.55f, 0.58f, 0.64f, 1f);
+    public bool AcceptHusk(PixelSocket socket, Rigidbody husk) => false;   // (output only)
 
     private Vector3 SlotWorld() => transform.TransformPoint(new Vector3(0f, beamTopY + 0.6f * unit, 0f));
 
@@ -277,22 +287,10 @@ public class PixelBeltSorter : MonoBehaviour
         kickT = 0f;
         PixelAudio.Play("click", 0.8f);
         float u = unit, oldSize = clicker.OldPixelWorldSize;
-        Vector3 mouth = transform.position + sideDir * (beltWidth * 0.5f + 1.0f * u);
         rb.isKinematic = false;
-        Vector3 pos = transform.position + sideDir * (beltWidth * 0.5f + 0.2f * u) + Vector3.up * (oldSize * 0.6f);
-        Vector3 vel = sideDir * Kick * u + Vector3.up * (0.6f * u);
-        foreach (PixelConveyor other in PixelConveyor.All)
-        {
-            if (other == null || other.IsGhost || other == belt) continue;
-            Vector3 d = other.StartPoint - mouth;
-            if (new Vector3(d.x, 0f, d.z).magnitude > 1.3f * u || Mathf.Abs(d.y) > 1.2f * u) continue;
-            Vector3 over = other.PointAt(0.6f * oldSize);
-            pos = new Vector3(over.x, over.y + other.SurfaceHeight + oldSize * 0.7f, over.z);
-            vel = other.Direction * other.Speed * 0.5f;
-            break;
-        }
-        rb.position = pos;
-        PixelPathCarrier.SetVelocity(rb, vel);
+        if (PixelCouplings.Emit(this, "chute", rb)) return;   // a belt that starts at the chute's mouth (its built-in coupling) takes it
+        rb.position = transform.position + sideDir * (beltWidth * 0.5f + 0.2f * u) + Vector3.up * (oldSize * 0.6f);
+        PixelPathCarrier.SetVelocity(rb, sideDir * Kick * u + Vector3.up * (0.6f * u));
     }
 
     // ---------------- saving ----------------

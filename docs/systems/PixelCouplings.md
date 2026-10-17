@@ -1,6 +1,6 @@
 # Sockets and couplings - one way to connect belts and hoses to devices
 
-Agreed in the Design Discussion chat (2026-10-17), built in the Devices session. Code: `PixelSockets.cs` (sockets, kinds, the device
+Agreed in the Design Discussion chat (2026-10-17), BUILT in the Devices session the same day (not yet tested in Unity). Code: `PixelSockets.cs` (sockets, kinds, the device
 hooks, the registry) and `PixelCoupling.cs` (the snap-on coupling piece). Placed from Dev Hub > Tester > **Coupling**.
 
 ## The problem it replaced
@@ -55,4 +55,27 @@ kind = a new enum value + its own coupling look + its own hook, never a new syst
 ## Build order (how it was moved over)
 1. Sockets + coupling + hook next to the old interfaces. 2. Devices moved one at a time: Storage Crate, Kiln, Trash Can, Splitter, Elevator,
 Container Hose, Connector, then the Funnel and Chipper outputs, then the Recycler + Sorting Hopper (+ Quantum Organizer for hoses) as new
-intakes. 3. `IPixelBeltAcceptor`, `IPixelPort` and the hand-made output latches deleted, so there is one way to connect.
+intakes. 3. `IPixelBeltAcceptor`, `IPixelPort` and the hand-made output latches deleted, so there is one way to connect. The Belt Sorter's
+chute (the same "find a belt that starts here" copy) moved onto a built-in bare socket too. Kiln got a second socket, its charcoal chute (Out).
+
+## Where each device's sockets are
+| Device | Sockets |
+|---|---|
+| Storage Crate | `front` (Both: In = belts / hoses in, Out = a hose pulls stored husks) |
+| Quantum Organizer | `side` (Both, like the crate; In drops husks onto the pad) |
+| Kiln | `mouth` (In, burns it), `chute` (Out, charcoal) |
+| Trash Can | `front`, `back` (In) |
+| Recycler | `hatch` (In, the back hatch; a latched Sorting Hopper OCCUPIES it) |
+| Sorting Hopper | `back` (In, drops husks into the tray; refuses at `trayRoom`) |
+| Funnel | `output` (Out, the spout end; the tube waits while its belt is full) |
+| Wood Chipper | `chute` (Out, on the floor in front of the outlet) |
+| Conveyor Elevator | `in`, `out` (fitted) |
+| Splitter | `in`, `out0` / `out1` / `out2` (fitted) |
+| Conveyor Connector / Hose Adapter | `in` (not the adapter), `out`, adapter `right` / `left` (fitted, bare) |
+| Belt Sorter | `chute` (Out, fitted, bare) |
+
+## Adding a device
+Implement `IPixelSocketDevice` (SocketRoot, Sockets, SocketTint, AcceptHusk), build the socket list once the device knows its size, call
+`PixelCouplings.Register` / `Unregister` in OnEnable / OnDisable, and put husks out with `PixelCouplings.Emit(this, id, husk)` (false = do your own thing).
+A piece that is a belt fitting itself marks its sockets `fitted` (and `bare` if its own shape shows the way) and calls `PixelCoupling.FitBuiltIn(this)`
+after building (and `PixelCoupling.RemoveAll(this)` before a rebuild). Nothing else: the tester, saving, snapping and the belt system pick it up.

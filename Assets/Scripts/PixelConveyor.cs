@@ -13,7 +13,7 @@
 //   the way. LOCKED RIDING (no physics): an old pixel that lands on a belt (not held, not glued into a build, not flying, and there is room: riders keep a gap of 1.1 cube widths)
 //   is CAPTURED by PixelConveyorSystem - made kinematic, centred on the line and carried along it at beltSpeedCubes (0 = 1.6 cube widths per second) by position, like the Storage Crate
 //   locks pixels in. At the end of a belt it is handed on to a belt that STARTS there (a chained piece, ends within 0.45 cube widths and not head-on); when there is no belt to hand it
-//   to, the end is detected: a machine whose opening is there (IPixelBeltAcceptor: the Kiln mouth, the Storage Crate) takes the pixel straight in, otherwise it is EJECTED: physics back on, thrown on a little along the belt's direction (so it can fly into a Kiln mouth or onto the floor). Riders queue
+//   to, the end is detected: an In COUPLING whose port is there (PixelSockets.cs / PixelCoupling.cs, docs/systems/PixelCouplings.md) hands the pixel to its device, otherwise it is EJECTED: physics back on, thrown on a little along the belt's direction (so it can fly into a Kiln mouth or onto the floor). Riders queue
 //   when the one ahead is stopped. Flipping a belt flips its riders; grabbing a rider with Pixel Grabbing frees it. Things spat out of a machine or dropped by the player simply land on a
 //   belt and get captured. Belts are saved with the tester save (shape incl. heights, riders). Built with PixelFactoryKit. SPEED: each belt can have its own speed - in FIRST PERSON a right click on a belt opens a small window (PixelConveyorSystem
 //   speed editor: a number box in cube widths per second, Set / Reverse / Close; the mouse is freed while it is open); in the normal view a right click still reverses the belt.
@@ -23,15 +23,6 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
-
-/// <summary>Something a belt can hand a pixel to at its end (the Kiln's mouth, the Storage Crate): no ejecting, the pixel goes straight in.</summary>
-public interface IPixelBeltAcceptor
-{
-    /// <summary>Is this world point (just past the end of a belt) at the acceptor's opening?</summary>
-    bool AcceptsAt(Vector3 world);
-    /// <summary>Takes the pixel (it is kinematic and no longer owned by the belt). False if it cannot (full): the belt then ejects it.</summary>
-    bool AcceptFromBelt(Rigidbody pixel);
-}
 
 public class PixelConveyor : MonoBehaviour
 {
@@ -508,12 +499,6 @@ public class PixelConveyorSystem : MonoBehaviour
     [Tooltip("The soft magnet that draws the player to the belt's middle line, in cube widths per second at most. Walking out is always stronger. 0 = the coded default (0.9).")]
     [SerializeField] private float playerMagnet = 0f;
 
-    private static readonly List<IPixelBeltAcceptor> acceptors = new List<IPixelBeltAcceptor>();
-
-    /// <summary>Machines register here (in OnEnable) so a belt end can feed them directly.</summary>
-    public static void Register(IPixelBeltAcceptor a) { if (a != null && !acceptors.Contains(a)) acceptors.Add(a); }
-    public static void Unregister(IPixelBeltAcceptor a) { acceptors.Remove(a); }
-
     /// <summary>Is there room to put a pixel on the start of this belt (no rider within a gap of the drop spot, no loose pixel lying there)? The Funnel waits when it is false.</summary>
     public static bool StartHasRoom(PixelConveyor belt)
     {
@@ -529,38 +514,6 @@ public class PixelConveyorSystem : MonoBehaviour
                 if (rb != null && !rb.isKinematic && (rb.position - drop).sqrMagnitude < (0.9f * u) * (0.9f * u)) return false;
         }
         return true;
-    }
-
-    /// <summary>The first machine (not 'exclude') whose opening contains this world point; null if none.</summary>
-    public static IPixelBeltAcceptor FindAcceptorAt(Vector3 world, IPixelBeltAcceptor exclude)
-    {
-        for (int i = acceptors.Count - 1; i >= 0; i--)
-        {
-            IPixelBeltAcceptor a = acceptors[i];
-            if (a == null || (a is Object o && o == null)) { acceptors.RemoveAt(i); continue; }
-            if (a != exclude && a.AcceptsAt(world)) return a;
-        }
-        return null;
-    }
-
-    /// <summary>Calls 'visit' with the opening point of every machine that has one (IPixelPort): the Conveyor Connector magnetizes to them.</summary>
-    public static void ForEachPort(System.Action<Vector3> visit)
-    {
-        foreach (IPixelBeltAcceptor a in acceptors)
-            if (a is IPixelPort port && !(a is Object o && o == null)) visit(port.PortWorld);
-    }
-
-    private IPixelBeltAcceptor FindAcceptor(PixelConveyor belt)
-    {
-        Vector3 end = belt.ExitPoint + belt.Direction * belt.Unit * 0.5f;
-        end.y = belt.ExitPoint.y + belt.SurfaceHeight + belt.Unit * 0.5f;
-        for (int i = acceptors.Count - 1; i >= 0; i--)
-        {
-            IPixelBeltAcceptor a = acceptors[i];
-            if (a == null || (a is Object o && o == null)) { acceptors.RemoveAt(i); continue; }
-            if (a.AcceptsAt(end) || a.AcceptsAt(belt.ExitPoint + Vector3.up * belt.Unit * 0.6f)) return a;
-        }
-        return null;
     }
 
     private PixelClicker clicker;
@@ -731,16 +684,9 @@ public class PixelConveyorSystem : MonoBehaviour
                 PixelConveyor next = belt.FindNext();
                 if (next == null)
                 {
-                    // An end. An In coupling at the end (PixelCouplings) hands the pixel to its device; (old way, being moved over:) a machine opening takes it; otherwise it is ejected.
+                    // An end. An In COUPLING at the end (PixelSockets.cs) hands the pixel to its device's one hook; otherwise (none, or the device is full) it is ejected.
                     Rigidbody taken = r.rb;
                     if (PixelCouplings.HandIn(belt.ExitPoint, taken))
-                    {
-                        riding.Remove(taken);
-                        riders.RemoveAt(i);
-                        continue;
-                    }
-                    IPixelBeltAcceptor acceptor = FindAcceptor(belt);
-                    if (acceptor != null && acceptor.AcceptFromBelt(taken))
                     {
                         riding.Remove(taken);
                         riders.RemoveAt(i);

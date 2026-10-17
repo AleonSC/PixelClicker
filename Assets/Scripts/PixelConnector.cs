@@ -13,12 +13,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>A machine's opening a connector can magnetize to (the Kiln mouth, the Storage Crate). PortWorld = the point at floor level of the opening.</summary>
-public interface IPixelPort
-{
-    Vector3 PortWorld { get; }
-}
-
 public class PixelConnector : MonoBehaviour, IPixelSocketDevice
 {
     [Min(0f)]
@@ -230,7 +224,7 @@ public class PixelConnector : MonoBehaviour, IPixelSocketDevice
 
     // ---------------- snapping ----------------
 
-    /// <summary>While placing: the nearest belt end, elevator top, splitter output, machine opening or other connector end (by screen distance, at its height).</summary>
+    /// <summary>While placing: the nearest belt end, coupling port (elevator top, splitter side, a coupling on a machine) or other connector end (by screen distance, at its height).</summary>
     public static Vector3 Snap(PixelClicker c, Vector3 p, out bool snapped)
     {
         Vector3 result = PixelConveyor.Snap(c, p, out bool found);
@@ -247,7 +241,6 @@ public class PixelConnector : MonoBehaviour, IPixelSocketDevice
             if (d < best) { best = d; result = end; found = true; }
         }
         foreach (PixelConnector con in all) if (con != null && !con.ghost) { Try(con.a); Try(con.b); if (con.adapter) { Try(con.SidePort(1)); Try(con.SidePort(-1)); } }
-        PixelConveyorSystem.ForEachPort(Try);
         PixelCouplings.Ports(Try);   // couplings on devices
         snapped = found;
         return result;
