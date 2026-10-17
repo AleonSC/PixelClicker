@@ -1,13 +1,13 @@
 // ---- System notes ----
 // PixelTrashCan.cs
 //   TRASH CAN (a Dev Hub > Tester feature, PixelFeatureTester 'Trash Can'): a plain cylinder you put on the floor. Within suctionRadiusCubes (default 2.5 cube widths) of it every loose old pixel - things thrown out of a Funnel hose, a machine or the end of a conveyor belt,
-//   or simply lying there - is pulled towards its mouth and, once it gets there, shrinks away and is DELETED (PixelClicker.ClaimOldPixel, no credit). Belts and connectors that end at the can hand their pixels in directly (IPixelBeltAcceptor). Pixels the player holds,
+//   or simply lying there - is pulled towards its mouth and, once it gets there, shrinks away and is DELETED (PixelClicker.ClaimOldPixel, no credit). SOCKETS (PixelSockets.cs): 'front' and 'back' (In): a belt, connector or hose ending at an In coupling there hands its husks straight in (AcceptHusk). Pixels the player holds,
 //   ones riding a belt / carried by a machine (kinematic), flying pixels and attached ones are left alone. Saved with the tester save (position).
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelTrashCan : MonoBehaviour, IPixelBeltAcceptor
+public class PixelTrashCan : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom
 {
     [Min(0f)]
     [Tooltip("How far from the can (in cube widths) loose old pixels are pulled in. 0 = the coded default (2.5).")]
@@ -50,6 +50,13 @@ public class PixelTrashCan : MonoBehaviour, IPixelBeltAcceptor
         GameObject root = new GameObject(name);
         PixelTrashCan t = root.AddComponent<PixelTrashCan>();
         t.clicker = c; t.ghost = ghostMode; t.unit = Mathf.Max(0.05f, c.OldPixelWorldSize);
+        // Sockets (PixelSockets.cs): two sides (front / back) where a belt, connector or hose can end at an In coupling. A ghost has none.
+        if (!ghostMode)
+            t.sockets = new[]
+            {
+                new PixelSocket("front", new Vector3(0f, 0f, -0.72f * t.unit), Vector3.back, PixelSocketFlow.Intake),
+                new PixelSocket("back", new Vector3(0f, 0f, 0.72f * t.unit), Vector3.forward, PixelSocketFlow.Intake),
+            };
         t.BuildModel();
         return root;
     }
@@ -69,22 +76,23 @@ public class PixelTrashCan : MonoBehaviour, IPixelBeltAcceptor
         ring = r.transform;
     }
 
-    private void OnEnable() { if (!ghost) { if (clicker == null) clicker = PixelFind.First<PixelClicker>(); PixelConveyorSystem.Register(this); } if (!all.Contains(this)) all.Add(this); }
-    private void OnDisable() { PixelConveyorSystem.Unregister(this); all.Remove(this); }
+    private void OnEnable() { if (clicker == null) clicker = PixelFind.First<PixelClicker>(); PixelCouplings.Register(this); if (!all.Contains(this)) all.Add(this); }
+    private void OnDisable() { PixelCouplings.Unregister(this); all.Remove(this); }
+
+    // ---- Sockets ----
+    private PixelSocket[] sockets = new PixelSocket[0];
+    public Transform SocketRoot => transform;
+    public IReadOnlyList<PixelSocket> Sockets => sockets;
+    public Color SocketTint => new Color(0.45f, 0.48f, 0.54f, 1f);
+    public int HuskRoom(PixelSocket socket) => 1000;   // (it never fills up)
 
     private void Update()
     {
         if (ring != null) { float s = 1f + 0.03f * Mathf.Sin(Time.time * 3f); ring.localScale = new Vector3(s * (Radius / (2.5f * unit)), 1f, s * (Radius / (2.5f * unit))); }
     }
 
-    public bool AcceptsAt(Vector3 world)
-    {
-        if (ghost) return false;
-        Vector3 d = world - transform.position; d.y = 0f;
-        return d.magnitude < 1.4f * unit && world.y < transform.position.y + 2.2f * unit;
-    }
-
-    public bool AcceptFromBelt(Rigidbody pixel)
+    /// <summary>A husk comes in through an In coupling: it vanishes like one pulled into the mouth.</summary>
+    public bool AcceptHusk(PixelSocket socket, Rigidbody pixel)
     {
         if (ghost || pixel == null || clicker == null || !clicker.ClaimOldPixel(pixel)) return false;
         StartCoroutine(Vanish(pixel));
