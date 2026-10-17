@@ -1022,28 +1022,12 @@ public partial class PixelShop
     private Button CreateButton(Transform parent, string objectName, string label, Vector2 size, Color color,
                                 Color labelColor, float labelSize, out TMP_Text labelText, out Image image)
     {
-        GameObject go = new GameObject(objectName, typeof(RectTransform), typeof(Image), typeof(Button));
-        go.transform.SetParent(parent, false);
-        go.GetComponent<RectTransform>().sizeDelta = size;
-
-        image = go.GetComponent<Image>();
-        image.color = color;
-        PixelUIKit.StyleButton(image);
-
-        Button button = go.GetComponent<Button>();
-        button.targetGraphic = image;
-        button.onClick.AddListener(() => PixelAudio.Play("ui_click")); // the shop builds its own buttons, so it adds the sound itself
-        go.AddComponent<PixelButtonPulse>();   // a neon rim in the button's colour comes out from under it on every press
-        PixelMenuFx.DecorateAll(go.transform);   // the fancy menu's brighten / shine / press (this button only)
-
-        labelText = CreateText(go.transform, "Label", label, labelSize, TextAlignmentOptions.Center, FontStyles.Bold);
-        labelText.color = labelColor;
-        RectTransform lr = labelText.rectTransform;
-        lr.anchorMin = Vector2.zero;
-        lr.anchorMax = Vector2.one;
-        lr.offsetMin = lr.offsetMax = Vector2.zero;
-        if (label == "X") PixelUIKit.UseCloseGlyph(go, labelText, labelColor, size); // close buttons draw a cross
-
+        // The shared button (look, click sound, custom button colour, close cross) plus the shop's extras.
+        Button button = PixelUIKit.CreateButton(font, parent, objectName, label, size, color, labelColor, labelSize);
+        image = button.GetComponent<Image>();
+        labelText = button.GetComponentInChildren<TMP_Text>(true);
+        button.gameObject.AddComponent<PixelButtonPulse>();   // a neon rim in the button's colour comes out from under it on every press
+        PixelMenuFx.DecorateAll(button.transform);   // the fancy menu's brighten / shine / press (this button only)
         return button;
     }
 

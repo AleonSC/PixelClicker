@@ -1119,10 +1119,8 @@ public class PixelCrafting : MonoBehaviour
             {
                 // Click a known recipe to put its ingredients in the two boxes.
                 Recipe clicked = r;
-                Button rowButton = row.AddComponent<Button>();   // a Button (not a drag handler) so the list still scrolls when dragged
-                rowButton.transition = Selectable.Transition.None;
-                rowButton.targetGraphic = row.GetComponent<Image>();
-                rowButton.onClick.AddListener(() => FillBoxes(ScaleRecipe(clicked)));
+                // A click (not a drag handler) so the list still scrolls when dragged; FillBoxes plays the click sound.
+                PixelUIKit.MakeClickable(row, () => FillBoxes(ScaleRecipe(clicked)), sound: false, pressTint: false);
             }
             RectTransform rr = row.GetComponent<RectTransform>();
             rr.anchorMin = new Vector2(0f, 1f);
@@ -1566,7 +1564,7 @@ public class PixelCrafting : MonoBehaviour
         while (headers.Count <= index)
         {
             MaterialHeader h = new MaterialHeader();
-            GameObject go = new GameObject("Category", typeof(RectTransform), typeof(Image), typeof(Button));
+            GameObject go = new GameObject("Category", typeof(RectTransform), typeof(Image));
             go.transform.SetParent(listContent, false);
             Image im = go.GetComponent<Image>();
             im.color = new Color(cellColor.r, cellColor.g, cellColor.b, 0.55f);
@@ -1583,15 +1581,12 @@ public class PixelCrafting : MonoBehaviour
             lr.anchorMax = Vector2.one;
             lr.offsetMin = new Vector2(14f, 0f);
             lr.offsetMax = new Vector2(-8f, 0f);
-            Button b = go.GetComponent<Button>();
-            b.targetGraphic = im;
-            b.transition = Selectable.Transition.None;   // (a Button, not a drag handler, so the list still scrolls when dragged)
-            b.onClick.AddListener(() =>
+            // (a click, not a drag handler, so the list still scrolls when dragged)
+            PixelUIKit.MakeClickable(go, () =>
             {
                 materialsCollapsed[h.category] = !materialsCollapsed[h.category];
-                PixelAudio.Play("ui_click");
                 RefreshList();
-            });
+            }, pressTint: false);
             headers.Add(h);
         }
         return headers[index];

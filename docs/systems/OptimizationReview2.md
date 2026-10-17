@@ -4,6 +4,8 @@ The first review (HANDOFF.md section 4, 2026-10-08) covered ~22k lines. This one
 
 Effort: S < 1 h, M = a few hours, L = a day. Risk = chance of breaking behaviour.
 
+**Done:** A1 (rolling save picture stays on the GPU; read back + JPG only when a save needs it), A2 + A3 (shared redraw limit `PixelTierPicture.Due`, 30/s, used by Render, shop pictures, shop Operation, Log icons; shop picture keys cached), A4 partly (the Log icons use the limit; its studio copy is not moved onto PixelTierPicture yet - its camera size differs). Untested in Unity.
+
 ## A. Biggest wins (normal play, always on)
 
 | # | Where | Problem | Fix | Effort/Risk |

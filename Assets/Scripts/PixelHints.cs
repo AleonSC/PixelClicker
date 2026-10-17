@@ -697,7 +697,7 @@ public class PixelHints : MonoBehaviour
             Entry entry = history[i];
                         string text = entry.text;
 
-            GameObject row = new GameObject("Row", typeof(RectTransform), typeof(Image), typeof(Button), typeof(CanvasGroup));
+            GameObject row = new GameObject("Row", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
             row.transform.SetParent(listRect, false);
             rowRects.Add(row.GetComponent<RectTransform>());
             rowGroups.Add(row.GetComponent<CanvasGroup>());
@@ -718,9 +718,9 @@ public class PixelHints : MonoBehaviour
             y += h + 6f;
 
             string full = entry.full;
-            Button b = row.GetComponent<Button>();
-            if (!string.IsNullOrEmpty(full)) b.onClick.AddListener(() => PixelNotice.Show(full, autoCloseSeconds));
-            else b.interactable = false;
+            bool opens = !string.IsNullOrEmpty(full);
+            Button b = PixelUIKit.MakeClickable(row, opens ? () => PixelNotice.Show(full, autoCloseSeconds) : (UnityEngine.Events.UnityAction)null, sound: opens);
+            b.interactable = opens;
         }
 
         contentHeight = y + 4f;

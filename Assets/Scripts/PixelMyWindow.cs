@@ -849,7 +849,7 @@ public class PixelMyWindow : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             if (!PixelHints.TryGetHistory(i, out string text, out string full)) continue;
-            GameObject go = new GameObject("Line " + i, typeof(RectTransform), typeof(Image), typeof(Button));
+            GameObject go = new GameObject("Line " + i, typeof(RectTransform), typeof(Image));
             go.transform.SetParent(logContent, false);
             go.GetComponent<Image>().color = rowColor;
             RectTransform rt = go.GetComponent<RectTransform>();
@@ -861,9 +861,10 @@ public class PixelMyWindow : MonoBehaviour
             rt.sizeDelta = new Vector2(-8f, h);
             rt.anchoredPosition = new Vector2(0f, -y);
             y += h + 5f;
-            Button b = go.GetComponent<Button>();
-            if (!string.IsNullOrEmpty(full)) { string tip = full; b.onClick.AddListener(() => PixelNotice.Show(tip, 0f)); }
-            else b.interactable = false;
+            bool opens = !string.IsNullOrEmpty(full);
+            string tip = full;
+            Button b = PixelUIKit.MakeClickable(go, opens ? () => PixelNotice.Show(tip, 0f) : (UnityEngine.Events.UnityAction)null, sound: opens);
+            b.interactable = opens;
         }
         if (count == 0)
         {
@@ -1088,19 +1089,18 @@ public class PixelMyWindow : MonoBehaviour
 
     private void BuildPlusCard()
     {
-        GameObject go = new GameObject("Blank Widget", typeof(RectTransform), typeof(Image), typeof(Button));
+        GameObject go = new GameObject("Blank Widget", typeof(RectTransform), typeof(Image));
         go.transform.SetParent(listContent, false);
         Image bg = go.GetComponent<Image>();
         bg.color = new Color(1f, 1f, 1f, 0.05f);
         PixelUIKit.StyleBox(bg, true);
-        go.GetComponent<Button>().targetGraphic = bg;
         plusCard = go.GetComponent<RectTransform>();
         plusCard.anchorMin = new Vector2(0f, 1f); plusCard.anchorMax = new Vector2(1f, 1f); plusCard.pivot = new Vector2(0.5f, 1f);
         plusCard.sizeDelta = new Vector2(-6f, PlusHeight);
         TMP_Text plus = Text(plusCard, "Plus", "+", 56f, TextAlignmentOptions.Center, new Color(1f, 1f, 1f, 0.55f), FontStyles.Bold);
         plus.raycastTarget = false;
         PixelUIKit.Stretch(plus.rectTransform);
-        go.GetComponent<Button>().onClick.AddListener(OpenPicker);
+        PixelUIKit.MakeClickable(go, OpenPicker);
     }
 
     private void LayoutBoard()

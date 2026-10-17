@@ -129,7 +129,7 @@ public class PixelDatabaseWindow : MonoBehaviour
 
         // Search box (left, under the title).
         search = PixelUIKit.CreateInputField(Font, windowObject.transform, "Search", new Vector2(640f, 70f), new Color(0.16f, 0.16f, 0.2f, 1f), Color.white, 30f,
-                                             "Search pixels, packs, skills, items, tips...");
+                                             "Search pixels, items, settings, tips...");
         PixelUIKit.AddSearchIcon(search);
         RectTransform sr = search.GetComponent<RectTransform>();
         sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0f, 1f);
@@ -139,8 +139,9 @@ public class PixelDatabaseWindow : MonoBehaviour
         // Category tabs under the search box (two rows) and the 'show undiscovered' switch as the last cell.
         string[,] tabDefs = { { "All", null }, { "Pixels", "Pixel" }, { "Packs", "Shop pack" }, { "Skills", "Skill" }, { "Items", "Consumable" },
                               { "Recipes", "Recipe" }, { "Minigames", "Minigame" }, { "Awards", "Achievement" }, { "Tips", "Tip" },
-                              { "Pets", "Pet" }, { "Floors", "Floor" }, { "Skies", "Sky" }, { "Rules", "Block rule" }, { "Nodes", "Skill node" } };
-        float cellW = (640f - 4f * 6f) / 5f;
+                              { "Pets", "Pet" }, { "Floors", "Floor" }, { "Skies", "Sky" }, { "Rules", "Block rule" }, { "Nodes", "Skill node" }, { "Settings", "Setting" } };
+        const int tabCols = 6;
+        float cellW = (640f - (tabCols - 1) * 6f) / tabCols;
         for (int i = 0; i < tabDefs.GetLength(0) + 1; i++)
         {
             bool isToggle = i == tabDefs.GetLength(0);
@@ -149,7 +150,7 @@ public class PixelDatabaseWindow : MonoBehaviour
             Button tb = PixelUIKit.CreateButton(Font, windowObject.transform, "Tab " + tabLabel, tabLabel, new Vector2(cellW, 44f), new Color(0.2f, 0.22f, 0.3f, 1f), Color.white, 20f);
             RectTransform tr2 = tb.GetComponent<RectTransform>();
             tr2.anchorMin = tr2.anchorMax = tr2.pivot = new Vector2(0f, 1f);
-            tr2.anchoredPosition = new Vector2(30f + (i % 5) * (cellW + 6f), -190f - (i / 5) * 50f);
+            tr2.anchoredPosition = new Vector2(30f + (i % tabCols) * (cellW + 6f), -190f - (i / tabCols) * 50f);
             TMP_Text tl = tb.GetComponentInChildren<TMP_Text>();
             tl.enableAutoSizing = true; tl.fontSizeMax = 20f; tl.fontSizeMin = 11f;
             tl.margin = new Vector4(4f, 0f, 4f, 0f);
@@ -166,7 +167,7 @@ public class PixelDatabaseWindow : MonoBehaviour
             }
         }
         RefreshTabs();
-        int tabRows = (tabDefs.GetLength(0) + 1 + 4) / 5;
+        int tabRows = (tabDefs.GetLength(0) + 1 + tabCols - 1) / tabCols;
         float listTop = 190f + tabRows * 50f + 8f;
 
         // Left: the results.

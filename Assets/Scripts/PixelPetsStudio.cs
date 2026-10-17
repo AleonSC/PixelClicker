@@ -390,7 +390,7 @@ public partial class PixelPets
     {
         Button b = PixelUIKit.CreateButton(font, parent, label, label, new Vector2(w, h), color, Color.white, size);
         Put(b.GetComponent<RectTransform>(), x, y, w, h);
-        b.onClick.AddListener(() => { PixelAudio.Play("ui_click"); onClick(); });
+        b.onClick.AddListener(() => onClick());
         return b;
     }
 

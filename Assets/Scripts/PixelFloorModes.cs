@@ -96,12 +96,33 @@ public partial class PixelFloor
         m.SetFloat("_Glow", style.glow > 0f ? Mathf.Clamp(style.glow, 0.5f, 2f) : 1f);
         m.SetFloat("_Seed", style.seed % 97);
         m.SetFloat("_Fade", visibility);
+        m.SetVector(ScrollId, style.scrollSpeed * Mathf.Max(0.1f, style.tileWorldSize));   // (the painted scroll is in pictures per second)
+        m.SetFloat(ClockId, 0f);
+        m.SetFloat(PulseId, 1f);
         Material[] mats = new Material[Mathf.Max(1, originalMaterials != null ? originalMaterials.Length : 1)];
         for (int i = 0; i < mats.Length; i++) mats[i] = m;
         floorRenderer.sharedMaterials = mats;
         animTimer = animClock = 0f;
         groundShaderOn = true;
         return true;
+    }
+
+    private static readonly int ClockId = Shader.PropertyToID("_Clock");
+    private static readonly int PulseId = Shader.PropertyToID("_Pulse");
+    private static readonly int ScrollId = Shader.PropertyToID("_Scroll");
+
+    /// <summary>Every frame for a ground-shader style: its clock (unscaled time that freezes in Time Stop, like the painted floors' animations) and its glow pulse.</summary>
+    private void TickGroundShader(FloorStyle style, float dt)
+    {
+        animClock += dt * style.animSpeed;
+        float pulse = 1f;
+        if (style.pulseSpeed > 0f)
+        {
+            pulseClock += dt;
+            pulse = 1f - style.pulseAmount * (0.5f + 0.5f * Mathf.Sin(pulseClock * style.pulseSpeed * Mathf.PI * 2f));
+        }
+        activeMaterial.SetFloat(ClockId, animClock);
+        activeMaterial.SetFloat(PulseId, pulse);
     }
 
     /// <summary>The shader fades the ground out in a circle round the cube (or the first person player), like the edge fade does for painted floors.</summary>

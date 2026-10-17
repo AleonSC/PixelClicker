@@ -98,7 +98,7 @@ public class PixelLogoView : MonoBehaviour
     /// <summary>A small star under an arrow (it fades in and out with the arrow): click to make the logo showing now the favourite of this save.</summary>
     private Image MakeStar(RectTransform arrow)
     {
-        GameObject go = new GameObject("Favorite Star", typeof(RectTransform), typeof(Image), typeof(Button));
+        GameObject go = new GameObject("Favorite Star", typeof(RectTransform), typeof(Image));
         go.transform.SetParent(arrow, false);
         RectTransform r = go.GetComponent<RectTransform>();
         r.anchorMin = r.anchorMax = new Vector2(0.5f, 0f);
@@ -106,8 +106,7 @@ public class PixelLogoView : MonoBehaviour
         r.sizeDelta = new Vector2(44f, 44f);
         r.anchoredPosition = new Vector2(0f, -8f);
         Image im = go.GetComponent<Image>();
-        go.GetComponent<Button>().targetGraphic = im;
-        go.GetComponent<Button>().onClick.AddListener(ToggleFavorite);
+        PixelUIKit.MakeClickable(go, ToggleFavorite, sound: false);   // (ToggleFavorite plays the click)
         return im;
     }
     private const int GridRows = 15, TotalCols = 41;

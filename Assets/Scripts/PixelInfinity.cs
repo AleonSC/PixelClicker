@@ -172,15 +172,14 @@ public class PixelInfinity : MonoBehaviour
         for (int f = 0; f < 6; f++)
         {
             int face = f;
-            GameObject go = new GameObject("Face " + names[f], typeof(RectTransform), typeof(Image), typeof(Button));
+            GameObject go = new GameObject("Face " + names[f], typeof(RectTransform), typeof(Image));
             go.transform.SetParent(panel, false);
             RectTransform r = go.GetComponent<RectTransform>();
             r.sizeDelta = new Vector2(s, s);
             r.anchoredPosition = origin + new Vector2((cells[f].x - 1f) * (s + gap) + s * 1.0f + gap * 0.5f, cells[f].y * (s + gap));
             faceImages[f] = go.GetComponent<Image>();
             faceImages[f].color = new Color(0.95f, 0.75f, 0.22f, 1f);
-            go.GetComponent<Button>().targetGraphic = faceImages[f];
-            go.GetComponent<Button>().onClick.AddListener(() => ClickFace(face));
+            PixelUIKit.MakeClickable(go, () => ClickFace(face), sound: false);   // (ClickFace plays the click when something changes)
             faceGems[f] = NewImage("Gem", go.transform, Color.clear);
             faceGems[f].rectTransform.sizeDelta = new Vector2(s * 0.55f, s * 0.55f);
             faceGems[f].raycastTarget = false;
@@ -195,14 +194,13 @@ public class PixelInfinity : MonoBehaviour
         for (int i = 0; i < 6; i++)
         {
             int stone = i;
-            GameObject go = new GameObject("Stone " + StoneNames[i], typeof(RectTransform), typeof(Image), typeof(Button));
+            GameObject go = new GameObject("Stone " + StoneNames[i], typeof(RectTransform), typeof(Image));
             go.transform.SetParent(panel, false);
             RectTransform r = go.GetComponent<RectTransform>();
             r.sizeDelta = new Vector2(380f, 62f);
             r.anchoredPosition = new Vector2(380f, 160f - i * 72f);
             trayImages[i] = go.GetComponent<Image>();
-            go.GetComponent<Button>().targetGraphic = trayImages[i];
-            go.GetComponent<Button>().onClick.AddListener(() => ClickStone(stone));
+            PixelUIKit.MakeClickable(go, () => ClickStone(stone));
             trayGems[i] = NewImage("Gem", go.transform, StoneColors[i]);
             trayGems[i].rectTransform.anchorMin = trayGems[i].rectTransform.anchorMax = new Vector2(0f, 0.5f);
             trayGems[i].rectTransform.sizeDelta = new Vector2(38f, 38f); trayGems[i].rectTransform.anchoredPosition = new Vector2(40f, 0f);

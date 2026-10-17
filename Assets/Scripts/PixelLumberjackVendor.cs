@@ -237,7 +237,7 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
             float f = frac[i];
             Button b = PixelUIKit.CreateButton(font, parent, quick[i], quick[i], new Vector2(100f, 44f), grey, Color.white, 22f);
             Place(b.GetComponent<RectTransform>(), 160f, 44f, i * 0.13f, i * 0.13f + 0.12f);
-            b.onClick.AddListener(() => { if (amountSlider.maxValue >= 1f) { amountSlider.value = Mathf.Max(1f, Mathf.Floor(amountSlider.maxValue * f)); } PixelAudio.Play("ui_click"); });
+            b.onClick.AddListener(() => { if (amountSlider.maxValue >= 1f) { amountSlider.value = Mathf.Max(1f, Mathf.Floor(amountSlider.maxValue * f)); } });
         }
         amountLabel = Label(font, parent, "", 160f, 44f, 0.54f, 1f);
         amountLabel.alignment = TextAlignmentOptions.MidlineRight;
@@ -262,7 +262,7 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
         acceptButton.onClick.AddListener(AcceptOffer);
         declineButton = PixelUIKit.CreateButton(font, parent, "Decline", "Decline", new Vector2(100f, 60f), new Color(0.5f, 0.22f, 0.22f, 1f), Color.white, 28f);
         Place(declineButton.GetComponent<RectTransform>(), 486f, 60f, 0.54f, 0.88f);
-        declineButton.onClick.AddListener(() => { PixelAudio.Play("ui_click"); ClearOffer("Suit yourself. Ask again if you change your mind."); });
+        declineButton.onClick.AddListener(() => { ClearOffer("Suit yourself. Ask again if you change your mind."); });
         RefreshLists();
     }
 

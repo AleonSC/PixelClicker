@@ -207,10 +207,8 @@ public class PixelCollectionLog : MonoBehaviour
         // Pages: click right = forward, click left = back.
         left.cameraButton.onClick.AddListener(() => EnterGallery(left.entry));
         right.cameraButton.onClick.AddListener(() => EnterGallery(right.entry));
-        left.root.gameObject.AddComponent<Button>().onClick.AddListener(() => Turn(false));
-        right.root.gameObject.AddComponent<Button>().onClick.AddListener(() => Turn(true));
-        left.root.GetComponent<Button>().transition = Selectable.Transition.None;
-        right.root.GetComponent<Button>().transition = Selectable.Transition.None;
+        PixelUIKit.MakeClickable(left.root.gameObject, () => Turn(false), sound: false, pressTint: false);   // (Turn plays the page sound)
+        PixelUIKit.MakeClickable(right.root.gameObject, () => Turn(true), sound: false, pressTint: false);
 
         GameObject spine = new GameObject("Spine", typeof(RectTransform), typeof(Image));
         spine.transform.SetParent(br, false);
@@ -245,16 +243,14 @@ public class PixelCollectionLog : MonoBehaviour
 
         Color ink = new Color(0.22f, 0.14f, 0.07f, 1f);
         // The camera: walk round all the collection in the gallery, starting beside this entry.
-        GameObject camGo = new GameObject("Gallery Button", typeof(RectTransform), typeof(Image), typeof(Button));
+        GameObject camGo = new GameObject("Gallery Button", typeof(RectTransform), typeof(Image));
         camGo.transform.SetParent(p.root, false);
         Image camImg = camGo.GetComponent<Image>();
         camImg.sprite = PixelCollectionGallery.CameraSprite(); camImg.preserveAspect = true;
-        camGo.GetComponent<Button>().targetGraphic = camImg;
         RectTransform camR = camGo.GetComponent<RectTransform>();
         camR.anchorMin = camR.anchorMax = camR.pivot = new Vector2(1f, 1f);
         camR.sizeDelta = new Vector2(64f, 48f); camR.anchoredPosition = new Vector2(-14f, -12f);
-        p.cameraButton = camGo.GetComponent<Button>();
-        p.cameraButton.onClick.AddListener(() => PixelAudio.Play("ui_click"));
+        p.cameraButton = PixelUIKit.MakeClickable(camGo, null);   // (what it opens is added by the caller)
         p.section = PixelUIKit.CreateText(font, p.root, "Section", "", 24f, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0.5f, 0.35f, 0.15f, 1f));
         Anchor(p.section.rectTransform, 1f, -16f, 36f);
         p.title = PixelUIKit.CreateText(font, p.root, "Title", "", 44f, TextAlignmentOptions.Center, FontStyles.Bold, ink);

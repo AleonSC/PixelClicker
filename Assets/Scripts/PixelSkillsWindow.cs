@@ -678,12 +678,7 @@ public partial class PixelSkills
         infoBox.sizeDelta = new Vector2(30f, 30f);
 
         // A green 'skill tree' square under the '!': selects the skill and opens its tree.
-        GameObject treeSquare = new GameObject("Tree Button", typeof(RectTransform), typeof(Image), typeof(Button));
-        treeSquare.transform.SetParent(c.button.transform, false);
-        Image treeImage = treeSquare.GetComponent<Image>();
-        treeImage.color = new Color(0.2f, 0.62f, 0.3f, 1f);
-        PixelUIKit.StyleButton(treeImage);
-        treeSquare.GetComponent<Button>().targetGraphic = treeImage;
+        GameObject treeSquare = PixelUIKit.CreateButton(Font, c.button.transform, "Tree Button", "", new Vector2(30f, 30f), new Color(0.2f, 0.62f, 0.3f, 1f), Color.white, 16f).gameObject;
         RectTransform tsr = treeSquare.GetComponent<RectTransform>();
         tsr.anchorMin = tsr.anchorMax = tsr.pivot = new Vector2(0f, 1f);
         tsr.sizeDelta = new Vector2(30f, 30f);
