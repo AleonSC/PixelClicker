@@ -28,7 +28,7 @@ using UnityEngine;
 /// value is kept). Left-click a stored pixel to take it out again - it is handed to the mouse like a grabbed pixel. Removing the crate lets everything out.
 /// NOTE: it must not define its own Update / LateUpdate (they would hide the base's); per-frame work runs in <c>OnTick</c>.
 /// </summary>
-public class PixelStorageCrate : PixelPlacedDevice, IPixelSocketDevice, IPixelHuskSource, IPixelHuskRoom
+public class PixelStorageCrate : PixelPlacedDevice, IPixelSocketDevice, IPixelHuskSource, IPixelHuskRoom, IPixelStrayTarget
 {
     private const int Columns = 5, Rows = 2, Sections = Columns * Rows;
 

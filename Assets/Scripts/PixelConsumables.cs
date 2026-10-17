@@ -131,6 +131,8 @@ public class PixelConsumables : MonoBehaviour
         Coupling = 23,
         /// <summary>Not placed by hand: right-click starts routing a Container Hose between two couplings; one is used up per hose. Listed with the Utilities.</summary>
         ContainerHose = 24,
+        /// <summary>Placed, permanent: a wind-up clockwork cube (PixelSweeper) that fetches husks close to fading into the nearest Storage Crate / Sorting Hopper / Recycler with room. On sale from Standard level 5.</summary>
+        Sweeper = 25,
     }
 
     /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
@@ -898,6 +900,28 @@ public class PixelConsumables : MonoBehaviour
         };
     }
 
+    private static Device CreateDefaultSweeper()
+    {
+        return new Device
+        {
+            kind = DeviceKind.Sweeper,
+            displayName = "Sweeper",
+            description = "A little wind-up clockwork cube with a broom. It rolls out from its pad and rescues husks that are about to fade, carrying each one to the NEAREST Storage Crate, Sorting Hopper or Recycler with room - so where you put it decides where strays go. It runs about a minute, then slows to a stop: click it to wind it again. It stays until you remove it.",
+            requiredType = PixelClicker.PixelType.White,
+            costs = new[] { new PixelShop.PackCost { type = PixelClicker.PixelType.White, amount = 400 } },
+            maxHeld = 2,
+            durationSeconds = 1e9f,
+            radius = 1f,
+            color = new Color(0.86f, 0.66f, 0.3f, 1f),
+            bodyDiameter = 1.5f,
+            bodyHeight = 1f,
+            vendorOnly = true,          // not in the shop until...
+            shopSkillId = "standard",   // ...Standard level 5 puts it on sale (GameDesign section 6 'The Sweeper'); no vendor sells it
+            shopSkillLevel = 5,
+            placingMessage = "Click the floor to put the {0}'s pad down - it sweeps strays to the nearest crate, hopper or Recycler  (right-click to cancel)",
+        };
+    }
+
     private static Device CreateDefaultCoupling()
     {
         return new Device
@@ -1161,6 +1185,7 @@ public class PixelConsumables : MonoBehaviour
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.SortingHopper, CreateDefaultSortingHopper),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Coupling, CreateDefaultCoupling),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ContainerHose, CreateDefaultContainerHose),
+                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Sweeper, CreateDefaultSweeper),
                 })
                 {
                     DeviceKind wanted = extra.Key;
@@ -1997,6 +2022,9 @@ public class PixelConsumables : MonoBehaviour
                 case DeviceKind.SortingHopper:
                     root = PixelSortingHopper.CreateDisplay(clicker);
                     break;
+                case DeviceKind.Sweeper:
+                    root = PixelSweeper.CreateDisplay(clicker);
+                    break;
                 default:
                     if (PixelInstantItems.Find(kind) != null) root = BuildItemModel(kind, d);   // instant-use items (PixelInstantItems) have small item models
                     break;
@@ -2647,7 +2675,7 @@ public class PixelConsumables : MonoBehaviour
 
         Device effective = EffectiveDevice(d);
         PixelPlacedDevice placed = SpawnDevice(index, point, placingYaw, UsesKind(d.kind) ? effective.uses : DeviceSeconds(effective), 0f, 0f, -1);
-        if (placed != null && d.kind != DeviceKind.StorageCrate && d.kind != DeviceKind.WoodChipper && d.kind != DeviceKind.Funnel && d.kind != DeviceKind.Recycler && d.kind != DeviceKind.SortingHopper) placed.Disarm();   // (the crate needs no switching on) starts grey and idle until you left-click it
+        if (placed != null && d.kind != DeviceKind.StorageCrate && d.kind != DeviceKind.WoodChipper && d.kind != DeviceKind.Funnel && d.kind != DeviceKind.Recycler && d.kind != DeviceKind.SortingHopper && d.kind != DeviceKind.Sweeper) placed.Disarm();   // (the crate needs no switching on) starts grey and idle until you left-click it
 
         EndPlacement();
         DevicePlaced?.Invoke(d.kind);
@@ -2732,6 +2760,13 @@ public class PixelConsumables : MonoBehaviour
             PixelRecyclerDevice recyclerDevice = root.AddComponent<PixelRecyclerDevice>();   // (the countdown; the behaviour is in PixelRecycler)
             recyclerDevice.Init(clicker, cam, duration, shrinkSeconds);
             result = recyclerDevice;
+        }
+        else if (d.kind == DeviceKind.Sweeper)
+        {
+            GameObject root = PixelSweeper.Place(clicker, point, yaw);
+            PixelChipperDevice sweeperDevice = root.AddComponent<PixelChipperDevice>();   // (the thin permanent-device stub; all the behaviour is in PixelSweeper)
+            sweeperDevice.Init(clicker, cam, shrinkSeconds);
+            result = sweeperDevice;
         }
         else if (d.kind == DeviceKind.SortingHopper)
         {
@@ -2844,6 +2879,8 @@ public class PixelConsumables : MonoBehaviour
             if (recycler != null) state.extra = recycler.ExportState();   // the husks waiting in a Recycler
             PixelSortingHopper hopper = placed.GetComponent<PixelSortingHopper>();
             if (hopper != null) state.extra = hopper.ExportState();       // the Sorting Hopper's chosen type
+            PixelSweeper sweeper = placed.GetComponent<PixelSweeper>();
+            if (sweeper != null) state.extra = sweeper.ExportState();     // the Sweeper's wind left
             if (placed is PixelSorterDevice sorter)
             {
                 state.aim = sorter.AimDegrees;
@@ -2878,6 +2915,8 @@ public class PixelConsumables : MonoBehaviour
         if (restoredRecycler != null) restoredRecycler.ImportState(state.extra);
         PixelSortingHopper restoredHopper = restored != null ? restored.GetComponent<PixelSortingHopper>() : null;
         if (restoredHopper != null) restoredHopper.ImportState(state.extra);
+        PixelSweeper restoredSweeper = restored != null ? restored.GetComponent<PixelSweeper>() : null;
+        if (restoredSweeper != null) restoredSweeper.ImportState(state.extra);
         if (restored is PixelStorageCrate restoredCrate) restoredCrate.ImportState(state.extra);
         if (restored != null) PixelCouplings.Import(restored.gameObject, state.couplings);   // its couplings go back on its sockets
     }
@@ -2950,6 +2989,11 @@ public class PixelConsumables : MonoBehaviour
                 return ghost;
             }
             return displayOnly ? PixelRecycler.CreateDisplay(clicker) : PixelRecycler.Place(clicker, Vector3.zero, 0f);
+        }
+        if (d.kind == DeviceKind.Sweeper)
+        {
+            suckPoint = null; timer = null;
+            return isPreview ? PixelSweeper.CreateGhost(clicker) : displayOnly ? PixelSweeper.CreateDisplay(clicker) : PixelSweeper.Place(clicker, Vector3.zero, 0f);
         }
         if (d.kind == DeviceKind.SortingHopper)
         {

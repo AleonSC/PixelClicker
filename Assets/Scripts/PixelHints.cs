@@ -185,6 +185,7 @@ public class PixelHints : MonoBehaviour
             case "device_QuantumOrganizer": return "You placed a Quantum Organizer!";
             case "device_StorageCrate": return "You placed a Storage Crate!";
             case "device_SortingHopper": return "You placed a Sorting Hopper!";
+            case "device_Sweeper": return "You placed a Sweeper!";
             case "device_Funnel": return "You placed a Funnel!";
             case "husk_crush": return "Right-click a husk to crush it for XP";
             case "craft": return "You crafted something!";
@@ -262,6 +263,7 @@ public class PixelHints : MonoBehaviour
         H("device_StorageCrate", "Storage Crate placed! It needs no switching on. Let go of a pixel you are holding (Pixel Grabbing) above the crate and it drops into the next free section; clicking the crate also stores loose pixels lying on it. Click a stored pixel to pick it up again. Drag the handles on its short ends to move it."),
         H("device_SortingHopper", "Sorting Hopper placed! Put it near a Recycler and it latches onto the back. The first husk to land in the tray sets its filter; click its flag (or scroll over it) to pick another type lying in the tray. That type slides into the Recycler one by one, so the streak keeps growing; other husks just lie in the tray and fade. The orange button throws everything in the tray out over the back."),
         H("device_Funnel", "Funnel placed! Its glass cone hangs under the cube and catches every husk that falls into it, then sends them one by one down the tube to the spout where you placed it (scroll or Q / E turns the spout). Placing it again moves it."),
+        H("device_Sweeper", "Sweeper placed! It rolls out from its pad and carries husks that are about to fade to the nearest Storage Crate, Sorting Hopper or Recycler with room. It runs about a minute and slows to a stop - click it to wind it again."),
         H("device_Magnet", "Magnet placed! It is grey and asleep: left-click it to switch it on. Then it pulls loose old pixels in around it and holds them in a heap without collecting them."),
         H("device_Sorter", "Sorter placed! It is grey and asleep: left-click its ring or pipe to switch it on. Then click its buttons to change how hard old pixels are pushed out of the pipe."),
         H("craft", "Crafted! The new item is in your Inventory under Consumables."),

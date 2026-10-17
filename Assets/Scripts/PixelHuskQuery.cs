@@ -8,7 +8,7 @@
 //   - Near(clicker, centre, radius, results, flat): every husk within a radius (flat = horizontal distance only), alive ones only unless asked.
 //   - CountOfType(clicker, type): how many husks of a pixel type are lying out (e.g. Acorns for the Great Oak chance).
 //   Used by the zone-style systems (Sap fields, Mold, the Great Oak boost, the Magnet, Nuclear radiation) and - since the 2026-10-17 device pass - every
-//   device / container script (Recycler, Storage Crate, Bank hose, belts, sorters, Tiny Robot, electric links, Quantum Organizer, Funnel, hoses...).
+//   device / container script (Recycler, Storage Crate, Bank hose, belts, sorters, the Sweeper, electric links, Quantum Organizer, Funnel, hoses...).
 //   A card missing at the first look (a husk still being made) is looked for again. A NEW zone effect should use Near instead of its own loop.
 // ---------------------------------------------------
 using System.Collections.Generic;
