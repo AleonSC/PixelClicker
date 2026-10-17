@@ -1291,3 +1291,4 @@
 [2026-10-17 12:12 UTC] Added a pinned 'Husks and Physics' session (how husks and pets move, grab, throw and settle) to the session list in the notes, and a to-do item to make thrown husks tumble instead of slide.
 [2026-10-17 12:14 UTC] Thrown husks now tumble end over end instead of skidding flat: letting go gives them a spin along the throw and a little extra grip for a few seconds so their corners catch (tune it under Pixel Grab > Tumbling when thrown).
 [2026-10-17 12:14 UTC] Shop: the Pixels tab now uses the same tile layout as Consumables (Toggleables and Skill packs buttons, a tile grid and one buy bar), Consumables opens on Utilities first, and the tabs are now Pixels, Consumables, Upgrades, Minigames.
+[2026-10-17 12:22 UTC] To-do: one shared helper for building husk / pet physics materials instead of the hand-written copies per Unity version.
