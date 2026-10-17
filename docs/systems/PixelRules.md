@@ -54,6 +54,14 @@ Machines exist to turn husks into something useful; despawning hurts because unu
 | Crafting (planned) | recipe ingredients |
 | Conveyor belts, sorters, hoses | moving husks to the right machine |
 
+## Husks settle into small heaps (agreed 2026-10-17 in the Design Discussion chat, built 2026-10-17)
+
+A husk lands, maybe rolls or tips once, and stays put - no more bouncing about.
+- **Where they land:** the burst (`PixelBurstPop.TryBurstVelocity`) still throws each husk out to a ring round the cube, so the floor fills with **a ring of small heaps**, never one tower right under the cube. A Recycler parked under the cube must not catch everything: aiming (Aimed Clicks) and the Recycler's suction are what route husks (docs/GameDesign.md 'Husk routing rework').
+- **How they feel:** the default husk material is barely bouncy and a little grippier (`PixelClicker` bounciness 0.08, friction 0.65; were 0.3 / 0.5). Types whose look sets its own physics (`look.customPhysics`: Water's jelly, Sap, Leaf / Herb / Seaweed drifting...) keep their own values.
+- **Heaps are free:** a resting husk falls asleep quickly (`huskSleepThreshold` 0.03, Rigidbody.sleepThreshold; Unity's default 0.005) and stays asleep - the script gravity (`ScaledGravity`) no longer pushes sleeping husks, which used to keep every husk awake for ever. Anything that touches one wakes it as usual (a grab, a crush taking a husk out from under it, Recycler suction, Magnet, Fan, belts, another husk landing on it).
+- **Throws still tumble:** a thrown husk gets its spin and brief extra grip (`PixelGrab`, 'Tumbling when thrown'); its throw grip (`thrownGrip` 0.85) stays above the resting friction 0.65 so corners catch and tip it over.
+
 ## The Recycler (built 2026-10-15, `PixelRecycler.cs`)
 
 **Reworked 2026-10-17 (docs/GameDesign.md section 6 'Husk routing rework'):** the Recycler is CURRENCY ONLY - each husk pays 50% of a click's value times the same-type streak (cap 80%, never above 95% of a click), and NO XP; XP from husks comes from Husk Crush and the skill machines. A modest suction ring round the rim draws nearby loose husks in (Operation: Suction), several Recyclers can stand at once at a rising price (x1.8 each), and whoever captures a husk first owns it (`PixelHuskHolder`). Edge-click aiming is now Standard's tree node 'Aimed Clicks' (Standard 3).
