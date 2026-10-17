@@ -152,16 +152,18 @@ When two pillars pull against each other, see **(Q7)**.
 ## 6. The progression arc
 
 ### Early game - the first hour (Decided 2026-10-16, built, being tuned)
-The agreed path (times for a normal player at about 4 clicks a second):
+The agreed path (times for a normal player at about 4 actions a second, clicks + husk crushes). **Times re-set 2026-10-17 from the
+6:24 session report and KEPT on purpose:** crushing takes about a quarter of the player's actions, which slowed the unlocks by ~2.5 min,
+and the developer likes that pace - it leaves room for the tutorials. Do not lower the unlock costs to speed it back up.
 
 | Time | Step | What it teaches |
 |---|---|---|
-| 0:00-1:15 | **White** (300 to unlock Gray). Cubie's first visit at 100 White clicks: the Recycler. | Clicking, husks, edge-click aiming. |
-| ~1:15-2:30 | **Gray** (200 to unlock Black). Standard level 2: the first skill point - Block Hold or Power Click. | The first choice. |
-| ~2:30-3:45 | **Black**: earn 100. | The last plain grind. |
-| ~3:45 | **Cubie's second visit:** RGB is UNLOCKED (not bought - he gives the RGB Pack), a taste of Red / Green / Blue, the shop opens. "The rest of the pure currency: grind it and you're ready to branch off." | Six currencies. |
-| ~4-8 min | **The RGB phase.** First buy: the **Auto Clicker** (150 of each pure pixel). Value upgrades on the side. | Automation, the Toggles window. |
-| ~8-15 min | **The branch.** All six pure currencies in hand. A **skill comes first** (nudged: the Lumberjack's Pack is the cheapest next buy, Cubie names Big Tim, the Toggles tutorial and the Log goal point at it); special pixels (Glass...) and minigames follow. | Skills are the heart of the game. |
+| 0:00-~2:00 | **White** (300 to unlock Gray). Cubie's first visit at 100 White clicks: the Recycler. | Clicking, husks, edge-click aiming. |
+| ~2:00-4:20 | **Gray** (200 to unlock Black). Standard level 2 (~5:00): the first skill point - Block Hold or Power Click. | The first choice. |
+| ~4:20-6:10 | **Black**: earn 100. | The last plain grind. |
+| ~6:10 | **Cubie's second visit:** RGB is UNLOCKED (not bought - he gives the RGB Pack), a taste of Red / Green / Blue, the shop opens. "The rest of the pure currency: grind it and you're ready to branch off." | Six currencies. |
+| ~6-10 min | **The RGB phase.** First buy: the **Auto Clicker** (150 of each pure pixel). Value upgrades on the side. | Automation, the Toggles window. |
+| ~10-17 min | **The branch.** All six pure currencies in hand. A **skill comes first** (nudged: the Lumberjack's Pack is the cheapest next buy, Cubie names Big Tim, the Toggles tutorial and the Log goal point at it); special pixels (Glass...) and minigames follow. | Skills are the heart of the game. |
 
 The RGB Pack stays in the data (everything that "needs the RGB pack" keeps working) but is never sold.
 
@@ -190,7 +192,7 @@ give CONTENT (blocks, hazards, vendors) and their own tools.
 
 | ~Minute | Standard level | Tree unlock |
 |---|---|---|
-| ~3 | 2 | Block Hold *or* Power Click (the new move) |
+| ~5 | 2 | Block Hold *or* Power Click (the new move) |
 | ~8-10 | 3 | The other one, or Aimed Clicks (edge-click aiming, see 'Husk routing rework') |
 | ~20 | 4 | First twist: Lucky stake, Quick charge or Chain Crush |
 | ~30-35 | 5 | What's Next (needs both moves) |
