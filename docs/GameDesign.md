@@ -73,6 +73,8 @@ All decided 2026-10-16 unless noted.
 - **Art direction:** what the game already is - smooth, clean menus with retro / 8-bit / cube visuals; no fixed rulebook.
 - **Music:** the developer's own Suno tracks (paid plan, no attribution needed).
 - **Early game path:** RGB is Cubie's unlock at 100 Black, not a purchase; the Auto Clicker is the shop's first buy; a skill is nudged as the first branch (section 6).
+- **Early game length (2026-10-17):** about an hour, ending when the player first chooses between skills; the unique mechanics land in the first 10 minutes and the rest of the hour deepens them (section 6).
+- **Standard (2026-10-17):** the longest-levelling skill; it gives abilities (tree) and unlocks the general husk-handling devices in the shop (level perks); gathering skills give content and their own tools (section 6).
 
 ---
 
@@ -162,6 +164,56 @@ The agreed path (times for a normal player at about 4 clicks a second):
 | ~8-15 min | **The branch.** All six pure currencies in hand. A **skill comes first** (nudged: the Lumberjack's Pack is the cheapest next buy, Cubie names Big Tim, the Toggles tutorial and the Log goal point at it); special pixels (Glass...) and minigames follow. | Skills are the heart of the game. |
 
 The RGB Pack stays in the data (everything that "needs the RGB pack" keeps working) but is never sold.
+
+### Early game, minutes 15-60 - the first skill (Agreed 2026-10-17, numbers to tune)
+**Early game lasts about an hour and ends when the player first has to choose between skills** (the second skill pack becomes
+affordable / worth buying). By then every core idea has been met once: clicking and husks, the Recycler, the Auto Clicker, a skill
+with its filler and hazards, a first tree point, a first husk machine.
+
+**The hooks land early, the hour goes deep.** Everything that makes the game stand out (husks, Block Hold, Power Click) arrives in
+the first 10 minutes; the rest of the hour adds TWISTS to those moves (Standard's tree branches) and new CONTENT (the first gathering
+skill), never long gaps. Aim: something new every 5-8 minutes, one idea at a time.
+
+Minutes 15-60, roughly: level the first skill until its filler thins out, spend its first tree point, meet its first hazard (right
+click), get the first husk machine (the to-do's Standard-XP deposit box), the skill's vendor visits (Big Tim), maybe one forgiving
+minigame (the to-do's Early Cube Dash).
+
+### Standard - the ability skill (Agreed 2026-10-17, numbers to tune)
+Standard is the skill that levels the LONGEST: it trains all the time (1 flat XP per block, whatever skill is trained), just at its
+own pace. **Two tracks with different jobs:** Standard gives ABILITIES (new ways to click) and GENERAL husk tools; the gathering skills
+give CONTENT (blocks, hazards, vendors) and their own tools.
+
+**XP curve:** front-loaded - the first 5-6 levels come about every 8-10 minutes (the early-game rewards), then the curve slows sharply
+(the long grind). Standard XP also counts auto clicks, so the minutes must be tuned with the Auto Clicker running.
+
+**Abilities (skill tree, one point per level):**
+
+| ~Minute | Standard level | Tree unlock |
+|---|---|---|
+| ~3 | 2 | Block Hold *or* Power Click (the new move) |
+| ~8-10 | 3 | The other one |
+| ~20 | 4 | First twist: Lucky stake or Quick charge |
+| ~30-35 | 5 | What's Next (needs both moves) |
+| ~45 | 6 | Second twist: High roller or Aftershock |
+| ~60 | 7 | Shuffle Combo - the end of the early game |
+
+**Shop unlocks (level perks, not tree points):** Standard levels unlock the GENERAL husk-handling devices in the shop. Rules:
+1. Standard gates tools that work on any husk; a skill's own tools stay with that skill and its vendor (Wood Chipper -> Woodcutting,
+   Bait Bucket -> Fishing, Sprinkler -> Farming).
+2. Unlocks are level PERKS, never tree points - the player never picks between an ability and a shop item.
+3. Standard unlocks ACCESS; currency still buys the item. The shop shows it locked with "Standard N" so the player sees what's coming.
+4. The first tool must land inside the first hour, or husks pile up with nothing to do with them.
+
+| Standard level | Unlocks in the shop |
+|---|---|
+| 3-4 | Storage Crate (simplest: just holding husks) |
+| 5 | Magnet, Fan (moving husks) |
+| 6-7 | Funnel (catching husks automatically) |
+| 8-10 | Sorter, then Magnetized Sorter |
+| 12+ | Quantum Organizer; later the factory pieces as real items |
+
+Build it as ONE shared rule (a small "needs skill X at level N" table on shop items) read by the Shop, Toggles and Game Database,
+not a check per device; the same table later covers skill-gated minigames and the gathering skills' own tools (to-do).
 
 ### Mid game - skills and machines (Built, growing)
 Gathering skills (Woodcutting, Foraging, Fishing, Mining, Farming, Electrician), each with filler, hazards, specials, perks and a
