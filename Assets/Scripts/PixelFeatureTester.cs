@@ -146,7 +146,7 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].export = PixelConnector.ExportState;
         features[features.Count - 1].import = PixelConnector.ImportState;
         RegisterLine("Container Hose",
-                     "A see-through hose from one container to another. Click the SOURCE - a Storage Crate or a Quantum Organizer - then the TARGET: a Recycler, another Storage Crate, a Quantum Organizer or a Trash Can (both clicks magnetize to the nearest container's top). It pumps the source's stored pixels through the hose one by one and drops them into the target, only as many as the target has room for. The ends follow the containers when you carry them.",
+                     "A see-through hose between two COUPLINGS. Click an OUT coupling on a Storage Crate or Quantum Organizer (click a crate's coupling dot to set it to Out), then an IN coupling on the target - a Recycler, another crate, an organizer, a Trash Can, the Kiln... (both clicks magnetize to the nearest coupling). It pumps the source's stored husks through the hose one by one into the target, only as many as the target has room for. The ends follow the devices when you carry them.",
                      c => PixelConveyor.CreateMarker(c), c => PixelContainerHose.CreatePreview(c), (g, a, b) => PixelContainerHose.UpdatePreview(g, a, b),
                      (c, a, b) => PixelContainerHose.Place(c, a, b), PixelContainerHose.Snap);
         features[features.Count - 1].singleLine = true;

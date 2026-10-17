@@ -14,7 +14,8 @@ using Unity.Profiling;
 //   ExternalClickBlock) to release ReleasePerClick (6) stored pixels as ordinary old pixels with the average stored payout
 //   (SpawnStoredPixel, ignored by the organizer for 10 s); when its time runs out or it is removed (Ended) everything stored comes
 //   out. Saved in PlacedState.extra (ExportState/ImportState, 'Q,tier,count,total;'). It must not define its own Update / LateUpdate:
-//   per-frame work runs in OnTick. Tip device_QuantumOrganizer. Not part of the Operation tab or the UFO's placeable list yet.
+//   per-frame work runs in OnTick. Tip device_QuantumOrganizer. SOCKET (PixelSockets.cs): one 'side' socket (Both): In = a hose / belt drops husks onto the pad
+//   (AcceptHusk), Out = a Container Hose pulls stored husks (TakeHuskOut / HuskRoom). Not part of the Operation tab or the UFO's placeable list yet.
 // ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
@@ -31,7 +32,7 @@ using UnityEngine;
 /// text and shrink-away come from <see cref="PixelPlacedDevice"/>; the model is built by <see cref="PixelConsumables"/>.
 /// NOTE: it must not define its own Update / LateUpdate (they would hide the base's); per-frame work runs in <c>OnTick</c>.
 /// </summary>
-public class PixelQuantumDevice : PixelPlacedDevice
+public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelHuskSource, IPixelHuskRoom
 {
     private const int MaxTypes = 3;          // pixel types one organizer can hold
     private const int MaxVisible = 18;       // little pixel models shown per type (the stored count can be higher)
@@ -80,7 +81,31 @@ public class PixelQuantumDevice : PixelPlacedDevice
         if (clicker.UIFont != null) label.font = clicker.UIFont;
 
         RefreshLabel();
-        Ended += _ => ReleaseSome(1000);   // when its time is up (or it is removed) everything stored comes out again
+        Ended += _ => { ReleaseSome(1000); PixelCouplings.Unregister(this); };   // when its time is up (or it is removed) everything stored comes out again
+        tint = settings.color;
+        sockets = new[] { new PixelSocket("side", new Vector3(0f, 0f, -(half + 0.2f)), Vector3.back, PixelSocketFlow.Both) };
+        PixelCouplings.Register(this);   // its SIDE socket: In = hoses / belts drop husks onto the pad, Out = a hose pulls stored husks
+    }
+
+    private void OnDestroy() { PixelCouplings.Unregister(this); }
+
+    // ---- Socket (PixelSockets.cs): one 'side' socket, In or Out ----
+    private PixelSocket[] sockets = new PixelSocket[0];
+    private Color tint = Color.cyan;
+    public Transform SocketRoot => transform;
+    public IReadOnlyList<PixelSocket> Sockets => sockets;
+    public Color SocketTint => tint;
+    public bool TakeHuskOut(PixelSocket socket, out int tier, out double amount) => TakeOneForHose(out tier, out amount);
+    public int HuskRoom(PixelSocket socket) => HoseRoom;
+
+    /// <summary>A husk comes in through an In coupling: it is dropped onto the middle of the pad (the organizer binds / takes it like any husk lying there). Refused when full.</summary>
+    public bool AcceptHusk(PixelSocket socket, Rigidbody husk)
+    {
+        if (husk == null || HoseRoom <= 0) return false;
+        husk.isKinematic = false;
+        husk.position = transform.TransformPoint(new Vector3(0f, wallHeight + 0.4f, 0f));
+        PixelHuskHolder.SetVelocity(husk, Vector3.down * 1.2f);
+        return true;
     }
 
     private static float Speed(Rigidbody body)

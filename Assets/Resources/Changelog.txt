@@ -1304,3 +1304,4 @@
 [2026-10-17 13:07 UTC] Couplings step 2 (Trash Can): the Trash Can now takes belts, connectors and hoses through two In sockets (front / back); its old belt intake is gone.
 [2026-10-17 13:08 UTC] Couplings step 2 (Splitter): the Splitter's entry and three sides are now sockets with couplings built in (their arrows show in / out); it hands husks out through them, and its own belt-finding code is gone.
 [2026-10-17 13:09 UTC] Couplings step 2 (Conveyor Elevator): its entry and top are now sockets with couplings built in; belts snap to the top coupling and it puts husks out through it, and its own belt-finding code is gone.
+[2026-10-17 13:11 UTC] Couplings step 2 (Container Hose): hose ends now snap to couplings - start on an Out coupling of a Storage Crate or Quantum Organizer, end on any In coupling; the target's one husk hook takes what arrives; the Quantum Organizer got a side socket (In or Out).
