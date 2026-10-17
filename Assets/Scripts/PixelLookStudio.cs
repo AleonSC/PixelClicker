@@ -437,7 +437,7 @@ public class PixelLookStudio : MonoBehaviour
                 r.s = ss; r.v = vv;
                 foreach (Action a in childShows) a();
             };
-            swatch.onClick.AddListener(() => { r.expanded = !r.expanded; PixelAudio.Play("ui_click"); Layout(); });
+            swatch.onClick.AddListener(() => { r.expanded = !r.expanded; Layout(); });
             hex.onEndEdit.AddListener(text =>
             {
                 string h = text.Trim();

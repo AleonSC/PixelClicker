@@ -49,13 +49,8 @@ public partial class PixelSkills
     /// <summary>A small code-drawn book after the skill's name in the detail panel (called once while the window is built).</summary>
     private void BuildGuideBook(Transform detail)
     {
-        GameObject go = new GameObject("Guide Book", typeof(RectTransform), typeof(Image), typeof(Button));
-        go.transform.SetParent(detail, false);
-        Image back = go.GetComponent<Image>();
-        back.color = new Color(0.25f, 0.3f, 0.45f, 1f);
-        PixelUIKit.StyleButton(back);
-        guideBookButton = go.GetComponent<Button>();
-        guideBookButton.targetGraphic = back;
+        guideBookButton = PixelUIKit.CreateButton(Font, detail, "Guide Book", "", new Vector2(48f, 42f), new Color(0.25f, 0.3f, 0.45f, 1f), Color.white, 20f);
+        GameObject go = guideBookButton.gameObject;
         RectTransform r = go.GetComponent<RectTransform>();
         r.anchorMin = r.anchorMax = new Vector2(0f, 1f);
         r.pivot = new Vector2(0f, 0.5f);
@@ -70,7 +65,7 @@ public partial class PixelSkills
             Part(go.transform, new Vector2(9f, 1.5f), new Vector2(-7.5f, 6f - i * 5f), new Color(0.55f, 0.5f, 0.45f, 1f));
             Part(go.transform, new Vector2(9f, 1.5f), new Vector2(7.5f, 6f - i * 5f), new Color(0.55f, 0.5f, 0.45f, 1f));
         }
-        guideBookButton.onClick.AddListener(() => { PixelAudio.Play("ui_click"); CloseGuideAsk(); StartWoodGuide(); });
+        guideBookButton.onClick.AddListener(() => { CloseGuideAsk(); StartWoodGuide(); });
         go.SetActive(false);
     }
 
@@ -147,12 +142,12 @@ public partial class PixelSkills
         RectTransform yr = yes.GetComponent<RectTransform>();
         yr.anchorMin = yr.anchorMax = yr.pivot = new Vector2(0.5f, 0f);
         yr.anchoredPosition = new Vector2(-135f, 24f);
-        yes.onClick.AddListener(() => { PixelAudio.Play("ui_click"); CloseGuideAsk(); StartWoodGuide(); });
+        yes.onClick.AddListener(() => { CloseGuideAsk(); StartWoodGuide(); });
         Button no = PixelUIKit.CreateButton(Font, box.transform, "No", "No thanks", new Vector2(240f, 64f), new Color(0.35f, 0.35f, 0.42f, 1f), Color.white, 26f);
         RectTransform nr = no.GetComponent<RectTransform>();
         nr.anchorMin = nr.anchorMax = nr.pivot = new Vector2(0.5f, 0f);
         nr.anchoredPosition = new Vector2(135f, 24f);
-        no.onClick.AddListener(() => { PixelAudio.Play("ui_click"); CloseGuideAsk(); PointAtGuideBook(); });
+        no.onClick.AddListener(() => { CloseGuideAsk(); PointAtGuideBook(); });
         PixelAudio.Play("ui_click");
     }
 

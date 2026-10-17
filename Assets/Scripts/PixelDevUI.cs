@@ -36,7 +36,7 @@ public static class PixelDevUI
     {
         Button b = PixelUIKit.CreateButton(Font, parent, label, label, new Vector2(w, h), color, TextColor, size);
         PlaceTL(b.GetComponent<RectTransform>(), x, y, w, h);
-        if (onClick != null) b.onClick.AddListener(() => { PixelAudio.Play("ui_click"); onClick(); });
+        if (onClick != null) b.onClick.AddListener(() => onClick());
         return b;
     }
 

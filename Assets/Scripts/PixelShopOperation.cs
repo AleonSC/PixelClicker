@@ -98,6 +98,7 @@ public partial class PixelShop
         public Transform pivot;
         public Camera cam;
         public RenderTexture rt;
+        public float lastDrawn = -1f;   // (for the shared redraw limit, PixelTierPicture.Due)
     }
 
     private OperationRow[] operationRows;
@@ -318,6 +319,7 @@ public partial class PixelShop
             OperationStudio st = operationStudios[i];
             if (st == null || st.rt == null) continue;
             if (o.icon.texture != st.rt) o.icon.texture = st.rt;
+            if (!PixelTierPicture.Due(ref st.lastDrawn)) continue;
             st.pivot.localRotation = Quaternion.Euler(0f, Time.unscaledTime * 45f + i * 40f, 0f);
             st.cam.Render();
         }
