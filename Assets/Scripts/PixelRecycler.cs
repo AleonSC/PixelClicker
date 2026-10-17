@@ -55,7 +55,7 @@ using System.Text;
 using TMPro;
 using UnityEngine;
 
-public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom
+public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, IPixelStrayTarget
 {
     [Tooltip("How many husks fit in the bin before it has to be closed.")]
     [SerializeField] private int capacity = 10;

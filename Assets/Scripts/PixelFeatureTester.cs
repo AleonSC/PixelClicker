@@ -171,13 +171,6 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].groundPlane = true;
         features[features.Count - 1].export = PixelBeltSorter.ExportState;
         features[features.Count - 1].import = PixelBeltSorter.ImportState;
-        Register("Tiny Robot",
-                 "A little hover robot (to become an Electrician consumable). Pick a SPOT ON A CONVEYOR BELT (the ghost snaps to the belt under the mouse; a click off the belts does nothing). For a minute it keeps fetching the nearest loose old pixel to that spot, flies it over and puts it down on the belt, where the belt carries it away. Pixels you grab are left alone.",
-                 c => PixelTinyRobot.CreateGhost(c), (c, p, yw) => PixelTinyRobot.Place(c, p, yw));
-        features[features.Count - 1].placeSnap = PixelTinyRobot.TrySnap;
-        features[features.Count - 1].groundPlane = true;
-        features[features.Count - 1].export = PixelTinyRobot.ExportState;
-        features[features.Count - 1].import = PixelTinyRobot.ImportState;
         Register("Conveyor Elevator",
                  "A tower that lifts pixels from the end of a belt to a higher belt. Bring the ghost near the end of a belt and it magnetizes to it (turned the belt's way). Click to fix the base, then move the mouse up or down to set the height and click again to confirm (right click goes back a step). Place a new belt starting at the top: its first point snaps to the tower's top. Pixels from the belt are lifted and come out of the top.",
                  c => PixelElevator.CreateGhost(c), (c, p, yw) => PixelElevator.Place(c, p, yw));

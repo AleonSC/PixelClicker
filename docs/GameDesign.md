@@ -265,7 +265,7 @@ streaks rarely happen. The **Sorting Hopper** is its partner: a choice, a little
   orange EJECT button throws everything in the tray out over the back; no floating text - hovering the flag shows a small card.
 - **Open:** whether the filter can also be set to "any pure", and the price after testing.
 
-### The Sweeper - an early stray-husk helper (Agreed 2026-10-17, not built)
+### The Sweeper - an early stray-husk helper (Agreed 2026-10-17, built 2026-10-17 - `PixelSweeper.cs`)
 A little wind-up clockwork cube with a broom: early automation for stray husks that is NOT tied to Electrician (no power needed).
 
 - **Only rescues strays:** it fetches husks that are close to fading (their last few seconds) and leaves the rest to the player, so it
@@ -282,6 +282,9 @@ A little wind-up clockwork cube with a broom: early automation for stray husks t
 - **Built from the Tiny Robot** (`PixelTinyRobot.cs`, tester: fetches loose husks onto a belt): same fetching code, new target (a
   container instead of a belt), wind-up instead of electric - not a fourth separate husk fetcher. Its own job next to the Magnet
   (gathers a heap) and the UFO Helper (late-game cleanup into the Bank).
+- **As built:** Standard 5, 400 White; range 12 husk widths from its pad, 'close to fading' = 4 s or less left, 60 s per wind (slows over the
+  last 12 s); the nearest container is measured from where the husk was picked up; no carry handles (it roams from its pad: remove and place it
+  again to move it). Open: the Standard range / speed upgrades and the Electrician motor (`motorFitted` is the hook).
 
 ### Mid game - skills and machines (Built, growing)
 Gathering skills (Woodcutting, Foraging, Fishing, Mining, Farming, Electrician), each with filler, hazards, specials, perks and a
