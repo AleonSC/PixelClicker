@@ -81,3 +81,4 @@
 [ ] Dev Hub: performance overlay - a small frame-time graph plus husk / physics object counts and garbage made per frame, to spot features that slow the game
 [ ] Dev Hub: game speed buttons (x0.25 / x1 / x4 / x10) on the Main tab to test timers, Recyclers and visitors without waiting
 [ ] Look Studio: compare view - the old look and the new one side by side before saving
+[ ] Husk pooling: first a 'husk released' signal that every system keeping husk lists listens to (~30: conveyors, Recycler, Bank, crates, links, PixelHuskQuery...), then reuse husk objects instead of Destroy / new (only worth it if a profile shows husk spawning costs real time; see docs/systems/OptimizationReview2.md B1)
