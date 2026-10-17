@@ -197,6 +197,8 @@ One line per script / system: what it is and where its details are. Search it (`
 | `PixelButtonPulse.cs` | Button pulse: every shop button (the shop's own CreateButton adds PixelButtonPulse) sends a clean neon outline out from under it when pressed - a thin glowing ring (a code-drawn 9-sliced rounded-recta | in the header comment of `PixelButtonPulse.cs` |
 | `PixelShopPictures.cs` | Part of partial class PixelShop: rotating 3D pictures on shop rows/cards (AddRowPicture, AddPackPicture, Consumables tiles / buy bar; | in the header comment of `PixelShopPictures.cs` |
 | `PixelShopConsumables.cs` | Third-and-a-half part of partial class PixelShop: | in the header comment of `PixelShopConsumables.cs` |
+| `PixelShopTilePage.cs` | Part of partial class PixelShop: the shared tile-page layout (category chips, tile grid, one buy bar) used by the Pixels and Consumables tabs. | in the header comment of `PixelShopTilePage.cs` |
+| `PixelShopPixels.cs` | Part of partial class PixelShop: the Pixels tab as a tile page (Toggleables / Skill packs chips). | in the header comment of `PixelShopPixels.cs` |
 | `PixelAutoClicker.cs` | Timer that calls clicker.AutoCollect() (paused while a takeover minigame runs or the cube is shrunk away: | in the header comment of `PixelAutoClicker.cs` |
 | `PixelAchievements.cs` | Modular achievements: Inspector list of Achievement (id, title, description, Kind, pixelType, target). | in the header comment of `PixelAchievements.cs` |
 | `PixelCubeIcon.cs` | UI MaskableGraphic drawing a tiny spinning shaded 3D cube (no camera/render texture) - achievement icons. | in the header comment of `PixelCubeIcon.cs` |
