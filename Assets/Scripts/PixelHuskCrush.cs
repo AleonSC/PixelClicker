@@ -17,7 +17,8 @@
 //     cleanBreakSeconds of their lived time back (OldPixelDespawn.GiveBackTime); 'hardhands' Hard Hands (level 9): crush XP x hardHandsFactor (1.6 =
 //     40% of a click).
 //   - First-time tip 'husk_crush' (PixelHints) once tipAfterClicks manual clicks were made and a crushable husk lies about (not during the intro).
-//   Stats: husk.crushed, husk.crushed.xp. Nothing saved.
+//   Stats: husk.crushed, husk.crushed.xp (the base XP handed to AddHuskXp, before XP multipliers), husk.crushed.chain (the extra ones Chain Crush
+//   broke), husk.crushed.<skill id> / husk.crushed.xp.<skill id> (per skill); the session recorder reports them. Nothing saved.
 // ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
@@ -95,7 +96,8 @@ public class PixelHuskCrush : MonoBehaviour
     [Tooltip("The first-time tip 'Right-click a husk to crush it' shows after this many manual clicks, once a husk lies on the floor.")]
     [SerializeField] private int tipAfterClicks = 12;
 
-    private const string ChainNode = "chaincrush", CleanNode = "cleanbreak", HardNode = "hardhands";
+    // (public: the session recorder marks when each one is bought)
+    public const string ChainNode = "chaincrush", CleanNode = "cleanbreak", HardNode = "hardhands";
 
     private static PixelHuskCrush instance;
     private PixelClicker clicker;
@@ -169,7 +171,7 @@ public class PixelHuskCrush : MonoBehaviour
         int tier = PixelHuskQuery.Get(body).Tier;
         if (PixelSkills.HasStandardNode(ChainNode)) CollectChain(body, tier);
         else chain.Clear();
-        CrushOne(body, tier, shardCount, 1f);
+        CrushOne(body, tier, shardCount, 1f, false);
         if (chain.Count > 0) StartCoroutine(CrushChain(tier, new List<Rigidbody>(chain)));
         chain.Clear();
     }
@@ -203,12 +205,12 @@ public class PixelHuskCrush : MonoBehaviour
         {
             if (step > 0f) yield return new WaitForSeconds(step);
             Rigidbody b = bodies[i];
-            if (CanCrush(clicker, b)) CrushOne(b, tier, chainShardCount, 0.92f);   // (taken by a machine, picked up or faded meanwhile: skipped)
+            if (CanCrush(clicker, b)) CrushOne(b, tier, chainShardCount, 0.92f, true);   // (taken by a machine, picked up or faded meanwhile: skipped)
         }
     }
 
     /// <summary>One husk: XP to its skill, Clean Break round it, chunks and a crunch; the husk is gone.</summary>
-    private void CrushOne(Rigidbody body, int tier, int shards, float pitchScale)
+    private void CrushOne(Rigidbody body, int tier, int shards, float pitchScale, bool chained)
     {
         Vector3 at = body.position;
         clicker.ReleaseOldPixel(body, false);   // (never pays: husks are not currency)
@@ -222,10 +224,14 @@ public class PixelHuskCrush : MonoBehaviour
         {
             xp = skills.ClickXpOf(tier) * Mathf.Max(0f, xpShare) * (PixelSkills.HasStandardNode(HardNode) ? Mathf.Max(1f, hardHandsFactor) : 1f);
             skills.AddHuskXp(tier, xp, true);
+            string skillId = skills.HuskSkillId(tier);
+            PixelStats.Count("husk.crushed." + skillId);
+            PixelStats.Count("husk.crushed.xp." + skillId, xp);
         }
         if (PixelSkills.HasStandardNode(CleanNode)) CleanBreak(at);
         PixelStats.Count("husk.crushed");
         PixelStats.Count("husk.crushed.xp", xp);
+        if (chained) PixelStats.Count("husk.crushed.chain");
     }
 
     /// <summary>Clean Break: the husks lying round a crush get some of their lived time back.</summary>

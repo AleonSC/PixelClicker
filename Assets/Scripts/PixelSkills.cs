@@ -1272,6 +1272,13 @@ public partial class PixelSkills : MonoBehaviour
     /// <summary>The XP one manual click on this block gives its skill before multipliers: 1 for a skill's block, Standard's flat XP per block for a pure one (Husk Crush pays a share of it).</summary>
     public double ClickXpOf(int tierIndex) => PackForTier(tierIndex) != null ? 1d : StandardXpPerBlock;
 
+    /// <summary>The id of the skill a husk of this tier trains (its pack's, or Standard for the pure pixels) - the skill AddHuskXp pays.</summary>
+    public string HuskSkillId(int tierIndex)
+    {
+        SkillPack pack = PackForTier(tierIndex);
+        return pack != null ? pack.id : StandardId;
+    }
+
     /// <summary>The name of the skill a husk of this type trains (its pack's, or Standard for the pure pixels).</summary>
     public string HuskSkillName(PixelClicker.PixelType type)
     {

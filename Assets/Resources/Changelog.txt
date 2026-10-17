@@ -1317,3 +1317,4 @@
 [2026-10-17 13:49 UTC] Design + to-do: Charge Crush (hold right on a husk to charge an arc that crushes every same-type husk in a growing ring, the step above Chain Crush) and the Sweeper (a wind-up helper made from the Tiny Robot that rescues fading husks into the nearest container).
 [2026-10-17 13:49 UTC] Shop: the Coupling (30 White) and Container Hose (120 White) are now shop items - right-click one to place them, one is used up per coupling fitted or hose laid - and Utilities now starts with Recycler, Sorting Hopper, Coupling, Container Hose.
 [2026-10-17 13:52 UTC] Added a pinned 'Gameplay Logs' session to the project notes for analysing session recorder reports.
+[2026-10-17 13:56 UTC] Session recorder now reports Husk Crush: crushes and crush XP per minute (also in the CSV), by hand vs Chain Crush, per skill, the share of husks crushed and of the skill's XP, plus the first crush and the three crush nodes on the timeline.

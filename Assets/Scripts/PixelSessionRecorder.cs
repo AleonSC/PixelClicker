@@ -11,7 +11,9 @@
 //   best 10 s), blocks broken, income per pixel type per minute, Standard and training-skill XP per minute, a TIMELINE of milestones found by
 //   polling once a second (pixel types unlocked, shop packs bought / levelled, skill level-ups, Cubie's visits, the shop window first opened),
 //   Block Hold and stakes (hold.count, stake.placed, stake.won / lost), husk counts (blocks broken = husks dropped; despawned unused 'old.despawned', removed by the floor cap 'old.capped', grabbed, vacuumed, recycled, shredded, banked - PixelStats
-//   counters), and the state at the start and end.
+//   counters), HUSK CRUSH (right-click a husk, PixelHuskCrush: crushes and base crush XP per minute, by hand vs Chain Crush, per skill, the share
+//   of dropped husks crushed and of Standard XP that came from crushing; the first crush and the Chain Crush / Clean Break / Hard Hands nodes go on
+//   the timeline), and the state at the start and end.
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -63,11 +65,18 @@ public class PixelSessionRecorder : MonoBehaviour
     {
         public long manual, auto, blocks;
         public double standardXp, skillXp;
+        public long crushes;    // husks crushed by right click (Chain Crush's extra ones included)
+        public double crushXp;  // their base XP (before XP multipliers)
         public readonly Dictionary<int, double> income = new Dictionary<int, double>();
     }
 
     private static readonly string[] HuskKeys =
         { "old.despawned", "old.capped", "old.grabbed", "old.vacuumed", "recycler.husks", "recycler.paid", "recycler.xp", "old.shredded", "old.shattered", "old.banked", "old.attached" };
+
+    // Husk Crush (PixelHuskCrush): the Standard tree nodes that change it, shown on the timeline when bought
+    private static readonly string[] CrushNodes = { PixelHuskCrush.ChainNode, PixelHuskCrush.CleanNode, PixelHuskCrush.HardNode };
+    private static readonly string[] CrushNodeNames = { "Chain Crush", "Clean Break", "Hard Hands" };
+    private static readonly string[] CrushKeys = { "husk.crushed", "husk.crushed.chain", "husk.crushed.xp" };
 
     private static readonly string[] HoldKeys = { "hold.count", "stake.placed", "stake.won", "stake.lost", "power.clicks" };
 
@@ -93,6 +102,8 @@ public class PixelSessionRecorder : MonoBehaviour
     private long lastManual, lastAuto;
     private bool clicksSeeded;   // (the stats component may not exist yet when recording starts at load: the first sample only sets the baseline)
     private double lastStandardXp, lastSkillXp;
+    private double lastCrushed, lastCrushXp;   // Husk Crush stat totals at the last sample (seeded with the click counters)
+    private bool crushedOnce;                   // the first crush this session is on the timeline
     private int blocksThisSecond;
     private readonly List<Minute> minutes = new List<Minute>();
     private readonly List<string> timeline = new List<string>();
@@ -147,6 +158,7 @@ public class PixelSessionRecorder : MonoBehaviour
     private bool[] packOwned;
     private int[] packLevel;
     private readonly Dictionary<string, int> skillLevel = new Dictionary<string, int>();
+    private bool[] crushNodeOwned;
     private bool cubieWasVisiting, shopOpenedOnce;
     private int cubieVisits;
 
@@ -258,6 +270,7 @@ public class PixelSessionRecorder : MonoBehaviour
         minutes.Clear(); timeline.Clear(); gifts.Clear(); skillRuns.Clear(); lastTrainingId = TrainingIdNow(); lastSeconds.Clear(); totalIncome.Clear(); statsAtStart.Clear(); skillLevel.Clear();
         bestWindowClicks = 0; totalBlocks = 0; blocksThisSecond = 0; cubieVisits = 0;
         shopOpenedOnce = false;
+        crushedOnce = false;
         cubieWasVisiting = PixelGuideVendor.Visiting;
 
         PixelStats stats = PixelFind.Cached<PixelStats>();
@@ -267,6 +280,11 @@ public class PixelSessionRecorder : MonoBehaviour
         foreach (string k in HuskKeys) statsAtStart[k] = PixelStats.Total(k);
         foreach (string k in HoldKeys) statsAtStart[k] = PixelStats.Total(k);
         foreach (string k in WoodKeys) statsAtStart[k] = PixelStats.Total(k);
+        foreach (string k in CrushKeys) statsAtStart[k] = PixelStats.Total(k);
+        PixelSkills skillsNow = PixelSkills.Instance;
+        if (skillsNow != null)
+            foreach (PixelSkills.SkillPack p in skillsNow.Packs)
+                if (p != null) { statsAtStart["husk.crushed." + p.id] = PixelStats.Total("husk.crushed." + p.id); statsAtStart["husk.crushed.xp." + p.id] = PixelStats.Total("husk.crushed.xp." + p.id); }
         lastStandardXp = SkillXp(PixelSkills.StandardId);
         lastSkillXp = TrainingXp();
         SnapshotPolledState();
@@ -369,7 +387,12 @@ public class PixelSessionRecorder : MonoBehaviour
         if (stats != null)
         {
             long manual = stats.ManualClicks, auto = stats.AutoClicks;
-            if (!clicksSeeded) { clicksSeeded = true; lastManual = manual; lastAuto = auto; }
+            double crushed = PixelStats.Total("husk.crushed"), crushXp = PixelStats.Total("husk.crushed.xp");
+            if (!clicksSeeded) { clicksSeeded = true; lastManual = manual; lastAuto = auto; lastCrushed = crushed; lastCrushXp = crushXp; }
+            long dc = (long)Math.Max(0d, crushed - lastCrushed);
+            m.crushes += dc; m.crushXp += Math.Max(0d, crushXp - lastCrushXp);
+            lastCrushed = crushed; lastCrushXp = crushXp;
+            if (dc > 0 && !crushedOnce) { crushedOnce = true; Mark("First husk crushed (right click)"); }
             long dm = Math.Max(0, manual - lastManual), da = Math.Max(0, auto - lastAuto);
             lastManual = manual; lastAuto = auto;
             m.manual += dm; m.auto += da;
@@ -404,6 +427,8 @@ public class PixelSessionRecorder : MonoBehaviour
         for (int i = 0; i < n; i++) { packOwned[i] = shop.GetPackPurchased(i); packLevel[i] = shop.GetPackLevel(i); }
         PixelSkills skills = PixelSkills.Instance;
         if (skills != null) foreach (PixelSkills.SkillPack p in skills.Packs) if (p != null) skillLevel[p.id] = skills.LevelOf(p);
+        crushNodeOwned = new bool[CrushNodes.Length];
+        for (int i = 0; i < CrushNodes.Length; i++) crushNodeOwned[i] = PixelSkills.HasStandardNode(CrushNodes[i]);
     }
 
     private void PollMilestones()
@@ -441,6 +466,13 @@ public class PixelSessionRecorder : MonoBehaviour
                 if (was > 0 && level > was) Mark(p.displayName + " level " + level);
                 skillLevel[p.id] = level;
             }
+
+        for (int i = 0; i < CrushNodes.Length; i++)
+        {
+            bool owned = PixelSkills.HasStandardNode(CrushNodes[i]);
+            if (owned && !crushNodeOwned[i]) Mark("Standard tree: " + CrushNodeNames[i] + " (Husk Crush)");
+            crushNodeOwned[i] = owned;
+        }
 
         bool visiting = PixelGuideVendor.Visiting;
         if (visiting && !cubieWasVisiting) { cubieVisits++; Mark("Cubie arrived (visit " + cubieVisits + " this session)"); }
@@ -511,8 +543,11 @@ public class PixelSessionRecorder : MonoBehaviour
             double now = PixelStats.Total(k) - was;
             sb.AppendLine("  " + HuskLabel(k) + ": " + (k == "recycler.paid" || k == "recycler.xp" ? PixelClicker.FormatNumber(now) : now.ToString("F0")));
         }
+        sb.AppendLine("  Crushed by right click (Husk Crush, details below): " + Since("husk.crushed").ToString("F0"));
         sb.AppendLine("  Longest Recycler streak (this save): " + PixelStats.Total("recycler.streak").ToString("F0"));
         sb.AppendLine();
+
+        AppendHuskCrush(sb, minutesPlayed, stdXp);
 
         sb.AppendLine("== BLOCK HOLD, STAKES AND POWER CLICKS ==");
         foreach (string k in HoldKeys)
@@ -526,13 +561,13 @@ public class PixelSessionRecorder : MonoBehaviour
         AppendSkillTraining(sb);
 
         sb.AppendLine("== PER MINUTE (CSV) ==");
-        sb.AppendLine("minute,manual_clicks,auto_clicks,blocks,standard_xp,skill_xp,income (type=amount; ...)");
+        sb.AppendLine("minute,manual_clicks,auto_clicks,blocks,standard_xp,skill_xp,husks_crushed,crush_xp,income (type=amount; ...)");
         for (int i = 0; i < minutes.Count; i++)
         {
             Minute m = minutes[i];
             var inc = new StringBuilder();
             foreach (KeyValuePair<int, double> kv in Sorted(m.income)) { if (inc.Length > 0) inc.Append("; "); inc.Append(TierName(kv.Key) + "=" + kv.Value.ToString("0.##")); }
-            sb.AppendLine((i + 1) + "," + m.manual + "," + m.auto + "," + m.blocks + "," + m.standardXp.ToString("0.#") + "," + m.skillXp.ToString("0.#") + ",\"" + inc + "\"");
+            sb.AppendLine((i + 1) + "," + m.manual + "," + m.auto + "," + m.blocks + "," + m.standardXp.ToString("0.#") + "," + m.skillXp.ToString("0.#") + "," + m.crushes + "," + m.crushXp.ToString("0.##") + ",\"" + inc + "\"");
         }
         sb.AppendLine();
 
@@ -541,6 +576,46 @@ public class PixelSessionRecorder : MonoBehaviour
         sb.AppendLine("== STATE NOW ==");
         sb.AppendLine(StateText());
         return sb.ToString();
+    }
+
+    /// <summary>How much a PixelStats counter rose since the recording started.</summary>
+    private double Since(string key)
+    {
+        statsAtStart.TryGetValue(key, out double was);
+        return PixelStats.Total(key) - was;
+    }
+
+    /// <summary>Husk Crush (right-click a husk on the floor for a little XP, PixelHuskCrush): how much the player used it and what it paid.</summary>
+    private void AppendHuskCrush(StringBuilder sb, float minutesPlayed, double stdXp)
+    {
+        double crushed = Since("husk.crushed"), chained = Since("husk.crushed.chain"), xp = Since("husk.crushed.xp");
+        sb.AppendLine("== HUSK CRUSH (right-click a husk) ==");
+        sb.AppendLine("Husks crushed: " + crushed.ToString("F0") + "  (" + (crushed / minutesPlayed).ToString("F1") + " per minute; " +
+                      (totalBlocks > 0 ? (100d * crushed / totalBlocks).ToString("F0") : "0") + "% of the husks dropped)");
+        sb.AppendLine("  by hand: " + (crushed - chained).ToString("F0") + ", extra ones broken by Chain Crush: " + chained.ToString("F0"));
+        long best = 0; int bestMinute = 0, minutesUsed = 0;
+        for (int i = 0; i < minutes.Count; i++)
+        {
+            if (minutes[i].crushes > 0) minutesUsed++;
+            if (minutes[i].crushes > best) { best = minutes[i].crushes; bestMinute = i + 1; }
+        }
+        sb.AppendLine("  Used in " + minutesUsed + " of " + minutes.Count + " minutes" + (best > 0 ? "; most in one minute: " + best + " (minute " + bestMinute + ")" : ""));
+        sb.AppendLine("Crush XP (base, before XP multipliers): " + xp.ToString("F1") + "  (" + (xp / minutesPlayed).ToString("F2") + " per minute)");
+        PixelSkills skills = PixelSkills.Instance;
+        if (skills != null)
+            foreach (PixelSkills.SkillPack p in skills.Packs)
+            {
+                if (p == null) continue;
+                double n = Since("husk.crushed." + p.id), px = Since("husk.crushed.xp." + p.id);
+                if (n <= 0d) continue;
+                double whole = p.id == PixelSkills.StandardId ? stdXp : (skillRuns.TryGetValue(p.id, out SkillRun run) ? run.xp : 0d);   // (a skill's XP is only counted while it is trained)
+                sb.AppendLine("  " + p.displayName + ": " + n.ToString("F0") + " crushed, " + px.ToString("F1") + " XP" +
+                              (whole > 0d ? "  (~" + (100d * px / whole).ToString("F0") + "% of that skill's XP this session)" : ""));
+            }
+        var nodes = new List<string>();
+        for (int i = 0; i < CrushNodes.Length; i++) if (PixelSkills.HasStandardNode(CrushNodes[i])) nodes.Add(CrushNodeNames[i]);
+        sb.AppendLine("Crush nodes owned now (Standard tree): " + (nodes.Count > 0 ? string.Join(", ", nodes) : "none"));
+        sb.AppendLine();
     }
 
     private string StateText()
@@ -600,7 +675,7 @@ public class PixelSessionRecorder : MonoBehaviour
                 sb.AppendLine("    " + TierName(t.Key) + ": " + t.Value + "  (" + (100d * t.Value / Math.Max(1L, r.blocks)).ToString("F1") + "%)");
             if (kv.Key == PixelSkills.WoodcuttingId)
             {
-                double D(string k) { statsAtStart.TryGetValue(k, out double was); return PixelStats.Total(k) - was; }
+                double D(string k) => Since(k);
                 sb.AppendLine("  Trees started: " + D("woodcutting.trees_started").ToString("F0") + ", felled (Timber!): " + D("woodcutting.trees_felled").ToString("F0") +
                               ", infested: " + D("woodcutting.trees_infested").ToString("F0") + ", Timber XP: " + PixelClicker.FormatNumber(D("woodcutting.timber_xp")));
                 sb.AppendLine("  Hazards set off: " + D("hazards.triggered").ToString("F0") + ", cleared with right click: " + D("hazards.defused").ToString("F0") + "  (all skills)");
