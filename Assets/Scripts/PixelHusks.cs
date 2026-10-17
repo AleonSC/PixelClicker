@@ -1,7 +1,7 @@
 // ---- System notes ----
 // PixelHusks.cs
 //   Small helper components that ride on HUSKS (the pixels that drop off the cube; code calls them old pixels), split out of PixelClicker.cs:
-//   ScaledGravity (gravity scale per body), OldPixelImpact (landing sound / pulse), OldPixelPopIn (pop-in animation), OldPixelFlight
+//   ScaledGravity (gravity scale per body; skips sleeping husks so heaps can sleep - see docs/systems/PixelRules.md 'Husks settle'), OldPixelImpact (landing sound / pulse), OldPixelPopIn (pop-in animation), OldPixelFlight
 //   (fly-away marker), OldPixelDespawn (lifetime, swell-and-shrink despawn, Frozen / HoldAll for black holes and takeovers),
 //   OldPixelInfo (what tier a husk is, its amount, held-by-player tag). PixelClicker adds them in SpawnFallingCopy.
 //   ScaledGravity, OldPixelImpact, OldPixelPopIn and OldPixelDespawn have no Update / FixedUpdate of their own: they register with PixelHuskTicker
@@ -34,7 +34,9 @@ public class ScaledGravity : MonoBehaviour, IHuskTick
     /// <summary>Once per physics step (PixelHuskTicker).</summary>
     public void Tick()
     {
-        if (body != null && !body.isKinematic)
+        // A sleeping husk is left asleep: AddForce would wake it every step, so resting husks could never sleep and heaps kept fidgeting.
+        // Anything that touches it (another husk, a grab, Magnet, Fan, suction, its support taken away) wakes it and gravity resumes.
+        if (body != null && !body.isKinematic && !body.IsSleeping())
             body.AddForce(Physics.gravity * scale, ForceMode.Acceleration);
     }
 }

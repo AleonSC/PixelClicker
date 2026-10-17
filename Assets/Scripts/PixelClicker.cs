@@ -140,6 +140,7 @@ public partial class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
+    [SerializeField, HideInInspector] private int huskSettleVersion; // 1 = husks settle into heaps: bounce 0.3 -> 0.08, friction 0.5 -> 0.65, sleep threshold 0.03
     [SerializeField, HideInInspector] private int tierDataVersion; // 1 = Gray / Black unlock at 250 (was 100); 2 = Gray at 300 White, Black at 200 Gray
     [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission; 22 = Vacuum vortex marks + violet rim; 23 = RGB lost their rim, Gray rim darker; 24 = Black / Gray lost their rim, Obsidian rim darker; 25 = Fire + ore looks added; 26 = Treasure chest look added; 27 = Nuclear look added; 35 = Meteor / Solar looks; 36 = rocky pixels jagged, no outlines; 38 = Vacuum glass container; 39 = Ghost gel blob; 49 = RGB lost their faint emission, Mirror no longer leans on reflections / emission
 
@@ -526,12 +527,16 @@ public partial class PixelClicker : MonoBehaviour
     [SerializeField] private float gravityScale = 1f;
 
     [Range(0f, 1f)]
-    [Tooltip("Bounciness of old pixels (0 = no bounce, 1 = perfect bounce).")]
-    [SerializeField] private float bounciness = 0.3f;
+    [Tooltip("Bounciness of husks (0 = no bounce, 1 = perfect bounce). Low on purpose: a husk lands, maybe rolls or tips once, and stays put, so the floor fills with small heaps. Types whose look sets its own physics (Water, Sap, Leaf...) keep their own value.")]
+    [SerializeField] private float bounciness = 0.08f;
 
     [Range(0f, 1f)]
-    [Tooltip("Friction of old pixels.")]
-    [SerializeField] private float friction = 0.5f;
+    [Tooltip("Friction of husks (higher = they stop sooner and heaps hold their shape). Types whose look sets its own physics keep their own value.")]
+    [SerializeField] private float friction = 0.65f;
+
+    [Min(0f)]
+    [Tooltip("How still a husk must be before the physics lets it fall asleep (Rigidbody.sleepThreshold; Unity's default is 0.005). Higher = heaps go still sooner and cost nothing; too high and a slow-rolling husk freezes mid-roll. Anything that touches a sleeping husk wakes it.")]
+    [SerializeField] private float huskSleepThreshold = 0.03f;
 
     [Tooltip("Continuous collision stops fast pixels tunneling through thin floors. Costs slightly more.")]
     [SerializeField] private CollisionDetectionMode collisionDetection = CollisionDetectionMode.ContinuousDynamic;
@@ -926,6 +931,14 @@ public partial class PixelClicker : MonoBehaviour
                 else if (t.type == PixelType.Black) t.unlockThreshold = 200d;
             }
             tierDataVersion = 2;
+        }
+        if (huskSettleVersion < 1)
+        {
+            // Husks settle into small heaps (2026-10-17): less bounce, a little more grip, quick sleep. Only untouched old defaults are changed.
+            if (Mathf.Approximately(bounciness, 0.3f)) bounciness = 0.08f;
+            if (Mathf.Approximately(friction, 0.5f)) friction = 0.65f;
+            if (huskSleepThreshold <= 0f) huskSleepThreshold = 0.03f;
+            huskSettleVersion = 1;
         }
 
         if (pixelRenderer != null)

@@ -649,6 +649,7 @@ public partial class PixelClicker
         rb.mass = Mathf.Max(0.0001f, fallingCopyMass);
         rb.useGravity = false; // gravity applied by ScaledGravity so gravityScale works
         rb.collisionDetectionMode = collisionDetection;
+        if (huskSleepThreshold > 0f) rb.sleepThreshold = huskSleepThreshold;   // resting husks go still quickly (heaps cost nothing)
 #if UNITY_6000_0_OR_NEWER
         rb.linearDamping = fallingCopyDrag;
         rb.angularDamping = fallingCopyAngularDrag;

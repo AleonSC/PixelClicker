@@ -124,8 +124,8 @@ public class PixelGrab : MonoBehaviour
     [Tooltip("Random wobble added to the spin axis (0 = every throw rolls perfectly straight, 1 = quite wild). A little makes throws look natural.")]
     [SerializeField] private float spinWobble = 0.25f;
     [Range(0f, 1.5f)]
-    [Tooltip("Grip of a thrown husk for a moment after the throw (0 = slippery, 1 = rubbery). Husks are normally slippery against each other and the floor, so their corners never caught and spinning ones still slid; this lets the edges catch and tip it over. 0 = keep its normal grip.")]
-    [SerializeField] private float thrownGrip = 0.6f;
+    [Tooltip("Grip of a thrown husk for a moment after the throw (0 = slippery, 1 = rubbery), combined by Maximum so it wins against the floor. Keep it above the resting husk friction (PixelClicker friction 0.65) so corners catch and tip a thrown husk over instead of sliding. 0 = keep its normal grip.")]
+    [SerializeField] private float thrownGrip = 0.85f;
     [Min(0f)]
     [Tooltip("Seconds a thrown husk keeps that extra grip, then it goes back to its normal material (so piles and machines behave as before).")]
     [SerializeField] private float thrownGripSeconds = 2.5f;
@@ -202,6 +202,7 @@ public class PixelGrab : MonoBehaviour
     private void Awake()
     {
         instance = this;
+        if (Mathf.Approximately(thrownGrip, 0.6f)) thrownGrip = 0.85f;   // (2026-10-17) above the new resting husk friction 0.65, so a throw still grips harder than a heap
         grabbingActive = true;   // Pixel Grabbing is unlocked from the start now (it still has its switch in the Toggles window)
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (clicker == null)
