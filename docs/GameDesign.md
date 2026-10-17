@@ -225,12 +225,13 @@ minute. **Base crush is FREE** (not a tree node): RIGHT-CLICK a husk lying on th
 - **Crush bonuses (Agreed 2026-10-17 from the 10:50 session report, not built):** the report showed why crushing felt flat - a crush
   paid 0.25 XP while a recycled husk paid ~2.6 (Recycler streaks), and HALF of all husks were wasted (340 faded, 823 removed by the
   floor cap, of 2,357). Crushing's job: use the husks the Recycler misses. Numbers (C = a click's XP on that block):
-  plain crush **0.5 C** (was 0.25); **air crush** (husk crushed before it lands) **x3 = 1.5 C**; **last-gasp** (its last ~2 s, while it
-  flickers) **x2 = 1 C**; **crush streak** (crushes within 1 s of each other) **+10% each, capped at x2**. Top ~3 C per crush - still at or
-  under a recycled husk (~2.6 C + currency), so the Recycler stays the best home for a husk.
+  plain crush **0.5 C** (was 0.25); **air crush** (husk crushed before it lands) **x2 = 1 C**; **last-gasp** (its last ~2 s, while it
+  flickers) **x1.5 = 0.75 C**; **crush streak** (crushes within 1 s of each other) **+10% each, capped at x1.5**. **HARD CAP: a crush never
+  pays more than a click (1 C), whatever stacks** - no reward for swapping clicks for crushes (decided 2026-10-17: no 'swap bonus').
   - **No new UI:** a bonus REPLACES the usual XP popup with a short text - "Air crush bonus!", "Last-gasp bonus!", "Crush streak x1.4!".
-  - **Checks:** alternating click + air crush ~1.25 C per action vs 1 C clicking, but half the currency (an XP-or-currency choice); with
-    the Auto Clicker on, crushing what it drops + its clicks ~80% of clicking by hand (active stays best).
+  - **Checks:** alternating click + crush = the same XP as clicking only, for half the currency, so swapping never pays; crushing's
+    value is the husks the Recycler misses and the time the Auto Clicker runs (crushing what it drops + its clicks ~50% of clicking by
+    hand - active clicking stays best). The Recycler (~2.6 C + currency per husk) stays the best home for a husk.
   - **Knock-on:** in the same report Standard levelled ~2x faster than planned (level 4 at 8:21, plan ~20 min) because the Recycler's
     streak XP (2,620) out-earned clicking (2,357); better crushing adds more. Retune Standard's curve and/or how much Standard XP the
     Recycler gives together with this.
