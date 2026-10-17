@@ -4,9 +4,9 @@
 //   with two tyres, hubs, fenders, a hitch with a jack stand and coupler; an orange cutter housing with a hatch, bolts, a flywheel guard with a spinning pulley, warning stripes and a danger plate;
 //   a big tapered FEED HOPPER (double-sided walls, dark liner, yellow / black hazard rim) over two ribbed feed rollers; a discharge chute with a swivel hood; an engine with fins, valve cover, air
 //   filter, fuel tank, muffler and exhaust stack; a control panel with levers, a gauge and an e-stop; an amber beacon; reflectors. Build(true) makes the see-through placement ghost (no colliders).
-//   DISCHARGE ARROW + BELT LATCH: while placing, the ghost shows a flat arrow from the chute outwards (the chips shoot out along it). If the opening (start) of a conveyor belt lies in the
-//   arrow's area, the chipper latches on (PixelWoodChipper.TrySnapToBelt, used by PixelFeatureTester's placement snap): it turns so the arrow runs the way the belt runs and the chute sits just
-//   over the belt's opening; the arrow turns green. A placed chipper drops its Wood Chips blocks straight onto a belt opening in that area (BeltAtOutlet).
+//   DISCHARGE ARROW + CHUTE SOCKET: while placing, the ghost shows a flat arrow from the chute outwards (the chips shoot out along it). The 'chute' is an Out SOCKET (PixelSockets.cs) on the
+//   floor in front of the outlet: with an Out coupling there, the Wood Chips blocks go straight onto the belt that starts at it (PixelCouplings.Emit); otherwise they fly out along the arrow.
+//   (The old placing latch onto a belt opening is gone: fit a coupling and start the belt from it.)
 //   BEHAVIOUR (the placed machine): any old pixel inside the hopper (or just above its mouth, suction) is pulled to the rollers and SHREDDED: PixelClicker.ClaimOldPixel takes it out of the list
 //   (no payout), it is drawn through the rollers while it squashes, and a burst of pixel-coloured chips plus wood chips comes out of the chute. While it works the machine shakes, the rollers and
 //   flywheel speed up, the beacon blinks and the exhaust puffs more. Pixels you are holding are left alone.
@@ -20,7 +20,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelWoodChipper : MonoBehaviour
+public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice
 {
     // ------------------------------------------------------------------
     // Where things are, in the machine's own units (before the scale)
@@ -87,80 +87,15 @@ public class PixelWoodChipper : MonoBehaviour
 
     private static float ScaleFor(PixelClicker clicker) => clicker != null ? Mathf.Max(0.05f, clicker.PixelBaseSize) * 0.9f : 1f;
 
-    private const float ArrowLength = 2.6f;   // machine units: how far the discharge arrow reaches from the outlet (the area where a belt opening latches on)
+    private const float ArrowLength = 2.6f;   // machine units: how far the discharge arrow reaches from the outlet (where the chips land)
 
-    /// <summary>
-    /// While placing: if the opening (start) of a conveyor belt lies in the discharge arrow's area, the chipper latches on: it turns so the arrow points along the belt and moves so the outlet
-    /// sits just over the belt's opening. Returns true when latched (the snapped position / yaw are returned). Also tints the ghost's arrow green when latched.
-    /// </summary>
-    public static bool TrySnapToBelt(PixelClicker clicker, Vector3 point, float yaw, GameObject ghost, out Vector3 snappedPoint, out float snappedYaw)
-    {
-        snappedPoint = point; snappedYaw = yaw;
-        bool latched = false;
-        if (clicker != null)
-        {
-            float scale = ScaleFor(clicker);
-            Quaternion rot = Quaternion.Euler(0f, yaw, 0f);
-            Vector3 outlet = point + rot * Vector3.Scale(OutletLocal, new Vector3(scale, 0f, scale));
-            Vector3 dir = rot * Vector3.forward, right = rot * Vector3.right;
-            PixelConveyor best = null;
-            float bestAlong = float.MaxValue;
-            foreach (PixelConveyor belt in PixelConveyor.All)
-            {
-                if (belt == null || belt.IsGhost) continue;
-                Vector3 v = belt.StartPoint - outlet; v.y = 0f;
-                float along = Vector3.Dot(v, dir), lateral = Vector3.Dot(v, right);
-                if (along < -0.3f * scale || along > ArrowLength * scale || Mathf.Abs(lateral) > 1.1f * scale) continue;
-                if (Mathf.Abs(along) < bestAlong) { bestAlong = Mathf.Abs(along); best = belt; }
-            }
-            if (best != null)
-            {
-                Vector3 beltDir = best.Direction;
-                snappedYaw = Mathf.Atan2(beltDir.x, beltDir.z) * Mathf.Rad2Deg;   // the arrow (local +Z) runs the way the belt runs
-                Quaternion rot2 = Quaternion.Euler(0f, snappedYaw, 0f);
-                Vector3 outletTarget = best.StartPoint + beltDir * (0.6f * clicker.OldPixelWorldSize);
-                snappedPoint = outletTarget - rot2 * Vector3.Scale(OutletLocal, new Vector3(scale, 0f, scale));
-                snappedPoint.y = point.y;
-                latched = true;
-            }
-        }
-        TintArrow(ghost, latched);
-        return latched;
-    }
-
-    private static void TintArrow(GameObject ghost, bool latched)
-    {
-        if (ghost == null) return;
-        Transform arrow = ghost.transform.Find("Arrow");
-        if (arrow == null) return;
-        Color c = latched ? new Color(0.35f, 1f, 0.45f, 0.75f) : new Color(0.4f, 0.85f, 1f, 0.7f);
-        foreach (Renderer r in arrow.GetComponentsInChildren<Renderer>())
-        {
-            Material m = r.material;
-            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", c);
-            if (m.HasProperty("_Color")) m.SetColor("_Color", c);
-        }
-    }
-
-    /// <summary>The belt whose opening is in this chipper's discharge area right now (null = nothing to latch onto).</summary>
-    private PixelConveyor BeltAtOutlet()
-    {
-        Vector3 outlet = transform.TransformPoint(OutletLocal);
-        Vector3 dir = transform.TransformDirection(Vector3.forward); dir.y = 0f; dir.Normalize();
-        Vector3 right = Vector3.Cross(Vector3.up, dir);
-        float scale = transform.lossyScale.x;
-        PixelConveyor best = null;
-        float bestD = float.MaxValue;
-        foreach (PixelConveyor belt in PixelConveyor.All)
-        {
-            if (belt == null || belt.IsGhost) continue;
-            Vector3 v = belt.StartPoint - outlet; v.y = 0f;
-            float along = Vector3.Dot(v, dir), lateral = Vector3.Dot(v, right);
-            if (along < -0.8f * scale || along > ArrowLength * scale || Mathf.Abs(lateral) > 1.2f * scale) continue;
-            if (Mathf.Abs(along) < bestD) { bestD = Mathf.Abs(along); best = belt; }
-        }
-        return best;
-    }
+    // ---- Socket (PixelSockets.cs): the CHUTE, an Out socket on the floor in front of the outlet (where the discharge arrow points) ----
+    private PixelSocket[] sockets = new PixelSocket[0];
+    public Transform SocketRoot => transform;
+    public IReadOnlyList<PixelSocket> Sockets => sockets;
+    public Color SocketTint => new Color(1f, 0.55f, 0.15f, 1f);
+    public bool AcceptHusk(PixelSocket socket, Rigidbody husk) => false;   // (output only: things go in through the hopper)
+    private void OnDestroy() { PixelCouplings.Unregister(this); }
 
     // ---- saving (PixelFeatureTester) ----
 
@@ -405,18 +340,11 @@ public class PixelWoodChipper : MonoBehaviour
         int tier = clicker.EnsureWoodChipsTier();
         float s = transform.lossyScale.x;
         Vector3 pos = transform.TransformPoint(OutletLocal);
-        PixelConveyor belt = BeltAtOutlet();
-        if (belt != null)
-        {
-            // Latched to a belt: the block drops straight onto the belt's opening and rides away.
-            Vector3 over = belt.PointAt(0.6f * clicker.OldPixelWorldSize);
-            clicker.SpawnStoredPixel(tier, 1, new Vector3(over.x, pos.y, over.z), belt.Direction * belt.Speed * 0.5f);
-            PixelAudio.Play("drop", 1.1f, 0.6f);
-            return;
-        }
         Vector3 dir = (transform.TransformDirection(OutletDirLocal).normalized + Vector3.up * 0.25f + Random.insideUnitSphere * 0.15f).normalized;
+        int before = clicker.OldPixels.Count;
         clicker.SpawnStoredPixel(tier, 1, pos, dir * Random.Range(2.5f, 4f) * s);
-        PixelAudio.Play("drop", 0.5f, 1.2f);
+        bool onBelt = clicker.OldPixels.Count > before && PixelCouplings.Emit(this, "chute", clicker.OldPixels[clicker.OldPixels.Count - 1]);   // an Out coupling on the chute: straight onto its belt
+        PixelAudio.Play("drop", onBelt ? 1.1f : 0.5f, onBelt ? 0.6f : 1.2f);
     }
 
     /// <summary>A wood pixel went through: Woodcutting XP.</summary>
@@ -574,6 +502,8 @@ public class PixelWoodChipper : MonoBehaviour
         chipper.shake = sh; chipper.shakeHome = sh.localPosition;
         chipper.rollerA = rA; chipper.rollerB = rB; chipper.flywheel = fly; chipper.beaconLamp = lamp; chipper.beaconMat = beacon;
         chipper.scaleFactor = scale;
+        chipper.sockets = new[] { new PixelSocket("chute", new Vector3(OutletLocal.x, 0f, OutletLocal.z + 1.1f), Vector3.forward, PixelSocketFlow.Output) };
+        PixelCouplings.Register(chipper);
         chipper.MakeParticles(exhaustTop);
         chipper.health = chipper.maxHealth;
         chipper.BuildCondition(k);

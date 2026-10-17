@@ -126,9 +126,8 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].live = PixelCoupling.Removable;
 
         Register("Wood Chipper",
-                 "A detailed trailer-mounted wood chipper. Wood pixels dropped into its hopper (or lying close above it) are shredded for Woodcutting XP. Anything else damages it, and enough of that breaks it for good - Clear it and place a new one. Drag pixels in with Pixel Grabbing. While placing, an arrow shows where its chips shoot out; if a conveyor belt's opening is in the arrow's area the chipper latches onto it and its Wood Chips drop straight onto the belt.",
+                 "A detailed trailer-mounted wood chipper. Wood pixels dropped into its hopper (or lying close above it) are shredded for Woodcutting XP. Anything else damages it, and enough of that breaks it for good - Clear it and place a new one. Drag pixels in with Pixel Grabbing. While placing, an arrow shows where its chips shoot out. Fit a Coupling on its chute (in front of the outlet) and start a belt there: its Wood Chips then drop straight onto the belt.",
                  c => PixelWoodChipper.CreateGhost(c), (c, p, yw) => PixelWoodChipper.Place(c, p, yw));
-        features[features.Count - 1].placeSnap = PixelWoodChipper.TrySnapToBelt;
         features[features.Count - 1].export = PixelWoodChipper.ExportState;
         features[features.Count - 1].import = PixelWoodChipper.ImportState;
 

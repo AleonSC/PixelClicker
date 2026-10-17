@@ -86,6 +86,8 @@ public class PixelCoupling : MonoBehaviour
         go.transform.localPosition = s.localPosition;
         Vector3 f = s.localFacing; f.y = 0f;
         go.transform.localRotation = Quaternion.LookRotation(f.sqrMagnitude > 1e-6f ? f.normalized : Vector3.forward, Vector3.up);
+        float parentScale = d.SocketRoot.lossyScale.x;
+        if (parentScale > 0.2f) go.transform.localScale = Vector3.one / parentScale;   // the same size on every device (a scaled machine - the Wood Chipper, a bigger Recycler - does not blow it up)
         PixelCoupling c = go.AddComponent<PixelCoupling>();
         c.device = d;
         c.socket = s;

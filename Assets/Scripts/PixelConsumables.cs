@@ -2416,13 +2416,6 @@ public class PixelConsumables : MonoBehaviour
             preview.transform.rotation = Quaternion.Euler(0f, placingYaw, 0f);
         }
         chipperLatched = false;
-        if (hasPoint && devices[placingIndex].kind == DeviceKind.WoodChipper
-            && PixelWoodChipper.TrySnapToBelt(clicker, point, placingYaw, preview, out Vector3 latchPoint, out float latchYaw))
-        {
-            // The chipper's chute arrow found a conveyor belt opening: it latches on (turns and moves so the chute sits over the belt).
-            chipperLatched = true; chipperLatchPoint = latchPoint; chipperLatchYaw = latchYaw;
-            preview.transform.SetPositionAndRotation(latchPoint, Quaternion.Euler(0f, latchYaw, 0f));
-        }
 
         if (hasPoint && devices[placingIndex].kind == DeviceKind.Funnel)
         {
@@ -2563,7 +2556,7 @@ public class PixelConsumables : MonoBehaviour
     {
         int index = placingIndex;
         Device d = devices[index];
-        if (chipperLatched && (d.kind == DeviceKind.WoodChipper || d.kind == DeviceKind.Funnel || d.kind == DeviceKind.SortingHopper)) { point = chipperLatchPoint; placingYaw = chipperLatchYaw; }
+        if (chipperLatched && (d.kind == DeviceKind.Funnel || d.kind == DeviceKind.SortingHopper)) { point = chipperLatchPoint; placingYaw = chipperLatchYaw; }
         if (robotPicked != null)
         {
             Action<int, Vector3, float, float> picked = robotPicked;
