@@ -414,11 +414,13 @@ public class PixelLog : MonoBehaviour
         public Camera cam;
         public Transform model;
         public GameObject root;
+        public float lastDrawn = -1f;   // (for the shared redraw limit, PixelTierPicture.Due)
     }
 
     private readonly Dictionary<int, SkinStudio> skinStudios = new Dictionary<int, SkinStudio>();
     private readonly HashSet<int> skinRenderedThisFrame = new HashSet<int>();
     private const float SkinStudioHeight = -3500f;
+    private static readonly Vector3[] skinViewCorners = new Vector3[4], skinRowCorners = new Vector3[4];   // (reused every frame)
 
     /// <summary>Live picture of a pixel type with its real look (material, glow, extras). Each type has its own far-away studio; null if it can't be made.</summary>
     private Texture SkinIcon(int tier)
@@ -467,6 +469,7 @@ public class PixelLog : MonoBehaviour
 
     private void RenderSkin(SkinStudio st)
     {
+        if (!PixelTierPicture.Due(ref st.lastDrawn)) return;   // (at most 30 redraws a second)
         st.model.localRotation = Quaternion.Euler(25f, 0f, 0f) * Quaternion.Euler(0f, Time.unscaledTime * achievementIconSpin, 0f); // same pose as PixelCubeIcon
         st.cam.Render();
     }
@@ -477,7 +480,7 @@ public class PixelLog : MonoBehaviour
         if (goalRows.Count == 0 || goalsContent == null) return;
         RectTransform viewport = goalsContent.parent as RectTransform;
         if (viewport == null) return;
-        Vector3[] vc = new Vector3[4], rc = new Vector3[4];
+        Vector3[] vc = skinViewCorners, rc = skinRowCorners;
         viewport.GetWorldCorners(vc);
         skinRenderedThisFrame.Clear();
         foreach (GoalRow row in goalRows)
@@ -496,7 +499,7 @@ public class PixelLog : MonoBehaviour
         if (achievementRows.Count == 0 || achievementsContent == null) return;
         RectTransform viewport = achievementsContent.parent as RectTransform;
         if (viewport == null) return;
-        Vector3[] vc = new Vector3[4], rc = new Vector3[4];
+        Vector3[] vc = skinViewCorners, rc = skinRowCorners;
         viewport.GetWorldCorners(vc);
         skinRenderedThisFrame.Clear();
         for (int i = 0; i < achievementRows.Count; i++)

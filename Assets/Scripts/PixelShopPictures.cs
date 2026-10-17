@@ -47,6 +47,7 @@ public partial class PixelShop
         public Transform pivot;
         public Camera cam;
         public RenderTexture rt;
+        public float lastDrawn = -1f;   // (for the shared redraw limit, PixelTierPicture.Due)
     }
 
     private class PictureSlot
@@ -112,8 +113,17 @@ public partial class PixelShop
         if (info != null) info.GetComponent<RectTransform>().anchoredPosition += new Vector2(shift, 0f);
     }
 
+    // (the keys are asked for every frame for every picture on screen: built once per type instead of a new string each time)
+    private static readonly Dictionary<PixelClicker.PixelType, string> tierKeys = new Dictionary<PixelClicker.PixelType, string>();
+
     /// <summary>The picture key of a pixel type ("tier:Red"), or null.</summary>
-    private static string TierKey(PixelClicker.PixelType type) => "tier:" + type;
+    private static string TierKey(PixelClicker.PixelType type)
+    {
+        if (!tierKeys.TryGetValue(type, out string key)) { key = "tier:" + type; tierKeys[type] = key; }
+        return key;
+    }
+
+    private static readonly Vector3[] viewportCorners = new Vector3[4], slotCorners = new Vector3[4];
 
     /// <summary>A picture that shows the pixel types of a pack one after another.</summary>
     private Func<string> PackTierKey(int packIndex)
@@ -166,12 +176,12 @@ public partial class PixelShop
         float vMin = 0f, vMax = 0f;
         if (viewport != null)
         {
-            Vector3[] vc = new Vector3[4];
+            Vector3[] vc = viewportCorners;
             viewport.GetWorldCorners(vc);
             vMin = vc[0].y; vMax = vc[1].y;
         }
 
-        Vector3[] c = new Vector3[4];
+        Vector3[] c = slotCorners;
         foreach (PictureSlot s in pictureSlots)
         {
             if (s.frame == null || !s.rect.gameObject.activeInHierarchy) continue;
@@ -186,6 +196,7 @@ public partial class PixelShop
             if (pic == null || pic.rt == null) { if (s.image.enabled) s.image.enabled = false; continue; }
             if (!s.image.enabled) s.image.enabled = true;
             if (s.image.texture != pic.rt) s.image.texture = pic.rt;
+            if (!PixelTierPicture.Due(ref pic.lastDrawn)) continue;   // (at most 30 redraws a second, and once per frame when two rows show the same picture)
             pic.pivot.localRotation = Quaternion.Euler(0f, Time.unscaledTime * pictureSpinSpeed, 0f);
             pic.cam.Render();
         }

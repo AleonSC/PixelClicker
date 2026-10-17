@@ -5,6 +5,9 @@
 //   Rebuild(clicker, tier) builds the model again after its look changed (Look Studio); asking for a bigger resolution resizes the same texture in place.
 //   First user: the Next-up window (PixelNextUp). The Pixel Guide, the shop pictures, the Log skin studio and the shop operation studio each still have their own copy of this studio code:
 //   move them onto this helper when they are next touched (one place, one set of heights).
+//   Redraw limit: Render redraws a picture at most MaxFps times a second (and once per frame when two pictures show the same block). Each Render is a
+//   full camera pass, so redrawing every frame cost one extra pass per picture on screen. The other studios (shop pictures, shop Operation, Log icons)
+//   use the same limit through Due(ref lastDrawn). Rebuild makes the next Render draw at once.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -17,6 +20,23 @@ public static class PixelTierPicture
         public Transform model;
         public Camera cam;
         public RenderTexture rt;
+        public float lastDrawn = -1f;   // (Time.unscaledTime of the last redraw, for the redraw limit)
+    }
+
+    /// <summary>The most times a second a spinning picture is redrawn (each redraw is a whole camera pass; 30 still looks smooth for a slow turn).</summary>
+    public const float MaxFps = 30f;
+
+    /// <summary>
+    /// The shared redraw limit: true (and remembers the time) when a picture last drawn at 'lastDrawn' should be drawn again now.
+    /// Start 'lastDrawn' at -1 so the first call draws. Several pictures of the same thing in one frame: only the first one draws.
+    /// </summary>
+    public static bool Due(ref float lastDrawn)
+    {
+        float now = Time.unscaledTime;
+        // (the small margin: at 60 fps two frames are 'about' 1/30 s apart - without it every third frame would draw, i.e. 20 fps)
+        if (now >= lastDrawn && now - lastDrawn < 1f / MaxFps - 0.004f) return false;
+        lastDrawn = now;
+        return true;
     }
 
     private const float StudioHeight = -5200f;   // apart from the other studios (-3000 .. -4300)
@@ -85,12 +105,14 @@ public static class PixelTierPicture
         GameObject model = clicker.CreateDisplayPixel(tier, st.root.transform, 1f);
         if (model != null) model.transform.localPosition = Vector3.zero;
         st.model = model != null ? model.transform : null;
+        st.lastDrawn = -1f;   // (show the new look at the next Render, not up to a redraw later)
     }
 
-    /// <summary>Turns the model to 'yawDegrees' (with the usual forward tilt) and renders it.</summary>
+    /// <summary>Turns the model to 'yawDegrees' (with the usual forward tilt) and renders it - at most MaxFps times a second (see Due).</summary>
     public static void Render(int tier, float yawDegrees)
     {
         if (!studios.TryGetValue(tier, out Studio st) || st.rt == null || st.model == null || st.cam == null) return;
+        if (!Due(ref st.lastDrawn)) return;
         st.model.localRotation = Quaternion.Euler(25f, 0f, 0f) * Quaternion.Euler(0f, yawDegrees, 0f);
         st.cam.Render();
     }
