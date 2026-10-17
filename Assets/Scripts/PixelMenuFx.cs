@@ -149,6 +149,8 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
     private RectTransform rect, labelRect;
     private CanvasGroup group;
     private Color baseColor;
+    private Color writtenColor;   // the colour this script last gave the image (anything else = someone else recoloured it)
+    private bool wroteColor;
     private Vector2 basePos, baseLabelPos;
     private bool built, hover, press;
     private float hoverT, enterT = 1f, shineT = 2f, idleShine, pressVis, pressUntil;
@@ -237,7 +239,7 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
         float dt = Time.unscaledDeltaTime;
         if (!on)
         {
-            if (!lightMode) { rect.localScale = Vector3.one; rect.anchoredPosition = basePos; group.alpha = 1f; image.color = baseColor; if (labelRect != null) labelRect.anchoredPosition = baseLabelPos; }
+            if (!lightMode) { rect.localScale = Vector3.one; rect.anchoredPosition = basePos; group.alpha = 1f; image.color = baseColor; wroteColor = false; if (labelRect != null) labelRect.anchoredPosition = baseLabelPos; }
             else if (rect.localScale != Vector3.one) rect.localScale = Vector3.one;
             return;
         }
@@ -252,6 +254,10 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
             rect.anchoredPosition = basePos + new Vector2(-70f * (1f - ease), 0f);
         }
 
+        // Someone else recoloured the button while the glow was on (the Shop's tab turning blue on a click): take that as the new
+        // base at once, instead of painting over it until the mouse leaves.
+        if (wroteColor && image.color != writtenColor) baseColor = image.color;
+
         hoverT = Mathf.MoveTowards(hoverT, hover ? 1f : 0f, dt * 7f);
         float h = hoverT * hoverT * (3f - 2f * hoverT);
         float scale = (lightMode ? 1f : Mathf.Lerp(1f, 1.04f, h)) * (press ? 0.965f : 1f);
@@ -264,14 +270,18 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
             float hoverDepth = h * 0.35f;
             float depth = Mathf.Max(hoverDepth, pressVis);
             float dark = Mathf.Lerp(1f, 0.7f, depth);
-            if (hoverT <= 0.001f && pressVis <= 0.001f) baseColor = image.color;
-            else image.color = new Color(baseColor.r * dark, baseColor.g * dark, baseColor.b * dark, baseColor.a);
+            if (hoverT <= 0.001f && pressVis <= 0.001f) { baseColor = image.color; wroteColor = false; }
+            else { image.color = new Color(baseColor.r * dark, baseColor.g * dark, baseColor.b * dark, baseColor.a); writtenColor = image.color; wroteColor = true; }
             if (labelRect != null) labelRect.anchoredPosition = baseLabelPos + new Vector2(0f, -(1.5f * h + 3.5f * pressVis));
             float s2 = Mathf.Lerp(1f, 0.978f, h) * Mathf.Lerp(1f, 0.96f, pressVis);
             if (button == null || button.interactable) rect.localScale = Vector3.Lerp(rect.localScale, Vector3.one * s2, 1f - Mathf.Exp(-dt * 20f));
         }
-        else if (lightMode && hoverT <= 0.001f) baseColor = image.color;   // (follow outside colour changes while nothing is happening)
-        else image.color = Color.Lerp(baseColor, new Color(Mathf.Min(1f, baseColor.r * 1.28f + 0.05f), Mathf.Min(1f, baseColor.g * 1.28f + 0.05f), Mathf.Min(1f, baseColor.b * 1.28f + 0.05f), baseColor.a), h);
+        else if (lightMode && hoverT <= 0.001f) { baseColor = image.color; wroteColor = false; }   // (follow outside colour changes while nothing is happening)
+        else
+        {
+            image.color = Color.Lerp(baseColor, new Color(Mathf.Min(1f, baseColor.r * 1.28f + 0.05f), Mathf.Min(1f, baseColor.g * 1.28f + 0.05f), Mathf.Min(1f, baseColor.b * 1.28f + 0.05f), baseColor.a), h);
+            writtenColor = image.color; wroteColor = true;
+        }
 
         if (!lightMode)
         {
