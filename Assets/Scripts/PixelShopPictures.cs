@@ -1,7 +1,7 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelShopPictures.cs
-//   Part of partial class PixelShop: rotating 3D pictures on shop rows/cards (AddRowPicture, AddCardPicture, AddPackPicture; pixel
-//   packs cycle through their reward tiers every pictureCycleSeconds, Value rows, Consumables cards follow the drop-down, minigame
+//   Part of partial class PixelShop: rotating 3D pictures on shop rows/cards (AddRowPicture, AddPackPicture, Consumables tiles / buy bar; pixel
+//   packs cycle through their reward tiers every pictureCycleSeconds, Value rows, Consumables tiles (still, clipped to the grid) and buy bar, minigame
 //   packs use primitive models BuildMinigameModel for ghost/meteor/blackhole/bomb/pad/snake/sort/breakout - a new minigame needs a
 //   case + its id in ModelledMinigames). One hidden studio per distinct picture key (tier:<Type>, item:<name>, game:<id>; y -3900),
 //   drawn only while on screen (UpdatePictures); hidePictures, pictureResolution. Shop cost lines no longer print '(you have n)'
@@ -38,7 +38,7 @@ public partial class PixelShop
     [Tooltip("How much of the picture a pixel / potion cube fills: the camera's half-height in cube widths. Smaller = bigger cube (0.85 fits a spinning cube with its corners just touching the frame).")]
     [SerializeField] private float pictureCubeFraming = 0.85f;
 
-    [Tooltip("Size of the picture on a Consumables card.")]
+    [Tooltip("Size of the picture in the Consumables tab's buy bar.")]
     [SerializeField] private float cardPictureSize = 112f;
 
     private class ShopPicture
@@ -48,6 +48,7 @@ public partial class PixelShop
         public Camera cam;
         public RenderTexture rt;
         public float lastDrawn = -1f;   // (for the shared redraw limit, PixelTierPicture.Due)
+        public bool drawnOnce;          // still slots draw only until this is set
     }
 
     private class PictureSlot
@@ -57,6 +58,8 @@ public partial class PixelShop
         public GameObject frame;
         public Func<string> key;
         public bool inScroll;   // sits in the main scrolling list (only drawn while inside its viewport)
+        public RectTransform clip;   // sits in another scroll view: only drawn while inside this viewport (instead of the main list's)
+        public bool still;      // drawn once, not spun (the Consumables tiles: dozens of them, only the selected item spins in the buy bar)
     }
 
     private const float PictureStudioHeight = -3900f;
@@ -69,7 +72,8 @@ public partial class PixelShop
     // ------------------------------------------------------------------
 
     /// <summary>A framed picture slot. 'key' is asked every frame (so it can cycle or follow a drop-down); null = show nothing.</summary>
-    private PictureSlot AddPictureSlot(RectTransform parent, float size, Vector2 topLeft, bool middleLeft, Func<string> key, bool inScroll)
+    private PictureSlot AddPictureSlot(RectTransform parent, float size, Vector2 topLeft, bool middleLeft, Func<string> key, bool inScroll,
+                                       RectTransform clip = null, bool still = false)
     {
         GameObject frame = new GameObject("Picture", typeof(RectTransform), typeof(Image));
         frame.transform.SetParent(parent, false);
@@ -95,7 +99,7 @@ public partial class PixelShop
         img.raycastTarget = false;
         PixelUIKit.Stretch(imageGo.GetComponent<RectTransform>());
 
-        PictureSlot slot = new PictureSlot { image = img, rect = fr, frame = frame, key = key, inScroll = inScroll };
+        PictureSlot slot = new PictureSlot { image = img, rect = fr, frame = frame, key = key, inScroll = inScroll, clip = clip, still = still };
         pictureSlots.Add(slot);
         return slot;
     }
@@ -151,19 +155,6 @@ public partial class PixelShop
         }
     }
 
-    /// <summary>Shrinks a card's title and drop-down and puts a picture at its top right.</summary>
-    private void AddCardPicture(PurchaseCard card, RectTransform title, Func<string> key)
-    {
-        if (hidePictures) return;
-        float size = cardPictureSize;
-        float x = card.rect.sizeDelta.x - 14f - size;
-        AddPictureSlot(card.rect, size, new Vector2(x, 8f), false, key, false);
-        float narrow = size + 12f;
-        title.sizeDelta = new Vector2(title.sizeDelta.x - narrow, title.sizeDelta.y);
-        RectTransform dd = card.dropdown.GetComponent<RectTransform>();
-        dd.sizeDelta = new Vector2(dd.sizeDelta.x - narrow, dd.sizeDelta.y);
-    }
-
     // ------------------------------------------------------------------
     // Updating
     // ------------------------------------------------------------------
@@ -182,23 +173,41 @@ public partial class PixelShop
         }
 
         Vector3[] c = slotCorners;
+        int newStudios = 0;
         foreach (PictureSlot s in pictureSlots)
         {
             if (s.frame == null || !s.rect.gameObject.activeInHierarchy) continue;
-            if (s.inScroll && viewport != null)
+            if (s.clip != null)
+            {
+                s.clip.GetWorldCorners(viewportCorners);
+                float cMin = viewportCorners[0].y, cMax = viewportCorners[1].y;
+                s.rect.GetWorldCorners(c);
+                if (c[1].y < cMin || c[0].y > cMax) continue;
+            }
+            else if (s.inScroll && viewport != null)
             {
                 s.rect.GetWorldCorners(c);
                 if (c[1].y < vMin || c[0].y > vMax) continue;
             }
             string key = s.key();
             if (key == null) { if (s.image.enabled) s.image.enabled = false; continue; }
+            if (!pictures.ContainsKey(key) && ++newStudios > 4) continue;   // a grid full of new items builds its studios a few per frame, not all at once
             ShopPicture pic = GetPicture(key);
             if (pic == null || pic.rt == null) { if (s.image.enabled) s.image.enabled = false; continue; }
             if (!s.image.enabled) s.image.enabled = true;
             if (s.image.texture != pic.rt) s.image.texture = pic.rt;
+            if (s.still)
+            {
+                if (pic.drawnOnce) continue;   // (a spinning slot showing the same item keeps redrawing it, so the tile turns too while selected)
+                pic.drawnOnce = true;
+                pic.pivot.localRotation = Quaternion.Euler(0f, 35f, 0f);
+                pic.cam.Render();
+                continue;
+            }
             if (!PixelTierPicture.Due(ref pic.lastDrawn)) continue;   // (at most 30 redraws a second, and once per frame when two rows show the same picture)
             pic.pivot.localRotation = Quaternion.Euler(0f, Time.unscaledTime * pictureSpinSpeed, 0f);
             pic.cam.Render();
+            pic.drawnOnce = true;
         }
     }
 

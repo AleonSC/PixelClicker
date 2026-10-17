@@ -194,7 +194,7 @@ One line per script / system: what it is and where its details are. Search it (`
 | `PixelFarmFx.cs` | Farming pixel particles: PixelFarmFx.Attach (ambient loop per PixelLook.farmFx: | in the header comment of `PixelFarmFx.cs` |
 | `PixelShopTutorial.cs` | Shop tutorial (added by PixelShop): the first time the Shop button is available (PixelShop.ShopAvailable) and the screen is calm (title screen over, PixelHints.IntroHoldsGuide false, no other tip, no takeover minigame, not paused; | in the header comment of `PixelShopTutorial.cs` |
 | `PixelButtonPulse.cs` | Button pulse: every shop button (the shop's own CreateButton adds PixelButtonPulse) sends a clean neon outline out from under it when pressed - a thin glowing ring (a code-drawn 9-sliced rounded-recta | in the header comment of `PixelButtonPulse.cs` |
-| `PixelShopPictures.cs` | Part of partial class PixelShop: rotating 3D pictures on shop rows/cards (AddRowPicture, AddCardPicture, AddPackPicture; | in the header comment of `PixelShopPictures.cs` |
+| `PixelShopPictures.cs` | Part of partial class PixelShop: rotating 3D pictures on shop rows/cards (AddRowPicture, AddPackPicture, Consumables tiles / buy bar; | in the header comment of `PixelShopPictures.cs` |
 | `PixelShopConsumables.cs` | Third-and-a-half part of partial class PixelShop: | in the header comment of `PixelShopConsumables.cs` |
 | `PixelAutoClicker.cs` | Timer that calls clicker.AutoCollect() (paused while a takeover minigame runs or the cube is shrunk away: | in the header comment of `PixelAutoClicker.cs` |
 | `PixelAchievements.cs` | Modular achievements: Inspector list of Achievement (id, title, description, Kind, pixelType, target). | in the header comment of `PixelAchievements.cs` |

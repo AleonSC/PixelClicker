@@ -484,14 +484,14 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Normal text colour.")]
     [SerializeField] private Color textColor = Color.white;
 
-    [Header("Consumables Tab (two purchase cards)")]
-    [Tooltip("Title of the left card (potions).")]
+    [Header("Consumables Tab (category chips, item tiles, buy bar)")]
+    [Tooltip("Label of the Potions category button.")]
     [SerializeField] private string potionsCardTitle = "Potions";
 
-    [Tooltip("Title of the right card (devices you place).")]
+    [Tooltip("Label of the Utilities category button (devices you place).")]
     [SerializeField] private string utilitiesCardTitle = "Utilities";
 
-    [Tooltip("Colour of a locked item's name in the drop-down.")]
+    [Tooltip("Colour of a locked item's name and price line on its tile.")]
     [SerializeField] private Color lockedItemColor = new Color(0.55f, 0.55f, 0.6f, 1f);
 
     [Tooltip("Shown instead of the cost on a locked item. {0} = the pixel type that must be unlocked first.")]
@@ -500,27 +500,50 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Text of the Buy button. {0} = how many.")]
     [SerializeField] private string buyCountFormat = "Buy x{0}";
 
-    [Tooltip("Button text on a purchase card when you already hold the most of that potion you can.")]
+    [Tooltip("Buy button / tile text when you already hold the most of that potion you can.")]
     [SerializeField] private string potionFullText = "Full";
 
-    [Tooltip("Cost line on a purchase card when that potion is full. {0} = the most you can hold.")]
+    [Tooltip("Cost line in the buy bar when that potion is full. {0} = the most you can hold.")]
     [SerializeField] private string potionFullFormat = "You can hold {0} of each potion. Drink one to buy more.";
 
-    [Tooltip("Shown on a card that has no items.")]
+    [Tooltip("Shown when a category has no items.")]
     [SerializeField] private string noItemsText = "Nothing to buy here.";
 
-    [Min(150f)]
-    [Tooltip("Height of each purchase card (canvas units). There are two rows of cards (Potions / Utilities, then Seeds / spare), so this is roughly half the shop's height.")]
-    [SerializeField] private float cardRowHeight = 322f;
+    [Min(30f)]
+    [Tooltip("Height of the category buttons along the top of the Consumables tab.")]
+    [SerializeField] private float chipHeight = 56f;
 
-    [Tooltip("Title of the Seeds purchase card.")]
+    [Min(140f)]
+    [Tooltip("Height of the buy bar along the bottom of the Consumables tab (picture, name, description, cost, count, Buy).")]
+    [SerializeField] private float buyBarHeight = 210f;
+
+    [Min(80f)]
+    [Tooltip("Width of one item tile in the Consumables grid. The picture is this minus 32.")]
+    [SerializeField] private float tileWidth = 132f;
+
+    [Min(100f)]
+    [Tooltip("Height of one item tile (picture + name + price lines).")]
+    [SerializeField] private float tileHeight = 170f;
+
+    [Min(0f)]
+    [Tooltip("Gap between the item tiles.")]
+    [SerializeField] private float tileGap = 10f;
+
+    [Min(10f)]
+    [Tooltip("Font size of a tile's name; the price and owned count are a little smaller, the buy bar's description a little bigger.")]
+    [SerializeField] private float tileFontSize = 20f;
+
+    [Tooltip("Shown when hovering the Consumables Buy button.")]
+    [SerializeField] private string buyMaxTip = "Shift-click to buy as many as you can.";
+
+    [Tooltip("Label of the Seeds category button.")]
     [SerializeField] private string seedsCardTitle = "Seeds";
 
-    [Tooltip("Title of the Supplies card (Combo Fuel, Ghost Bait, Pet Treat).")]
+    [Tooltip("Label of the Supplies category button (Combo Fuel, Ghost Bait, Pet Treat).")]
     [SerializeField] private string suppliesCardTitle = "Supplies";
 
     [Min(0f)]
-    [Tooltip("Gap between the two cards.")]
+    [Tooltip("Gap between the category buttons, the tile grid and the buy bar.")]
     [SerializeField] private float cardGap = 20f;
 
     [Min(1)]
