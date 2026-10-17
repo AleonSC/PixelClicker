@@ -3,15 +3,15 @@
 //   CONVEYOR ELEVATOR (a Dev Hub > Tester feature, PixelFeatureTester 'Conveyor Elevator'): a square tower that lifts pixels from the END of a belt up to a higher belt. PLACING (two stages):
 //   1. the ghost follows the mouse and MAGNETIZES to a belt end that is near it (PixelElevator.TrySnap: it turns to the belt's direction, the belt's end meets its entry face, and its base
 //   takes that belt's height); Q / E turn it when it is not latched; click to fix the base. 2. Move the mouse up or down to set the HEIGHT (the mouse ray is cut with a vertical plane through
-//   the base, quantised to heightStepCubes) and click to confirm; right click goes back to stage 1. The tower's posts run down to the floor when the base is raised. A belt end that points
-//   at the entry hands its pixels straight in (IPixelBeltAcceptor): they are drawn to the shaft, carried up by a PixelPathCarrier and put out of the top (exit face, +Z) onto a belt that STARTS
-//   at OutputPoint (PixelConveyor.Snap offers that point, so a new belt snaps to the top of the tower, at its height) or flung forward. Belts can also be raised and lowered while placing
+//   the base, quantised to heightStepCubes) and click to confirm; right click goes back to stage 1. The tower's posts run down to the floor when the base is raised. SOCKETS (PixelSockets.cs, couplings built in):
+//   'in' at the entry, 'out' at the top. A belt end at the entry coupling hands its pixels straight in (AcceptHusk): they are drawn to the shaft, carried up by a PixelPathCarrier and put out of the
+//   top coupling (PixelCouplings.Emit) onto a belt that STARTS there (belts snap to coupling ports, so a new belt snaps to the top of the tower, at its height) or flung forward. Belts can also be raised and lowered while placing
 //   (scroll wheel, PixelFeatureTester) so ramps and bridges are possible. Saved with the tester save (position, turn, height). Built with PixelFactoryKit.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelElevator : MonoBehaviour, IPixelBeltAcceptor
+public class PixelElevator : MonoBehaviour, IPixelSocketDevice
 {
     [Min(0f)]
     [Tooltip("How fast pixels travel up the shaft, in cube widths per second. 0 = the coded default (3).")]
@@ -49,8 +49,12 @@ public class PixelElevator : MonoBehaviour, IPixelBeltAcceptor
 
     public bool IsGhost => ghost;
     public float Height => height;
-    /// <summary>Where a belt starts on top of the tower: the middle of the exit face at the platform's level (a belt's bottom).</summary>
-    public Vector3 OutputPoint => transform.TransformPoint(new Vector3(0f, height, HalfCubes * unit));
+
+    // ---- Sockets (PixelSockets.cs): the entry at the bottom (In) and the exit at the top (Out), each with a coupling built in ----
+    private PixelSocket[] sockets = new PixelSocket[0];
+    public Transform SocketRoot => transform;
+    public IReadOnlyList<PixelSocket> Sockets => sockets;
+    public Color SocketTint => new Color(0.55f, 0.58f, 0.64f, 1f);
 
     // ---------------- building ----------------
 
@@ -88,6 +92,7 @@ public class PixelElevator : MonoBehaviour, IPixelBeltAcceptor
 
     private void Rebuild(float h)
     {
+        PixelCoupling.RemoveAll(this);   // (its built-in couplings are children: made again below, the top one at the new height)
         for (int i = transform.childCount - 1; i >= 0; i--) { GameObject old = transform.GetChild(i).gameObject; old.SetActive(false); Destroy(old); }
         pads.Clear();
         path = null;
@@ -122,6 +127,13 @@ public class PixelElevator : MonoBehaviour, IPixelBeltAcceptor
         int count = Mathf.Max(2, Mathf.CeilToInt(h / (2f * u)) + 1);
         for (int i = 0; i < count; i++) pads.Add(k.Box("Pad", transform, Vector3.zero, new Vector3(0.9f * u, 0.05f * u, 0.9f * u), accent, default, false, 0.3f, 0.4f).transform);
         PlacePads();
+        if (ghost) return;
+        sockets = new[]
+        {
+            new PixelSocket("in", new Vector3(0f, 0f, -half), Vector3.back, PixelSocketFlow.Intake, true),
+            new PixelSocket("out", new Vector3(0f, h, half), Vector3.forward, PixelSocketFlow.Output, true),   // (a new belt starts here, at the top's height)
+        };
+        PixelCoupling.FitBuiltIn(this);
     }
 
     private void PlacePads()
@@ -172,19 +184,12 @@ public class PixelElevator : MonoBehaviour, IPixelBeltAcceptor
 
     // ---------------- behaviour ----------------
 
-    private void OnEnable() { if (!ghost) { if (clicker == null) clicker = PixelFind.First<PixelClicker>(); PixelConveyorSystem.Register(this); } if (!all.Contains(this)) all.Add(this); }
-    private void OnDisable() { PixelConveyorSystem.Unregister(this); all.Remove(this); }
+    private void OnEnable() { if (clicker == null) clicker = PixelFind.First<PixelClicker>(); PixelCouplings.Register(this); if (!all.Contains(this)) all.Add(this); }
+    private void OnDisable() { PixelCouplings.Unregister(this); all.Remove(this); }
     private void OnDestroy() { carrier.ReleaseAll(); }
 
-    /// <summary>A belt's end: the pixel is at the entry when it is just in front of the entry face on the base plate.</summary>
-    public bool AcceptsAt(Vector3 world)
-    {
-        if (ghost) return false;
-        Vector3 l = transform.InverseTransformPoint(world) / Mathf.Max(0.0001f, unit);
-        return Mathf.Abs(l.x) < HalfCubes + 0.3f && l.z > -HalfCubes - 0.7f && l.z < -HalfCubes + 1.0f && l.y > -0.4f && l.y < 1.5f;
-    }
-
-    public bool AcceptFromBelt(Rigidbody pixel)
+    /// <summary>A husk comes in through the entry coupling: drawn to the shaft and lifted (refused when the shaft is full).</summary>
+    public bool AcceptHusk(PixelSocket socket, Rigidbody pixel)
     {
         if (ghost || pixel == null || carrier.Count > 14) return false;
         carrier.Add(pixel);
@@ -220,23 +225,11 @@ public class PixelElevator : MonoBehaviour, IPixelBeltAcceptor
         carrier.Step(path, cum, LiftSpeed * unit, Gap * unit, Time.fixedDeltaTime, PutOut);
     }
 
-    /// <summary>A pixel reaches the top: onto a belt that starts there, or flung forward off the lip.</summary>
+    /// <summary>A pixel reaches the top: out through the top coupling onto the belt there (PixelCouplings.Emit), or flung forward off the lip.</summary>
     private void PutOut(Rigidbody rb)
     {
-        Vector3 end = path[path.Length - 1], fwd = transform.forward;
-        float oldSize = clicker.OldPixelWorldSize;
-        Vector3 velocity = fwd * unit * 2f;
-        foreach (PixelConveyor belt in PixelConveyor.All)
-        {
-            if (belt == null || belt.IsGhost) continue;
-            Vector3 d = belt.StartPoint - OutputPoint;
-            if (new Vector3(d.x, 0f, d.z).magnitude > 1.3f * unit || Mathf.Abs(d.y) > 1.2f * unit) continue;
-            Vector3 over = belt.PointAt(0.6f * oldSize);
-            end = new Vector3(over.x, over.y + belt.SurfaceHeight + oldSize * 0.7f, over.z);
-            velocity = belt.Direction * belt.Speed * 0.5f;
-            break;
-        }
-        rb.position = end;
-        PixelPathCarrier.SetVelocity(rb, velocity);
+        if (PixelCouplings.Emit(this, "out", rb)) return;
+        rb.position = path[path.Length - 1];
+        PixelPathCarrier.SetVelocity(rb, transform.forward * unit * 2f);
     }
 }

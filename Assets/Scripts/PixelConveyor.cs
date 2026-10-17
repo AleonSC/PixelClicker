@@ -279,7 +279,6 @@ public class PixelConveyor : MonoBehaviour
             if (belt == null || belt.ghostMode) continue;
             Try(belt.a); Try(belt.b);
         }
-        foreach (PixelElevator lift in PixelElevator.All) if (lift != null && !lift.IsGhost) Try(lift.OutputPoint);
         foreach (PixelConnector con in PixelConnector.All) if (con != null && !con.IsGhost) { Try(con.EndPoint); if (con.IsAdapter) { Try(con.SidePort(1)); Try(con.SidePort(-1)); } }
         PixelCouplings.Ports(Try);   // couplings on devices: a belt ends at an In coupling or starts at an Out one
         snapped = found;
