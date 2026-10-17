@@ -20,6 +20,8 @@
 //   Floor and Sky (the looks of PixelFloor / PixelSkybox, IPixelLookSource) and vendors' wares (PixelVisitorMinigame.WareNames -> 'Sells' / 'Sold by' links on minigame + consumable entries).
 //   RULES / NODES: 'Block rule' entries (PixelBlockRules special-block and hold-block rules; text = PixelBlockRules.GuideNotes, links to the pixel, the blocks it replaces, the boost block, the hazard it clears and the skill) and
 //   'Skill node' entries (every PixelSkills.TreeNode: description, cost, 'coming soon', links to its skill, the node it needs and the block toggle it unlocks); both are discovered when their pixel / skill is.
+//   SETTINGS: 'Setting' entries = every row of the pause menu's Settings screen (PixelPauseMenu.SettingsCatalog reads the BUILT rows: section, label, tick box / slider / drop-down / look picker /
+//   button, drop-down choices, current value), so screen filters, day / night length, floor off modes and every other option can be found by searching; the Floor / Sky rows link to each look.
 //   PIN: Entry.pinType / pinKey (pixel = currency row, skill, achievement, listable consumable = favorite) drive the window's 'Pin to My Window' button (PixelMyWindow.CanPin / IsPinned / TogglePin).
 //   Known leak: a discovered entry's reference text still contains the hidden name, so searching for that exact name finds the discovered entry.
 // ---------------------------------------------------
@@ -82,6 +84,7 @@ public static class PixelDatabase
             case "Pet": return new Color(1f, 0.75f, 0.85f);
             case "Block rule": return new Color(0.85f, 0.7f, 1f);
             case "Skill node": return new Color(0.7f, 0.95f, 0.6f);
+            case "Setting": return new Color(0.75f, 0.8f, 0.6f);
             default: return new Color(0.6f, 0.65f, 0.7f);
         }
     }
@@ -322,6 +325,23 @@ public static class PixelDatabase
         };
         addLooks("Floor", PixelFloor.Instance, "Floor style");
         addLooks("Sky", PixelSkybox.Instance, "Sky style");
+
+        // ---- Settings: every row of the pause menu's Settings screen (labels, choices and current values read from the built rows) ----
+        PixelPauseMenu pauseMenu = PixelFind.First<PixelPauseMenu>();
+        if (pauseMenu != null)
+            foreach (PixelPauseMenu.SettingInfo st in pauseMenu.SettingsCatalog())
+            {
+                string label = Plain(st.label).Trim();
+                string where = "Settings > " + (string.IsNullOrEmpty(st.section) ? "" : Plain(st.section).Trim() + " > ") + label;
+                string text = "Found in " + where + ". A " + st.kind.ToLowerInvariant() + ".";
+                string lookCategory = st.look == null ? null : (ReferenceEquals(st.look, PixelSkybox.Instance) ? "Sky" : "Floor");
+                if (st.choices != null && st.choices.Length > 0) text += "\nChoices: " + string.Join(", ", st.choices) + ".";
+                if (lookCategory != null) text += "\nChoices: every " + lookCategory.ToLowerInvariant() + " style (each has its own entry under " + (lookCategory == "Sky" ? "Skies" : "Floors") + ").";
+                if (!string.IsNullOrEmpty(st.current)) text += "\nNow: " + Plain(st.current) + ".";
+                Entry se = Add("Setting", label, text);
+                if (lookCategory != null)
+                    for (int i = 0; i < st.look.StyleCount; i++) Link(se, "Lists", Find(lookCategory + "|" + st.look.StyleName(i)), "Picked in setting");
+            }
 
         // ---- Pets: one per pixel type that can have one ----
         PixelPets petSystem = PixelPets.Instance;

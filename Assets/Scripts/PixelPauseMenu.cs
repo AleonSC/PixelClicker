@@ -2734,6 +2734,55 @@ public class PixelPauseMenu : MonoBehaviour
         if (settingsScroll != null) PixelUIKit.UpdateScrollView(settingsScroll, settingsBar, settingsTotalHeight - removed, settingsListHeight);
     }
 
+    /// <summary>One row of the Settings screen as the Game Database lists it (read from the built rows, so labels and choices are never typed twice).</summary>
+    public struct SettingInfo
+    {
+        public string section, label, kind, current;
+        public string[] choices;        // drop-downs: every choice (null for other rows)
+        public IPixelLookSource look;   // the Floor / Sky rows: the looks they pick from (null for other rows)
+    }
+
+    /// <summary>Every row of the Settings screen (section, label, what kind of control, its choices and current value), in screen order.</summary>
+    public List<SettingInfo> SettingsCatalog()
+    {
+        List<SettingInfo> list = new List<SettingInfo>();
+        foreach (SettingsItem item in settingsItems)
+        {
+            if (item.isHeader || !item.wasActive || item.rect == null) continue;
+            SettingInfo info = new SettingInfo { section = item.section, label = RowText(item) };
+            if (string.IsNullOrEmpty(info.label)) continue;
+            TMP_Dropdown dd = item.rect.GetComponentInChildren<TMP_Dropdown>(true);
+            Slider slider = item.rect.GetComponentInChildren<Slider>(true);
+            Toggle toggle = item.rect.GetComponentInChildren<Toggle>(true);
+            if (lookRows.TryGetValue(item.rect, out System.Func<IPixelLookSource> source))
+            {
+                info.kind = "Look picker";
+                info.look = source != null ? source() : null;
+                if (info.look != null && info.look.Current >= 0 && info.look.Current < info.look.StyleCount) info.current = info.look.StyleName(info.look.Current);
+            }
+            else if (dd != null)
+            {
+                info.kind = "Drop-down";
+                info.choices = new string[dd.options.Count];
+                for (int i = 0; i < dd.options.Count; i++) info.choices[i] = dd.options[i].text;
+                if (dd.value >= 0 && dd.value < dd.options.Count) info.current = dd.options[dd.value].text;
+            }
+            else if (slider != null)
+            {
+                info.kind = "Slider";
+                info.current = slider.maxValue <= 1.0001f ? Mathf.RoundToInt(slider.value * 100f) + "%" : slider.value.ToString("0.##");
+            }
+            else if (toggle != null)
+            {
+                info.kind = "Tick box";
+                info.current = toggle.isOn ? "On" : "Off";
+            }
+            else info.kind = "Button";
+            list.Add(info);
+        }
+        return list;
+    }
+
     private int NearestUiScaleIndex()
     {
         float saved = PixelDisplaySettings.SavedUIScale;
