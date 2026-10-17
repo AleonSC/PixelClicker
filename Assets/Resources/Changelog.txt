@@ -1292,3 +1292,4 @@
 [2026-10-17 12:14 UTC] Thrown husks now tumble end over end instead of skidding flat: letting go gives them a spin along the throw and a little extra grip for a few seconds so their corners catch (tune it under Pixel Grab > Tumbling when thrown).
 [2026-10-17 12:14 UTC] Shop: the Pixels tab now uses the same tile layout as Consumables (Toggleables and Skill packs buttons, a tile grid and one buy bar), Consumables opens on Utilities first, and the tabs are now Pixels, Consumables, Upgrades, Minigames.
 [2026-10-17 12:22 UTC] To-do: one shared helper for building husk / pet physics materials instead of the hand-written copies per Unity version.
+[2026-10-17 12:23 UTC] To-do: added a per-kind device table so a new device is one entry instead of edits to about 8 scattered lists.
