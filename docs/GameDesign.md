@@ -238,6 +238,12 @@ minute. **Base crush is FREE** (not a tree node): RIGHT-CLICK a husk lying on th
   - **Knock-on:** in the same report Standard levelled ~2x faster than planned (level 4 at 8:21, plan ~20 min) because the Recycler's
     streak XP (2,620) out-earned clicking (2,357); better crushing adds more. Retune Standard's curve and/or how much Standard XP the
     Recycler gives together with this.
+- **Crush streaks recharge the first move (Agreed 2026-10-17, not built):** the early-game payoff for crushing, from Standard level 2
+  (~5 min), before the Auto Clicker / Combo Meter exist. Each crush in a streak takes **1 s off Power Click's cooldown** (45 s) and adds
+  a little to the **Block Hold meter** (like its 'every 5 clicks +1%' energy). Small and capped - about one extra Power Click a minute at
+  most, never a money source - so it is not a swap bonus. Why: both session reports show the first move is barely used (1 and 4 power
+  clicks, 0 block holds); this gives crushing and the move a reason to exist together. No new UI: a short "Power Click ready!" text
+  when a streak finishes the cooldown (reuse the existing ready signal / popup).
 - **Tuning note:** pure husks give Standard XP, so crushing speeds up early Standard levels. Keep the base small; the Standard XP curve
   targets above (levels 2-7 at about 3 / 8-10 / 20 / 30-35 / 45 / 60 min) must be tuned with crushing AND the Auto Clicker in the mix.
 
