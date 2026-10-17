@@ -1277,3 +1277,4 @@
 [2026-10-17 11:20 UTC] To-do: added husk pooling (with the 'husk released' signal it needs first).
 [2026-10-17 11:23 UTC] Shop: the Consumables tab is redesigned - category buttons (Potions / Utilities / Seeds / Supplies) over a grid of item tiles (picture, name, price, how many you own; Shift-click a tile buys one) and one buy bar for the selected item with its full description (Shift-click Buy buys as many as you can afford).
 [2026-10-17 11:37 UTC] Laser Tracker floor: the beams reach much further out (emitters circle at twice the visible floor's reach, tunable as Tracker Reach on the floor overlay).
+[2026-10-17 11:42 UTC] Mossy Glade floor redrawn: soft domed moss in drifting greens, proper arching ferns, rounded shaded stones with moss and lichen, fallen leaves, shadows and dappled sunlight (no more dark muddy blotches, spiky stars or flat grey discs).

@@ -5,7 +5,7 @@
 //   GRASS (big still pictures like Lush Grass: 1024 px, stretchToFloor over 40 world units, drawn in WORLD units on worker threads, never repeated or
 //   stretched; every blade is its own tapered stroke from a 3 x 3 cell search - BladeLayer - bent by a noise wind field):
 //     Wild Meadow (hue patches, wind-bent blades, wildflower clusters, seed heads), Clover Lawn (curving mower stripes, three-leaf clover patches,
-//     daisies, worn spots, a fairy ring of mushrooms), Mossy Glade (speckled moss, ferns, mossy stones, twigs, puddles), Prairie Grass (tall golden
+//     daisies, worn spots, a fairy ring of mushrooms), Mossy Glade (redrawn: domed moss cushions in drifting greens lit from the top left, fallen leaves, ball-shaded stones with moss creeping up their lit side and lichen, arching fern fronds of paired leaflets, stones and ferns casting shadows down-right - GladeStone / GladeFern -, twigs, dappled sun patches), Prairie Grass (tall golden
 //     wind-swept blades, green patches, purple flowers, rocks).
 //   SEE-THROUGH LASERS (FloorStyle.hideBase: the floor picture is hidden - ApplyVisibility / the edge fade read HideBaseNow - but the collider stays):
 //     Neon Lasers (overlay Lasers: beams drifting / turning / pulsing over nothing, neon colours from the style), Laser Tracker (overlay LaserTracker:
@@ -316,84 +316,184 @@ public partial class PixelFloor
 
     // 3. Mossy Glade ---------------------------------------------------------------------
 
+    // The Mossy Glade's light comes from the top left of the picture (-x, +y); shadows fall the other way by this many world units.
+    private const float GladeShadowX = 0.16f, GladeShadowY = -0.16f;
+
     private static Color ShadeMossyGlade(FloorStyle s, float u, float v, int x, int y)
     {
         float W = Wu(s), wx = u * W, wy = v * W;
-        // Moss: lumpy cushions in several greens with a fine speckle.
-        float lumps = Fbm(u, v, Per(s, 1.4f), 4, s.seed), tones = Fbm(u, v, Per(s, 8f), 3, s.seed + 1);
-        Color moss = Color.Lerp(Color.Lerp(s.colorA, s.colorB, lumps), new Color(0.45f, 0.5f, 0.12f), Sstep(0.6f, 0.85f, tones) * 0.6f);
-        moss *= 0.7f + 0.45f * Hash(x, y, s.seed + 2) * Sstep(0.3f, 0.7f, lumps);
-        moss *= 0.75f + 0.35f * Sstep(0.35f, 0.65f, lumps);   // shaded between cushions
+
+        // Moss: rounded cushions (a jittered cell grid in world units, warped so they are not in rows), each its own green,
+        // domed and lit from the top left, a little darker in the seams between them, with a fine fuzz.
+        const float cushion = 0.75f;
+        float warpX = (Fbm(u, v, Per(s, 2.5f), 2, s.seed) - 0.5f) * 0.9f, warpY = (Fbm(u, v, Per(s, 2.5f), 2, s.seed + 31) - 0.5f) * 0.9f;
+        float mx = (wx + warpX) / cushion, my = (wy + warpY) / cushion;
+        int gx = Mathf.FloorToInt(mx), gy = Mathf.FloorToInt(my);
+        float d1 = 9f, d2 = 9f, ndx = 0f, ndy = 0f;
+        int bx = 0, by = 0;
+        for (int oy = -1; oy <= 1; oy++)
+            for (int ox = -1; ox <= 1; ox++)
+            {
+                int ix = gx + ox, iy = gy + oy;
+                float dx = mx - (ix + 0.15f + 0.7f * Hash(ix, iy, s.seed + 40)), dy = my - (iy + 0.15f + 0.7f * Hash(ix, iy, s.seed + 41));
+                float d = dx * dx + dy * dy;
+                if (d < d1) { d2 = d1; d1 = d; ndx = dx; ndy = dy; bx = ix; by = iy; }
+                else if (d < d2) d2 = d;
+            }
+        d1 = Mathf.Sqrt(d1); d2 = Mathf.Sqrt(d2);
+        float dome = Mathf.Clamp01(1f - d1 / 0.8f);
+        float lit = Mathf.Clamp01(0.55f + (-ndx + ndy) * 0.55f);
+        float seam = Sstep(0f, 0.3f, d2 - d1);
+        // The colour drifts smoothly over the glade (patches of deep, fresh and olive moss); each cushion only nudges it a little.
+        Color fresh = new Color(0.5f, 0.68f, 0.2f), olive = new Color(0.42f, 0.46f, 0.16f);
+        float hue = Fbm(u, v, Per(s, 4f), 3, s.seed + 44), dry = Sstep(0.6f, 0.8f, Fbm(u, v, Per(s, 7f), 3, s.seed + 45));
+        Color moss = Color.Lerp(Color.Lerp(s.colorA, s.colorB, 0.35f + 0.65f * hue), fresh, Sstep(0.55f, 0.8f, hue) * 0.6f);
+        moss = Color.Lerp(moss, olive, dry * 0.55f);
+        moss *= 0.94f + 0.12f * Hash(bx, by, s.seed + 42);
+        moss *= Mathf.Lerp(0.82f, 1.1f, lit * 0.5f + Mathf.Sqrt(dome) * 0.5f);
+        moss = Color.Lerp(moss * 0.88f, moss, seam);
+        // Fuzz: tiny tufts and a per-texel grain.
+        moss *= 0.82f + 0.3f * Fbm(u, v, Per(s, 0.12f), 2, s.seed + 43) + 0.12f * (Hash(x, y, s.seed + 2) - 0.5f);
         Color c = moss;
-        // Bare soil and old needles where the moss thins out.
-        float soil = Sstep(0.62f, 0.78f, Fbm(u, v, Per(s, 5f), 4, s.seed + 3));
-        if (soil > 0f)
+
+        // Fallen leaves here and there on the moss (small ellipses with a midrib, brown / rust / old yellow).
+        const float leafCell = 1.3f;
+        int lx0 = Mathf.FloorToInt(wx / leafCell), ly0 = Mathf.FloorToInt(wy / leafCell);
+        for (int oy = -1; oy <= 1; oy++)
+            for (int ox = -1; ox <= 1; ox++)
+            {
+                int ix = lx0 + ox, iy = ly0 + oy;
+                if (Hash(ix, iy, s.seed + 50) < 0.86f) continue;
+                float lcx = (ix + Hash(ix, iy, s.seed + 51)) * leafCell, lcy = (iy + Hash(ix, iy, s.seed + 52)) * leafCell;
+                float ang = Hash(ix, iy, s.seed + 53) * Mathf.PI * 2f, ca = Mathf.Cos(ang), sa = Mathf.Sin(ang);
+                float px = wx - lcx, py = wy - lcy;
+                float along = (px * ca + py * sa) / 0.3f, across = (-px * sa + py * ca) / 0.13f;
+                float e = along * along + across * across;
+                if (e >= 1f) continue;
+                float lp = Hash(ix, iy, s.seed + 54);
+                Color leaf = lp < 0.55f ? new Color(0.4f, 0.29f, 0.15f) : lp < 0.85f ? new Color(0.52f, 0.31f, 0.14f) : new Color(0.62f, 0.54f, 0.26f);
+                leaf *= 0.85f + 0.25f * Mathf.Clamp01(0.5f - across * 0.5f);
+                if (Mathf.Abs(across) < 0.12f) leaf *= 0.75f;   // midrib
+                c = Color.Lerp(c, leaf, 1f - Sstep(0.8f, 1f, e));
+            }
+
+        // Shadows of the stones and ferns, cast down to the right.
+        float shadow = Mathf.Max(GladeStone(s, wx - GladeShadowX, wy - GladeShadowY, u, v, out _, out _, out _), GladeFern(s, wx - GladeShadowX, wy - GladeShadowY, out _, out _) * 0.8f);
+        c *= 1f - 0.42f * shadow;
+
+        // Stones: rounded, lit like a ball, dark at the foot, moss growing over their top and pale lichen spots.
+        float stone = GladeStone(s, wx, wy, u, v, out float snx, out float sny, out float snz);
+        if (stone > 0f)
         {
-            Color dirt = Color.Lerp(new Color(0.22f, 0.15f, 0.08f), new Color(0.38f, 0.26f, 0.14f), Hash(x / 2, y / 2, s.seed + 4));
-            float needles = BladeLayer(wx, wy, 0.7f, 2, 0.12f, 0.14f, 0.26f, 0.026f, 3.1f, 0f, s.seed + 6, out _, out float nt);
-            dirt = Color.Lerp(dirt, new Color(0.55f, 0.38f, 0.18f) * (0.8f + 0.3f * nt), needles);
-            c = Color.Lerp(c, dirt, soil);
+            float lambert = Mathf.Clamp01(-snx * 0.5f + sny * 0.5f + snz * 0.72f);
+            Color rock = s.colorC * (0.42f + 0.8f * lambert) * (0.92f + 0.16f * Hash(x / 2, y / 2, s.seed + 14));
+            float lichen = Fbm(u, v, Per(s, 0.25f), 2, s.seed + 15);
+            rock = Color.Lerp(rock, new Color(0.62f, 0.66f, 0.52f) * (0.6f + 0.5f * lambert), Sstep(0.68f, 0.75f, lichen) * 0.6f);   // pale lichen patches
+            float capNoise = Fbm(u, v, Per(s, 0.5f), 2, s.seed + 16) - 0.5f;
+            float cap = Sstep(0.45f, 0.55f, (-snx + sny) * 0.45f + snz * 0.2f + capNoise * 0.9f);   // moss creeps up the lit (top-left) side in patches
+            Color mossCap = moss * (0.7f + 0.45f * lambert);   // the same moss as the ground around it
+            Color rc = Color.Lerp(rock, mossCap, cap);
+            rc *= Mathf.Lerp(0.6f, 1f, Sstep(0.05f, 0.3f, snz));   // darker where the stone curves down to the ground
+            c = Color.Lerp(c, rc, stone);
         }
-        // Puddles: dark still water with a pale sky sheen.
-        float puddle = Sstep(0.78f, 0.82f, Fbm(u + 0.3f, v + 0.1f, Per(s, 3f), 4, s.seed + 7));
-        if (puddle > 0f)
+
+        // Ferns: arching fronds of paired leaflets that shrink towards the tip.
+        float fern = GladeFern(s, wx, wy, out float fernAlong, out float fernTone);
+        if (fern > 0f)
         {
-            float sheen = Fbm(u, v, Per(s, 0.8f), 2, s.seed + 8);
-            c = Color.Lerp(c, Color.Lerp(new Color(0.08f, 0.12f, 0.14f), new Color(0.55f, 0.65f, 0.72f), Sstep(0.55f, 0.8f, sheen) * 0.6f), puddle);
+            Color fc = Color.Lerp(new Color(0.2f, 0.46f, 0.12f), new Color(0.48f, 0.76f, 0.24f), Mathf.Clamp01(fernAlong * 0.8f + fernTone * 0.4f));
+            c = Color.Lerp(c, fc, fern);
         }
-        // Mossy stones: rounded grey rocks with moss on their upper side.
-        float scell = 4.5f;
-        int sx = Mathf.FloorToInt(wx / scell), sy = Mathf.FloorToInt(wy / scell);
+
+        // Twigs.
+        float tw = BladeLayer(wx + 50f, wy, 0.4f, 1, 1.6f, 0.5f, 1.1f, 0.05f, 3.1f, 0f, s.seed + 23, out _, out float twt);
+        if (tw > 0.3f && Hash(Mathf.FloorToInt(wx / 1.6f), Mathf.FloorToInt(wy / 1.6f), s.seed + 24) > 0.8f) c = Color.Lerp(c, new Color(0.36f, 0.28f, 0.18f) * (0.8f + 0.3f * twt), tw);
+
+        // Dappled light through the canopy: soft warm sun patches over everything.
+        float sun = Sstep(0.5f, 0.72f, Fbm(u, v, Per(s, 6f), 3, s.seed + 5));
+        c = Color.Lerp(c * 0.9f, c * 1.18f + new Color(0.05f, 0.045f, 0f), sun);
+        return Fin(c);
+    }
+
+    /// <summary>Mossy Glade stones: coverage (0..1, soft rim) at a world point and the ball-shaped surface normal there.</summary>
+    private static float GladeStone(FloorStyle s, float wx, float wy, float u, float v, out float nx, out float ny, out float nz)
+    {
+        nx = ny = 0f; nz = 1f;
+        const float cell = 5.5f;
+        int sx = Mathf.FloorToInt(wx / cell), sy = Mathf.FloorToInt(wy / cell);
+        float best = 0f;
         for (int oy = -1; oy <= 1; oy++)
             for (int ox = -1; ox <= 1; ox++)
             {
                 int ix = sx + ox, iy = sy + oy;
-                if (Hash(ix, iy, s.seed + 9) < 0.55f) continue;
-                float rcx = (ix + Hash(ix, iy, s.seed + 10)) * scell, rcy = (iy + Hash(ix, iy, s.seed + 11)) * scell;
-                float r = 0.5f + 0.7f * Hash(ix, iy, s.seed + 12);
-                float dx = wx - rcx, dy = wy - rcy;
-                float wob = 1f + 0.15f * (Fbm(u, v, Per(s, 0.6f), 2, s.seed + 13) - 0.5f);
-                float d = Mathf.Sqrt(dx * dx + dy * dy * 1.3f) / (r * wob);
-                if (d < 1f)
-                {
-                    float lit = Mathf.Clamp01(0.5f + (-dx + dy) / (r * 2.2f));
-                    Color rock = s.colorC * (0.55f + 0.6f * lit) * (0.9f + 0.2f * Hash(x / 3, y / 3, s.seed + 14));
-                    float mossTop = Sstep(0.1f, 0.5f, dy / r + 0.3f * (lumps - 0.5f));
-                    c = Color.Lerp(rock, moss * 1.1f, mossTop * 0.8f);
-                    if (d > 0.9f) c *= 0.7f;   // the rim's shadow
-                }
+                if (Hash(ix, iy, s.seed + 9) < 0.62f) continue;
+                float cx = (ix + 0.2f + 0.6f * Hash(ix, iy, s.seed + 10)) * cell, cy = (iy + 0.2f + 0.6f * Hash(ix, iy, s.seed + 11)) * cell;
+                float r = 0.7f + 0.8f * Hash(ix, iy, s.seed + 12);
+                float stretch = 0.8f + 0.4f * Hash(ix, iy, s.seed + 13);
+                float dx = (wx - cx) / (r * stretch), dy = (wy - cy) / (r / stretch);
+                float ang = Mathf.Atan2(dy, dx);
+                float wob = 1f + 0.08f * Mathf.Sin(ang * 3f + ix) + 0.05f * Mathf.Sin(ang * 5f + iy);
+                float d = Mathf.Sqrt(dx * dx + dy * dy) / wob;
+                if (d >= 1f) continue;
+                float cover = 1f - Sstep(0.93f, 1f, d);
+                if (cover <= best) continue;
+                best = cover;
+                float k = d > 1e-4f ? Mathf.Min(d, 0.999f) / d : 0f;
+                nx = dx * k; ny = dy * k;
+                nz = Mathf.Sqrt(Mathf.Max(0f, 1f - nx * nx - ny * ny));
             }
-        // Ferns: a stem with leaflets that shrink towards the tip.
-        float fcell = 3.4f;
-        int fx0 = Mathf.FloorToInt(wx / fcell), fy0 = Mathf.FloorToInt(wy / fcell);
+        return best;
+    }
+
+    /// <summary>Mossy Glade ferns: coverage (0..1) at a world point, how far along its frond (0 base .. 1 tip) and a per-frond tone.</summary>
+    private static float GladeFern(FloorStyle s, float wx, float wy, out float along01, out float tone)
+    {
+        along01 = 0f; tone = 0f;
+        const float cell = 4.2f;
+        int fx0 = Mathf.FloorToInt(wx / cell), fy0 = Mathf.FloorToInt(wy / cell);
+        float best = 0f;
         for (int oy = -1; oy <= 1; oy++)
             for (int ox = -1; ox <= 1; ox++)
             {
                 int ix = fx0 + ox, iy = fy0 + oy;
-                if (Hash(ix, iy, s.seed + 15) < 0.4f) continue;
-                float bx = (ix + Hash(ix, iy, s.seed + 16)) * fcell, by = (iy + Hash(ix, iy, s.seed + 17)) * fcell;
-                int fronds = 4 + Mathf.FloorToInt(Hash(ix, iy, s.seed + 18) * 4f);
+                if (Hash(ix, iy, s.seed + 17) < 0.5f) continue;
+                float bx = (ix + 0.2f + 0.6f * Hash(ix, iy, s.seed + 18)) * cell, by = (iy + 0.2f + 0.6f * Hash(ix, iy, s.seed + 19)) * cell;
+                float px = wx - bx, py = wy - by;
+                if (px * px + py * py > 2.4f * 2.4f) continue;
+                int fronds = 3 + Mathf.FloorToInt(Hash(ix, iy, s.seed + 20) * 3f);
+                float turn = Hash(ix, iy, s.seed + 21) * Mathf.PI * 2f;
                 for (int f = 0; f < fronds; f++)
                 {
-                    float a = (f + Hash(ix + f, iy, s.seed + 19) * 0.6f) / fronds * Mathf.PI * 2f, len = 0.8f + 0.6f * Hash(ix, iy + f, s.seed + 20);
-                    float dxs = Mathf.Cos(a), dys = Mathf.Sin(a);
-                    float px = wx - bx, py = wy - by;
-                    float along = (px * dxs + py * dys) / len;
-                    if (along < 0f || along > 1f) continue;
-                    float side = px * -dys + py * dxs;
-                    float leafW = 0.22f * (1f - along) + 0.02f;
-                    float leaflet = Mathf.Abs(Mathf.Sin(along * len * 9f));
-                    if (Mathf.Abs(side) < 0.025f || (Mathf.Abs(side) < leafW * leaflet && Mathf.Abs(side) > 0.02f))
+                    float a = turn + (f + (Hash(ix + f, iy, s.seed + 22) - 0.5f) * 0.5f) / fronds * Mathf.PI * 2f;
+                    float len = 1.3f + 0.8f * Hash(ix, iy + f, s.seed + 23);
+                    float bend = (Hash(ix - f, iy, s.seed + 24) > 0.5f ? 1f : -1f) * (0.25f + 0.25f * Hash(ix, iy - f, s.seed + 26));   // the frond arches to one side
+                    float ca = Mathf.Cos(a), sa = Mathf.Sin(a);
+                    float along = px * ca + py * sa;
+                    float t = along / len;
+                    if (t < 0.06f || t > 1f) continue;
+                    float side = (-px * sa + py * ca) - bend * len * t * t;
+                    float half = 0.32f * Mathf.Pow(1f - t, 0.8f) + 0.03f;   // leaflet length (half the frond's width)
+                    float aside = Mathf.Abs(side);
+                    float cover = 0f;
+                    if (aside < 0.03f) cover = 1f;                            // the midrib
+                    else if (aside < half)
                     {
-                        Color fern = Color.Lerp(new Color(0.18f, 0.45f, 0.12f), new Color(0.42f, 0.7f, 0.22f), along) * (0.85f + 0.3f * Hash(ix + f, iy + f, s.seed + 21));
-                        c = Mathf.Abs(side) < 0.025f ? fern * 0.75f : fern;
+                        // Paired leaflets slanting towards the tip.
+                        const float spacing = 0.16f;
+                        float q = (along - aside * 0.6f) / spacing;
+                        float lf = Mathf.Abs(PixelNoise.Frac(q) - 0.5f) * spacing;
+                        float w = spacing * 0.42f * Mathf.Sqrt(Mathf.Max(0f, 1f - (aside / half) * (aside / half)));
+                        cover = 1f - Sstep(w * 0.6f, w, lf);
+                    }
+                    if (cover > best)
+                    {
+                        best = cover;
+                        along01 = t;
+                        tone = Hash(ix + f, iy - f, s.seed + 25);
                     }
                 }
             }
-        // Twigs.
-        float tw = BladeLayer(wx + 50f, wy, 0.4f, 1, 1.6f, 0.5f, 1.1f, 0.05f, 3.1f, 0f, s.seed + 23, out _, out float twt);
-        if (tw > 0.3f && Hash(Mathf.FloorToInt(wx / 1.6f), Mathf.FloorToInt(wy / 1.6f), s.seed + 24) > 0.6f) c = Color.Lerp(c, new Color(0.3f, 0.2f, 0.12f) * (0.8f + 0.3f * twt), tw);
-        return Fin(c);
+        return best;
     }
 
     // 4. Prairie Grass -------------------------------------------------------------------
