@@ -46,6 +46,8 @@
 //   SORTING HOPPER (2026-10-17): a PixelSortingHopper snaps onto the back wall (BackEdgeLocalZ, SizeFactor) and keeps the back hatch open (SetHatchOpen);
 //   it slides its chosen husk type through the hatch (HatchOutside -> HatchInside) and lets it fall into the bin, where Capture takes it as usual.
 //   Capturing / letting go / freezing use the shared PixelHuskHolder steps.
+//   SOCKET (PixelSockets.cs): the back hatch is an In socket ('hatch'). With no hopper latched (a latched hopper OCCUPIES it), a coupling there takes belts / connectors / hoses:
+//   AcceptHusk counts the husk at once and lets it fall in behind the back wall (HatchInside); refused while working or full (HuskRoom).
 // ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
@@ -53,7 +55,7 @@ using System.Text;
 using TMPro;
 using UnityEngine;
 
-public class PixelRecycler : MonoBehaviour
+public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom
 {
     [Tooltip("How many husks fit in the bin before it has to be closed.")]
     [SerializeField] private int capacity = 10;
@@ -91,14 +93,34 @@ public class PixelRecycler : MonoBehaviour
     /// <summary>Every Recycler in the scene (a Container Hose finds its end here).</summary>
     public static IReadOnlyList<PixelRecycler> All => all;
 
-    /// <summary>A Container Hose may drop a husk in now: not working and not full.</summary>
+    /// <summary>Can a husk be put in now (a Sorting Hopper slide, a belt / hose through the hatch coupling): not working and not full.</summary>
     public bool HoseCanTake => !processing && inside.Count < Mathf.Max(1, capacity);
 
     /// <summary>How many more husks fit in the bin.</summary>
     public int HoseRoom => Mathf.Max(0, Mathf.Max(1, capacity) - inside.Count);
 
-    /// <summary>Where a Container Hose lets its husks fall: above the middle of the bin.</summary>
-    public Vector3 HoseDropPoint => transform.TransformPoint(new Vector3(0f, wallH * 1.3f, 0f));
+    // ---- Socket (PixelSockets.cs): the BACK HATCH, an In socket. A Sorting Hopper latched on the back occupies it (PixelCouplings.Occupy); otherwise a coupling
+    // there takes belts / connectors / hoses ----
+    public const string HatchSocket = "hatch";
+    private PixelSocket[] sockets = new PixelSocket[0];
+    public Transform SocketRoot => transform;
+    public IReadOnlyList<PixelSocket> Sockets => sockets;
+    public Color SocketTint => BodyColor;
+    public int HuskRoom(PixelSocket socket) => HoseCanTake ? HoseRoom : 0;
+
+    /// <summary>A husk comes in through the hatch coupling: it is counted at once (so a hose never overfills the bin) and let fall in behind the back wall. Refused while working or full.</summary>
+    public bool AcceptHusk(PixelSocket socket, Rigidbody husk)
+    {
+        if (husk == null || !HoseCanTake || Busy || Fading || !PixelHuskHolder.Capture(clicker, husk)) return false;
+        husk.isKinematic = false;
+        husk.position = HatchInside;
+        PixelHuskHolder.SetVelocity(husk, transform.TransformDirection(Vector3.back) * 1.2f + Vector3.down);
+        inside.Add(husk);
+        capturedAt[husk] = Time.time;
+        RefreshCounter();
+        PixelAudio.Play("click");
+        return true;
+    }
 
     // ---- The Sorting Hopper's hookup (PixelSortingHopper snaps onto the back wall with its exit at the back hatch) ----
 
@@ -332,6 +354,7 @@ public class PixelRecycler : MonoBehaviour
         float u = Unit(clicker);
         innerW = WidthHusks * u; innerD = DepthHusks * u; wallH = HeightHusks * u;
         baseScale = transform.localScale;
+        sockets = new[] { new PixelSocket(HatchSocket, new Vector3(0f, 0f, BackEdgeLocalZ), Vector3.forward, PixelSocketFlow.Intake) };
         lidPivot = transform.Find("Lid Pivot");
         hatchPivot = transform.Find("Hatch Pivot");
         if (hatchPivot != null) foreach (Collider c in hatchPivot.GetComponentsInChildren<Collider>()) hatchColliders.Add(c);
@@ -359,8 +382,8 @@ public class PixelRecycler : MonoBehaviour
         RefreshCounter();
     }
 
-    private void OnEnable() { if (!all.Contains(this)) all.Add(this); }
-    private void OnDisable() { all.Remove(this); }
+    private void OnEnable() { if (!all.Contains(this)) all.Add(this); PixelCouplings.Register(this); }
+    private void OnDisable() { all.Remove(this); PixelCouplings.Unregister(this); }
 
     private void OnDestroy()
     {

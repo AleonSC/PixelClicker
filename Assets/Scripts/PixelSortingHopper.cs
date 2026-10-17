@@ -22,13 +22,15 @@
 //   - EVERY OTHER HUSK just lies in the tray and fades like any husk (no keep-alive): the wrong colours take room until they go - that is the loss.
 //   - WITHOUT A RECYCLER the exit stays shut (nothing slides out): it is just a tray. The flag's card says so.
 //   Unlock: vendorOnly + shopSkillId 'standard' / level 3 = it appears in the shop at Standard level 3 (no vendor sells it); bought for White.
+//   SOCKETS (PixelSockets.cs): it OCCUPIES its Recycler's 'hatch' socket while latched (and will not latch onto a Recycler with a coupling on the hatch); its own 'back'
+//   socket (In) takes belts / connectors / hoses: AcceptHusk drops the husk into the tray (refused when trayRoom husks lie there).
 //   Stat hopper.husks. Tip device_SortingHopper.
 // ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelSortingHopper : MonoBehaviour
+public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom
 {
     [Header("Sorting Hopper")]
     [Tooltip("Seconds between two husks of the chosen type slid into the Recycler (a steady stream).")]
@@ -144,6 +146,8 @@ public class PixelSortingHopper : MonoBehaviour
     {
         clicker = owner;
         snapRange = Mathf.Max(0.5f, reach);
+        float su = Unit(clicker);
+        sockets = new[] { new PixelSocket("back", new Vector3(0f, 0f, DepthHusks * su * 0.5f + 0.35f * su), Vector3.forward, PixelSocketFlow.Intake) };
         baseScale = transform.localScale;
         flagTop = transform.Find("Flag Top");
         Transform flag = transform.Find("Flag");
@@ -155,11 +159,41 @@ public class PixelSortingHopper : MonoBehaviour
         SetFilter(-1);   // (nothing chosen: the first husk that lands in the tray sets it)
     }
 
-    private void OnEnable() { if (!all.Contains(this)) all.Add(this); }
-    private void OnDisable() { all.Remove(this); }
+    private void OnEnable() { if (!all.Contains(this)) all.Add(this); PixelCouplings.Register(this); }
+    private void OnDisable() { all.Remove(this); PixelCouplings.Unregister(this); }
+
+    // ---- Socket (PixelSockets.cs): the BACK wall, an In socket - a belt / connector / hose ending at a coupling there drops husks into the tray ----
+    private PixelSocket[] sockets = new PixelSocket[0];
+    public Transform SocketRoot => transform;
+    public IReadOnlyList<PixelSocket> Sockets => sockets;
+    public Color SocketTint => BodyColor;
+
+    [Tooltip("The most husks lying in the tray before the back coupling refuses more (a belt there then throws them on).")]
+    [SerializeField] private int trayRoom = 12;
+
+    public int HuskRoom(PixelSocket socket)
+    {
+        int n = 0;
+        IReadOnlyList<Rigidbody> pixels = clicker != null ? clicker.OldPixels : null;
+        if (pixels != null) for (int i = 0; i < pixels.Count; i++) if (pixels[i] != null && InTray(pixels[i].position, out _)) n++;
+        return Mathf.Max(0, Mathf.Max(1, trayRoom) - n);
+    }
+
+    /// <summary>A husk comes in through the back coupling: it drops into the tray near the back wall and slides down like any other. Refused when the tray is full.</summary>
+    public bool AcceptHusk(PixelSocket socket, Rigidbody husk)
+    {
+        if (husk == null || clicker == null || HuskRoom(socket) <= 0) return false;
+        float u = Unit(clicker);
+        husk.isKinematic = false;
+        husk.position = transform.TransformPoint(new Vector3(0f, (BackFloorHusks + 0.8f) * u, DepthHusks * u * 0.3f));
+        PixelHuskHolder.SetVelocity(husk, transform.TransformDirection(Vector3.back) * 0.8f);
+        return true;
+    }
 
     private void OnDestroy()
     {
+        PixelCouplings.Unregister(this);
+        if (recycler != null) PixelCouplings.Vacate(recycler, PixelRecycler.HatchSocket, this);
         if (sliding != null) PixelHuskHolder.Unreserve(sliding, Vector3.zero);   // (a husk half way through the hatch is let fall)
         sliding = null;
     }
@@ -169,7 +203,7 @@ public class PixelSortingHopper : MonoBehaviour
     /// <summary>Is this Recycler free for a hopper (none latched on, not ending)? 'except' = the asking hopper.</summary>
     private static bool Free(PixelRecycler r, PixelSortingHopper except)
     {
-        if (r == null || Ending(r)) return false;
+        if (r == null || Ending(r) || PixelCoupling.On(r, PixelRecycler.HatchSocket) != null) return false;   // (a coupling on the hatch takes the hopper's place)
         foreach (PixelSortingHopper h in all) if (h != null && h != except && h.recycler == r) return false;
         return true;
     }
@@ -245,13 +279,14 @@ public class PixelSortingHopper : MonoBehaviour
     /// <summary>Latches onto a free Recycler within reach (every half second when it has none), follows it when it is carried, keeps its back hatch open.</summary>
     private void KeepLatched()
     {
-        if (recycler != null && (Ending(recycler) || !recycler.isActiveAndEnabled)) recycler = null;
+        if (recycler != null && (Ending(recycler) || !recycler.isActiveAndEnabled)) { PixelCouplings.Vacate(recycler, PixelRecycler.HatchSocket, this); recycler = null; }
         if (recycler == null)
         {
             if (Time.time < nextLook) return;
             nextLook = Time.time + 0.5f;
             recycler = Nearest(clicker, transform.position, snapRange, this);
             if (recycler == null) return;
+            PixelCouplings.Occupy(recycler, PixelRecycler.HatchSocket, this);   // (the hatch socket is ours now: no coupling goes there)
             PixelAudio.Play("device_place");
         }
         if (recycler.Fading) return;
