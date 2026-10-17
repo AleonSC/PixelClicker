@@ -42,7 +42,10 @@ public class PixelFeatureTester : MonoBehaviour
         public Func<PixelClicker, Vector3, float, GameObject> place;
         // Two-point features (a conveyor belt): click a start, click an end, repeat (the end starts the next piece).
         public bool line;
-        public bool singleLine;       // a line feature that is ONE piece (the Conveyor Connector): after the second click it starts over instead of chaining
+        // Routed features (the Container Hose): click a start, any number of bend points, and an end that snaps (a coupling); one piece through them all.
+        public bool route;
+        public Func<PixelClicker, IReadOnlyList<Vector3>, GameObject> placeRoute;
+        public Action<GameObject, IReadOnlyList<Vector3>> updateRoute;
         public Func<PixelClicker, GameObject> preview;
         public Func<PixelClicker, Vector3, Vector3, GameObject> placeLine;
         public Action<GameObject, Vector3, Vector3> updatePreview;
@@ -112,6 +115,13 @@ public class PixelFeatureTester : MonoBehaviour
         features.Add(new Feature { name = name, description = description, ghost = markerBuilder, line = true, preview = previewBuilder, updatePreview = previewUpdate, placeLine = placeBuilder, snap = snapPoint });
     }
 
+    /// <summary>Adds a routed thing to test (a hose through clicked points, ending on a snap point).</summary>
+    private void RegisterRoute(string name, string description, Func<PixelClicker, GameObject> markerBuilder, Func<PixelClicker, GameObject> previewBuilder,
+                               Action<GameObject, IReadOnlyList<Vector3>> previewUpdate, Func<PixelClicker, IReadOnlyList<Vector3>, GameObject> placeBuilder, SnapFunc snapPoint)
+    {
+        features.Add(new Feature { name = name, description = description, ghost = markerBuilder, line = true, route = true, preview = previewBuilder, updateRoute = previewUpdate, placeRoute = placeBuilder, snap = snapPoint });
+    }
+
     private void Awake()
     {
         instance = this;
@@ -120,7 +130,7 @@ public class PixelFeatureTester : MonoBehaviour
         PixelUIKit.EnsureEventSystem();
 
         Register("Coupling",
-                 "The one piece that joins belts, hoses and connectors to a device. Bring it near a device: the free SOCKETS show teal rings and the coupling snaps onto the nearest one (Storage Crate front, Kiln mouth, Trash Can side, Recycler back hatch, Sorting Hopper back, Quantum Organizer side, Wood Chipper chute, Funnel output). Its arrow shows the way husks go: green into the device (In), orange out of it (Out); on a crate or organizer click its teal dot to switch. Then end a belt at an In coupling or start one at an Out coupling (belts, connectors and hoses snap to it). It moves with the device and is saved with it. Hold the right button on it to take it off.",
+                 "The one piece that joins belts and hoses to a device. Bring it near a device: the free SOCKETS show teal rings and the coupling snaps onto the nearest one (Storage Crate front, Kiln mouth, Trash Can side, Recycler back hatch, Sorting Hopper back, Quantum Organizer side, Wood Chipper chute, Funnel output). Its arrow shows the way husks go: green into the device (In), orange out of it (Out); on a crate or organizer click its teal dot to switch. Then end a belt at an In coupling or start one at an Out coupling (belts and hoses snap to it). It moves with the device and is saved with it. Hold the right button on it to take it off.",
                  c => PixelCoupling.CreateGhost(c), (c, p, yw) => PixelCoupling.PlaceAt(c, p, yw));
         features[features.Count - 1].placeSnap = PixelCoupling.TrySnapGhost;
         features[features.Count - 1].live = PixelCoupling.Removable;
@@ -137,27 +147,11 @@ public class PixelFeatureTester : MonoBehaviour
                      (c, a, b) => PixelConveyor.Place(c, a, b), PixelConveyor.Snap);
         features[features.Count - 1].export = PixelConveyor.ExportState;
         features[features.Count - 1].import = PixelConveyor.ImportState;
-        RegisterLine("Conveyor Connector",
-                     "A boxed channel for gaps in turns or for joining a belt to a machine. Click one end, then the other: it magnetizes to belt ends, elevator tops, splitter outputs, the Kiln's mouth, the Storage Crate and other connectors, and a box forms between the two (scroll raises / lowers the point). Any old pixel inside the box - handed in by a belt or dropped / spat into it - is forced along it and put onto the belt that starts at the far end or into the machine there.",
-                     c => PixelConveyor.CreateMarker(c), c => PixelConnector.CreatePreview(c), (g, a, b) => PixelConnector.UpdatePreview(g, a, b),
-                     (c, a, b) => PixelConnector.Place(c, a, b), PixelConnector.Snap);
-        features[features.Count - 1].singleLine = true;
-        features[features.Count - 1].export = PixelConnector.ExportState;
-        features[features.Count - 1].import = PixelConnector.ImportState;
-        RegisterLine("Container Hose",
-                     "A see-through hose between two COUPLINGS. Click an OUT coupling on a Storage Crate or Quantum Organizer (click a crate's coupling dot to set it to Out), then an IN coupling on the target - a Recycler, another crate, an organizer, a Trash Can, the Kiln... (both clicks magnetize to the nearest coupling). It pumps the source's stored husks through the hose one by one into the target, only as many as the target has room for. The ends follow the devices when you carry them.",
-                     c => PixelConveyor.CreateMarker(c), c => PixelContainerHose.CreatePreview(c), (g, a, b) => PixelContainerHose.UpdatePreview(g, a, b),
-                     (c, a, b) => PixelContainerHose.Place(c, a, b), PixelContainerHose.Snap);
-        features[features.Count - 1].singleLine = true;
+        RegisterRoute("Container Hose",
+                     "A see-through hose between two COUPLINGS that you route yourself. Click an OUT coupling on a Storage Crate or Quantum Organizer (click a crate's coupling dot to set it to Out), then click as many points as you like to lead the hose round things (scroll raises / lowers the point), and finish by clicking an IN coupling on the target - a Recycler, another crate, an organizer, a Trash Can, the Kiln... (coupling clicks magnetize). Right click while routing takes the last point back. It pumps the source's stored husks through the hose one by one into the target, only as many as the target has room for. The ends follow the devices when you carry them. A quick right click on a placed hose turns its flow round (when both ends can work the other way).",
+                     c => PixelConveyor.CreateMarker(c), c => PixelContainerHose.CreatePreview(c), PixelContainerHose.UpdatePreview, PixelContainerHose.Place, PixelContainerHose.Snap);
         features[features.Count - 1].export = PixelContainerHose.ExportState;
         features[features.Count - 1].import = PixelContainerHose.ImportState;
-        Register("Hose Adapter",
-                 "A long open trough that snaps onto the end of a working Funnel's spout (bring the ghost near the spout) and carries what comes out of the hose. Start a conveyor belt at one of its two sides (the belt's first point snaps to the teal ports) or at its far end: the adapter hands the pixels to the belt that starts there, so the hose-to-belt connection is always clean.",
-                 c => PixelConnector.CreateAdapterGhost(c), (c, p, yw) => PixelConnector.PlaceAdapter(c, p, yw));
-        features[features.Count - 1].placeSnap = PixelConnector.TrySnapAdapter;
-        features[features.Count - 1].groundPlane = true;
-        features[features.Count - 1].export = PixelConnector.ExportState;
-        features[features.Count - 1].import = PixelConnector.ImportState;
         Register("Vacuum Cleaner",
                  "A big canister vacuum on wheels (to become a consumable). Left-click its body to drive it: W A S D or the arrow keys move it (diagonals too), relative to the camera. Husks that come near its wide front intake are sucked in and automatically spat back out of its hose - the mouse aims the hose, and they land where it points. Click the body again or press Escape to stop driving.",
                  c => PixelVacuumCleaner.CreateGhost(c), (c, p, yw) => PixelVacuumCleaner.Place(c, p, yw));
@@ -165,7 +159,7 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].export = PixelVacuumCleaner.ExportState;
         features[features.Count - 1].import = PixelVacuumCleaner.ImportState;
         Register("Trash Can",
-                 "A plain cylinder that deletes things. Put it on the floor: every loose old pixel within a small radius (the teal ring) - thrown out of a Funnel hose, a machine or the end of a conveyor belt - is pulled to its mouth and vanishes, no credit. Belts and connectors that end at it feed it directly.",
+                 "A plain cylinder that deletes things. Put it on the floor: every loose old pixel within a small radius (the teal ring) - thrown out of a Funnel hose, a machine or the end of a conveyor belt - is pulled to its mouth and vanishes, no credit. Belts and hoses that end at a coupling on it feed it directly.",
                  c => PixelTrashCan.CreateGhost(c), (c, p, yw) => PixelTrashCan.Place(c, p, yw));
         features[features.Count - 1].groundPlane = true;
         features[features.Count - 1].export = PixelTrashCan.ExportState;
@@ -327,6 +321,7 @@ public class PixelFeatureTester : MonoBehaviour
         if (previewGhost != null) Destroy(previewGhost);
         previewGhost = null;
         hasStart = false;
+        routePoints.Clear();
         stageActive = false;
         lineElev = 0f;
         placing = null;
@@ -721,6 +716,7 @@ public class PixelFeatureTester : MonoBehaviour
         Vector3 elevated = new Vector3(raw.x, groundY + lineElev, raw.z);
         bool snapped = false;
         Vector3 p = hasPoint ? placing.snap(clicker, elevated, out snapped) : elevated;
+        if (placing.route) { UpdateRoute(hasPoint, p, snapped, groundY, unit); return; }
         if (hasStart) p = PixelConveyor.ClampEnd(lineStart, p);
         string text = "Scroll: raise / lower the belt supports. Height " + (lineElev / unit).ToString("0.0") + " cubes" + (snapped ? "  (snapped to an end)" : "");
         if (statusLabel != null && text != lastElevText) { statusLabel.text = text; lastElevText = text; }
@@ -749,12 +745,6 @@ public class PixelFeatureTester : MonoBehaviour
             {
                 GameObject go = placing.placeLine(clicker, lineStart, p);
                 if (go != null) { placing.placed.Add(go); lineStart = p; }
-                if (placing.singleLine)
-                {
-                    hasStart = false;
-                    if (previewGhost != null) Destroy(previewGhost);
-                    previewGhost = null;
-                }
                 Refresh();
             }
         }
@@ -769,6 +759,65 @@ public class PixelFeatureTester : MonoBehaviour
             }
             else StopPlacing();
         }
+    }
+
+    // ---------------- routed placing (the Container Hose) ----------------
+
+    private readonly List<Vector3> routePoints = new List<Vector3>();
+    private readonly List<Vector3> routeScratch = new List<Vector3>();
+
+    /// <summary>
+    /// A routed piece: the first click starts it, every click after that adds a bend point, and a click that SNAPS (onto a coupling) finishes it - one
+    /// piece through all the points. Right click takes the last point back (with none left it stops placing). Scroll raises / lowers the point.
+    /// </summary>
+    private void UpdateRoute(bool hasPoint, Vector3 p, bool snapped, float groundY, float unit)
+    {
+        string text = (routePoints.Count == 0 ? "Click the start (an Out coupling)." : "Click bend points, then an In coupling to finish. Right click: take the last point back.")
+                      + "  Scroll: height " + (lineElev / unit).ToString("0.0") + " cubes" + (snapped ? "  (on a coupling)" : "");
+        if (statusLabel != null && text != lastElevText) { statusLabel.text = text; lastElevText = text; }
+        if (routePoints.Count == 0)
+        {
+            if (ghost != null) { ghost.SetActive(hasPoint); if (hasPoint) ghost.transform.position = p; }
+        }
+        else if (previewGhost != null)
+        {
+            routeScratch.Clear();
+            routeScratch.AddRange(routePoints);
+            if (hasPoint) routeScratch.Add(p);
+            placing.updateRoute(previewGhost, routeScratch);
+        }
+        if (Time.frameCount == placeStartFrame) return;
+        if (hasPoint && PixelInput.LeftPressed())
+        {
+            if (snapped) lineElev = Mathf.Max(0f, p.y - groundY);
+            routePoints.Add(p);
+            if (routePoints.Count == 1)
+            {
+                hasStart = true;
+                if (ghost != null) ghost.SetActive(false);
+                if (previewGhost == null) previewGhost = placing.preview(clicker);
+            }
+            else if (snapped)
+            {
+                GameObject go = placing.placeRoute(clicker, routePoints);
+                if (go != null) placing.placed.Add(go);
+                EndRoute();
+            }
+            Refresh();
+        }
+        else if (PixelInput.RightPressed())
+        {
+            if (routePoints.Count > 0) { routePoints.RemoveAt(routePoints.Count - 1); if (routePoints.Count == 0) EndRoute(); Refresh(); }
+            else StopPlacing();
+        }
+    }
+
+    private void EndRoute()
+    {
+        routePoints.Clear();
+        hasStart = false;
+        if (previewGhost != null) Destroy(previewGhost);
+        previewGhost = null;
     }
 
     // ---------------- two-stage tall placing (the Conveyor Elevator) ----------------

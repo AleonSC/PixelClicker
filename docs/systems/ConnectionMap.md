@@ -75,7 +75,7 @@ Keep this map current: when a system gets a new link (or loses one), change its 
 | Conveyor Belt (+ corner joints) | husks | moves them | space | Electrician (level 5) | Built (a real item at Electrician 5) |
 | Splitter | a belt's husks | shares them over three outputs | space | Electrician? | Built (tester) |
 | Conveyor Elevator | a belt's husks | lifts them to a higher belt | space | Electrician? | Built (tester) |
-| Conveyor Connector / Hose Adapter | husks in its box / from a Funnel | onto the next belt or machine | space | Electrician? | Built (tester) |
+| Container Hose | husks stored in a crate / organizer (Out coupling) | into any In coupling, routed through bend points | space | Electrician? | Built (tester) |
 | Belt Sorter | a belt's husks + one filter block | that type off the side | space, the rotation | Electrician? | Built (tester) |
 | Kiln | husks | Charcoal husks | despawn | ? | Built (tester) |
 | Trash Can | loose husks | deletes them | space | ? | Built (tester) |
@@ -86,7 +86,7 @@ Keep this map current: when a system gets a new link (or loses one), change its 
 | Action | Takes in | Gives out | Pressure | Later replaced / kept by | State |
 |---|---|---|---|---|---|
 | Break husks by hand | loose husks | skill XP (a fraction of the click's XP) | despawn | machines (Chipper, Recycler) | Built |
-| Pick up and carry husks | loose husks | husks fed to a machine by hand | despawn, space | belts, Funnel, connectors, Tiny Robot | Built |
+| Pick up and carry husks | loose husks | husks fed to a machine by hand | despawn, space | belts, Funnel, hoses, Tiny Robot | Built |
 | **Repair a broken machine** | husks from other skills (Mining metals, Electrician Wire) | the machine runs again | machine breakdowns | stays a hands-only job | Designed (`PixelRules.md`) |
 
 Machines can **break** from the wrong input (main cause) or gentle wear (optional); a broken machine stops and keeps its contents until it is repaired in first person (`PixelRules.md`, "Machine breakdowns and repair").
@@ -99,7 +99,7 @@ Machines can **break** from the wrong input (main cause) or gentle wear (optiona
 |---|---|
 | **Despawn** (husks vanish) | first person by hand (the first answer), Wood Chipper, Storage Crate, Magnet, Quantum Organizer, Funnel, Recycler (Designed), Kiln |
 | **Machine breakdowns** (wrong input, wear) | sorting before the machine (Belt Sorter, Splitter), repairs in first person (Designed) |
-| **Space** (the floor circle is small) | belts, Splitter, Elevator, Connector, Fan, Sorter, Trash Can, free cam; a bigger floor as a reward (Idea, the dev toggle exists) |
+| **Space** (the floor circle is small) | belts, Splitter, Elevator, hoses, Fan, Sorter, Trash Can, free cam; a bigger floor as a reward (Idea, the dev toggle exists) |
 | **Hazards** | right-click clearing, Pesticide charges / Sprayer (Designed), Focus potions, Infestation dial (open), sap bait (Designed), Belt Sorter |
 | **One skill at a time** | auto clicker + machines working while you focus elsewhere; Offline Progression |
 | **The rotation** (cannot choose the next block) | Block Hold, Shuffle, potions, lookahead perks (Designed) |
@@ -156,7 +156,7 @@ Machines can **break** from the wrong input (main cause) or gentle wear (optiona
 1. **Foraging:** what does it give other skills, and what does it need? (e.g. Herbs -> potions, Mushrooms -> Farming fertilizer)
 2. **Fishing:** an outgoing link (e.g. Water -> Farming, Pearls -> crafting).
 3. **Mining:** an incoming link (e.g. Electrician powers a drill; Charcoal fuels a smelter). Its metal husks as machine repair material (Designed) give it an outgoing link.
-4. **Electrician as the factory skill:** confirm it is the home of belts, splitters, elevators, connectors, sorters and the Tiny Robot.
+4. **Electrician as the factory skill:** confirm it is the home of belts, splitters, elevators, hoses, couplings, sorters and the Tiny Robot.
 5. **Dead-end outputs:** Charcoal, Wood Chips and Magic Wood need a use.
 6. **Minigames:** give each one a skill it feeds.
 7. **Pixel rules rework:** step 1 built (husks stop paying; Vacuum gives husk XP, Solar keeps daylight up, Bank is storage). Open: should the husk minigames (Snake, Sorting Race, Breakout) keep paying currency per husk?

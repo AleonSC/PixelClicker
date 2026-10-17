@@ -15,18 +15,18 @@ hooks, the registry) and `PixelCoupling.cs` (the snap-on coupling piece). Placed
 - **Sockets (data).** Every device declares its SOCKETS: a few lines each - `id`, local position (the PORT, where a belt end / hose end meets
   it, at belt-underside height), outward facing, `flow` = Intake / Output / Both, and a `kind`. Sockets sit on openings the device already has:
   Kiln mouth, Storage Crate front, Trash Can side, Recycler back hatch (shared with the Sorting Hopper: a latched hopper occupies it), Sorting
-  Hopper back wall, Quantum Organizer side, Wood Chipper chute, Funnel output, Elevator entry / top, Splitter entry / three sides, Connector ends.
+  Hopper back wall, Quantum Organizer side, Wood Chipper chute, Funnel output, Elevator entry / top, Splitter entry / three sides, Belt Sorter chute.
 - **Couplings (one shared piece).** ONE model (PixelFactoryKit) and ONE component. Placing it near a free socket snaps it on; it is parented to
   the device so it moves with it (carry handles, turning); removing the device removes its couplings. It is tinted a little with the device's
   colour (`SocketTint`) so it reads as a flange, not a bolt-on.
 - **Direction is shown on the coupling:** a green arrow pointing INTO the device = Intake, an orange arrow pointing OUT = Output, teal arrows
   both ways = Both.
-- **Fitted couplings.** The factory pieces that ARE belt fittings (Elevator, Splitter, Connector) come with couplings fitted on their sockets
+- **Fitted couplings.** The factory pieces that ARE belt fittings (Elevator, Splitter, Belt Sorter) come with couplings fitted on their sockets
   (`PixelSocket.fitted`): built with the piece, not saved, not removable on their own. Everything else needs a placed coupling.
-- **Belts, hoses and connectors connect to a COUPLING, never to the device directly:**
+- **Belts and hoses connect to a COUPLING, never to the device directly:**
   - a belt END at an Intake coupling's port hands the husk in; a belt START at an Output coupling's port is fed by it;
-  - a Connector's ends snap to coupling ports; a Container Hose's source end snaps to an Output (or Both) coupling, its target end to an Intake one;
-  - placing snaps to coupling ports (`PixelConveyor.Snap`, `PixelConnector.Snap`, `PixelContainerHose.Snap` all ask `PixelCouplings.Ports`).
+  - a Container Hose starts on an Output (or Both) coupling, runs through any bend points the player clicks, and ends on an Intake one; a quick right click on it reverses its flow;
+  - placing snaps to coupling ports (`PixelConveyor.Snap` and `PixelContainerHose.Snap` ask the couplings).
 - **ONE device hook for husks in:** `IPixelSocketDevice.AcceptHusk(socket, husk)` - the husk is kinematic and still on the husk list; the device
   takes it (true) or refuses (false, e.g. full). A refused husk is ejected by whatever brought it, like before (a belt throws it on, a hose drops it).
 - **Out:** a device that emits a husk calls `PixelCouplings.Emit(device, socketId, husk)`: with an Output coupling on that socket and a belt
@@ -37,11 +37,11 @@ hooks, the registry) and `PixelCoupling.cs` (the snap-on coupling piece). Placed
 - **Saving:** couplings are saved WITH THEIR DEVICE - `PlacedState.couplings` for shop devices, `TesterSave.couplings` for tester machines
   (a list of socket ids); belts re-attach after a load by position as before.
 - **Unchanged on purpose:** a device's own natural intake (husks falling into the Kiln mouth, the Recycler's open top, the Trash Can's suction)
-  works with or without couplings - couplings are only for belts, hoses and connectors.
+  works with or without couplings - couplings are only for belts and hoses.
 
 ## Socket kinds (an open list)
 The kind is an enum appended over time (`PixelSocketKind`: Husk, Power, Signal, Water, Heat, Link), NOT a yes / no "takes husks" flag. Each later
-kind = a new enum value + its own coupling look + its own hook, never a new system. Built: **Husk** only (belts, hoses, connectors).
+kind = a new enum value + its own coupling look + its own hook, never a new system. Built: **Husk** only (belts, hoses).
 - **Power (plan next, Electrician):** today Wire / Battery / Resistor husks and Electric pixels arc to devices in their own hand-made code
   (PixelElectricLinks, `HoldPower`); that should move onto power sockets (e.g. a powered Recycler works faster).
 - **Signal (plan next, the planned Automation skill):** on / off triggers between devices (a full Storage Crate starts a Recycler, a hopper opens
@@ -55,7 +55,8 @@ kind = a new enum value + its own coupling look + its own hook, never a new syst
 ## Build order (how it was moved over)
 1. Sockets + coupling + hook next to the old interfaces. 2. Devices moved one at a time: Storage Crate, Kiln, Trash Can, Splitter, Elevator,
 Container Hose, Connector, then the Funnel and Chipper outputs, then the Recycler + Sorting Hopper (+ Quantum Organizer for hoses) as new
-intakes. 3. `IPixelBeltAcceptor`, `IPixelPort` and the hand-made output latches deleted, so there is one way to connect. The Belt Sorter's
+intakes. 3. `IPixelBeltAcceptor`, `IPixelPort` and the hand-made output latches deleted, so there is one way to connect. 4. The Conveyor Connector
+and Hose Adapter were then deleted as no longer needed, and the Container Hose became freely routed (bend points) with a right click to reverse it. The Belt Sorter's
 chute (the same "find a belt that starts here" copy) moved onto a built-in bare socket too. Kiln got a second socket, its charcoal chute (Out).
 
 ## Where each device's sockets are
@@ -71,7 +72,6 @@ chute (the same "find a belt that starts here" copy) moved onto a built-in bare 
 | Wood Chipper | `chute` (Out, on the floor in front of the outlet) |
 | Conveyor Elevator | `in`, `out` (fitted) |
 | Splitter | `in`, `out0` / `out1` / `out2` (fitted) |
-| Conveyor Connector / Hose Adapter | `in` (not the adapter), `out`, adapter `right` / `left` (fitted, bare) |
 | Belt Sorter | `chute` (Out, fitted, bare) |
 
 ## Adding a device

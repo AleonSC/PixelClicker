@@ -1,6 +1,6 @@
 // ---- System notes ----
 // PixelCoupling.cs
-//   The COUPLING: the ONE snap-on piece that joins belts, hoses and connectors to a device's SOCKET (PixelSockets.cs; design docs/systems/PixelCouplings.md).
+//   The COUPLING: the ONE snap-on piece that joins belts and hoses to a device's SOCKET (PixelSockets.cs; design docs/systems/PixelCouplings.md).
 //   - Fit(device, socket): a child of the device's SocketRoot at the socket's port, facing out of it, so it moves / turns with the device (carry handles)
 //     and goes when the device goes. Built with PixelFactoryKit: a flange tinted a little with the device's colour (tintShare of SocketTint), a collar
 //     with a dark opening, a lip at belt height, and a flow ARROW over it that drifts the way husks go - green pointing INTO the device = In, orange

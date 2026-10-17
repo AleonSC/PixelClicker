@@ -9,7 +9,7 @@
 //   Ghost / display (shop picture) models are built by the same code (Mode); the cone and tube are pinned to the WORLD (the object's yaw only turns the spout). Riders in the tube are plain
 //   HOLD (backpressure + physics pile): the cone has a SOLID surface (a hidden two-sided mesh collider: the sloped wall and a floor closing the throat), so caught pixels do not vanish into the tube at once: they land in the cone and PILE UP with real
 //   physics. One by one (holdFeedSeconds), while the tube has room, the lowest pixel in the cone is locked and carried down the tube. At the spout the tube waits (PixelPathCarrier canExit = ExitHasRoom) when the output coupling's belt has no room for
-//   another pixel (PixelConveyorSystem.StartHasRoom) or a connector there is full, so a flooding hose queues up the tube and then fills the cone (the pile can heap up over the rim) instead of overflowing the belt. disableHold = the old direct catch (no collider).
+//   another pixel (PixelConveyorSystem.StartHasRoom) so a flooding hose queues up the tube and then fills the cone (the pile can heap up over the rim) instead of overflowing the belt. disableHold = the old direct catch (no collider).
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -73,13 +73,6 @@ public class PixelFunnel : MonoBehaviour, IPixelSocketDevice
     private static void ResetStatics() { real.Clear(); glassMat = null; }
 
     /// <summary>Is a working funnel standing in the world (placing another one then moves it)?</summary>
-    /// <summary>The working funnels (the Hose Adapter snaps to their spouts).</summary>
-    public static IReadOnlyList<PixelFunnel> Working => real;
-
-    /// <summary>Where the spout ends, at floor level (the Hose Adapter starts here), and the way it points (yaw in degrees).</summary>
-    public Vector3 SpoutEndFloor => transform.position + Quaternion.Euler(0f, transform.eulerAngles.y, 0f) * Vector3.forward * (SpoutLen * unit);
-    public float SpoutYaw => transform.eulerAngles.y;
-    public bool IsWorking => mode == Mode.Real;
 
     public static bool Exists { get { real.RemoveAll(f => f == null); return real.Count > 0; } }
 
@@ -365,14 +358,7 @@ public class PixelFunnel : MonoBehaviour, IPixelSocketDevice
         carrier.Step(path, pathDist, Speed * unit, Gap * unit, Time.fixedDeltaTime, Release, ApproachSeconds, ExitHasRoom);
     }
 
-    private bool ExitHasRoom()
-    {
-        float u = unit;
-        Vector3 end = path[path.Length - 1];
-        if (!PixelCouplings.OutputHasRoom(this, "output")) return false;   // a belt fed by the output coupling is full: wait
-        foreach (PixelConnector con in PixelConnector.All) if (con != null && !con.HasRoomAt(end + (path[path.Length - 1] - path[path.Length - 2]).normalized * 0.4f * u)) return false;
-        return true;
-    }
+    private bool ExitHasRoom() => PixelCouplings.OutputHasRoom(this, "output");   // a belt fed by the output coupling is full: wait
 
     private void Feed()
     {

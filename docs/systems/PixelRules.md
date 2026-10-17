@@ -52,14 +52,14 @@ Machines exist to turn husks into something useful; despawning hurts because unu
 | Storage Crate | stored material for later |
 | Pesticide Sprayer (planned) | used up to clear hives automatically |
 | Crafting (planned) | recipe ingredients |
-| Conveyor belts, sorters, connectors | moving husks to the right machine |
+| Conveyor belts, sorters, hoses | moving husks to the right machine |
 
 ## The Recycler (built 2026-10-15, `PixelRecycler.cs`)
 
 Built version: an open bin (DeviceKind.Recycler, first on the shop's Utilities card, 50 White; Cubie gives one on his first visit). Drop up to 10 husks in, press the red button on its front: the lid shuts and each husk pays back **50%** of its value (it shakes for 2 s first) as currency of its type. The husks stay in the bin as physical pixels until then. The notes below are the original plan; the live numbers are on the component.
 
 - **What it does:** takes husks in and pays out currency of that block's type at **15% of the block's click value** per husk (start value, to be tuned). A Wood husk from a Wood block that pays 3 gives 0.45 Wood.
-- **Takes time and setup:** it processes one husk every so often (proposed: one every 1.5 seconds), so throughput is a real limit; husks are fed by belt, Funnel, Conveyor Connector or by hand (it is a belt acceptor like the Kiln).
+- **Takes time and setup:** it processes one husk every so often (proposed: one every 1.5 seconds), so throughput is a real limit; husks are fed by belt, Funnel, hose or by hand (through a coupling on its socket, like the Kiln).
 - **Upgrades through other skills:** Electrician power raises its speed; a later tier raises its rate (e.g. to 25%). Another cross-skill link.
 - **It competes with the other uses:** the same husk can go to the Recycler (a little currency), the Wood Chipper (XP), crafting (material) or the Pesticide Sprayer (charges). Choosing where husks go is the builder's puzzle.
 - **A home for the old systems:** the Vacuum can collect husks and hand them to a Recycler instead of paying currency out directly. (The Pixel Bank is storage, not a cash-in: see the table below.)
@@ -73,7 +73,7 @@ The progression:
 
 1. **The cube** makes currency and husks.
 2. **Hands (first person)**: you save husks from despawning, break them for XP and carry them to machines. Free but slow.
-3. **Machines** take the carrying and processing over (belts, Funnel, connectors, sorters, Chipper, Kiln, Recycler). Faster, but they cost something to buy and place.
+3. **Machines** take the carrying and processing over (belts, Funnel, hoses, sorters, Chipper, Kiln, Recycler). Faster, but they cost something to buy and place.
 4. **Machines break** (see below), and your hands are needed again. That sends you back to fix the layout properly.
 
 Rules that keep it balanced:

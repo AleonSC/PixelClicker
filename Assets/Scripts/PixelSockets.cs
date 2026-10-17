@@ -1,15 +1,15 @@
 // ---- System notes ----
 // PixelSockets.cs
-//   SOCKETS: the ONE way belts, hoses and connectors connect to devices (design: docs/systems/PixelCouplings.md). A device declares its sockets as data
+//   SOCKETS: the ONE way belts and hoses connect to devices (design: docs/systems/PixelCouplings.md). A device declares its sockets as data
 //   (PixelSocket: id, port = local position where a belt end / hose end meets it, outward facing, flow Intake / Output / Both, kind, fitted) and
 //   implements IPixelSocketDevice: its sockets, a tint for its couplings, and ONE hook for husks coming in (AcceptHusk: take it or refuse when full).
 //   Devices register in OnEnable / unregister in OnDisable (PixelCouplings.Register). A PixelCoupling (PixelCoupling.cs) snaps onto a socket; belts,
 //   hoses and connectors only ever talk to couplings:
-//   - a belt END / connector end / hose end at an In coupling hands its husk in: PixelCouplings.HandIn(at, husk) -> the device's AcceptHusk;
+//   - a belt END / hose end at an In coupling hands its husk in: PixelCouplings.HandIn(at, husk) -> the device's AcceptHusk;
 //   - a device putting a husk out calls PixelCouplings.Emit(device, socketId, husk): an Out coupling on that socket puts it on the belt that starts at
 //     its port (PixelConveyorSystem.StartHasRoom), or hands it to an In coupling there (device to device); false = nothing attached, the device does
 //     its own thing (fling / drop). OutputHasRoom = may the device let one out now (the Funnel waits when a belt there is full).
-//   - placing belts / connectors / hoses snaps to coupling ports (Ports).
+//   - placing belts / hoses snaps to coupling ports (Ports).
 //   Optional extras: IPixelHuskSource (a hose may pull stored husks out of an Out coupling: Storage Crate, Quantum Organizer), IPixelHuskRoom (how many
 //   more husks an In coupling's device takes now: a hose only pumps what fits). A socket can be OCCUPIED by something that is not a coupling (the
 //   Sorting Hopper latched on the Recycler's back hatch: Occupy / Vacate). Couplings are saved with their device: Export / Import (socket ids +
@@ -22,7 +22,7 @@ using UnityEngine;
 /// <summary>What flows through a socket. An open list: append new kinds at the end (Unity stores enums as numbers).</summary>
 public enum PixelSocketKind
 {
-    /// <summary>Husks (belts, hoses, connectors). The only kind built so far.</summary>
+    /// <summary>Husks (belts, hoses). The only kind built so far.</summary>
     Husk = 0,
     /// <summary>Planned (Electrician): electricity that speeds machines up or keeps them running.</summary>
     Power = 1,
@@ -55,7 +55,7 @@ public class PixelSocket
     public PixelSocketKind kind;
     [Tooltip("A coupling comes fitted with the device (the belt-fitting pieces: Elevator, Splitter, Connector); not saved, not removable on its own.")]
     public bool fitted;
-    [Tooltip("A fitted coupling with no model of its own (the piece's own shape is the fitting: the Conveyor Connector's ends).")]
+    [Tooltip("A fitted coupling with no model of its own (the piece's own shape is the fitting: the Belt Sorter's chute).")]
     public bool bare;
 
     public PixelSocket(string id, Vector3 localPosition, Vector3 localFacing, PixelSocketFlow flow, bool fitted = false, PixelSocketKind kind = PixelSocketKind.Husk)

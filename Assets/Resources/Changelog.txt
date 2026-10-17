@@ -1312,3 +1312,5 @@
 [2026-10-17 13:17 UTC] Couplings step 3: deleted the old belt intake (IPixelBeltAcceptor), the connector port marker (IPixelPort) and the last hand-made belt-finding copy (Belt Sorter chute, now a built-in socket), so couplings are the one way belts, hoses and connectors join devices; docs updated and the to-do item marked done.
 [2026-10-17 13:18 UTC] Couplings: the Kiln's mouth socket now sits at the front edge of its stone apron, so a belt ending there does not run into the apron.
 [2026-10-17 13:31 UTC] Fixed a NullReferenceException in the hover tooltip (PixelClicker.TryGetBlockAt) when a husk under the mouse was destroyed mid-frame, and added the missing 'Funnel placed' hint.
+[2026-10-17 13:36 UTC] Removed the Conveyor Connector and the Hose Adapter (and all their code): couplings and the Container Hose now do their job.
+[2026-10-17 13:36 UTC] Container Hose: it is now routed freely - start on an Out coupling, click any number of bend points (scroll sets their height), finish on an In coupling - with no forced arc, and a quick right click on a placed hose reverses its flow when both ends can work the other way.

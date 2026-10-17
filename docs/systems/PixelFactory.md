@@ -31,8 +31,8 @@ PixelVisitorMinigame got `BuySellTabs` (a vendor that sells wares AND buys pixel
 - Belt ends are 3D points (y = underside). Scroll while placing a belt raises / lowers the point (posts appear), so belts can slope; `Snap` finds belt ends / elevator tops by screen distance. Riders move by ground distance (`Length`), with `PointAt` / `RunSpeed` / `LiftFactor` handling the slope.
 - `PixelElevator` (tester feature): magnetizes to a belt end, click for the base, mouse height, click to confirm. Entry on its -Z face and exit on the +Z top face are sockets with couplings built in (a belt ends at the entry coupling; a new belt starts at the top one). Uses `PixelPathCarrier`.
 
-## Conveyor Connector
-`PixelConnector.cs` (tester feature, two clicks, one piece): see its header comment. Its ends are built-in (bare) sockets; it magnetizes to coupling ports (`PixelCouplings.Ports`) and puts pixels out through its far-end coupling (`PixelCouplings.Emit`).
+## Conveyor Connector and Hose Adapter (removed 2026-10-17)
+Both were deleted once couplings existed: a belt ends at a coupling or starts at one, and the Container Hose is routed freely between couplings, so neither the boxed channel nor the funnel-spout trough is needed.
 
 ## Corner joints
 `PixelConveyorJoint.cs`: belts chained at an angle get a corner filler (slab + outer rails) on the outside of the turn, built automatically by each belt every 0.5 s (see the file header).
