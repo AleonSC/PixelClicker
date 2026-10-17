@@ -525,19 +525,17 @@ public class PixelToggles : MonoBehaviour
         lr.offsetMax = new Vector2(-(rowHeight + 20f), 0f);
 
         // The pencil (pet rows only) on the far left.
-        GameObject pencil = new GameObject("Pencil", typeof(RectTransform), typeof(Image), typeof(Button));
+        GameObject pencil = new GameObject("Pencil", typeof(RectTransform), typeof(Image));
         pencil.transform.SetParent(row.go.transform, false);
         Image pencilImage = pencil.GetComponent<Image>();
         PixelPets petsForIcon = PixelPets.Instance;
         pencilImage.sprite = petsForIcon != null ? petsForIcon.PencilSprite() : null;
         pencilImage.preserveAspect = true;
-        pencil.GetComponent<Button>().targetGraphic = pencilImage;
         RectTransform pencilRect = pencil.GetComponent<RectTransform>();
         pencilRect.anchorMin = pencilRect.anchorMax = pencilRect.pivot = new Vector2(0f, 0.5f);
         pencilRect.sizeDelta = new Vector2(rowHeight * 0.62f, rowHeight * 0.62f);
         pencilRect.anchoredPosition = new Vector2(12f, 0f);
-        pencil.GetComponent<Button>().onClick.AddListener(() => { row.editAction?.Invoke(); PixelAudio.Play("ui_click"); });
-        row.edit = pencil.GetComponent<Button>();
+        row.edit = PixelUIKit.MakeClickable(pencil, () => row.editAction?.Invoke());
         pencil.SetActive(false);
 
         GameObject box = new GameObject("Tick Box", typeof(RectTransform), typeof(Image), typeof(Toggle));

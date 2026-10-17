@@ -15,5 +15,7 @@ if [ ! -d .cache/unity/lib/net45 ]; then
 fi
 OUT=$(dotnet build CompileCheck.csproj -nologo -v q -clp:NoSummary 2>&1 || true)
 ERRS=$(echo "$OUT" | grep -E "error (CS|MSB|NU)" | sed -E 's#^.*/Assets/Scripts/##' | sort -u)
+RULES=$(./rules.sh || true)   # project rules the compiler can't check (see rules.sh)
+ERRS=$(printf '%s\n%s' "$ERRS" "$RULES" | sed '/^$/d')
 if [ -n "$ERRS" ]; then echo "$ERRS"; echo "$(echo "$ERRS" | wc -l) error(s)"; exit 1; fi
 echo "compile check passed (no errors)"

@@ -1462,11 +1462,10 @@ public class PixelBank : MonoBehaviour
     private RowUI BuildRow()
     {
         RowUI row = new RowUI();
-        row.go = new GameObject("Bank Row", typeof(RectTransform), typeof(Image), typeof(Button));
+        row.go = new GameObject("Bank Row", typeof(RectTransform), typeof(Image));
         row.go.transform.SetParent(content, false);
         row.background = row.go.GetComponent<Image>();
         row.background.color = rowColor;
-        row.go.GetComponent<Button>().targetGraphic = row.background;
         RectTransform rr = row.go.GetComponent<RectTransform>();
         rr.anchorMin = new Vector2(0f, 1f);
         rr.anchorMax = new Vector2(1f, 1f);
@@ -1474,7 +1473,7 @@ public class PixelBank : MonoBehaviour
         rr.sizeDelta = new Vector2(-24f, rowHeight);
 
         // Clicking a row selects that pixel type (when there are some stored).
-        row.go.GetComponent<Button>().onClick.AddListener(() =>
+        PixelUIKit.MakeClickable(row.go, () =>
         {
             if (row.tier >= 0 && row.tier < counts.Length && Has(row.tier))
             {
@@ -1482,7 +1481,7 @@ public class PixelBank : MonoBehaviour
                 refreshTimer = 0f;
                 PixelAudio.Play("bank_select");
             }
-        });
+        }, sound: false);   // (a pick makes its own 'bank_select' sound)
 
         GameObject swatchObject = new GameObject("Swatch", typeof(RectTransform), typeof(Image));
         swatchObject.transform.SetParent(row.go.transform, false);

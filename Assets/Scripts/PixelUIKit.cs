@@ -134,6 +134,24 @@ public static class PixelUIKit
         return go.GetComponent<Button>();
     }
 
+    /// <summary>
+    /// Makes something that is NOT a button (a list row, a picture, a card, a click catcher) clickable without changing its look;
+    /// real buttons come from <see cref="CreateButton"/>. These two are the only places that add a Button component (the compile
+    /// check fails on any other), so click sound and press feedback are settled here. 'go' needs a raycast-target Graphic (its Image).
+    /// sound = play the ui_click (false when the click makes its own sound, e.g. a page turn); pressTint = the usual darken while held
+    /// (false for rows inside a scroll list and plain pictures); target = the graphic that tints (default: the one on 'go').
+    /// </summary>
+    public static Button MakeClickable(GameObject go, UnityEngine.Events.UnityAction onClick, bool sound = true, bool pressTint = true, Graphic target = null)
+    {
+        Button b = go.GetComponent<Button>();
+        if (b == null) b = go.AddComponent<Button>();
+        b.targetGraphic = target != null ? target : go.GetComponent<Graphic>();
+        if (!pressTint) b.transition = Selectable.Transition.None;
+        if (sound) b.onClick.AddListener(() => PixelAudio.Play("ui_click"));
+        if (onClick != null) b.onClick.AddListener(onClick);
+        return b;
+    }
+
     private static Sprite buttonSprite;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

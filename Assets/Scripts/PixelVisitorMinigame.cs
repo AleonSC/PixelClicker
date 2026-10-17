@@ -551,19 +551,17 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         // Clicking the visitor (any part of the art) brings them in.
         Image catcher = visitorRect.gameObject.AddComponent<Image>();
         catcher.color = new Color(0f, 0f, 0f, 0f);
-        Button inButton = visitorRect.gameObject.AddComponent<Button>();
-        inButton.transition = Selectable.Transition.None;
-        inButton.onClick.AddListener(() => accept());
+        Button inButton = PixelUIKit.MakeClickable(visitorRect.gameObject, () => accept(), pressTint: false);
         peekCatcher = catcher;
         peekButton = inButton;
 
         // The bubble, left of the peeking visitor.
-        GameObject b = new GameObject("Peek Bubble", typeof(RectTransform), typeof(Image), typeof(Button));
+        GameObject b = new GameObject("Peek Bubble", typeof(RectTransform), typeof(Image));
         b.transform.SetParent(canvasRoot.transform, false);
         Image bg = b.GetComponent<Image>();
         bg.color = peekBubbleColor;   // (a dark box: the Image's default white made the white text unreadable)
         PixelUIKit.StyleBox(bg);
-        b.GetComponent<Button>().onClick.AddListener(() => accept());
+        PixelUIKit.MakeClickable(b, () => accept());
         RectTransform br = b.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = new Vector2(1f, 0f);
         br.pivot = new Vector2(1f, 0f);

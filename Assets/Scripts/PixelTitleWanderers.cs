@@ -232,7 +232,7 @@ public class PixelTitleWanderers : MonoBehaviour
 
     private void MakeToggle(TMP_FontAsset font, string name, string text, float y, System.Func<bool> get, System.Action<bool> set, bool withSlider = false)
     {
-        GameObject t = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(CanvasGroup), typeof(Button));
+        GameObject t = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
         t.transform.SetParent(layer.parent, false);
         Image bg = t.GetComponent<Image>();
         bg.color = new Color(0.08f, 0.1f, 0.14f, 0.85f);
@@ -243,14 +243,15 @@ public class PixelTitleWanderers : MonoBehaviour
         CanvasGroup group = t.GetComponent<CanvasGroup>();
         group.alpha = 0f;
         Toggle toggle = new Toggle { rect = rect, group = group, get = get, set = set };
-        t.GetComponent<Button>().onClick.AddListener(() =>
+        PixelUIKit.MakeClickable(t, () =>
         {
             // Letting go of the blur slider must not count as a click on the toggle behind it.
             if (toggle.slider != null && toggle.slider.gameObject.activeInHierarchy &&
                 (Time.unscaledTime - toggle.sliderUsed < 0.3f || RectTransformUtility.RectangleContainsScreenPoint((RectTransform)toggle.slider.transform, PixelInput.PointerPosition(), null))) return;
+            PixelAudio.Play("ui_click");
             toggle.set(!toggle.get());
             Refresh();
-        });
+        }, sound: false);   // (the click sound only once the click counts: not when letting go of the blur slider)
 
         // A tick box and the text.
         GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image));

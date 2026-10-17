@@ -586,19 +586,18 @@ public partial class PixelPets
         tagLabel.fontSizeMin = 14f;
 
         // The pencil button.
-        GameObject pencil = new GameObject("Pencil", typeof(RectTransform), typeof(Image), typeof(Button));
+        GameObject pencil = new GameObject("Pencil", typeof(RectTransform), typeof(Image));
         pencil.transform.SetParent(box.transform, false);
         Image pi = pencil.GetComponent<Image>();
         if (pencilSprite == null) pencilSprite = BuildPencilSprite();
         pi.sprite = pencilSprite;
         pi.preserveAspect = true;
-        pencil.GetComponent<Button>().targetGraphic = pi;
         RectTransform pr = pencil.GetComponent<RectTransform>();
         pr.anchorMin = pr.anchorMax = new Vector2(1f, 0.5f);
         pr.pivot = new Vector2(1f, 0.5f);
         pr.sizeDelta = new Vector2(44f, 44f);
         pr.anchoredPosition = new Vector2(-10f, 0f);
-        pencil.GetComponent<Button>().onClick.AddListener(() => OpenCustomize(tagPet));
+        PixelUIKit.MakeClickable(pencil, () => OpenCustomize(tagPet), sound: false);   // (OpenCustomize plays the click)
         tagCanvas.SetActive(false);
     }
 
