@@ -192,10 +192,31 @@ give CONTENT (blocks, hazards, vendors) and their own tools.
 |---|---|---|
 | ~3 | 2 | Block Hold *or* Power Click (the new move) |
 | ~8-10 | 3 | The other one |
-| ~20 | 4 | First twist: Lucky stake or Quick charge |
+| ~20 | 4 | First twist: Lucky stake, Quick charge or Chain Crush |
 | ~30-35 | 5 | What's Next (needs both moves) |
-| ~45 | 6 | Second twist: High roller or Aftershock |
+| ~45 | 6 | Second twist: High roller, Aftershock or Clean Break |
 | ~60 | 7 | Shuffle Combo - the end of the early game |
+
+**Husk Crush (Agreed 2026-10-17 in the Design Discussion chat, built 2026-10-17 - `PixelHuskCrush.cs`):** husks get a use from the very first
+minute. **Base crush is FREE** (not a tree node): RIGHT-CLICK a husk lying on the floor and it breaks apart for a little skill XP.
+- **XP, never currency.** A crush gives about **25%** of the XP a click on that block gave (Inspector value), to the husk's own skill
+  (`PixelSkills.AddHuskXp`: pure husks -> Standard, wood husks -> Woodcutting...). It never pays currency (pixel rules: husks are never
+  currency; only the Recycler turns them into currency, at a loss).
+- **Two routes from the start:** with Cubie's Recycler (visit 1) the player chooses per husk: crush = instant small XP, recycle = currency +
+  XP + streak.
+- **Taught** by a first-time tip once husks lie about: "Right-click a husk to crush it for XP".
+- **Right-click priority is decided in ONE place** (`PixelRightClick.cs`): menus / UI / the intro block it; the Bank hose and the conveyor kit
+  (and device placing) keep the right button while active; a pet under the pointer opens its menu; a device part that claimed the pointer
+  keeps it; the live cube = Block Hold / clearing hazards (it wins even with a husk in front of it); otherwise the husk under the pointer is
+  crushed. Husks held in machines (Recycler, Storage Crate, Sorting Hopper, Bait Bucket - `PixelHuskHolder`) or riding a belt can't be crushed.
+- **Feedback:** the husk bursts into small chunks of itself (the glass shatter's shards) with a crunch, and the usual skill XP popup (small
+  amounts show with decimals).
+- **Tree upgrades (Standard), next to the twists so those points become real picks:** **Chain Crush** (Standard 4, ~20 min): crushing a husk
+  also crushes the husks of the SAME type touching it (`PixelHuskQuery.Near`); **Clean Break** (Standard 6, ~45 min, 2 points): each crush
+  gives the husks around it a few seconds of their lifespan back; **Hard Hands** (Standard 9, later, 2 points): crushes give more XP (x1.6 =
+  40% of a click), still well below a click. The tree's `minLevel` holds a node back until the skill reaches that level.
+- **Tuning note:** pure husks give Standard XP, so crushing speeds up early Standard levels. Keep the base small; the Standard XP curve
+  targets above (levels 2-7 at about 3 / 8-10 / 20 / 30-35 / 45 / 60 min) must be tuned with crushing AND the Auto Clicker in the mix.
 
 **Shop unlocks (level perks, not tree points):** Standard levels unlock the GENERAL husk-handling devices in the shop. Rules:
 1. Standard gates tools that work on any husk; a skill's own tools stay with that skill and its vendor (Wood Chipper -> Woodcutting,
