@@ -232,6 +232,8 @@ streaks rarely happen. The **Sorting Hopper** is its partner: a choice, a little
 - **As built:** no separate capacity - the tray's physical room is the limit; it latches onto a free Recycler within 6 world units
   (the Device's Reach), on placing and later; 150 White, on sale from Standard 3 (vendorOnly + shopSkillId, so it is simply
   hidden before then - the "shown locked with Standard N" part waits for the shared skill-requirement to-do).
+- **Changed after the first look (2026-10-17):** the flag only steps through the types lying in the tray (the first husk in sets it); an
+  orange EJECT button throws everything in the tray out over the back; no floating text - hovering the flag shows a small card.
 - **Open:** whether the filter can also be set to "any pure", and the price after testing.
 
 ### Mid game - skills and machines (Built, growing)

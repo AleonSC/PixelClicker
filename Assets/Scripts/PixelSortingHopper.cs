@@ -9,19 +9,23 @@
 //     One hopper per Recycler. When the Recycler's time runs out the hopper stays where it is and latches onto the next free Recycler that
 //     stands within reach (checked every half second).
 //   - THE FILTER: one husk type (filterTier), shown by the coloured flag and the little spinning block on its pole. Click the flag (or scroll
-//     over it) to step through the unlocked types (PixelPointerClaim keeps the cube out of that click). Saved in PlacedState.extra ('F,Type').
+//     over it) to step through the types of the husks lying IN THE TRAY right now (TrayTypes; the current one stays in the list). With nothing
+//     chosen yet, the first husk that lands in the tray sets it. Hovering the flag shows a small card (PixelBlockTooltip.ShowFor: the block,
+//     its name and what the filter does); there is no floating text over the hopper. The flag and the eject button use
+//     PixelPointerClaim.ClaimButton (the cube and Pixel Grabbing leave that click alone). Saved in PlacedState.extra ('F,Type').
+//   - EJECT BUTTON (orange, on the right rim): click it and every husk lying in the tray is popped out over the back wall (away from the
+//     Recycler), each thrown just high and far enough to clear it (Eject, ejectClearance). Stat hopper.ejected.
 //   - FEEDING: every feedInterval (0.35 s), while the Recycler can take a husk (HoseCanTake, not working or carried, hatch open), the husk of the
 //     filter type lying in the tray nearest the exit is RESERVED (PixelHuskHolder.Reserve: kinematic, timer held, no other machine takes it) and
 //     slid over the exit lip, through the hatch and let fall into the bin (Slide) - a steady same-type stream, so the Recycler's streak builds.
 //     The bin's own Capture takes it from there.
 //   - EVERY OTHER HUSK just lies in the tray and fades like any husk (no keep-alive): the wrong colours take room until they go - that is the loss.
-//   - WITHOUT A RECYCLER the exit stays shut (nothing slides out): it is just a tray. The label says so.
+//   - WITHOUT A RECYCLER the exit stays shut (nothing slides out): it is just a tray. The flag's card says so.
 //   Unlock: vendorOnly + shopSkillId 'standard' / level 3 = it appears in the shop at Standard level 3 (no vendor sells it); bought for White.
 //   Stat hopper.husks. Tip device_SortingHopper.
 // ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 
 public class PixelSortingHopper : MonoBehaviour
@@ -33,8 +37,10 @@ public class PixelSortingHopper : MonoBehaviour
     [SerializeField] private float slideSeconds = 0.45f;
     [Tooltip("How hard a husk is pushed into the bin when it leaves the hatch (world units per second).")]
     [SerializeField] private float dropPush = 1.2f;
-    [Tooltip("Colour of the label above the hopper.")]
-    [SerializeField] private Color labelColor = new Color(0.85f, 0.95f, 1f, 1f);
+    [Tooltip("Eject button: how far (in husk widths) above the back wall the ejected husks' arc tops out.")]
+    [SerializeField] private float ejectClearance = 0.8f;
+    [Tooltip("Colour the eject button and the flag brighten towards while the pointer is on them.")]
+    [SerializeField] private Color hoverColor = new Color(1f, 0.95f, 0.55f, 1f);
 
     private static readonly List<PixelSortingHopper> all = new List<PixelSortingHopper>();
 
@@ -50,7 +56,11 @@ public class PixelSortingHopper : MonoBehaviour
     private Transform flagTop;
     private Renderer flagRenderer;
     private GameObject flagModel;
-    private TextMeshPro label;
+    private Transform ejectButton;
+    private Collider ejectCollider;
+    private Renderer ejectRenderer;
+    private Vector3 ejectScale;
+    private float ejectPress;               // 0..1: the button dips when pressed
     private float tick, nextFeed, nextLook;
     private Rigidbody sliding;               // the husk on its way into the bin (one at a time)
 
@@ -59,7 +69,7 @@ public class PixelSortingHopper : MonoBehaviour
     // The tray, in husk widths (u): width, depth, floor height at the exit and at the back, wall height, the exit gap's width.
     private const float WidthHusks = 5.5f, DepthHusks = 4.5f, ExitFloorHusks = 1f, BackFloorHusks = 1.5f, WallHusks = 1f, GapHusks = 1.7f;
     private static readonly Color BodyColor = new Color(0.3f, 0.48f, 0.6f, 1f), Metal = new Color(0.72f, 0.75f, 0.78f, 1f), Dark = new Color(0.12f, 0.14f, 0.15f, 1f);
-    private static readonly Color Stripe = new Color(0.35f, 1f, 0.55f, 1f);
+    private static readonly Color Stripe = new Color(0.35f, 1f, 0.55f, 1f), EjectColor = new Color(1f, 0.55f, 0.15f, 1f);
 
     private static float Unit(PixelClicker clicker) => clicker != null && clicker.OldPixelWorldSize > 0f ? clicker.OldPixelWorldSize : 0.5f;
 
@@ -116,6 +126,9 @@ public class PixelSortingHopper : MonoBehaviour
                 kit.Box("Leg", tr, new Vector3(sx * (w * 0.5f - t), top * 0.5f, sz * (d * 0.5f - t)), new Vector3(t * 1.2f, top, t * 1.2f), Metal, default, false, 0.85f, 0.7f);
                 kit.Box("Foot", tr, new Vector3(sx * (w * 0.5f - t), t * 0.1f, sz * (d * 0.5f - t)), new Vector3(t * 2f, t * 0.2f, t * 2f), Dark, default, false, 0.5f, 0.6f);
             }
+        // The EJECT button on the right rim (orange, on a dark base): pops every husk in the tray out over the back wall.
+        kit.Cyl("Eject Base", tr, new Vector3((w + t) * 0.5f, sideTop + t * 0.35f, d * 0.15f), u * 0.32f, t * 0.6f, Dark);
+        kit.Cyl("Eject Button", tr, new Vector3((w + t) * 0.5f, sideTop + t * 0.9f, d * 0.15f), u * 0.22f, t * 0.8f, EjectColor, default, 0.1f, 0.6f, colliders);
         // The filter flag on a pole at the back-left corner: tinted the chosen type's colour, with a little block of that type spinning on top.
         float poleH = u * 2.2f;
         Vector3 poleBase = new Vector3(-(w + t) * 0.5f, sideTop, (d + t) * 0.5f);
@@ -135,21 +148,11 @@ public class PixelSortingHopper : MonoBehaviour
         flagTop = transform.Find("Flag Top");
         Transform flag = transform.Find("Flag");
         flagRenderer = flag != null ? flag.GetComponent<Renderer>() : null;
-        float u = Unit(clicker);
-
-        GameObject lg = new GameObject("Label");
-        lg.transform.SetParent(transform, false);
-        lg.transform.localPosition = new Vector3(0f, (BackFloorHusks + WallHusks) * u + u * 1.6f, 0f);
-        label = lg.AddComponent<TextMeshPro>();
-        label.fontSize = 3.2f;
-        label.fontStyle = FontStyles.Bold;
-        label.alignment = TextAlignmentOptions.Center;
-        label.color = labelColor;
-        label.rectTransform.sizeDelta = new Vector2(12f, 3f);
-        if (clicker != null && clicker.UIFont != null) label.font = clicker.UIFont;
-
-        List<int> options = FilterOptions();
-        SetFilter(options.Count > 0 ? options[0] : -1);
+        ejectButton = transform.Find("Eject Button");
+        ejectCollider = ejectButton != null ? ejectButton.GetComponent<Collider>() : null;
+        ejectRenderer = ejectButton != null ? ejectButton.GetComponent<Renderer>() : null;
+        if (ejectButton != null) ejectScale = ejectButton.localScale;
+        SetFilter(-1);   // (nothing chosen: the first husk that lands in the tray sets it)
     }
 
     private void OnEnable() { if (!all.Contains(this)) all.Add(this); }
@@ -223,32 +226,32 @@ public class PixelSortingHopper : MonoBehaviour
         if (device == null) device = GetComponent<PixelPlacedDevice>();
         if (device != null && device.IsEnding) return;   // being removed (shrinking away)
         Camera cam = clicker.ViewCamera;
-        if (label != null && cam != null) label.transform.rotation = Quaternion.LookRotation(label.transform.position - cam.transform.position, cam.transform.up);
         if (flagModel != null) flagModel.transform.Rotate(0f, 60f * Time.deltaTime, 0f, Space.World);
 
         bool fading = (transform.localScale - baseScale).sqrMagnitude > 0.0001f;   // the floor's props fade (main menu, after a load): wait
         if (fading || PixelCalm.InMenu || Time.timeScale <= 0f) return;
 
         HandleFlag(cam);
+        HandleEject(cam);
         KeepLatched();
 
         tick -= Time.deltaTime;
         if (tick > 0f) return;
         tick = 0.1f;
+        if (filterTier < 0) { List<int> inTray = TrayTypes(); if (inTray.Count > 0) SetFilter(inTray[0]); }   // (nothing chosen yet: the first type in the tray)
         Feed();
     }
 
     /// <summary>Latches onto a free Recycler within reach (every half second when it has none), follows it when it is carried, keeps its back hatch open.</summary>
     private void KeepLatched()
     {
-        if (recycler != null && (Ending(recycler) || !recycler.isActiveAndEnabled)) { recycler = null; RefreshLabel(); }
+        if (recycler != null && (Ending(recycler) || !recycler.isActiveAndEnabled)) recycler = null;
         if (recycler == null)
         {
             if (Time.time < nextLook) return;
             nextLook = Time.time + 0.5f;
             recycler = Nearest(clicker, transform.position, snapRange, this);
             if (recycler == null) return;
-            RefreshLabel();
             PixelAudio.Play("device_place");
         }
         if (recycler.Fading) return;
@@ -320,40 +323,63 @@ public class PixelSortingHopper : MonoBehaviour
 
     // ---- The filter flag ----
 
-    /// <summary>The types the flag can show: every unlocked pixel type that drops a normal husk (not fly-aways).</summary>
-    private List<int> FilterOptions()
+    /// <summary>The types of the husks lying in the tray right now (in tier order), plus the chosen one: what the flag steps through.</summary>
+    private List<int> TrayTypes()
     {
         List<int> list = new List<int>();
         if (clicker == null) return list;
-        for (int i = 0; i < clicker.Tiers.Length; i++)
+        if (filterTier >= 0) list.Add(filterTier);
+        IReadOnlyList<Rigidbody> pixels = clicker.OldPixels;
+        for (int i = 0; i < pixels.Count; i++)
         {
-            PixelClicker.PixelTier tier = clicker.Tiers[i];
-            if (tier != null && tier.unlocked && !tier.flyAway) list.Add(i);
+            Rigidbody b = pixels[i];
+            if (b == null || !InTray(b.position, out _)) continue;
+            PixelHuskQuery.Husk h = PixelHuskQuery.Get(b);
+            if (h.Fading || !clicker.IsValidTierIndex(h.Tier) || clicker.Tiers[h.Tier].flyAway || list.Contains(h.Tier)) continue;
+            list.Add(h.Tier);
         }
+        list.Sort();
         return list;
     }
 
-    /// <summary>Pointer on the flag: claims the click; left-click / scroll steps through the types.</summary>
+    /// <summary>Is the pointer within a screen circle round this world point ('radiusWorld' wide)? For the flag (the button uses its collider).</summary>
+    private static bool PointerNear(Camera cam, Vector3 centre, float radiusWorld)
+    {
+        Vector3 sp = cam.WorldToScreenPoint(centre);
+        if (sp.z <= 0f) return false;
+        Vector3 edge = cam.WorldToScreenPoint(centre + cam.transform.right * radiusWorld);
+        float radius = Mathf.Max(20f, Mathf.Abs(edge.x - sp.x));
+        return Vector2.Distance(PixelInput.PointerPosition(), new Vector2(sp.x, sp.y)) <= radius;
+    }
+
+    /// <summary>Pointer on the flag: claims the click and shows the filter's small card; left-click / scroll steps through the types in the tray.</summary>
     private void HandleFlag(Camera cam)
     {
-        if (cam == null || flagTop == null || PixelInput.PointerOverUI() || PixelCarryHandles.Hot) return;
-        float u = Unit(clicker) * transform.lossyScale.x;
-        Vector3 centre = flagTop.position - Vector3.up * u * 0.5f;
-        Vector3 sp = cam.WorldToScreenPoint(centre);
-        if (sp.z <= 0f) return;
-        Vector3 edge = cam.WorldToScreenPoint(centre + cam.transform.right * u * 0.9f);
-        float radius = Mathf.Max(20f, Mathf.Abs(edge.x - sp.x));
-        if (Vector2.Distance(PixelInput.PointerPosition(), new Vector2(sp.x, sp.y)) > radius) return;
-        PixelPointerClaim.Claim();
+        bool hot = cam != null && flagTop != null && !PixelInput.PointerOverUI() && !PixelCarryHandles.Hot
+                   && PointerNear(cam, flagTop.position - Vector3.up * Unit(clicker) * transform.lossyScale.x * 0.5f, Unit(clicker) * transform.lossyScale.x * 0.9f);
+        TintFlag(hot);
+        if (!hot) return;
+        PixelPointerClaim.ClaimButton();
+        if (filterTier >= 0) PixelBlockTooltip.ShowFor(filterTier, FilterNote());
         float scroll = PixelInput.ScrollY();
         if (Mathf.Abs(scroll) > 0.01f) StepFilter(scroll > 0f ? 1 : -1);
         else if (PixelInput.LeftPressed()) StepFilter(1);
     }
 
+    /// <summary>What the flag's card says under the block's name.</summary>
+    private string FilterNote()
+    {
+        int others = TrayTypes().Count - 1;
+        string change = others > 0 ? "Click or scroll to pick another type lying in the tray (" + others + " more)." : "Only this type is in the tray - drop others in to choose them.";
+        return recycler != null
+            ? "<b>Being filtered.</b> Only this type slides into the Recycler, one after another, so its streak grows. Other husks stay in the tray and fade.\n<color=#8f9bb5>" + change + "</color>"
+            : "<b>Being filtered</b> - but there is no Recycler behind the hopper, so its exit is shut.\n<color=#8f9bb5>" + change + "</color>";
+    }
+
     private void StepFilter(int step)
     {
-        List<int> options = FilterOptions();
-        if (options.Count == 0) return;
+        List<int> options = TrayTypes();
+        if (options.Count <= 1) { if (filterTier < 0 && options.Count == 1) SetFilter(options[0]); return; }
         int at = options.IndexOf(filterTier);
         at = at < 0 ? 0 : (at + step + options.Count) % options.Count;
         SetFilter(options[at]);
@@ -374,16 +400,76 @@ public class PixelSortingHopper : MonoBehaviour
         flagModel = null;
         if (filterTier >= 0 && flagTop != null) flagModel = clicker.CreateDisplayPixel(filterTier, flagTop, Unit(clicker) * 0.6f);
         if (flagModel != null) flagModel.transform.localPosition = Vector3.zero;
-        RefreshLabel();
+        flagBase = filterTier >= 0 ? clicker.Tiers[filterTier].UIColor : Color.gray;
+        flagGlow = -1f;   // (re-tint at once)
     }
 
-    private void RefreshLabel()
+    private Color flagBase = Color.gray;
+    private float flagGlow;
+
+    /// <summary>The flag brightens while the pointer is on it.</summary>
+    private void TintFlag(bool hot)
     {
-        if (label == null) return;
-        string type = filterTier >= 0 ? clicker.Tiers[filterTier].displayName.Replace(" Pixels", "") : "nothing";
-        label.text = recycler != null
-            ? "Lets " + type + " through\n<size=60%>click the flag to change</size>"
-            : "Sorting " + type + "\n<size=60%>no Recycler - the exit is shut</size>";
+        float target = hot ? 1f : 0f;
+        if (Mathf.Approximately(flagGlow, target) || flagRenderer == null) return;
+        flagGlow = flagGlow < 0f ? target : Mathf.MoveTowards(flagGlow, target, Time.unscaledDeltaTime / 0.12f);
+        Color c = Color.Lerp(flagBase, hoverColor, flagGlow * 0.35f);
+        Material m = flagRenderer.material;
+        m.color = c;
+        if (m.HasProperty("_EmissionColor")) { m.EnableKeyword("_EMISSION"); m.SetColor("_EmissionColor", c * (0.35f + 0.6f * flagGlow)); }
+    }
+
+    // ---- The eject button ----
+
+    /// <summary>Pointer on the eject button: claims the click (cube and Pixel Grabbing step aside), glows; a click pops the tray's husks out.</summary>
+    private void HandleEject(Camera cam)
+    {
+        if (ejectButton == null) return;
+        bool hot = cam != null && ejectCollider != null && !PixelInput.PointerOverUI() && !PixelCarryHandles.Hot
+                   && ejectCollider.Raycast(cam.ScreenPointToRay(PixelInput.PointerPosition()), out _, 500f);
+        if (hot)
+        {
+            PixelPointerClaim.ClaimButton();
+            if (PixelInput.LeftPressed()) { ejectPress = 1f; Eject(); }
+        }
+        ejectPress = Mathf.MoveTowards(ejectPress, 0f, Time.unscaledDeltaTime / 0.18f);
+        ejectButton.localScale = new Vector3(ejectScale.x, ejectScale.y * (1f - 0.45f * ejectPress), ejectScale.z);
+        if (ejectRenderer != null)
+        {
+            Material m = ejectRenderer.material;
+            Color c = hot ? Color.Lerp(EjectColor, hoverColor, 0.4f) : EjectColor;
+            if (m.color != c)
+            {
+                m.color = c;
+                if (m.HasProperty("_EmissionColor")) { m.EnableKeyword("_EMISSION"); m.SetColor("_EmissionColor", hot ? c * 0.8f : Color.black); }
+            }
+        }
+    }
+
+    /// <summary>Every husk lying in the tray is thrown out over the back wall (away from the Recycler), just high and far enough to clear it.</summary>
+    private void Eject()
+    {
+        float u = Unit(clicker), scale = transform.lossyScale.x, g = Mathf.Max(1f, -Physics.gravity.y);
+        float wallTop = (BackFloorHusks + WallHusks) * u, wallBack = DepthHusks * u * 0.5f + 0.2f * u;   // (the back wall, in the hopper's own units)
+        int count = 0;
+        IReadOnlyList<Rigidbody> pixels = clicker.OldPixels;
+        for (int i = 0; i < pixels.Count; i++)
+        {
+            Rigidbody b = pixels[i];
+            if (b == null || b == sliding || b.isKinematic || !InTray(b.position, out _)) continue;
+            PixelHuskQuery.Husk h = PixelHuskQuery.Get(b);
+            if (h.Fading || h.HeldByPlayer) continue;
+            Vector3 local = transform.InverseTransformPoint(b.position);
+            // Up so the arc tops out ejectClearance above the wall, and back so it is past the wall at the top of the arc.
+            float rise = Mathf.Max(0.2f * u, wallTop + Mathf.Max(0.3f, ejectClearance) * u - local.y) * scale;
+            float vy = Mathf.Sqrt(2f * g * rise), timeUp = vy / g;
+            float run = Mathf.Max(0.3f * u, wallBack + 0.6f * u - local.z) * scale;
+            Vector3 v = transform.TransformDirection(new Vector3(Random.Range(-0.15f, 0.15f) * run / timeUp, 0f, run / timeUp)) + Vector3.up * vy;
+            PixelHuskHolder.SetVelocity(b, v);
+            count++;
+        }
+        PixelAudio.Play(count > 0 ? "device_place" : "ui_click");
+        if (count > 0) PixelStats.Count("hopper.ejected", count);
     }
 
     // ---- Saving (PixelConsumables puts this in PlacedState.extra) ----

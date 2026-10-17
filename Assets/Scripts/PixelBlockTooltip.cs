@@ -9,6 +9,9 @@
 //   PINNED works whatever the tooltip mode: with the floating tooltip Off, the Pocket's Info card still shows what is hovered.
 //   PINNED + My Window MINIMIZED: the small card (3D block + name, like Minimal) hangs under the minimized header (dockedCompact).
 //   PINNED: My Window's Info button (PixelMyWindow.HoverDocked) moves the card into the window (UpdateDocked / Undock): it stops following the mouse, is scaled to the window's width, shows whatever is hovered (it keeps the last block while the mouse is over the window) and the window grows to fit it.
+//   WORLD OBJECTS: ShowFor(tier, note) - called every frame by a placed thing whose part the pointer is on (the Sorting Hopper's filter flag) -
+//   shows a SMALL card for that block type instead (the turning 3D block, its name and the given note; no stats / bar), whatever the tooltip mode,
+//   and never docked in My Window.
 //   The pinned card is always the FULL card (or the small one under a minimized window): the tooltip mode and Alt (tap or hold) only change the floating in-game card.
 // ---------------------------------------------------
 using TMPro;
@@ -82,7 +85,26 @@ public class PixelBlockTooltip : MonoBehaviour
     private float shownAt;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { }
+    private static void ResetStatics() { externalFrame = -10; externalTier = -1; externalNote = null; }
+
+    // ---- A world object asking for a small card (ShowFor) ----
+    private static int externalFrame = -10, externalTier = -1;
+    private static string externalNote;
+    private bool shownExternal;
+    private string shownNote;
+
+    /// <summary>
+    /// Call every frame the pointer is on a world object's part that stands for a block type (the Sorting Hopper's filter flag): a small card shows
+    /// that block (turning 3D model + name) with 'note' under it. Shown whatever the tooltip mode.
+    /// </summary>
+    public static void ShowFor(int tier, string note)
+    {
+        externalFrame = Time.frameCount;
+        externalTier = tier;
+        externalNote = note ?? "";
+    }
+
+    private static bool ExternalActive => externalFrame >= Time.frameCount - 1;
 
     private void Start()
     {
@@ -275,10 +297,12 @@ public class PixelBlockTooltip : MonoBehaviour
         // Pinned to My Window (its Info button) shows the info even while the floating tooltip is switched Off.
         bool pinned = PixelMyWindow.TryGetHoverSlot(out RectTransform slot, out float slotWidth, out bool compactSlot) && !disableTooltip && !PixelCalm.InMenu;
         int tier = -1; bool live = false; Rigidbody body = null;
-        bool hovering;
+        bool hovering = false;
+        bool external = ExternalActive && clicker.IsValidTierIndex(externalTier) && !disableTooltip && !PixelCalm.InMenu && !PointerOverUI();
         Rigidbody heldBody = grab != null ? grab.HeldBody : null;
         OldPixelInfo heldInfo = heldBody != null ? heldBody.GetComponent<OldPixelInfo>() : null;
-        if (heldInfo != null && clicker.IsValidTierIndex(heldInfo.tierIndex) && !Suppressed(true, pinned))
+        if (external) { pinned = false; tier = externalTier; hovering = true; }   // (a world object's small card: never docked)
+        else if (heldInfo != null && clicker.IsValidTierIndex(heldInfo.tierIndex) && !Suppressed(true, pinned))
         {
             // Grabbing a block keeps its tooltip open (it follows the block you carry).
             tier = heldInfo.tierIndex; live = false; body = heldBody; hovering = true;
@@ -294,12 +318,13 @@ public class PixelBlockTooltip : MonoBehaviour
         }
         if (wasDocked) Undock();
 
-        bool same = hovering && tier == shownTier && live == shownLive && body == shownBody;
+        bool same = hovering && tier == shownTier && live == shownLive && body == shownBody && external == shownExternal;
         if (hovering && !same)
         {
-            shownTier = tier; shownLive = live; shownBody = body;
+            shownTier = tier; shownLive = live; shownBody = body; shownExternal = external;
             hoverTime = 0f; nextRefresh = 0f;
         }
+        if (external && shownNote != externalNote) { shownNote = externalNote; nextRefresh = 0f; }
         else if (hovering) hoverTime += Time.unscaledDeltaTime;
         else hoverTime = 0f;
 
@@ -494,6 +519,23 @@ public class PixelBlockTooltip : MonoBehaviour
 
         // Pinned in My Window: the window decides (full card, or the small one under a minimized window); the tooltip mode and Alt
         // only change the floating in-game card.
+        if (shownExternal)
+        {
+            // A world object's small card: the 3D block and its name, the object's note under the name; nothing else.
+            tagText.gameObject.SetActive(false);
+            statsText.gameObject.SetActive(false);
+            bar.gameObject.SetActive(false);
+            descText.gameObject.SetActive(true);
+            const float ew = 470f;
+            RectTransform efr = iconFrame.rectTransform;
+            efr.anchoredPosition = new Vector2(20f, -20f); efr.sizeDelta = new Vector2(100f, 100f);
+            PlaceText(nameText, 140f, -20f, ew - 160f, 46f);
+            descText.text = shownNote;
+            float noteHeight = descText.GetPreferredValues(shownNote, ew - 160f, 0f).y;
+            PlaceText(descText, 140f, -70f, ew - 160f, noteHeight);
+            card.sizeDelta = new Vector2(ew, Mathf.Max(140f, 70f + noteHeight + 20f));
+            return;
+        }
         bool mini = wasDocked ? dockedCompact : EffectiveMode == ModeMinimal;
         tagText.gameObject.SetActive(!mini);
         statsText.gameObject.SetActive(!mini);

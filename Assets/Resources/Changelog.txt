@@ -1293,3 +1293,4 @@
 [2026-10-17 12:14 UTC] Shop: the Pixels tab now uses the same tile layout as Consumables (Toggleables and Skill packs buttons, a tile grid and one buy bar), Consumables opens on Utilities first, and the tabs are now Pixels, Consumables, Upgrades, Minigames.
 [2026-10-17 12:22 UTC] To-do: one shared helper for building husk / pet physics materials instead of the hand-written copies per Unity version.
 [2026-10-17 12:23 UTC] To-do: added a per-kind device table so a new device is one entry instead of edits to about 8 scattered lists.
+[2026-10-17 12:28 UTC] Sorting Hopper: the flag now only cycles through husk types lying in the tray (the first husk in sets it), a new orange eject button throws the tray's husks out over the back, and the floating text is gone - hovering the flag shows a small card with the block, its name and what the filter does.
