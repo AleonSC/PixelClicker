@@ -390,6 +390,34 @@ Chips / Magic Wood have no use yet.
 - **Tools:** the Dev Hub's Balance report (per-skill XP, minutes to level), `PixelBalanceReport.cs`.
 - Open: the long-term sink **(Q9)**, offline progress **(Q10)**.
 
+### Shop consumable pricing (Agreed 2026-10-17, not built)
+Why: the early devices cost White (or Gray) only, but the shop opens after all six pure colours are unlocked (the 10:50 report: RGB at
+3:59, shop at 4:29), so White drains while the other five pile up. Income in that report (per minute, session average): White 113,
+Gray 85, Black 80, Red 135, Green 128, Blue 160.
+
+1. **Every shop item costs 2-3 of the pure colours**, so all six are spent.
+2. **Colours have meaning:** monochrome (White / Gray / Black) = machines and structure (Recycler, Sorting Hopper, Storage Crate,
+   Sweeper, couplings, Funnel...); RGB = boosts and timed things (Combo Fuel, potions, Pet Treat, Ghost Bait...). A machine may add one
+   RGB 'accent' cost.
+3. **Price in minutes of income, not raw numbers:** a cheap tool ~1 minute of the colours it costs, a milestone tool (Sweeper, Funnel)
+   ~3-5 minutes; set from session reports, since income grows with Value upgrades.
+4. **Repeat buys climb** (each extra Recycler costs more - 'Husk routing rework').
+5. **The main shop and Cubie take pure currency only;** skill items (Wood Chipper, Pesticide Spray, Bait Bucket...) stay priced in
+   their skill's blocks.
+
+Starting examples (tune from the next report):
+
+| Item | Was | New | ~Minutes of income |
+|---|---|---|---|
+| Coupling | 30 White | 40 Gray + 40 Black | ~0.5 |
+| Extra Recycler (2nd) | - | 150 White + 100 Green, then x2 each | ~1.5, rising |
+| Sorting Hopper (Standard 3) | 150 White | 200 Gray + 150 Red | ~2 |
+| Storage Crate (Standard 4-5) | 300 Gray | 300 Black + 200 Blue | ~3 |
+| Sweeper (Standard 5) | 400 White | 400 White + 300 Gray + 200 Red | ~4 |
+
+Shop prices live in the scene's serialized Inspector data, so new coded defaults need a one-time reset step (like the shop's
+`shopBalanceVersion` / ResetBuiltInPackPrices) to reach an existing scene.
+
 ## 9. Content and version 1.0
 
 **1.0 direction (Decided):** flesh out the game's systems and ship **a handful of skills**; more skills arrive as **updates** after
