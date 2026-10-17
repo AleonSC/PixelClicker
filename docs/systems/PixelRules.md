@@ -56,6 +56,8 @@ Machines exist to turn husks into something useful; despawning hurts because unu
 
 ## The Recycler (built 2026-10-15, `PixelRecycler.cs`)
 
+**Planned change (agreed 2026-10-17, not built - see docs/GameDesign.md section 6 'Husk routing rework'):** the Recycler becomes CURRENCY ONLY (its streak boosts currency, it pays no or very little XP); XP from husks comes from Husk Crush and the skill machines. Recyclers get a modest suction ring, several can be placed at a rising price, and edge-click aiming moves into Standard's tree ('Aimed Clicks').
+
 Built version: an open bin (DeviceKind.Recycler, first on the shop's Utilities card, 50 White; Cubie gives one on his first visit). Drop up to 10 husks in, press the red button on its front: the lid shuts and each husk pays back **50%** of its value (it shakes for 2 s first) as currency of its type. The husks stay in the bin as physical pixels until then. The notes below are the original plan; the live numbers are on the component.
 
 - **What it does:** takes husks in and pays out currency of that block's type at **15% of the block's click value** per husk (start value, to be tuned). A Wood husk from a Wood block that pays 3 gives 0.45 Wood.

@@ -191,7 +191,7 @@ give CONTENT (blocks, hazards, vendors) and their own tools.
 | ~Minute | Standard level | Tree unlock |
 |---|---|---|
 | ~3 | 2 | Block Hold *or* Power Click (the new move) |
-| ~8-10 | 3 | The other one |
+| ~8-10 | 3 | The other one, or Aimed Clicks (edge-click aiming, see 'Husk routing rework') |
 | ~20 | 4 | First twist: Lucky stake, Quick charge or Chain Crush |
 | ~30-35 | 5 | What's Next (needs both moves) |
 | ~45 | 6 | Second twist: High roller, Aftershock or Clean Break |
@@ -299,6 +299,32 @@ A little wind-up clockwork cube with a broom: early automation for stray husks t
 - **As built:** Standard 5, 400 White; range 12 husk widths from its pad, 'close to fading' = 4 s or less left, 60 s per wind (slows over the
   last 12 s); the nearest container is measured from where the husk was picked up; no carry handles (it roams from its pad: remove and place it
   again to move it). Open: the Standard range / speed upgrades and the Electrician motor (`motorFitted` is the hook).
+
+### Husk routing rework: aiming becomes a skill, the Recycler pays currency (Agreed 2026-10-17, not built)
+Why: the 10:50 session report showed the early husk setup was too automatic - edge-click aiming (free from the start) sent husks
+straight into the Recycler (1,017 recycled, an 89-husk streak), and the Recycler paid MORE Standard XP (2,620) than clicking (2,357)
+while also paying currency, so Standard levelled ~2x too fast and Husk Crush had no job.
+
+1. **Edge-click aiming is no longer free.** Without it, a click scatters its husk at random round the cube (the existing burst).
+   Aiming (click near the cube's edge to throw the husk out of that side, `PixelBurstPop.edgeAiming`, the aim cursor `PixelAimCursor`)
+   becomes a **Standard tree node, "Aimed Clicks"** (~Standard 3-5; a new way to click, like Block Hold / Power Click). The aim
+   cursor only shows once it is owned.
+2. **Recyclers catch husks more easily: a modest SUCTION ring** round the rim pulls nearby loose husks in. Modest on purpose - one bin
+   catches SOME of the random scatter, not all of it, so placement matters. Grown by the Operation tab (Bin Size, or a new Suction row).
+3. **More Recyclers are a real buy:** several can stand at once, each extra one costs more (a rising price ladder) - an early currency
+   sink (Q9) and a placement puzzle (ring the cube with bins).
+4. **Role split - every husk is a choice of money OR XP:**
+
+| Route | Gives | Not |
+|---|---|---|
+| Recycler | currency at a loss (50%); the same-type STREAK boosts the CURRENCY | XP (none, or very little) |
+| Husk Crush | XP (with the capped crush bonuses) | currency |
+
+   The Sorting Hopper stays the streak tool (a single-colour stream = more currency). The Sweeper still feeds the nearest container.
+5. **One owner per husk:** suction, the Magnet, the Sweeper and the hopper can reach for the same husk - whoever captures it first owns
+   it, through `PixelHuskHolder`, never a special case per device.
+6. **Re-check after building:** Standard's pace against the curve (levels 2-7 at about 3 / 8-10 / 20 / 30-35 / 45 / 60 min) with a new
+   session report - removing the Recycler's XP should bring it close to clicking-only.
 
 ### Mid game - skills and machines (Built, growing)
 Gathering skills (Woodcutting, Foraging, Fishing, Mining, Farming, Electrician), each with filler, hazards, specials, perks and a
