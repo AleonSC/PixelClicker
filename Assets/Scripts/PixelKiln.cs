@@ -121,7 +121,7 @@ public class PixelKiln : MonoBehaviour, IPixelSocketDevice
         // Sockets (PixelSockets.cs): the MOUTH takes husks in (a belt / connector / hose ends at an In coupling there), the back CHUTE puts charcoal out.
         kiln.sockets = new[]
         {
-            new PixelSocket("mouth", new Vector3((MouthCenter.x + MouthHalf.x * 0.5f) * u, 0f, 0f), Vector3.right, PixelSocketFlow.Intake),
+            new PixelSocket("mouth", new Vector3(2.65f * u, 0f, 0f), Vector3.right, PixelSocketFlow.Intake),   // (at the front edge of the stone apron, so a belt ending there does not run into it)
             new PixelSocket("chute", new Vector3((OutletLocal.x - 0.25f) * u, 0f, 0f), Vector3.left, PixelSocketFlow.Output),
         };
         kiln.fireLight = MakeLight(t, new Vector3(fx + 0.5f * u, 0.7f * u, 0f), u);
