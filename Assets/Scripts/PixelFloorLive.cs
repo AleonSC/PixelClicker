@@ -527,6 +527,8 @@ public class PixelFloorOverlay : MonoBehaviour
     [SerializeField] private int trackerCount = 10;
     [Tooltip("How fast the converging point catches up with the mouse (higher = snappier).")]
     [SerializeField] private float trackerFollow = 10f;
+    [Tooltip("How far out the Laser Tracker's emitters circle, as a multiple of the visible floor's reach (higher = longer beams, reaching past the screen's edges).")]
+    [SerializeField] private float trackerReach = 2f;
 
     [Header("Ant")]
     [Tooltip("Length of the ant (world units).")]
@@ -695,7 +697,7 @@ public class PixelFloorOverlay : MonoBehaviour
         if (!trackInit) { trackPoint = target; trackInit = true; }
         trackPoint = Vector3.Lerp(trackPoint, target, 1f - Mathf.Exp(-trackerFollow * Time.unscaledDeltaTime));
         trackPoint.y = y;
-        float emitR = reach * 0.85f;
+        float emitR = reach * Mathf.Max(0.3f, trackerReach);
         BeginBeams();
         for (int i = 0; i < beamState.Count; i++)
         {
