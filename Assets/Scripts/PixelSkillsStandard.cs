@@ -22,6 +22,8 @@
 //   each show one more block ahead in it. 'Shuffle Combo' (shuffle, after highroller) unlocks PixelShuffleBonus (the filler tap combo). The bottom
 //   row (row 3) is the HUSK branch (2026-10-17, PixelHuskCrush - crushing itself is free): 'Chain Crush' (chaincrush, minLevel 4, column 1 = beside
 //   the first twists) -> 'Clean Break' (cleanbreak, minLevel 6, cost 2) -> 'Hard Hands' (hardhands, minLevel 9, cost 2); TreeNode.minLevel holds a node back.
+//   'Aimed Clicks' (aimed, row 1 column 0, minLevel 3, 2026-10-17): edge-click aiming (PixelBurstPop.AimingOwned) - the alternative to the second move;
+//   level 3's perk popup (StandardLevel3Notice) points at that choice.
 //   Row 4: 'Charge Crush' (chargecrush, needs chaincrush, minLevel 7, cost 2): hold right on a husk to charge a ring, let go to arc-crush its type inside it. The level 2 popup now points the player to the skill point and the tree. Minigame bonus XP
 //   still skips Standard.
 //   Standard's XP popups and level-up log lines show from the very FIRST click (no longer only once a skill pack exists). Its level 2 perk carries the
@@ -97,12 +99,15 @@ public partial class PixelSkills
     private double StandardXpPerBlock => standardXpPerBlock > 0f ? standardXpPerBlock : 1d;
 
     /// <summary>The popup at Standard level 2: it introduces skills (the perk's noticeText, editable on the Standard pack's level 2 perk).</summary>
-    private const string StandardLevel2Notice = "Standard level 2! Surprise: you have been training a skill all along. Every block you collect gives 1 Standard XP, and every level gives a perk AND a skill point.\n\nSpend your point in Standard's skill tree (the tree button on its card): Block Hold or Power Click - two new ways to click. Later points take the other one and branch further.\n\nYour first perk, Lingering pixels: husks on the floor last 5 seconds longer for every Standard level.";
+    private const string StandardLevel2Notice = "Standard level 2! Surprise: you have been training a skill all along. Every block you collect gives 1 Standard XP, and every level gives a perk AND a skill point.\n\nSpend your point in Standard's skill tree (the tree button on its card): Block Hold or Power Click - two new ways to click. At level 3 your next point can take the other one - or Aimed Clicks, to throw husks where you want them. Later points branch further.\n\nYour first perk, Lingering pixels: husks on the floor last 5 seconds longer for every Standard level.";
+
+    /// <summary>The popup at Standard level 3: the second point is a choice between the move you skipped and Aimed Clicks.</summary>
+    private const string StandardLevel3Notice = "Standard level 3 - another skill point! Take the move you skipped (Block Hold or Power Click), or Aimed Clicks: click near the cube's edge and its husk flies out of that side, so you can send husks to a Recycler or a clear spot. Until then every husk scatters at random.\n\nYour perk, Steady grip: Block Hold lasts 10% longer.";
 
     private static Perk[] StandardPerks() => new[]
     {
         new Perk { level = 2, text = "Lingering pixels: old pixels last 5 seconds longer for every level", implemented = true, noticeText = StandardLevel2Notice },
-        new Perk { level = 3, text = "Steady grip: Block Hold lasts 10% longer", implemented = true },
+        new Perk { level = 3, text = "Steady grip: Block Hold lasts 10% longer", implemented = true, noticeText = StandardLevel3Notice, noticeInWindow = true },
         new Perk { level = 4, text = "Roomy floor: room for 5 more old pixels for every level", implemented = true },
         new Perk { level = 5, text = "Firm grip: Block Hold lasts another 10% longer", implemented = true },
         new Perk { level = 7, text = "Sharper clicks: a small bonus to every pixel" },

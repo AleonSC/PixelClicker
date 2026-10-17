@@ -6,6 +6,9 @@
 //   a ring round the cube (any direction, burstLandRadius 0 = 1.2..3.5 pixel widths), so a click throws pixels OUT in all directions and
 //   they land spread over the floor (usable as physics items) instead of dropping straight down in one stack. Short falls and
 //   disableBurstPop keep the old pop (popSpeedRange / popVerticalRange).
+//   AIMED CLICKS (2026-10-17, design 'Husk routing rework'): aiming is no longer free - it needs the Standard tree node 'Aimed Clicks' (id 'aimed',
+//   Standard 3, the alternative to the second move). TryGetAim is the ONE gate (AimingOwned): without the node it says no, so every click's husk
+//   scatters at random (the burst below) and PixelAimCursor shows the normal cursor.
 //   EDGE-CLICK AIMING (edgeAiming, 2026-10-16): a MANUAL click near the cube's edge (on the screen: aimDeadZone 0.3 .. aimFullAt 0.85 of the way from its
 //   centre to its edge) throws the husk out of that side, within aimSpread (25 deg) either way; the middle stays random (spread 180) and it blends in
 //   between. Works for long falls (burst) and short ones (pop) alike. The auto clicker and first person always scatter. AimedDirection, set up by
@@ -44,6 +47,9 @@ public partial class PixelClicker
 
     private bool aimThisCopy;   // set by CollectInternal around a manual click's SpawnFallingCopy
 
+    /// <summary>Edge-click aiming is a Standard tree node ('Aimed Clicks', id 'aimed', level 3; 2026-10-17 husk routing rework). Without it every click scatters.</summary>
+    public static bool AimingOwned => PixelSkills.HasStandardNode(PixelSkills.AimedClicksNode);
+
     /// <summary>
     /// Edge-click aiming: where the click landed on the cube (on the SCREEN, so the cube's spin does not matter) picks the husk's heading on the floor.
     /// Near the middle the random heading is kept; towards the edge it narrows to that side (aimSpread either way). Returns a normalized flat (x, z) direction.
@@ -57,7 +63,7 @@ public partial class PixelClicker
         screenDir = Vector2.right;
         sharp = 0f;
         Camera cam = targetCamera != null ? targetCamera : Camera.main;
-        if (!edgeAiming || cam == null || pixelTransform == null || PixelFirstPerson.Active) return false;
+        if (!edgeAiming || !AimingOwned || cam == null || pixelTransform == null || PixelFirstPerson.Active) return false;
         Vector3 centre = cam.WorldToScreenPoint(pixelTransform.position);
         Vector3 edge = cam.WorldToScreenPoint(pixelTransform.position + cam.transform.right * (PixelBaseSize * 0.5f));
         float halfPx = Mathf.Abs(edge.x - centre.x);

@@ -188,6 +188,7 @@ public class PixelHints : MonoBehaviour
             case "device_Sweeper": return "You placed a Sweeper!";
             case "device_Funnel": return "You placed a Funnel!";
             case "husk_crush": return "Right-click a husk to crush it for XP";
+            case "node_standard_aimed": return "Aimed Clicks: click near the cube's edge to aim husks";
             case "craft": return "You crafted something!";
             case "combo": return "Combo started!";
             case "ultra": return "You earned an Ultra pixel!";
@@ -304,6 +305,7 @@ public class PixelHints : MonoBehaviour
         H("bank_suck", "Stored in the Bank! Open the Bank tab on the left edge to see what you have. Stored pixels keep their value when you spit them back out."),
         H("bank_spit", "Spat a stored pixel back out! It is worth what it was worth when you stored it."),
         H("bank_full", "The Bank is full! Spit some pixels out, or buy Bank Storage upgrades in the shop to hold more."),
+        H("node_standard_aimed", "Aimed Clicks! Click near the EDGE of the cube and its husk flies out of that side - the cursor turns into an arrow that shows where. A click in the middle still scatters it at random. Send husks into a Recycler, onto a crate, or somewhere clear to crush them."),
         H("husk_crush", "Right-click a husk to crush it for XP! The blocks that fall off the cube are husks: material, never money. Crushing one gives a little XP to its own skill (the pure pixels train Standard). Husks fade after a while, so use them while they lie there."),
         H("stake_intro", "Try this: HOLD the right mouse button on a basic block (black, gray, white, red, green or blue) on the cube. A stake grows on it the longer you hold (watch the number by the meter). Let go and the block goes back in line; when it comes round again it glows green and pays more - or red and pays nothing. Most stakes pay off, but not all of them."),
         H("blockhold", "Block Hold unlocked! HOLD the right mouse button on the block on the cube to pull it out of the rotation: you get a new block while it stays held. Let go and it goes back. Holding drains the meter under the cube; if it runs dry the block is put back and the meter recharges more slowly."),
