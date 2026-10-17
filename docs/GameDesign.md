@@ -206,7 +206,8 @@ give CONTENT (blocks, hazards, vendors) and their own tools.
 
 | Standard level | Unlocks in the shop |
 |---|---|
-| 3-4 | Storage Crate (simplest: just holding husks) |
+| 3-4 | Sorting Hopper (the Recycler's partner, below) |
+| 4-5 | Storage Crate (just holding husks) |
 | 5 | Magnet, Fan (moving husks) |
 | 6-7 | Funnel (catching husks automatically) |
 | 8-10 | Sorter, then Magnetized Sorter |
@@ -214,6 +215,21 @@ give CONTENT (blocks, hazards, vendors) and their own tools.
 
 Build it as ONE shared rule (a small "needs skill X at level N" table on shop items) read by the Shop, Toggles and Game Database,
 not a check per device; the same table later covers skill-gated minigames and the gathering skills' own tools (to-do).
+
+### The early husk setup: Recycler + Sorting Hopper (Agreed 2026-10-17, not built)
+The Recycler (Cubie's gift) pays a STREAK bonus for the same husk type in a row, but husks land mixed and fade in about 15 s, so
+streaks rarely happen. The **Sorting Hopper** is its partner: a choice, a little help, and still a loss - right for the early game.
+
+- **Snaps to the Recycler's back.** Placed near a Recycler it snaps onto the back wall; its exit lines up with the bin's back hatch.
+  It is a wide tray, so it catches husks the bin alone would miss.
+- **A filter toggle picks ONE husk type** (shown as a coloured flag on the hopper; click / scroll to change it). Husks of that type
+  slide through the exit into the Recycler one after another - a steady same-type stream, so the streak builds.
+- **Every other husk stays in the hopper and despawns like normal** (no keep-alive). They take room, so a hopper full of the wrong
+  colours catches less until they fade - that is the loss, and choosing the type is the decision.
+- **Without a Recycler** the exit stays shut and it is just a tray. When a Recycler's time runs out the hopper stays placed and snaps
+  onto the next one.
+- **Unlock:** Standard level 3-4 (the first general husk tool, see the table above); bought for pure currency.
+- **Open:** capacity (about 12?), whether the filter can also be set to "any pure", and the price.
 
 ### Mid game - skills and machines (Built, growing)
 Gathering skills (Woodcutting, Foraging, Fishing, Mining, Farming, Electrician), each with filler, hazards, specials, perks and a
