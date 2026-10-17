@@ -278,9 +278,9 @@ public class PixelMagnetSorterDevice : PixelPlacedDevice
                 Rigidbody body = pixels[i];
                 if (body == null || body.isKinematic || clicker.IsFlyingPixel(body)) continue;
                 if (ignoreUntil.TryGetValue(body, out float until) && Time.time < until) continue;
-                OldPixelDespawn d = body.GetComponent<OldPixelDespawn>();
+                OldPixelDespawn d = PixelHuskQuery.Get(body).despawn;
                 if (d != null && (d.Held || d.IsDespawning)) continue;
-                OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+                OldPixelInfo info = PixelHuskQuery.Get(body).info;
                 if (info == null) continue;
 
                 Vector3 to = target - body.position;
@@ -311,7 +311,7 @@ public class PixelMagnetSorterDevice : PixelPlacedDevice
         if (body == null) yield break;
         Collider[] colliders = body.GetComponentsInChildren<Collider>();
         foreach (Collider c in colliders) c.enabled = false;
-        OldPixelDespawn d = body.GetComponent<OldPixelDespawn>();
+        OldPixelDespawn d = PixelHuskQuery.Get(body).despawn;
         if (d != null) Destroy(d);
         body.isKinematic = true;
         Transform t = body.transform;

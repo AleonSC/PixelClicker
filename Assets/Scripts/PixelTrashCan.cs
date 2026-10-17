@@ -101,9 +101,9 @@ public class PixelTrashCan : MonoBehaviour, IPixelBeltAcceptor
         {
             Rigidbody rb = pixels[i];
             if (rb == null || rb.isKinematic || clicker.IsFlyingPixel(rb) || PixelAttachment.IsAttached(rb)) continue;
-            OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
+            OldPixelInfo info = PixelHuskQuery.Get(rb).info;
             if (info == null || info.heldByPlayer) continue;
-            OldPixelDespawn despawn = rb.GetComponent<OldPixelDespawn>();
+            OldPixelDespawn despawn = PixelHuskQuery.Get(rb).despawn;
             if (despawn != null && (despawn.IsDespawning || despawn.Held)) continue;
             Vector3 to = mouth - rb.position;
             Vector3 flat = new Vector3(to.x, 0f, to.z);

@@ -131,7 +131,7 @@ public class PixelRecycler : MonoBehaviour
         foreach (PixelRecycler r in all)
         {
             if (r == null || !r.Over(body.position)) continue;
-            OldPixelDespawn d = body.GetComponent<OldPixelDespawn>();
+            OldPixelDespawn d = PixelHuskQuery.Get(body).despawn;
             if (d != null && !d.IsDespawning) d.KeepAlive();
             return;
         }
@@ -346,7 +346,7 @@ public class PixelRecycler : MonoBehaviour
         foreach (Rigidbody b in inside)   // a frozen husk you start to grab is let loose at once (Pixel Grabbing steers it with its velocity)
         {
             if (b == null || !b.isKinematic) continue;
-            OldPixelInfo i = b.GetComponent<OldPixelInfo>();
+            OldPixelInfo i = PixelHuskQuery.Get(b).info;
             if (i != null && i.heldByPlayer) Unfreeze(b);
         }
         bool hot = !processing && (carry == null || !carry.Dragging) && buttonCollider != null && cam != null && !PixelInput.PointerOverUI() && PointerOnButton(cam);
@@ -390,7 +390,7 @@ public class PixelRecycler : MonoBehaviour
         foreach (Rigidbody b in inside)
         {
             if (b == null) continue;
-            OldPixelInfo info = b.GetComponent<OldPixelInfo>();
+            OldPixelInfo info = PixelHuskQuery.Get(b).info;
             if (info == null || !clicker.IsValidTierIndex(info.tierIndex)) continue;
             sb.Append(clicker.Tiers[info.tierIndex].type).Append(',').Append(info.amount.ToString("R", System.Globalization.CultureInfo.InvariantCulture)).Append(';');
         }
@@ -422,7 +422,7 @@ public class PixelRecycler : MonoBehaviour
             if (pop != null) pop.Finish();   // full size and solid at once
             Vector3 size = b.transform.localScale;   // (its world size: it had no parent)
             if (!clicker.ReleaseOldPixel(b, false)) continue;
-            OldPixelDespawn despawn = b.GetComponent<OldPixelDespawn>();
+            OldPixelDespawn despawn = PixelHuskQuery.Get(b).despawn;
             if (despawn != null) despawn.Held = true;
             b.isKinematic = true;
             b.transform.SetParent(transform, false);   // placed straight into the bin in its own space (the bin may still be scaled by the load fade)
@@ -455,8 +455,8 @@ public class PixelRecycler : MonoBehaviour
         // Husks in the bin never despawn: their timer stays held every tick (Pixel Grabbing lets go of 'Held' when you poke one); one taken out of the bin is let go again.
         for (int i = inside.Count - 1; i >= 0; i--)
         {
-            OldPixelDespawn hold = inside[i].GetComponent<OldPixelDespawn>();
-            OldPixelInfo heldInfo = inside[i].GetComponent<OldPixelInfo>();
+            OldPixelDespawn hold = PixelHuskQuery.Get(inside[i]).despawn;
+            OldPixelInfo heldInfo = PixelHuskQuery.Get(inside[i]).info;
             bool inHand = heldInfo != null && heldInfo.heldByPlayer;
             // A husk in the player's hand is never counted; one bouncing up a little above the walls stays counted (KeepsHold), only one that left the bin is let go.
             if (!inHand && KeepsHold(inside[i].position)) { if (hold != null) hold.Held = true; Settle(inside[i], false); continue; }
@@ -471,18 +471,18 @@ public class PixelRecycler : MonoBehaviour
         {
             Rigidbody b = pixels[i];
             if (b == null || !Over(b.position)) continue;
-            OldPixelDespawn alive = b.GetComponent<OldPixelDespawn>();
+            OldPixelDespawn alive = PixelHuskQuery.Get(b).despawn;
             if (alive != null && !alive.IsDespawning) alive.KeepAlive();   // falling into the bin (or resting in it): its timer waits until it is captured
             if (!Inside(b.position)) continue;
             if (inside.Count >= Mathf.Max(1, capacity))   // the bin is full: husks lying in it anyway still never fade while they are inside
             {
-                OldPixelDespawn keep = b.GetComponent<OldPixelDespawn>();
+                OldPixelDespawn keep = PixelHuskQuery.Get(b).despawn;
                 if (keep != null && !keep.IsDespawning) keep.KeepAlive();
                 continue;
             }
-            OldPixelInfo info = b.GetComponent<OldPixelInfo>();
+            OldPixelInfo info = PixelHuskQuery.Get(b).info;
             if (info == null) continue;
-            OldPixelDespawn despawn = b.GetComponent<OldPixelDespawn>();
+            OldPixelDespawn despawn = PixelHuskQuery.Get(b).despawn;
             if (despawn != null && despawn.IsDespawning) continue;   // already vanishing
             if (info.heldByPlayer) continue;                          // still in the player's hand
             if (!clicker.ReleaseOldPixel(b, false)) continue;
@@ -522,7 +522,7 @@ public class PixelRecycler : MonoBehaviour
             if (b == null) { inside.RemoveAt(i); continue; }
             if (!capturedAt.TryGetValue(b, out float at)) { capturedAt[b] = Time.time; continue; }   // (loaded / older husks: their timer starts now)
             if (Time.time - at < Mathf.Max(0f, recycleDelay)) continue;
-            OldPixelInfo info = b.GetComponent<OldPixelInfo>();
+            OldPixelInfo info = PixelHuskQuery.Get(b).info;
             if (info != null && info.heldByPlayer) continue;
             inside.RemoveAt(i);
             capturedAt.Remove(b);
@@ -570,9 +570,9 @@ public class PixelRecycler : MonoBehaviour
         {
             Rigidbody b = inside[i];
             if (b == null) { inside.RemoveAt(i); changed = true; continue; }
-            OldPixelInfo carriedInfo = b.GetComponent<OldPixelInfo>();
+            OldPixelInfo carriedInfo = PixelHuskQuery.Get(b).info;
             if ((carriedInfo == null || !carriedInfo.heldByPlayer) && KeepsHold(b.position)) { Freeze(b); continue; }
-            OldPixelDespawn hold = b.GetComponent<OldPixelDespawn>();
+            OldPixelDespawn hold = PixelHuskQuery.Get(b).despawn;
             if (hold != null) hold.Held = false;
             Unfreeze(b);
             inside.RemoveAt(i);
@@ -639,9 +639,9 @@ public class PixelRecycler : MonoBehaviour
         {
             Rigidbody b = inside[i];
             if (b == null) { inside.RemoveAt(i); changed = true; continue; }
-            OldPixelInfo info = b.GetComponent<OldPixelInfo>();
+            OldPixelInfo info = PixelHuskQuery.Get(b).info;
             if (info != null && !info.heldByPlayer && KeepsHold(b.position)) continue;
-            OldPixelDespawn hold = b.GetComponent<OldPixelDespawn>();
+            OldPixelDespawn hold = PixelHuskQuery.Get(b).despawn;
             if (hold != null && (info == null || !info.heldByPlayer)) hold.Held = false;
             Unfreeze(b);
             if (clicker != null) clicker.AdoptOldPixel(b);
@@ -663,7 +663,7 @@ public class PixelRecycler : MonoBehaviour
         {
             Rigidbody b = pixels[i];
             if (b == null || inside.Contains(b) || !KeepsHold(b.position)) continue;
-            OldPixelInfo info = b.GetComponent<OldPixelInfo>();
+            OldPixelInfo info = PixelHuskQuery.Get(b).info;
             if (info != null && info.heldByPlayer) continue;
             Vector3 p = transform.InverseTransformPoint(b.position);
             float side = p.z >= 0f ? 1f : -1f;
@@ -758,7 +758,7 @@ public class PixelRecycler : MonoBehaviour
         foreach (Rigidbody b in inside)
         {
             if (b == null) continue;
-            OldPixelInfo info = b.GetComponent<OldPixelInfo>();
+            OldPixelInfo info = PixelHuskQuery.Get(b).info;
             if (info != null && clicker.IsValidTierIndex(info.tierIndex))
             {
                 double pay = CurrentValue(info.tierIndex) * payoutShare;   // what a click on that block pays NOW (Value upgrades bought since count)

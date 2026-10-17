@@ -1246,3 +1246,4 @@
 [2026-10-17 02:20 UTC] CLAUDE.md: new standing rule - look for an existing helper before writing code for a common job, and never paste a private copy of one.
 [2026-10-17 02:25 UTC] Code cleanup (pattern hunt): new PixelClicker.ViewCamera helper replaces the 'TargetCamera or Camera.main' line written out 91 times in 60 scripts; the Pixel Guide and Shop use the shared orange '!' badge; a few lookups that ran every frame now use the cached search.
 [2026-10-17 02:25 UTC] Fixed the day / night cycle using a Unity-6-only scene search without the version check (it would not compile on older Unity); it and four other scripts now use the shared PixelFind.All.
+[2026-10-17 04:38 UTC] Code cleanup (devices): the Recycler, Storage Crate, Bank hose, conveyor belts, sorters, Tiny Robot, electric links, Lightning Rod, Quantum Organizer, Funnel, hoses, Trash Can, Bait Bucket and others now read husk info through the shared husk lookup (71 hand-written lookups replaced).

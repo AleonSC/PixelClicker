@@ -297,7 +297,7 @@ public class PixelWoodChipper : MonoBehaviour
             if (i >= list.Count) continue;
             Rigidbody rb = list[i];
             if (rb == null) continue;
-            OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
+            OldPixelInfo info = PixelHuskQuery.Get(rb).info;
             if (info == null || info.heldByPlayer) continue;   // what you are holding is yours
 
             Vector3 p = transform.InverseTransformPoint(rb.position);

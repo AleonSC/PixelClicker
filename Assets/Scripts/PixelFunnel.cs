@@ -336,9 +336,9 @@ public class PixelFunnel : MonoBehaviour
     private bool CanCatch(Rigidbody rb)
     {
         if (rb == null || rb.isKinematic || carrier.Contains(rb) || PixelAttachment.IsAttached(rb) || clicker.IsFlyingPixel(rb)) return false;
-        OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
+        OldPixelInfo info = PixelHuskQuery.Get(rb).info;
         if (info != null && info.heldByPlayer) return false;
-        OldPixelDespawn despawn = rb.GetComponent<OldPixelDespawn>();
+        OldPixelDespawn despawn = PixelHuskQuery.Get(rb).despawn;
         if (despawn != null && (despawn.IsDespawning || despawn.Held)) return false;
         return true;
     }

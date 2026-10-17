@@ -208,9 +208,9 @@ public class PixelSolarPanel : MonoBehaviour
             {
                 Rigidbody rb = list[i];
                 if (rb == null) continue;
-                OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
+                OldPixelInfo info = PixelHuskQuery.Get(rb).info;
                 if (info == null || info.tierIndex != solar || !InPad(rb.worldCenterOfMass)) continue;
-                OldPixelDespawn d = rb.GetComponent<OldPixelDespawn>();
+                OldPixelDespawn d = PixelHuskQuery.Get(rb).despawn;
                 if (d != null && d.IsDespawning) continue;
                 count++;
                 if (d != null && d.IsKept) keptCount++; else scratch.Add(rb);

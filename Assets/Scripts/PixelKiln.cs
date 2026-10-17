@@ -234,7 +234,7 @@ public class PixelKiln : MonoBehaviour, IPixelBeltAcceptor, IPixelPort
         {
             Rigidbody rb = list[i];
             if (rb == null || rb.isKinematic || PixelAttachment.IsAttached(rb) || clicker.IsFlyingPixel(rb)) continue;
-            OldPixelDespawn despawn = rb.GetComponent<OldPixelDespawn>();
+            OldPixelDespawn despawn = PixelHuskQuery.Get(rb).despawn;
             if (despawn != null && (despawn.IsDespawning || despawn.Held)) continue;
             if (!InMouth(rb.worldCenterOfMass)) continue;
             if (clicker.ClaimOldPixel(rb)) StartCoroutine(BurnPixel(rb));

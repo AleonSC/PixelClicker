@@ -143,9 +143,9 @@ public class PixelQuantumDevice : PixelPlacedDevice
             Rigidbody body = pixels[i];
             if (body == null || body.isKinematic || clicker.IsFlyingPixel(body)) continue;
             if (ignoreUntil.TryGetValue(body, out float until) && Time.time < until) continue;
-            OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
+            OldPixelDespawn despawn = PixelHuskQuery.Get(body).despawn;
             if (despawn != null && (despawn.Held || despawn.IsDespawning)) continue;
-            OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+            OldPixelInfo info = PixelHuskQuery.Get(body).info;
             if (info == null || !clicker.IsValidTierIndex(info.tierIndex) || clicker.Tiers[info.tierIndex].flyAway) continue;
 
             Slot slot = SlotOf(info.tierIndex);

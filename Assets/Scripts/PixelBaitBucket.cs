@@ -166,9 +166,9 @@ public class PixelBaitBucket : MonoBehaviour
         foreach (Rigidbody body in snapshot)
         {
             if (body == null || body.isKinematic) continue;
-            OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
+            OldPixelDespawn despawn = PixelHuskQuery.Get(body).despawn;
             if (despawn != null && (despawn.Held || despawn.IsDespawning)) continue;   // taken when you let go
-            OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+            OldPixelInfo info = PixelHuskQuery.Get(body).info;
             if (info == null || !clicker.IsValidTierIndex(info.tierIndex) || !InZone(body.position)) continue;
             PixelClicker.PixelType type = clicker.Tiers[info.tierIndex].type;
             bool fish = type == PixelClicker.PixelType.Fish, water = type == PixelClicker.PixelType.Water;
@@ -192,7 +192,7 @@ public class PixelBaitBucket : MonoBehaviour
         Transform t = body.transform;
         foreach (Collider c in body.GetComponents<Collider>()) c.enabled = false;
         body.isKinematic = true;
-        OldPixelDespawn d = body.GetComponent<OldPixelDespawn>();
+        OldPixelDespawn d = PixelHuskQuery.Get(body).despawn;
         if (d != null) d.enabled = false;
         Vector3 start = t.position, startScale = t.localScale;
         Vector3 target = root != null ? root.transform.TransformPoint(new Vector3(0f, 0.9f, 0f)) : start;

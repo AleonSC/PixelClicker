@@ -214,13 +214,13 @@ public class PixelElectricLinks : MonoBehaviour
         foreach (KeyValuePair<Rigidbody, Link> kv in links)
         {
             if (kv.Key == null) continue;
-            OldPixelDespawn d = kv.Key.GetComponent<OldPixelDespawn>();
+            OldPixelDespawn d = PixelHuskQuery.Get(kv.Key).despawn;
             if (d != null) d.KeepAlive();   // linked pixels (to a device, the pet or each other) never age
         }
         foreach (Rigidbody seed in chainSeeds)
         {
             if (seed == null) continue;
-            OldPixelDespawn d = seed.GetComponent<OldPixelDespawn>();
+            OldPixelDespawn d = PixelHuskQuery.Get(seed).despawn;
             if (d != null) d.KeepAlive();
         }
 
@@ -285,7 +285,7 @@ public class PixelElectricLinks : MonoBehaviour
     private void Dissipate(Rigidbody body)
     {
         if (body == null) return;
-        OldPixelDespawn d = body.GetComponent<OldPixelDespawn>();
+        OldPixelDespawn d = PixelHuskQuery.Get(body).despawn;
         if (d != null) d.Begin();
         links.Remove(body);
         charge.Remove(body);
@@ -307,9 +307,9 @@ public class PixelElectricLinks : MonoBehaviour
     {
         despawn = null;
         if (body == null) return false;
-        OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+        OldPixelInfo info = PixelHuskQuery.Get(body).info;
         if (info == null || !clicker.IsValidTierIndex(info.tierIndex) || !IsConductor(clicker.Tiers[info.tierIndex].type)) return false;
-        despawn = body.GetComponent<OldPixelDespawn>();
+        despawn = PixelHuskQuery.Get(body).despawn;
         return despawn == null || !despawn.IsDespawning;
     }
 
@@ -452,7 +452,7 @@ public class PixelElectricLinks : MonoBehaviour
         if (!booster.AddCharge(1f)) return false;
         unlinked.RemoveAt(index);
         links.Remove(body);
-        OldPixelDespawn d = body.GetComponent<OldPixelDespawn>();
+        OldPixelDespawn d = PixelHuskQuery.Get(body).despawn;
         if (d != null) d.Begin();
         return true;
     }

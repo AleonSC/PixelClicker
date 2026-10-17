@@ -594,7 +594,7 @@ public class PixelConveyorSystem : MonoBehaviour
         foreach (Rider r in system.riders)
         {
             if (r.belt != belt || r.rb == null) continue;
-            OldPixelInfo info = r.rb.GetComponent<OldPixelInfo>();
+            OldPixelInfo info = PixelHuskQuery.Get(r.rb).info;
             if (info == null || !system.clicker.IsValidTierIndex(info.tierIndex)) continue;
             list.Add(new RiderSave { type = system.clicker.Tiers[info.tierIndex].type.ToString(), amount = info.amount, s = r.s, lane = r.lane });
         }
@@ -641,9 +641,9 @@ public class PixelConveyorSystem : MonoBehaviour
     private bool Eligible(Rigidbody rb)
     {
         if (rb == null || rb.isKinematic || riding.Contains(rb) || PixelAttachment.IsAttached(rb) || clicker.IsFlyingPixel(rb)) return false;
-        OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
+        OldPixelInfo info = PixelHuskQuery.Get(rb).info;
         if (info != null && info.heldByPlayer) return false;
-        OldPixelDespawn despawn = rb.GetComponent<OldPixelDespawn>();
+        OldPixelDespawn despawn = PixelHuskQuery.Get(rb).despawn;
         if (despawn != null && (despawn.IsDespawning || despawn.Held)) return false;
         return true;
     }
@@ -705,7 +705,7 @@ public class PixelConveyorSystem : MonoBehaviour
         {
             Rider r = riders[i];
             bool gone = r.rb == null;
-            OldPixelInfo info = gone ? null : r.rb.GetComponent<OldPixelInfo>();
+            OldPixelInfo info = gone ? null : PixelHuskQuery.Get(r.rb).info;
             if (gone || (info != null && info.heldByPlayer) || r.belt == null)
             {
                 if (!gone && (info == null || !info.heldByPlayer)) Release(r, false);   // (a grabbed pixel is the grab's business now)

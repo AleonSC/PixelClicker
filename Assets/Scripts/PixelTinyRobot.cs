@@ -149,9 +149,9 @@ public class PixelTinyRobot : MonoBehaviour
     private bool Fetchable(Rigidbody rb)
     {
         if (rb == null || rb.isKinematic || clicker.IsFlyingPixel(rb) || PixelAttachment.IsAttached(rb)) return false;
-        OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
+        OldPixelInfo info = PixelHuskQuery.Get(rb).info;
         if (info == null || info.heldByPlayer) return false;
-        OldPixelDespawn despawn = rb.GetComponent<OldPixelDespawn>();
+        OldPixelDespawn despawn = PixelHuskQuery.Get(rb).despawn;
         if (despawn != null && (despawn.IsDespawning || despawn.Held)) return false;
         Vector3 c = rb.worldCenterOfMass;
         foreach (PixelConveyor b in PixelConveyor.All) if (b != null && !b.IsGhost && b.Carries(c)) return false;   // already on a belt (or about to be captured)
@@ -215,7 +215,7 @@ public class PixelTinyRobot : MonoBehaviour
                 break;
             case State.ToSpot:
                 if (target == null) { state = State.Idle; break; }
-                OldPixelInfo info = target.GetComponent<OldPixelInfo>();
+                OldPixelInfo info = PixelHuskQuery.Get(target).info;
                 if (info != null && info.heldByPlayer) { DropTarget(); state = State.Idle; break; }   // the player grabbed it
                 goal = spot + Vector3.up * (0.95f * unit + 0.75f * unit);
                 if ((botPos - goal).sqrMagnitude < 0.04f * unit * unit)
@@ -241,7 +241,7 @@ public class PixelTinyRobot : MonoBehaviour
 
         if (target != null && target.isKinematic && (state == State.ToSpot || state == State.Leaving))
         {
-            OldPixelDespawn d = target.GetComponent<OldPixelDespawn>();
+            OldPixelDespawn d = PixelHuskQuery.Get(target).despawn;
             if (d != null) d.KeepAlive();
             target.position = botPos + Vector3.down * 0.75f * unit;
         }

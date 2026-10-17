@@ -235,7 +235,7 @@ public class PixelBeltSorter : MonoBehaviour
         {
             Rigidbody body = pixels[i];
             if (body == null || body.isKinematic) continue;
-            OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+            OldPixelInfo info = PixelHuskQuery.Get(body).info;
             if (info == null || info.heldByPlayer || !info.RecentlyHeld(window)) continue;
             if (ignoreUntil.TryGetValue(body, out float until) && Time.time < until) continue;
             if (!clicker.IsValidTierIndex(info.tierIndex) || clicker.Tiers[info.tierIndex].flyAway || clicker.IsFlyingPixel(body)) continue;
@@ -259,7 +259,7 @@ public class PixelBeltSorter : MonoBehaviour
         {
             PixelBeltSorter b = all[i];
             if (b == null || b.ghost || b.belt != belt || Mathf.Abs(s - b.along) > 0.2f * b.unit) continue;
-            OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
+            OldPixelInfo info = PixelHuskQuery.Get(rb).info;
             if (info == null || !c.IsValidTierIndex(info.tierIndex)) continue;
             PixelClicker.PixelType type = c.Tiers[info.tierIndex].type;
             if (!b.hasFilter || type != b.filter) continue;   // (an empty slot lets everything pass)

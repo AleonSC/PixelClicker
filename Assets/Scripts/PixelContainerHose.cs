@@ -268,7 +268,7 @@ public class PixelContainerHose : MonoBehaviour
             bool taken = rb == null || !InHuskList(rb);
             if (taken || Time.time - fallingSince[rb] > 2.5f)
             {
-                if (!taken && rb != null && !PixelRecycler.Holds(rb)) { OldPixelDespawn d = rb.GetComponent<OldPixelDespawn>(); if (d != null) d.Held = false; }
+                if (!taken && rb != null && !PixelRecycler.Holds(rb)) { OldPixelDespawn d = PixelHuskQuery.Get(rb).despawn; if (d != null) d.Held = false; }
                 if (rb != null) fallingSince.Remove(rb);
                 falling.RemoveAt(i);
             }
@@ -336,7 +336,7 @@ public class PixelContainerHose : MonoBehaviour
         PixelPathCarrier.SetVelocity(rb, Vector3.down * 1.5f * unit);
         if (!(target is PixelQuantumDevice))   // (the organizer must be able to take it)
         {
-            OldPixelDespawn d = rb.GetComponent<OldPixelDespawn>();
+            OldPixelDespawn d = PixelHuskQuery.Get(rb).despawn;
             if (d != null) d.Held = true;   // nothing else snatches it on the way down
         }
         falling.Add(rb);
@@ -347,7 +347,7 @@ public class PixelContainerHose : MonoBehaviour
     {
         carrier.ReleaseAll();   // what was in the hose falls out
         foreach (Rigidbody rb in falling)
-            if (rb != null && !PixelRecycler.Holds(rb)) { OldPixelDespawn d = rb.GetComponent<OldPixelDespawn>(); if (d != null) d.Held = false; }
+            if (rb != null && !PixelRecycler.Holds(rb)) { OldPixelDespawn d = PixelHuskQuery.Get(rb).despawn; if (d != null) d.Held = false; }
         if (mesh != null) Destroy(mesh);
     }
 

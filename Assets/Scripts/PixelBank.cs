@@ -752,10 +752,10 @@ public class PixelBank : MonoBehaviour
         if (hoseRoot != null && c.transform.IsChildOf(hoseRoot.transform)) return false;
         Rigidbody body = c.attachedRigidbody;
         if (body == null) return true;
-        OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+        OldPixelInfo info = PixelHuskQuery.Get(body).info;
         if (info == null || !clicker.IsValidTierIndex(info.tierIndex)) return true;
         if (body.isKinematic || clicker.IsFlyingPixel(body)) return true;
-        OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
+        OldPixelDespawn despawn = PixelHuskQuery.Get(body).despawn;
         if (despawn != null && despawn.IsDespawning) return true;
         target = body;
         return true;
@@ -860,7 +860,7 @@ public class PixelBank : MonoBehaviour
             areaTier = selected >= 0 && selected < counts.Length ? selected : -1;
             if (areaTier < 0)
             {
-                OldPixelInfo info = beamTarget != null ? beamTarget.GetComponent<OldPixelInfo>() : null;
+                OldPixelInfo info = beamTarget != null ? PixelHuskQuery.Get(beamTarget).info : null;
                 if (info != null) areaTier = info.tierIndex;
             }
 
@@ -908,9 +908,9 @@ public class PixelBank : MonoBehaviour
         {
             Rigidbody body = pixels[i];
             if (body == null || body.isKinematic) continue;
-            OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+            OldPixelInfo info = PixelHuskQuery.Get(body).info;
             if (info == null || info.tierIndex != areaTier || clicker.IsFlyingPixel(body)) continue;
-            OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
+            OldPixelDespawn despawn = PixelHuskQuery.Get(body).despawn;
             if (despawn != null && despawn.IsDespawning) continue;
 
             Vector3 to = body.position - tipPosition;
@@ -1043,7 +1043,7 @@ public class PixelBank : MonoBehaviour
             return false;
         }
 
-        OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+        OldPixelInfo info = PixelHuskQuery.Get(body).info;
         if (info == null || !clicker.ReleaseOldPixel(body, false)) return true; // gone already: not a reason to stop
 
         counts[info.tierIndex]++;
@@ -1064,7 +1064,7 @@ public class PixelBank : MonoBehaviour
         PixelStats.Count("old.banked");
         foreach (Collider c in body.GetComponents<Collider>()) c.enabled = false;
         body.isKinematic = true;
-        OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
+        OldPixelDespawn despawn = PixelHuskQuery.Get(body).despawn;
         if (despawn != null) despawn.Held = true; // no despawn swell while it flies in
 
         Transform t = body.transform;

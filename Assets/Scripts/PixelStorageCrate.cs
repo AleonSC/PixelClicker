@@ -80,7 +80,7 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor, IPixelPo
     public bool AcceptFromBelt(Rigidbody body)
     {
         if (body == null || IsDying || NextFree() < 0) return false;
-        OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+        OldPixelInfo info = PixelHuskQuery.Get(body).info;
         if (info == null || !clicker.IsValidTierIndex(info.tierIndex) || clicker.Tiers[info.tierIndex].flyAway) return false;
         int before = FreeCount();
         StoreBody(body, info);
@@ -120,9 +120,9 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor, IPixelPo
             Rigidbody body = pixels[i];
             if (body == null || body.isKinematic || clicker.IsFlyingPixel(body)) continue;
             if (ignoreUntil.TryGetValue(body, out float until) && Time.time < until) continue;
-            OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
+            OldPixelDespawn despawn = PixelHuskQuery.Get(body).despawn;
             if (despawn != null && (despawn.Held || despawn.IsDespawning)) continue;
-            OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+            OldPixelInfo info = PixelHuskQuery.Get(body).info;
             if (info == null || !clicker.IsValidTierIndex(info.tierIndex) || clicker.Tiers[info.tierIndex].flyAway) continue;
             Vector3 local = transform.InverseTransformPoint(body.position);
             if (Mathf.Abs(local.x) > width * 0.5f + cell || Mathf.Abs(local.z) > depth * 0.5f + cell || local.y < -0.6f || local.y > 3.2f) continue;
@@ -216,10 +216,10 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor, IPixelPo
         for (int i = 0; i < pixels.Count && !listed; i++) listed = pixels[i] == body;
         if (!listed) return;
         Vector3 local = transform.InverseTransformPoint(body.position);
-        OldPixelInfo tagged = body.GetComponent<OldPixelInfo>();
+        OldPixelInfo tagged = PixelHuskQuery.Get(body).info;
         bool fromAnyHeight = tagged != null && tagged.RecentlyHeld(PixelGrab.RecentlyHeldSeconds);   // let go by the player a moment ago: dropped from the very top still counts
         if (Mathf.Abs(local.x) > width * 0.5f + cell * 0.4f || Mathf.Abs(local.z) > depth * 0.5f + cell * 0.4f || local.y < -0.3f || (!fromAnyHeight && local.y > 3.2f)) return;
-        OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+        OldPixelInfo info = PixelHuskQuery.Get(body).info;
         if (info == null || !clicker.IsValidTierIndex(info.tierIndex) || clicker.Tiers[info.tierIndex].flyAway) return;
         StoreBody(body, info);
     }
@@ -237,11 +237,11 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor, IPixelPo
         {
             Rigidbody body = pixels[i];
             if (body == null || body.isKinematic || (grab != null && body == grab.HeldBody)) continue;
-            OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+            OldPixelInfo info = PixelHuskQuery.Get(body).info;
             if (info == null || info.heldByPlayer || !info.RecentlyHeld(window)) continue;
             if (ignoreUntil.TryGetValue(body, out float until) && Time.time < until) continue;
             if (!clicker.IsValidTierIndex(info.tierIndex) || clicker.Tiers[info.tierIndex].flyAway || clicker.IsFlyingPixel(body)) continue;
-            OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
+            OldPixelDespawn despawn = PixelHuskQuery.Get(body).despawn;
             if (despawn != null && (despawn.Held || despawn.IsDespawning)) continue;
             Vector3 local = transform.InverseTransformPoint(body.position);
             if (Mathf.Abs(local.x) > width * 0.5f + cell * 0.4f || Mathf.Abs(local.z) > depth * 0.5f + cell * 0.4f || local.y < -0.3f) continue;
@@ -271,7 +271,7 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor, IPixelPo
         foreach (Rigidbody body in FindLoose())
         {
             if (NextFree() < 0) break;
-            OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+            OldPixelInfo info = PixelHuskQuery.Get(body).info;
             if (info != null) StoreBody(body, info);
         }
     }

@@ -91,11 +91,11 @@ public class PixelLightningRod : PixelPlacedDevice
         {
             if (body == null || clicker.IsFlyingPixel(body)) continue;
             if ((body.position - transform.position).sqrMagnitude > radius * radius) continue;
-            OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+            OldPixelInfo info = PixelHuskQuery.Get(body).info;
             if (info == null || !clicker.IsValidTierIndex(info.tierIndex)) continue;
             PixelClicker.PixelTier tier = clicker.Tiers[info.tierIndex];
             if (tier.type == PixelClicker.PixelType.Electric || tier.flyAway || PixelClicker.IsRareCube(tier.type)) continue;
-            OldPixelDespawn dd = body.GetComponent<OldPixelDespawn>();
+            OldPixelDespawn dd = PixelHuskQuery.Get(body).despawn;
             if (dd != null && dd.IsDespawning) continue;
             targets.Add(body);
         }
@@ -104,7 +104,7 @@ public class PixelLightningRod : PixelPlacedDevice
         hitPoints.Clear();
         foreach (Rigidbody body in targets)
         {
-            OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+            OldPixelInfo info = PixelHuskQuery.Get(body).info;
             double amount = info.amount;
             Vector3 pos = body.position;
             if (!clicker.ReleaseOldPixel(body, false)) continue;

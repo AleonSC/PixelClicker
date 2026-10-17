@@ -292,7 +292,7 @@ public class PixelConnector : MonoBehaviour, IPixelBeltAcceptor
             {
                 Rigidbody rb = list[i];
                 if (rb == null || rb.isKinematic || carrier.Contains(rb)) continue;   // (kinematic = held, riding a belt, or inside another machine)
-                OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
+                OldPixelInfo info = PixelHuskQuery.Get(rb).info;
                 if (info == null || info.heldByPlayer) continue;
                 float at = InsideAt(rb.worldCenterOfMass);
                 if (at < 0f) continue;
