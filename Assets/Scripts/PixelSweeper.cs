@@ -2,10 +2,11 @@
 // PixelSweeper.cs
 //   THE SWEEPER (PixelConsumables DeviceKind.Sweeper 25, Utilities; design: docs/GameDesign.md section 6 'The Sweeper'): an early stray-husk helper, NOT tied to
 //   Electrician. Built from the old Tiny Robot (the tester's belt-feeding hover bot, same fetch loop) into a little wind-up CLOCKWORK CUBE with a broom: it rolls
-//   out from its home pad, fetches husks that are CLOSE TO FADING (RemainingReal <= fadingSeconds, the most urgent one within rangeCubes of home first), carries
+//   out from its home pad, fetches husks that are CLOSE TO FADING (it sets off once RemainingReal <= fadingSeconds + headStartSeconds + the trip there; the most urgent one within rangeCubes of home first), carries
 //   them on its head (kept alive on the way) and drops them into the NEAREST container with room that is an IPixelStrayTarget (Storage Crate, Sorting Hopper,
 //   Recycler - nearest to where the husk was picked up), through the container's one husk hook (IPixelSocketDevice.AcceptHusk; room = IPixelHuskRoom). So the
 //   player's placement decides where strays go: a crate nearest = stored safe, the hopper nearest = straight to recycling. It MOVES husks, never processes them.
+//   After a drop it pauses pauseAfterDrop (0.35 s), then goes straight to the next stray; with none it rolls back to its pad (it looks every searchSeconds).
 //   Refused (full) or no container: it puts the husk down where it stands. Husks held by the player, kinematic (riding / kept by a machine), flying, attached or
 //   high above the floor are left alone; one the player grabs from it is let go.
 //   WIND-UP: it runs runSeconds (60) after a wind, slowing to a stop over the last slowDownSeconds (the key on its back turns slower too); stopped, it shows
@@ -44,6 +45,18 @@ public class PixelSweeper : MonoBehaviour
     [Tooltip("'Close to fading': a husk with this many seconds of life left (or fewer) is a stray it rescues.")]
     [SerializeField] private float fadingSeconds = 4f;
 
+    [Min(0f)]
+    [Tooltip("It sets off this many seconds EARLIER than 'close to fading', plus the time the trip takes, so it reaches a husk before its last moments.")]
+    [SerializeField] private float headStartSeconds = 2f;
+
+    [Min(0f)]
+    [Tooltip("After dropping a husk in, it waits this long, then goes straight to the next stray (or back to its pad when there is none).")]
+    [SerializeField] private float pauseAfterDrop = 0.35f;
+
+    [Min(0.05f)]
+    [Tooltip("Seconds between two looks for a stray while it waits.")]
+    [SerializeField] private float searchSeconds = 0.12f;
+
     [Tooltip("The planned Electrician MOTOR (fitted through a future Power socket): on = it never runs down and needs no winding. Off for now.")]
     [SerializeField] private bool motorFitted = false;
 
@@ -65,7 +78,7 @@ public class PixelSweeper : MonoBehaviour
     private Rigidbody target;
     private IPixelSocketDevice container;
     private float containerReach;
-    private float windLeft, nextSearch;
+    private float windLeft, nextSearch, pauseUntil;
     private Vector3 botPos;
 
     /// <summary>Is the motor fitted (no winding)? The hook for the later Electrician upgrade.</summary>
@@ -182,12 +195,17 @@ public class PixelSweeper : MonoBehaviour
         return true;
     }
 
-    /// <summary>Close to fading: a husk whose fade timer is running and has fadingSeconds or fewer left.</summary>
+    /// <summary>
+    /// Worth setting off for: a husk whose fade timer is running and that will be close to fading by the time it gets there - fadingSeconds, plus the trip
+    /// from where the Sweeper is now, plus a head start. 'left' = the time it has left.
+    /// </summary>
     private bool Fading(Rigidbody rb, out float left)
     {
         OldPixelDespawn d = PixelHuskQuery.Get(rb).despawn;
         left = d != null ? d.RemainingReal : -1f;
-        return d != null && !d.Paused && left >= 0f && left <= fadingSeconds;
+        if (d == null || d.Paused || left < 0f) return false;
+        float trip = Flat(rb.position - botPos) / Mathf.Max(0.05f, speedCubes * unit);
+        return left <= fadingSeconds + headStartSeconds + trip;
     }
 
     /// <summary>The most urgent stray within range of home (the least time left).</summary>
@@ -261,15 +279,16 @@ public class PixelSweeper : MonoBehaviour
         switch (state)
         {
             case State.Idle:
+                if (Time.time < pauseUntil) { goal = botPos; break; }   // (a short stop after dropping a husk in)
                 if (!RunDown && Time.time >= nextSearch)
                 {
-                    nextSearch = Time.time + 0.3f;
+                    nextSearch = Time.time + searchSeconds;
                     Rigidbody stray = FindStray();
-                    if (stray != null && NearestContainer(stray.position) != null) { target = stray; state = State.ToHusk; }
+                    if (stray != null && NearestContainer(stray.position) != null) { target = stray; state = State.ToHusk; goal = stray.position; break; }   // off it goes at once
                 }
-                break;
+                break;   // nothing to fetch: back to its pad
             case State.ToHusk:
-                if (!Fetchable(target)) { target = null; state = State.Idle; break; }
+                if (!Fetchable(target)) { target = null; state = State.Idle; nextSearch = 0f; break; }   // (gone: look for the next one straight away)
                 goal = target.position;
                 if (Flat(goal - botPos) < 0.45f * unit)
                 {
@@ -317,6 +336,8 @@ public class PixelSweeper : MonoBehaviour
         Rigidbody husk = target;
         target = null;
         state = State.Idle;
+        pauseUntil = Time.time + pauseAfterDrop;   // a short stop, then straight on to the next stray (or home)
+        nextSearch = pauseUntil;
         PixelSocket intake = IntakeOf(container);
         PixelHuskHolder.Unreserve(husk, Vector3.zero);
         husk.isKinematic = true;
