@@ -43,6 +43,7 @@
 [ ] Game Database: add Goals (the Log's goal list) as entries
 [ ] Game Database: add pet outfits (generated + named special outfits, Outfit Studio) - a category or inside the pet entries
 [x] Game Database: add a Settings category (screen filters, day / night lengths, floor off-modes, display options) so players can find them by searching
+[ ] Settings help lines: one short 'what it does' line per Settings row, written once (passed with the row in PixelPauseMenu) and shown as the row's hover tip AND in its Game Database 'Setting' entry (PixelPauseMenu.SettingsCatalog carries it)
 [ ] Game Database: add Cubie, the Prospector and the Lumberjack as character entries (who they are, when they visit, what they do)
 [ ] Game Database: hand-written entries for the Fishing specials (whale fight, treasure map) and the Dragon Cubes / wish - their data lives in code, not in tables
 [ ] Tutorials: audit which skills / tools have their own tip boxes and turn the ones that can be into tooltips or Game Database entries (one shared Skills tutorial; per-tool help lives in tooltips)
