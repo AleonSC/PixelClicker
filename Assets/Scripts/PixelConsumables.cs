@@ -673,7 +673,7 @@ public class PixelConsumables : MonoBehaviour
         {
             kind = DeviceKind.Funnel,
             displayName = "Funnel",
-            description = "A wide glass funnel that hangs under the clicker cube and catches the pixels that fall off it. They are carried down a see-through tube and come out at an output on the floor - click where you want it. Point the output at a conveyor belt to feed it. Only one stands at a time: placing it again moves it.",
+            description = "A wide glass funnel that hangs under the clicker cube and catches the pixels that fall off it. They are carried down a see-through tube and come out at an output on the floor - click where you want it. Fit a coupling on its output and start a conveyor belt there to feed it. Only one stands at a time: placing it again moves it.",
             requiredType = PixelClicker.PixelType.Gray,
             costs = new[]
             {

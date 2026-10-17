@@ -3,18 +3,18 @@
 //   The FUNNEL (consumable device, PixelConsumables DeviceKind.Funnel 16, one at a time; the placed device is the thin PixelChipperDevice stub on the same object). A wide glass cone hangs just UNDER
 //   the clicker cube (mouth radius mouthRadius cube widths, its mouth mouthDrop below the cube's underside) and catches every loose old pixel that falls into it: the pixel is locked (kinematic,
 //   moved by position by the shared PixelPathCarrier), drawn to the throat and carried down a see-through TUBE (PixelTube, a smooth curve from the throat to the output) at tubeSpeed cube widths per second,
-//   one gap apart. The output sits on the floor where the player clicked (the object's own position; the spout points away from the cube, Scroll / Q / E turns it a bit, a conveyor belt
-//   opening in front of the spout makes it latch on like the Wood Chipper); at the end the pixel is put back as an ordinary old pixel (physics again) with a small push, or dropped onto the
-//   belt. While placing, the output can only be put within maxReach cube widths of the cube. Placing a second funnel MOVES the first (no extra one is used up).
+//   one gap apart. The output sits on the floor where the player clicked (the object's own position; the spout points away from the cube, Scroll / Q / E turns it a bit); at the end the pixel is put back
+//   as an ordinary old pixel (physics again) with a small push - or, with an Out COUPLING on its 'output' socket (PixelSockets.cs), put on the belt that starts at the coupling (PixelCouplings.Emit;
+//   the tube waits while that belt is full: OutputHasRoom). Placing it again keeps the coupling. While placing, the output can only be put within maxReach cube widths of the cube. Placing a second funnel MOVES the first (no extra one is used up).
 //   Ghost / display (shop picture) models are built by the same code (Mode); the cone and tube are pinned to the WORLD (the object's yaw only turns the spout). Riders in the tube are plain
 //   HOLD (backpressure + physics pile): the cone has a SOLID surface (a hidden two-sided mesh collider: the sloped wall and a floor closing the throat), so caught pixels do not vanish into the tube at once: they land in the cone and PILE UP with real
-//   physics. One by one (holdFeedSeconds), while the tube has room, the lowest pixel in the cone is locked and carried down the tube. At the spout the tube waits (PixelPathCarrier canExit = ExitHasRoom) when a belt starts there and has no room for
+//   physics. One by one (holdFeedSeconds), while the tube has room, the lowest pixel in the cone is locked and carried down the tube. At the spout the tube waits (PixelPathCarrier canExit = ExitHasRoom) when the output coupling's belt has no room for
 //   another pixel (PixelConveyorSystem.StartHasRoom) or a connector there is full, so a flooding hose queues up the tube and then fills the cone (the pile can heap up over the rim) instead of overflowing the belt. disableHold = the old direct catch (no collider).
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelFunnel : MonoBehaviour
+public class PixelFunnel : MonoBehaviour, IPixelSocketDevice
 {
     public enum Mode { Real, Ghost, Display }
 
@@ -116,10 +116,12 @@ public class PixelFunnel : MonoBehaviour
     public static GameObject Place(PixelClicker c, Vector3 point, float yaw)
     {
         real.RemoveAll(f => f == null);
-        foreach (PixelFunnel old in real.ToArray()) Destroy(old.gameObject);
+        string keptCouplings = "";
+        foreach (PixelFunnel old in real.ToArray()) { keptCouplings = PixelCouplings.Export(old.gameObject); Destroy(old.gameObject); }   // (moving the funnel keeps its output coupling)
         real.Clear();
         GameObject root = Build(c, Mode.Real, "Funnel");
         root.transform.SetPositionAndRotation(point, Quaternion.Euler(0f, yaw, 0f));
+        PixelCouplings.Import(root, keptCouplings);
         return root;
     }
 
@@ -131,7 +133,13 @@ public class PixelFunnel : MonoBehaviour
         f.clicker = c;
         f.unit = Mathf.Max(0.05f, c != null ? c.PixelBaseSize : 1f);
         f.BuildParts();
-        if (mode == Mode.Real) real.Add(f);
+        if (mode == Mode.Real)
+        {
+            real.Add(f);
+            // Socket (PixelSockets.cs): the OUTPUT at the spout's end, on the floor. An Out coupling there puts what comes down the tube on the belt that starts at it.
+            f.sockets = new[] { new PixelSocket("output", new Vector3(0f, 0f, SpoutLen * f.unit), Vector3.forward, PixelSocketFlow.Output) };
+            PixelCouplings.Register(f);
+        }
         return root;
     }
 
@@ -280,8 +288,8 @@ public class PixelFunnel : MonoBehaviour
     // ---------------- placing ----------------
 
     /// <summary>
-    /// While placing: puts the output at the clicked floor spot (kept inside the reach), turns the spout away from the cube plus the player's turn, and latches onto a conveyor belt opening in
-    /// front of the spout. Returns true when latched. 'point' / 'yaw' are where the funnel will really stand.
+    /// While placing: puts the output at the clicked floor spot (kept inside the reach) and turns the spout away from the cube plus the player's turn.
+    /// 'point' / 'yaw' are where the funnel will really stand. (It no longer latches onto belts: a coupling on its output does that job.)
     /// </summary>
     public bool Adjust(Vector3 floorPoint, float turnOffset, out Vector3 point, out float yaw)
     {
@@ -294,31 +302,21 @@ public class PixelFunnel : MonoBehaviour
         point = new Vector3(cube.x + flat.x, floorPoint.y, cube.z + flat.z);
         yaw = Mathf.Atan2(flat.x, flat.z) * Mathf.Rad2Deg + turnOffset;
 
-        Vector3 fwd = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward, right = Quaternion.Euler(0f, yaw, 0f) * Vector3.right;
-        Vector3 exit = point + fwd * (SpoutLen * u);
-        PixelConveyor best = null;
-        float bestAlong = float.MaxValue;
-        foreach (PixelConveyor belt in PixelConveyor.All)
-        {
-            if (belt == null || belt.IsGhost) continue;
-            Vector3 v = belt.StartPoint - exit; v.y = 0f;
-            float along = Vector3.Dot(v, fwd), lateral = Vector3.Dot(v, right);
-            if (along < -0.3f * u || along > 2f * u || Mathf.Abs(lateral) > 1.1f * u) continue;
-            if (Mathf.Abs(along) < bestAlong) { bestAlong = Mathf.Abs(along); best = belt; }
-        }
-        if (best == null) return false;
-        Vector3 bd = best.Direction;
-        yaw = Mathf.Atan2(bd.x, bd.z) * Mathf.Rad2Deg;
-        Vector3 f2 = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
-        Vector3 over = best.PointAt(0.6f * (clicker != null ? clicker.OldPixelWorldSize : 0.4f * u));
-        point = new Vector3(over.x - f2.x * SpoutLen * u, floorPoint.y, over.z - f2.z * SpoutLen * u);
-        return true;
+        return false;   // (no belt latch any more: fit a coupling on the output and start a belt from it)
     }
 
     // ---------------- behaviour ----------------
 
+    // ---- Socket ----
+    private PixelSocket[] sockets = new PixelSocket[0];
+    public Transform SocketRoot => transform;
+    public IReadOnlyList<PixelSocket> Sockets => sockets;
+    public Color SocketTint => new Color(0.55f, 0.8f, 1f, 1f);
+    public bool AcceptHusk(PixelSocket socket, Rigidbody husk) => false;   // (output only)
+
     private void OnDestroy()
     {
+        PixelCouplings.Unregister(this);
         real.Remove(this);
         carrier.ReleaseAll();
     }
@@ -371,13 +369,7 @@ public class PixelFunnel : MonoBehaviour
     {
         float u = unit;
         Vector3 end = path[path.Length - 1];
-        foreach (PixelConveyor belt in PixelConveyor.All)
-        {
-            if (belt == null || belt.IsGhost) continue;
-            Vector3 d = belt.StartPoint - end; d.y = 0f;
-            if (d.magnitude > 1.3f * u) continue;
-            return PixelConveyorSystem.StartHasRoom(belt);
-        }
+        if (!PixelCouplings.OutputHasRoom(this, "output")) return false;   // a belt fed by the output coupling is full: wait
         foreach (PixelConnector con in PixelConnector.All) if (con != null && !con.HasRoomAt(end + (path[path.Length - 1] - path[path.Length - 2]).normalized * 0.4f * u)) return false;
         return true;
     }
@@ -448,21 +440,9 @@ public class PixelFunnel : MonoBehaviour
     /// <summary>The pixel leaves the spout: ordinary physics again, or dropped onto a belt opening in front of it.</summary>
     private void Release(Rigidbody rb)
     {
-        float u = unit;
+        if (PixelCouplings.Emit(this, "output", rb)) return;   // an Out coupling on the output: onto the belt there
         Vector3 end = path[path.Length - 1], dir = (path[path.Length - 1] - path[path.Length - 2]).normalized;
-        float oldSize = clicker.OldPixelWorldSize;
-        Vector3 velocity = dir * Speed * u * 0.4f;
-        foreach (PixelConveyor belt in PixelConveyor.All)
-        {
-            if (belt == null || belt.IsGhost) continue;
-            Vector3 d = belt.StartPoint - end; d.y = 0f;
-            if (d.magnitude > 1.3f * u) continue;
-            Vector3 over = belt.PointAt(0.6f * oldSize);
-            end = new Vector3(over.x, over.y + belt.SurfaceHeight + oldSize * 0.7f, over.z);
-            velocity = belt.Direction * belt.Speed * 0.5f;
-            break;
-        }
         rb.position = end;
-        PixelPathCarrier.SetVelocity(rb, velocity);
+        PixelPathCarrier.SetVelocity(rb, dir * Speed * unit * 0.4f);
     }
 }
