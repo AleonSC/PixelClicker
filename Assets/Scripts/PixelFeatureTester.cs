@@ -36,6 +36,7 @@ public class PixelFeatureTester : MonoBehaviour
         public Func<GameObject, string> export;
         public Func<PixelClicker, string, GameObject> import;
         public bool linkAfterPlace;   // after placing, click a device to link it (the Solar Panel)
+        public Func<IEnumerable<GameObject>> live;   // the placed list comes from the world (couplings: saved with their device, so they are not this feature's own)
         public string name, description;
         public Func<PixelClicker, GameObject> ghost;
         public Func<PixelClicker, Vector3, float, GameObject> place;
@@ -117,6 +118,12 @@ public class PixelFeatureTester : MonoBehaviour
         clicker = PixelFind.First<PixelClicker>();
         font = clicker != null ? clicker.UIFont : null;
         PixelUIKit.EnsureEventSystem();
+
+        Register("Coupling",
+                 "The one piece that joins belts, hoses and connectors to a device. Bring it near a device: the free SOCKETS show teal rings and the coupling snaps onto the nearest one (Storage Crate front, Kiln mouth, Trash Can side, Recycler back hatch, Sorting Hopper back, Quantum Organizer side, Wood Chipper chute, Funnel output). Its arrow shows the way husks go: green into the device (In), orange out of it (Out); on a crate or organizer click its teal dot to switch. Then end a belt at an In coupling or start one at an Out coupling (belts, connectors and hoses snap to it). It moves with the device and is saved with it. Hold the right button on it to take it off.",
+                 c => PixelCoupling.CreateGhost(c), (c, p, yw) => PixelCoupling.PlaceAt(c, p, yw));
+        features[features.Count - 1].placeSnap = PixelCoupling.TrySnapGhost;
+        features[features.Count - 1].live = PixelCoupling.Removable;
 
         Register("Wood Chipper",
                  "A detailed trailer-mounted wood chipper. Wood pixels dropped into its hopper (or lying close above it) are shredded for Woodcutting XP. Anything else damages it, and enough of that breaks it for good - Clear it and place a new one. Drag pixels in with Pixel Grabbing. While placing, an arrow shows where its chips shoot out; if a conveyor belt's opening is in the arrow's area the chipper latches onto it and its Wood Chips drop straight onto the belt.",
@@ -274,6 +281,7 @@ public class PixelFeatureTester : MonoBehaviour
     {
         foreach (Feature f in features)
         {
+            SyncLive(f);
             f.placed.RemoveAll(g => g == null);
             if (f.placeLabel != null) f.placeLabel.text = placing == f ? "Stop placing" : "Place";
             if (f.clearLabel != null) f.clearLabel.text = "Clear (" + f.placed.Count + ")";
@@ -328,8 +336,17 @@ public class PixelFeatureTester : MonoBehaviour
         Refresh();
     }
 
+    /// <summary>A feature whose objects live in the world (couplings) takes its list from there.</summary>
+    private static void SyncLive(Feature f)
+    {
+        if (f.live == null) return;
+        f.placed.Clear();
+        foreach (GameObject g in f.live()) if (g != null) f.placed.Add(g);
+    }
+
     private void Clear(Feature f)
     {
+        SyncLive(f);
         foreach (GameObject g in f.placed) if (g != null) Destroy(g);
         f.placed.Clear();
         Refresh();
@@ -393,12 +410,19 @@ public class PixelFeatureTester : MonoBehaviour
         GameObject best = null;
         float bestDist = float.MaxValue;
         foreach (Feature f in features)
+        {
+            SyncLive(f);
             foreach (GameObject go in f.placed)
             {
                 if (go == null) continue;
                 foreach (Renderer r in go.GetComponentsInChildren<Renderer>())
+                {
+                    PixelCoupling part = r.GetComponentInParent<PixelCoupling>();
+                    if (part != null && !part.Fitted && part.gameObject != go) continue;   // (a coupling on a machine is its own object: holding it removes the coupling, not the machine)
                     if (r.enabled && r.bounds.IntersectRay(ray, out float d) && d < bestDist) { bestDist = d; best = go; }
+                }
             }
+        }
         if (best == null) return null;
         foreach (RaycastHit h in Physics.RaycastAll(ray, bestDist, ~0, QueryTriggerInteraction.Ignore))
         {
@@ -594,7 +618,7 @@ public class PixelFeatureTester : MonoBehaviour
     // ---------------- saving with the save file ----------------
 
     [Serializable]
-    public class TesterSave { public string feature; public string json; }
+    public class TesterSave { public string feature; public string json; public string couplings; }
 
     private static TesterSave[] kept;   // what was loaded while the tester was not running (kept as it was, so a save made then does not lose it)
 
@@ -610,7 +634,7 @@ public class PixelFeatureTester : MonoBehaviour
             {
                 if (go == null) continue;
                 string json = f.export(go);
-                if (!string.IsNullOrEmpty(json)) list.Add(new TesterSave { feature = f.name, json = json });
+                if (!string.IsNullOrEmpty(json)) list.Add(new TesterSave { feature = f.name, json = json, couplings = PixelCouplings.Export(go) });   // (its couplings go with it)
             }
         }
         return list.ToArray();
@@ -623,7 +647,7 @@ public class PixelFeatureTester : MonoBehaviour
         if (instance == null && saved != null && saved.Length > 0) Boot();
         if (instance == null) return;
         instance.StopPlacing();
-        foreach (Feature f in instance.features) { foreach (GameObject g in f.placed) if (g != null) Destroy(g); f.placed.Clear(); }
+        foreach (Feature f in instance.features) { if (f.live == null) foreach (GameObject g in f.placed) if (g != null) Destroy(g); f.placed.Clear(); }   // (couplings go with their machines)
         if (saved != null && instance.clicker != null)
             foreach (TesterSave t in saved)
             {
@@ -632,7 +656,7 @@ public class PixelFeatureTester : MonoBehaviour
                 if (f == null || f.import == null) continue;
                 GameObject go = null;
                 try { go = f.import(instance.clicker, t.json); } catch (Exception e) { Debug.LogWarning("PixelFeatureTester: could not restore a " + t.feature + " - " + e.Message); }
-                if (go != null) f.placed.Add(go);
+                if (go != null) { f.placed.Add(go); PixelCouplings.Import(go, t.couplings); }
             }
         instance.Refresh();
     }

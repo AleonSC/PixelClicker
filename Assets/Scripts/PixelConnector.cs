@@ -225,6 +225,7 @@ public class PixelConnector : MonoBehaviour, IPixelBeltAcceptor
         }
         foreach (PixelConnector con in all) if (con != null && !con.ghost) { Try(con.a); Try(con.b); if (con.adapter) { Try(con.SidePort(1)); Try(con.SidePort(-1)); } }
         PixelConveyorSystem.ForEachPort(Try);
+        PixelCouplings.Ports(Try);   // couplings on devices
         snapped = found;
         return result;
     }

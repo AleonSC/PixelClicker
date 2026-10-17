@@ -282,6 +282,7 @@ public class PixelConveyor : MonoBehaviour
         foreach (PixelElevator lift in PixelElevator.All) if (lift != null && !lift.IsGhost) Try(lift.OutputPoint);
         foreach (PixelSplitter split in PixelSplitter.All) if (split != null && !split.IsGhost) for (int i = 0; i < 3; i++) Try(split.OutputPoint(i));
         foreach (PixelConnector con in PixelConnector.All) if (con != null && !con.IsGhost) { Try(con.EndPoint); if (con.IsAdapter) { Try(con.SidePort(1)); Try(con.SidePort(-1)); } }
+        PixelCouplings.Ports(Try);   // couplings on devices: a belt ends at an In coupling or starts at an Out one
         snapped = found;
         return result;
     }
@@ -732,9 +733,15 @@ public class PixelConveyorSystem : MonoBehaviour
                 PixelConveyor next = belt.FindNext();
                 if (next == null)
                 {
-                    // An end. A machine at the end (Kiln mouth, Storage Crate) takes the pixel straight in; otherwise it is ejected.
-                    IPixelBeltAcceptor acceptor = FindAcceptor(belt);
+                    // An end. An In coupling at the end (PixelCouplings) hands the pixel to its device; (old way, being moved over:) a machine opening takes it; otherwise it is ejected.
                     Rigidbody taken = r.rb;
+                    if (PixelCouplings.HandIn(belt.ExitPoint, taken))
+                    {
+                        riding.Remove(taken);
+                        riders.RemoveAt(i);
+                        continue;
+                    }
+                    IPixelBeltAcceptor acceptor = FindAcceptor(belt);
                     if (acceptor != null && acceptor.AcceptFromBelt(taken))
                     {
                         riding.Remove(taken);

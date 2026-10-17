@@ -142,7 +142,7 @@ public abstract class PixelPlacedDevice : MonoBehaviour
     }
 
     /// <summary>Does this part count as 'on the device' for HitTest? (Default: every visible part except the range markings.) Read once per part, when the list is made.</summary>
-    protected virtual bool CountsForHit(Renderer r) => r.name != "Range" && r.name != "Blow Area";
+    protected virtual bool CountsForHit(Renderer r) => r.name != "Range" && r.name != "Blow Area" && !r.name.StartsWith("Coupling");   // (a coupling on the device is removed on its own)
 
     private Renderer[] hitRenderers;
     private float hitRenderersTime = -10f;

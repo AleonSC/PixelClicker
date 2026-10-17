@@ -2747,6 +2747,7 @@ public class PixelConsumables : MonoBehaviour
         public float forceValue;   // the exact force set with the slider (0 = use the force button index)
         public bool disarmed;   // placed but never switched on yet
         public string extra;    // device-specific text (the Magnetized Sorter's box contents and pipes)
+        public string couplings;   // the couplings fitted on the device's sockets (PixelCouplings.Export)
     }
 
     /// <summary>The devices currently standing in the world (those not already shrinking away).</summary>
@@ -2764,6 +2765,7 @@ public class PixelConsumables : MonoBehaviour
                 remaining = placed.Remaining,
                 disarmed = !placed.Armed,
             };
+            state.couplings = PixelCouplings.Export(placed.gameObject);
             if (placed is PixelChargeBooster booster) state.aim = booster.Charge;
             if (placed is PixelMagnetSorterDevice magSorter) state.extra = magSorter.ExportState();
             if (placed is PixelQuantumDevice organizer) state.extra = organizer.ExportState();
@@ -2807,6 +2809,7 @@ public class PixelConsumables : MonoBehaviour
         PixelSortingHopper restoredHopper = restored != null ? restored.GetComponent<PixelSortingHopper>() : null;
         if (restoredHopper != null) restoredHopper.ImportState(state.extra);
         if (restored is PixelStorageCrate restoredCrate) restoredCrate.ImportState(state.extra);
+        if (restored != null) PixelCouplings.Import(restored.gameObject, state.couplings);   // its couplings go back on its sockets
     }
 
     /// <summary>Starts a potion again with the time it had left (no sound, nothing used up). Used when loading a save.</summary>
