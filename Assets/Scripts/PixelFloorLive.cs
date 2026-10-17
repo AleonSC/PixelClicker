@@ -10,8 +10,10 @@
 //   SEE-THROUGH LASERS (FloorStyle.hideBase: the floor picture is hidden - ApplyVisibility / the edge fade read HideBaseNow - but the collider stays):
 //     Neon Lasers (overlay Lasers: beams drifting / turning / pulsing over nothing, neon colours from the style), Laser Tracker (overlay LaserTracker:
 //     emitters round the cube shoot beams that all converge on the mouse's point on the floor, with a pulsing ring there).
-//     The beams are flat LineRenderer ribbons (TransformZ alignment, the transform turned Euler(90,0,0) so they face the camera from above). The style's
-//     still picture (ShadeLaserPicture, 160 px) is never on the floor; it is the menu icon and the title screen's background picture.
+//     The beams are flat LineRenderer ribbons (TransformZ alignment, the transform turned Euler(90,0,0) so they face the camera from above), never thinner
+//     on screen than coreMinPixels / glowMinPixels (WorldPerPixel: the floor is far below the cube, so 0.05 world units was about a pixel). The style's
+//     still picture (ShadeLaserPicture, 160 px) is never on the floor; it is the menu icon and the title screen's background picture (shown ONCE there,
+//     PixelFloor.TryGetTitlePicture: it does not tile).
 //   PICNIC BLANKET: a gingham blanket with a woven texture, fringe, folds and crumbs on meadow grass, plus overlay Ant: a small 3D ant (built from
 //     primitives, no colliders) that walks to the mouse's point on the floor with a tripod leg gait and wiggling antennae, and wanders when the mouse is
 //     off the floor. The overlay fades with the floor (Display floor / the menu fade) and follows FloorStyle.overlay.
@@ -516,6 +518,10 @@ public class PixelFloorOverlay : MonoBehaviour
     [SerializeField] private float coreWidth = 0.05f;
     [Tooltip("Width of a beam's soft glow (world units).")]
     [SerializeField] private float glowWidth = 0.4f;
+    [Tooltip("The beams are never thinner on screen than this many pixels (the floor lies far under the cube, so the world widths above can shrink to a pixel or less).")]
+    [SerializeField] private float coreMinPixels = 3f;
+    [Tooltip("The beams' glow is never thinner on screen than this many pixels.")]
+    [SerializeField] private float glowMinPixels = 18f;
     [Tooltip("How many emitters shoot beams at the mouse on the Laser Tracker floor.")]
     [SerializeField] private int trackerCount = 10;
     [Tooltip("How fast the converging point catches up with the mouse (higher = snappier).")]
@@ -543,6 +549,7 @@ public class PixelFloorOverlay : MonoBehaviour
 
     private PixelFloor.FloorStyle style;
     private GameObject root;
+    private float coreNow, glowNow;   // this frame's beam widths (world units), at least the minimum pixels
     private Material lineMat;
     private readonly List<LineRenderer> cores = new List<LineRenderer>(), glows = new List<LineRenderer>();
     private readonly List<Vector4> beamState = new List<Vector4>();   // per beam: centre offset x / z (0..1 of the reach), angle, speed
@@ -652,7 +659,8 @@ public class PixelFloorOverlay : MonoBehaviour
             glows[i].SetPosition(0, a); glows[i].SetPosition(1, b);
             Paint(cores[i], Color.Lerp(c, Color.white, 0.45f), alpha * pulse, 0f);
             Paint(glows[i], c, alpha * pulse * 0.22f, 0f);
-            glows[i].widthMultiplier = glowWidth * (0.8f + 0.4f * pulse);
+            cores[i].widthMultiplier = coreNow;
+            glows[i].widthMultiplier = glowNow * (0.8f + 0.4f * pulse);
         }
     }
 
@@ -674,6 +682,8 @@ public class PixelFloorOverlay : MonoBehaviour
             glows[i].SetPosition(0, from); glows[i].SetPosition(1, trackPoint);
             Paint(cores[i], Color.Lerp(c, Color.white, 0.5f), alpha * flicker, 0.35f);
             Paint(glows[i], c, alpha * flicker * 0.25f, 0.2f);
+            cores[i].widthMultiplier = coreNow;
+            glows[i].widthMultiplier = glowNow;
         }
         if (ring != null)
         {
@@ -684,6 +694,7 @@ public class PixelFloorOverlay : MonoBehaviour
                 ring.SetPosition(k, trackPoint + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * r);
             }
             Paint(ring, Color.Lerp(style.colorA, Color.white, 0.6f), alpha, 1f);
+            ring.widthMultiplier = coreNow * 1.4f;
         }
     }
 
@@ -904,6 +915,16 @@ public class PixelFloorOverlay : MonoBehaviour
         return true;
     }
 
+    /// <summary>World units one screen pixel covers at a point (0 when there is no camera).</summary>
+    private static float WorldPerPixel(Vector3 point)
+    {
+        Camera cam = PixelClicker.ViewCameraOf(PixelFind.Cached<PixelClicker>());
+        if (cam == null || cam.pixelHeight <= 0) return 0f;
+        if (cam.orthographic) return cam.orthographicSize * 2f / cam.pixelHeight;
+        float depth = Mathf.Max(0.1f, Vector3.Dot(point - cam.transform.position, cam.transform.forward));
+        return 2f * depth * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) / cam.pixelHeight;
+    }
+
     private void LateUpdate()
     {
         if (root == null || style == null) return;
@@ -917,6 +938,9 @@ public class PixelFloorOverlay : MonoBehaviour
         if (root.activeSelf != show) root.SetActive(show);
         if (!show) return;
         float time = PixelTimeStop.IsStopped ? 0f : Time.unscaledTime;
+        float perPixel = WorldPerPixel(centre);
+        coreNow = Mathf.Max(coreWidth, perPixel * coreMinPixels);
+        glowNow = Mathf.Max(glowWidth, perPixel * glowMinPixels);
         bool hasMouse = TryMousePoint(centre.y, out Vector3 mouse) && (mouse - centre).sqrMagnitude < reach * reach * 1.5f;
         switch (style.overlay)
         {

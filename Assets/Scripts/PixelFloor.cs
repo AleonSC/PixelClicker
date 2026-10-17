@@ -1165,7 +1165,9 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         bool classic = styles[current].pattern == FloorPattern.Classic;
         texture = !classic && activeTexture != null ? activeTexture : PreviewTexture(current);
         if (classic) tint = PreviewColor(current);
-        if (texture != null && texture.wrapMode == TextureWrapMode.Repeat)
+        if (texture != null && styles[current].hideBase)
+            tiles = new Vector2(1f, Screen.height / Mathf.Max(1f, Screen.width));   // a see-through style's still picture does not tile: one copy across, square cells
+        else if (texture != null && texture.wrapMode == TextureWrapMode.Repeat)
         {
             float across = styles[current].detail > 1 ? 1.5f : 6f;   // a big non-repeating texture is shown (nearly) once
             tiles = new Vector2(across, across * Screen.height / Mathf.Max(1f, Screen.width));   // square cells
