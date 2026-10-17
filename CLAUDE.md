@@ -5,13 +5,13 @@
 ## The game at a glance (full index: `docs/Index.md`)
 - **Core loop:** click the cube's block -> its currency + a HUSK drops (material, never currency); blocks roll from unlocked tiers (`PixelClicker` + partials, `PixelBlockCatalog` cards/tags, `PixelLooks` 3D looks, `PixelBlockRules` special / hold blocks). Tough blocks, hazards, fillers, rare drops.
 - **Progression:** Shop (packs, upgrades, Operation, consumables), Skills (Standard tree: Block Hold, Power Click, Next up, Shuffle; gathering skills Woodcutting / Foraging / Fishing, dev Mining / Farming / Electrician / Firemaking; Mastery, perks, level-up popups), Crafting, Bank, Time Stop, Combo, Auto Clicker, UFO Helper, offline progress, achievements, stats.
-- **Husk economy / machines:** Recycler (streak XP), Storage Crate, Quantum Organizer, Funnel, Magnet, Fan, Vacuum, Sorters, Sprinkler, attuned devices, zone effects (Sap, Mold, Nuclear, gravity well via `PixelHuskQuery`); tester factory (conveyors, kiln, elevator, splitter, belt sorter, hose, trash can, robot, vacuum cleaner).
+- **Husk economy / machines:** Recycler (streak XP) + Sorting Hopper, Storage Crate, Quantum Organizer, Funnel, Magnet, Fan, Vacuum, Sorters, Sprinkler, attuned devices, zone effects (Sap, Mold, Nuclear, gravity well via `PixelHuskQuery`); tester factory (conveyors, kiln, elevator, splitter, belt sorter, hose, trash can, robot, vacuum cleaner).
 - **Minigames:** takeover and side games (Black Hole, Ghost, Meteor, Stardust, Evil Tree, Snake, Sorting Race, Dash, Traffic, Evade, Blink, Breakout, Bomb, Ultra Holes, Weak Spots), limited by `PixelMinigameLimits`.
 - **Characters:** Cubie (guide / shopkeeper, tutorials), visitors (Tinkerer, Wizard, Entrepreneur, Farmer, Prospector, Lumberjack, cats Egg / Bean), pets (outfits, studio).
 - **Rares and shows:** Dragon Cubes + wish, God Cubes, Prime Cubes + Gauntlet / Cubelette, Golden Snitch, Treasure, Collection Log + gallery.
 - **World and camera:** floors, skies, day / night, filters, flat view, orbit / zoom / top-down / first person / free cam, view bounds.
 - **UI:** code-built (`PixelUIKit`), HUD bars, Inventory, Log / event log, Toggles, Pocket, tooltips, Pixel Guide, Database, notices / tips / Did you know, pause menu (settings, save / load, guide), title screen.
-- **Shared foundations:** `PixelSystems` (system list), `PixelFind`, `PixelPrefs`, `PixelStatics`, `PixelCalm`, `PixelHuskQuery`, `PixelHuskTicker`, `PixelPointerClaim`, `PixelCarryHandles`, `PixelInstantItems`, `PixelTierPicture`, `PixelAudio` (+ code-made synths), save system.
+- **Shared foundations:** `PixelSystems` (system list), `PixelFind`, `PixelPrefs`, `PixelStatics`, `PixelCalm`, `PixelHuskQuery`, `PixelHuskHolder` (container steps), `PixelHuskTicker`, `PixelPointerClaim`, `PixelCarryHandles`, `PixelInstantItems`, `PixelTierPicture`, `PixelAudio` (+ code-made synths), save system.
 - **Dev tools (Dev Hub, F9):** widgets / cheats, Docs (to-do, changelog, notes), Tester, Inspector, Look Studio, Setups, Events, Sounds, Console, snapshots, balance report, session recorder, crash logs.
 
 ## Finding things
@@ -53,7 +53,8 @@
   - **Skills** - the Skills window, skill packs, gathering skills, perks, trees, Mastery, XP.
   - **Shops** - the Shop, packs, upgrades, Operation, consumables, vendors' wares and prices.
   - **Devices** - husk machines and devices: Recycler, Storage Crate, Quantum Organizer, Funnel, Magnet, Fan, Vacuum, Sorters, Sprinkler, attuned devices, zone effects, the tester factory (conveyors, kiln, elevator, splitter, robot...).
-  - When a topic fits two, a feature's own session owns how it WORKS (a skill's perk -> Skills, a shop item -> Shops, a machine's behaviour -> Devices) and UI and Interfaces owns how windows LOOK and behave in general; one-off bugs go to Console Errors.
+  - **Husks and Physics** - how husks (and pets) move and feel: falling, bouncing, tumbling and settling, Pixel Grabbing (grab / throw), carrying in first person, the floor cap and lifetime, physics materials and weights.
+  - When a topic fits two, a feature's own session owns how it WORKS (a skill's perk -> Skills, a shop item -> Shops, a machine's behaviour -> Devices, how a husk itself moves -> Husks and Physics) and UI and Interfaces owns how windows LOOK and behave in general; one-off bugs go to Console Errors.
 - **Suggest the right session (standing instruction from the user):** do NOT suggest a new chat because a session has grown long or covered several features. When a request falls outside this session's area, still help if it is small, and say in one line at the end which pinned session it belongs in ("this fits the **Skills** session"), or, when none fits, suggest a new session with a short name for it. When the chat has been compressed (summarised), say so ONCE in the next reply (one line, e.g. "Note: earlier parts of this chat were compressed into a summary"). Either way, write decisions from the chat into the notes / to-do, since other sessions can't see this chat.
 - Git: develop on the branch the session names (recently `claude/intelligent-cori-y2qt3d`); commit + push when work is done; no PRs unless asked.
 

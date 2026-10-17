@@ -216,7 +216,7 @@ give CONTENT (blocks, hazards, vendors) and their own tools.
 Build it as ONE shared rule (a small "needs skill X at level N" table on shop items) read by the Shop, Toggles and Game Database,
 not a check per device; the same table later covers skill-gated minigames and the gathering skills' own tools (to-do).
 
-### The early husk setup: Recycler + Sorting Hopper (Agreed 2026-10-17, not built)
+### The early husk setup: Recycler + Sorting Hopper (Agreed 2026-10-17, built 2026-10-17 - `PixelSortingHopper.cs`)
 The Recycler (Cubie's gift) pays a STREAK bonus for the same husk type in a row, but husks land mixed and fade in about 15 s, so
 streaks rarely happen. The **Sorting Hopper** is its partner: a choice, a little help, and still a loss - right for the early game.
 
@@ -229,7 +229,10 @@ streaks rarely happen. The **Sorting Hopper** is its partner: a choice, a little
 - **Without a Recycler** the exit stays shut and it is just a tray. When a Recycler's time runs out the hopper stays placed and snaps
   onto the next one.
 - **Unlock:** Standard level 3-4 (the first general husk tool, see the table above); bought for pure currency.
-- **Open:** capacity (about 12?), whether the filter can also be set to "any pure", and the price.
+- **As built:** no separate capacity - the tray's physical room is the limit; it latches onto a free Recycler within 6 world units
+  (the Device's Reach), on placing and later; 150 White, on sale from Standard 3 (vendorOnly + shopSkillId, so it is simply
+  hidden before then - the "shown locked with Standard N" part waits for the shared skill-requirement to-do).
+- **Open:** whether the filter can also be set to "any pure", and the price after testing.
 
 ### Mid game - skills and machines (Built, growing)
 Gathering skills (Woodcutting, Foraging, Fishing, Mining, Farming, Electrician), each with filler, hazards, specials, perks and a

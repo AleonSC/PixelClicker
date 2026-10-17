@@ -13,7 +13,7 @@
 //   Cursor.SetCursor, requested per frame, normal cursor returns when nobody asks), left-drag moves the crate over the floor plane
 //   (DragTo, kept on screen) with the fist cursor, and while dragging scroll / Q / E turn it (PixelConsumables.TurnInput; also when placing it; the yaw is saved in PlacedState). PixelStorageCrate.ClaimsPointer() makes PixelGrab step aside when the click belongs
 //   to the crate; PixelPointerClaim blocks cube clicks. Removing it (Ended) lets everything out. Saved in PlacedState.extra
-//   ('S,slot,tier,amount;'). Tip device_StorageCrate.
+//   ('S,slot,tier,amount;'). Tip device_StorageCrate. Which husks it may take, the fly-in and taking one out into the hand are the shared PixelHuskHolder steps.
 // ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
@@ -118,12 +118,8 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor, IPixelPo
         for (int i = 0; i < pixels.Count; i++)
         {
             Rigidbody body = pixels[i];
-            if (body == null || body.isKinematic || clicker.IsFlyingPixel(body)) continue;
+            if (!PixelHuskHolder.Takeable(clicker, body)) continue;
             if (ignoreUntil.TryGetValue(body, out float until) && Time.time < until) continue;
-            OldPixelDespawn despawn = PixelHuskQuery.Get(body).despawn;
-            if (despawn != null && (despawn.Held || despawn.IsDespawning)) continue;
-            OldPixelInfo info = PixelHuskQuery.Get(body).info;
-            if (info == null || !clicker.IsValidTierIndex(info.tierIndex) || clicker.Tiers[info.tierIndex].flyAway) continue;
             Vector3 local = transform.InverseTransformPoint(body.position);
             if (Mathf.Abs(local.x) > width * 0.5f + cell || Mathf.Abs(local.z) > depth * 0.5f + cell || local.y < -0.6f || local.y > 3.2f) continue;
             found.Add(body);
@@ -236,13 +232,10 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor, IPixelPo
         for (int i = 0; i < pixels.Count; i++)
         {
             Rigidbody body = pixels[i];
-            if (body == null || body.isKinematic || (grab != null && body == grab.HeldBody)) continue;
+            if (!PixelHuskHolder.Takeable(clicker, body) || (grab != null && body == grab.HeldBody)) continue;
             OldPixelInfo info = PixelHuskQuery.Get(body).info;
-            if (info == null || info.heldByPlayer || !info.RecentlyHeld(window)) continue;
+            if (!info.RecentlyHeld(window)) continue;
             if (ignoreUntil.TryGetValue(body, out float until) && Time.time < until) continue;
-            if (!clicker.IsValidTierIndex(info.tierIndex) || clicker.Tiers[info.tierIndex].flyAway || clicker.IsFlyingPixel(body)) continue;
-            OldPixelDespawn despawn = PixelHuskQuery.Get(body).despawn;
-            if (despawn != null && (despawn.Held || despawn.IsDespawning)) continue;
             Vector3 local = transform.InverseTransformPoint(body.position);
             if (Mathf.Abs(local.x) > width * 0.5f + cell * 0.4f || Mathf.Abs(local.z) > depth * 0.5f + cell * 0.4f || local.y < -0.3f) continue;
             StoreBody(body, info);
@@ -262,7 +255,7 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor, IPixelPo
         s.tier = tier;
         s.amount = amount;
         MakeModel(s, slot);
-        StartCoroutine(FlyIn(go, s.model));
+        StartCoroutine(PixelHuskHolder.FlyIn(go, s.model, transform.position, true));   // (shared: the husk shrinks into its compartment as the model grows)
         PixelAudio.Play("device_place");
     }
 
@@ -315,13 +308,8 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor, IPixelPo
         if (s.model != null) Destroy(s.model.gameObject);
         s.model = null; s.tier = -1; s.amount = 0;
 
-        if (!clicker.SpawnStoredPixel(tier, amount, at, Vector3.zero)) return;
-        IReadOnlyList<Rigidbody> pixels = clicker.OldPixels;
-        Rigidbody body = pixels.Count > 0 ? pixels[pixels.Count - 1] : null;
-        if (body == null) return;
-        ignoreUntil[body] = Time.time + 1.5f;
-        PixelGrab grab = PixelFind.First<PixelGrab>();
-        if (grab != null) grab.BeginHold(body);
+        Rigidbody body = PixelHuskHolder.SpawnIntoHand(clicker, tier, amount, at);
+        if (body != null) ignoreUntil[body] = Time.time + 1.5f;   // (not stored again the moment it is taken out)
     }
 
     private void ReleaseAll()
@@ -337,34 +325,6 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor, IPixelPo
             if (s.model != null) Destroy(s.model.gameObject);
             s.model = null; s.tier = -1;
         }
-    }
-
-    /// <summary>The old pixel shrinks and slides into its compartment while the stored model pops up.</summary>
-    private IEnumerator FlyIn(GameObject go, Transform target)
-    {
-        if (go == null) yield break;
-        foreach (MonoBehaviour mb in go.GetComponents<MonoBehaviour>()) if (mb != null) mb.enabled = false;
-        Rigidbody rb = go.GetComponent<Rigidbody>();
-        if (rb != null) rb.isKinematic = true;
-        foreach (Collider c in go.GetComponentsInChildren<Collider>()) c.enabled = false;
-        foreach (ParticleSystem ps in go.GetComponentsInChildren<ParticleSystem>(true)) ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-        Vector3 start = go.transform.position, scale = go.transform.localScale;
-        Vector3 finalScale = target != null ? target.localScale : Vector3.one;
-        if (target != null) target.localScale = Vector3.zero;
-        float t = 0f;
-        const float Seconds = 0.28f;
-        while (t < Seconds)
-        {
-            if (go == null) yield break;
-            t += Time.unscaledDeltaTime;
-            float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / Seconds));
-            if (target != null) go.transform.position = Vector3.Lerp(start, target.position, k);
-            go.transform.localScale = scale * (1f - k);
-            if (target != null) target.localScale = finalScale * k;
-            yield return null;
-        }
-        if (target != null) target.localScale = finalScale;
-        if (go != null) Destroy(go);
     }
 
     // ------------------------------------------------------------------

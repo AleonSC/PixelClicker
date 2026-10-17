@@ -125,6 +125,8 @@ public class PixelConsumables : MonoBehaviour
         FocusPotion = 20,
         /// <summary>Not placed: right-click to add Pesticide charges (PixelBlockRules.AddCharges for the Termite Hive: each charge clears a hive by itself). Sold by the Lumberjack.</summary>
         PesticideSpray = 21,
+        /// <summary>Placed, permanent: a sloped tray that latches onto a Recycler's back (PixelSortingHopper) and slides ONE chosen husk type through the back hatch into the bin (a steady streak); other husks lie in it and fade. On sale from Standard level 3.</summary>
+        SortingHopper = 22,
     }
 
     /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
@@ -640,6 +642,31 @@ public class PixelConsumables : MonoBehaviour
         };
     }
 
+    private static Device CreateDefaultSortingHopper()
+    {
+        return new Device
+        {
+            kind = DeviceKind.SortingHopper,
+            displayName = "Sorting Hopper",
+            description = "A wide tray that latches onto a Recycler's back. Pick ONE husk type with its flag: those slide through the back hatch into the bin one after another, so the streak builds. Every other husk just lies in the tray and fades. Without a Recycler its exit stays shut. It stays until you remove it.",
+            requiredType = PixelClicker.PixelType.White,
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.White, amount = 150 },
+            },
+            maxHeld = 2,
+            durationSeconds = 1e9f,
+            radius = 6f,   // how far from a Recycler's back it latches on (world units)
+            color = new Color(0.3f, 0.48f, 0.6f, 1f),
+            bodyDiameter = 3f,
+            bodyHeight = 1.5f,
+            vendorOnly = true,          // not in the shop until...
+            shopSkillId = "standard",   // ...Standard level 3 puts it on sale (GameDesign section 6: the first general husk tool); no vendor sells it
+            shopSkillLevel = 3,
+            placingMessage = "Scroll or Q / E to turn the {0}, click the floor to place it - near a Recycler it latches onto its back  (right-click to cancel)",
+        };
+    }
+
     private static Device CreateDefaultFunnel()
     {
         return new Device
@@ -1099,6 +1126,7 @@ public class PixelConsumables : MonoBehaviour
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Recycler, CreateDefaultRecycler),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.FocusPotion, CreateDefaultFocusPotion),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.PesticideSpray, CreateDefaultPesticideSpray),
+                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.SortingHopper, CreateDefaultSortingHopper),
                 })
                 {
                     DeviceKind wanted = extra.Key;
@@ -1932,6 +1960,9 @@ public class PixelConsumables : MonoBehaviour
                 case DeviceKind.Recycler:
                     root = PixelRecycler.CreateDisplay(clicker);
                     break;
+                case DeviceKind.SortingHopper:
+                    root = PixelSortingHopper.CreateDisplay(clicker);
+                    break;
                 default:
                     if (PixelInstantItems.Find(kind) != null) root = BuildItemModel(kind, d);   // instant-use items (PixelInstantItems) have small item models
                     break;
@@ -2378,7 +2409,7 @@ public class PixelConsumables : MonoBehaviour
         if (hasPoint) preview.transform.position = point;
 
         // A fan can be turned with the mouse wheel or Q / E.
-        if (devices[placingIndex].kind == DeviceKind.Fan || devices[placingIndex].kind == DeviceKind.MagnetSorter || devices[placingIndex].kind == DeviceKind.StorageCrate || devices[placingIndex].kind == DeviceKind.WoodChipper || devices[placingIndex].kind == DeviceKind.Funnel || devices[placingIndex].kind == DeviceKind.Recycler)
+        if (devices[placingIndex].kind == DeviceKind.Fan || devices[placingIndex].kind == DeviceKind.MagnetSorter || devices[placingIndex].kind == DeviceKind.StorageCrate || devices[placingIndex].kind == DeviceKind.WoodChipper || devices[placingIndex].kind == DeviceKind.Funnel || devices[placingIndex].kind == DeviceKind.Recycler || devices[placingIndex].kind == DeviceKind.SortingHopper)
         {
             rawYaw += TurnInput();
             placingYaw = PixelSnap.Active ? PixelSnap.Yaw(rawYaw) : rawYaw;   // snap the turn to angle steps unless Shift is held (the raw turn keeps counting so Q / E stay smooth)
@@ -2402,6 +2433,18 @@ public class PixelConsumables : MonoBehaviour
                 funnel.Adjust(point, placingYaw, out Vector3 funnelPoint, out float funnelYaw);
                 chipperLatched = true; chipperLatchPoint = funnelPoint; chipperLatchYaw = funnelYaw;
                 preview.transform.SetPositionAndRotation(funnelPoint, Quaternion.Euler(0f, funnelYaw, 0f));
+            }
+        }
+
+        if (devices[placingIndex].kind == DeviceKind.SortingHopper)
+        {
+            // Near a free Recycler the hopper's ghost latches onto its back (turned and sized like the bin); elsewhere it stands where you point.
+            preview.transform.localScale = Vector3.one;
+            if (hasPoint && PixelSortingHopper.TrySnap(clicker, point, devices[placingIndex].radius, out Vector3 hopperPoint, out float hopperYaw, out float hopperSize))
+            {
+                chipperLatched = true; chipperLatchPoint = hopperPoint; chipperLatchYaw = hopperYaw;
+                preview.transform.SetPositionAndRotation(hopperPoint, Quaternion.Euler(0f, hopperYaw, 0f));
+                preview.transform.localScale = Vector3.one * hopperSize;
             }
         }
 
@@ -2520,7 +2563,7 @@ public class PixelConsumables : MonoBehaviour
     {
         int index = placingIndex;
         Device d = devices[index];
-        if (chipperLatched && (d.kind == DeviceKind.WoodChipper || d.kind == DeviceKind.Funnel)) { point = chipperLatchPoint; placingYaw = chipperLatchYaw; }
+        if (chipperLatched && (d.kind == DeviceKind.WoodChipper || d.kind == DeviceKind.Funnel || d.kind == DeviceKind.SortingHopper)) { point = chipperLatchPoint; placingYaw = chipperLatchYaw; }
         if (robotPicked != null)
         {
             Action<int, Vector3, float, float> picked = robotPicked;
@@ -2534,7 +2577,7 @@ public class PixelConsumables : MonoBehaviour
 
         Device effective = EffectiveDevice(d);
         PixelPlacedDevice placed = SpawnDevice(index, point, placingYaw, UsesKind(d.kind) ? effective.uses : DeviceSeconds(effective), 0f, 0f, -1);
-        if (placed != null && d.kind != DeviceKind.StorageCrate && d.kind != DeviceKind.WoodChipper && d.kind != DeviceKind.Funnel && d.kind != DeviceKind.Recycler) placed.Disarm();   // (the crate needs no switching on) starts grey and idle until you left-click it
+        if (placed != null && d.kind != DeviceKind.StorageCrate && d.kind != DeviceKind.WoodChipper && d.kind != DeviceKind.Funnel && d.kind != DeviceKind.Recycler && d.kind != DeviceKind.SortingHopper) placed.Disarm();   // (the crate needs no switching on) starts grey and idle until you left-click it
 
         EndPlacement();
         DevicePlaced?.Invoke(d.kind);
@@ -2619,6 +2662,13 @@ public class PixelConsumables : MonoBehaviour
             PixelRecyclerDevice recyclerDevice = root.AddComponent<PixelRecyclerDevice>();   // (the countdown; the behaviour is in PixelRecycler)
             recyclerDevice.Init(clicker, cam, duration, shrinkSeconds);
             result = recyclerDevice;
+        }
+        else if (d.kind == DeviceKind.SortingHopper)
+        {
+            GameObject root = PixelSortingHopper.Place(clicker, point, yaw, d.radius);   // (d.radius = how far from a Recycler's back it latches on)
+            PixelChipperDevice hopperDevice = root.AddComponent<PixelChipperDevice>();   // (the thin permanent-device stub; all the behaviour is in PixelSortingHopper)
+            hopperDevice.Init(clicker, cam, shrinkSeconds);
+            result = hopperDevice;
         }
         else if (d.kind == DeviceKind.Funnel)
         {
@@ -2720,6 +2770,8 @@ public class PixelConsumables : MonoBehaviour
             if (placed is PixelStorageCrate storageCrate) state.extra = storageCrate.ExportState();
             PixelRecycler recycler = placed.GetComponent<PixelRecycler>();
             if (recycler != null) state.extra = recycler.ExportState();   // the husks waiting in a Recycler
+            PixelSortingHopper hopper = placed.GetComponent<PixelSortingHopper>();
+            if (hopper != null) state.extra = hopper.ExportState();       // the Sorting Hopper's chosen type
             if (placed is PixelSorterDevice sorter)
             {
                 state.aim = sorter.AimDegrees;
@@ -2752,6 +2804,8 @@ public class PixelConsumables : MonoBehaviour
         if (restored is PixelQuantumDevice restoredOrganizer) restoredOrganizer.ImportState(state.extra);
         PixelRecycler restoredRecycler = restored != null ? restored.GetComponent<PixelRecycler>() : null;
         if (restoredRecycler != null) restoredRecycler.ImportState(state.extra);
+        PixelSortingHopper restoredHopper = restored != null ? restored.GetComponent<PixelSortingHopper>() : null;
+        if (restoredHopper != null) restoredHopper.ImportState(state.extra);
         if (restored is PixelStorageCrate restoredCrate) restoredCrate.ImportState(state.extra);
     }
 
@@ -2823,6 +2877,11 @@ public class PixelConsumables : MonoBehaviour
                 return ghost;
             }
             return displayOnly ? PixelRecycler.CreateDisplay(clicker) : PixelRecycler.Place(clicker, Vector3.zero, 0f);
+        }
+        if (d.kind == DeviceKind.SortingHopper)
+        {
+            suckPoint = null; timer = null;
+            return isPreview ? PixelSortingHopper.CreateGhost(clicker) : displayOnly ? PixelSortingHopper.CreateDisplay(clicker) : PixelSortingHopper.Place(clicker, Vector3.zero, 0f, d.radius);
         }
 
         GameObject root = new GameObject(isPreview ? d.displayName + " (Preview)" : d.displayName);

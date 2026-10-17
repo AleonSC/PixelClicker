@@ -184,6 +184,7 @@ public class PixelHints : MonoBehaviour
             case "device_MagnetSorter": return "You placed a Magnetized Sorter!";
             case "device_QuantumOrganizer": return "You placed a Quantum Organizer!";
             case "device_StorageCrate": return "You placed a Storage Crate!";
+            case "device_SortingHopper": return "You placed a Sorting Hopper!";
             case "craft": return "You crafted something!";
             case "combo": return "Combo started!";
             case "ultra": return "You earned an Ultra pixel!";
@@ -257,6 +258,7 @@ public class PixelHints : MonoBehaviour
         H("device_MagnetSorter", "Magnetized Sorter placed! Left-click it to switch it on. It sucks loose old pixels from the arc in front of its magnet into the box. Click an exit pipe to grab it, click again to put it down; scroll over a pipe to choose which stored pixel type it shoots out."),
         H("device_QuantumOrganizer", "Quantum Organizer placed! Left-click it to switch it on, then drop a pixel onto the pad to bind its type. Every loose old pixel of that type is dematerialized and stored in the box. Click the box to let some out again."),
         H("device_StorageCrate", "Storage Crate placed! It needs no switching on. Let go of a pixel you are holding (Pixel Grabbing) above the crate and it drops into the next free section; clicking the crate also stores loose pixels lying on it. Click a stored pixel to pick it up again. Drag the handles on its short ends to move it."),
+        H("device_SortingHopper", "Sorting Hopper placed! Put it near a Recycler and it latches onto the back. Click its flag (or scroll over it) to pick ONE husk type: those slide into the Recycler one by one, so the streak keeps growing. Other husks just lie in the tray and fade."),
         H("device_Magnet", "Magnet placed! It is grey and asleep: left-click it to switch it on. Then it pulls loose old pixels in around it and holds them in a heap without collecting them."),
         H("device_Sorter", "Sorter placed! It is grey and asleep: left-click its ring or pipe to switch it on. Then click its buttons to change how hard old pixels are pushed out of the pipe."),
         H("craft", "Crafted! The new item is in your Inventory under Consumables."),

@@ -43,6 +43,9 @@
 //   Stats recycler.husks / paid / xp, Best recycler.streak. The idea is that husks reach it WITHOUT the player stopping (bin placed where husks land; edge-click
 //   aiming is planned). The button / capacity / lid cycle below is the old manual mode (autoRecycle off) and still works in auto mode for anything left inside.
 //   A FULL bin makes its button flash and pulse (UpdateButtonFlash, flashColor). Removing the Recycler destroys what is inside. Not a belt acceptor yet.
+//   SORTING HOPPER (2026-10-17): a PixelSortingHopper snaps onto the back wall (BackEdgeLocalZ, SizeFactor) and keeps the back hatch open (SetHatchOpen);
+//   it slides its chosen husk type through the hatch (HatchOutside -> HatchInside) and lets it fall into the bin, where Capture takes it as usual.
+//   Capturing / letting go / freezing use the shared PixelHuskHolder steps.
 // ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
@@ -96,6 +99,39 @@ public class PixelRecycler : MonoBehaviour
 
     /// <summary>Where a Container Hose lets its husks fall: above the middle of the bin.</summary>
     public Vector3 HoseDropPoint => transform.TransformPoint(new Vector3(0f, wallH * 1.3f, 0f));
+
+    // ---- The Sorting Hopper's hookup (PixelSortingHopper snaps onto the back wall with its exit at the back hatch) ----
+
+    /// <summary>The bin's size factor (Operation: Bin Size); a Sorting Hopper on its back is built to the same scale.</summary>
+    public float SizeFactor => baseScale.x;
+
+    /// <summary>True while the floor's props fade scales the bin (main menu, after a load): a hopper on it waits.</summary>
+    public bool Fading => (transform.localScale - baseScale).sqrMagnitude > 0.0001f;
+
+    /// <summary>True while the bin works (lid shut) or is being carried: a hopper feeds nothing in then.</summary>
+    public bool Busy => processing || (carry != null && carry.Dragging);
+
+    /// <summary>How far behind the bin's middle (its own unscaled units, +z) the back wall, pillars and plinth end: a hopper's exit edge goes here.</summary>
+    public float BackEdgeLocalZ => Unit(clicker) * (DepthHusks * 0.5f + 0.4f);
+
+    /// <summary>Just outside the back hatch, where a husk leaves a hopper's exit (world).</summary>
+    public Vector3 HatchOutside => transform.TransformPoint(new Vector3(0f, HatchPassY, BackEdgeLocalZ));
+
+    /// <summary>Just inside the back wall, behind the hatch: a husk slid in here falls into the bin (world).</summary>
+    public Vector3 HatchInside => transform.TransformPoint(new Vector3(0f, HatchPassY, innerD * 0.5f - Unit(clicker) * 0.9f));
+
+    private float HatchPassY => HatchBottom(Unit(clicker)) + HatchHeight(Unit(clicker)) * 0.45f;
+
+    /// <summary>Is the back hatch fully open?</summary>
+    public bool HatchIsOpen => hatchOpen && !hatchMoving;
+
+    /// <summary>Opens / shuts the back hatch (a Sorting Hopper on the back keeps it open). Nothing happens while the bin works or the hatch moves.</summary>
+    public void SetHatchOpen(bool open)
+    {
+        if (processing || hatchMoving || hatchOpen == open || !isActiveAndEnabled) return;
+        StartCoroutine(MoveHatch(open));
+    }
+
     private static int hotFrame = -10;
 
     /// <summary>True while the pointer is over a Recycler's button (clicks there belong to the Recycler, not the cube or Pixel Grabbing).</summary>
@@ -421,9 +457,7 @@ public class PixelRecycler : MonoBehaviour
             OldPixelPopIn pop = b.GetComponent<OldPixelPopIn>();
             if (pop != null) pop.Finish();   // full size and solid at once
             Vector3 size = b.transform.localScale;   // (its world size: it had no parent)
-            if (!clicker.ReleaseOldPixel(b, false)) continue;
-            OldPixelDespawn despawn = PixelHuskQuery.Get(b).despawn;
-            if (despawn != null) despawn.Held = true;
+            if (!PixelHuskHolder.Capture(clicker, b)) continue;
             b.isKinematic = true;
             b.transform.SetParent(transform, false);   // placed straight into the bin in its own space (the bin may still be scaled by the load fade)
             b.transform.localPosition = local;
@@ -460,9 +494,7 @@ public class PixelRecycler : MonoBehaviour
             bool inHand = heldInfo != null && heldInfo.heldByPlayer;
             // A husk in the player's hand is never counted; one bouncing up a little above the walls stays counted (KeepsHold), only one that left the bin is let go.
             if (!inHand && KeepsHold(inside[i].position)) { if (hold != null) hold.Held = true; Settle(inside[i], false); continue; }
-            if (hold != null && !inHand) hold.Held = false;
-            Unfreeze(inside[i]);
-            if (clicker != null) clicker.AdoptOldPixel(inside[i]);   // back on the floor's husk list (grabbable, despawns, can be caught again)
+            LetGo(inside[i]);   // back on the floor's husk list (grabbable, despawns, can be caught again)
             inside.RemoveAt(i);
             changed = true;
         }
@@ -485,8 +517,7 @@ public class PixelRecycler : MonoBehaviour
             OldPixelDespawn despawn = PixelHuskQuery.Get(b).despawn;
             if (despawn != null && despawn.IsDespawning) continue;   // already vanishing
             if (info.heldByPlayer) continue;                          // still in the player's hand
-            if (!clicker.ReleaseOldPixel(b, false)) continue;
-            if (despawn != null) despawn.Held = true;   // it never shrinks away while it is in the bin
+            if (!PixelHuskHolder.Capture(clicker, b)) continue;      // (off the floor's list, its timer held: it never shrinks away while it is in the bin)
             inside.Add(b);
             capturedAt[b] = Time.time;
             changed = true;
@@ -572,11 +603,8 @@ public class PixelRecycler : MonoBehaviour
             if (b == null) { inside.RemoveAt(i); changed = true; continue; }
             OldPixelInfo carriedInfo = PixelHuskQuery.Get(b).info;
             if ((carriedInfo == null || !carriedInfo.heldByPlayer) && KeepsHold(b.position)) { Freeze(b); continue; }
-            OldPixelDespawn hold = PixelHuskQuery.Get(b).despawn;
-            if (hold != null) hold.Held = false;
-            Unfreeze(b);
             inside.RemoveAt(i);
-            if (clicker != null) clicker.AdoptOldPixel(b);   // a normal husk on the floor again
+            LetGo(b);   // a normal husk on the floor again
             changed = true;
         }
         if (changed) RefreshCounter();
@@ -600,28 +628,19 @@ public class PixelRecycler : MonoBehaviour
     }
 
     /// <summary>Freezes a husk into the bin: kinematic and parented to it, so it scales and moves with the Recycler (the menu fade shrinks the bin with its contents).</summary>
-    private void Freeze(Rigidbody b)
-    {
-        if (b == null) return;
-        if (!b.isKinematic)
-        {
-#if UNITY_6000_0_OR_NEWER
-            b.linearVelocity = Vector3.zero;
-#else
-            b.velocity = Vector3.zero;
-#endif
-            b.angularVelocity = Vector3.zero;
-            b.isKinematic = true;
-        }
-        if (b.transform.parent != transform) b.transform.SetParent(transform, true);
-    }
+    private void Freeze(Rigidbody b) => PixelHuskHolder.Freeze(b, transform);
 
     private void Unfreeze(Rigidbody b)
     {
         restSeconds.Remove(b);
-        if (b == null) return;
-        if (b.transform.parent == transform) b.transform.SetParent(null, true);
-        if (b.isKinematic) b.isKinematic = false;
+        PixelHuskHolder.Unfreeze(b, transform);
+    }
+
+    /// <summary>A husk leaves the bin: back to the floor as a normal husk (shared PixelHuskHolder.LetGo).</summary>
+    private void LetGo(Rigidbody b)
+    {
+        restSeconds.Remove(b);
+        PixelHuskHolder.LetGo(clicker, b, transform);
     }
 
     /// <summary>Is a husk that is already counted still in the bin? Like Inside, but it may bounce up to two wall heights above the floor of the bin.</summary>
@@ -641,10 +660,7 @@ public class PixelRecycler : MonoBehaviour
             if (b == null) { inside.RemoveAt(i); changed = true; continue; }
             OldPixelInfo info = PixelHuskQuery.Get(b).info;
             if (info != null && !info.heldByPlayer && KeepsHold(b.position)) continue;
-            OldPixelDespawn hold = PixelHuskQuery.Get(b).despawn;
-            if (hold != null && (info == null || !info.heldByPlayer)) hold.Held = false;
-            Unfreeze(b);
-            if (clicker != null) clicker.AdoptOldPixel(b);
+            LetGo(b);
             inside.RemoveAt(i);
             changed = true;
         }
