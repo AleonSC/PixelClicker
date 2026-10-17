@@ -1268,3 +1268,4 @@
 [2026-10-17 10:58 UTC] Fixed 7 'assigned but never used' console warnings: removed old Dev Tools button labels (now in the Dev reports widget) and the leftover Offline Progression mode settings in Skills.
 [2026-10-17 10:59 UTC] Neon Lasers / Laser Tracker: the beams are now drawn as one flat mesh on the floor (like the floor-edge wireframe) instead of line renderers, which never showed in the game.
 [2026-10-17 11:05 UTC] Less work per click: the '+N' popups reuse a small set of labels (at most 24 on screen, the oldest is reused) instead of making a new text object each time, picking the next block checks each block once instead of three times, the Skills window no longer rebuilds itself on every click while open, and a few other per-click lookups were made cheaper.
+[2026-10-17 11:06 UTC] Notes: Claude now suggests a new chat only when the work moves out of a session's area (sessions are long-lived per area), and says once when a chat has been compressed.
