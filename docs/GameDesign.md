@@ -215,6 +215,12 @@ minute. **Base crush is FREE** (not a tree node): RIGHT-CLICK a husk lying on th
   also crushes the husks of the SAME type touching it (`PixelHuskQuery.Near`); **Clean Break** (Standard 6, ~45 min, 2 points): each crush
   gives the husks around it a few seconds of their lifespan back; **Hard Hands** (Standard 9, later, 2 points): crushes give more XP (x1.6 =
   40% of a click), still well below a click. The tree's `minLevel` holds a node back until the skill reaches that level.
+- **Charge Crush (Agreed 2026-10-17, not built) - the step above Chain Crush:** CLICK = Chain Crush, the quick cleanup (the husk + touching
+  same-type husks). HOLD right on a husk = charge: a ring grows from it the longer you hold (capped reach, Inspector values); letting
+  go sends an arc to every same-type husk inside the ring, touching or not - a slower but more thorough cleanup. It mirrors Power
+  Click (hold left on the cube to charge). Needs Chain Crush; about Standard 7-8 (~60 min). Short cooldown after a charged crush so it
+  never out-earns clicking. Right-click priority is unchanged: holding on the cube = Block Hold, holding on a husk = the charge (the
+  target decides, `PixelRightClick`). Maybe later: a **Wide Arc** node lets the arc jump to any husk type.
 - **Tuning note:** pure husks give Standard XP, so crushing speeds up early Standard levels. Keep the base small; the Standard XP curve
   targets above (levels 2-7 at about 3 / 8-10 / 20 / 30-35 / 45 / 60 min) must be tuned with crushing AND the Auto Clicker in the mix.
 
@@ -230,6 +236,7 @@ minute. **Base crush is FREE** (not a tree node): RIGHT-CLICK a husk lying on th
 | 3-4 | Sorting Hopper (the Recycler's partner, below) |
 | 4-5 | Storage Crate (just holding husks) |
 | 5 | Magnet, Fan (moving husks) |
+| 5-6 | Sweeper (rescues stray husks, below) |
 | 6-7 | Funnel (catching husks automatically) |
 | 8-10 | Sorter, then Magnetized Sorter |
 | 12+ | Quantum Organizer; later the factory pieces as real items |
@@ -256,6 +263,24 @@ streaks rarely happen. The **Sorting Hopper** is its partner: a choice, a little
 - **Changed after the first look (2026-10-17):** the flag only steps through the types lying in the tray (the first husk in sets it); an
   orange EJECT button throws everything in the tray out over the back; no floating text - hovering the flag shows a small card.
 - **Open:** whether the filter can also be set to "any pure", and the price after testing.
+
+### The Sweeper - an early stray-husk helper (Agreed 2026-10-17, not built)
+A little wind-up clockwork cube with a broom: early automation for stray husks that is NOT tied to Electrician (no power needed).
+
+- **Only rescues strays:** it fetches husks that are close to fading (their last few seconds) and leaves the rest to the player, so it
+  saves waste without playing for you. It moves husks, it never processes them.
+- **Puts them in the NEAREST CONTAINER with room** - any `PixelHuskHolder` (Storage Crate, Sorting Hopper, Recycler). Placement is the
+  player's choice: a crate nearest = strays are stored safe; the hopper nearest = strays go straight to recycling. Later the crate's
+  output coupling + a belt links stored strays on to a Recycler (the socket / coupling plan) - the first factory chain.
+- **Wind-up:** runs about a minute, then slows to a stop until clicked to wind it again (a light active touch: active is better, idle
+  is possible).
+- **Unlock:** Standard 5-6 (~30-45 min), in the shop for pure currency - after the player has felt husks fading even with Crush, the
+  Recycler and the hopper.
+- **Upgrades without needing them:** Electrician fits a motor (no more winding - an early use of power sockets); Standard upgrades
+  range and speed.
+- **Built from the Tiny Robot** (`PixelTinyRobot.cs`, tester: fetches loose husks onto a belt): same fetching code, new target (a
+  container instead of a belt), wind-up instead of electric - not a fourth separate husk fetcher. Its own job next to the Magnet
+  (gathers a heap) and the UFO Helper (late-game cleanup into the Bank).
 
 ### Mid game - skills and machines (Built, growing)
 Gathering skills (Woodcutting, Foraging, Fishing, Mining, Farming, Electrician), each with filler, hazards, specials, perks and a
