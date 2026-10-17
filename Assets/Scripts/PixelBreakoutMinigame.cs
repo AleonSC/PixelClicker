@@ -441,8 +441,11 @@ public class PixelBreakoutMinigame : PixelMinigame
         }
         Material m = new Material(flat);
         if (m.HasProperty("_Color")) m.color = c;
+        courtMaterials.Add(m);
         return m;
     }
+
+    private readonly System.Collections.Generic.List<Material> courtMaterials = new System.Collections.Generic.List<Material>();   // (the court's copies of 'flat', freed with the court)
 
     private Transform Block(string name, Vector2 pos, Vector2 size, Color c, float z)
     {
@@ -687,6 +690,8 @@ public class PixelBreakoutMinigame : PixelMinigame
         // Broken bricks: let go of physics only once they are gone (their despawn handles it).
         if (root != null) Destroy(root);
         root = null;
+        foreach (Material m in courtMaterials) if (m != null) Destroy(m);
+        courtMaterials.Clear();
         paddle = ball = ballModel = null;
         bricks.Clear();
         if (uiRoot != null) Destroy(uiRoot);

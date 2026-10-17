@@ -260,6 +260,7 @@ public partial class PixelPets : MonoBehaviour
         public float born;          // Time.time when the body was built (a Seed pet never plants in its first moments)
         public GameObject mound;
         public PixelClicker.PixelType type;
+        public Collider hitBox;       // the body's collider (kept so the mouse-over check needs no GetComponent every frame)
         public bool off;
         public string customName;     // the player's name for the pet ("" = the default)
         public int outfit;            // which outfit it wears (0 = none)
@@ -597,6 +598,7 @@ public partial class PixelPets : MonoBehaviour
         model.transform.localRotation = Quaternion.identity;
 
         BoxCollider box = go.AddComponent<BoxCollider>();
+        p.hitBox = box;
         if (p.planter)
         {
             float w = size * seedPetScale * 0.5f, h = size * seedPetScale * 0.32f; // a tall box around the stem and leaves, base at the origin
@@ -610,20 +612,7 @@ public partial class PixelPets : MonoBehaviour
                 Physics.IgnoreCollision(box, live);
         }
         else box.size = Vector3.one * size;
-#if UNITY_6000_0_OR_NEWER
-        PhysicsMaterial material = new PhysicsMaterial("Pet")
-        {
-            bounciness = bounciness, dynamicFriction = friction, staticFriction = friction,
-            bounceCombine = PhysicsMaterialCombine.Maximum,
-        };
-#else
-        PhysicMaterial material = new PhysicMaterial("Pet")
-        {
-            bounciness = bounciness, dynamicFriction = friction, staticFriction = friction,
-            bounceCombine = PhysicMaterialCombine.Maximum,
-        };
-#endif
-        box.sharedMaterial = material;
+        box.sharedMaterial = PetMaterial();
 
         Rigidbody rb = go.AddComponent<Rigidbody>();
         rb.mass = petMass;
@@ -715,31 +704,68 @@ public partial class PixelPets : MonoBehaviour
 
     private static bool PixelPlacingBlocked() => PixelMinigame.TakeoverActive;
 
+    // (runs every frame: the pets' own colliders are tested first, and the ray against the cube is only cast when a pet was hit)
     private Pet PetUnderPointer()
     {
         Camera cam = clicker.ViewCamera;
-        if (cam == null) return null;
+        if (cam == null || pets.Count == 0) return null;
         Ray ray = cam.ScreenPointToRay(PointerPosition());
-
-        // Where the cursor meets the clickable cube: a pet behind it (wandering under it) must not steal the click.
-        float cubeDistance = float.PositiveInfinity;
-        if (clicker.PixelTransform != null)
-            foreach (RaycastHit h in Physics.RaycastAll(ray, 1000f, ~0, QueryTriggerInteraction.Collide))
-                if (h.transform.IsChildOf(clicker.PixelTransform) && h.distance < cubeDistance) cubeDistance = h.distance;
 
         Pet best = null;
         float bestDistance = float.PositiveInfinity;
         foreach (Pet p in pets)
         {
             if (p.body == null || !p.body.activeInHierarchy) continue;
-            Collider c = p.body.GetComponent<Collider>();
-            if (c != null && c.Raycast(ray, out RaycastHit hit, 1000f) && hit.distance < bestDistance && hit.distance < cubeDistance)
+            if (p.hitBox == null) p.hitBox = p.body.GetComponent<Collider>();
+            Collider c = p.hitBox;
+            if (c != null && c.Raycast(ray, out RaycastHit hit, 1000f) && hit.distance < bestDistance)
             {
                 best = p;
                 bestDistance = hit.distance;
             }
         }
+        if (best == null) return null;
+
+        // Where the cursor meets the clickable cube: a pet behind it (wandering under it) must not steal the click.
+        if (clicker.PixelTransform != null)
+        {
+            int n = Physics.RaycastNonAlloc(ray, cubeHits, 1000f, ~0, QueryTriggerInteraction.Collide);
+            for (int i = 0; i < n; i++)
+                if (cubeHits[i].distance <= bestDistance && cubeHits[i].transform.IsChildOf(clicker.PixelTransform)) return null;
+        }
         return best;
+    }
+
+    private static readonly RaycastHit[] cubeHits = new RaycastHit[64];   // (reused by PetUnderPointer)
+
+    // One physics material shared by every pet body (each body used to make its own, never freed); made again only when the bounce / friction settings change.
+#if UNITY_6000_0_OR_NEWER
+    private PhysicsMaterial petMaterial;
+#else
+    private PhysicMaterial petMaterial;
+#endif
+
+#if UNITY_6000_0_OR_NEWER
+    private PhysicsMaterial PetMaterial()
+#else
+    private PhysicMaterial PetMaterial()
+#endif
+    {
+        if (petMaterial != null && petMaterial.bounciness == bounciness && petMaterial.dynamicFriction == friction && petMaterial.staticFriction == friction) return petMaterial;
+#if UNITY_6000_0_OR_NEWER
+        petMaterial = new PhysicsMaterial("Pet")
+        {
+            bounciness = bounciness, dynamicFriction = friction, staticFriction = friction,
+            bounceCombine = PhysicsMaterialCombine.Maximum,
+        };
+#else
+        petMaterial = new PhysicMaterial("Pet")
+        {
+            bounciness = bounciness, dynamicFriction = friction, staticFriction = friction,
+            bounceCombine = PhysicMaterialCombine.Maximum,
+        };
+#endif
+        return petMaterial;
     }
 
     private void BeginHold(Pet p)

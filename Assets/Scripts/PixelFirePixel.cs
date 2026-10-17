@@ -115,15 +115,21 @@ public class PixelFxRing : MonoBehaviour
     private Light flash;
     private float flashIntensity;
 
+    // One ring mesh for every ring (the shape never changes) and the colour set through a property block on the shared overlay
+    // material: each ring used to build its own mesh and material copy, and Destroy(gameObject) freed neither.
+    private static Mesh ringMesh;
+    private static MaterialPropertyBlock block;
+
     public static void Spawn(Vector3 centre, Color color, float startScale, float endScale, float seconds, float lightIntensity)
     {
         GameObject go = new GameObject("Fx Ring", typeof(MeshFilter), typeof(MeshRenderer));
         go.transform.position = centre;
         go.transform.rotation = Quaternion.Euler(90f, 0f, 0f);   // lies flat
-        go.GetComponent<MeshFilter>().sharedMesh = PixelSorterDevice.BuildRingMesh(0.86f, 1f, 0.02f, 40);
+        if (ringMesh == null) ringMesh = PixelSorterDevice.BuildRingMesh(0.86f, 1f, 0.02f, 40);
+        go.GetComponent<MeshFilter>().sharedMesh = ringMesh;
         MeshRenderer mr = go.GetComponent<MeshRenderer>();
         mr.sharedMaterial = PixelLooks.OverlayMaterial();
-        mr.material.color = color;
+        SetColor(mr, color);
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         mr.receiveShadows = false;
 
@@ -156,9 +162,16 @@ public class PixelFxRing : MonoBehaviour
         float eased = 1f - (1f - k) * (1f - k);
         transform.localScale = Vector3.one * Mathf.Lerp(startScale, endScale, eased);
         Color c = color; c.a = color.a * (1f - k);
-        ringRenderer.material.color = c;
+        SetColor(ringRenderer, c);
         if (flash != null) flash.intensity = flashIntensity * (1f - k) * (1f - k);
         if (k >= 1f) Destroy(gameObject);
+    }
+
+    private static void SetColor(Renderer r, Color c)
+    {
+        if (block == null) block = new MaterialPropertyBlock();
+        block.SetColor("_Color", c);
+        r.SetPropertyBlock(block);
     }
 }
 

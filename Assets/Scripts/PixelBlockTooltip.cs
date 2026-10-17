@@ -9,6 +9,7 @@
 //   PINNED works whatever the tooltip mode: with the floating tooltip Off, the Pocket's Info card still shows what is hovered.
 //   PINNED + My Window MINIMIZED: the small card (3D block + name, like Minimal) hangs under the minimized header (dockedCompact).
 //   PINNED: My Window's Info button (PixelMyWindow.HoverDocked) moves the card into the window (UpdateDocked / Undock): it stops following the mouse, is scaled to the window's width, shows whatever is hovered (it keeps the last block while the mouse is over the window) and the window grows to fit it.
+//   The pinned card is always the FULL card (or the small one under a minimized window): the tooltip mode and Alt (tap or hold) only change the floating in-game card.
 // ---------------------------------------------------
 using TMPro;
 using UnityEngine;
@@ -250,7 +251,7 @@ public class PixelBlockTooltip : MonoBehaviour
                 Mode = (Mode + 1) % 3;   // a tap: Full -> Minimal -> Off -> Full
                 toastText = "Tooltips: " + ModeNames[Mode];
                 toastUntil = Time.unscaledTime + 1.3f;
-                shownTier = -1; shownBody = null; hoverTime = 0f;   // (the card re-forms in the new kind)
+                if (!wasDocked) { shownTier = -1; shownBody = null; hoverTime = 0f; }   // (the floating card re-forms in the new kind; a pinned card is left alone)
             }
             altPeek = false;
         }
@@ -491,7 +492,9 @@ public class PixelBlockTooltip : MonoBehaviour
         }
         statsText.text = stats;
 
-        bool mini = EffectiveMode == ModeMinimal || (wasDocked && dockedCompact);
+        // Pinned in My Window: the window decides (full card, or the small one under a minimized window); the tooltip mode and Alt
+        // only change the floating in-game card.
+        bool mini = wasDocked ? dockedCompact : EffectiveMode == ModeMinimal;
         tagText.gameObject.SetActive(!mini);
         statsText.gameObject.SetActive(!mini);
         descText.gameObject.SetActive(!mini);

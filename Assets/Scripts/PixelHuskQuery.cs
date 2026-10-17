@@ -2,7 +2,8 @@
 // PixelHuskQuery.cs
 //   ONE place to look at the husks lying on the field (PixelClicker.OldPixels) without every system repeating the same work:
 //   - Get(body): the husk's OldPixelInfo / OldPixelDespawn, fetched ONCE per husk and cached (GetComponent every check was the old way). The cache prunes
-//     itself when it holds far more entries than husks exist, and is cleared on Restart.
+//     itself when it holds far more entries than husks exist (checked by Near, and by Get every 256 new husks, so it also stays small when no zone
+//     system calls Near), and is cleared on Restart.
 //   - Husk.Tier / TypeOf / Fading (vanishing or already gone) / HeldByPlayer.
 //   - Near(clicker, centre, radius, results, flat): every husk within a radius (flat = horizontal distance only), alive ones only unless asked.
 //   - CountOfType(clicker, type): how many husks of a pixel type are lying out (e.g. Acorns for the Great Oak chance).
@@ -33,7 +34,10 @@ public static class PixelHuskQuery
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() { cache.Clear(); PixelStatics.ResetOnRestart(OnRestart); }
-    private static void OnRestart() => cache.Clear();
+    private static void OnRestart() { cache.Clear(); insertsSincePrune = 0; }
+
+    private static int insertsSincePrune;
+    private static readonly List<int> deadScratch = new List<int>();
 
     /// <summary>The husk's components (cached after the first look).</summary>
     public static Husk Get(Rigidbody body)
@@ -53,6 +57,7 @@ public static class PixelHuskQuery
         }
         h = new Husk { body = body, info = body.GetComponent<OldPixelInfo>(), despawn = body.GetComponent<OldPixelDespawn>() };
         cache[id] = h;
+        if (++insertsSincePrune >= 256) { insertsSincePrune = 0; RemoveDead(); }   // (every new husk adds an entry: drop the ones of husks that are gone)
         return h;
     }
 
@@ -70,9 +75,15 @@ public static class PixelHuskQuery
     {
         int alive = clicker != null ? clicker.OldPixels.Count : 0;
         if (cache.Count < 64 || cache.Count < alive * 3) return;
-        List<int> dead = null;
-        foreach (KeyValuePair<int, Husk> kv in cache) if (kv.Value.body == null) (dead ?? (dead = new List<int>())).Add(kv.Key);
-        if (dead != null) foreach (int k in dead) cache.Remove(k);
+        RemoveDead();
+    }
+
+    private static void RemoveDead()
+    {
+        deadScratch.Clear();
+        foreach (KeyValuePair<int, Husk> kv in cache) if (kv.Value.body == null) deadScratch.Add(kv.Key);
+        foreach (int k in deadScratch) cache.Remove(k);
+        deadScratch.Clear();
     }
 
     /// <summary>

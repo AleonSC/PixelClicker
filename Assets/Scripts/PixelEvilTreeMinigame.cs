@@ -253,7 +253,8 @@ public class PixelEvilTreeMinigame : PixelMinigame
         // Health bar: a flat bar above the tree that always faces the camera.
         GameObject barRoot = new GameObject("Evil Tree Health");
         Track(barRoot);
-        Transform barBack = Part(barRoot.transform, PrimitiveType.Quad, "Back", Vector3.zero, new Vector3(1f, 0.1f, 1f), Flat(new Color(0f, 0f, 0f, 0.75f)), false);
+        Material barBackMat = Flat(new Color(0f, 0f, 0f, 0.75f));
+        Transform barBack = Part(barRoot.transform, PrimitiveType.Quad, "Back", Vector3.zero, new Vector3(1f, 0.1f, 1f), barBackMat, false);
         Transform barFill = Part(barRoot.transform, PrimitiveType.Quad, "Fill", Vector3.zero, new Vector3(1f, 0.08f, 1f), Flat(Color.green), false);
         Material fillMat = barFill.GetComponent<Renderer>().sharedMaterial;
         Collider[] colliders = root.GetComponentsInChildren<Collider>();
@@ -361,6 +362,7 @@ public class PixelEvilTreeMinigame : PixelMinigame
 
         Destroy(root);
         Destroy(barRoot);
+        foreach (Material m in new[] { bark, leaf, glow, dark, barBackMat, fillMat }) if (m != null) Destroy(m);   // (this tree's own materials)
         spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
         treeActive = false;
     }

@@ -140,7 +140,7 @@ public class PixelMold : MonoBehaviour
         float hold = zoneHoldSeconds > 0f ? zoneHoldSeconds : 30f, fade = zoneFadeSeconds > 0f ? zoneFadeSeconds : 25f;
         float sinceSpread = Time.time - lastSpread;
         float fadeK = sinceSpread <= hold ? 0f : Mathf.Clamp01((sinceSpread - hold) / fade);
-        if (fadeK >= 1f) { radius = 0f; if (disc != null) { Destroy(disc.gameObject); disc = null; } return; }
+        if (fadeK >= 1f) { radius = 0f; DestroyDisc(); return; }
 
         if (disc != null)
         {
@@ -168,7 +168,16 @@ public class PixelMold : MonoBehaviour
 
     private readonly List<PixelHuskQuery.Husk> nearby = new List<PixelHuskQuery.Husk>();
 
-    private void OnDestroy() { if (disc != null) Destroy(disc.gameObject); if (Instance == this) Instance = null; }
+    private void OnDestroy() { DestroyDisc(); if (Instance == this) Instance = null; }
+
+    // (the disc's material is made with it, so it goes with it - a new zone makes a new one)
+    private void DestroyDisc()
+    {
+        if (disc != null) Destroy(disc.gameObject);
+        disc = null;
+        if (discMaterial != null) Destroy(discMaterial);
+        discMaterial = null;
+    }
 
     // ---- Glowing finds ----
 
@@ -185,7 +194,7 @@ public class PixelMold : MonoBehaviour
         copy.AddComponent<PixelForageGlow>().Setup(c, Instance.GlowStart);
     }
 
-    /// <summary>A translucent unlit shell slightly bigger than the pixel (a child cube), used by the glow and the mold.</summary>
+    /// <summary>A translucent unlit shell slightly bigger than the pixel (a child cube), used by the glow and the mold. The material is the caller's own copy: destroy it with the caller.</summary>
     public static Renderer MakeShell(Transform parent, float scale, out Material material)
     {
         GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -225,6 +234,8 @@ public class PixelForageGlow : MonoBehaviour
         c.a = k * (0.38f + 0.14f * Mathf.Sin(Time.time * 4f));
         mat.color = c;
     }
+
+    private void OnDestroy() { if (mat != null) Destroy(mat); }   // (each glowing find has its own shell material)
 }
 
 /// <summary>An old pixel with mold on it: its shell darkens until the mold kills it. Shake it while holding it to get the mold off.</summary>
@@ -295,4 +306,6 @@ public class PixelMoldy : MonoBehaviour
         if (shellT != null) Destroy(shellT.gameObject);
         Destroy(this);
     }
+
+    private void OnDestroy() { if (mat != null) Destroy(mat); }   // (each moldy husk has its own shell material; also when it is cleaned)
 }

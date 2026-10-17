@@ -8,15 +8,6 @@ using UnityEngine;
 
 public class PixelFunnelDevice : PixelChipperDevice
 {
-    public override bool HitTest(Ray ray, out float distance)
-    {
-        distance = float.MaxValue;
-        bool hit = false;
-        foreach (Renderer r in GetComponentsInChildren<Renderer>())
-        {
-            if (!r.enabled || (r.name != "Plate" && r.name != "Collar" && r.name != "Collar Base")) continue;
-            if (r.bounds.IntersectRay(ray, out float d) && d < distance) { distance = d; hit = true; }
-        }
-        return hit;
-    }
+    // (only the plate and collar count as 'on' the funnel; PixelPlacedDevice.HitTest does the rest with a cached part list)
+    protected override bool CountsForHit(Renderer r) => r.name == "Plate" || r.name == "Collar" || r.name == "Collar Base";
 }
