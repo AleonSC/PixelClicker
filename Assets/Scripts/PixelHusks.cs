@@ -4,6 +4,8 @@
 //   ScaledGravity (gravity scale per body), OldPixelImpact (landing sound / pulse), OldPixelPopIn (pop-in animation), OldPixelFlight
 //   (fly-away marker), OldPixelDespawn (lifetime, swell-and-shrink despawn, Frozen / HoldAll for black holes and takeovers),
 //   OldPixelInfo (what tier a husk is, its amount, held-by-player tag). PixelClicker adds them in SpawnFallingCopy.
+//   ScaledGravity, OldPixelImpact, OldPixelPopIn and OldPixelDespawn have no Update / FixedUpdate of their own: they register with PixelHuskTicker
+//   while enabled and it calls their Tick (one loop for every husk instead of one engine call per husk per helper).
 // ---------------------------------------------------
 using System;
 using System.Collections;
@@ -20,14 +22,17 @@ using UnityEngine.InputSystem;
 /// Tiny helper added at runtime to old pixels so their gravity can be scaled
 /// (Unity's Rigidbody only has on/off gravity).
 /// </summary>
-public class ScaledGravity : MonoBehaviour
+public class ScaledGravity : MonoBehaviour, IHuskTick
 {
     [HideInInspector] public float scale = 1f;
     private Rigidbody body;
 
     private void Awake() => body = GetComponent<Rigidbody>();
+    private void OnEnable() => PixelHuskTicker.AddPhysics(this);
+    private void OnDisable() => PixelHuskTicker.RemovePhysics(this);
 
-    private void FixedUpdate()
+    /// <summary>Once per physics step (PixelHuskTicker).</summary>
+    public void Tick()
     {
         if (body != null && !body.isKinematic)
             body.AddForce(Physics.gravity * scale, ForceMode.Acceleration);
@@ -38,8 +43,11 @@ public class ScaledGravity : MonoBehaviour
 /// Reports when an old pixel hits a surface hard enough to be heard (PixelClicker.OldPixelLanded). Pixels bumping into
 /// each other don't count - only the floor and other solid surfaces.
 /// </summary>
-public class OldPixelImpact : MonoBehaviour
+public class OldPixelImpact : MonoBehaviour, IHuskTick
 {
+    private void OnEnable() => PixelHuskTicker.AddPhysics(this);
+    private void OnDisable() => PixelHuskTicker.RemovePhysics(this);
+
     private float minSpeed = 1.5f, fullSpeed = 8f, cooldown = 0.12f, lastTime = -99f;
     private string soundId; // a sound just for this pixel type's bounce (e.g. "pixel_bounce_electric"); plain landing sound when it has none
 
@@ -58,9 +66,9 @@ public class OldPixelImpact : MonoBehaviour
     /// <summary>
     /// Safety net for the landing pulse: a pixel that was falling fast and has just stopped (or bounced) gets its ripple even when no collision event reached
     /// OnCollisionEnter (a pixel dropped from high up can come down hard enough for the physics to resolve the landing without one). A short ray straight down finds the surface.
-    /// Only runs while the landing pulse is on and only for pixels that were falling fast, so it costs nothing otherwise.
+    /// Only runs while the landing pulse is on and only for pixels that were falling fast, so it costs nothing otherwise. Once per physics step (PixelHuskTicker).
     /// </summary>
-    private void FixedUpdate()
+    public void Tick()
     {
         if (!PixelFloor.PulseActive) { lastFallSpeed = 0f; return; }
         if (pulseBody == null) pulseBody = GetComponent<Rigidbody>();
@@ -75,10 +83,11 @@ public class OldPixelImpact : MonoBehaviour
         if (fell < 2.5f || vy > -fell * 0.5f) return;   // was not falling fast, or is still falling
         if (Time.time - lastPulseTime < 0.15f) return;   // the collision event already made one
         float reach = Mathf.Max(0.3f, fell * Time.fixedDeltaTime * 3f + transform.lossyScale.y);
-        RaycastHit[] hits = Physics.RaycastAll(transform.position, Vector3.down, reach, ~0, QueryTriggerInteraction.Ignore);
+        int count = Physics.RaycastNonAlloc(transform.position, Vector3.down, downHits, reach, ~0, QueryTriggerInteraction.Ignore);
         float best = float.MaxValue; RaycastHit surface = default; bool found = false;
-        foreach (RaycastHit h in hits)
+        for (int i = 0; i < count; i++)
         {
+            RaycastHit h = downHits[i];
             if (h.collider == null || h.collider.transform.IsChildOf(transform) || h.distance >= best) continue;
             if (h.collider.GetComponentInParent<OldPixelInfo>() != null || h.collider.GetComponent<WaterSplashPiece>() != null) continue;
             best = h.distance; surface = h; found = true;
@@ -88,6 +97,8 @@ public class OldPixelImpact : MonoBehaviour
         OldPixelInfo info = GetComponent<OldPixelInfo>();
         PixelFloorPulse.LandedAt(surface.point, surface.normal, transform, info != null ? info.tierIndex : -1, Mathf.Clamp01(fell / fullSpeed));
     }
+
+    private static readonly RaycastHit[] downHits = new RaycastHit[16];   // (reused by Tick)
 
     private void OnCollisionEnter(Collision collision)
     {
@@ -116,8 +127,11 @@ public class OldPixelImpact : MonoBehaviour
 /// <summary>
 /// Makes a new old pixel start tiny and non-colliding, then grow to full size and become solid again.
 /// </summary>
-public class OldPixelPopIn : MonoBehaviour
+public class OldPixelPopIn : MonoBehaviour, IHuskTick
 {
+    private void OnEnable() => PixelHuskTicker.AddFrame(this);
+    private void OnDisable() => PixelHuskTicker.RemoveFrame(this);
+
     private Collider body;
     private Vector3 fullScale;
     private float startScale, growSeconds, ghostSeconds, age;
@@ -142,7 +156,8 @@ public class OldPixelPopIn : MonoBehaviour
         Destroy(this);
     }
 
-    private void Update()
+    /// <summary>Once per frame (PixelHuskTicker).</summary>
+    public void Tick()
     {
         age += Time.deltaTime;
         if (growSeconds > 0f)
@@ -151,7 +166,7 @@ public class OldPixelPopIn : MonoBehaviour
             transform.localScale = fullScale * Mathf.Lerp(startScale, 1f, k * (2f - k)); // ease out
         }
         if (body != null && body.isTrigger && age >= ghostSeconds) body.isTrigger = false;
-        if (age >= growSeconds && age >= ghostSeconds) Destroy(this);
+        if (age >= growSeconds && age >= ghostSeconds) { enabled = false; Destroy(this); }   // (enabled = false: off the ticker at once, Destroy only happens at the end of the frame)
     }
 }
 
@@ -165,8 +180,11 @@ public class OldPixelFlight : MonoBehaviour
     public bool Flying = true;
 }
 
-public class OldPixelDespawn : MonoBehaviour
+public class OldPixelDespawn : MonoBehaviour, IHuskTick
 {
+    private void OnEnable() => PixelHuskTicker.AddFrame(this);
+    private void OnDisable() => PixelHuskTicker.RemoveFrame(this);
+
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
     {
@@ -282,13 +300,14 @@ public class OldPixelDespawn : MonoBehaviour
         baseScale = transform.localScale;
 
         OldPixelPopIn pop = GetComponent<OldPixelPopIn>();
-        if (pop != null) Destroy(pop); // stop growing; we take over the scale
+        if (pop != null) { pop.enabled = false; Destroy(pop); } // stop growing; we take over the scale
 
         Collider c = GetComponent<Collider>();
         if (c != null) c.isTrigger = true; // a vanishing pixel shouldn't shove others around
     }
 
-    private void Update()
+    /// <summary>Once per frame (PixelHuskTicker).</summary>
+    public void Tick()
     {
         if (!despawning)
         {
@@ -309,7 +328,7 @@ public class OldPixelDespawn : MonoBehaviour
         else
         {
             float k = (phaseTime - swellSeconds) / shrinkSeconds;
-            if (k >= 1f) { if (naturalEnd) PixelAudio.Play("pixel_vanish"); Destroy(gameObject); return; }   // a small high bloop, only when its own despawn timer ended it (cleared by the capacity limit or used up = silent)
+            if (k >= 1f) { if (naturalEnd) PixelAudio.Play("pixel_vanish"); enabled = false; Destroy(gameObject); return; }   // (enabled = false: no more ticks before the end-of-frame Destroy)   // a small high bloop, only when its own despawn timer ended it (cleared by the capacity limit or used up = silent)
             transform.localScale = baseScale * Mathf.Lerp(swellScale, 0f, k * k);
         }
     }
