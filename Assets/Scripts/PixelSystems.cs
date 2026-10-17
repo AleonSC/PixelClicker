@@ -68,6 +68,7 @@ public static class PixelSystems
         new Entry(typeof(PixelDidYouKnow), "UI"),
         new Entry(typeof(PixelFilters), "World"),
         new Entry(typeof(PixelBlockHold), "Skills"),
+        new Entry(typeof(PixelHuskCrush), "Skills"),
         new Entry(typeof(PixelHazardTell), "Skills"),
         new Entry(typeof(PixelBlockRules), "Skills"),
         new Entry(typeof(PixelGreatOak), "Skills"),

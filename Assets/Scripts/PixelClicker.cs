@@ -1001,7 +1001,8 @@ public partial class PixelClicker : MonoBehaviour
         if (clicksBlocked || ExternalClickBlock || GodMode || PixelCameraIntro.ClicksLocked) return; // e.g. placing a device (PixelConsumables) or holding the hose (PixelBank)
         bool leftClick = WasClickedThisFrame();
         // A RIGHT click on a hazard block (Pest, Gas Pocket) works it away safely (see DefuseHazard).
-        bool rightClick = !leftClick && pixelTransform != null && !isSpawning && PixelInput.RightPressed() && (IsHazard(GetClickTier().type) || GetClickTier().type == PixelType.Bottle);
+        bool rightClick = !leftClick && pixelTransform != null && !isSpawning && PixelInput.RightPressed() && (IsHazard(GetClickTier().type) || GetClickTier().type == PixelType.Bottle)
+                          && PixelRightClick.Current == PixelRightClick.Owner.Cube;   // (the shared right-click order, PixelRightClick)
         if ((!leftClick && !rightClick) || targetCamera == null) return;
         if (ignoreClicksOverUI && EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 

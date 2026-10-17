@@ -35,7 +35,10 @@ public static class PixelGuideTexts
         return sb.ToString();
     }
 
-    public static string OldPixel(PixelClicker.PixelType type)
+    /// <summary>What a block's husk does (the block's own text, then the Husk Crush sentence when it can be crushed).</summary>
+    public static string OldPixel(PixelClicker.PixelType type) => OldPixelOwn(type) + PixelHuskCrush.GuideNote(type);
+
+    private static string OldPixelOwn(PixelClicker.PixelType type)
     {
         string fromCard = PixelBlockCatalog.OldPixelText(type);   // most texts live on the block's entry in PixelBlockCatalog.cs
         if (fromCard != null) return fromCard;

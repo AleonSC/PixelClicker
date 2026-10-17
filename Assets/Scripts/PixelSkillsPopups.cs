@@ -5,7 +5,8 @@
 //   window's Update; XP from the auto clicker is gathered separately and appears beside the cube instead (xpFromAuto set by
 //   OnCollected, FlushAutoXpPopup, CubeScreenPoint, rises beside the cube and follows it); text in the pack's accent colour, hangs
 //   just under the mouse cursor and follows it (drifting a little further down as it fades), on its own canvas 106 so it never mixes
-//   with the other +n texts; hideXpPopups, xpPopupSize).
+//   with the other +n texts; hideXpPopups, xpPopupSize). A Husk Crush (AddHuskXp crushed) marks its XP 'show decimals' (xpPopupDecimals ->
+//   xpPendingDecimals): that popup shows the gathered amount even under 1, rounded to 2 decimals ('+0.25 Standard XP'), so every crush is seen.
 // ---------------------------------------------------
 using System.Collections;
 using TMPro;
@@ -36,6 +37,9 @@ public partial class PixelSkills
     private SkillPack xpPendingPack;
     private float xpGatherTimer;
 
+    private bool xpPopupDecimals;    // set by AddHuskXp for a crush: the XP queued next shows even under 1, with decimals
+    private bool xpPendingDecimals;  // the XP gathered now holds such a crush
+
     // XP that came from the auto clicker is gathered separately and shown beside the cube.
     private bool xpFromAuto;
     private double autoPending;
@@ -53,6 +57,7 @@ public partial class PixelSkills
             return;
         }
         if (xpPendingPack != null && xpPendingPack != pack) FlushXpPopup(true);   // the skill changed: show what was gathered for the old one
+        if (xpPopupDecimals) { xpPendingDecimals = true; xpPopupDecimals = false; }
         xpPendingPack = pack;
         xpPending += xp;
     }
@@ -76,9 +81,20 @@ public partial class PixelSkills
     {
         xpGatherTimer = 0f;
         int whole = (int)System.Math.Floor(xpPending);
+        if (xpPendingDecimals && xpPending >= 0.005d && xpPendingPack != null && !PixelTitleScreen.Showing)
+        {
+            // A crush is in it: show everything gathered, decimals and all (+0.25), and start again from nothing.
+            SkillPack crushPack = xpPendingPack;
+            double shown = System.Math.Round(xpPending, 2);
+            xpPending = 0d;
+            xpPendingDecimals = false;
+            if (force) xpPendingPack = null;
+            ShowXpPopup(crushPack, shown, false);
+            return;
+        }
         if (whole < 1 || xpPendingPack == null || PixelTitleScreen.Showing)
         {
-            if (force) { xpPending = 0d; xpPendingPack = null; }
+            if (force) { xpPending = 0d; xpPendingPack = null; xpPendingDecimals = false; }
             return;
         }
         xpPending -= whole;
@@ -115,7 +131,7 @@ public partial class PixelSkills
         return new Vector2(sp.x + half + 70f, sp.y + 30f);
     }
 
-    private void ShowXpPopup(SkillPack pack, int amount, bool nearCube)
+    private void ShowXpPopup(SkillPack pack, double amount, bool nearCube)
     {
         if (xpCanvas == null)
         {
@@ -126,7 +142,7 @@ public partial class PixelSkills
         float xJitter = Random.Range(-24f, 24f);
 
         float size = xpPopupSize > 1f ? xpPopupSize : 34f;
-        TMP_Text t = PixelUIKit.CreateText(Font, xpCanvas.transform, "Skill XP", "+" + amount + " " + pack.displayName + " XP", size, TextAlignmentOptions.Center, FontStyles.Bold, pack.accent);
+        TMP_Text t = PixelUIKit.CreateText(Font, xpCanvas.transform, "Skill XP", "+" + amount.ToString(amount == System.Math.Floor(amount) ? "0" : "0.##") + " " + pack.displayName + " XP", size, TextAlignmentOptions.Center, FontStyles.Bold, pack.accent);
         t.raycastTarget = false;
         RectTransform r = t.rectTransform;
         r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);

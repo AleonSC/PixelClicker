@@ -240,6 +240,12 @@ public class OldPixelDespawn : MonoBehaviour, IHuskTick
         if (!despawning && lifetime > 0f) lifetime += seconds;
     }
 
+    /// <summary>Gives back up to 'seconds' of the time it has already lived (never more than it has lived), so it fades later. Husk Crush's Clean Break.</summary>
+    public void GiveBackTime(float seconds)
+    {
+        if (!despawning && lifetime > 0f && seconds > 0f) age = Mathf.Max(0f, age - seconds);
+    }
+
     /// <summary>Replaces the lifetime (seconds until it starts to vanish; the time already lived still counts). Ignored once a saved remaining time was restored.</summary>
     public void SetLifetime(float seconds)
     {

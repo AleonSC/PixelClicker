@@ -21,6 +21,7 @@
 //   energyPerClicks (1%), holding or not (OnClick from PixelClicker.CollectInternal; autoClicksCount off = only your own clicks).
 //   A first-time tip (stake_intro) shows after 25 manual clicks. Skill XP is not changed by the stake.
 //   Not saved (the meter starts full); the pack itself is saved like any pack. No Toggles switch (right click does nothing else on normal blocks).
+//   Whether a right press is the cube's at all is decided by PixelRightClick (Owner.Cube: the live cube under the pointer, nothing ahead of it in the order).
 // ---------------------------------------------------
 using TMPro;
 using UnityEngine;
@@ -304,8 +305,8 @@ public class PixelBlockHold : MonoBehaviour
 
     private bool CanStart()
     {
-        if (meter < MinStart || PixelInput.PointerOverUI() || PixelClicker.ExternalClickBlock) return false;
-        return clicker.IsLiveCubeAt(PixelInput.PointerPosition());   // (old pixels in front of the cube, e.g. the one a cleared hazard drops, do not stop the grab)
+        if (meter < MinStart) return false;
+        return PixelRightClick.Current == PixelRightClick.Owner.Cube;   // (the shared right-click order; husks in front of the cube, e.g. the one a cleared hazard drops, do not stop the grab)
     }
 
     private float holdStartedAt;

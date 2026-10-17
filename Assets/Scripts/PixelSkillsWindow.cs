@@ -400,7 +400,7 @@ public partial class PixelSkills
         fadeX.view = nodeView;
         fadeX.content = nodeArea;
 
-        for (int i = 0; i < 45; i++)   // connector lines first so the nodes draw over them
+        for (int i = 0; i < 75; i++)   // connector lines first so the nodes draw over them
         {
             GameObject g = new GameObject("Line " + i, typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
             g.transform.SetParent(nodeArea, false);
@@ -411,7 +411,7 @@ public partial class PixelSkills
             g.SetActive(false);
             treeLines.Add(im);
         }
-        for (int i = 0; i < 12; i++)
+        for (int i = 0; i < 20; i++)
         {
             Button b = PixelUIKit.CreateButton(Font, nodeArea, "Node " + i, "", nodeSize, cardColor, textColor, 26f);
             b.gameObject.AddComponent<CanvasGroup>();
@@ -483,11 +483,11 @@ public partial class PixelSkills
         PixelUIKit.SetText(treeTitle, p.displayName + " - " + treeTitleText);
         PixelUIKit.SetText(pointsLabel, "Skill points: " + PointsAvailable(p) + "   (one per level)");
 
-        int maxDepth = 0;
-        for (int i = 0; i < count; i++) maxDepth = Mathf.Max(maxDepth, Depth(p, p.nodes[i]));
+        int maxDepth = 0, maxRow = 2;   // (three rows at least; a tree with a 4th row - Standard's husk branch - spreads its rows over the same height)
+        for (int i = 0; i < count; i++) { maxDepth = Mathf.Max(maxDepth, Depth(p, p.nodes[i])); maxRow = Mathf.Max(maxRow, Mathf.Clamp(p.nodes[i].row, 0, 3)); }
         float viewW = nodeView.rect.width, areaH = nodeView.rect.height;
         float colStep = maxDepth > 0 ? Mathf.Clamp((viewW - nodeSize.x) / maxDepth, nodeSize.x + 20f, nodeSize.x + 220f) : 0f;
-        float rowStep = Mathf.Max(nodeSize.y + 14f, (areaH - nodeSize.y) / 2f);
+        float rowStep = Mathf.Max(nodeSize.y + 8f, (areaH - nodeSize.y) / maxRow);
         float usedW = maxDepth * colStep + nodeSize.x;
         const float pad = 20f;
         float areaW = Mathf.Max(viewW, usedW + pad * 2f);   // wider than the view = the tree scrolls sideways
@@ -498,7 +498,7 @@ public partial class PixelSkills
         for (int i = 0; i < count; i++)
         {
             TreeNode n = p.nodes[i];
-            pos[i] = new Vector2(offX + Depth(p, n) * colStep, Mathf.Clamp(n.row, 0, 2) * rowStep);
+            pos[i] = new Vector2(offX + Depth(p, n) * colStep, Mathf.Clamp(n.row, 0, 3) * rowStep);
         }
         int line = 0;
         for (int i = 0; i < nodeButtons.Count; i++)
@@ -514,7 +514,7 @@ public partial class PixelSkills
             Color c = owned ? new Color(0.2f, 0.5f, 0.3f, 1f) : can ? new Color(0.25f, 0.38f, 0.62f, 1f) : cardColor;
             if (i == selectedNode) c = Color.Lerp(c, Color.white, 0.22f);
             nodeImages[i].color = c;
-            PixelUIKit.SetText(nodeLabels[i], n.displayName + "\n<size=70%>" + (owned ? "OWNED" : n.cost + (n.cost == 1 ? " point" : " points")) + "</size>");
+            PixelUIKit.SetText(nodeLabels[i], n.displayName + "\n<size=70%>" + (owned ? "OWNED" : NeedsLevel(p, n) ? "Level " + n.minLevel : n.cost + (n.cost == 1 ? " point" : " points")) + "</size>");
 
             // Connector from each parent: right edge -> a vertical step -> this node's left edge.
             foreach (TreeNode parent in ParentsOf(p, n))
@@ -546,6 +546,7 @@ public partial class PixelSkills
         bool canUnlock = CanUnlock(p, sel);
         unlockButton.interactable = canUnlock;
         PixelUIKit.SetText(unlockLabel, own ? "Unlocked" : canUnlock ? "Unlock (" + sel.cost + " pt)"
+            : NeedsLevel(p, sel) ? "Needs " + p.displayName + " level " + sel.minLevel
             : (missing.Length > 0 ? "Needs " + missing : "Not enough points"));
     }
 

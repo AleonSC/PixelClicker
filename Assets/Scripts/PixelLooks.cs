@@ -2214,9 +2214,21 @@ public class OldPixelShatter : MonoBehaviour
         if (body != null) clicker.ReleaseOldPixel(body, false);
 
         if (!string.IsNullOrEmpty(soundId)) PixelAudio.Play(soundId);
+        SpawnShards(gameObject, normal, shardCount, shardSpeed, shardLife, shardSize);
+        Destroy(gameObject);
+    }
 
-        MeshFilter mf = GetComponent<MeshFilter>();
-        MeshRenderer mr = GetComponent<MeshRenderer>();
+    /// <summary>
+    /// Bursts flying slivers of a husk's own mesh and look out of it (they shrink away after 'life' seconds). The husk itself is left alone - the caller
+    /// destroys it. Used by the glass shatter and by Husk Crush (PixelHuskCrush).
+    /// </summary>
+    public static void SpawnShards(GameObject source, Vector3 normal, int shardCount, float shardSpeed, float shardLife, float shardSize)
+    {
+        if (source == null || shardCount <= 0) return;
+        Transform transform = source.transform;
+        MeshFilter mf = source.GetComponent<MeshFilter>();
+        if (mf == null) mf = source.GetComponentInChildren<MeshFilter>();   // (a look built from child parts: its first part's mesh and colour)
+        MeshRenderer mr = mf != null ? mf.GetComponent<MeshRenderer>() : null;
         if (mf != null && mr != null)
         {
             MaterialPropertyBlock block = new MaterialPropertyBlock();
@@ -2227,7 +2239,7 @@ public class OldPixelShatter : MonoBehaviour
             for (int i = 0; i < shardCount; i++)
             {
                 GameObject shard = new GameObject("GlassShard");
-                shard.layer = gameObject.layer;
+                shard.layer = source.layer;
                 shard.transform.position = transform.position + UnityEngine.Random.insideUnitSphere * baseSize * 0.35f;
                 shard.transform.rotation = UnityEngine.Random.rotation;
                 // Flat slivers of different sizes.
@@ -2254,7 +2266,6 @@ public class OldPixelShatter : MonoBehaviour
                 shard.AddComponent<OldPixelShard>().Setup(shardLife * UnityEngine.Random.Range(0.7f, 1.2f));
             }
         }
-        Destroy(gameObject);
     }
 }
 

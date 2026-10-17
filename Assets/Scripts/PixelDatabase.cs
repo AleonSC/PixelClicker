@@ -235,7 +235,7 @@ public static class PixelDatabase
                 foreach (PixelSkills.TreeNode n in s.nodes)
                 {
                     if (n == null || string.IsNullOrEmpty(n.displayName)) continue;
-                    string text = Plain(n.description) + "\nCosts " + n.cost + " skill point" + (n.cost == 1 ? "" : "s") + " (a skill earns one per level above 1)." + (n.implemented ? "" : "\nComing soon: the effect is not built yet.");
+                    string text = Plain(n.description) + "\nCosts " + n.cost + " skill point" + (n.cost == 1 ? "" : "s") + " (a skill earns one per level above 1)." + (n.minLevel > 1 ? "\nNeeds " + s.displayName + " level " + n.minLevel + "." : "") + (n.implemented ? "" : "\nComing soon: the effect is not built yet.");
                     Entry ne = Add("Skill node", s.displayName + ": " + n.displayName, text);
                     ne.discovered = owner.discovered;
                     nodeEntries[n.id] = ne;

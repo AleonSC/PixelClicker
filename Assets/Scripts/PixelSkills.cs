@@ -39,8 +39,14 @@ public partial class PixelSkills : MonoBehaviour
         [TextArea(1, 3)] public string description = "";
         [Tooltip("Id of the node that must be unlocked first (empty = a root node). Several ids separated by commas = ALL of them are needed (e.g. 'hold,power').")]
         public string requires = "";
-        [Tooltip("Row in the tree (0 = top, 1 = middle, 2 = bottom). The column follows from how many nodes lie above it.")]
+        [Tooltip("Row in the tree (0 = top, 1 and 2 below it, 3 = the bottom row, e.g. Standard's husk branch). The column follows from how many nodes lie above it.")]
         public int row = 1;
+        [Min(0)]
+        [Tooltip("The skill must have reached this level before the node can be unlocked (0 = no level needed). Holds a root node back until later, e.g. Standard's Chain Crush at level 4.")]
+        public int minLevel = 0;
+        [Min(0)]
+        [Tooltip("The column it is drawn in at the least (0 = from the chain of nodes it needs). Lets a root node sit beside nodes further along, e.g. Chain Crush next to the first twists; nodes after it move along with it.")]
+        public int column = 0;
         [Tooltip("Skill points it costs. A skill earns one point per level above 1.")]
         public int cost = 1;
         [Tooltip("Off = shown as 'coming soon' (the effect is not built yet).")]
@@ -605,6 +611,10 @@ public partial class PixelSkills : MonoBehaviour
                 new TreeNode { id = "nextup", displayName = "What's Next", description = "Shows the Next up window: the block coming next, the one on the cube now and the one before - plan your holds and power clicks ahead.", requires = "hold,power", row = 1, cost = 1, implemented = true },
                 new TreeNode { id = "nextup2", displayName = "Look Further", description = "The Next up window shows one more block ahead (the next two).", requires = "nextup", row = 1, cost = 2, implemented = true },
                 new TreeNode { id = "nextup3", displayName = "Foresight", description = "The Next up window shows one more block ahead (the next three).", requires = "nextup2", row = 1, cost = 2, implemented = true },
+                // The husk branch (bottom row): crushing a husk (right-click) is free from the start; these build on it, beside the twists so those levels are real picks (PixelHuskCrush).
+                new TreeNode { id = "chaincrush", displayName = "Chain Crush", description = "Crushing a husk (right-click it) also crushes the husks of the SAME type touching it, and the ones touching those.", row = 3, cost = 1, minLevel = 4, column = 1, implemented = true },
+                new TreeNode { id = "cleanbreak", displayName = "Clean Break", description = "Every husk you crush gives the husks lying around it a few seconds of their time back before they fade.", requires = "chaincrush", row = 3, cost = 2, minLevel = 6, implemented = true },
+                new TreeNode { id = "hardhands", displayName = "Hard Hands", description = "Crushing a husk gives more XP (still well below a click).", requires = "cleanbreak", row = 3, cost = 2, minLevel = 9, implemented = true },
             };
         if (id == WoodcuttingId)
             return new[]
@@ -1136,16 +1146,19 @@ public partial class PixelSkills : MonoBehaviour
         return parents.Count > 0 ? parents[0] : null;
     }
 
-    /// <summary>Column of a node: the longest chain of parents above it.</summary>
+    /// <summary>Column of a node: the longest chain of parents above it, or its own 'column' if that is further along (a node's children follow it).</summary>
     public int Depth(SkillPack pack, TreeNode node) => DepthOf(pack, node, 0);
 
     private int DepthOf(SkillPack pack, TreeNode node, int guard)
     {
         if (guard > 12) return 0;   // (a loop in hand-edited data)
-        int d = 0;
+        int d = Mathf.Max(0, node.column);
         foreach (TreeNode p in ParentsOf(pack, node)) d = Mathf.Max(d, 1 + DepthOf(pack, p, guard + 1));
         return d;
     }
+
+    /// <summary>The skill is below the node's minLevel (it can't be unlocked yet, whatever the points).</summary>
+    public bool NeedsLevel(SkillPack pack, TreeNode node) => pack != null && node != null && node.minLevel > 1 && LevelOf(pack) < node.minLevel;
 
     /// <summary>The parents not unlocked yet, as 'A and B' (empty when nothing is missing).</summary>
     public string MissingParents(SkillPack pack, TreeNode node)
@@ -1168,7 +1181,7 @@ public partial class PixelSkills : MonoBehaviour
 
     public bool CanUnlock(SkillPack pack, TreeNode node)
     {
-        if (pack == null || node == null || NodeUnlocked(pack, node)) return false;
+        if (pack == null || node == null || NodeUnlocked(pack, node) || NeedsLevel(pack, node)) return false;
         foreach (TreeNode parent in ParentsOf(pack, node)) if (!NodeUnlocked(pack, parent)) return false;
         return PointsAvailable(pack) >= Mathf.Max(0, node.cost);
     }
@@ -1243,14 +1256,28 @@ public partial class PixelSkills : MonoBehaviour
     }
 
     /// <summary>
-    /// Pixel rules: XP from consumed husks (PixelClicker.GiveHuskXp: Vacuum pixel, Vacuum Device, Ultra Holes). A husk trains the skill it belongs to
-    /// (wood husks Woodcutting, ores Mining...), pure husks train Standard. Popups only once the Skills tab exists, like Standard's click XP.
+    /// Pixel rules: XP from consumed husks (PixelClicker.GiveHuskXp: Vacuum pixel, Vacuum Device, Ultra Holes; the Recycler; Husk Crush). A husk trains the skill it belongs to
+    /// (wood husks Woodcutting, ores Mining...), pure husks train Standard. Popups only once the Skills tab exists, like Standard's click XP - except a
+    /// crush (crushed = true), which always shows its popup, small amounts with decimals: it is the crush's feedback.
     /// </summary>
-    public void AddHuskXp(int tierIndex, double xp)
+    public void AddHuskXp(int tierIndex, double xp, bool crushed = false)
     {
         if (disableSkills || xp <= 0d) return;
         SkillPack pack = PackForTier(tierIndex) ?? Find(StandardId);
-        AddXp(pack, xp, pack != null && (pack.id != StandardId || AnyTrainable));
+        xpPopupDecimals = crushed;   // (read by QueueXpPopup: the crush's popup shows decimals)
+        AddXp(pack, xp, pack != null && (crushed || pack.id != StandardId || AnyTrainable));
+        xpPopupDecimals = false;
+    }
+
+    /// <summary>The XP one manual click on this block gives its skill before multipliers: 1 for a skill's block, Standard's flat XP per block for a pure one (Husk Crush pays a share of it).</summary>
+    public double ClickXpOf(int tierIndex) => PackForTier(tierIndex) != null ? 1d : StandardXpPerBlock;
+
+    /// <summary>The name of the skill a husk of this type trains (its pack's, or Standard for the pure pixels).</summary>
+    public string HuskSkillName(PixelClicker.PixelType type)
+    {
+        SkillPack owner = PackOfType(type);
+        if (owner == null || owner.id == StandardId) owner = Find(StandardId);
+        return owner != null ? owner.displayName : "Standard";
     }
 
     /// <summary>Extra XP for the skill being trained (the shuffle bonus): goes through AddXp, so penalties, minigame multipliers and the bonus bank apply as usual.</summary>

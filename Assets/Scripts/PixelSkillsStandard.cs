@@ -14,7 +14,9 @@
 //   hold -> lucky (+10% stake win) -> highroller (cost 2, stakes grow 50% faster) and power -> quick (charge 40% faster) -> aftershock (cost 2,
 //   cooldown a third shorter). 'What's Next' (nextup, row 1) needs BOTH hold and power ('requires' takes several comma-separated ids now: ParentsOf,
 //   all must be owned, the window draws a line from each) and shows the Next up window; 'Look Further' (nextup2, cost 2) and 'Foresight' (nextup3, cost 2)
-//   each show one more block ahead in it. 'Shuffle Combo' (shuffle, after highroller) unlocks PixelShuffleBonus (the filler tap combo). The level 2 popup now points the player to the skill point and the tree. Minigame bonus XP
+//   each show one more block ahead in it. 'Shuffle Combo' (shuffle, after highroller) unlocks PixelShuffleBonus (the filler tap combo). The bottom
+//   row (row 3) is the HUSK branch (2026-10-17, PixelHuskCrush - crushing itself is free): 'Chain Crush' (chaincrush, minLevel 4, column 1 = beside
+//   the first twists) -> 'Clean Break' (cleanbreak, minLevel 6, cost 2) -> 'Hard Hands' (hardhands, minLevel 9, cost 2); TreeNode.minLevel holds a node back. The level 2 popup now points the player to the skill point and the tree. Minigame bonus XP
 //   still skips Standard.
 //   Standard's XP popups and level-up log lines show from the very FIRST click (no longer only once a skill pack exists). Its level 2 perk carries the
 //   intro popup (StandardLevel2Notice, the perk's noticeText: 'you have been training a skill all along...'), shown once through the perk notices.
