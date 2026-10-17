@@ -886,7 +886,7 @@ public class PixelFeatureTester : MonoBehaviour
         if (linkPanel != null) { UpdateLink(); return; }
         if (selecting) { UpdateSelect(); return; }
         if (placing == null) { UpdateDelete(); return; }
-        if (!PixelDevHub.IsOpen) { StopPlacing(); return; }
+        if (!PixelDevHub.IsOpen && !gameplayPlacing) { StopPlacing(); return; }   // (placing started from a shop item - Coupling, Container Hose, Conveyor Belt Kit - does not need the hub open)
         PixelClicker.ExternalClickBlock = true;
         blocking = true;
 
