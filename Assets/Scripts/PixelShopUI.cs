@@ -208,8 +208,10 @@ public partial class PixelShop
         // The two sub-tab buttons at the top of the Upgrades tab (normal upgrades | Pixel boosts).
         BuildSubTabs(contentRect);
 
-        // The Consumables tab is two purchase cards (potions / utilities), not part of the scrolling list.
-        BuildConsumablesArea(panelObject.transform, headerHeight + tabsDrop + tabHeight + panelPadding * 0.5f);
+        // The Pixels and Consumables tabs are tile pages (chips, tile grid, buy bar), not part of the scrolling list.
+        float pageTop = headerHeight + tabsDrop + tabHeight + panelPadding * 0.5f;
+        BuildPixelsPage(panelObject.transform, pageTop);
+        BuildConsumablesArea(panelObject.transform, pageTop);
 
         panelObject.SetActive(false);
         subPanelObject.SetActive(false);
@@ -424,10 +426,15 @@ public partial class PixelShop
 #endif
     }
 
+    /// <summary>The tab buttons, left to right.</summary>
+    private static readonly ShopTab[] TabOrder = { ShopTab.Pixels, ShopTab.Consumables, ShopTab.Upgrades, ShopTab.Minigames };
+
     private void BuildTabs(Transform parent)
     {
-        string[] names = { pixelsTabText, upgradesTabText, consumablesTabText, minigamesTabText };
-        ShopTab[] tabs = { ShopTab.Pixels, ShopTab.Upgrades, ShopTab.Consumables, ShopTab.Minigames };
+        ShopTab[] tabs = TabOrder;
+        string[] names = new string[tabs.Length];
+        for (int i = 0; i < tabs.Length; i++)
+            names[i] = tabs[i] == ShopTab.Pixels ? pixelsTabText : tabs[i] == ShopTab.Consumables ? consumablesTabText : tabs[i] == ShopTab.Upgrades ? upgradesTabText : minigamesTabText;
         tabImages = new Image[tabs.Length];
 
         GameObject bar = new GameObject("Tabs", typeof(RectTransform));
@@ -1045,9 +1052,8 @@ public partial class PixelShop
         bool searching = shopSearch.Length > 0;
         if (tabImages != null)
         {
-            ShopTab[] order = { ShopTab.Pixels, ShopTab.Upgrades, ShopTab.Consumables, ShopTab.Minigames };
             for (int t = 0; t < tabImages.Length; t++)
-                tabImages[t].color = !searching && order[t] == currentTab ? tabActiveColor : tabInactiveColor;
+                tabImages[t].color = !searching && TabOrder[t] == currentTab ? tabActiveColor : tabInactiveColor;
         }
 
         // The upgrades window only makes sense while its pack is owned.
@@ -1080,12 +1086,9 @@ public partial class PixelShop
         }
         bool showGeneral = !onUpgrades || upgradesSubTab == 0;
 
-        // Pixels tab: the packs are grouped into collapsible sections (base pixels, toggleables, skill packs).
-        EnsureSectionHeaders();
-        if (sectionHeaders != null) foreach (Button oldHeader in sectionHeaders) if (oldHeader != null && oldHeader.gameObject.activeSelf) oldHeader.gameObject.SetActive(false);
+        // (the Pixels tab is a tile page, PixelShopPixels.cs: its packs' rows only show while searching)
         int[] packOrder = new int[Mathf.Min(packs.Length, rows.Length)];
         for (int o = 0; o < packOrder.Length; o++) packOrder[o] = o;
-        bool grouped = !searching && currentTab == ShopTab.Pixels;
         if (!searching && currentTab == ShopTab.Upgrades)
         {
             // Upgrades tab: the Pixel Bank is listed right above Time Stop (only the shown order; the pack list itself keeps its indexes, which requirements point at).
@@ -1093,14 +1096,6 @@ public partial class PixelShop
             float Key(int i) => timeStop >= 0 && packs[i] != null && packs[i].unlocksBank ? timeStop - 0.5f : i;
             System.Array.Sort(packOrder, (a, b) => Key(a) != Key(b) ? Key(a).CompareTo(Key(b)) : a.CompareTo(b));
         }
-        if (grouped) System.Array.Sort(packOrder, (a, b) =>
-        {
-            int d = SectionOf(packs[a]).CompareTo(SectionOf(packs[b]));
-            if (d != 0) return d;
-            if (IsWoodcutterPack(packs[a]) != IsWoodcutterPack(packs[b])) return IsWoodcutterPack(packs[a]) ? -1 : 1;   // the Lumberjack's Pack stands first (in the Skill packs section)
-            return a.CompareTo(b);
-        });
-        int lastSection = -1;
 
         for (int oi = 0; oi < packOrder.Length; oi++)
         {
@@ -1117,22 +1112,7 @@ public partial class PixelShop
                 ? openParent >= 0 && pack.ParentIndex == openParent && listed && !HiddenAsPurchased(i)
                 : (searching ? MatchesSearch(pack) : TabOf(pack) == currentTab && showGeneral) && listed && !HiddenAsPurchased(i);
 
-            if (visible && grouped && !child && SectionOf(pack) == 0 && owned && !IsWoodcutterPack(pack)) visible = false;   // the RGB pack disappears once bought, whatever the 'hide purchased' setting says
-            if (visible && grouped && sectionHeaders != null && !child && SectionOf(pack) != 0)
-            {
-                int sec = SectionOf(pack);
-                if (sec != lastSection)
-                {
-                    lastSection = sec;
-                    Button hb = sectionHeaders[sec];
-                    hb.gameObject.SetActive(true);
-                    hb.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -y);
-                    PixelUIKit.SetText(sectionLabels[sec], (sectionCollapsed[sec] ? "+  " : "-  ") + SectionNames[sec]);
-                    y += rowHeight * 0.5f + rowSpacing;
-                    visibleCount++;
-                }
-                if (sectionCollapsed[sec]) visible = false;
-            }
+            if (visible && !searching && !child && currentTab == ShopTab.Pixels) visible = false;   // shown as tiles instead
 
             row.rect.gameObject.SetActive(visible);
             if (!visible) continue;
@@ -1175,8 +1155,8 @@ public partial class PixelShop
             }
         }
 
-        // Consumables tab: the two purchase cards replace the scrolling list.
-        if (consumables != null) RefreshConsumablesTab(!searching && currentTab == ShopTab.Consumables);
+        // Pixels and Consumables tabs: their tile pages replace the scrolling list.
+        RefreshTilePages(searching);
 
         // Upgrades > Value: one row per unlocked pixel type, paid for with that pixel's own currency.
         EnsureValueRows();
@@ -1228,11 +1208,6 @@ public partial class PixelShop
         ApplyContentHeight(subContentRect, subEmptyLabel, subY, subVisibleCount);
     }
 
-    private static readonly string[] SectionNames = { "RGB", "Toggleables", "Skill packs" };   // section 0 (the RGB pack) has no header: it stands above the other two
-    private Button[] sectionHeaders;
-    private TMP_Text[] sectionLabels;
-    private readonly bool[] sectionCollapsed = { false, true, false };   // Toggleables start collapsed; Skill packs start open (the Lumberjack's Pack, the first skill, is the nudge after the Auto Clicker)
-
     /// <summary>Which Pixels-tab section a pack belongs to: 0 = the RGB pack (listed above the sections, hidden once bought), 1 = single toggleable pixels (Glass, Luminescent, Obsidian...), 2 = skill packs (many pixels at once).</summary>
     /// <summary>The Lumberjack's Pack (the first skill pack): listed in the Skill packs section, first among them.</summary>
     private static bool IsWoodcutterPack(ShopPack pack) => pack != null && Rewards(pack, PixelClicker.PixelType.Wood);
@@ -1246,31 +1221,6 @@ public partial class PixelShop
         foreach (PixelClicker.PixelTier t in pack.rewardTiers)
             if (t.type != PixelClicker.PixelType.Red && t.type != PixelClicker.PixelType.Green && t.type != PixelClicker.PixelType.Blue) return 1;
         return 0;
-    }
-
-    private void EnsureSectionHeaders()
-    {
-        if (sectionHeaders != null || contentRect == null) return;
-        sectionHeaders = new Button[SectionNames.Length];
-        sectionLabels = new TMP_Text[SectionNames.Length];
-        for (int i = 0; i < SectionNames.Length; i++)
-        {
-            int index = i;
-            Button b = CreateButton(contentRect, "Section " + SectionNames[i], "", new Vector2(10f, rowHeight * 0.5f), tabInactiveColor, textColor,
-                                    tabFontSize + 2f, out TMP_Text label, out _);
-            PixelUIKit.Caps(b);
-            label.alignment = TextAlignmentOptions.MidlineLeft;
-            label.margin = new Vector4(18f, 0f, 8f, 0f);
-            RectTransform rt = b.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(0f, 1f);
-            rt.anchorMax = new Vector2(1f, 1f);
-            rt.pivot = new Vector2(0.5f, 1f);
-            rt.sizeDelta = new Vector2(0f, rowHeight * 0.5f);
-            b.onClick.AddListener(() => { sectionCollapsed[index] = !sectionCollapsed[index]; RefreshRows(); });
-            b.gameObject.SetActive(false);
-            sectionHeaders[i] = b;
-            sectionLabels[i] = label;
-        }
     }
 
     private void ApplyContentHeight(RectTransform content, TMP_Text empty, float y, int count)

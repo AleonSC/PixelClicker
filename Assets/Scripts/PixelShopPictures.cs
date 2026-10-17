@@ -142,17 +142,25 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>A pack's picture key: its pixel types one after another, the Electrician's pixel, or its minigame's model (null = none).</summary>
+    private Func<string> PackPictureKey(int packIndex)
+    {
+        ShopPack p = packs[packIndex];
+        if (p.skillId == PixelSkills.ElectricianId) return () => TierKey(PixelClicker.PixelType.Electric);   // the pack's pixel
+        if (p.rewardTiers != null && p.rewardTiers.Length > 0) return PackTierKey(packIndex);
+        if (!string.IsNullOrEmpty(p.unlocksMinigame) && HasMinigameModel(p.unlocksMinigame))
+        {
+            string key = "game:" + p.unlocksMinigame;
+            return () => key;
+        }
+        return null;
+    }
+
     /// <summary>Called when a pack row is built: pixel packs and minigame packs get a picture.</summary>
     private void AddPackPicture(PackRow row, int packIndex)
     {
-        ShopPack p = packs[packIndex];
-        if (p.skillId == PixelSkills.ElectricianId) AddRowPicture(row, () => TierKey(PixelClicker.PixelType.Electric));   // the pack's pixel
-        else if (p.rewardTiers != null && p.rewardTiers.Length > 0) AddRowPicture(row, PackTierKey(packIndex));
-        else if (!string.IsNullOrEmpty(p.unlocksMinigame) && HasMinigameModel(p.unlocksMinigame))
-        {
-            string key = "game:" + p.unlocksMinigame;
-            AddRowPicture(row, () => key);
-        }
+        Func<string> key = PackPictureKey(packIndex);
+        if (key != null) AddRowPicture(row, key);
     }
 
     // ------------------------------------------------------------------

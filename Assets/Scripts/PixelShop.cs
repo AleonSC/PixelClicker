@@ -484,7 +484,7 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Normal text colour.")]
     [SerializeField] private Color textColor = Color.white;
 
-    [Header("Consumables Tab (category chips, item tiles, buy bar)")]
+    [Header("Pixels and Consumables Tabs (category chips, tiles, buy bar)")]
     [Tooltip("Label of the Potions category button.")]
     [SerializeField] private string potionsCardTitle = "Potions";
 
@@ -535,6 +535,12 @@ public partial class PixelShop : MonoBehaviour
 
     [Tooltip("Shown when hovering the Consumables Buy button.")]
     [SerializeField] private string buyMaxTip = "Shift-click to buy as many as you can.";
+
+    [Tooltip("Label of the Pixels tab's first category button (the RGB pack and single pixels: Glass, Luminescent...).")]
+    [SerializeField] private string pixelsToggleablesTitle = "Toggleables";
+
+    [Tooltip("Label of the Pixels tab's second category button (skill packs: many pixels at once).")]
+    [SerializeField] private string pixelsSkillPacksTitle = "Skill packs";
 
     [Tooltip("Label of the Seeds category button.")]
     [SerializeField] private string seedsCardTitle = "Seeds";
