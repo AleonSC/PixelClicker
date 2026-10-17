@@ -4,13 +4,14 @@
 //   into the mouth from the side burns: an old pixel (not held, not glued into a build) inside the mouth zone (a box just in front of the door, mouthCenter / mouthHalf in kiln units)
 //   is taken out of the game (PixelClicker.ClaimOldPixel, no payout), drawn in while it shrinks and flares, and a CHARCOAL old pixel (PixelType.Charcoal 81, PixelClicker.EnsureCharcoalTier,
 //   standalone, despawns like any old pixel) is queued: charcoalPerPixel of them come out of the back chute charcoalDelaySeconds after the burn, one every charcoalGapSeconds. A conveyor
-//   belt (PixelConveyor) can lead into the mouth: a belt END at the mouth hands its pixels straight in (IPixelBeltAcceptor), and another can carry the charcoal away. The kiln roars while it burns (light, ember sparks, thicker smoke). Not saved.
+//   SOCKETS (PixelSockets.cs): 'mouth' (In, +X) - a belt / connector / hose ending at an In coupling there hands its husks straight in (AcceptHusk); 'chute' (Out, -X) -
+//   with an Out coupling there the charcoal goes onto the belt that starts at it (PixelCouplings.Emit), else it drops out as before. The kiln roars while it burns (light, ember sparks, thicker smoke). Saved with the tester save.
 // ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelKiln : MonoBehaviour, IPixelBeltAcceptor, IPixelPort
+public class PixelKiln : MonoBehaviour, IPixelSocketDevice
 {
     [Header("Burning")]
     [Min(0f)]
@@ -117,6 +118,12 @@ public class PixelKiln : MonoBehaviour, IPixelBeltAcceptor, IPixelPort
         PixelKiln kiln = root.AddComponent<PixelKiln>();
         kiln.clicker = c;
         kiln.unit = u;
+        // Sockets (PixelSockets.cs): the MOUTH takes husks in (a belt / connector / hose ends at an In coupling there), the back CHUTE puts charcoal out.
+        kiln.sockets = new[]
+        {
+            new PixelSocket("mouth", new Vector3((MouthCenter.x + MouthHalf.x * 0.5f) * u, 0f, 0f), Vector3.right, PixelSocketFlow.Intake),
+            new PixelSocket("chute", new Vector3((OutletLocal.x - 0.25f) * u, 0f, 0f), Vector3.left, PixelSocketFlow.Output),
+        };
         kiln.fireLight = MakeLight(t, new Vector3(fx + 0.5f * u, 0.7f * u, 0f), u);
         kiln.glowRenderer = t.Find("Fire Glow") != null ? t.Find("Fire Glow").GetComponent<Renderer>() : null;
         kiln.smoke = MakeSmoke(t, new Vector3(-0.65f * u, 3.9f * u, 0.45f * u), u);
@@ -198,21 +205,17 @@ public class PixelKiln : MonoBehaviour, IPixelBeltAcceptor, IPixelPort
 
     // ---------------- behaviour ----------------
 
-    private void OnEnable() { if (clicker == null) clicker = PixelFind.First<PixelClicker>(); PixelConveyorSystem.Register(this); }
-    private void OnDisable() { PixelConveyorSystem.Unregister(this); }
+    private void OnEnable() { if (clicker == null) clicker = PixelFind.First<PixelClicker>(); PixelCouplings.Register(this); }
+    private void OnDisable() { PixelCouplings.Unregister(this); }
 
-    /// <summary>The middle of the mouth's front, at floor level (where a Conveyor Connector latches on).</summary>
-    public Vector3 PortWorld => transform.TransformPoint(new Vector3((MouthCenter.x + MouthHalf.x * 0.5f) * unit, 0.1f * unit, 0f));
+    // ---- Sockets ----
+    private PixelSocket[] sockets = new PixelSocket[0];
+    public Transform SocketRoot => transform;
+    public IReadOnlyList<PixelSocket> Sockets => sockets;
+    public Color SocketTint => new Color(0.62f, 0.27f, 0.2f, 1f);
 
-    /// <summary>A belt's end: the pixel is at the mouth when it is in the mouth zone (a bit roomier than the zone things fall into).</summary>
-    public bool AcceptsAt(Vector3 world)
-    {
-        Vector3 d = transform.InverseTransformPoint(world) / Mathf.Max(0.0001f, unit) - MouthCenter;
-        return Mathf.Abs(d.x) < MouthHalf.x + 0.9f && Mathf.Abs(d.y) < MouthHalf.y + 0.6f && Mathf.Abs(d.z) < MouthHalf.z + 0.3f;
-    }
-
-    /// <summary>A belt hands a pixel to the kiln: it burns just like one that went into the mouth.</summary>
-    public bool AcceptFromBelt(Rigidbody pixel)
+    /// <summary>A husk comes in through the mouth's In coupling: it burns just like one that went into the mouth.</summary>
+    public bool AcceptHusk(PixelSocket socket, Rigidbody pixel)
     {
         if (pixel == null || clicker == null || !clicker.ClaimOldPixel(pixel)) return false;
         StartCoroutine(BurnPixel(pixel));
@@ -300,7 +303,9 @@ public class PixelKiln : MonoBehaviour, IPixelBeltAcceptor, IPixelPort
         int tier = clicker.EnsureCharcoalTier();
         Vector3 pos = transform.TransformPoint(OutletLocal * unit);
         Vector3 dir = (-transform.right + Vector3.up * 0.15f + Random.insideUnitSphere * 0.08f).normalized;
+        int before = clicker.OldPixels.Count;
         clicker.SpawnStoredPixel(tier, 1, pos, dir * Random.Range(1.2f, 1.9f) * unit);
+        if (clicker.OldPixels.Count > before) PixelCouplings.Emit(this, "chute", clicker.OldPixels[clicker.OldPixels.Count - 1]);   // an Out coupling on the chute puts it on the belt there (else it just drops out)
         PixelAudio.Play("drop", 1.2f, 0.5f);
         if (embers != null) embers.Emit(3);
     }

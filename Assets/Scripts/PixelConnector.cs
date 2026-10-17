@@ -336,6 +336,9 @@ public class PixelConnector : MonoBehaviour, IPixelBeltAcceptor
             PixelPathCarrier.SetVelocity(rb, belt.Direction * belt.Speed * 0.5f);
             return;
         }
+        rb.isKinematic = true;
+        if (PixelCouplings.HandIn(end + Vector3.up * 0.1f * unit, rb)) return;   // an In coupling on a device at the far end
+        rb.isKinematic = false;
         IPixelBeltAcceptor acceptor = PixelConveyorSystem.FindAcceptorAt(end + flat * 0.4f * unit + Vector3.up * 0.5f * unit, this) ?? PixelConveyorSystem.FindAcceptorAt(end + Vector3.up * 0.4f * unit, this);
         if (acceptor != null)
         {

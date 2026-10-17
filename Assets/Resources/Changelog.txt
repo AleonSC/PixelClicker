@@ -1300,3 +1300,4 @@
 [2026-10-17 13:00 UTC] Wrote the sockets + couplings design (one way to connect belts and hoses to devices) into docs/systems/PixelCouplings.md, with its index line and a to-do item.
 [2026-10-17 13:04 UTC] Couplings step 1: added device sockets and the shared snap-on Coupling piece (Dev Hub > Tester > Coupling, shows free sockets, arrow shows in / out, saved with its device); belt ends now hand husks to an In coupling first, and belts / connectors snap to coupling ports.
 [2026-10-17 13:05 UTC] Couplings step 2 (Storage Crate): the crate now connects through a 'front' socket - an In coupling takes belts in, an Out coupling lets a hose pull from it; its old belt intake is gone.
+[2026-10-17 13:06 UTC] Couplings step 2 (Kiln): the Kiln's mouth is now an In socket and its back chute an Out socket (charcoal goes onto a belt starting at an Out coupling there); its old belt intake and connector port are gone.
