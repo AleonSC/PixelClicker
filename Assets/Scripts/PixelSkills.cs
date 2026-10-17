@@ -158,12 +158,6 @@ public partial class PixelSkills : MonoBehaviour
     [Tooltip("Share of the XP an automatic (auto clicker) click gives compared with a manual click.")]
     [SerializeField] private float autoXpFactor = 0.25f;
 
-    [Tooltip("Offline Progression: the skill pack you play with while Offline Progression is chosen earns this share of its normal XP (0.5 = 50%).")]
-    [SerializeField] private float offlineAssignedShare = 0.5f;
-
-    [Tooltip("Offline Progression: extra XP for Offline Progression itself when no skill pack is in play (0.5 = +50%).")]
-    [SerializeField] private float offlineNoSkillBonus = 0.5f;
-
     [Tooltip("Turn the whole skill system (and its Skills tab) off.")]
     [SerializeField] private bool disableSkills = false;
 
@@ -180,7 +174,7 @@ public partial class PixelSkills : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
-        penaltyLevels.Clear(); penaltyEnds.Clear(); Instance = null; offlineCache = -1; packCache = null; guestCache = null; offCache = null;
+        penaltyLevels.Clear(); penaltyEnds.Clear(); Instance = null; packCache = null; guestCache = null; offCache = null;
         PixelStatics.ResetOnRestart(OnSceneUnloaded);
     }
 
@@ -1009,18 +1003,11 @@ public partial class PixelSkills : MonoBehaviour
 
     // ---- Offline Progression mode: you play with some pack's pixels but only the Offline Progression skill earns XP ----
 
-    private const string OfflinePref = "PixelClicker.Setting.SkillOffline";
-    private static int offlineCache = -1;
-
     /// <summary>
     /// Offline Progression used to be trainable by clicking; since 2026-10-16 it is PASSIVE (XP only from offline progress, AddOfflineXp), so it is never
     /// the skill in training. Kept as a property (always false) so the old checks read naturally; an old save's 'offline chosen' switch is ignored.
     /// </summary>
-    public static bool OfflineMode
-    {
-        get => false;
-        private set { offlineCache = 0; PixelPrefs.SetInt(OfflinePref, 0); }
-    }
+    public static bool OfflineMode => false;
 
     private const string OfflineTaskPref = "PixelClicker.Setting.SkillOfflineTask";
 
@@ -1063,7 +1050,7 @@ public partial class PixelSkills : MonoBehaviour
     }
 
     /// <summary>A save file with its own settings was loaded: read the switch again.</summary>
-    public static void ReloadSettingsFromPrefs() { offlineCache = -1; packCache = null; guestCache = null; offCache = null; }
+    public static void ReloadSettingsFromPrefs() { packCache = null; guestCache = null; offCache = null; }
 
     /// <summary>The skill that earns the XP right now: Offline Progression while it is chosen, else the pack in play.</summary>
     public string TrainingId => OfflineMode && IsAvailable(Find(OfflineId)) ? OfflineId : ActiveId;
@@ -1077,7 +1064,6 @@ public partial class PixelSkills : MonoBehaviour
         if (id == OfflineId) return;   // (passive: it is never chosen to train)
         else
         {
-            if (OfflineMode) { OfflineMode = false; changed = true; }
             if (id != ActiveId)
             {
                 PackSetting = id; changed = true;   // takes effect from the NEXT spawn: the cube you are clicking stays until it is collected

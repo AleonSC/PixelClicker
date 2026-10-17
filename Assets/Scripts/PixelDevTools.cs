@@ -511,9 +511,6 @@ public class PixelDevTools : MonoBehaviour
     [SerializeField] private string sessionStopLabel = "Stop & save {time}";
 
     [Header("Balance report")]
-    [Tooltip("Label of the Tools tab button that writes the skill balance report (PixelBalanceReport) - paste the file / clipboard into any AI.")]
-    [SerializeField] private string balanceReportText = "Balance report (copies to clipboard)";
-
     [Min(0.1f)]
     [Tooltip("Manual clicks per second the balance report assumes.")]
     [SerializeField] private float balanceManualCps = 4f;
@@ -525,19 +522,10 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Skill levels the balance report compares (ascending; the second one is the level the outlier check judges).")]
     [SerializeField] private int[] balanceLevels = { 1, 10, 20, 30 };
 
-    [Header("Bounds snapshot")]
-    [Tooltip("Label of the Tools tab button that writes the view bounds snapshot (PixelBoundsSnapshot).")]
-    [SerializeField] private string boundsSnapshotText = "Snapshot bounds (waits 3 s)";
-
+    [Header("Dev reports delay")]
     [Min(0f)]
     [Tooltip("Seconds between pressing the snapshot button and the snapshot, so the panel can be closed and the view set up.")]
     [SerializeField] private float boundsSnapshotDelay = 3f;
-
-    [Tooltip("Label of the Tools tab button that saves a screenshot + state report (PixelDevProbe.MarkMoment) after the snapshot delay. The key (default F10) does it at once.")]
-    [SerializeField] private string markMomentText = "Mark this moment (waits 3 s)";
-
-    [Tooltip("Label of the Tools tab button that saves the UI layout as text (PixelDevProbe.UiLayoutDump) after the snapshot delay.")]
-    [SerializeField] private string uiDumpText = "UI layout dump (waits 3 s)";
 
     private System.Collections.IEnumerator ProbeRoutine(System.Action run, string what)
     {
