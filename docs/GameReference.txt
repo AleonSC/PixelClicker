@@ -63,7 +63,7 @@ PROJECT RULES (from CLAUDE.md)
 - Every variable editable in Unity ([SerializeField] private + [Tooltip]); field initializers don't reach already-serialized components (use Awake / OnValidate fix-ups).
 - Enum values are only appended. Copy the whole Assets/Scripts folder together. Compile check: tools/compile-check/check.sh.
 - Save compatibility is not a concern during development. Skill packs are chosen only in the Skills window. Player-facing texts say "husk".
-GENERATED: 2026-10-17 12:41 UTC
+GENERATED: 2026-10-17 12:56 UTC
 
 === 2. DATA MODEL (from CLAUDE.md) ===
 - PixelTier: name, colour/UIColor, PixelType enum (see PixelClicker.cs; values are only ever appended so saves stay valid), TierUnlockMode (PreviousTierThreshold / ShopOnly), spawnWeight, randomPayout + payoutMin/Max (a random whole amount per harvest, e.g. Electric 1-15; amountPerClick = the average for estimates; migrated by packDataVersion 3), clicksToCollect (tough pixels: only the last click pays; PixelClicker.PixelHit event for the others), startingAmount, translucent / materialOverride, glow + glowIntensity (emission on a runtime material copy + point light), vacuum flag, spawnSwitch (Auto = Glass, Luminescent and the IsSpecialType types get a spawn toggle in the Toggles window, see PixelTier.CanSwitchOff; spawnDisabled saved; CanSpawn used by PickSpawnTier), flyAway/flyDirection/flySpeed (old pixel streaks away in a straight camera-relative line with a smooth tapered trail instead of falling - Meteor; flyRandomDirection + flyAngleRange 10-170 deg = a random direction on the top half of the screen), count, totalCollected, unlocked.
@@ -2588,6 +2588,14 @@ Content
 - A balancing pass on spawn weights and costs.
 - Particle polish and filling in missing sound clips.
 
+Device connections beyond husks (sockets + couplings)
+- The socket / coupling system (belts and hoses snap to a coupling on a device socket) starts with HUSK flow; its socket kind is an open list so more connection kinds can be added later, each with its own coupling look.
+- Power (Electrician): electricity that speeds machines up or keeps them running. Today Wire / Battery / Resistor husks and Electric pixels arc to devices in their own hand-made code; moving that onto power sockets gives Electrician a real job in the factory (e.g. a powered Recycler works faster). Plan this one next.
+- Signal (the planned Automation skill): on / off triggers between devices - a full Storage Crate starts a Recycler, a hopper opens when a colour arrives. Turns a pile of machines into a factory. Plan this one next too.
+- Water (Farming / Fishing): Sprinkler, Water pixels and the Bait Bucket's water piped between devices for growing and cooling.
+- Heat (Firemaking, later Smithing): fuel and heat for the Kiln, Charcoal and burning.
+- Link (late game): wireless pairs that pass a husk or effect between two devices, like the Quantum Organizer's teleport.
+
 Code clean-ups worth doing some day
 - Split PixelShop further into separate logic and UI classes.
 - One shared game object that owns the references, instead of scene searches.
@@ -2607,7 +2615,6 @@ Code clean-ups worth doing some day
 [ ] Build the real effects for the skill tree nodes and the Offline Progression skill (offline efficiency, longer offline cap, pack earns a little offline); more skill packs.
 [ ] Basic blocks (Wood, Rock...) give a little XP in other skills while you are not training them, so you can mix and match what you train (figure out the amounts / rules).
 [ ] Add consumables and minigames that are locked behind skill unlocks (skill levels / tree nodes unlock new consumables, devices and minigames).
-[ ] Husk Crush (design in docs/GameDesign.md section 6, 'Standard - the ability skill'): right-click a floor husk to crush it for ~25% of a click's XP (its own skill, never currency), from the first minute; right-click priority decided in one place; first-time tip; Standard tree nodes Chain Crush (lv 4), Clean Break (lv 6), Hard Hands (later).
 [ ] Standard shop unlocks (design in docs/GameDesign.md section 6, 'Standard - the ability skill'): Standard levels unlock the GENERAL husk devices in the shop as level perks, not tree points (Sorting Hopper 3-4, Storage Crate 4-5, Magnet + Fan 5, Funnel 6-7, Sorter then Magnetized Sorter 8-10, Quantum Organizer 12+); currency still buys them; the shop shows them locked with 'Standard N'. Build ONE shared 'needs skill X at level N' requirement on shop items (read by the Shop, Toggles and Game Database, no per-device checks) so skill-gated minigames and the gathering skills' own tools (item above) use the same table
 [ ] Standard XP curve: front-load it so levels 2-7 land at about 3 / 8-10 / 20 / 30-35 / 45 / 60 minutes (Block Hold or Power Click, the other one, first twist, What's Next, second twist, Shuffle Combo), then slow it sharply so Standard stays the longest skill; tune with the Auto Clicker running (Standard counts auto clicks) using the session recorder / balance report
 [ ] Minigame progression rework: every minigame pack costs base coin only (monochrome + RGB, laddered), the minigame pixel packs (Ghost, Singularity, Meteor, Solar) are gated by their minigame goals instead of Glass / Vacuum / Obsidian packs, and skills enhance minigames through permanent skill tree nodes (a small `PixelSkills.Bonus(minigameId, stat)` lookup that minigames read; e.g. Mining = more Meteor chunks, Farming = better Ghost potions, Electrician = faster Ultra Holes). Also: make Obsidian unlockable by a Mining skill tree node (e.g. 'Volcanic glass' around Mining level 5; decide unlock-outright vs make-purchasable and whether it stops needing the Glass pack).
