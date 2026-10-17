@@ -205,10 +205,10 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         [Tooltip("Pattern variation (crater floors: 0 = battle, 1 = moon, 2 = red planet).")]
         public int variant = 0;
 
-        [Tooltip("Draw the ground with the world-space ground shader instead of a painted texture (0 = painted texture, 1 lava, 2 marble, 3 ice, 4 deep space, 5 data streams). The picture then never repeats or stretches and stays sharp at any zoom. The menus' preview pictures stay painted.")]
+        [Tooltip("Draw the ground with the world-space ground shader instead of a painted texture (0 = painted texture, 1 lava, 2 marble, 3 ice, 4 deep space, 5 data streams, 6 aura flames, 7 death energy wisps, 8 matrix rain, 9 liquid flow, 10 laser corridor). The picture then never repeats or stretches and stays sharp at any zoom. The menus' preview pictures stay painted.")]
         public int shaderGround = 0;
 
-        [Tooltip("World units one 'cell' of the shader pattern spans (0 = the default 6).")]
+        [Tooltip("World units one 'cell' of the shader pattern spans (0 = the default 6). Patterns 6-10 (ports of painted floors): the world units one copy of the painted picture spanned, i.e. its Tile World Size.")]
         public float shaderScale = 0f;
 
         [Tooltip("Hide the floor picture itself (a see-through floor: only the sky and the overlay show; the floor still catches pixels).")]
@@ -630,6 +630,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         if (activeMaterial == null || current < 0 || current >= styles.Count) return;
         FloorStyle style = styles[current];
         float dt = PixelTimeStop.IsStopped ? 0f : Time.unscaledDeltaTime; // keeps moving on the title screen, freezes in Time Stop
+        if (groundShaderOn) { TickGroundShader(style, dt); return; }   // (the shader draws, scrolls and pulses itself: no tiling or redraws)
 
         bool tilingDirty = false;
         if (style.fitToView && FitToView(false)) tilingDirty = true;
@@ -2376,6 +2377,18 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             defaultsVersion = 14;
         }
 
+        // The auras, Death Energy, Matrix Rain, Liquid Flow and Laser Corridor are drawn by the world-space ground shader in the game (patterns 6-10).
+        if (defaultsVersion < 15)
+        {
+            foreach (FloorStyle def in DefaultStyles())
+            {
+                if (def.shaderGround < 6) continue;
+                FloorStyle old = styles.Find(x => x != null && x.name == def.name);
+                if (old != null) { old.shaderGround = def.shaderGround; old.shaderScale = def.shaderScale; }
+            }
+            defaultsVersion = 15;
+        }
+
         foreach (FloorStyle def in DefaultStyles())
             if (!styles.Exists(s => s.name == def.name)) styles.Add(def);
     }
@@ -2488,7 +2501,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
 
         FloorStyle matrix = S("Matrix Rain", FloorPattern.MatrixRain, new Color(0.0f, 0.03f, 0.0f), new Color(0.15f, 1f, 0.35f),
                               new Color(0.85f, 1f, 0.9f), 1024, true, 40f, 128, 0.5f, 1.3f);
-        matrix.scrollSpeed = new Vector2(0f, 0.0375f); matrix.detail = 6;
+        matrix.scrollSpeed = new Vector2(0f, 0.0375f); matrix.detail = 6; matrix.shaderGround = 8; matrix.shaderScale = 40f;
         yield return matrix;
 
         yield return S("Hazard Stripes", FloorPattern.Hazard, new Color(0.98f, 0.8f, 0.05f), new Color(0.08f, 0.08f, 0.08f),
@@ -2525,38 +2538,39 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
 
         FloorStyle ssj = S("Super Aura", FloorPattern.KiAura, new Color(0.35f, 0.18f, 0.0f), new Color(1f, 0.78f, 0.1f),
                            new Color(1f, 1f, 0.85f), 256, false, 6f, 1, 0.6f, 1.3f);
-        ssj.scrollSpeed = new Vector2(0f, 0.0525f); ssj.pulseSpeed = 1.5f; ssj.pulseAmount = 0.3f; ssj.detail = 7; ssj.tileWorldSize = 40f; ssj.resolution = 1024;
+        ssj.scrollSpeed = new Vector2(0f, 0.0525f); ssj.pulseSpeed = 1.5f; ssj.pulseAmount = 0.3f; ssj.detail = 7; ssj.tileWorldSize = 40f; ssj.resolution = 1024; ssj.shaderGround = 6; ssj.shaderScale = 40f;
         yield return ssj;
 
         FloorStyle ui = S("Divine Aura", FloorPattern.KiAura, new Color(0.12f, 0.14f, 0.25f), new Color(0.65f, 0.75f, 1f),
                           new Color(1f, 1f, 1f), 256, false, 6f, 1, 0.8f, 1.2f);
-        ui.scrollSpeed = new Vector2(0f, 0.0375f); ui.pulseSpeed = 0.7f; ui.pulseAmount = 0.35f; ui.seed = 91; ui.detail = 7; ui.tileWorldSize = 40f; ui.resolution = 1024;
+        ui.scrollSpeed = new Vector2(0f, 0.0375f); ui.pulseSpeed = 0.7f; ui.pulseAmount = 0.35f; ui.seed = 91; ui.detail = 7; ui.tileWorldSize = 40f; ui.resolution = 1024; ui.shaderGround = 6; ui.shaderScale = 40f;
         yield return ui;
 
         FloorStyle blue = S("Blue Aura", FloorPattern.KiAura, new Color(0.0f, 0.12f, 0.3f), new Color(0.1f, 0.7f, 1f),
                             new Color(0.85f, 1f, 1f), 256, false, 6f, 1, 0.7f, 1.3f);
-        blue.scrollSpeed = new Vector2(0f, 0.0525f); blue.pulseSpeed = 1.2f; blue.pulseAmount = 0.3f; blue.seed = 57; blue.detail = 7; blue.tileWorldSize = 40f; blue.resolution = 1024;
+        blue.scrollSpeed = new Vector2(0f, 0.0525f); blue.pulseSpeed = 1.2f; blue.pulseAmount = 0.3f; blue.seed = 57; blue.detail = 7; blue.tileWorldSize = 40f; blue.resolution = 1024; blue.shaderGround = 6; blue.shaderScale = 40f;
         yield return blue;
 
         FloorStyle god = S("God Aura", FloorPattern.KiAura, new Color(0.3f, 0.02f, 0.05f), new Color(1f, 0.25f, 0.3f),
                            new Color(1f, 0.85f, 0.75f), 256, false, 6f, 1, 0.6f, 1.3f);
-        god.scrollSpeed = new Vector2(0f, 0.045f); god.pulseSpeed = 1f; god.pulseAmount = 0.3f; god.seed = 73; god.detail = 7; god.tileWorldSize = 40f; god.resolution = 1024;
+        god.scrollSpeed = new Vector2(0f, 0.045f); god.pulseSpeed = 1f; god.pulseAmount = 0.3f; god.seed = 73; god.detail = 7; god.tileWorldSize = 40f; god.resolution = 1024; god.shaderGround = 6; god.shaderScale = 40f;
         yield return god;
 
         FloorStyle hakai = S("Death Energy", FloorPattern.EnergyWisps, new Color(0.04f, 0.0f, 0.08f), new Color(0.55f, 0.1f, 0.85f),
                              new Color(1f, 0.7f, 1f), 256, false, 7f, 1, 0.6f, 1.2f);
-        hakai.scrollSpeed = new Vector2(0.0035f, 0.006f); hakai.pulseSpeed = 0.5f; hakai.pulseAmount = 0.4f; hakai.detail = 6; hakai.tileWorldSize = 40f; hakai.resolution = 1024;
+        hakai.scrollSpeed = new Vector2(0.0035f, 0.006f); hakai.pulseSpeed = 0.5f; hakai.pulseAmount = 0.4f; hakai.detail = 6; hakai.tileWorldSize = 40f; hakai.resolution = 1024; hakai.shaderGround = 7; hakai.shaderScale = 40f;
         yield return hakai;
 
         // ---- Animated ----
         FloorStyle lasers = S("Laser Corridor", FloorPattern.LaserHall, new Color(0.2f, 0.34f, 0.36f), new Color(0.6f, 0.95f, 1f),
                               new Color(1f, 0.08f, 0.05f), 128, false, 18f, 8, 0.8f, 1.1f);   // (scaled up: bigger panels and beams)
-        lasers.animateFps = 14f; lasers.metallic = 0.3f;
+        lasers.animateFps = 14f; lasers.metallic = 0.3f; lasers.shaderGround = 10; lasers.shaderScale = 18f;
         yield return lasers;
 
         FloorStyle liquid = S("Liquid Flow", FloorPattern.Liquid, new Color(0.02f, 0.15f, 0.35f), new Color(0.1f, 0.55f, 0.75f),
                               new Color(0.85f, 1f, 1f), 768, false, 40f, 12, 0.95f, 0.25f);
         liquid.detail = 3; liquid.scrollSpeed = new Vector2(0.004f, 0.006f); liquid.pulseSpeed = 0.3f; liquid.pulseAmount = 0.15f;   // (one big picture that drifts)
+        liquid.shaderGround = 9; liquid.shaderScale = 40f;
         yield return liquid;
 
         FloorStyle clouds = S("Moving Clouds", FloorPattern.CloudSea, new Color(0.35f, 0.6f, 0.9f), new Color(0.72f, 0.78f, 0.88f),
