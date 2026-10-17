@@ -25,6 +25,16 @@ public static class PixelInstantItems
         /// <summary>Sound played when it worked (empty = none).</summary>
         public string sound = "";
         public UseRule use;
+        /// <summary>Listed in the shop's Utilities next to the machines it connects (the Coupling, the Container Hose), not under Supplies.</summary>
+        public bool withUtilities;
+    }
+
+    /// <summary>Starts placing a bought tester piece from the game: one is used up per piece placed, placing stops when none are left.</summary>
+    private static bool PlacePieces(PixelConsumables c, PixelConsumables.DeviceKind kind, string feature, string hint, out string msg)
+    {
+        bool ok = c.OwnedOfKind(kind) > 0 && PixelFeatureTester.StartFeature(feature, () => { c.TryUseAutoItem(kind); return c.OwnedOfKind(kind) > 0; });
+        msg = ok ? hint : "";
+        return ok;
     }
 
     public static readonly Entry[] All =
@@ -74,6 +84,18 @@ public static class PixelInstantItems
                 msg = ok ? "Click a point, then another to lay a belt. Right click stops" : "";
                 return ok;
             },
+        },
+        new Entry
+        {
+            kind = PixelConsumables.DeviceKind.Coupling, usedUp = false, withUtilities = true,   // (one is used up per coupling fitted, by the tester's placing)
+            use = (PixelConsumables c, int item, out string msg) => PlacePieces(c, PixelConsumables.DeviceKind.Coupling, "Coupling",
+                "Bring the coupling near a device: it snaps onto a free socket (the teal rings). Click to fit it. Right click stops", out msg),
+        },
+        new Entry
+        {
+            kind = PixelConsumables.DeviceKind.ContainerHose, usedUp = false, withUtilities = true,   // (one is used up per hose laid)
+            use = (PixelConsumables c, int item, out string msg) => PlacePieces(c, PixelConsumables.DeviceKind.ContainerHose, "Container Hose",
+                "Click an Out coupling, then bend points, then an In coupling. Right click takes a point back", out msg),
         },
         new Entry
         {

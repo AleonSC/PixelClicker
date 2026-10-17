@@ -127,6 +127,10 @@ public class PixelConsumables : MonoBehaviour
         PesticideSpray = 21,
         /// <summary>Placed, permanent: a sloped tray that latches onto a Recycler's back (PixelSortingHopper) and slides ONE chosen husk type through the back hatch into the bin (a steady streak); other husks lie in it and fade. On sale from Standard level 3.</summary>
         SortingHopper = 22,
+        /// <summary>Not placed by hand: right-click starts placing couplings (PixelCoupling) on device sockets; one is used up per coupling fitted. Listed with the Utilities.</summary>
+        Coupling = 23,
+        /// <summary>Not placed by hand: right-click starts routing a Container Hose between two couplings; one is used up per hose. Listed with the Utilities.</summary>
+        ContainerHose = 24,
     }
 
     /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
@@ -894,6 +898,34 @@ public class PixelConsumables : MonoBehaviour
         };
     }
 
+    private static Device CreateDefaultCoupling()
+    {
+        return new Device
+        {
+            kind = DeviceKind.Coupling,
+            displayName = "Coupling",
+            description = "The piece that joins belts and hoses to a machine. Right-click to fit couplings: bring one near a device and it snaps onto a free socket (teal rings) - the Recycler's back hatch, the Storage Crate's front, the Funnel's output... Its arrow shows the way husks go (green in, orange out; click a crate's coupling dot to switch). One is used up per coupling fitted.",
+            requiredType = PixelClicker.PixelType.White,
+            costs = new[] { new PixelShop.PackCost { type = PixelClicker.PixelType.White, amount = 30 } },
+            maxHeld = 10,
+            color = new Color(0.62f, 0.66f, 0.7f, 1f),
+        };
+    }
+
+    private static Device CreateDefaultContainerHose()
+    {
+        return new Device
+        {
+            kind = DeviceKind.ContainerHose,
+            displayName = "Container Hose",
+            description = "A see-through hose that pumps stored husks from a Storage Crate or Quantum Organizer (an Out coupling) into any In coupling - the Recycler, another crate, a Trash Can... Right-click to lay one: click the start coupling, click bend points to lead it round things, then click the end coupling. A quick right click on a laid hose turns its flow round. One is used up per hose.",
+            requiredType = PixelClicker.PixelType.White,
+            costs = new[] { new PixelShop.PackCost { type = PixelClicker.PixelType.White, amount = 120 } },
+            maxHeld = 3,
+            color = new Color(0.6f, 0.9f, 1f, 1f),
+        };
+    }
+
     private static Device CreateDefaultConveyorBelt()
     {
         return new Device
@@ -1127,6 +1159,8 @@ public class PixelConsumables : MonoBehaviour
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.FocusPotion, CreateDefaultFocusPotion),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.PesticideSpray, CreateDefaultPesticideSpray),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.SortingHopper, CreateDefaultSortingHopper),
+                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Coupling, CreateDefaultCoupling),
+                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ContainerHose, CreateDefaultContainerHose),
                 })
                 {
                     DeviceKind wanted = extra.Key;
@@ -2066,6 +2100,37 @@ public class PixelConsumables : MonoBehaviour
             tail.transform.localScale = new Vector3(0.4f, 0.12f, 0.4f);
             tail.transform.localPosition = new Vector3(0f, 0.12f, 0f);
         }
+        else if (kind == DeviceKind.Coupling)
+        {
+            // A flange (a short wide disc) with a collar and a green arrow on top.
+            GameObject flange = MakePrimitive(PrimitiveType.Cylinder, "Flange", root.transform, main, false);
+            flange.transform.localScale = new Vector3(0.9f, 0.08f, 0.9f);
+            flange.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            flange.transform.localPosition = new Vector3(0f, 0.5f, 0f);
+            GameObject collar = MakePrimitive(PrimitiveType.Cylinder, "Collar", root.transform, new Color(0.25f, 0.27f, 0.3f, 1f), false);
+            collar.transform.localScale = new Vector3(0.62f, 0.18f, 0.62f);
+            collar.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            collar.transform.localPosition = new Vector3(0f, 0.5f, 0.15f);
+            for (int sx = -1; sx <= 1; sx += 2)
+            {
+                GameObject arm = MakePrimitive(PrimitiveType.Cube, "Arrow", root.transform, new Color(0.35f, 1f, 0.45f, 1f), false);
+                arm.transform.localScale = new Vector3(0.1f, 0.08f, 0.4f);
+                arm.transform.localRotation = Quaternion.Euler(0f, sx * 40f, 0f);
+                arm.transform.localPosition = new Vector3(sx * 0.13f, 1.02f, 0.1f);
+            }
+        }
+        else if (kind == DeviceKind.ContainerHose)
+        {
+            // A coil of see-through hose: a few short tube pieces round a ring.
+            for (int i = 0; i < 10; i++)
+            {
+                float a = i * 36f * Mathf.Deg2Rad;
+                GameObject piece = MakePrimitive(PrimitiveType.Cylinder, "Hose", root.transform, main, false);
+                piece.transform.localScale = new Vector3(0.18f, 0.2f, 0.18f);
+                piece.transform.localRotation = Quaternion.Euler(0f, -i * 36f, 90f);
+                piece.transform.localPosition = new Vector3(Mathf.Cos(a) * 0.5f, 0.25f + i * 0.02f, Mathf.Sin(a) * 0.5f);
+            }
+        }
         else if (kind == DeviceKind.ConveyorBelt)
         {
             // A short belt: a dark slab with a bright stripe and a roller at each end.
@@ -2179,7 +2244,19 @@ public class PixelConsumables : MonoBehaviour
     }
 
     /// <summary>0 = potion, 1 = placeable device (Utilities), 2 = seed, 3 = supply (instant-use item).</summary>
-    public int CategoryOf(int item) => IsSeedItem(item) ? 2 : IsSupplyItem(item) ? 3 : IsDevice(item) ? 1 : 0;
+    public int CategoryOf(int item) => IsSeedItem(item) ? 2 : IsSupplyItem(item) && !UtilityTool(item) ? 3 : IsDevice(item) ? 1 : 0;
+
+    /// <summary>An instant-use item listed with the Utilities (the Coupling and Container Hose sit next to the machines they connect).</summary>
+    private bool UtilityTool(int item) { PixelInstantItems.Entry e = PixelInstantItems.Find(devices[item - potions.Length].kind); return e != null && e.withUtilities; }
+
+    /// <summary>How many items of this kind the player holds (huge with infinite resources).</summary>
+    public int OwnedOfKind(DeviceKind kind)
+    {
+        if (Inf) return 99999;
+        int n = 0;
+        foreach (Device d in devices) if (d != null && d.kind == kind) n += d.owned;
+        return n;
+    }
 
     public bool IsSeedItem(int item) => IsDevice(item) && devices[item - potions.Length].kind == DeviceKind.Seed;
 

@@ -301,8 +301,13 @@ public class PixelFeatureTester : MonoBehaviour
 
     private bool gameplayPlacing;   // placing started by the game (StartFeature), not from the Dev Hub card: it does not need the hub open
 
-    /// <summary>Starts placing a feature by name from the game itself (the Conveyor Belt item). Returns false when there is no such feature.</summary>
-    public static bool StartFeature(string featureName)
+    private Func<bool> spendOne;   // placing a bought item (a Coupling, a Container Hose): uses one up per piece placed; returns false when none are left
+
+    /// <summary>
+    /// Starts placing a feature by name from the game itself (the Conveyor Belt Kit, Coupling and Container Hose items). 'spendOne' (optional) is called after
+    /// every piece placed: it uses one item up and says whether another can be placed (false stops placing). Returns false when there is no such feature.
+    /// </summary>
+    public static bool StartFeature(string featureName, Func<bool> spendOne = null)
     {
         Boot();
         if (instance == null) return false;
@@ -310,12 +315,23 @@ public class PixelFeatureTester : MonoBehaviour
         if (f == null) return false;
         instance.StartPlacing(f);
         instance.gameplayPlacing = true;
+        instance.spendOne = spendOne;
+        return true;
+    }
+
+    /// <summary>A piece was placed: a bought item is used up; when none are left, placing stops. True = placing stopped.</summary>
+    private bool AfterPlaced()
+    {
+        if (spendOne == null || spendOne()) return false;
+        PixelHints.Announce("That was the last one - buy more in the shop");
+        StopPlacing();
         return true;
     }
 
     private void StopPlacing()
     {
         gameplayPlacing = false;
+        spendOne = null;
         if (ghost != null) Destroy(ghost);
         ghost = null;
         if (previewGhost != null) Destroy(previewGhost);
@@ -802,6 +818,7 @@ public class PixelFeatureTester : MonoBehaviour
                 GameObject go = placing.placeRoute(clicker, routePoints);
                 if (go != null) placing.placed.Add(go);
                 EndRoute();
+                if (go != null && AfterPlaced()) return;
             }
             Refresh();
         }
@@ -901,6 +918,7 @@ public class PixelFeatureTester : MonoBehaviour
         {
             GameObject go = placing.place(clicker, point, useYaw);
             if (go != null) placing.placed.Add(go);
+            if (go != null && AfterPlaced()) return;
             if (go != null && placing.linkAfterPlace) { linkPanel = go; linkOnly = false; placeStartFrame = Time.frameCount; go.GetComponent<PixelSolarPanel>()?.ShowRange(true); }
             Refresh();
         }

@@ -67,7 +67,12 @@ public partial class PixelShop
         return scaled;
     }
 
-    /// <summary>Items of a category, in shop order (the Recycler first among Utilities).</summary>
+    private static readonly PixelConsumables.DeviceKind[] UtilitiesFirst =
+    {
+        PixelConsumables.DeviceKind.Recycler, PixelConsumables.DeviceKind.SortingHopper, PixelConsumables.DeviceKind.Coupling, PixelConsumables.DeviceKind.ContainerHose,
+    };
+
+    /// <summary>Items of a category, in shop order (the Recycler, Sorting Hopper, Coupling and Container Hose first among Utilities).</summary>
     private void CollectCategoryItems(int category, List<int> list)
     {
         list.Clear();
@@ -79,8 +84,17 @@ public partial class PixelShop
         }
         if (category == 1)
         {
-            int r = list.FindIndex(i => consumables.IsDevice(i) && consumables.DeviceKindOf(i) == PixelConsumables.DeviceKind.Recycler);
-            if (r > 0) { int recyclerItem = list[r]; list.RemoveAt(r); list.Insert(0, recyclerItem); }
+            // The early husk setup leads the Utilities, in this order: Recycler, Sorting Hopper, Coupling, Container Hose (those on sale).
+            int at = 0;
+            foreach (PixelConsumables.DeviceKind kind in UtilitiesFirst)
+            {
+                int r = list.FindIndex(i => consumables.IsDevice(i) && consumables.DeviceKindOf(i) == kind);
+                if (r < 0) continue;
+                int item = list[r];
+                list.RemoveAt(r);
+                list.Insert(Mathf.Min(at, list.Count), item);
+                at++;
+            }
         }
     }
 

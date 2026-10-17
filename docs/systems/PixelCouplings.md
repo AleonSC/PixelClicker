@@ -49,7 +49,9 @@ kind = a new enum value + its own coupling look + its own hook, never a new syst
 - Water, Heat and wireless Link: `Assets/Resources/Ideas.txt` ('Device connections beyond husks') for when Farming / Firemaking / the late game need them.
 
 ## Later (noted, not built)
-- Couplings could be bought / unlocked (Standard or Devices progression) instead of free in the Tester.
+- BOUGHT (2026-10-17): the Coupling (30 White, hold 10) and Container Hose (120 White, hold 3) are shop items in Utilities, right after the Recycler and
+  Sorting Hopper; right-click one to start placing (PixelInstantItems -> PixelFeatureTester.StartFeature with a 'spend one' callback: one is used up per
+  coupling fitted / hose laid, placing stops when none are left). The Dev Hub Tester cards still place them free. Unlocking them by progression is still open.
 - A device can have more sockets than you fill (the Splitter already does).
 
 ## Build order (how it was moved over)
