@@ -6,7 +6,10 @@
 //   kept: Trim deletes the OLDEST when a newer one comes in. List() gives them newest first.
 //   PixelSaveShots (static + a hidden runner): a screenshot of the game window (ScreenCapture, shrunk to 320 wide, JPG) next to EVERY save: slot saves go to <save file>.jpg, autosave
 //   history to its own .jpg. A rolling copy is taken every few seconds while the game is visible and used when a save happens while paused (the Save / Load window shows the
-//   pause menu, not the game). Load(path) returns a cached Texture2D for the hover tooltips (slot rows in the Save / Load window, rows of the autosave window).
+//   pause menu, not the game). The rolling copy stays on the graphics card (CaptureScreenshotIntoRenderTexture, shrunk into a small RenderTexture): nothing waits for the GPU
+//   and no JPG is made until a save needs the picture (it used to read back and encode the full screen every 2.5 s - a regular hitch). The capture comes out upside down when
+//   SystemInfo.graphicsUVStartsAtTop (same rule as PixelFilters), so the shrink blit flips it there.
+//   Load(path) returns a cached Texture2D for the hover tooltips (slot rows in the Save / Load window, rows of the autosave window).
 //   PixelAutosaveWindow: the separate window opened by the small 'Autosaves' button in the Save / Load window (PixelPauseMenu.BuildSaveLoadPanel): a scrolling list (newest first)
 //   with a Load button per row and a hover tooltip with the screenshot; Load = PixelSaveGame.LoadFile (does not change the current slot) and then resumes the game.
 // ---------------------------------------------------
@@ -130,19 +133,21 @@ public static class PixelSaveShots
     public const int ThumbWidth = 320;
     private const float CacheSeconds = 2.5f;
 
-    private static byte[] cached;
+    private static RenderTexture screenCopy, thumb;   // the rolling copy: the whole screen, then shrunk to ThumbWidth (both live on the graphics card)
+    private static bool haveThumb;                     // (thumb holds a picture of THIS game)
+    private static byte[] thumbJpg;                    // thumb as a JPG, made the first time a save needs it (null = not made yet)
     private static ShotRunner runner;
     private static readonly Dictionary<string, KeyValuePair<long, Texture2D>> textures = new Dictionary<string, KeyValuePair<long, Texture2D>>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
-        cached = null; runner = null; textures.Clear();
+        screenCopy = thumb = null; haveThumb = false; thumbJpg = null; runner = null; textures.Clear();
         PixelStatics.ResetOnRestart(OnSceneUnloaded);
     }
 
     // (Restart reloads the scene: a save made while paused must not get the old game's last picture; the runner lives on, DontDestroyOnLoad)
-    private static void OnSceneUnloaded() { cached = null; }
+    private static void OnSceneUnloaded() { haveThumb = false; thumbJpg = null; }
 
     // The rolling copy only runs once the runner exists; start it with the game, otherwise the first manual save (made from the pause menu) has no picture to use.
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -201,6 +206,54 @@ public static class PixelSaveShots
 
     private static bool GameVisible => !PixelCalm.InMenu && Screen.width > 8 && Screen.height > 8;
 
+    /// <summary>Copies the screen into the small rolling picture, all on the graphics card. Call it at the end of a frame (after WaitForEndOfFrame).</summary>
+    private static void CaptureRolling()
+    {
+        int sw = Screen.width, sh = Screen.height;
+        if (screenCopy == null || screenCopy.width != sw || screenCopy.height != sh)
+        {
+            if (screenCopy != null) { screenCopy.Release(); UnityEngine.Object.Destroy(screenCopy); }
+            screenCopy = new RenderTexture(sw, sh, 0, RenderTextureFormat.ARGB32) { name = "Save Shot Screen" };
+            screenCopy.Create();
+        }
+        int w = ThumbWidth, h = Mathf.Max(1, Mathf.RoundToInt(w * (float)sh / Mathf.Max(1, sw)));
+        if (thumb == null || thumb.width != w || thumb.height != h)
+        {
+            if (thumb != null) { thumb.Release(); UnityEngine.Object.Destroy(thumb); }
+            thumb = new RenderTexture(w, h, 0, RenderTextureFormat.ARGB32) { name = "Save Shot Thumb", filterMode = FilterMode.Bilinear };
+            thumb.Create();
+        }
+        ScreenCapture.CaptureScreenshotIntoRenderTexture(screenCopy);
+        if (SystemInfo.graphicsUVStartsAtTop) Graphics.Blit(screenCopy, thumb, new Vector2(1f, -1f), new Vector2(0f, 1f));   // (the capture is upside down there)
+        else Graphics.Blit(screenCopy, thumb);
+        haveThumb = true;
+        thumbJpg = null;
+    }
+
+    /// <summary>The rolling picture as a JPG (read back from the graphics card and encoded only now, once per picture). Null when there is none.</summary>
+    private static byte[] ThumbJpg()
+    {
+        if (thumbJpg != null) return thumbJpg;
+        if (!haveThumb || thumb == null || !thumb.IsCreated()) return null;
+        Texture2D small = null;
+        RenderTexture previous = RenderTexture.active;
+        try
+        {
+            small = new Texture2D(thumb.width, thumb.height, TextureFormat.RGB24, false);
+            RenderTexture.active = thumb;
+            small.ReadPixels(new Rect(0, 0, thumb.width, thumb.height), 0, 0);
+            small.Apply(false);
+            thumbJpg = small.EncodeToJPG(75);
+        }
+        catch (Exception e) { Debug.LogWarning("PixelSaveShots: could not make the screenshot - " + e.Message); }
+        finally
+        {
+            RenderTexture.active = previous;
+            if (small != null) UnityEngine.Object.Destroy(small);
+        }
+        return thumbJpg;
+    }
+
     private class ShotRunner : MonoBehaviour
     {
         private float timer;
@@ -214,39 +267,18 @@ public static class PixelSaveShots
 
         public void Take(IList<string> paths)
         {
-            if (!GameVisible || busy) { Write(paths, cached); return; }   // paused (the Save / Load window is on screen): use the last picture of the game itself
+            if (!GameVisible || busy) { Write(paths, ThumbJpg()); return; }   // paused (the Save / Load window is on screen): use the last picture of the game itself
             StartCoroutine(Capture(new List<string>(paths)));
         }
 
+        /// <summary>Refreshes the rolling picture at the end of this frame; with 'paths' (a save was made) it is also written to those files.</summary>
         private IEnumerator Capture(IList<string> paths)
         {
             busy = true;
             yield return new WaitForEndOfFrame();
-            byte[] jpg = null;
-            Texture2D full = null, small = null;
-            try
-            {
-                full = ScreenCapture.CaptureScreenshotAsTexture();
-                if (full != null)
-                {
-                    int w = ThumbWidth, h = Mathf.Max(1, Mathf.RoundToInt(w * (float)full.height / Mathf.Max(1, full.width)));
-                    RenderTexture rt = RenderTexture.GetTemporary(w, h, 0);
-                    Graphics.Blit(full, rt);
-                    RenderTexture previous = RenderTexture.active;
-                    RenderTexture.active = rt;
-                    small = new Texture2D(w, h, TextureFormat.RGB24, false);
-                    small.ReadPixels(new Rect(0, 0, w, h), 0, 0);
-                    small.Apply(false);
-                    RenderTexture.active = previous;
-                    RenderTexture.ReleaseTemporary(rt);
-                    jpg = small.EncodeToJPG(75);
-                }
-            }
+            try { CaptureRolling(); }
             catch (Exception e) { Debug.LogWarning("PixelSaveShots: could not take the screenshot - " + e.Message); }
-            if (full != null) Destroy(full);
-            if (small != null) Destroy(small);
-            if (jpg != null) { cached = jpg; if (paths != null) Write(paths, jpg); }
-            else if (paths != null) Write(paths, cached);
+            if (paths != null) Write(paths, ThumbJpg());   // (if the capture failed this is the previous picture, as before)
             busy = false;
         }
     }
