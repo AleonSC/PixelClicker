@@ -1251,3 +1251,4 @@
 [2026-10-17 05:08 UTC] Added Look Studio phases 2 (your own shapes) and 3 (your own textures and particle effects) to the to-do.
 [2026-10-17 05:48 UTC] Added four Dev Hub tabs: Setups (save the game as a named test setup and load it with one click, your save slots untouched), Events (show any tip, replay any tutorial, level-up / achievement popups, try your own text), Sounds (play every sound and change its volume live, copy changes for Claude) and Console (the live log with filters, stack traces, Copy for Claude and a red on-screen error badge).
 [2026-10-17 05:48 UTC] Added the performance overlay, game speed buttons and a Look Studio compare view to the to-do.
+[2026-10-17 06:59 UTC] Shrank CLAUDE.md from 62 KB to 14 KB: the per-script index moved to docs/Index.md (searched when needed), while the working rules, the data model and a new short 'game at a glance' overview stay so every session still sees the whole game.

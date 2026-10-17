@@ -32,7 +32,7 @@ out.append('GENERATED: ' + datetime.datetime.now(datetime.timezone.utc).strftime
 
 # 2. Data model (CLAUDE.md)
 claude = read(os.path.join(ROOT, 'CLAUDE.md'))
-m = re.search(r'### Data model\n(.*?)\n## ', claude, re.S)
+m = re.search(r'## Data model\n(.*?)\n## ', claude, re.S)
 if m:
     section('2. DATA MODEL (from CLAUDE.md)')
     out.append(plain(m.group(1)))
@@ -91,9 +91,10 @@ for dm in re.finditer(r'private\s+(?:static\s+)?Device\s+(CreateDefault\w+)\s*\(
     desc = re.search(r'description = "((?:[^"\\]|\\.)*)"', body)
     out.append('%s | %s | %s' % (name, dn.group(1) if dn else '(set at runtime)', desc.group(1) if desc else ''))
 
-# 8. System index (CLAUDE.md table)
+# 8. System index (docs/Index.md table)
 section('8. SYSTEM INDEX (script / system | what it is | where the details are)')
-for line in claude.splitlines():
+index_md = read(os.path.join(ROOT, 'docs', 'Index.md'))
+for line in index_md.splitlines():
     if line.startswith('| ') and not line.startswith('| Script') and not line.startswith('|---'):
         cells = [c.strip().replace('`', '') for c in line.strip('|').split('|')]
         if len(cells) >= 3:
