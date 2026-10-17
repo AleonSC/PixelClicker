@@ -9,6 +9,9 @@
 //   padlock stick (trackerStuck: can't be dragged), downsize ('-' / '+': a one-line small version) and X (closes it; the Skills menu
 //   is NOT reopened). DOUBLE CLICKING the name (small or full; PixelDoubleClick) opens the Skills window on the skill in training with its tree beside it (never the expanded tree). Open / small / stuck / position are PlayerPrefs PixelClicker.Skills.Tracker* (global, not per save); hidden on
 //   the title screen and until the Skills button exists (SkillsTabUnlocked: Standard level 2), so Standard alone can be pinned.
+//   EARLY TRACKER (trackerBeforeSkills, UpdateTrackerIntro): before that, from the first Standard XP, the full tracker shows at the bottom left (PlaceTrackerBottomLeft: above the
+//   bottom bar, right of the event log, trackerIntroMargin) with NO buttons and locked in place (name double click does nothing), so the player watches Standard level up.
+//   When Standard level 2's popup appears (SkillsTabUnlocked turns true at that moment) its buttons come back (arrows, lock, downsize, X) and it becomes the normal pinned tracker in that spot.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using TMPro;
@@ -39,6 +42,13 @@ public partial class PixelSkills
     private bool trackerOn, trackerSmall, trackerStuck, trackerBuilt;
     private float trackerTimer;
 
+    [Header("Pinned skill tracker")]
+    [Tooltip("Before the Skills button exists (Standard level 2): once Standard XP starts coming in, show the tracker at the bottom left (beside the event log) so the player sees the level filling up. It has no buttons and can't be moved; when Standard level 2's popup appears its buttons (arrows, lock, downsize, X) come back and it stays pinned there.")]
+    [SerializeField] private bool trackerBeforeSkills = true;
+    [Tooltip("Gap between that early tracker and the bottom black bar / the event log (canvas units).")]
+    [SerializeField] private float trackerIntroMargin = 16f;
+    private bool trackerIntro;   // the early, button-less tracker is showing (see trackerBeforeSkills)
+
     /// <summary>Is the pinned tracker showing?</summary>
     public bool TrackerOn => trackerOn;
 
@@ -68,7 +78,7 @@ public partial class PixelSkills
     /// <summary>Double click on the tracker's name (small or full): opens the Skills window on the skill in training with its tree beside it (the normal tree, not the expanded one).</summary>
     private void OpenTrainedSkillWithTree()
     {
-        if (PixelTutorialDim.Active || packs == null || packs.Count == 0) return;
+        if (PixelTutorialDim.Active || packs == null || packs.Count == 0 || !SkillsTabUnlocked) return;   // (not before the Skills window exists)
         if (!WindowOpen) OpenWindow();
         int index = packs.FindIndex(p => p.id == TrainingId);
         if (index < 0) return;
@@ -249,7 +259,9 @@ public partial class PixelSkills
     private void LayoutTracker()
     {
         if (!trackerBuilt) return;
-        bool small = trackerSmall;
+        bool small = trackerSmall && !trackerIntro;   // (the early tracker is always the full one: the XP numbers are the point)
+        foreach (Button b in new[] { trackerClose, trackerSize, trackerStick, trackerPrev, trackerNext })
+            if (b.gameObject.activeSelf == trackerIntro) b.gameObject.SetActive(!trackerIntro);   // the early tracker has no buttons
         float w = small ? 300f : 380f, h = small ? 64f : 124f, bs = small ? 28f : 40f;
         trackerRect.sizeDelta = new Vector2(w, h);
         float x = -8f;
@@ -260,11 +272,12 @@ public partial class PixelSkills
             r.anchoredPosition = new Vector2(x, small ? -6f : -8f);
             x -= bs + 4f;
         }
-        float buttonsWidth = -x + 4f;
+        float buttonsWidth = trackerIntro ? 8f - bs - 6f : -x + 4f;   // (no buttons: the name gets the whole width)
         RectTransform pr = trackerPrev.GetComponent<RectTransform>(), xr2 = trackerNext.GetComponent<RectTransform>();
         pr.anchorMin = pr.anchorMax = pr.pivot = new Vector2(0f, 1f);
         pr.sizeDelta = new Vector2(bs, bs);
         pr.anchoredPosition = new Vector2(8f, small ? -6f : -8f);
+        float nameLeft = trackerIntro ? 8f : 8f + bs + 6f;
         xr2.anchorMin = xr2.anchorMax = xr2.pivot = new Vector2(1f, 1f);
         xr2.sizeDelta = new Vector2(bs, bs);
         xr2.anchoredPosition = new Vector2(-buttonsWidth, small ? -6f : -8f);
@@ -272,7 +285,7 @@ public partial class PixelSkills
         nr.anchorMin = new Vector2(0f, 1f);
         nr.anchorMax = new Vector2(1f, 1f);
         nr.pivot = new Vector2(0.5f, 1f);
-        nr.offsetMin = new Vector2(8f + bs + 6f, small ? -h + 28f : -50f);
+        nr.offsetMin = new Vector2(nameLeft, small ? -h + 28f : -50f);
         nr.offsetMax = new Vector2(-buttonsWidth - bs - 6f, small ? -4f : -8f);
         trackerName.fontSizeMax = small ? 22f : 30f;
         trackerBar.anchorMin = new Vector2(0f, 0f);
@@ -288,7 +301,7 @@ public partial class PixelSkills
         trackerStickImage.color = trackerStuck ? new Color(0.2f, 0.55f, 0.3f, 1f) : new Color(0.3f, 0.3f, 0.35f, 1f);
         trackerShackleClosed.SetActive(trackerStuck);
         trackerShackleOpen.SetActive(!trackerStuck);
-        trackerDrag.locked = trackerStuck;
+        trackerDrag.locked = trackerStuck || trackerIntro;
         KeepTrackerOnScreen();
         RefreshTracker();
     }
@@ -346,17 +359,53 @@ public partial class PixelSkills
 
     private void ApplyTrackerVisibility()
     {
-        bool show = trackerOn && trackerBuilt && SkillsTabUnlocked && !PixelTitleScreen.Showing;   // (from Standard level 2, like the Skills button - not only once a skill pack is owned)
+        bool show = trackerBuilt && !PixelTitleScreen.Showing && (trackerIntro || (trackerOn && SkillsTabUnlocked));   // (from Standard level 2, like the Skills button; before that only the early tracker)
         if (trackerCanvas != null && trackerCanvas.activeSelf != show) trackerCanvas.SetActive(show);
         if (trackerPinImage != null) trackerPinImage.color = trackerOn ? new Color(0.2f, 0.6f, 0.3f, 1f) : new Color(0.3f, 0.3f, 0.35f, 1f);
+    }
+
+    /// <summary>
+    /// The early tracker (trackerBeforeSkills): from the first Standard XP until Standard level 2's popup appears (that is when SkillsTabUnlocked turns true),
+    /// a button-less, unmovable tracker sits at the bottom left beside the event log. When the popup appears it becomes the normal pinned tracker, in the same spot.
+    /// </summary>
+    private void UpdateTrackerIntro()
+    {
+        bool unlocked = SkillsTabUnlocked;
+        bool want = trackerBeforeSkills && !unlocked && clicker != null && Xp(Find(StandardId)) > 0d;
+        if (want == trackerIntro)
+        {
+            if (trackerIntro) PlaceTrackerBottomLeft();   // (follows the event log being switched on / off)
+            return;
+        }
+        trackerIntro = want;
+        if (want) { EnsureTracker(); PlaceTrackerBottomLeft(); LayoutTracker(); return; }
+        if (!unlocked) { LayoutTracker(); return; }   // (switched off in the Inspector: just gone)
+        // Standard level 2's popup is up: keep it pinned where it is, with its buttons back.
+        PixelPrefs.SetFloat(TrackerXPref, trackerDesired.x);
+        PixelPrefs.SetFloat(TrackerYPref, trackerDesired.y);
+        SetTracker(true);
+        LayoutTracker();
+    }
+
+    /// <summary>The early tracker's spot: bottom left, above the bottom bar and right of the event log (or the screen edge when the log is off).</summary>
+    private void PlaceTrackerBottomLeft()
+    {
+        RectTransform canvasRect = trackerCanvas.GetComponent<RectTransform>();
+        float bars = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
+        float margin = Mathf.Max(0f, trackerIntroMargin);
+        float left = PixelHints.EventLogEnabled ? PixelHints.LogRightEdge : margin;
+        Vector2 half = canvasRect.rect.size * 0.5f, size = trackerRect.sizeDelta * 0.5f;
+        trackerDesired = new Vector2(-half.x + left + size.x, -half.y + bars + margin + size.y);
+        KeepTrackerOnScreen();
     }
 
     private void UpdateTracker()
     {
         if (!built) return;
+        UpdateTrackerIntro();
         if (!trackerBuilt && trackerOn && SkillsTabUnlocked) { EnsureTracker(); }
         ApplyTrackerVisibility();
-        if (!trackerBuilt || !trackerOn) return;
+        if (!trackerBuilt || !(trackerOn || trackerIntro)) return;
         trackerTimer -= Time.unscaledDeltaTime;
         if (trackerTimer > 0f) return;
         trackerTimer = 0.25f;
