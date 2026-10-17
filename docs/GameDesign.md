@@ -215,7 +215,8 @@ minute. **Base crush is FREE** (not a tree node): RIGHT-CLICK a husk lying on th
   also crushes the husks of the SAME type touching it (`PixelHuskQuery.Near`); **Clean Break** (Standard 6, ~45 min, 2 points): each crush
   gives the husks around it a few seconds of their lifespan back; **Hard Hands** (Standard 9, later, 2 points): crushes give more XP (x1.6 =
   40% of a click), still well below a click. The tree's `minLevel` holds a node back until the skill reaches that level.
-- **Charge Crush (Agreed 2026-10-17, not built) - the step above Chain Crush:** CLICK = Chain Crush, the quick cleanup (the husk + touching
+- **Charge Crush (Agreed 2026-10-17, built 2026-10-17 - `PixelHuskCrush.cs`; tree row 4, level 7, 2 points, cooldown 8 s, reach 1.5 -> 8 husk
+  widths over 1.5 s) - the step above Chain Crush:** CLICK = Chain Crush, the quick cleanup (the husk + touching
   same-type husks). HOLD right on a husk = charge: a ring grows from it the longer you hold (capped reach, Inspector values); letting
   go sends an arc to every same-type husk inside the ring, touching or not - a slower but more thorough cleanup. It mirrors Power
   Click (hold left on the cube to charge). Needs Chain Crush; about Standard 7-8 (~60 min). Short cooldown after a charged crush so it

@@ -475,6 +475,9 @@ public partial class PixelSkills
         RefreshWindow();
     }
 
+    /// <summary>The lowest tree row a node can use (0 = top). Standard's husk branch uses rows 3 and 4.</summary>
+    private const int MaxTreeRow = 4;
+
     /// <summary>Shows the selected pack's skill tree: nodes laid out by depth (column) and row over the whole width of the window, joined by lines.</summary>
     private void RefreshTree(SkillPack p)
     {
@@ -483,11 +486,16 @@ public partial class PixelSkills
         PixelUIKit.SetText(treeTitle, p.displayName + " - " + treeTitleText);
         PixelUIKit.SetText(pointsLabel, "Skill points: " + PointsAvailable(p) + "   (one per level)");
 
-        int maxDepth = 0, maxRow = 2;   // (three rows at least; a tree with a 4th row - Standard's husk branch - spreads its rows over the same height)
-        for (int i = 0; i < count; i++) { maxDepth = Mathf.Max(maxDepth, Depth(p, p.nodes[i])); maxRow = Mathf.Max(maxRow, Mathf.Clamp(p.nodes[i].row, 0, 3)); }
+        // Three rows at least; a tree with more (Standard's husk branch uses rows 3 and 4) spreads its rows over the same height, and when they
+        // don't fit at full node height the nodes get shorter (nodeH) so nothing overlaps or is cut off.
+        int maxDepth = 0, maxRow = 2;
+        for (int i = 0; i < count; i++) { maxDepth = Mathf.Max(maxDepth, Depth(p, p.nodes[i])); maxRow = Mathf.Max(maxRow, Mathf.Clamp(p.nodes[i].row, 0, MaxTreeRow)); }
         float viewW = nodeView.rect.width, areaH = nodeView.rect.height;
+        const float rowGap = 8f;
+        float nodeH = Mathf.Max(40f, Mathf.Min(nodeSize.y, (areaH - rowGap * maxRow) / (maxRow + 1)));
+        Vector2 nodeDims = new Vector2(nodeSize.x, nodeH);
         float colStep = maxDepth > 0 ? Mathf.Clamp((viewW - nodeSize.x) / maxDepth, nodeSize.x + 20f, nodeSize.x + 220f) : 0f;
-        float rowStep = Mathf.Max(nodeSize.y + 8f, (areaH - nodeSize.y) / maxRow);
+        float rowStep = Mathf.Max(nodeH + rowGap, (areaH - nodeH) / maxRow);
         float usedW = maxDepth * colStep + nodeSize.x;
         const float pad = 20f;
         float areaW = Mathf.Max(viewW, usedW + pad * 2f);   // wider than the view = the tree scrolls sideways
@@ -498,7 +506,7 @@ public partial class PixelSkills
         for (int i = 0; i < count; i++)
         {
             TreeNode n = p.nodes[i];
-            pos[i] = new Vector2(offX + Depth(p, n) * colStep, Mathf.Clamp(n.row, 0, 3) * rowStep);
+            pos[i] = new Vector2(offX + Depth(p, n) * colStep, Mathf.Clamp(n.row, 0, MaxTreeRow) * rowStep);
         }
         int line = 0;
         for (int i = 0; i < nodeButtons.Count; i++)
@@ -508,7 +516,7 @@ public partial class PixelSkills
             if (!used) continue;
             TreeNode n = p.nodes[i];
             RectTransform r = nodeButtons[i].GetComponent<RectTransform>();
-            r.sizeDelta = nodeSize;
+            r.sizeDelta = nodeDims;
             r.anchoredPosition = new Vector2(pos[i].x, -pos[i].y);
             bool owned = NodeUnlocked(p, n), can = CanUnlock(p, n);
             Color c = owned ? new Color(0.2f, 0.5f, 0.3f, 1f) : can ? new Color(0.25f, 0.38f, 0.62f, 1f) : cardColor;
@@ -522,8 +530,8 @@ public partial class PixelSkills
                 int pi = System.Array.IndexOf(p.nodes, parent);
                 if (pi < 0 || pi >= count) continue;
                 Color lc = NodeUnlocked(p, parent) ? perkUnlockedColor : new Color(1f, 1f, 1f, 0.3f);
-                float x0 = pos[pi].x + nodeSize.x, y0 = pos[pi].y + nodeSize.y * 0.5f;
-                float x1 = pos[i].x, y1 = pos[i].y + nodeSize.y * 0.5f;
+                float x0 = pos[pi].x + nodeSize.x, y0 = pos[pi].y + nodeH * 0.5f;
+                float x1 = pos[i].x, y1 = pos[i].y + nodeH * 0.5f;
                 float mid = (x0 + x1) * 0.5f;
                 if (line + 3 <= treeLines.Count)
                 {

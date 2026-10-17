@@ -39,7 +39,7 @@ public partial class PixelSkills : MonoBehaviour
         [TextArea(1, 3)] public string description = "";
         [Tooltip("Id of the node that must be unlocked first (empty = a root node). Several ids separated by commas = ALL of them are needed (e.g. 'hold,power').")]
         public string requires = "";
-        [Tooltip("Row in the tree (0 = top, 1 and 2 below it, 3 = the bottom row, e.g. Standard's husk branch). The column follows from how many nodes lie above it.")]
+        [Tooltip("Row in the tree (0 = top, then 1, 2, 3, 4 = the lowest; Standard's husk branch uses rows 3 and 4 - with more than 3 rows the nodes get shorter to fit). The column follows from how many nodes lie above it.")]
         public int row = 1;
         [Min(0)]
         [Tooltip("The skill must have reached this level before the node can be unlocked (0 = no level needed). Holds a root node back until later, e.g. Standard's Chain Crush at level 4.")]
@@ -615,6 +615,7 @@ public partial class PixelSkills : MonoBehaviour
                 new TreeNode { id = "chaincrush", displayName = "Chain Crush", description = "Crushing a husk (right-click it) also crushes the husks of the SAME type touching it, and the ones touching those.", row = 3, cost = 1, minLevel = 4, column = 1, implemented = true },
                 new TreeNode { id = "cleanbreak", displayName = "Clean Break", description = "Every husk you crush gives the husks lying around it a few seconds of their time back before they fade.", requires = "chaincrush", row = 3, cost = 2, minLevel = 6, implemented = true },
                 new TreeNode { id = "hardhands", displayName = "Hard Hands", description = "Crushing a husk gives more XP (still well below a click).", requires = "cleanbreak", row = 3, cost = 2, minLevel = 9, implemented = true },
+                new TreeNode { id = "chargecrush", displayName = "Charge Crush", description = "HOLD the right mouse button on a husk: a ring grows round it the longer you hold. Let go and an arc jumps to every husk of the SAME type inside the ring - touching or not - and crushes them all. A quick click is still Chain Crush. Short cooldown after a charged crush.", requires = "chaincrush", row = 4, cost = 2, minLevel = 7, implemented = true },
             };
         if (id == WoodcuttingId)
             return new[]

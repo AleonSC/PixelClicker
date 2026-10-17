@@ -16,6 +16,16 @@
 //     (chainStepSeconds), at most chainMax extra; 'cleanbreak' Clean Break (level 6): every crush gives the husks within cleanBreakRadius widths
 //     cleanBreakSeconds of their lived time back (OldPixelDespawn.GiveBackTime); 'hardhands' Hard Hands (level 9): crush XP x hardHandsFactor (1.6 =
 //     40% of a click).
+//   - CHARGE CRUSH ('chargecrush', level 7, needs Chain Crush; row 4 of the tree): a quick CLICK on a husk is still the crush above (Chain Crush
+//     included) - with the node owned the crush happens when the button comes UP, so a press can still turn into a hold. HOLDING right on a husk
+//     for holdDelay (0.25 s) starts a charge (mirrors Power Click): a ring on the floor round the husk grows from startReach to maxReach husk widths
+//     over chargeSeconds, with the rising 'remove_buildup' whine (stretched to the charge time, like PixelHold) and Power Click's 'snitch_ready'
+//     ding + a gold pulsing ring at full. Letting go (any time after the charge started) crushes the held husk and sends an arc (a short jagged
+//     line) to every husk of the SAME type inside the ring, touching or not, nearest first (arcStepSeconds apart, at most maxTargets); every one is
+//     a normal crush (same XP rules, Clean Break, never currency). Then a cooldown (cooldownSeconds 8): holding a husk meanwhile shows a grey
+//     ring of the time left and letting go just crushes it like a click. Whose press it is comes from PixelRightClick.PressOwner (a press that
+//     started on a husk stays the husk's while held, so Block Hold never starts from it). A charge is dropped (no cooldown) in a menu, a takeover
+//     minigame, first person or frozen time. Stat husk.chargecrush.
 //   - First-time tip 'husk_crush' (PixelHints) once tipAfterClicks manual clicks were made and a crushable husk lies about (not during the intro).
 //   Stats: husk.crushed, husk.crushed.xp. Nothing saved.
 // ---------------------------------------------------
@@ -90,12 +100,55 @@ public class PixelHuskCrush : MonoBehaviour
     [Tooltip("Crush XP is multiplied by this (1.6 with the 0.25 share = 40% of a click: still well below a click).")]
     [SerializeField] private float hardHandsFactor = 1.6f;
 
+    [Header("Charge Crush (Standard tree, level 7)")]
+    [Min(0.05f)]
+    [Tooltip("Seconds you must keep holding right on a husk before the charge starts (a shorter press is a normal click crush).")]
+    [SerializeField] private float holdDelay = 0.25f;
+
+    [Min(0.1f)]
+    [Tooltip("Seconds of holding for the ring to reach its full size.")]
+    [SerializeField] private float chargeSeconds = 1.5f;
+
+    [Min(0f)]
+    [Tooltip("Radius of the ring when the charge starts, in husk widths.")]
+    [SerializeField] private float startReach = 1.5f;
+
+    [Min(0.5f)]
+    [Tooltip("Radius of the ring at full charge (the most it can reach), in husk widths.")]
+    [SerializeField] private float maxReach = 8f;
+
+    [Min(0f)]
+    [Tooltip("Seconds after a charged crush before the next charge can start (a click crush works meanwhile).")]
+    [SerializeField] private float cooldownSeconds = 8f;
+
+    [Min(1)]
+    [Tooltip("Most husks one charged crush can take (the nearest ones first).")]
+    [SerializeField] private int maxTargets = 40;
+
+    [Min(0f)]
+    [Tooltip("Seconds between two arcs of a charged crush (nearest husk first).")]
+    [SerializeField] private float arcStepSeconds = 0.035f;
+
+    [Min(0.05f)]
+    [Tooltip("Seconds an arc stays visible while it fades.")]
+    [SerializeField] private float arcSeconds = 0.25f;
+
+    [Tooltip("Colour of the ring while it grows.")]
+    [SerializeField] private Color ringColor = new Color(1f, 1f, 1f, 0.85f);
+
+    [Tooltip("Colour of the ring at full charge, and of the arcs.")]
+    [SerializeField] private Color readyColor = new Color(1f, 0.82f, 0.25f, 1f);
+
+    [Tooltip("Colour of the ring that shows the cooldown left (shown while you hold a husk during the cooldown).")]
+    [SerializeField] private Color cooldownColor = new Color(0.6f, 0.65f, 0.75f, 0.6f);
+
     [Header("Tip")]
     [Min(0)]
     [Tooltip("The first-time tip 'Right-click a husk to crush it' shows after this many manual clicks, once a husk lies on the floor.")]
     [SerializeField] private int tipAfterClicks = 12;
 
-    private const string ChainNode = "chaincrush", CleanNode = "cleanbreak", HardNode = "hardhands";
+    private const string ChainNode = "chaincrush", CleanNode = "cleanbreak", HardNode = "hardhands", ChargeNode = "chargecrush";
+    private const string BuildupSound = "remove_buildup";
 
     private static PixelHuskCrush instance;
     private PixelClicker clicker;
@@ -117,6 +170,8 @@ public class PixelHuskCrush : MonoBehaviour
     private void OnDestroy()
     {
         if (instance == this) instance = null;
+        if (charging) PixelAudio.Stop(BuildupSound);
+        if (lineMaterial != null) Destroy(lineMaterial);
     }
 
     /// <summary>Can this body be crushed by hand now? (A loose husk on the floor, not kept by a machine, not a rare collectible.)</summary>
@@ -150,16 +205,231 @@ public class PixelHuskCrush : MonoBehaviour
         if (!CrushableType(type)) return "";
         PixelSkills skills = PixelSkills.Instance;
         string skill = skills != null ? skills.HuskSkillName(type) : "Standard";
-        return " Right-click it to crush it for a little " + skill + " XP.";
+        return " Right-click it to crush it for a little " + skill + " XP." + (PixelSkills.HasStandardNode(ChargeNode) ? " Hold right on it to charge a Charge Crush: every husk of its type inside the ring is crushed too." : "");
     }
 
     private void Update()
     {
         if (clicker == null) { clicker = PixelFind.Cached<PixelClicker>(); if (clicker == null) return; }
+        if (cooldownLeft > 0f && !PixelCalm.InMenu) cooldownLeft -= Time.unscaledDeltaTime;
         UpdateTip();
-        if (!crushEnabled || !PixelInput.RightPressed()) return;
-        Rigidbody target = PixelRightClick.Husk;
-        if (target != null) Crush(target);
+        UpdateArcs();
+        if (!crushEnabled) { CancelCharge(); return; }
+        if (state == ChargeState.Idle)
+        {
+            if (!PixelInput.RightPressed() || PixelRightClick.PressOwner != PixelRightClick.Owner.Husk) { ShowRing(false); return; }
+            Rigidbody target = PixelRightClick.Husk;
+            if (target == null) return;
+            if (!PixelSkills.HasStandardNode(ChargeNode)) { Crush(target); return; }   // no Charge Crush: the crush happens on the press
+            state = ChargeState.Pressed;   // with it, wait: a quick release is a click crush, a hold becomes a charge
+            pressTarget = target;
+            pressTime = Time.unscaledTime;
+            chargeTier = PixelHuskQuery.Get(target).Tier;
+            chargeCentre = target.position;
+            return;
+        }
+        UpdateCharge();
+    }
+
+    // ------------------------------------------------------------------
+    // Charge Crush: hold right on a husk, a ring grows, let go and arcs crush every same-type husk inside it
+    // ------------------------------------------------------------------
+
+    private enum ChargeState { Idle, Pressed, Charging }
+    private ChargeState state = ChargeState.Idle;
+    private Rigidbody pressTarget;
+    private float pressTime, charge, cooldownLeft;
+    private int chargeTier = -1;
+    private Vector3 chargeCentre;
+    private bool charging, fullDinged;
+
+    private float ChargeTime => Mathf.Max(0.1f, chargeSeconds);
+    private float ReachWorld => Mathf.Lerp(Mathf.Max(0f, startReach), Mathf.Max(startReach, maxReach), charge) * clicker.OldPixelWorldSize;
+
+    /// <summary>Things that drop a charge: menus, takeover minigames, first person, time frozen by something other than Time Stop.</summary>
+    private static bool ChargeBlocked() =>
+        PixelCalm.InMenu || PixelMinigame.TakeoverActive || PixelFirstPerson.Active || (Time.timeScale <= 0f && !PixelTimeStop.IsStopped);
+
+    private void UpdateCharge()
+    {
+        if (ChargeBlocked()) { CancelCharge(); return; }
+        if (pressTarget != null) chargeCentre = pressTarget.position;   // (the ring follows the husk while it rolls; it stays put once the husk is gone)
+        if (state == ChargeState.Pressed)
+        {
+            if (!PixelInput.RightHeld())   // a click: the normal crush (Chain Crush included)
+            {
+                Rigidbody target = pressTarget;
+                CancelCharge();
+                if (target != null) Crush(target);
+                return;
+            }
+            if (Time.unscaledTime - pressTime < holdDelay) return;
+            if (cooldownLeft > 0f) { ShowCooldownRing(); return; }   // still cooling down: letting go is a click crush
+            state = ChargeState.Charging;
+            charge = 0f;
+            charging = true;
+            fullDinged = false;
+            PixelAudio.Play(BuildupSound, PixelSynth.BuildupSeconds / ChargeTime);   // the rising whine, stretched to last the whole charge
+        }
+
+        if (!PixelInput.RightHeld()) { FireCharge(); return; }
+        charge = Mathf.Clamp01(charge + Time.unscaledDeltaTime / ChargeTime);
+        if (charge >= 1f && !fullDinged) { fullDinged = true; PixelAudio.Play("snitch_ready", 1.3f); }   // full: Power Click's ready ding
+        ShowChargeRing();
+    }
+
+    /// <summary>Drops the press / charge without doing anything (no cooldown).</summary>
+    private void CancelCharge()
+    {
+        if (charging) PixelAudio.Stop(BuildupSound);
+        charging = false;
+        state = ChargeState.Idle;
+        pressTarget = null;
+        charge = 0f;
+        ShowRing(false);
+    }
+
+    /// <summary>Let go after charging: the held husk and every husk of its type inside the ring are crushed, nearest first, each reached by an arc.</summary>
+    private void FireCharge()
+    {
+        float reach = ReachWorld;
+        Vector3 centre = chargeCentre;
+        int tier = chargeTier;
+        Rigidbody first = pressTarget;
+        CancelCharge();
+        cooldownLeft = Mathf.Max(0f, cooldownSeconds);
+
+        List<Rigidbody> targets = new List<Rigidbody>();
+        if (CanCrush(clicker, first)) targets.Add(first);
+        PixelHuskQuery.Near(clicker, centre, reach, near, true);
+        near.Sort((a, b) => (a.body.position - centre).sqrMagnitude.CompareTo((b.body.position - centre).sqrMagnitude));
+        int cap = Mathf.Max(1, maxTargets);
+        for (int i = 0; i < near.Count && targets.Count < cap; i++)
+        {
+            Rigidbody b = near[i].body;
+            if (b != first && near[i].Tier == tier && CanCrush(clicker, b)) targets.Add(b);
+        }
+        near.Clear();
+        PixelAudio.Play("overcharge", 1.4f);   // the release zap (Power Click's fire sound, a little higher)
+        PixelStats.Count("husk.chargecrush");
+        if (targets.Count > 0) StartCoroutine(ArcCrush(centre, tier, targets));
+    }
+
+    private IEnumerator ArcCrush(Vector3 centre, int tier, List<Rigidbody> targets)
+    {
+        float step = Mathf.Max(0f, arcStepSeconds);
+        for (int i = 0; i < targets.Count; i++)
+        {
+            Rigidbody b = targets[i];
+            if (!CanCrush(clicker, b)) continue;   // (taken by a machine, picked up or faded meanwhile)
+            if (i > 0 && step > 0f) yield return new WaitForSeconds(step);
+            if (!CanCrush(clicker, b)) continue;
+            if ((b.position - centre).sqrMagnitude > 0.0001f) ShowArc(centre, b.position);
+            CrushOne(b, tier, i == 0 ? shardCount : chainShardCount, 1f + 0.02f * Mathf.Min(i, 15));   // (the crunches climb a little, like a streak)
+        }
+    }
+
+    // ---- Look: the floor ring and the arcs (world-space lines, Sprites/Default) ----
+
+    private const int RingPoints = 64;
+    private Material lineMaterial;
+    private LineRenderer ring;
+
+    private struct Arc { public LineRenderer line; public float age; }
+    private readonly List<Arc> arcs = new List<Arc>();
+    private readonly List<LineRenderer> spareArcs = new List<LineRenderer>();
+
+    private LineRenderer MakeLine(string name)
+    {
+        if (lineMaterial == null) lineMaterial = new Material(PixelShaders.SpriteDefault());
+        GameObject go = new GameObject(name, typeof(LineRenderer));
+        go.transform.SetParent(transform, false);
+        LineRenderer lr = go.GetComponent<LineRenderer>();
+        lr.sharedMaterial = lineMaterial;
+        lr.useWorldSpace = true;
+        lr.alignment = LineAlignment.View;
+        lr.numCapVertices = 3;
+        lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        lr.receiveShadows = false;
+        return lr;
+    }
+
+    private void ShowRing(bool show)
+    {
+        if (ring != null && ring.gameObject.activeSelf != show) ring.gameObject.SetActive(show);
+    }
+
+    /// <summary>The ring on the floor round the charging husk: its radius is the reach, it brightens to gold and pulses at full.</summary>
+    private void ShowChargeRing()
+    {
+        float pulse = charge >= 1f ? 1f + 0.05f * Mathf.Sin(Time.unscaledTime * 18f) : 1f;
+        Color c = charge >= 1f ? readyColor : Color.Lerp(ringColor, readyColor, charge * 0.5f);
+        DrawRing(ReachWorld * pulse, 1f, c, charge >= 1f ? 0.09f : 0.06f);
+    }
+
+    /// <summary>During the cooldown: a small grey ring round the held husk, as much of it drawn as there is cooldown left.</summary>
+    private void ShowCooldownRing()
+    {
+        float left = cooldownSeconds > 0f ? Mathf.Clamp01(cooldownLeft / cooldownSeconds) : 0f;
+        DrawRing(Mathf.Max(1f, startReach) * clicker.OldPixelWorldSize, left, cooldownColor, 0.04f);
+    }
+
+    private void DrawRing(float radius, float fill, Color color, float widthInHusks)
+    {
+        if (ring == null) ring = MakeLine("Charge Crush Ring");
+        ShowRing(true);
+        int points = Mathf.Max(2, Mathf.CeilToInt(RingPoints * Mathf.Clamp01(fill)) + 1);
+        bool whole = fill >= 0.999f;
+        ring.loop = whole;
+        ring.positionCount = whole ? RingPoints : points;
+        float y = chargeCentre.y - clicker.OldPixelWorldSize * 0.45f;   // about the bottom of the husk: on the floor it lies on
+        for (int i = 0; i < ring.positionCount; i++)
+        {
+            float a = (whole ? i / (float)RingPoints : i / (float)(points - 1) * fill) * Mathf.PI * 2f;
+            ring.SetPosition(i, new Vector3(chargeCentre.x + Mathf.Cos(a) * radius, y, chargeCentre.z + Mathf.Sin(a) * radius));
+        }
+        ring.startWidth = ring.endWidth = clicker.OldPixelWorldSize * widthInHusks;
+        ring.startColor = ring.endColor = color;
+    }
+
+    /// <summary>A short jagged arc from the charge centre to a husk; it fades over arcSeconds (UpdateArcs).</summary>
+    private void ShowArc(Vector3 from, Vector3 to)
+    {
+        LineRenderer lr;
+        if (spareArcs.Count > 0) { lr = spareArcs[spareArcs.Count - 1]; spareArcs.RemoveAt(spareArcs.Count - 1); lr.gameObject.SetActive(true); }
+        else lr = MakeLine("Charge Crush Arc");
+        const int n = 8;
+        lr.loop = false;
+        lr.positionCount = n;
+        float size = clicker.OldPixelWorldSize;
+        float lift = Mathf.Min((to - from).magnitude * 0.25f, size * 2f);   // it arcs up a little on the way
+        for (int i = 0; i < n; i++)
+        {
+            float t = i / (float)(n - 1);
+            Vector3 p = Vector3.Lerp(from, to, t) + Vector3.up * Mathf.Sin(t * Mathf.PI) * lift;
+            if (i > 0 && i < n - 1) p += Random.insideUnitSphere * size * 0.25f;   // jagged, like a spark
+            lr.SetPosition(i, p);
+        }
+        lr.startWidth = size * 0.08f;
+        lr.endWidth = size * 0.04f;
+        lr.startColor = lr.endColor = readyColor;
+        arcs.Add(new Arc { line = lr, age = 0f });
+    }
+
+    private void UpdateArcs()
+    {
+        float life = Mathf.Max(0.05f, arcSeconds);
+        for (int i = arcs.Count - 1; i >= 0; i--)
+        {
+            Arc a = arcs[i];
+            a.age += Time.unscaledDeltaTime;
+            if (a.line == null) { arcs.RemoveAt(i); continue; }
+            if (a.age >= life) { a.line.gameObject.SetActive(false); spareArcs.Add(a.line); arcs.RemoveAt(i); continue; }
+            Color c = readyColor;
+            c.a *= 1f - a.age / life;
+            a.line.startColor = a.line.endColor = c;
+            arcs[i] = a;
+        }
     }
 
     /// <summary>Crushes one husk (and, with Chain Crush, the same-type husks touching it).</summary>
