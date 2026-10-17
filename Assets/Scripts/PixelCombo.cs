@@ -4,7 +4,8 @@
 //   clicks build a combo (breaks after 1.2 s idle). Tiered multiplier: tierCombos {10, 50, 200, 500, 1000} / tierMultipliers {1.5, 2,
 //   3, 4, 5}; the highest tier whose combo count is reached (and that the upgrade level unlocked: UnlockedTiers = tiers whose
 //   multiplier <= maxMultiplier) sets Multiplier (x1 below tier 1; Tier); sets PixelClicker.ManualClickBonus every frame (manual
-//   payouts only); meter at the bottom-centre shows the next milestone (nextFormat). Fades out after hideAfterSeconds without manual
+//   payouts only); meter at the bottom-centre shows the next milestone (nextFormat): INSIDE the bottom black bar by default (inBottomBar, barPadding: PlaceMeter scales the
+//   'Meter Root' holder - meter + every tier effect - to fit the bar's height and centres it there; off = just above the bar at meterBottomMargin; MeterTopOffset follows). Fades out after hideAfterSeconds without manual
 //   clicks. It is the last thing to arrive after entering the game (UpdateEntrance: waits for the title screen, the camera intro and
 //   the sliding margins / buttons to finish plus entranceDelaySeconds (0 = 0.6 s), then fades in over entranceFadeSeconds (0 = 1.2 s);
 //   disableEntranceFade). Tier effects (by reached tier, cumulative, runtime-drawn UI sprites): 1 mild shake, 2 yellow flame aura
@@ -89,6 +90,13 @@ public class PixelCombo : MonoBehaviour
 
     [Tooltip("Horizontal shift from the centre of the screen.")]
     [SerializeField] private float horizontalOffset = 0f;
+
+    [Tooltip("Put the meter INSIDE the bottom black bar (centred, scaled down to fit its height; the tier effects scale with it) instead of floating above it. Off = above the bar at 'Meter Bottom Margin'.")]
+    [SerializeField] private bool inBottomBar = true;
+
+    [Min(0f)]
+    [Tooltip("In the bottom bar: the gap between the meter and the bar's top and bottom edges (canvas units).")]
+    [SerializeField] private float barPadding = 8f;
 
     [Tooltip("Text. {0} = combo count, {1} = multiplier.")]
     [SerializeField] private string meterFormat = "Combo {0}   x{1}";
@@ -274,7 +282,11 @@ public class PixelCombo : MonoBehaviour
     private RectTransform barFillRect;
 
     /// <summary>How far above the bottom of the screen the top of the meter is (canvas units); tips use it to sit just above the meter.</summary>
-    public float MeterTopOffset => meterBottomMargin + (PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f) + meterSize.y + 40f;
+    public float MeterTopOffset => InBar ? BarH + 40f : meterBottomMargin + BarH + meterSize.y + 40f;   // (in the bar: boxes only need to clear the bar)
+
+    private static float BarH => PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
+    private bool InBar => inBottomBar && BarH > 20f;   // (no bars = float above the bottom edge as before)
+    private RectTransform meterRoot;   // holds the meter and every effect; scaled down as one piece to fit inside the bar
 
     /// <summary>Is the Combo Meter bought?</summary>
     public bool Active => comboActive;
@@ -493,9 +505,22 @@ public class PixelCombo : MonoBehaviour
         if (baseAlpha < 0f) baseAlpha = group.alpha;
         baseAlpha = targetAlpha > baseAlpha ? targetAlpha : Mathf.MoveTowards(baseAlpha, targetAlpha, Time.unscaledDeltaTime / fadeSeconds);
         group.alpha = baseAlpha * entrance;
-        // Always sit just above the bottom black bar (it may not have existed yet when the meter was built, or its size may change).
-        boxBasePosition = new Vector2(horizontalOffset, meterBottomMargin + (PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f));
+        PlaceMeter();
         UpdateEffects();
+    }
+
+    /// <summary>
+    /// Inside the bottom black bar (inBottomBar): the holder is scaled so the meter fits the bar's height and the meter sits barPadding above its bottom edge.
+    /// Otherwise just above the bar. Done every frame: the bar may not exist yet when the meter is built, or its size may change.
+    /// </summary>
+    private void PlaceMeter()
+    {
+        if (meterRoot == null) return;
+        float bar = BarH;
+        float scale = InBar ? Mathf.Clamp((bar - 2f * barPadding) / Mathf.Max(1f, meterSize.y), 0.2f, 1f) : 1f;
+        if (!Mathf.Approximately(meterRoot.localScale.x, scale)) meterRoot.localScale = new Vector3(scale, scale, 1f);
+        boxBasePosition = InBar ? new Vector2(horizontalOffset / scale, (bar - meterSize.y * scale) * 0.5f / scale)   // (centred in the bar, in the holder's own units)
+                                : new Vector2(horizontalOffset, meterBottomMargin + bar);
     }
 
     private void BuildMeter()
@@ -503,18 +528,23 @@ public class PixelCombo : MonoBehaviour
         canvasRoot = PixelUIKit.CreateCanvas("PixelCombo Canvas", sortingOrder, referenceResolution, false);
         group = canvasRoot.AddComponent<CanvasGroup>();
         group.blocksRaycasts = false;
+        GameObject holder = new GameObject("Meter Root", typeof(RectTransform));
+        holder.transform.SetParent(canvasRoot.transform, false);
+        meterRoot = holder.GetComponent<RectTransform>();
+        PixelUIKit.Stretch(meterRoot);
+        meterRoot.pivot = new Vector2(0.5f, 0f);   // (scales about the bottom middle, where the meter sits)
 
         GameObject box = new GameObject("Combo Meter", typeof(RectTransform), typeof(Image));
-        box.transform.SetParent(canvasRoot.transform, false);
+        box.transform.SetParent(meterRoot, false);
         Image bg = box.GetComponent<Image>();
         bg.color = backgroundColor;
         bg.raycastTarget = false;
         RectTransform br = box.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(0.5f, 0f);
         br.sizeDelta = meterSize;
-        br.anchoredPosition = new Vector2(horizontalOffset, meterBottomMargin + (PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f)); // above the bottom bar
         boxRect = br;
-        boxBasePosition = br.anchoredPosition;
+        PlaceMeter();
+        br.anchoredPosition = boxBasePosition;   // in the bottom bar, or just above it
 
         float barHeight = Mathf.Max(8f, meterSize.y * 0.18f);
 
@@ -625,13 +655,13 @@ public class PixelCombo : MonoBehaviour
         glowTexture.Apply(false, false);
         glowSprite = Sprite.Create(glowTexture, new Rect(0, 0, tw, th), new Vector2(0.5f, 0.5f), 100f);
 
-        Image glow = NewEffectImage("Glow", canvasRoot.transform, glowSprite, new Vector2(0.5f, 0.5f), new Vector2(w, h));
+        Image glow = NewEffectImage("Glow", meterRoot, glowSprite, new Vector2(0.5f, 0.5f), new Vector2(w, h));
         glowImage = glow;
         glowRect = glow.rectTransform;
         glow.gameObject.SetActive(false);
 
         // Explosion flash: the same halo, scaled up for a moment.
-        flashImage = NewEffectImage("Flash", canvasRoot.transform, glowSprite, new Vector2(0.5f, 0.5f), new Vector2(w, h));
+        flashImage = NewEffectImage("Flash", meterRoot, glowSprite, new Vector2(0.5f, 0.5f), new Vector2(w, h));
         flashRect = flashImage.rectTransform;
         flashImage.gameObject.SetActive(false);
 
@@ -661,7 +691,7 @@ public class PixelCombo : MonoBehaviour
         flameSprite = Sprite.Create(flameTexture, new Rect(0, 0, fs, fs), new Vector2(0.5f, 0.5f), 100f);
 
         // Aura flames: a pool of soft sprites that rise around the meter.
-        flameRoot = NewEffectRoot("Flames", canvasRoot.transform);
+        flameRoot = NewEffectRoot("Flames", meterRoot);
         int count = Mathf.Max(1, flameCount);
         flameImages = new Image[count];
         flameAge = new float[count]; flameLife = new float[count]; flameX = new float[count]; flameY = new float[count];
@@ -690,7 +720,7 @@ public class PixelCombo : MonoBehaviour
         hairTexture.Apply(false, false);
         hairSprite = Sprite.Create(hairTexture, new Rect(0, 0, hw, hh), new Vector2(0.5f, 0f), 100f);
 
-        hairRoot = NewEffectRoot("Hair", canvasRoot.transform);
+        hairRoot = NewEffectRoot("Hair", meterRoot);
         int spikes = Mathf.Max(3, hairSpikes);
         hairOuter = new Image[spikes]; hairInner = new Image[spikes];
         hairFrac = new float[spikes]; hairAngle = new float[spikes]; hairLen = new float[spikes]; hairPhase = new float[spikes];
@@ -715,7 +745,7 @@ public class PixelCombo : MonoBehaviour
         hairRoot.SetSiblingIndex(3);
 
         // In front of the meter: lightning and explosion sparks (created last, so they draw last).
-        boltRoot = NewEffectRoot("Lightning", canvasRoot.transform);
+        boltRoot = NewEffectRoot("Lightning", meterRoot);
         int bolts = Mathf.Max(1, lightningBolts);
         boltSegments = new Image[bolts * BoltSegmentCount];
         boltAge = new float[bolts]; boltLife = new float[bolts];
@@ -726,7 +756,7 @@ public class PixelCombo : MonoBehaviour
             boltSegments[i] = seg;
         }
 
-        RectTransform burstRoot = NewEffectRoot("Explosion", canvasRoot.transform);
+        RectTransform burstRoot = NewEffectRoot("Explosion", meterRoot);
         int sparks = Mathf.Max(4, explosionSparks);
         burstImages = new Image[sparks];
         burstAngle = new float[sparks]; burstSpeed = new float[sparks]; burstSize = new float[sparks];
