@@ -1159,7 +1159,19 @@ public static class PixelLooks
     /// A finely divided sheet just above each cube face. <see cref="PixelLookShine"/> animates the vertex alpha so a soft diagonal band of light
     /// sweeps across (a plain four-corner quad could only blink as a white rectangle).
     /// </summary>
+    // (cached like the edge meshes: PixelLookShine copies the mesh for each cube, so the original must be shared, not made again per cube and orphaned)
+    private static readonly Dictionary<int, Mesh> shineMeshes = new Dictionary<int, Mesh>();
+
     private static Mesh ShineMesh(Vector3 size, bool jagged = false, int seed = 0)
+    {
+        int key = unchecked(size.GetHashCode() * 31 + (jagged ? 977 : 0) + seed * 7919);
+        if (shineMeshes.TryGetValue(key, out Mesh cached) && cached != null) return cached;
+        Mesh mesh = BuildShineMesh(size, jagged, seed);
+        shineMeshes[key] = mesh;
+        return mesh;
+    }
+
+    private static Mesh BuildShineMesh(Vector3 size, bool jagged, int seed)
     {
         Vector3[] normals = { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
         List<Vector3> v = new List<Vector3>();

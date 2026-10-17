@@ -370,7 +370,8 @@ public class PixelMeteorMinigame : PixelMinigame
         trail.widthCurve = new AnimationCurve(new Keyframe(0f, 1f, 0f, -0.5f), new Keyframe(0.3f, 0.66f), new Keyframe(1f, 0f, -1.3f, 0f)); // gently curved taper
         trail.alignment = LineAlignment.View;
         Shader trailShader = PixelShaders.SpriteDefault();
-        trail.sharedMaterial = trailShader != null ? new Material(trailShader) : clicker.CreateVisualMaterial(flameColor, true);
+        if (trailMaterial == null) trailMaterial = trailShader != null ? new Material(trailShader) : clicker.CreateVisualMaterial(flameColor, true);   // (one for every meteor: the colours come from the gradient)
+        trail.sharedMaterial = trailMaterial;
         Gradient gradient = new Gradient();
         gradient.SetKeys(
             new[] { new GradientColorKey(Color.Lerp(flameColor, Color.white, 0.4f), 0f), new GradientColorKey(flameColor, 0.35f), new GradientColorKey(new Color(flameColor.r * 0.6f, 0.1f, 0.05f), 1f) },
@@ -635,8 +636,7 @@ public class PixelMeteorMinigame : PixelMinigame
         if (shader != null)
         {
             if (haloSprite == null) haloSprite = BuildSoftSprite();
-            Material m = new Material(shader) { mainTexture = haloSprite.texture };
-            renderer.sharedMaterial = m;
+            renderer.sharedMaterial = ParticleMaterial(shader, haloSprite.texture);
         }
         renderer.renderMode = ParticleSystemRenderMode.Billboard;
         system.Play();
@@ -649,6 +649,18 @@ public class PixelMeteorMinigame : PixelMinigame
     // ------------------------------------------------------------------
 
     private static Texture2D chipTexture;
+
+    // The trail and particle materials never change, so every meteor shares them (each meteor used to make ~5 new ones that were never freed).
+    private static Material trailMaterial;
+    private static readonly System.Collections.Generic.Dictionary<Texture, Material> particleMaterials = new System.Collections.Generic.Dictionary<Texture, Material>();
+
+    private static Material ParticleMaterial(Shader shader, Texture texture)
+    {
+        if (texture != null && particleMaterials.TryGetValue(texture, out Material cached) && cached != null) return cached;
+        Material m = new Material(shader) { mainTexture = texture };
+        if (texture != null) particleMaterials[texture] = m;
+        return m;
+    }
 
     private ParticleSystem MakeBurstSystem(Transform parent, string objectName, Texture texture, int max)
     {
@@ -680,7 +692,7 @@ public class PixelMeteorMinigame : PixelMinigame
         drag.limit = 1000f;
         ParticleSystemRenderer renderer = go.GetComponent<ParticleSystemRenderer>();
         Shader shader = PixelShaders.SpriteDefault();
-        if (shader != null) renderer.sharedMaterial = new Material(shader) { mainTexture = texture };
+        if (shader != null) renderer.sharedMaterial = ParticleMaterial(shader, texture);
         renderer.renderMode = ParticleSystemRenderMode.Billboard;
         renderer.sortingOrder = 2;
         return system;

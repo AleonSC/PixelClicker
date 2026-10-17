@@ -501,6 +501,15 @@ public class PixelWeakspotMinigame : PixelMinigame
         return s;
     }
 
+    // (each spot has its own two materials - they are tinted per spot - so they go together with the spot)
+    private void DestroySpot(Spot s)
+    {
+        if (s.root != null) Destroy(s.root.gameObject);
+        if (s.mat != null) Destroy(s.mat);
+        if (s.ringMat != null) Destroy(s.ringMat);
+        s.mat = s.ringMat = null;
+    }
+
     private Material MakeMat(Texture2D tex)
     {
         Material m = new Material(PixelShaders.SpriteDefault());
@@ -677,7 +686,7 @@ public class PixelWeakspotMinigame : PixelMinigame
 
     private void BeginZoomOut()
     {
-        foreach (Spot s in spots) if (s.root != null) Destroy(s.root.gameObject);
+        foreach (Spot s in spots) DestroySpot(s);
         spots.Clear();
         phase = Phase.ZoomOut;
         phaseT = 0f;
@@ -697,7 +706,7 @@ public class PixelWeakspotMinigame : PixelMinigame
     private void FinishRound()
     {
         if (surface != null) { Destroy(surface.gameObject); surface = null; }
-        foreach (Spot s in spots) if (s.root != null) Destroy(s.root.gameObject);
+        foreach (Spot s in spots) DestroySpot(s);
         spots.Clear();
         if (slowed || !Mathf.Approximately(Time.timeScale, 1f) && !PixelPauseMenu.IsPaused && !PixelTimeStop.IsStopped && !PixelTimeStop.IsSlowed)
             ApplySlow(false);

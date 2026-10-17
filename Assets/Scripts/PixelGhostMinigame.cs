@@ -815,8 +815,12 @@ public class PixelGhostMinigame : PixelMinigame
         "..OOOOOOOOOOOOOO..",
     };
 
+    private static Sprite sharedBackpack;
+
+    /// <summary>The backpack picture (made once and shared: the Dragon / God / Egg shows used to make a new texture + sprite each time and never free them). Do not destroy it.</summary>
     public static Sprite BuildBackpackSprite()
     {
+        if (sharedBackpack != null) return sharedBackpack;
         int h = BackpackRows.Length, w = BackpackRows[0].Length;
         Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
         Color32 clear = new Color32(0, 0, 0, 0);
@@ -832,7 +836,8 @@ public class PixelGhostMinigame : PixelMinigame
             }
         }
         tex.Apply(false, false);
-        return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f);
+        sharedBackpack = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f);
+        return sharedBackpack;
     }
 
     private void EnsureBackpack()
