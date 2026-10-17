@@ -368,7 +368,7 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Shown in the floor style picker when the scene has no floor to restyle.")]
     [SerializeField] private string noFloorText = "No floor found";
 
-    [Tooltip("Colour of the floor style and sky pickers' arrow buttons.")]
+    [Tooltip("Colour of the floor / sky pop-out box's arrow buttons.")]
     [SerializeField] private Color floorArrowColor = new Color(0.25f, 0.25f, 0.3f, 1f);
 
     [Tooltip("Label of the master volume slider.")]
@@ -814,7 +814,6 @@ public class PixelPauseMenu : MonoBehaviour
         if (floorPopout != null || first == null || !first.Usable) return;
         popSource = source;
         popTitle = popoutTitle;
-        CloseLookList();
         if (menuRoot != null) menuRoot.SetActive(false);
 
         floorPopout = new GameObject("Floor Popout", typeof(RectTransform), typeof(Image));
@@ -3079,8 +3078,11 @@ public class PixelPauseMenu : MonoBehaviour
             settingsRefreshers.Add(() => toggle.SetIsOnWithoutNotify(getToggle()));
         }
 
-        // One drop-down button: picture + name + a down arrow. The list opens over everything (see OpenLookList).
-        Button pick = MakeButton(row, labelText + " Picker", "", new Vector2(10f, 10f), tickBoxColor, rowFontSize * 0.8f);
+        // The shared look drop-down (PixelUIKit.CreateLookDropdown): picture + name, and a list of every look with its picture.
+        // Its box is as tall as the row's other controls, and the list's entries are as tall as the box (the bigger look rows).
+        PixelLookDropdown pick = PixelUIKit.CreateLookDropdown(font, row, labelText + " Picker", new Vector2(10f, rowHeight * 0.88f),
+                                                               tickBoxColor, tickBoxColor, statValueColor, rowFontSize * 0.7f, source, escapeMasks: true);
+        pick.unusableText = noFloorText;
         RectTransform pr = pick.GetComponent<RectTransform>();
         pr.anchorMin = new Vector2(0.42f, 0.06f);
         pr.anchorMax = new Vector2(1f, 0.94f);
@@ -3089,7 +3091,7 @@ public class PixelPauseMenu : MonoBehaviour
         if (popout)
         {
             // A small 'pop-out' button right of the picker: closes the settings and opens a draggable box for this look (floor or sky).
-            pr.offsetMax = new Vector2(-(rowHeight * 0.8f + 10f), 0f);
+            pr.offsetMax = new Vector2(-(rowHeight * 0.8f + 10f), 0f);   // (room for it)
             Button pop = MakeButton(row, "Look Popout Button", "", new Vector2(rowHeight * 0.8f, rowHeight * 0.88f), menuButtonColor, rowFontSize * 0.7f);
             RectTransform pbr = pop.GetComponent<RectTransform>();
             pbr.anchorMin = pbr.anchorMax = pbr.pivot = new Vector2(1f, 0.5f);
@@ -3112,164 +3114,8 @@ public class PixelPauseMenu : MonoBehaviour
             pop.onClick.AddListener(() => OpenLookPopout(source, labelText));
         }
 
-        float icon = rowHeight * 0.7f;
-        GameObject swatchGo = new GameObject("Preview", typeof(RectTransform), typeof(RawImage));
-        swatchGo.transform.SetParent(pick.transform, false);
-        RawImage swatch = swatchGo.GetComponent<RawImage>();
-        swatch.raycastTarget = false;
-        RectTransform sr = swatchGo.GetComponent<RectTransform>();
-        sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0f, 0.5f);
-        sr.sizeDelta = new Vector2(icon, icon);
-        sr.anchoredPosition = new Vector2(8f, 0f);
-
-        TMP_Text nameText = pick.GetComponentInChildren<TMP_Text>();
-        nameText.color = statValueColor;
-        nameText.alignment = TextAlignmentOptions.MidlineLeft;
-        nameText.enableAutoSizing = true;
-        nameText.fontSizeMax = rowFontSize * 0.7f;
-        nameText.fontSizeMin = 12f;
-        nameText.overflowMode = TextOverflowModes.Truncate;
-        RectTransform nr = nameText.rectTransform;
-        nr.anchorMin = Vector2.zero;
-        nr.anchorMax = Vector2.one;
-        nr.offsetMin = new Vector2(icon + 18f, 0f);
-        nr.offsetMax = new Vector2(-icon - 6f, 0f);
-
-        Button arrow = MakeButton(pick.transform, "Arrow", ">", new Vector2(icon * 0.7f, icon * 0.7f), floorArrowColor, rowFontSize);
-        RectTransform ar = arrow.GetComponent<RectTransform>();
-        ar.anchorMin = ar.anchorMax = ar.pivot = new Vector2(1f, 0.5f);
-        ar.anchoredPosition = new Vector2(-8f, 0f);
-        PixelUIKit.UseArrowGlyph(arrow, false);
-        ar.localRotation = Quaternion.Euler(0f, 0f, -90f);   // points down
-
-        System.Action refresh = () =>
-        {
-            CloseLookList();
-            IPixelLookSource look = source();
-            bool usable = look != null && look.Usable;
-            nameText.text = usable ? look.StyleName(look.Current) : noFloorText;
-            swatch.texture = usable ? look.PreviewTexture(look.Current) : null;
-            swatch.color = usable ? look.PreviewColor(look.Current) : new Color(1f, 1f, 1f, 0.15f);
-            swatch.uvRect = usable ? look.PreviewRect : new Rect(0f, 0f, 1f, 1f);
-        };
-        System.Action open = () =>
-        {
-            IPixelLookSource look = source();
-            if (look == null || !look.Usable) return;
-            OpenLookList(pr, look, refresh);
-        };
-        pick.onClick.AddListener(() => open());
-        arrow.onClick.AddListener(() => open());
-
-        settingsRefreshers.Add(refresh);
+        settingsRefreshers.Add(() => pick.Refresh(true));
         y += rowHeight + 6f;
-    }
-
-    private GameObject lookListRoot;
-
-    private void CloseLookList()
-    {
-        if (lookListRoot != null) Destroy(lookListRoot);
-        lookListRoot = null;
-    }
-
-    /// <summary>The look drop-down: a list of every look (picture + name) that opens under (or above) the button, over the whole menu.</summary>
-    private void OpenLookList(RectTransform anchor, IPixelLookSource look, System.Action refresh)
-    {
-        CloseLookList();
-        RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
-
-        lookListRoot = new GameObject("Look List", typeof(RectTransform));
-        lookListRoot.transform.SetParent(canvasRoot.transform, false);
-        PixelUIKit.Stretch(lookListRoot.GetComponent<RectTransform>());
-
-        // Full-screen catcher: a click anywhere else closes the list. It sits BESIDE the list box, not around it:
-        // as the box's parent it would also take presses on the scroll bar (Unity hands a click to the nearest
-        // click handler above what was pressed), so letting go of a dragged scroll bar closed the list.
-        GameObject catcher = new GameObject("Click Catcher", typeof(RectTransform), typeof(Image), typeof(Button));
-        catcher.transform.SetParent(lookListRoot.transform, false);
-        catcher.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.01f);
-        PixelUIKit.Stretch(catcher.GetComponent<RectTransform>());
-        catcher.GetComponent<Button>().onClick.AddListener(CloseLookList);
-
-        Vector3[] corners = new Vector3[4];
-        anchor.GetWorldCorners(corners);
-        Vector2 bl = canvasRect.InverseTransformPoint(corners[0]);
-        Vector2 tr = canvasRect.InverseTransformPoint(corners[2]);
-        float width = tr.x - bl.x;
-        float itemH = rowHeight * 0.85f;
-        int count = look.StyleCount;
-        float height = Mathf.Min(count, 6) * itemH + 12f;
-        float below = bl.y - (-canvasRect.rect.height * 0.5f);   // room under the button
-        bool goUp = below < height + 20f;
-
-        GameObject boxGo = new GameObject("Box", typeof(RectTransform), typeof(Image));
-        boxGo.transform.SetParent(lookListRoot.transform, false);
-        Image boxImage = boxGo.GetComponent<Image>();
-        boxImage.color = tickBoxColor;
-        PixelUIKit.StyleBox(boxImage, true);
-        RectTransform box = boxGo.GetComponent<RectTransform>();
-        box.anchorMin = box.anchorMax = new Vector2(0.5f, 0.5f);
-        box.pivot = new Vector2(0f, goUp ? 0f : 1f);
-        box.sizeDelta = new Vector2(width, height);
-        box.anchoredPosition = goUp ? new Vector2(bl.x, tr.y + 4f) : new Vector2(bl.x, bl.y - 4f);
-
-        ScrollRect scroll = PixelUIKit.CreateScrollView(boxGo.transform, "List", scrollbarColor, 10f, itemH,
-                                                        out RectTransform content, out GameObject bar);
-        RectTransform vr = scroll.GetComponent<RectTransform>();
-        vr.anchorMin = Vector2.zero;
-        vr.anchorMax = Vector2.one;
-        vr.offsetMin = new Vector2(6f, 6f);
-        vr.offsetMax = new Vector2(-6f, -6f);
-
-        float icon = itemH * 0.75f;
-        for (int i = 0; i < count; i++)
-        {
-            int index = i;
-            Button item = MakeButton(content, "Look " + i, look.StyleName(i), new Vector2(10f, itemH - 4f),
-                                     i == look.Current ? floorArrowColor : tickBoxColor, rowFontSize * 0.7f);
-            RectTransform ir = item.GetComponent<RectTransform>();
-            ir.anchorMin = new Vector2(0f, 1f);
-            ir.anchorMax = new Vector2(1f, 1f);
-            ir.pivot = new Vector2(0.5f, 1f);
-            ir.sizeDelta = new Vector2(-14f, itemH - 4f);
-            ir.anchoredPosition = new Vector2(0f, -i * itemH);
-
-            TMP_Text t = item.GetComponentInChildren<TMP_Text>();
-            t.alignment = TextAlignmentOptions.MidlineLeft;
-            t.enableAutoSizing = true;
-            t.fontSizeMax = rowFontSize * 0.7f;
-            t.fontSizeMin = 12f;
-            t.overflowMode = TextOverflowModes.Truncate;
-            t.rectTransform.offsetMin = new Vector2(icon + 18f, 0f);
-            t.rectTransform.offsetMax = new Vector2(-6f, 0f);
-
-            GameObject pic = new GameObject("Preview", typeof(RectTransform), typeof(RawImage));
-            pic.transform.SetParent(item.transform, false);
-            RawImage ri = pic.GetComponent<RawImage>();
-            ri.raycastTarget = false;
-            ri.texture = look.PreviewTexture(i);
-            ri.color = look.PreviewColor(i);
-            ri.uvRect = look.PreviewRect;
-            RectTransform pr2 = pic.GetComponent<RectTransform>();
-            pr2.anchorMin = pr2.anchorMax = pr2.pivot = new Vector2(0f, 0.5f);
-            pr2.sizeDelta = new Vector2(icon, icon);
-            pr2.anchoredPosition = new Vector2(8f, 0f);
-
-            item.onClick.AddListener(() =>
-            {
-                look.SetStyle(index);
-                CloseLookList();
-                refresh();
-            });
-        }
-        PixelUIKit.UpdateScrollView(scroll, bar, count * itemH, height - 12f);
-        PixelScrollKeep keepAt = scroll.gameObject.AddComponent<PixelScrollKeep>();   // (set again for a few frames: the list's layout is still settling)
-        keepAt.content = content; keepAt.viewport = vr; keepAt.index = look.Current; keepAt.count = count; keepAt.itemHeight = itemH;
-        // Bring the current look into view.
-        float visible = height - 12f;
-        float want = Mathf.Max(0f, look.Current * itemH - visible * 0.5f + itemH * 0.5f);
-        content.anchoredPosition = new Vector2(0f, Mathf.Min(want, Mathf.Max(0f, count * itemH - visible)));
     }
 
     private string FormatCount(double value)

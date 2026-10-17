@@ -477,9 +477,8 @@ public class PixelLookStudio : MonoBehaviour
         else if (t.IsEnum)
         {
             Array values = Enum.GetValues(t);
-            TMP_Dropdown dd = PixelUIKit.CreateDropdown(font, r.rect, "Choice", new Vector2(RowW - 326f, 34f), Box, Box, TextColor, FontSize - 3f);
+            TMP_Dropdown dd = PixelUIKit.CreateDropdown(font, r.rect, "Choice", new Vector2(RowW - 326f, 34f), Box, Box, TextColor, FontSize - 3f, escapeMasks: true);
             PlaceTL(dd.GetComponent<RectTransform>(), 318f, 3f, RowW - 326f, 34f);
-            PixelUIKit.LetListEscapeMasks(dd);
             List<string> names = new List<string>();
             foreach (object v in values) names.Add(Nice(v.ToString()));
             dd.ClearOptions();

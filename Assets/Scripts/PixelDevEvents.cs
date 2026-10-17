@@ -72,8 +72,7 @@ public class PixelDevEvents : MonoBehaviour
 
         float y = 8f;
         PixelDevUI.Heading(root, "Tips", 10f, y, 400f); y += 38f;
-        tipDropdown = PixelDevUI.Dropdown(root, "Tip", 10f, y, DropW, RowH, PixelDevUI.FontSize - 3f);
-        PixelUIKit.LetListEscapeMasks(tipDropdown);
+        tipDropdown = PixelDevUI.Dropdown(root, "Tip", 10f, y, DropW, RowH, PixelDevUI.FontSize - 3f, escapeMasks: true);
         PixelDevUI.Button(root, "Show tip", BtnX, y, BtnW, RowH, PixelDevUI.Green, ShowTip); y += RowH + 8f;
         PixelDevUI.Button(root, "Forget all seen tips", 10f, y, 330f, RowH, PixelDevUI.ButtonColor, () =>
         {
@@ -88,8 +87,7 @@ public class PixelDevEvents : MonoBehaviour
         y += RowH + 18f;
 
         PixelDevUI.Heading(root, "Tutorials", 10f, y, 400f); y += 38f;
-        tutorialDropdown = PixelDevUI.Dropdown(root, "Tutorial", 10f, y, DropW, RowH, PixelDevUI.FontSize - 3f);
-        PixelUIKit.LetListEscapeMasks(tutorialDropdown);
+        tutorialDropdown = PixelDevUI.Dropdown(root, "Tutorial", 10f, y, DropW, RowH, PixelDevUI.FontSize - 3f, escapeMasks: true);
         List<string> tutorialNames = new List<string>();
         foreach (Tutorial t in tutorials) tutorialNames.Add(t.name);
         tutorialDropdown.ClearOptions();
@@ -102,11 +100,9 @@ public class PixelDevEvents : MonoBehaviour
         y += RowH + 18f;
 
         PixelDevUI.Heading(root, "Popups (nothing is given)", 10f, y, 500f); y += 38f;
-        skillDropdown = PixelDevUI.Dropdown(root, "Skill", 10f, y, DropW, RowH, PixelDevUI.FontSize - 3f);
-        PixelUIKit.LetListEscapeMasks(skillDropdown);
+        skillDropdown = PixelDevUI.Dropdown(root, "Skill", 10f, y, DropW, RowH, PixelDevUI.FontSize - 3f, escapeMasks: true);
         PixelDevUI.Button(root, "Level-up popup", BtnX, y, BtnW, RowH, PixelDevUI.Green, ShowLevelUp); y += RowH + 8f;
-        achievementDropdown = PixelDevUI.Dropdown(root, "Achievement", 10f, y, DropW, RowH, PixelDevUI.FontSize - 3f);
-        PixelUIKit.LetListEscapeMasks(achievementDropdown);
+        achievementDropdown = PixelDevUI.Dropdown(root, "Achievement", 10f, y, DropW, RowH, PixelDevUI.FontSize - 3f, escapeMasks: true);
         PixelDevUI.Button(root, "Achievement", BtnX, y, BtnW, RowH, PixelDevUI.Green, ShowAchievement); y += RowH + 18f;
 
         PixelDevUI.Heading(root, "Your own text", 10f, y, 400f); y += 38f;

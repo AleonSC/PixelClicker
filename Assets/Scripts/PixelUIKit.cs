@@ -853,11 +853,16 @@ public static class PixelUIKit
         return downTriangle;
     }
 
-    /// <summary>A TMP dropdown built in code (closed box + scrolling list). Fill it with <c>options</c>.</summary>
+    /// <summary>
+    /// A TMP dropdown built in code (closed box + scrolling list). Fill it with <c>options</c>. EVERY drop-down in the game is made here
+    /// (a look picker through <see cref="CreateLookDropdown"/>), so a fix or style change reaches them all.
+    /// </summary>
     public static TMP_Dropdown CreateDropdown(TMP_FontAsset font, Transform parent, string objectName, Vector2 size,
-                                              Color boxColor, Color listColor, Color textColor, float fontSize, bool icons = false)
+                                              Color boxColor, Color listColor, Color textColor, float fontSize, bool icons = false, bool escapeMasks = false)
     {
         // icons = a small picture left of each entry and of the shown name (fill it with TMP_Dropdown.OptionData(text, sprite)).
+        // escapeMasks = the opened list moves to the root canvas so a scroll view around the drop-down can't clip it (see LetListEscapeMasks).
+        // The list's entries are as tall as the closed box (size.y): a taller box gives bigger rows.
         float iconPad = icons ? size.y - 4f : 0f;
         GameObject root = new GameObject(objectName, typeof(RectTransform), typeof(Image), typeof(TMP_Dropdown));
         root.transform.SetParent(parent, false);
@@ -994,8 +999,24 @@ public static class PixelUIKit
         dropdown.itemText = itemLabel;
         root.AddComponent<PixelDropdownScroll>();   // an opened list starts at the chosen entry instead of the top
         if (icons) { dropdown.captionImage = captionIcon; dropdown.itemImage = itemIcon; }
+        if (escapeMasks) LetListEscapeMasks(dropdown);
         template.SetActive(false);
         return dropdown;
+    }
+
+    /// <summary>
+    /// A drop-down listing every look of an <see cref="IPixelLookSource"/> (floor styles, skies) with a preview picture beside each name.
+    /// Picking one applies it; the shown look follows changes made anywhere else (see <see cref="PixelLookDropdown"/>). Used by the
+    /// Settings floor / sky rows and the title screen's pickers. 'source' is asked again each time, so it works even if the look wakes up later.
+    /// </summary>
+    public static PixelLookDropdown CreateLookDropdown(TMP_FontAsset font, Transform parent, string objectName, Vector2 size,
+                                                       Color boxColor, Color listColor, Color textColor, float fontSize,
+                                                       System.Func<IPixelLookSource> source, bool escapeMasks = false)
+    {
+        TMP_Dropdown dd = CreateDropdown(font, parent, objectName, size, boxColor, listColor, textColor, fontSize, true, escapeMasks);
+        PixelLookDropdown look = dd.gameObject.AddComponent<PixelLookDropdown>();
+        look.Setup(dd, source);
+        return look;
     }
 
     private static Image MakeDropdownIcon(Transform parent, string objectName, float side, float x)
@@ -1292,6 +1313,88 @@ public class PixelScrollKeep : MonoBehaviour
         if (item <= 0f || contentH <= viewH) return;
         float target = Mathf.Clamp((index + 0.5f) * item - viewH * 0.5f, 0f, contentH - viewH);
         content.anchoredPosition = new Vector2(content.anchoredPosition.x, target);
+    }
+}
+
+/// <summary>
+/// Keeps a drop-down (made by PixelUIKit.CreateLookDropdown) in step with a look source: lists every look with its picture,
+/// applies the one picked, and shows the look in use even when it was changed somewhere else (checked every frame, cheaply:
+/// the options are only rebuilt when the number of looks changes).
+/// </summary>
+public class PixelLookDropdown : MonoBehaviour
+{
+    /// <summary>Text shown in the closed box while the source has nothing to restyle (e.g. no floor in the scene).</summary>
+    public string unusableText = "";
+    /// <summary>Asked before a pick is applied; false = ignore the pick (e.g. the title screen while Play is starting).</summary>
+    public System.Func<bool> canPick;
+    /// <summary>Called after a pick was applied.</summary>
+    public System.Action<int> onPicked;
+
+    public TMP_Dropdown Dropdown { get; private set; }
+    /// <summary>Name of the look shown in the box ("" while unusable).</summary>
+    public string ShownName { get; private set; } = "";
+
+    private System.Func<IPixelLookSource> source;
+    private int optionCount = -1, shownIndex = -2;
+    private bool shownUsable, refreshing;
+
+    public void Setup(TMP_Dropdown dropdown, System.Func<IPixelLookSource> lookSource)
+    {
+        Dropdown = dropdown;
+        source = lookSource;
+        dropdown.onValueChanged.AddListener(value =>
+        {
+            if (refreshing) return;
+            IPixelLookSource look = source != null ? source() : null;
+            if ((canPick == null || canPick()) && look != null && look.Usable && value >= 0 && value < look.StyleCount)
+            {
+                look.SetStyle(value);
+                onPicked?.Invoke(value);
+            }
+            Refresh(true);   // (also puts the box back if the pick was ignored)
+        });
+        Refresh(true);
+    }
+
+    private void Update() { Refresh(false); }
+
+    /// <summary>Shows the look in use; 'force' redraws even when nothing seems to have changed.</summary>
+    public void Refresh(bool force)
+    {
+        if (Dropdown == null || source == null) return;
+        IPixelLookSource look = source();
+        bool usable = look != null && look.Usable;
+        int index = usable ? look.Current : -1;
+        int count = usable ? look.StyleCount : 0;
+        if (!force && index == shownIndex && usable == shownUsable && count == optionCount) return;
+        shownIndex = index;
+        shownUsable = usable;
+        ShownName = usable && index >= 0 && index < count ? look.StyleName(index) : "";
+
+        refreshing = true;
+        if (optionCount != count)
+        {
+            optionCount = count;
+            var options = new System.Collections.Generic.List<TMP_Dropdown.OptionData>(count);
+            for (int i = 0; i < count; i++)
+            {
+                Texture tex = look.PreviewTexture(i);
+                Color tint = look.PreviewColor(i);
+                // A flat colour has its tint baked into the sprite; a real picture keeps its tint on the image.
+                options.Add(new TMP_Dropdown.OptionData(look.StyleName(i), PixelUIKit.PreviewSprite(tex, look.PreviewRect, tint), tex is Texture2D ? tint : Color.white));
+            }
+            Dropdown.ClearOptions();
+            Dropdown.AddOptions(options);
+        }
+        if (usable && index >= 0 && index < count) Dropdown.SetValueWithoutNotify(index);
+        Dropdown.RefreshShownValue();
+        if (!usable)
+        {
+            if (Dropdown.captionText != null) Dropdown.captionText.text = unusableText;
+            if (Dropdown.captionImage != null) Dropdown.captionImage.enabled = false;
+        }
+        Dropdown.interactable = usable;
+        refreshing = false;
     }
 }
 

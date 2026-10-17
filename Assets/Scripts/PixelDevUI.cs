@@ -63,9 +63,9 @@ public static class PixelDevUI
     }
 
     /// <summary>A drop-down in the dev colours.</summary>
-    public static TMP_Dropdown Dropdown(Transform parent, string name, float x, float y, float w, float h, float size = FontSize)
+    public static TMP_Dropdown Dropdown(Transform parent, string name, float x, float y, float w, float h, float size = FontSize, bool escapeMasks = false)
     {
-        TMP_Dropdown dd = PixelUIKit.CreateDropdown(Font, parent, name, new Vector2(w, h), Box, Box, TextColor, size);
+        TMP_Dropdown dd = PixelUIKit.CreateDropdown(Font, parent, name, new Vector2(w, h), Box, Box, TextColor, size, escapeMasks: escapeMasks);
         PlaceTL(dd.GetComponent<RectTransform>(), x, y, w, h);
         return dd;
     }

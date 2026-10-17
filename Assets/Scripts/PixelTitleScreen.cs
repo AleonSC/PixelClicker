@@ -250,13 +250,8 @@ public partial class PixelTitleScreen : MonoBehaviour
     /// <summary>One of the small floor / sky pickers beside Play.</summary>
     private class LookPicker
     {
-        public System.Func<IPixelLookSource> source;
-        public TMP_Dropdown dropdown;
-        public int optionCount = -1;
-        public bool refreshing;
-        public string shownName = "";
-        public int shownIndex = -2;
-        public bool shownUsable;
+        public PixelLookDropdown dropdown;   // (null for the dev Record session button, which only shares the pickers' fade)
+        public string ShownName => dropdown != null ? dropdown.ShownName : "";
         public RectTransform rect;
         public CanvasGroup group;
         public float alpha;      // 0 = hidden, 1 = shown (the picker only shows while the mouse is over it)
@@ -462,7 +457,6 @@ public partial class PixelTitleScreen : MonoBehaviour
         canvas.sortingOrder = menuOpen ? 400 : sortingOrder;
         if (foreground != null && foreground.activeSelf == menuOpen) foreground.SetActive(!menuOpen);
 
-        if (!menuOpen) foreach (LookPicker p in lookPickers) RefreshPicker(p, false);
         UpdatePickerFade();
         UpdateRecordLabel();
         UpdateLookTip(lookFont);
@@ -671,26 +665,21 @@ public partial class PixelTitleScreen : MonoBehaviour
         rr.anchoredPosition = position;
         shrinkRects.Add(rr);
 
-        LookPicker picker = new LookPicker { source = source, rect = rr, group = root.AddComponent<CanvasGroup>() };
+        LookPicker picker = new LookPicker { rect = rr, group = root.AddComponent<CanvasGroup>() };
         picker.group.alpha = 0f;
         PixelHoverTip hoverTip = root.AddComponent<PixelHoverTip>();
         hoverTip.onEnter = () => hoveredPicker = picker;
         hoverTip.onExit = () => { if (hoveredPicker == picker) hoveredPicker = null; };
 
         float fontSize = Mathf.Max(16f, lookNameFontSize);
-        TMP_Dropdown dd = PixelUIKit.CreateDropdown(font, root.transform, "Dropdown", new Vector2(width, lookBoxHeight), lookArrowColor,
-                                                    new Color(0.1f, 0.12f, 0.18f, 1f), buttonTextColor, fontSize, true);   // (true = a little preview picture beside each name)
+        // The shared look drop-down (a little preview picture beside each name; it keeps itself in step with the look).
+        PixelLookDropdown dd = PixelUIKit.CreateLookDropdown(font, root.transform, "Dropdown", new Vector2(width, lookBoxHeight), lookArrowColor,
+                                                             new Color(0.1f, 0.12f, 0.18f, 1f), buttonTextColor, fontSize, source);
+        dd.canPick = () => !playing;
         RectTransform dr = dd.GetComponent<RectTransform>();
         dr.anchorMin = dr.anchorMax = dr.pivot = new Vector2(0.5f, 0.5f);
         dr.anchoredPosition = Vector2.zero;
         picker.dropdown = dd;
-        dd.onValueChanged.AddListener(value =>
-        {
-            if (playing || picker.refreshing) return;
-            IPixelLookSource look = picker.source();
-            if (look != null && look.Usable && value >= 0 && value < look.StyleCount) look.SetStyle(value);
-            RefreshPicker(picker, true);
-        });
 
         if (!string.IsNullOrEmpty(caption))
         {
@@ -706,7 +695,6 @@ public partial class PixelTitleScreen : MonoBehaviour
         }
 
         lookPickers.Add(picker);
-        RefreshPicker(picker, true);
     }
 
     // ---- dev: the session recorder's Start / Stop & save button at the top left (fades in on hover like the pickers) ----
@@ -725,7 +713,7 @@ public partial class PixelTitleScreen : MonoBehaviour
         rr.sizeDelta = recordButtonSize;
         rr.anchoredPosition = new Vector2(pickerCornerMargin.x, -pickerCornerMargin.y);
         shrinkRects.Add(rr);
-        LookPicker fade = new LookPicker { source = null, rect = rr, group = root.AddComponent<CanvasGroup>() };
+        LookPicker fade = new LookPicker { rect = rr, group = root.AddComponent<CanvasGroup>() };
         fade.group.alpha = 0f;
         Button b = PixelUIKit.CreateButton(font, root.transform, "Button", "", recordButtonSize, smallButtonColor, buttonTextColor, Mathf.Max(16f, lookNameFontSize));
         PixelUIKit.Stretch(b.GetComponent<RectTransform>());
@@ -763,7 +751,7 @@ public partial class PixelTitleScreen : MonoBehaviour
         {
             if (p.rect == null || p.group == null) continue;
             p.rect.GetWorldCorners(corners);   // overlay canvas: world = screen pixels
-            bool open = p.dropdown != null && p.dropdown.IsExpanded;
+            bool open = p.dropdown != null && p.dropdown.Dropdown.IsExpanded;
             bool over = !playing && (open || pointer.x >= corners[0].x - pickerHoverMargin && pointer.x <= corners[2].x + pickerHoverMargin
                         && pointer.y >= corners[0].y - pickerHoverMargin && pointer.y <= corners[2].y + pickerHoverMargin);
             p.alpha = Mathf.MoveTowards(p.alpha, over ? 1f : 0f, Time.unscaledDeltaTime / (over ? 0.12f : 0.35f));
@@ -777,7 +765,7 @@ public partial class PixelTitleScreen : MonoBehaviour
 
     private void UpdateLookTip(TMP_FontAsset font)
     {
-        string tipText = !string.IsNullOrEmpty(hoveredText) ? hoveredText : (hoveredPicker != null ? hoveredPicker.shownName : null);
+        string tipText = !string.IsNullOrEmpty(hoveredText) ? hoveredText : (hoveredPicker != null ? hoveredPicker.ShownName : null);
         bool show = !string.IsNullOrEmpty(tipText) && !playing && foreground != null && foreground.activeInHierarchy;
         if (!show) { if (lookTip != null && lookTip.activeSelf) lookTip.SetActive(false); return; }
         if (lookTip == null)
@@ -804,36 +792,6 @@ public partial class PixelTitleScreen : MonoBehaviour
         RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
         if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local))
             rt.anchoredPosition = local + new Vector2(0f, 26f);
-    }
-
-    /// <summary>Updates a picker's picture and name when the look changed (from here, Settings, or the look waking up).</summary>
-    private static void RefreshPicker(LookPicker p, bool force)
-    {
-        if (p.source == null) return;   // (the dev Record session button shares the pickers' fade but has no look)
-        IPixelLookSource look = p.source();
-        bool usable = look != null && look.Usable;
-        int index = usable ? look.Current : -1;
-        if (!force && index == p.shownIndex && usable == p.shownUsable) return;
-        p.shownIndex = index;
-        p.shownUsable = usable;
-
-        p.shownName = usable ? look.StyleName(index) : "";
-        if (p.dropdown == null) return;
-        p.refreshing = true;
-        int count = usable ? look.StyleCount : 0;
-        if (p.optionCount != count)
-        {
-            p.optionCount = count;
-            List<TMP_Dropdown.OptionData> options = new List<TMP_Dropdown.OptionData>(count);
-            for (int i = 0; i < count; i++) options.Add(new TMP_Dropdown.OptionData(look.StyleName(i), PixelUIKit.PreviewSprite(look.PreviewTexture(i), look.PreviewRect, look.PreviewColor(i)), Color.white));
-            p.dropdown.ClearOptions();
-            p.dropdown.AddOptions(options);
-            PixelDebug.Info("PixelTitleScreen: a look picker now lists " + count + " looks" + (usable ? "" : " (its source is not usable yet: " + (look == null ? "no component" : "no floor / no styles") + ")") + ".", p.dropdown);
-        }
-        if (usable) p.dropdown.SetValueWithoutNotify(index);
-        p.dropdown.RefreshShownValue();
-        p.dropdown.interactable = usable;
-        p.refreshing = false;
     }
 
     private RawImage MakeRaw(string objectName)

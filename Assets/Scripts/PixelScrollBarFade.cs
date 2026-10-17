@@ -79,7 +79,8 @@ public class PixelScrollBarFade : MonoBehaviour, IPointerEnterHandler, IPointerE
             foreach (ScrollRect sr in GetComponentsInParent<ScrollRect>(true)) if (sr.verticalScrollbar == bar) { scroll = sr; break; }
             if (scroll == null && transform.parent != null)
                 foreach (ScrollRect sr in transform.parent.GetComponentsInChildren<ScrollRect>(true)) if (sr.verticalScrollbar == bar) { scroll = sr; break; }
-            if (scroll != null && scroll.GetComponentInParent<TMPro.TMP_Dropdown>() == null)
+            // (not on a drop-down's opened list - also when it was moved to the root canvas by PixelDropdownListEscape, which keeps TMP's name for it)
+            if (scroll != null && scroll.GetComponentInParent<TMPro.TMP_Dropdown>() == null && scroll.gameObject.name != "Dropdown List")
             {
                 RectTransform vp = scroll.viewport != null ? scroll.viewport : scroll.transform as RectTransform;
                 softMask = vp.GetComponent<RectMask2D>();   // only used to confirm this is a masked list
