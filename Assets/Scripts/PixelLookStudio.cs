@@ -24,6 +24,7 @@ using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using static PixelDevUI;   // the shared dev colours and PlaceTL
 
 public class PixelLookStudio : MonoBehaviour
 {
@@ -59,10 +60,6 @@ public class PixelLookStudio : MonoBehaviour
         { "floatDriftSpeed", 8f }, { "floatAfterBounces", 10f }, { "lightningJitter", 0.4f }, { "wellRadius", 10f }, { "wellFlyReach", 10f },
         { "wellLifetime", 600f }, { "wellPullSpeed", 6f }, { "wellGrip", 20f }, { "wellMaxPixels", 60f }, { "colorBlindRotation", 360f },
     };
-
-    private static readonly Color Box = new Color(0.07f, 0.09f, 0.14f, 1f), RowColor = new Color(1f, 1f, 1f, 0.035f), HeaderColor = new Color(0.2f, 0.25f, 0.36f, 1f),
-                                  ButtonColor = new Color(0.25f, 0.32f, 0.48f, 1f), Green = new Color(0.22f, 0.55f, 0.36f, 1f), TextColor = new Color(0.92f, 0.94f, 1f, 1f),
-                                  DimText = new Color(0.68f, 0.72f, 0.82f, 1f), Accent = new Color(0.4f, 0.7f, 1f, 1f);
 
     private sealed class Row
     {
@@ -126,13 +123,6 @@ public class PixelLookStudio : MonoBehaviour
     private string lastChangeKey;
     private float lastChangeTime;
 
-    private static void PlaceTL(RectTransform rt, float x, float y, float w, float h)
-    {
-        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
-        rt.anchoredPosition = new Vector2(x, -y);
-        rt.sizeDelta = new Vector2(w, h);
-    }
-
     private void Awake()
     {
         instance = this;
@@ -163,32 +153,17 @@ public class PixelLookStudio : MonoBehaviour
     // Building the tab
     // ------------------------------------------------------------------
 
-    private Button MakeButton(Transform parent, string label, float x, float y, float w, float h, Color color, Action onClick)
-    {
-        Button b = PixelUIKit.CreateButton(font, parent, label, label, new Vector2(w, h), color, TextColor, FontSize);
-        PlaceTL(b.GetComponent<RectTransform>(), x, y, w, h);
-        b.onClick.AddListener(() => { PixelAudio.Play("ui_click"); onClick(); });
-        return b;
-    }
-
-    private TMP_Text MakeLabel(Transform parent, string text, float x, float y, float w, float h, float size, Color color)
-    {
-        TMP_Text t = PixelUIKit.CreateText(font, parent, text, text, size, TextAlignmentOptions.MidlineLeft, FontStyles.Normal, color);
-        PlaceTL(t.rectTransform, x, y, w, h);
-        return t;
-    }
-
     private void Build()
     {
         built = true;
 
         // ---- top: pixel type + show on cube ----
-        MakeLabel(root, "Pixel", 10f, 8f, 70f, 40f, FontSize, TextColor);
+        PixelDevUI.Label(root, "Pixel", 10f, 8f, 70f, 40f, FontSize, TextColor);
         typeDropdown = PixelUIKit.CreateDropdown(font, root, "Type", new Vector2(330f, 40f), Box, Box, TextColor, FontSize);
         PlaceTL(typeDropdown.GetComponent<RectTransform>(), 80f, 8f, 330f, 40f);
         typeDropdown.onValueChanged.AddListener(i => { int o = PixelUIKit.Original(typeMap, i); if (o >= 0 && o < typeChoices.Count) Select(typeChoices[o]); });
 
-        TMP_Text showLabel = MakeLabel(root, "Show on cube", 424f, 8f, 210f, 40f, FontSize, TextColor);
+        TMP_Text showLabel = PixelDevUI.Label(root, "Show on cube", 424f, 8f, 210f, 40f, FontSize, TextColor);
         showOnCube = PixelUIKit.CreateTickBox(root, 34f, Box, Accent);
         PlaceTL(showOnCube.GetComponent<RectTransform>(), 646f, 11f, 34f, 34f);
         showOnCube.isOn = false;
@@ -213,18 +188,18 @@ public class PixelLookStudio : MonoBehaviour
 
         // ---- right column: undo / reset / copy from, save / load, use saved, status ----
         const float rx = 222f;
-        MakeButton(root, "Undo", rx, 58f, 110f, 40f, ButtonColor, Undo);
-        MakeButton(root, "Reset", rx + 116f, 58f, 110f, 40f, ButtonColor, ResetType);
+        PixelDevUI.Button(root, "Undo", rx, 58f, 110f, 40f, ButtonColor, Undo);
+        PixelDevUI.Button(root, "Reset", rx + 116f, 58f, 110f, 40f, ButtonColor, ResetType);
         copyDropdown = PixelUIKit.CreateDropdown(font, root, "Copy From", new Vector2(236f, 40f), Box, Box, TextColor, FontSize - 2f);
         PlaceTL(copyDropdown.GetComponent<RectTransform>(), rx + 232f, 58f, 236f, 40f);
         copyDropdown.onValueChanged.AddListener(CopyFromChosen);
         PixelDevTools.Tip(copyDropdown.gameObject, "Start from another pixel's look (or a blank one). Undo takes it back.");
 
-        Button save = MakeButton(root, "Save + copy code", rx, 106f, 230f, 40f, Green, Save);
+        Button save = PixelDevUI.Button(root, "Save + copy code", rx, 106f, 230f, 40f, Green, Save);
         PixelDevTools.Tip(save.gameObject, "Saves this look to a file and copies it as code. Paste it to Claude (or tell Claude the file name) to make it the official look.");
-        MakeButton(root, "Load saved", rx + 238f, 106f, 230f, 40f, ButtonColor, LoadSaved);
+        PixelDevUI.Button(root, "Load saved", rx + 238f, 106f, 230f, 40f, ButtonColor, LoadSaved);
 
-        TMP_Text useLabel = MakeLabel(root, "Use my saved looks when the game starts", rx, 154f, 420f, 40f, FontSize - 2f, TextColor);
+        TMP_Text useLabel = PixelDevUI.Label(root, "Use my saved looks when the game starts", rx, 154f, 420f, 40f, FontSize - 2f, TextColor);
         PixelUIKit.FitOneLine(useLabel);
         useSaved = PixelUIKit.CreateTickBox(root, 34f, Box, Accent);
         PlaceTL(useSaved.GetComponent<RectTransform>(), rx + 434f, 157f, 34f, 34f);
@@ -232,13 +207,7 @@ public class PixelLookStudio : MonoBehaviour
         useSaved.onValueChanged.AddListener(on => { PixelPrefs.SetBool(P + "UseSaved", on); if (on) { ApplyAllSaved(); SetStatus("Every saved look is applied now and again each time the game starts."); } });
         PixelDevTools.Tip(useSaved.gameObject, "Every look you saved is put back on its pixel when the game starts, until Claude makes them official.");
 
-        status = PixelUIKit.CreateText(font, root, "Status", "", 18f, TextAlignmentOptions.TopLeft, FontStyles.Normal, DimText);
-        PlaceTL(status.rectTransform, rx, 200f, 468f, 62f);
-#if UNITY_2023_1_OR_NEWER
-        status.textWrappingMode = TextWrappingModes.Normal;
-#else
-        status.enableWordWrapping = true;
-#endif
+        status = PixelDevUI.WrapText(root, "Status", rx, 200f, 468f, 62f, 18f, DimText);
 
         // ---- filter + the settings list ----
         filter = PixelUIKit.CreateInputField(font, root, "Filter", new Vector2(680f, 38f), Box, TextColor, FontSize - 1f, "Filter settings (glow, edge, colour...)");
@@ -371,7 +340,7 @@ public class PixelLookStudio : MonoBehaviour
         go.GetComponent<Image>().color = RowColor;
         Row r = new Row { key = key, label = label, search = (label + " " + key + " " + tip + " " + s.name).ToLowerInvariant(), rect = go.GetComponent<RectTransform>() };
         PlaceTL(r.rect, 0f, 0f, RowW, RowH);
-        TMP_Text t = MakeLabel(r.rect, label, 12f + indent, 0f, 300f - indent, RowH, FontSize - 1f, indent > 0f ? DimText : TextColor);
+        TMP_Text t = PixelDevUI.Label(r.rect, label, 12f + indent, 0f, 300f - indent, RowH, FontSize - 1f, indent > 0f ? DimText : TextColor);
         PixelUIKit.FitOneLine(t, 13f);
         if (!string.IsNullOrEmpty(tip)) PixelDevTools.Tip(go, tip);
         s.rows.Add(r);

@@ -472,6 +472,16 @@ public class PixelHints : MonoBehaviour
         if (instance != null) instance.Enqueue(id);
     }
 
+    /// <summary>Forgets that this one tip was shown (it shows again the next time it is triggered).</summary>
+    public static void ForgetTip(string id)
+    {
+        try { if (!string.IsNullOrEmpty(id)) PixelPrefs.DeleteKey(PrefPrefix + id); }
+        catch (Exception) { /* no PlayerPrefs */ }
+    }
+
+    /// <summary>Dev Events tab: shows this tip now, even if it was seen before (it still waits its turn behind other tips, and Settings > tips off still hides it).</summary>
+    public static void ShowNow(string id) { ForgetTip(id); Trigger(id); }
+
     /// <summary>Has the tip / tutorial with this id been shown already? (Other tutorials use this.)</summary>
     public static bool IsTipSeen(string id) => Seen(id);
 

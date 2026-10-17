@@ -469,6 +469,9 @@ public partial class PixelAudio : MonoBehaviour
         return null;
     }
 
+    /// <summary>Every sound effect (the Inspector list): the dev Sound board lists them and changes their volume live.</summary>
+    public static IReadOnlyList<Sound> AllSounds => instance != null && instance.sounds != null ? instance.sounds : (IReadOnlyList<Sound>)Array.Empty<Sound>();
+
     /// <summary>True if a sound with this id exists and has at least one clip.</summary>
     public static bool Has(string id)
     {

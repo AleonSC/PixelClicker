@@ -212,6 +212,14 @@ public class PixelDidYouKnow : MonoBehaviour
         return lastTip ?? tips[0];
     }
 
+    /// <summary>Dev Events tab: shows the next tip right away (even when the game isn't calm). False when there are no tips.</summary>
+    public bool DevShowNow()
+    {
+        if (tips.Count == 0) return false;
+        ShowTip(NextTip());
+        return true;
+    }
+
     private void ShowTip(string tip)
     {
         lastTip = tip;

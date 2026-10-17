@@ -77,3 +77,6 @@
 [ ] Block POWER bonuses: some blocks get a special effect when you charge a left click (Power Click) on them - like each block's right-click hold action, a block-specific power action (e.g. a mighty chop on Wood, a deep strike on ore); design which blocks and what each does
 [ ] Look Studio phase 2: your own shapes on a pixel (extra parts like spikes, rings, orbiting bits, a crown) placed and dragged along an axis like the Pet Outfit Studio, saved in the look
 [ ] Look Studio phase 3: your own textures (draw / import a face picture) and your own particle effects (colour, rate, size, motion) for a pixel's look
+[ ] Dev Hub: performance overlay - a small frame-time graph plus husk / physics object counts and garbage made per frame, to spot features that slow the game
+[ ] Dev Hub: game speed buttons (x0.25 / x1 / x4 / x10) on the Main tab to test timers, Recyclers and visitors without waiting
+[ ] Look Studio: compare view - the old look and the new one side by side before saving

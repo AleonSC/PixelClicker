@@ -1347,3 +1347,17 @@ public class PixelDragRelay : MonoBehaviour, IBeginDragHandler, IDragHandler, IE
     public void OnDrag(PointerEventData e) { onDrag?.Invoke(e); }
     public void OnEndDrag(PointerEventData e) { onEnd?.Invoke(e); }
 }
+
+/// <summary>Makes &lt;link="id"&gt; parts of a TextMeshPro text clickable: onLink gets the link id. Add it to the text's object (its raycastTarget must be on).</summary>
+public class PixelLinkClick : MonoBehaviour, IPointerClickHandler
+{
+    public TMP_Text text;
+    public System.Action<string> onLink;
+
+    public void OnPointerClick(PointerEventData e)
+    {
+        if (text == null || onLink == null) return;
+        int i = TMP_TextUtilities.FindIntersectingLink(text, e.position, e.pressEventCamera);
+        if (i >= 0 && i < text.textInfo.linkCount) onLink(text.textInfo.linkInfo[i].GetLinkID());
+    }
+}

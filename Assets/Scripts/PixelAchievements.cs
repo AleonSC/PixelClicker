@@ -858,6 +858,12 @@ public class PixelAchievements : MonoBehaviour
     private TMP_Text MakeText(Transform parent, string objectName, string text, float size, FontStyles style, Color color)
         => PixelUIKit.CreateText(font, parent, objectName, text, size, TextAlignmentOptions.MidlineLeft, style, color);
 
+    /// <summary>Dev Events tab: shows this achievement's popup (nothing is unlocked).</summary>
+    public void DevShowPopup(int index)
+    {
+        if (index >= 0 && index < achievements.Count) ShowPopup(index, 0);
+    }
+
     private void ShowPopup(int index, int tier)
     {
         if (popupRect == null) return;

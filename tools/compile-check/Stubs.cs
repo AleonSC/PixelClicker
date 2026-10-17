@@ -200,7 +200,13 @@ namespace TMPro
     public struct TMP_CharacterInfo { public char character; public bool isVisible; public Vector3 topLeft, bottomLeft, topRight, bottomRight; public int vertexIndex, materialReferenceIndex, lineNumber; public float xAdvance, ascender, descender, baseLine; public int index; public float origin; }
     public struct TMP_LineInfo { public int characterCount, firstCharacterIndex, lastCharacterIndex; public float width, ascender, descender, lineHeight; }
     public struct TMP_MeshInfo { public Vector3[] vertices; public Color32[] colors32; public Vector2[] uvs0; }
-    public class TMP_TextInfo { public int characterCount, lineCount, wordCount, pageCount, materialCount; public TMP_CharacterInfo[] characterInfo; public TMP_LineInfo[] lineInfo; public TMP_MeshInfo[] meshInfo; }
+    public class TMP_TextInfo { public int characterCount, lineCount, wordCount, pageCount, materialCount, linkCount; public TMP_CharacterInfo[] characterInfo; public TMP_LineInfo[] lineInfo; public TMP_MeshInfo[] meshInfo; public TMP_LinkInfo[] linkInfo; }
+    public struct TMP_LinkInfo { public int linkIdFirstCharacterIndex, linkIdLength, linkTextfirstCharacterIndex, linkTextLength; public string GetLinkID() => null; public string GetLinkText() => null; }
+    public static class TMP_TextUtilities
+    {
+        public static int FindIntersectingLink(TMP_Text text, UnityEngine.Vector3 position, UnityEngine.Camera camera) => -1;
+        public static int FindIntersectingCharacter(TMP_Text text, UnityEngine.Vector3 position, UnityEngine.Camera camera, bool visibleOnly) => -1;
+    }
     public abstract class TMP_Text : MaskableGraphic
     {
         public virtual string text { get; set; }

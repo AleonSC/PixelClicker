@@ -609,7 +609,10 @@ public class PixelSaveGame : MonoBehaviour
     }
 
     /// <summary>The slot's save: slot 0 = the autosave list, 1.. = a numbered slot (manual saves).</summary>
-    private bool WriteSave(int slot, bool showMessage)
+    /// <summary>Writes the game as a save file at this path (dev Test setups): the numbered slots, the current slot and the autosave list are not touched.</summary>
+    public bool SaveToFile(string path, bool showMessage = false) => WriteSave(-1, showMessage, path);
+
+    private bool WriteSave(int slot, bool showMessage, string fileOverride = null)
     {
         if (suppressSaving || clicker == null) return false;
         // On the main menu before anything was loaded or started, the game in memory is a blank one: an autosave / quit save / focus-loss save would write it over the real save in the current slot
@@ -732,7 +735,15 @@ public class PixelSaveGame : MonoBehaviour
 
             string json = JsonUtility.ToJson(data, true);
             var shots = new System.Collections.Generic.List<string>();
-            if (slot > 0)
+            if (fileOverride != null)
+            {
+                string temp = fileOverride + ".tmp";
+                File.WriteAllText(temp, json);
+                if (File.Exists(fileOverride)) File.Delete(fileOverride);
+                File.Move(temp, fileOverride);
+                shots.Add(PixelSaveShots.ThumbPath(fileOverride));
+            }
+            else if (slot > 0)
             {
                 // Write to a temp file first so a crash mid-write can't destroy the old save.
                 string path = PathFor(slot);
@@ -755,8 +766,8 @@ public class PixelSaveGame : MonoBehaviour
             HasLoadedSave = true;
             PixelSaveShots.Request(shots);
 
-            if (logToConsole) Debug.Log("PixelSaveGame: saved (" + (slot > 0 ? "slot " + slot : "autosave") + ").", this);
-            if (showMessage) { if (slot == 0) ShowAutoNote(); else ShowMessage("Saved to slot " + slot); }
+            if (logToConsole) Debug.Log("PixelSaveGame: saved (" + (fileOverride != null ? fileOverride : slot > 0 ? "slot " + slot : "autosave") + ").", this);
+            if (showMessage) { if (fileOverride != null) ShowMessage("Saved"); else if (slot == 0) ShowAutoNote(); else ShowMessage("Saved to slot " + slot); }
             return true;
         }
         catch (Exception e)
