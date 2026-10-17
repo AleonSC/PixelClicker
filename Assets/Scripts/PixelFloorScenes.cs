@@ -43,7 +43,11 @@ public partial class PixelFloor
     /// <summary>Smooth 0..1 step between two edges (the shader-style smoothstep; Mathf.SmoothStep is a different thing).</summary>
     private static float Sstep(float e0, float e1, float x)
     {
-        float t = Mathf.Clamp01((x - e0) / Mathf.Max(1e-6f, e1 - e0));
+        // Like the shader's smoothstep, the edges may come in either order (Sstep(1, 0.9, k) = 1 inside 0.9, fading to 0 at 1).
+        // (It used to clamp a falling range to 1e-6, so every call with e0 > e1 was a hard 0 / 1 step and Coral Reef's corals never showed.)
+        float range = e1 - e0;
+        if (Mathf.Abs(range) < 1e-6f) return x < e0 ? 0f : 1f;
+        float t = Mathf.Clamp01((x - e0) / range);
         return t * t * (3f - 2f * t);
     }
 

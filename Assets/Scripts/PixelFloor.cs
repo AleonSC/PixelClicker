@@ -105,7 +105,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         GraffitiWall,    // a brick wall laid flat with a big bubble-letter tag, drips and paint-over patches
         LeafLitter,      // soil under two layers of autumn leaves and twigs
         ZenGarden,       // raked sand that rings round mossy rocks
-        PersianRug,      // a woven rug with a medallion and borders on a wooden floor
+        PersianRug,      // (removed: Persian Rug is gone; the value stays so the numbers after it keep their meaning)
         CoralReef,       // seabed with brain / polyp / fan corals, seagrass, starfish and caustics
         CasinoFelt,      // green baize with gold rings, chips, dice and cards
         StainedGlass,    // jewel panes in lead with a rose window under the cube
@@ -122,7 +122,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     }
 
     /// <summary>Live 3D extras drawn on top of (or instead of) the floor picture, updated every frame (PixelFloorOverlay).</summary>
-    public enum FloorOverlay { None = 0, Lasers = 1, LaserTracker = 2, Ant = 3, Crumble = 4 }
+    public enum FloorOverlay { None = 0, Lasers = 1, LaserTracker = 2, Ant = 3, Crumble = 4, Caustics = 5 }
 
     [Serializable]
     public class FloorStyle
@@ -2389,6 +2389,15 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
                 if (old != null) { old.shaderGround = def.shaderGround; old.shaderScale = def.shaderScale; }
             }
             defaultsVersion = 15;
+        }
+
+        // Persian Rug is gone; Coral Reef was redrawn and gets the moving caustic light overlay.
+        if (defaultsVersion < 16)
+        {
+            styles.RemoveAll(x => x != null && (x.name == "Persian Rug" || x.pattern == FloorPattern.PersianRug));
+            FloorStyle reef = styles.Find(x => x != null && x.name == "Coral Reef");
+            if (reef != null) reef.overlay = FloorOverlay.Caustics;
+            defaultsVersion = 16;
         }
 
         foreach (FloorStyle def in DefaultStyles())

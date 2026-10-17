@@ -5,7 +5,7 @@ using static PixelNoise;
 /// <summary>
 /// The fourth batch of floor patterns (part of <see cref="PixelFloor"/>): ten big, still, non-repeating floors drawn once at 1024 px over ~40 world units (like Moon Surface / Graveyard:
 /// <c>stretchToFloor</c>, time-sliced fill). Everything is drawn in WORLD units (<c>tileWorldSize</c> = how far the picture spans) so a feature keeps its size at any resolution:
-/// Lush Grass, Nebula Field, Still Pond, Graffiti Wall, Leaf Litter, Zen Garden, Persian Rug, Coral Reef, Casino Felt, Stained Glass.
+/// Lush Grass, Nebula Field, Still Pond, Graffiti Wall, Leaf Litter, Zen Garden, Coral Reef (+ the Caustics overlay), Casino Felt, Stained Glass (Persian Rug was removed).
 /// Dispatched from <see cref="ShadeRetro"/>'s fall-through (<see cref="ShadeWorlds"/>); styles come from <see cref="WorldStyles"/>.
 /// </summary>
 public partial class PixelFloor
@@ -20,7 +20,6 @@ public partial class PixelFloor
             case FloorPattern.GraffitiWall: return ShadeGraffiti(s, u, v, x, y, n);
             case FloorPattern.LeafLitter: return ShadeLeaves(s, u, v, x, y, n);
             case FloorPattern.ZenGarden: return ShadeZen(s, u, v, x, y, n);
-            case FloorPattern.PersianRug: return ShadeRug(s, u, v, x, y, n);
             case FloorPattern.CoralReef: return ShadeReef(s, u, v, x, y, n);
             case FloorPattern.CasinoFelt: return ShadeCasino(s, u, v, x, y, n);
             case FloorPattern.StainedGlass: return ShadeGlass(s, u, v, x, y, n);
@@ -43,8 +42,9 @@ public partial class PixelFloor
         yield return W("Graffiti Wall", FloorPattern.GraffitiWall, new Color(0.55f, 0.22f, 0.15f), new Color(0.72f, 0.38f, 0.25f), new Color(0.55f, 0.52f, 0.48f), 40, 0.15f, 0f, 9);
         yield return W("Leaf Litter", FloorPattern.LeafLitter, new Color(0.14f, 0.09f, 0.05f), new Color(0.85f, 0.35f, 0.08f), new Color(0.95f, 0.75f, 0.15f), 40, 0.1f, 0f, 11);
         yield return W("Zen Garden", FloorPattern.ZenGarden, new Color(0.86f, 0.8f, 0.66f), new Color(0.42f, 0.42f, 0.44f), new Color(0.28f, 0.45f, 0.18f), 40, 0.1f, 0f, 13);
-        yield return W("Persian Rug", FloorPattern.PersianRug, new Color(0.55f, 0.08f, 0.1f), new Color(0.08f, 0.14f, 0.38f), new Color(0.92f, 0.82f, 0.58f), 40, 0.1f, 0f, 15);
-        yield return W("Coral Reef", FloorPattern.CoralReef, new Color(0.85f, 0.8f, 0.62f), new Color(0.95f, 0.4f, 0.5f), new Color(0.5f, 0.25f, 0.75f), 40, 0.7f, 0f, 17);
+        FloorStyle reef = W("Coral Reef", FloorPattern.CoralReef, new Color(0.85f, 0.8f, 0.62f), new Color(0.95f, 0.4f, 0.5f), new Color(0.5f, 0.25f, 0.75f), 40, 0.7f, 0f, 17);
+        reef.overlay = FloorOverlay.Caustics;   // (the moving caustic light is drawn live over the still picture)
+        yield return reef;
         yield return W("Casino Felt", FloorPattern.CasinoFelt, new Color(0.04f, 0.32f, 0.17f), new Color(0.9f, 0.75f, 0.3f), new Color(0.8f, 0.1f, 0.12f), 40, 0.1f, 0f, 19);
         yield return W("Stained Glass", FloorPattern.StainedGlass, new Color(0.15f, 0.3f, 0.8f), new Color(0.85f, 0.2f, 0.25f), new Color(0.95f, 0.75f, 0.2f), 40, 0.8f, 0.25f, 21);
     }
@@ -618,214 +618,50 @@ public partial class PixelFloor
     }
 
     // ------------------------------------------------------------------
-    // 7. Persian Rug: a woven rug with a medallion, borders, corner spandrels and fringe on a wooden floor
+    // 8. Coral Reef: a shallow sandy seabed seen from above - reef rock patches where the corals cluster (brain, branching, table,
+    //    soft coral and lace sea fans, each an irregular domed colony with its shadow on the sand), seagrass meadows, starfish,
+    //    urchins and shells. The moving caustic light is NOT in the picture: the Caustics overlay draws it live (PixelFloorOverlay).
     // ------------------------------------------------------------------
 
-    private static Color ShadeRug(FloorStyle s, float u, float v, int x, int y, int n)
-    {
-        float W = Wu(s), wx = u * W, wy = v * W;
-        const float hx = 0.36f, hy = 0.3f;
-        float lx = (u - 0.5f) / hx, ly = (v - 0.5f) / hy;
-        float ax = Mathf.Abs(lx), ay = Mathf.Abs(ly), d = Mathf.Max(ax, ay);
-
-        // ---- the wooden floor around the rug ----
-        Color c;
-        {
-            float plank = 1.6f;
-            int pr = Mathf.FloorToInt(wy / plank);
-            float grain = Fbm(u * 3f, v * 40f / plank * 1.6f, 12, 50, 3, s.seed + 1);
-            Color wood = Color.Lerp(new Color(0.22f, 0.12f, 0.06f), new Color(0.4f, 0.24f, 0.12f), HashId(pr, s.seed) * 0.6f + grain * 0.4f);
-            if (Frac(wy / plank) < 0.02f) wood *= 0.5f;
-            float seam = Hash(Mathf.FloorToInt(wx / 7f + pr * 0.37f), pr, s.seed + 2);
-            if (Mathf.Abs(Frac(wx / 7f + pr * 0.37f) - 0.5f) > 0.495f && seam > 0.3f) wood *= 0.55f;
-            c = wood;
-            float outside = Mathf.Max(0f, d - 1f) * 12f;
-            c *= 1f - 0.5f * Mathf.Exp(-outside * 1.2f) * (d > 1f ? 1f : 0f);     // the rug's shadow
-        }
-        if (d > 1.035f) return Fin(c);
-
-        // ---- fringe on the short sides ----
-        if (d > 1f)
-        {
-            if (ax > ay) return Fin(Frac(ly * 64f) < 0.5f ? s.colorC * (0.9f + 0.1f * Hash(y, 1, s.seed)) : c);
-            return Fin(c);
-        }
-
-        // ---- the rug ----
-        Color rug = s.colorA;
-        float bandD = d;
-        float t = ax > ay ? ly : lx;                 // position along the border
-        if (bandD > 0.965f) rug = s.colorC * 0.75f;                                          // outer edge
-        else if (bandD > 0.85f)
-        {
-            float cb = (bandD - 0.85f) / 0.115f;                                              // 0..1 across the main border
-            rug = s.colorB;
-            float m = Mathf.Abs(Frac(t * 7f) - 0.5f) * 2f;                                    // diamonds along the border
-            if (Mathf.Abs(cb - 0.5f) * 2f + m < 0.85f) rug = s.colorC;
-            if (Mathf.Abs(cb - 0.5f) < 0.07f && m > 0.8f) rug = s.colorA;
-            if (cb < 0.1f || cb > 0.9f) rug = s.colorC * 0.85f;
-        }
-        else if (bandD > 0.81f) rug = s.colorC;                                               // cream line
-        else if (bandD > 0.77f) rug = s.colorA * 0.8f;                                        // thin red
-        else
-        {
-            // the field: boteh-like blobs, a big diamond medallion, corner spandrels
-            float gx = Frac(lx * 9f) - 0.5f, gy = Frac(ly * 9f) - 0.5f;
-            rug = s.colorA * (0.9f + 0.1f * Mathf.Cos((gx * gx + gy * gy) * 30f));
-            if (gx * gx * 1.4f + gy * gy < 0.045f) rug = ScMix(rug, s.colorC * 0.55f, 0.5f);
-            float diamond = ax / 0.58f + ay / 0.52f;
-            if (diamond < 1f)
-            {
-                float r = Mathf.Sqrt(lx * lx * 0.8f + ly * ly * 1.05f);
-                rug = Frac(r * 6f) < 0.5f ? s.colorB : s.colorB * 1.5f;
-                if (diamond > 0.9f) rug = s.colorC;
-                float ang = Mathf.Atan2(ly, lx);
-                float star = 0.2f * (0.65f + 0.35f * Mathf.Abs(Mathf.Cos(4f * ang)));
-                if (r < star) rug = s.colorC;
-                if (r < 0.06f) rug = s.colorA;
-                if (r > 0.3f && r < 0.4f && Mathf.Abs(Frac(ang / 6.283f * 12f) - 0.5f) < 0.18f) rug = s.colorA;
-            }
-            else
-            {
-                float cdx = Mathf.Min(Mathf.Abs(ax - 0.76f), 9f), cdy = Mathf.Min(Mathf.Abs(ay - 0.76f), 9f);
-                float cd = Mathf.Sqrt(cdx * cdx + cdy * cdy);
-                if (cd < 0.3f) rug = cd < 0.2f ? s.colorB : cd < 0.24f ? s.colorC : s.colorA * 0.8f;
-            }
-        }
-        // weave + wear
-        rug *= 0.92f + 0.1f * (((x + y) & 1) == 0 ? 1f : 0f) + 0.06f * Hash(x, y, s.seed + 5);
-        rug *= 0.85f + 0.3f * Fbm(u, v, Per(s, 3f), 4, s.seed + 6);
-        return Fin(rug);
-    }
-
-    // ------------------------------------------------------------------
-    // 8. Coral Reef: sandy seabed with caustic light, brain / polyp / fan corals, seagrass and starfish
-    // ------------------------------------------------------------------
+    private const float ReefShadowX = 0.28f, ReefShadowY = -0.28f;   // light from the top left: shadows fall down-right (world units)
 
     private static Color ShadeReef(FloorStyle s, float u, float v, int x, int y, int n)
     {
         float W = Wu(s), wx = u * W, wy = v * W;
-        Color sand = s.colorA * (0.82f + 0.3f * Fbm(u, v, Per(s, 4f), 4, s.seed)) * (0.9f + 0.2f * Hash(x, y, s.seed + 1));
-        sand *= 0.92f + 0.1f * Mathf.Sin(wy * 5f + Fbm(u, v, Per(s, 1.5f), 3, s.seed + 2) * 8f);   // ripples in the sand
+
+        // Sand: pale, with gentle ripple bands and a fine grain.
+        float drift = Fbm(u, v, Per(s, 1.5f), 3, s.seed + 2);
+        Color sand = Color.Lerp(s.colorA, new Color(0.97f, 0.95f, 0.86f), 0.45f) * (0.88f + 0.2f * Fbm(u, v, Per(s, 5f), 4, s.seed)) * (0.93f + 0.14f * Hash(x, y, s.seed + 1));
+        sand *= 0.94f + 0.08f * Mathf.Sin(wy * 4.2f + wx * 1.3f + drift * 7f);
         Color c = sand;
 
-        // Coral colonies on a Voronoi map.
-        int cc = Per(s, 4.5f);
-        Voronoi(u, v, cc, s.seed + 3, out float f1, out float f2, out int id);
-        float colonyR = (0.42f + 0.18f * HashId(id, s.seed + 4)) / cc;
-        float rim = colonyR * (1f + 0.25f * (Fbm(u, v, Per(s, 0.8f), 3, s.seed + 5) - 0.5f));
-        bool colony = HashId(id, s.seed + 6) > 0.4f;
-        float shadowRing = colony ? Sstep(rim * 1.9f, rim, f1) : 0f;
-        c *= 1f - 0.35f * shadowRing;
-        if (colony && f1 < rim)
+        // Reef rock: grey-brown patches of old coral rock with pits and a film of algae.
+        float rock = ReefRock(s, u, v);
+        if (rock > 0f)
         {
-            int type = Mathf.FloorToInt(HashId(id, s.seed + 7) * 5f);
-            float k = f1 / rim;
-            Color baseCol = HashId(id, s.seed + 8) < 0.5f ? s.colorB : s.colorC;
-            baseCol = Color.Lerp(baseCol, Hue(HashId(id, s.seed + 9), 0.55f, 1f), 0.25f);
-            Color coral;
-            if (type == 0)
-            {
-                // brain coral: winding ridges
-                float ridge = Mathf.Abs(Mathf.Sin(Fbm(u, v, Per(s, 0.5f), 3, s.seed + 10 + id) * 30f));
-                coral = baseCol * (0.65f + 0.5f * ridge);
-            }
-            else if (type == 1)
-            {
-                // polyp coral: a field of little bumps with bright dots
-                float gx = Frac(wx / 0.2f) - 0.5f, gy = Frac(wy / 0.2f) - 0.5f;
-                float dot = Mathf.Sqrt(gx * gx + gy * gy);
-                coral = baseCol * (0.7f + 0.4f * (1f - dot * 1.4f));
-                if (dot < 0.16f) coral = ScMix(coral, Color.white, 0.45f);
-            }
-            else if (type == 2)
-            {
-                // fan coral: lines fanning out from the middle
-                float ang = Mathf.Atan2((v * cc - Mathf.Floor(v * cc)) - 0.5f, (u * cc - Mathf.Floor(u * cc)) - 0.5f);
-                coral = baseCol * (0.65f + 0.55f * Mathf.Abs(Mathf.Sin(ang * 16f + f1 * 40f)));
-            }
-            else if (type == 3)
-            {
-                // staghorn: thin branches radiating and forking, bright tips
-                float ang = Mathf.Atan2((v * cc - Mathf.Floor(v * cc)) - 0.5f, (u * cc - Mathf.Floor(u * cc)) - 0.5f);
-                float br = Mathf.Abs(Mathf.Sin(ang * 8f + Mathf.Sin(f1 * 70f + id) * 1.4f));
-                float branch = Sstep(0.72f, 0.95f, br);
-                coral = Color.Lerp(baseCol * 0.35f, baseCol * 1.25f + new Color(0.1f, 0.1f, 0.1f, 0f), branch);
-                if (branch > 0.5f && k > 0.7f) coral = ScMix(coral, Color.white, 0.35f);
-            }
-            else
-            {
-                // table coral: flat stacked plates, a ring for each, lit on the upper edge
-                float ring = Frac(k * 3.6f);
-                coral = baseCol * (0.7f + 0.4f * ring);
-                if (ring < 0.12f) coral *= 0.55f;
-            }
-            coral *= 0.6f + 0.55f * (1f - k * 0.6f);                                      // domed: darker toward the rim
-            c = ScMix(c, coral, Sstep(1f, 0.9f, k));
+            float pits = Fbm(u, v, Per(s, 0.35f), 2, s.seed + 5);
+            Color stone = Color.Lerp(new Color(0.66f, 0.6f, 0.5f), new Color(0.58f, 0.6f, 0.46f), Fbm(u, v, Per(s, 2f), 2, s.seed + 6));
+            stone *= 0.82f + 0.3f * pits;
+            stone *= 1f - 0.25f * (1f - Sstep(0.2f, 0.3f, pits));   // pits
+            c = Color.Lerp(c, stone, rock);
         }
 
-        // Seagrass: wavy green strokes standing in the sand.
-        float gcell = 1.7f;
-        int gx0 = Mathf.FloorToInt(wx / gcell), gy0 = Mathf.FloorToInt(wy / gcell);
-        if (!colony || f1 > rim * 1.6f)
-            if (Hash(gx0, gy0, s.seed + 20) > 0.7f)
-            {
-                float px = (gx0 + 0.5f) * gcell, py = (gy0 + 0.2f) * gcell;
-                float along = (wy - py) / 1.2f;
-                if (along > 0f && along < 1f)
-                {
-                    float sway = Mathf.Sin(along * 4f + gx0) * 0.18f * along;
-                    if (Mathf.Abs(wx - px - sway) < 0.045f * (1f - along * 0.6f)) c = Color.Lerp(new Color(0.1f, 0.4f, 0.2f), new Color(0.35f, 0.75f, 0.3f), along);
-                }
-            }
-
-        // Sea urchins: dark purple balls of spines.
-        float ucell = 4.3f;
-        int ux0 = Mathf.FloorToInt(wx / ucell), uy0 = Mathf.FloorToInt(wy / ucell);
-        if (Hash(ux0, uy0, s.seed + 50) > 0.5f)
+        // Seagrass meadows in the open sand: blades lying in the current.
+        float meadow = Sstep(0.6f, 0.72f, Fbm(u + 0.37f, v + 0.11f, Per(s, 7f), 3, s.seed + 4)) * (1f - rock);
+        if (meadow > 0.01f)
         {
-            float px = (ux0 + 0.2f + 0.6f * Hash(ux0, uy0, s.seed + 51)) * ucell, py = (uy0 + 0.2f + 0.6f * Hash(ux0, uy0, s.seed + 52)) * ucell;
-            float dx = wx - px, dy = wy - py, d = Mathf.Sqrt(dx * dx + dy * dy);
-            float ang = Mathf.Atan2(dy, dx);
-            float spike = 0.2f + 0.14f * Mathf.Pow(Mathf.Abs(Mathf.Cos(8f * ang)), 9f);
-            c *= 1f - 0.25f * Sstep(0.5f, 0.2f, d);
-            if (d < spike) c = Color.Lerp(new Color(0.08f, 0.03f, 0.14f), new Color(0.45f, 0.2f, 0.6f), Sstep(0.12f, spike, d));
+            float wave = 0.6f + 0.5f * (Fbm(u, v, Per(s, 4f), 2, s.seed + 7) - 0.5f);
+            float blade = BladeLayer(wx, wy, 0.6f, 3, 0.12f, 0.35f, 0.85f, 0.045f, 0.5f, wave - 0.6f, s.seed + 8, out float bt, out float btone);
+            c *= 1f - 0.25f * meadow;   // the meadow's shade
+            Color green = Color.Lerp(new Color(0.12f, 0.36f, 0.2f), new Color(0.42f, 0.66f, 0.3f), bt) * (0.85f + 0.3f * btone);
+            c = Color.Lerp(c, green, blade * meadow);
         }
 
-        // Fish seen from above: a little school, each with its shadow on the sand.
-        float fcell = 9f;
-        int fx0 = Mathf.FloorToInt(wx / fcell), fy0 = Mathf.FloorToInt(wy / fcell);
-        for (int oy = -1; oy <= 0; oy++)
-            for (int ox = -1; ox <= 0; ox++)
-            {
-                int ix = fx0 + ox, iy = fy0 + oy;
-                if (Hash(ix, iy, s.seed + 60) < 0.5f) continue;
-                float scx = (ix + 0.5f) * fcell, scy = (iy + 0.5f) * fcell;
-                float heading = Hash(ix, iy, s.seed + 61) * 360f;
-                Color fishCol = Hash(ix, iy, s.seed + 62) < 0.5f ? new Color(1f, 0.82f, 0.15f) : new Color(0.2f, 0.45f, 1f);
-                for (int i = 0; i < 6; i++)
-                {
-                    float fx = scx + (Hash(ix, iy * 7 + i, s.seed + 63) - 0.5f) * 2.4f, fy = scy + (Hash(ix, iy * 7 + i, s.seed + 64) - 0.5f) * 2.4f;
-                    Rot2(wx - fx, wy - fy, -(heading + (Hash(ix, i, s.seed + 65) - 0.5f) * 30f), out float lx, out float ly);
-                    float shadow = Mathf.Max(ScEll(lx - 0.18f, ly + 0.2f, 0f, 0f, 0.26f, 0.09f, 0.04f), ScEll(lx - 0.18f, ly + 0.2f, -0.3f, 0f, 0.12f, 0.07f, 0.04f));
-                    c *= 1f - 0.22f * shadow;
-                    float body = ScEll(lx, ly, 0f, 0f, 0.26f, 0.09f, 0.04f), tail = ScEll(lx, ly, -0.3f, 0f, 0.12f, 0.07f * (1f + Mathf.Abs(Mathf.Sin(lx * 20f))), 0.04f);
-                    float f = Mathf.Max(body, tail * 0.85f);
-                    if (f > 0f) c = ScMix(c, fishCol * (0.8f + 0.4f * Mathf.Clamp01(0.5f + ly * 5f)), f);
-                }
-            }
+        // Shadows of the corals on the sand / rock.
+        float shade = ReefCoral(s, wx - ReefShadowX, wy - ReefShadowY, u, v, out _, out _, out _, out _, out _);
+        c *= 1f - 0.4f * shade;
 
-        // Spiral shells in the sand.
-        float shcell = 2.6f;
-        int shx = Mathf.FloorToInt(wx / shcell), shy = Mathf.FloorToInt(wy / shcell);
-        if (Hash(shx, shy, s.seed + 70) > 0.82f)
-        {
-            float px = (shx + 0.2f + 0.6f * Hash(shx, shy, s.seed + 71)) * shcell, py = (shy + 0.2f + 0.6f * Hash(shx, shy, s.seed + 72)) * shcell;
-            float dx = wx - px, dy = wy - py, d = Mathf.Sqrt(dx * dx + dy * dy);
-            if (d < 0.11f) c = Color.Lerp(new Color(0.95f, 0.88f, 0.78f), new Color(0.85f, 0.55f, 0.45f), 0.5f + 0.5f * Mathf.Sin(Mathf.Atan2(dy, dx) * 2f + d * 70f)) * (0.8f + 0.3f * Mathf.Clamp01(0.5f - dy * 4f));
-        }
-
-        // Starfish.
+        // Starfish: five tapering arms, a raised spine line, little white knobs.
         float scell = 6f;
         int sx0 = Mathf.FloorToInt(wx / scell), sy0 = Mathf.FloorToInt(wy / scell);
         if (Hash(sx0, sy0, s.seed + 30) > 0.55f)
@@ -833,27 +669,170 @@ public partial class PixelFloor
             float px = (sx0 + 0.25f + 0.5f * Hash(sx0, sy0, s.seed + 31)) * scell, py = (sy0 + 0.25f + 0.5f * Hash(sx0, sy0, s.seed + 32)) * scell;
             float dx = wx - px, dy = wy - py, d = Mathf.Sqrt(dx * dx + dy * dy);
             float ang = Mathf.Atan2(dy, dx) + Hash(sx0, sy0, s.seed + 33) * 6f;
-            float r = 0.5f * (0.38f + 0.62f * Mathf.Pow(Mathf.Abs(Mathf.Cos(2.5f * ang)), 1.6f));
+            float arm = Mathf.Pow(Mathf.Abs(Mathf.Cos(2.5f * ang)), 1.6f);
+            float r = 0.45f * (0.34f + 0.66f * arm);
+            c *= 1f - 0.3f * (1f - Sstep(r, r + 0.12f, Mathf.Sqrt((dx - ReefShadowX * 0.4f) * (dx - ReefShadowX * 0.4f) + (dy - ReefShadowY * 0.4f) * (dy - ReefShadowY * 0.4f))));
             if (d < r)
             {
-                Color star = Color.Lerp(new Color(1f, 0.5f, 0.15f), new Color(0.95f, 0.25f, 0.2f), Hash(sx0, sy0, s.seed + 34));
-                if (Hash(x, y, s.seed + 35) > 0.9f || (d < 0.28f && Mathf.Abs(Mathf.Cos(2.5f * ang)) > 0.9f)) star = ScMix(star, Color.white, 0.5f);
-                c = star * (0.75f + 0.4f * (1f - d / r));
+                Color star = Color.Lerp(new Color(1f, 0.5f, 0.15f), new Color(0.92f, 0.25f, 0.2f), Hash(sx0, sy0, s.seed + 34));
+                star *= 0.7f + 0.45f * Sstep(0.55f, 1f, arm) * (1f - d / r) + 0.15f * (1f - d / r);
+                if (Hash(Mathf.FloorToInt(wx / 0.06f), Mathf.FloorToInt(wy / 0.06f), s.seed + 35) > 0.88f) star = ScMix(star, new Color(1f, 0.95f, 0.85f), 0.6f);
+                c = star;
             }
         }
 
-        // Deeper blue patches (a drop-off) and sunbeams slanting through the water.
-        float deep = Sstep(0.58f, 0.75f, Fbm(u, v, Per(s, 16f), 3, s.seed + 80));
-        c = ScMix(c, c * new Color(0.2f, 0.45f, 0.8f, 1f), deep * 0.6f);
-        float beam = Mathf.Pow(0.5f + 0.5f * Mathf.Sin((u * 0.9f + v * 0.5f) * 38f + Fbm(u, v, 3, 2, s.seed + 99) * 4f), 6f);
-        c += new Color(0.8f, 1f, 1f) * beam * 0.05f * (1f - deep * 0.6f);
+        // Shells and urchins in the sand.
+        float shcell = 2.6f;
+        int shx = Mathf.FloorToInt(wx / shcell), shy = Mathf.FloorToInt(wy / shcell);
+        if (Hash(shx, shy, s.seed + 70) > 0.84f)
+        {
+            float px = (shx + 0.2f + 0.6f * Hash(shx, shy, s.seed + 71)) * shcell, py = (shy + 0.2f + 0.6f * Hash(shx, shy, s.seed + 72)) * shcell;
+            float dx = wx - px, dy = wy - py, d = Mathf.Sqrt(dx * dx + dy * dy);
+            if (d < 0.12f) c = Color.Lerp(new Color(0.95f, 0.88f, 0.78f), new Color(0.85f, 0.55f, 0.45f), 0.5f + 0.5f * Mathf.Sin(Mathf.Atan2(dy, dx) * 2f + d * 70f)) * (0.8f + 0.3f * Mathf.Clamp01(0.5f - dy * 4f));
+        }
+        float ucell = 5.3f;
+        int ux0 = Mathf.FloorToInt(wx / ucell), uy0 = Mathf.FloorToInt(wy / ucell);
+        if (Hash(ux0, uy0, s.seed + 50) > 0.7f)
+        {
+            float px = (ux0 + 0.2f + 0.6f * Hash(ux0, uy0, s.seed + 51)) * ucell, py = (uy0 + 0.2f + 0.6f * Hash(ux0, uy0, s.seed + 52)) * ucell;
+            float dx = wx - px, dy = wy - py, d = Mathf.Sqrt(dx * dx + dy * dy);
+            float ang = Mathf.Atan2(dy, dx);
+            float spike = 0.13f + 0.11f * Mathf.Pow(Mathf.Abs(Mathf.Cos(9f * ang)), 9f);
+            c *= 1f - 0.3f * (1f - Sstep(0.15f, 0.35f, d));
+            if (d < spike) c = Color.Lerp(new Color(0.08f, 0.03f, 0.14f), new Color(0.4f, 0.2f, 0.55f), Sstep(0.08f, spike, d));
+        }
 
-        // Water tint and caustic light on top.
-        c *= new Color(0.82f, 1f, 1.05f, 1f);
-        Voronoi(u + 0.13f, v + 0.41f, Per(s, 1.5f), s.seed + 40, out float g1, out float g2, out int gid);
-        float net = 1f - Sstep(0f, 0.22f, (g2 - g1) * Per(s, 1.5f));
-        c += new Color(0.8f, 1f, 1f) * net * 0.16f;
+        // The corals.
+        float coral = ReefCoral(s, wx, wy, u, v, out int type, out float k, out float nx, out float ny, out float pick);
+        if (coral > 0f)
+        {
+            Color col;
+            switch (type)
+            {
+                case 0: col = Color.Lerp(new Color(0.78f, 0.64f, 0.38f), new Color(0.62f, 0.7f, 0.36f), pick); break;   // brain coral: tan / olive
+                case 1: col = pick < 0.4f ? s.colorC : pick < 0.75f ? new Color(0.35f, 0.6f, 0.95f) : s.colorB; break;      // branching: purple / blue / pink
+                case 2: col = Color.Lerp(new Color(0.55f, 0.66f, 0.5f), new Color(0.75f, 0.68f, 0.5f), pick); break;     // table coral: sage / sand
+                case 3: col = pick < 0.5f ? new Color(1f, 0.55f, 0.3f) : s.colorB; break;                                // soft coral: orange / pink
+                default: col = pick < 0.6f ? s.colorC * 1.1f : new Color(0.85f, 0.25f, 0.3f); break;                      // sea fan: violet / red
+            }
+            float lit = Mathf.Clamp01(0.55f + (-nx + ny) * 0.45f);
+            float dome = Mathf.Sqrt(Mathf.Max(0f, 1f - k * k));
+            if (type == 0)
+            {
+                // Brain coral: meandering grooves.
+                float groove = Mathf.Abs(Mathf.Sin(Fbm(u, v, Per(s, 0.7f), 3, s.seed + 10 + Mathf.FloorToInt(pick * 7f)) * 24f));
+                col *= 0.62f + 0.48f * Sstep(0.15f, 0.6f, groove);
+            }
+            else if (type == 1)
+            {
+                // Branching coral from above: crowded branch tips, bright at the tip, dark down between them.
+                float tip = ReefTips(wx, wy, 0.13f, s.seed + 11);
+                col = Color.Lerp(col * 0.35f, Color.Lerp(col * 1.15f, Color.white, 0.25f * tip), Sstep(0.15f, 0.7f, tip));
+            }
+            else if (type == 2)
+            {
+                // Table coral: a flat plate with fine radial lines, growth rings and a pale growing rim.
+                float ang = Mathf.Atan2(ny, nx);
+                col *= 0.85f + 0.15f * Mathf.Abs(Mathf.Sin(ang * 70f)) - 0.08f * Sstep(0.4f, 0.5f, Frac(k * 4f));
+                col = Color.Lerp(col, Color.Lerp(col, Color.white, 0.4f), Sstep(0.82f, 0.95f, k));
+                dome = 0.8f + 0.2f * dome;
+            }
+            else if (type == 3)
+            {
+                // Soft coral: a ring of wavy tentacles, their tips a brighter colour, a dark mouth in the middle.
+                float ang = Mathf.Atan2(ny, nx);
+                float tent = Mathf.Abs(Mathf.Sin(ang * 26f + Mathf.Sin(k * 14f + pick * 6f) * 1.2f + Fbm(u, v, Per(s, 0.4f), 2, s.seed + 12) * 4f));
+                col = Color.Lerp(col * 0.7f, col * 1.15f, Sstep(0.2f, 0.8f, tent));
+                col = Color.Lerp(col, new Color(0.9f, 0.85f, 1f), Sstep(0.75f, 1f, k) * 0.45f);
+                if (k < 0.16f) col = Color.Lerp(new Color(0.25f, 0.08f, 0.12f), col, Sstep(0.08f, 0.16f, k));
+            }
+            else
+            {
+                dome = 0.9f + 0.1f * dome;   // a sea fan lies flat; its lace already lets the sand show through (ReefCoral)
+                col *= 0.85f + 0.3f * (1f - k);
+            }
+            col *= (0.6f + 0.5f * lit) * (0.7f + 0.35f * dome);
+            if (k > 0.85f && type != 4) col *= 0.82f;   // the colony's edge curving down
+            c = Color.Lerp(c, col, coral);
+        }
+
+        // Water over everything: a turquoise tint and deeper blue hollows.
+        c *= new Color(0.84f, 1f, 1.02f, 1f);
+        float deep = Sstep(0.62f, 0.8f, Fbm(u, v, Per(s, 16f), 3, s.seed + 80));
+        c = ScMix(c, c * new Color(0.3f, 0.55f, 0.85f, 1f), deep * 0.55f);
         return Fin(c);
+    }
+
+    /// <summary>Coral Reef: how much reef rock covers this spot (0..1).</summary>
+    private static float ReefRock(FloorStyle s, float u, float v) { return Sstep(0.5f, 0.6f, Fbm(u, v, Per(s, 9f), 4, s.seed + 3)); }
+
+    /// <summary>Coral Reef: crowded branch tips (1 at a tip's centre) on a jittered grid 'cell' world units across.</summary>
+    private static float ReefTips(float wx, float wy, float cell, int seed)
+    {
+        int gx = Mathf.FloorToInt(wx / cell), gy = Mathf.FloorToInt(wy / cell);
+        float best = 9f;
+        for (int oy = -1; oy <= 1; oy++)
+            for (int ox = -1; ox <= 1; ox++)
+            {
+                int ix = gx + ox, iy = gy + oy;
+                float dx = wx / cell - (ix + 0.2f + 0.6f * Hash(ix, iy, seed)), dy = wy / cell - (iy + 0.2f + 0.6f * Hash(ix, iy, seed + 1));
+                best = Mathf.Min(best, dx * dx + dy * dy);
+            }
+        return Mathf.Clamp01(1f - Mathf.Sqrt(best) / 0.45f);
+    }
+
+    /// <summary>
+    /// Coral Reef colonies: coverage (0..1) at a world point, the colony's type (0 brain, 1 branching, 2 table, 3 soft, 4 sea fan),
+    /// how far out from its middle (k, 0..1), the outward direction (nx, ny) and a per-colony random value. Colonies sit on a jittered grid,
+    /// mostly on the reef rock, with lobed irregular outlines; the highest one wins where two overlap.
+    /// </summary>
+    private static float ReefCoral(FloorStyle s, float wx, float wy, float u, float v, out int type, out float k, out float nx, out float ny, out float pick)
+    {
+        type = 0; k = 1f; nx = ny = 0f; pick = 0f;
+        const float cell = 2.2f;
+        float W = Wu(s);
+        int gx = Mathf.FloorToInt(wx / cell), gy = Mathf.FloorToInt(wy / cell);
+        float best = 0f, bestOrder = -1f;
+        for (int oy = -1; oy <= 1; oy++)
+            for (int ox = -1; ox <= 1; ox++)
+            {
+                int ix = gx + ox, iy = gy + oy;
+                float cx = (ix + 0.2f + 0.6f * Hash(ix, iy, s.seed + 20)) * cell, cy = (iy + 0.2f + 0.6f * Hash(ix, iy, s.seed + 21)) * cell;
+                float onRock = ReefRock(s, cx / W, cy / W);
+                if (Hash(ix, iy, s.seed + 22) > 0.1f + 0.85f * onRock) continue;   // mostly on the rock, a few alone in the sand
+                int t = Mathf.FloorToInt(Hash(ix, iy, s.seed + 23) * 5f);
+                float r = 0.65f + 0.8f * Hash(ix, iy, s.seed + 24);
+                float dx = wx - cx, dy = wy - cy;
+                float lx = dx, ly = dy;
+                if (t == 4)
+                {
+                    // A sea fan: a wide, thin fan shape standing across the current (stretched one way).
+                    float a = Hash(ix, iy, s.seed + 25) * Mathf.PI;
+                    float ca = Mathf.Cos(a), sa = Mathf.Sin(a);
+                    lx = (dx * ca + dy * sa) / 1.25f; ly = (-dx * sa + dy * ca) / 0.45f;
+                }
+                float ang = Mathf.Atan2(ly, lx);
+                float p1 = Hash(ix, iy, s.seed + 26) * 6.28f, p2 = Hash(ix, iy, s.seed + 27) * 6.28f;
+                float lobes = t == 1 || t == 3 ? 0.16f : 0.09f;
+                float wob = 1f + lobes * Mathf.Sin(ang * 3f + p1) + lobes * 0.6f * Mathf.Sin(ang * 5f + p2) + 0.04f * Mathf.Sin(ang * 11f + p1 + p2);
+                float d = Mathf.Sqrt(lx * lx + ly * ly) / (r * wob);
+                if (d >= 1f) continue;
+                float cover = 1f - Sstep(0.94f, 1f, d);
+                if (t == 4)
+                {
+                    // The fan's lace: a net of fine branches with sand showing through the holes.
+                    float a2 = Mathf.Atan2(ly, lx + 1.1f), rr = Mathf.Sqrt((lx + 1.1f) * (lx + 1.1f) + ly * ly);
+                    float ribs = Mathf.Abs(Mathf.Sin(a2 * 38f)), cross = Mathf.Abs(Mathf.Sin(rr * 26f + Mathf.Sin(a2 * 9f)));
+                    cover *= Mathf.Max(1f - Sstep(0.2f, 0.4f, ribs), 1f - Sstep(0.18f, 0.35f, cross));
+                }
+                float order = Hash(ix, iy, s.seed + 28);
+                if (cover <= 0.02f || order <= bestOrder) continue;
+                bestOrder = order;
+                best = cover; type = t; k = d; pick = Hash(ix, iy, s.seed + 29);
+                float len = Mathf.Max(1e-4f, Mathf.Sqrt(dx * dx + dy * dy));
+                nx = dx / len * d; ny = dy / len * d;
+            }
+        return best;
     }
 
     // ------------------------------------------------------------------

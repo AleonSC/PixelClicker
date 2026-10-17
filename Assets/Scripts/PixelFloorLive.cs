@@ -89,6 +89,16 @@ public partial class PixelFloor
         return true;
     }
 
+    /// <summary>The floor's edge fade: it starts fading r0 and is gone r1 world units from the centre (the cube, or the player in first person).</summary>
+    public bool TryGetFadeRadii(out float r0, out float r1)
+    {
+        r0 = r1 = 0f;
+        PixelClicker clicker = PixelFind.Cached<PixelClicker>();
+        if (floorRenderer == null || clicker == null) return false;
+        FadeRadii(clicker, out r0, out r1);
+        return true;
+    }
+
     // ------------------------------------------------------------------
     // The patterns
     // ------------------------------------------------------------------
@@ -630,6 +640,16 @@ public class PixelFloorOverlay : MonoBehaviour
     [Tooltip("How far out the Laser Tracker's emitters circle, as a multiple of the visible floor's reach (higher = longer beams, reaching past the screen's edges).")]
     [SerializeField] private float trackerReach = 2f;
 
+    [Header("Caustics")]
+    [Tooltip("Size of one cell of the moving caustic light net (world units).")]
+    [SerializeField] private float causticScale = 1.6f;
+    [Tooltip("How fast the caustic light moves.")]
+    [SerializeField] private float causticSpeed = 0.6f;
+    [Tooltip("How bright the caustic light is.")]
+    [SerializeField] private float causticStrength = 0.35f;
+    [Tooltip("Colour of the caustic light.")]
+    [SerializeField] private Color causticColor = new Color(0.8f, 1f, 1f, 1f);
+
     [Header("Ant")]
     [Tooltip("Length of the ant (world units).")]
     [SerializeField] private float antLength = 0.42f;
@@ -676,6 +696,7 @@ public class PixelFloorOverlay : MonoBehaviour
         if (s == null || s.overlay == PixelFloor.FloorOverlay.None) return;
         root = new GameObject("Floor Overlay (" + s.name + ")");
         if (s.overlay == PixelFloor.FloorOverlay.Ant) BuildAnt();
+        else if (s.overlay == PixelFloor.FloorOverlay.Caustics) BuildCaustics();
         else if (s.overlay == PixelFloor.FloorOverlay.Crumble) { /* built on the first frame, when the floor's size is known (BuildCrumble) */ }
         else BuildBeams(s.overlay == PixelFloor.FloorOverlay.Lasers ? Mathf.Max(1, laserCount) : Mathf.Max(1, trackerCount), s.overlay == PixelFloor.FloorOverlay.LaserTracker);
     }
@@ -683,13 +704,66 @@ public class PixelFloorOverlay : MonoBehaviour
     private void Clear()
     {
         if (root != null) Destroy(root);
-        root = null;
+        if (causticQuad != null) Destroy(causticQuad.GetComponent<MeshFilter>().sharedMesh);
+        root = null; causticQuad = null;
         beamState.Clear(); antLegs.Clear(); tiles.Clear(); crumbleBuiltReach = 0f;
         if (beamMesh != null) { Destroy(beamMesh); beamMesh = null; }
         trackerRing = false; ant = null; trackInit = false;
     }
 
-    private void OnDestroy() { Clear(); if (lineMat != null) Destroy(lineMat); }
+    private void OnDestroy() { Clear(); if (lineMat != null) Destroy(lineMat); if (causticMat != null) Destroy(causticMat); }
+
+    // ---- caustics: one flat quad over the floor drawn with the Caustics shader ----
+
+    private static Shader causticShader;
+    private static bool causticShaderMissing;
+    private Material causticMat;
+    private Transform causticQuad;
+    private float causticClock;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { causticShader = null; causticShaderMissing = false; }
+
+    private void BuildCaustics()
+    {
+        if (causticShader == null && !causticShaderMissing)
+        {
+            causticShader = Resources.Load<Shader>("PixelCaustics");
+            if (causticShader == null) { causticShaderMissing = true; Debug.LogWarning("PixelFloorOverlay: Resources/PixelCaustics.shader was not found; the floor has no moving caustic light."); }
+        }
+        if (causticShader == null || !causticShader.isSupported) return;
+        if (causticMat == null) causticMat = new Material(causticShader) { name = "Floor Caustics" };
+        GameObject g = new GameObject("Caustics", typeof(MeshFilter), typeof(MeshRenderer));
+        g.transform.SetParent(root.transform, false);
+        Mesh quad = new Mesh { name = "Floor Caustics" };
+        quad.vertices = new[] { new Vector3(-1f, 0f, -1f), new Vector3(-1f, 0f, 1f), new Vector3(1f, 0f, 1f), new Vector3(1f, 0f, -1f) };
+        quad.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+        quad.RecalculateBounds();
+        g.GetComponent<MeshFilter>().sharedMesh = quad;
+        MeshRenderer mr = g.GetComponent<MeshRenderer>();
+        mr.sharedMaterial = causticMat;
+        mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        mr.receiveShadows = false;
+        causticQuad = g.transform;
+    }
+
+    private void UpdateCaustics(PixelFloor floor, Vector3 centre, float reach, float alpha)
+    {
+        if (causticQuad == null || causticMat == null) return;
+        if (!PixelTimeStop.IsStopped) causticClock += Time.unscaledDeltaTime;
+        if (!floor.TryGetFadeRadii(out float r0, out float r1)) { r0 = reach; r1 = reach * 1.3f; }
+        causticQuad.position = new Vector3(centre.x, centre.y + 0.015f, centre.z);
+        causticQuad.localScale = Vector3.one * Mathf.Max(1f, r1);
+        causticMat.SetColor("_Color", causticColor);
+        causticMat.SetFloat("_Scale", causticScale);
+        causticMat.SetFloat("_Speed", causticSpeed);
+        causticMat.SetFloat("_Strength", causticStrength);
+        causticMat.SetFloat("_Clock", causticClock);
+        causticMat.SetVector("_Center", new Vector4(centre.x, centre.z, 0f, 0f));
+        causticMat.SetFloat("_FadeStart", r0);
+        causticMat.SetFloat("_FadeEnd", r1);
+        causticMat.SetFloat("_Fade", alpha);
+    }
 
     // ---- lasers ----
 
@@ -1072,6 +1146,7 @@ public class PixelFloorOverlay : MonoBehaviour
             case PixelFloor.FloorOverlay.Lasers: UpdateLasers(centre, reach, alpha, time); break;
             case PixelFloor.FloorOverlay.LaserTracker: UpdateTracker(centre, reach, alpha, time, hasMouse ? mouse : centre); break;
             case PixelFloor.FloorOverlay.Crumble: UpdateCrumble(centre, reach, time); break;
+            case PixelFloor.FloorOverlay.Caustics: UpdateCaustics(floor, centre, reach, alpha); break;
             case PixelFloor.FloorOverlay.Ant:
                 if (ant != null) ant.localScale = Vector3.one * Mathf.Clamp01(alpha);   // (fades by shrinking with the floor)
                 UpdateAnt(centre, reach, hasMouse, mouse, PixelTimeStop.IsStopped ? 0f : Time.unscaledDeltaTime);
