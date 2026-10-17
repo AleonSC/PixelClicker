@@ -170,7 +170,7 @@ public partial class PixelFloor
             case FloorPattern.KiAura: case FloorPattern.EnergyWisps: case FloorPattern.Liquid:
             case FloorPattern.BattleCrater: case FloorPattern.Craters: case FloorPattern.MoonSurface: case FloorPattern.MarsSurface:
             case FloorPattern.LushGrass: case FloorPattern.NebulaField: case FloorPattern.StillPond: case FloorPattern.GraffitiWall: case FloorPattern.LeafLitter:
-            case FloorPattern.ZenGarden: case FloorPattern.PersianRug: case FloorPattern.CoralReef: case FloorPattern.CasinoFelt: case FloorPattern.StainedGlass:
+            case FloorPattern.ZenGarden: case FloorPattern.CoralReef: case FloorPattern.CasinoFelt: case FloorPattern.StainedGlass:
             case FloorPattern.WildMeadow: case FloorPattern.CloverLawn: case FloorPattern.MossyGlade: case FloorPattern.PrairieGrass: case FloorPattern.PicnicBlanket:
                 return true;
         }
