@@ -13,7 +13,8 @@
 //   Cursor.SetCursor, requested per frame, normal cursor returns when nobody asks), left-drag moves the crate over the floor plane
 //   (DragTo, kept on screen) with the fist cursor, and while dragging scroll / Q / E turn it (PixelConsumables.TurnInput; also when placing it; the yaw is saved in PlacedState). PixelStorageCrate.ClaimsPointer() makes PixelGrab step aside when the click belongs
 //   to the crate; PixelPointerClaim blocks cube clicks. Removing it (Ended) lets everything out. Saved in PlacedState.extra
-//   ('S,slot,tier,amount;'). Tip device_StorageCrate. Which husks it may take, the fly-in and taking one out into the hand are the shared PixelHuskHolder steps.
+//   ('S,slot,tier,amount;'). Tip device_StorageCrate. SOCKET (PixelSockets.cs): one 'front' socket (Both): an In coupling takes belts / hoses in (AcceptHusk),
+//   an Out coupling lets a Container Hose pull stored husks (TakeHuskOut / HuskRoom). Which husks it may take, the fly-in and taking one out into the hand are the shared PixelHuskHolder steps.
 // ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
@@ -27,7 +28,7 @@ using UnityEngine;
 /// value is kept). Left-click a stored pixel to take it out again - it is handed to the mouse like a grabbed pixel. Removing the crate lets everything out.
 /// NOTE: it must not define its own Update / LateUpdate (they would hide the base's); per-frame work runs in <c>OnTick</c>.
 /// </summary>
-public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor, IPixelPort
+public class PixelStorageCrate : PixelPlacedDevice, IPixelSocketDevice, IPixelHuskSource, IPixelHuskRoom
 {
     private const int Columns = 5, Rows = 2, Sections = Columns * Rows;
 
@@ -59,25 +60,23 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor, IPixelPo
         carry = gameObject.AddComponent<PixelCarryHandles>();
         carry.Init(() => cam);
         carry.Blocked = () => IsDying;
-        Ended += _ => { ReleaseAll(); PixelConveyorSystem.Unregister(this); };
-        PixelConveyorSystem.Register(this);   // a conveyor belt that ends at the crate feeds it directly
+        sockets = new[] { new PixelSocket("front", new Vector3(0f, 0.1f, -depth * 0.5f), Vector3.back, PixelSocketFlow.Both) };
+        Ended += _ => { ReleaseAll(); PixelCouplings.Unregister(this); };
+        PixelCouplings.Register(this);   // its FRONT socket: a coupling there takes belts / hoses in, or (set to Out) lets a hose pull stored husks
     }
 
-    private void OnDestroy() { PixelConveyorSystem.Unregister(this); }
+    private void OnDestroy() { PixelCouplings.Unregister(this); }
 
-    /// <summary>The middle of the crate's front edge at floor level (where a Conveyor Connector latches on).</summary>
-    public Vector3 PortWorld => transform.TransformPoint(new Vector3(0f, 0.1f, -depth * 0.5f));
+    // ---- Socket (PixelSockets.cs): one 'front' socket, In or Out ----
+    private PixelSocket[] sockets = new PixelSocket[0];
+    public Transform SocketRoot => transform;
+    public IReadOnlyList<PixelSocket> Sockets => sockets;
+    public Color SocketTint => new Color(0.62f, 0.45f, 0.28f, 1f);
+    public bool TakeHuskOut(PixelSocket socket, out int tier, out double amount) => TakeOneForHose(out tier, out amount);
+    public int HuskRoom(PixelSocket socket) => HoseRoom;
 
-    /// <summary>A belt's end: is this point over the crate (with some give round its edge) and is there a free section?</summary>
-    public bool AcceptsAt(Vector3 world)
-    {
-        if (IsDying || NextFree() < 0) return false;
-        Vector3 l = transform.InverseTransformPoint(world);
-        return Mathf.Abs(l.x) < width * 0.5f + cell * 1.2f && Mathf.Abs(l.z) < depth * 0.5f + cell * 1.2f && l.y > -0.6f && l.y < 3.2f;
-    }
-
-    /// <summary>A belt hands over a pixel: it flies into the next free section. False when the crate is full (the belt then ejects it).</summary>
-    public bool AcceptFromBelt(Rigidbody body)
+    /// <summary>A husk comes in through an In coupling: it flies into the next free section. False when the crate is full (whatever brought it throws it on).</summary>
+    public bool AcceptHusk(PixelSocket socket, Rigidbody body)
     {
         if (body == null || IsDying || NextFree() < 0) return false;
         OldPixelInfo info = PixelHuskQuery.Get(body).info;

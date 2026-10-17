@@ -331,6 +331,12 @@ public class PixelContainerHose : MonoBehaviour
             if (acc.AcceptFromBelt(rb)) return;
             rb.isKinematic = false;
         }
+        if (target is IPixelSocketDevice sd && sd.Sockets.Count > 0)   // (devices already moved onto sockets: their one husk hook)
+        {
+            rb.isKinematic = true;
+            if (sd.AcceptHusk(sd.Sockets[0], rb)) return;
+            rb.isKinematic = false;
+        }
         Vector3 drop = target is PixelRecycler r ? r.HoseDropPoint : b;
         rb.position = drop;
         PixelPathCarrier.SetVelocity(rb, Vector3.down * 1.5f * unit);
