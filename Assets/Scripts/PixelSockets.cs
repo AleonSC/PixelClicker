@@ -55,6 +55,8 @@ public class PixelSocket
     public PixelSocketKind kind;
     [Tooltip("A coupling comes fitted with the device (the belt-fitting pieces: Elevator, Splitter, Connector); not saved, not removable on its own.")]
     public bool fitted;
+    [Tooltip("A fitted coupling with no model of its own (the piece's own shape is the fitting: the Conveyor Connector's ends).")]
+    public bool bare;
 
     public PixelSocket(string id, Vector3 localPosition, Vector3 localFacing, PixelSocketFlow flow, bool fitted = false, PixelSocketKind kind = PixelSocketKind.Husk)
     {

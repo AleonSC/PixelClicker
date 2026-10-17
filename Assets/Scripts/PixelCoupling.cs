@@ -90,7 +90,7 @@ public class PixelCoupling : MonoBehaviour
         c.device = d;
         c.socket = s;
         c.outward = s.flow == PixelSocketFlow.Output;
-        c.Build(false, d.SocketTint);
+        if (!s.bare) c.Build(false, d.SocketTint);   // (a bare fitted socket is logic only: the piece's own shape shows the way)
         all.Add(c);
         return c;
     }
