@@ -11,6 +11,11 @@
 //   6. Blocked again: a takeover minigame (its husks are its pieces), the camera intro, time frozen by something other than Time Stop.
 //   7. Husk: the nearest thing under the pointer is a husk that can be crushed (PixelHuskCrush.CanCrush) - Husk Crush. Husk = that body.
 //   8. None.
+//   THE PRESS KEEPS ITS TARGET (2026-10-17, Charge Crush): the owner worked out on the frame the right button goes down is remembered (PressOwner)
+//   while it stays held. A press that started on a husk stays the husk's: Current keeps answering Husk (Husk = that body, null once it is gone)
+//   until the button is let go, so a hold that drifts onto the cube never starts Block Hold (its deferred start re-asks Current while held) and
+//   a hold on the cube never turns into a husk charge (PixelHuskCrush only charges when PressOwner is Husk). The press is caught by whoever asks
+//   first that frame; PixelHuskCrush asks on every press frame, so it is always caught. Released = PressOwner None again.
 //   Users: PixelBlockHold.CanStart (Cube), PixelClicker's hazard / bottle right-click (Cube), PixelHuskCrush (Husk). Systems that still check the
 //   right button on their own (belt flip, device / tester-object removal holds, the pet menu itself) are covered by the order above; a NEW right-click
 //   use adds its owner here instead of its own check.
@@ -22,11 +27,11 @@ public static class PixelRightClick
     public enum Owner { None, Blocked, Tool, Pet, WorldPart, Cube, Husk }
 
     private static int frame = -1;
-    private static Owner owner;
-    private static Rigidbody husk;
+    private static Owner owner, pressOwner;
+    private static Rigidbody husk, pressHusk;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { frame = -1; owner = Owner.None; husk = null; }
+    private static void ResetStatics() { frame = -1; owner = pressOwner = Owner.None; husk = pressHusk = null; }
 
     /// <summary>Who a right click at the pointer belongs to this frame.</summary>
     public static Owner Current { get { Resolve(); return owner; } }
@@ -34,12 +39,19 @@ public static class PixelRightClick
     /// <summary>The husk a right click would crush this frame (null unless Current is Husk).</summary>
     public static Rigidbody Husk { get { Resolve(); return owner == Owner.Husk ? husk : null; } }
 
+    /// <summary>Who the right button's current press belongs to (worked out on the frame it went down; None when the button is up).</summary>
+    public static Owner PressOwner { get { Resolve(); return pressOwner; } }
+
     private static void Resolve()
     {
         if (frame == Time.frameCount) return;
         frame = Time.frameCount;
+        bool pressed = PixelInput.RightPressed(), held = PixelInput.RightHeld();
+        if (!pressed && held && pressOwner == Owner.Husk) { owner = Owner.Husk; husk = pressHusk; return; }   // a hold that started on a husk stays the husk's
         husk = null;
         owner = Decide(PixelFind.Cached<PixelClicker>());
+        if (pressed) { pressOwner = owner; pressHusk = husk; }
+        else if (!held) { pressOwner = Owner.None; pressHusk = null; }
     }
 
     private static Owner Decide(PixelClicker clicker)

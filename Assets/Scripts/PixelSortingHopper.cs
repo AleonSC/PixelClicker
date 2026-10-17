@@ -30,7 +30,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom
+public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, IPixelStrayTarget
 {
     [Header("Sorting Hopper")]
     [Tooltip("Seconds between two husks of the chosen type slid into the Recycler (a steady stream).")]

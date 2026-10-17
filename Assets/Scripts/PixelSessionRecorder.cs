@@ -11,8 +11,8 @@
 //   best 10 s), blocks broken, income per pixel type per minute, Standard and training-skill XP per minute, a TIMELINE of milestones found by
 //   polling once a second (pixel types unlocked, shop packs bought / levelled, skill level-ups, Cubie's visits, the shop window first opened),
 //   Block Hold and stakes (hold.count, stake.placed, stake.won / lost), husk counts (blocks broken = husks dropped; despawned unused 'old.despawned', removed by the floor cap 'old.capped', grabbed, vacuumed, recycled, shredded, banked - PixelStats
-//   counters), HUSK CRUSH (right-click a husk, PixelHuskCrush: crushes and base crush XP per minute, by hand vs Chain Crush, per skill, the share
-//   of dropped husks crushed and of Standard XP that came from crushing; the first crush and the Chain Crush / Clean Break / Hard Hands nodes go on
+//   counters), HUSK CRUSH (right-click a husk, PixelHuskCrush: crushes and base crush XP per minute, plain click vs Chain Crush vs Charge Crush, per skill, the share
+//   of dropped husks crushed and of Standard XP that came from crushing; the first crush and the Chain Crush / Clean Break / Hard Hands / Charge Crush nodes go on
 //   the timeline), and the state at the start and end.
 // ---------------------------------------------------
 using System;
@@ -74,9 +74,9 @@ public class PixelSessionRecorder : MonoBehaviour
         { "old.despawned", "old.capped", "old.grabbed", "old.vacuumed", "recycler.husks", "recycler.paid", "recycler.xp", "old.shredded", "old.shattered", "old.banked", "old.attached" };
 
     // Husk Crush (PixelHuskCrush): the Standard tree nodes that change it, shown on the timeline when bought
-    private static readonly string[] CrushNodes = { PixelHuskCrush.ChainNode, PixelHuskCrush.CleanNode, PixelHuskCrush.HardNode };
-    private static readonly string[] CrushNodeNames = { "Chain Crush", "Clean Break", "Hard Hands" };
-    private static readonly string[] CrushKeys = { "husk.crushed", "husk.crushed.chain", "husk.crushed.xp" };
+    private static readonly string[] CrushNodes = { PixelHuskCrush.ChainNode, PixelHuskCrush.CleanNode, PixelHuskCrush.HardNode, PixelHuskCrush.ChargeNode };
+    private static readonly string[] CrushNodeNames = { "Chain Crush", "Clean Break", "Hard Hands", "Charge Crush" };
+    private static readonly string[] CrushKeys = { "husk.crushed", "husk.crushed.chain", "husk.crushed.charge", "husk.chargecrush", "husk.crushed.xp" };
 
     private static readonly string[] HoldKeys = { "hold.count", "stake.placed", "stake.won", "stake.lost", "power.clicks" };
 
@@ -588,11 +588,13 @@ public class PixelSessionRecorder : MonoBehaviour
     /// <summary>Husk Crush (right-click a husk on the floor for a little XP, PixelHuskCrush): how much the player used it and what it paid.</summary>
     private void AppendHuskCrush(StringBuilder sb, float minutesPlayed, double stdXp)
     {
-        double crushed = Since("husk.crushed"), chained = Since("husk.crushed.chain"), xp = Since("husk.crushed.xp");
+        double crushed = Since("husk.crushed"), chained = Since("husk.crushed.chain"), charged = Since("husk.crushed.charge"), xp = Since("husk.crushed.xp");
         sb.AppendLine("== HUSK CRUSH (right-click a husk) ==");
         sb.AppendLine("Husks crushed: " + crushed.ToString("F0") + "  (" + (crushed / minutesPlayed).ToString("F1") + " per minute; " +
                       (totalBlocks > 0 ? (100d * crushed / totalBlocks).ToString("F0") : "0") + "% of the husks dropped)");
-        sb.AppendLine("  by hand: " + (crushed - chained).ToString("F0") + ", extra ones broken by Chain Crush: " + chained.ToString("F0"));
+        sb.AppendLine("  by a plain click: " + (crushed - chained - charged).ToString("F0") + ", extra ones broken by Chain Crush: " + chained.ToString("F0") +
+                      ", by Charge Crush releases: " + charged.ToString("F0") + " (" + Since("husk.chargecrush").ToString("F0") + " releases" +
+                      (Since("husk.chargecrush") > 0d ? ", " + (charged / Since("husk.chargecrush")).ToString("F1") + " husks each" : "") + ")");
         long best = 0; int bestMinute = 0, minutesUsed = 0;
         for (int i = 0; i < minutes.Count; i++)
         {
