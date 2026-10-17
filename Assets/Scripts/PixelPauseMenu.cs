@@ -299,6 +299,8 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string filterLabel = "Screen filter";
     [Tooltip("Label of the screen filter strength slider in Settings.")]
     [SerializeField] private string filterStrengthLabel = "Filter strength";
+    [Tooltip("Label of the slider for the orbit camera's field of view (the default camera; Top down too).")]
+    [SerializeField] private string orbitFovLabel = "Orbit field of view";
     [SerializeField] private string cameraIntroLabel = "Camera intro (next start)";
     [SerializeField] private string dayNightLabel = "Day / night cycle";
     [Tooltip("Settings > Gameplay: label of the 'Did you know?' tips switch.")]
@@ -1520,7 +1522,13 @@ public class PixelPauseMenu : MonoBehaviour
     }
 
     /// <summary>A label with a 0..1 slider on its right.</summary>
-    private Slider AddSliderRow(Transform parent, string label, float value, UnityEngine.Events.UnityAction<float> onChanged, ref float y)
+    /// <summary>
+    /// A setting slider row (0..1 unless min / max are given; whole = whole numbers only). valueText = a small read-out of the value
+    /// just left of the slider (e.g. "75°"), kept up to date as it moves. reread = the setting's value, read again (with the read-out)
+    /// whenever the Settings screen opens or a save's settings load.
+    /// </summary>
+    private Slider AddSliderRow(Transform parent, string label, float value, UnityEngine.Events.UnityAction<float> onChanged, ref float y,
+                                float min = 0f, float max = 1f, bool whole = false, System.Func<float, string> valueText = null, System.Func<float> reread = null)
     {
         AddRowLabel(parent, label, y, out RectTransform row);
 
@@ -1529,8 +1537,30 @@ public class PixelPauseMenu : MonoBehaviour
         sr.anchorMin = new Vector2(0.62f, 0f);
         sr.anchorMax = Vector2.one;
         sr.offsetMin = sr.offsetMax = Vector2.zero;
+        slider.minValue = min;
+        slider.maxValue = max;
+        slider.wholeNumbers = whole;
         slider.SetValueWithoutNotify(value);
         slider.onValueChanged.AddListener(onChanged);
+        if (valueText != null)
+        {
+            TMP_Text read = MakeText(row, "Value", valueText(value), rowFontSize * 0.5f, FontStyles.Bold);
+            read.alignment = TextAlignmentOptions.MidlineRight;
+            read.color = statValueColor;
+            read.raycastTarget = false;
+            RectTransform vr = read.rectTransform;
+            vr.anchorMin = new Vector2(0.45f, 0f);
+            vr.anchorMax = new Vector2(0.6f, 1f);
+            vr.offsetMin = vr.offsetMax = Vector2.zero;
+            slider.onValueChanged.AddListener(v => read.text = valueText(v));
+        }
+        if (reread != null)
+            settingsRefreshers.Add(() =>
+            {
+                slider.SetValueWithoutNotify(reread());
+                TMP_Text shown = valueText != null ? row.Find("Value")?.GetComponent<TMP_Text>() : null;
+                if (shown != null) shown.text = valueText(slider.value);
+            });
 
         y += rowHeight + 6f;
         return slider;
@@ -2596,6 +2626,10 @@ public class PixelPauseMenu : MonoBehaviour
         AddDropdownRow(list, filterLabel, PixelFilters.Names, () => PixelFilters.Choice, v => PixelFilters.Choice = v, ref y);
         Slider filterSlider = AddSliderRow(list, filterStrengthLabel, PixelFilters.Strength, v => PixelFilters.Strength = v, ref y);
         settingsRefreshers.Add(() => filterSlider.SetValueWithoutNotify(PixelFilters.Strength));
+        // The orbit camera's field of view (the default camera; Top down too). 0 saved = the normal view's own, shown as that number.
+        System.Func<float> fovNow = () => PixelOrbitCamera.FieldOfView > 0f ? PixelOrbitCamera.FieldOfView : Mathf.Round(PixelOrbitCamera.NormalFov);
+        AddSliderRow(list, orbitFovLabel, fovNow(), v => PixelOrbitCamera.FieldOfView = v, ref y,
+                     PixelOrbitCamera.MinFov, PixelOrbitCamera.MaxFov, true, v => Mathf.RoundToInt(v).ToString(), fovNow);
         AddSettingToggle(list, vsyncLabel, () => PixelDisplaySettings.VSync, on => PixelDisplaySettings.VSync = on, ref y);
         AddSettingToggle(list, fullscreenLabel, () => PixelDisplaySettings.Fullscreen, on => PixelDisplaySettings.Fullscreen = on, ref y);
         List<Vector2Int> resolutions = PixelDisplaySettings.Resolutions;

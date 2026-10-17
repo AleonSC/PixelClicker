@@ -2,7 +2,7 @@
 // PixelOrbitCamera.cs
 //   BASE VIEW: at start (Start -> ApplyBaseView, useBaseView) the scene camera is moved to baseDistance 0 = 6 units from the cube at baseTilt 0 = 89 degrees, baseTurn 180 (the game's original orientation, +Z at the top of the screen): that
 //   pose is the game's normal view and the 1.0 of the zoom slider (Enter takes it as the home pose, so the camera intro settles into it, PixelViewBounds reads it through
-//   HomeCamera and takeover minigames glide back to it). The View window keeps the camera in Top down (this camera, pitch locked) whenever nothing else uses it.
+//   HomeCamera and takeover minigames glide back to it). The View window keeps the camera in its start view (Orbital by default; Top down = this camera, pitch locked) whenever nothing else uses it.
 //   Orbital camera (added by PixelClicker.Awake; chosen in the View window (PixelViewWindow, key PixelAction.ViewWindow) as 'Orbital', or
 //   'Top down' = Enter(topDown: true): the same camera with the pitch locked at 89 degrees; disableOrbit): the REAL camera swings round the cube (Enter captures
 //   the home pose; yaw / pitch / distance round CubeBasePosition, rotation = look-at-cube x aimOffset so the cube keeps its on-screen
@@ -13,7 +13,8 @@
 //   TargetCamera). While PixelOrbitCamera.Active, PixelOrbitCamera.HomeCamera (a hidden disabled copy at the home pose) is what
 //   PixelViewBounds and PixelFloor.FitToView read, so old pixels stay inside the NORMAL view and fitted floors don't re-fit. Leaving
 //   glides back over returnSeconds (0 = 0.7); the title screen, the camera intro and takeover / zooming minigames (any Busy + Takeover
-//   one) end it or block it.
+//   one) end it or block it. FIELD OF VIEW (Settings > Display > 'Orbit field of view', FieldOfView, PlayerPrefs OrbitFov per save, 30-100, 0 = the normal view's own): eased in on the
+//   real camera while orbiting / top down and eased back on leaving; HomeCamera keeps the normal one, so the play area does not change with it.
 // ---------------------------------------------------
 using TMPro;
 using UnityEngine;
@@ -89,7 +90,34 @@ public class PixelOrbitCamera : MonoBehaviour
     private static Camera orbitHome;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { Active = false; Instance = null; orbitHome = null; baseViewKnown = false; }
+    private static void ResetStatics() { Active = false; Instance = null; orbitHome = null; baseViewKnown = false; fovSetting = -1f; }
+
+    // ---- Field of view (Settings > Display > 'Orbit field of view'; saved per save file) ----
+    private const string PrefFov = "PixelClicker.Setting.OrbitFov";
+    /// <summary>The range of the Settings slider (degrees).</summary>
+    public const float MinFov = 30f, MaxFov = 100f;
+    private static float fovSetting = -1f;   // (-1 = not read yet)
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void DeclareFovSetting() { PixelPrefs.DeclarePerSave(PrefFov, PixelPrefs.Kind.Float); }
+
+    /// <summary>
+    /// The orbit / top down camera's field of view in degrees; 0 = the normal view's own. Only the real camera changes while orbiting: the play area,
+    /// the floor fit and the husk bounds keep reading the normal view (HomeCamera), so a wider view does not resize the play area.
+    /// </summary>
+    public static float FieldOfView
+    {
+        get { if (fovSetting < 0f) fovSetting = PixelPrefs.GetFloat(PrefFov, 0f); return fovSetting; }
+        set { fovSetting = value <= 0f ? 0f : Mathf.Clamp(value, MinFov, MaxFov); PixelPrefs.SetFloat(PrefFov, fovSetting); PixelPrefs.Save(); }
+    }
+
+    /// <summary>A save file with its own settings was loaded: read the field of view again.</summary>
+    public static void ReloadFromPrefs() { fovSetting = -1f; }
+
+    /// <summary>The normal view's own field of view (what a FieldOfView of 0 means), for the Settings slider.</summary>
+    public static float NormalFov => baseViewKnown ? baseViewFov : (orbitHome != null ? orbitHome.fieldOfView : Camera.main != null ? Camera.main.fieldOfView : 60f);
+
+    private float TargetFov => FieldOfView > 0f ? FieldOfView : homeFov;
 
     private PixelClicker clicker;
     private Camera cam;
@@ -99,7 +127,7 @@ public class PixelOrbitCamera : MonoBehaviour
     private float yaw, pitch, distance, targetYaw, targetPitch, targetDistance;
     private bool returning;
     private float returnT;
-    private float returnFromYaw, returnFromPitch, returnFromDistance;
+    private float returnFromYaw, returnFromPitch, returnFromDistance, returnFromFov;
     private Vector2 lastPointer;
     private bool autoOrbit;
 
@@ -239,6 +267,7 @@ public class PixelOrbitCamera : MonoBehaviour
         returning = true;
         returnT = 0f;
         returnFromYaw = yaw; returnFromPitch = pitch; returnFromDistance = distance;
+        returnFromFov = cam != null ? cam.fieldOfView : homeFov;
     }
 
     private void Finish(bool snap)
@@ -303,6 +332,7 @@ public class PixelOrbitCamera : MonoBehaviour
             yaw = returnFromYaw + Mathf.DeltaAngle(returnFromYaw, homeYaw) * k;
             pitch = Mathf.Lerp(returnFromPitch, homePitch, k);
             distance = Mathf.Lerp(returnFromDistance, homeDistance, k);
+            cam.fieldOfView = Mathf.Lerp(returnFromFov, homeFov, k);   // (back to the normal view's field of view)
             Place();
             if (returnT >= 1f) { Finish(true); }
             return;
@@ -311,6 +341,7 @@ public class PixelOrbitCamera : MonoBehaviour
         yaw = Mathf.LerpAngle(yaw, targetYaw, f);
         pitch = Mathf.Lerp(pitch, targetPitch, f);
         distance = Mathf.Lerp(distance, targetDistance, f);
+        cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, TargetFov, f);   // the Settings field of view (eases in when orbiting starts or the slider moves)
         pivot = clicker.CubeBasePosition;
         Place();
     }

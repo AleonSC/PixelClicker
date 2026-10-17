@@ -10,8 +10,8 @@
 //   or the orbit / top down camera's DistanceFraction; not in first person); and, in Orbital / Top down, the orbit controls: Auto orbit tick
 //   box + speed slider, and hold buttons for turning (and, in Orbital only, tilting). Each view row shows its CONTROLS as a vertical hover tooltip (AddViewTip; the old hint lines at the bottom of the screen for first person and orbit are gone). While the window is open first person gives the
 //   mouse back (PixelFirstPerson checks PixelViewWindow.IsOpen). The choices are saved with the save file's settings (PlayerPrefs
-//   PixelClicker.Setting.ViewKind / ViewBaseZoom / ViewAutoOrbit / ViewAutoSpeed / ViewScrollInvert, listed in PixelSettingsSync): ApplySaved puts the
-//   view back once the title screen and camera intro are over. There is no separate Default view any more: TOP DOWN is the normal view (Default only means 'no view in use for a moment': the intro, a takeover minigame, first person ending) - Update puts the player's view back (ApplySaved every 0.4 s while Default; nothing saved = startView Top down at startZoom 1). Zoom 1.0 is the BASE view (PixelOrbitCamera: the scene camera is put 6 units from the cube at 89 degrees at start, useBaseView / baseDistance / baseTilt / baseTurn); the slider and the wheel zoom between 0.35x and 2x of that and the zoom is saved (ViewBaseZoom; the wheel too). 'Invert zoom scroll' tick (orbit section, PlayerPrefs ViewScrollInvert, default ON) flips the wheel direction in PixelOrbitCamera (scroll up = zoom in). (first person is never restored by itself; orthographic is the existing FlatView setting).
+//   PixelClicker.Setting.ViewMode / ViewBaseZoom / ViewAutoOrbit / ViewAutoSpeed / ViewScrollInvert, listed in PixelSettingsSync): ApplySaved puts the
+//   view back once the title screen and camera intro are over. There is no separate Default view any more: ORBITAL is the default camera (startView; Top down was until 2026-10; Default only means 'no view in use for a moment': the intro, a takeover minigame, first person ending) - Update puts the player's view back (ApplySaved every 0.4 s while Default; nothing saved = startView Orbital at startZoom 1; the saved view's key is ViewMode). The orbit camera's field of view is Settings > Display > 'Orbit field of view' (PixelOrbitCamera.FieldOfView). Zoom 1.0 is the BASE view (PixelOrbitCamera: the scene camera is put 6 units from the cube at 89 degrees at start, useBaseView / baseDistance / baseTilt / baseTurn); the slider and the wheel zoom between 0.35x and 2x of that and the zoom is saved (ViewBaseZoom; the wheel too). 'Invert zoom scroll' tick (orbit section, PlayerPrefs ViewScrollInvert, default ON) flips the wheel direction in PixelOrbitCamera (scroll up = zoom in). (first person is never restored by itself; orthographic is the existing FlatView setting).
 // ---------------------------------------------------
 using TMPro;
 using UnityEngine;
@@ -52,15 +52,17 @@ public class PixelViewWindow : MonoBehaviour
     [SerializeField] private Color buttonColor = new Color(0.25f, 0.4f, 0.7f, 1f);
 
     [Header("Start view (used until the player picks one: no saved view setting)")]
-    [Tooltip("The view a fresh save starts in (and the one the camera returns to after a takeover minigame). Top down is the normal view of the game.")]
-    [SerializeField] private PixelViewKind startView = PixelViewKind.TopDown;
+    [Tooltip("The view a fresh save starts in (and the one the camera returns to after a takeover minigame) until the player picks another. Orbital = the default camera.")]
+    [SerializeField] private PixelViewKind startView = PixelViewKind.Orbital;
+    [SerializeField, HideInInspector] private int startViewVersion;   // (1 = Orbital became the default; moves scenes saved with the old Top down default over once)
 
     [Min(0.1f)]
     [Tooltip("Zoom of that view, as a fraction of the base distance (1 = the base view from PixelOrbitCamera 'Base Distance'; smaller = closer, up to 2 = twice as far).")]
     [SerializeField] private float startZoom = 1f;
 
     // Saved with the save file's settings (PixelSettingsSync lists these keys): the view, the zoom of the normal view, the orbit / top down zoom and auto orbit.
-    private const string PrefKind = "PixelClicker.Setting.ViewKind", PrefOrbitZoom = "PixelClicker.Setting.ViewBaseZoom",   // (the old ViewOrbitZoom was relative to the scene camera and is no longer read)
+    private const string PrefKind = "PixelClicker.Setting.ViewMode",   // (renamed from ViewKind when Orbital became the default, so every save starts in it once)
+                          PrefOrbitZoom = "PixelClicker.Setting.ViewBaseZoom",   // (the old ViewOrbitZoom was relative to the scene camera and is no longer read)
                          PrefAuto = "PixelClicker.Setting.ViewAutoOrbit", PrefSpeed = "PixelClicker.Setting.ViewAutoSpeed",
                          PrefInvert = "PixelClicker.Setting.ViewScrollInvert";
 
@@ -136,8 +138,19 @@ public class PixelViewWindow : MonoBehaviour
 
     private const float RowH = 50f, Pad = 18f, Width = 600f;
 
+    private void OnValidate() { UpgradeStartView(); }
+
+    /// <summary>Scenes saved before Orbital became the default still say Top down: move them over once.</summary>
+    private void UpgradeStartView()
+    {
+        if (startViewVersion >= 1) return;
+        startViewVersion = 1;
+        if (startView == PixelViewKind.TopDown || startView == PixelViewKind.Default) startView = PixelViewKind.Orbital;
+    }
+
     private void Awake()
     {
+        UpgradeStartView();
         instance = this;
         clicker = PixelFind.First<PixelClicker>();
         font = clicker != null ? clicker.UIFont : null;
@@ -164,7 +177,7 @@ public class PixelViewWindow : MonoBehaviour
             else if (CurrentView == PixelViewKind.Default && Time.unscaledTime >= nextAuto)
             {
                 nextAuto = Time.unscaledTime + 0.4f;
-                ApplySaved();   // no view is in use (the intro, a takeover minigame or first person just ended): back to the player's view (Top down by default)
+                ApplySaved();   // no view is in use (the intro, a takeover minigame or first person just ended): back to the player's view (Orbital by default)
             }
         }
         PixelOrbitCamera orbitNow = PixelOrbitCamera.Instance;
@@ -187,7 +200,8 @@ public class PixelViewWindow : MonoBehaviour
     {
         pendingApply = false;
         PixelViewKind kind = (PixelViewKind)Mathf.Clamp(PixelPrefs.GetInt(PrefKind, (int)startView), 0, 3);
-        if (kind == PixelViewKind.FirstPerson || kind == PixelViewKind.Default) kind = PixelViewKind.TopDown;   // (first person is never restored by itself; the old Default view is Top down now)
+        if (kind == PixelViewKind.FirstPerson || kind == PixelViewKind.Default)   // (first person is never restored by itself; 'Default' only means no view for a moment)
+            kind = startView == PixelViewKind.TopDown ? PixelViewKind.TopDown : PixelViewKind.Orbital;
         if (CurrentView != kind && !SetView(kind, false)) return;   // (the camera could not start it just now: Update tries again in a moment)
         if (CurrentView == PixelViewKind.Orbital || CurrentView == PixelViewKind.TopDown)
         {
