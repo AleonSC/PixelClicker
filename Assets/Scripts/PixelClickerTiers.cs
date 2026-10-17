@@ -550,10 +550,11 @@ public partial class PixelClicker
     {
         if (TryFishingShare(i, out float fishShare)) return fishShare;
         if (PixelSkills.TryGetUniformPool(this, uniformPool)) return uniformPool.Contains(i) ? 1f / uniformPool.Count : 0f;   // a truly random rotation
-        SpecialInfo(out int fillerIndex, out float fillerWeight, out int hazardIndex, out float hazardWeight);
+        bool[] ok = FillSpawnableNow();
+        SpecialInfo(ok, out int fillerIndex, out float fillerWeight, out int hazardIndex, out float hazardWeight);
         float total = 0f;
         for (int k = 0; k < tiers.Length; k++)
-            if (tiers[k].CanSpawn && !tiers[k].rareDrop && !PixelSkills.LeftOutOfSpawns(tiers[k].type)) total += k == fillerIndex ? fillerWeight : k == hazardIndex ? hazardWeight : SpawnWeightOf(k);
+            if (ok[k] && !tiers[k].rareDrop) total += k == fillerIndex ? fillerWeight : k == hazardIndex ? hazardWeight : SpawnWeightOf(k);
         float mine = i == fillerIndex ? fillerWeight : i == hazardIndex ? hazardWeight : SpawnWeightOf(i);
         return total > 0f ? mine / total : 0f;
     }
@@ -564,7 +565,7 @@ public partial class PixelClicker
     /// The skill pack in play may have a FILLER block (Dirt, Stone: a set share of the spawns, bigger at low skill level) and a HAZARD block
     /// (Pest, Gas Pocket: a small share that grows with level). Returns their tier indexes (or -1) and the weights that give them those shares.
     /// </summary>
-    private void SpecialInfo(out int fillerIndex, out float fillerWeight, out int hazardIndex, out float hazardWeight)
+    private void SpecialInfo(bool[] ok, out int fillerIndex, out float fillerWeight, out int hazardIndex, out float hazardWeight)
     {
         fillerIndex = hazardIndex = -1;
         fillerWeight = hazardWeight = 0f;
@@ -572,12 +573,12 @@ public partial class PixelClicker
         float fShare = 0f, hShare = 0f;
         if (PixelSkills.TryGetFiller(out PixelType ft, out float fs) && fs > 0f) { f = IndexOf(ft); fShare = fs; }
         if (PixelSkills.TryGetHazard(out PixelType ht, out float hs) && hs > 0f) { h = IndexOf(ht); hShare = hs; }
-        if (f >= 0 && (!tiers[f].CanSpawn || PixelSkills.LeftOutOfSpawns(tiers[f].type))) f = -1;
-        if (h >= 0 && (!tiers[h].CanSpawn || PixelSkills.LeftOutOfSpawns(tiers[h].type))) h = -1;
+        if (f >= 0 && !ok[f]) f = -1;
+        if (h >= 0 && !ok[h]) h = -1;
         if (f < 0 && h < 0) return;
         float others = 0f;
         for (int k = 0; k < tiers.Length; k++)
-            if (k != f && k != h && tiers[k].CanSpawn && !tiers[k].rareDrop && !PixelSkills.LeftOutOfSpawns(tiers[k].type)) others += SpawnWeightOf(k);   // (rare drops roll on their own)
+            if (k != f && k != h && ok[k] && !tiers[k].rareDrop) others += SpawnWeightOf(k);   // (rare drops roll on their own)
         if (others <= 0f) return;
         float basis = others;
         if (f >= 0) { fillerIndex = f; fillerWeight = others * fShare / (1f - fShare); basis += fillerWeight; }
@@ -625,6 +626,19 @@ public partial class PixelClicker
         return chosen;
     }
 
+    private bool[] spawnableScratch = new bool[0];
+
+    /// <summary>
+    /// For each tier: can it spawn right now (CanSpawn and not left out by the skill pack in play)? Worked out ONCE per roll and shared by
+    /// SpecialInfo and the weight loops, which used to ask PixelSkills.LeftOutOfSpawns three times per tier per click. The array is reused: read it before the next call.
+    /// </summary>
+    private bool[] FillSpawnableNow()
+    {
+        if (spawnableScratch.Length != tiers.Length) spawnableScratch = new bool[tiers.Length];
+        for (int i = 0; i < tiers.Length; i++) spawnableScratch[i] = tiers[i].CanSpawn && !PixelSkills.LeftOutOfSpawns(tiers[i].type);
+        return spawnableScratch;
+    }
+
     private readonly System.Collections.Generic.List<PixelType> fillerFamilyScratch = new System.Collections.Generic.List<PixelType>();
     private readonly System.Collections.Generic.List<int> uniformPool = new System.Collections.Generic.List<int>();
 
@@ -644,17 +658,18 @@ public partial class PixelClicker
         // packs that are not in play stay out unless the player turned them on as guests (a skill tree unlock).
         if (TryPickFishing(out int fishPick)) return fishPick;   // Fishing has its own fixed table
         if (PixelSkills.TryGetUniformPool(this, uniformPool)) return uniformPool[UnityEngine.Random.Range(0, uniformPool.Count)];   // a truly random rotation (Foraging)
-        SpecialInfo(out int fillerIndex, out float fillerWeight, out int hazardIndex, out float hazardWeight);
+        bool[] ok = FillSpawnableNow();
+        SpecialInfo(ok, out int fillerIndex, out float fillerWeight, out int hazardIndex, out float hazardWeight);
         float total = 0f;
         for (int i = 0; i < tiers.Length; i++)
-            if (tiers[i].CanSpawn && !tiers[i].rareDrop && !PixelSkills.LeftOutOfSpawns(tiers[i].type)) total += i == fillerIndex ? fillerWeight : i == hazardIndex ? hazardWeight : SpawnWeightOf(i);
+            if (ok[i] && !tiers[i].rareDrop) total += i == fillerIndex ? fillerWeight : i == hazardIndex ? hazardWeight : SpawnWeightOf(i);
 
         if (total <= 0f) return GetHighestUnlockedIndex();
 
         float roll = UnityEngine.Random.value * total;
         for (int i = 0; i < tiers.Length; i++)
         {
-            if (!tiers[i].CanSpawn || tiers[i].rareDrop || PixelSkills.LeftOutOfSpawns(tiers[i].type)) continue;   // (rare drops have their own roll: TryPickRare)
+            if (!ok[i] || tiers[i].rareDrop) continue;   // (rare drops have their own roll: TryPickRare)
             roll -= i == fillerIndex ? fillerWeight : i == hazardIndex ? hazardWeight : SpawnWeightOf(i);
             if (roll <= 0f) return i;
         }

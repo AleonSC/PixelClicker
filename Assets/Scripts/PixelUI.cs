@@ -420,6 +420,10 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Sorting order of the popup canvas. Above the inventory panel (100) but BELOW the Log (140) and Shop (150) windows, so popups never draw over them.")]
     [SerializeField] private int popupCanvasOrder = 120;
 
+    [Tooltip("Most '+N' popups on screen at once. The labels are made once and reused; when all are in use the oldest one is taken for the new popup (fast auto clicking).")]
+    [Min(1)]
+    [SerializeField] private int maxPopups = 24;
+
     // ------------------------------------------------------------------
     // Runtime
     // ------------------------------------------------------------------
@@ -654,6 +658,7 @@ public class PixelUI : MonoBehaviour
     private void Update()
     {
         if (!built) return;
+        TickPopups();
         UpdatePinnedHierarchy();
         UpdatePinnedPlacement();
         TickDeltas();
@@ -820,30 +825,12 @@ public class PixelUI : MonoBehaviour
         string text = needed < 0 ? hits.ToString() : string.Format(hitPopupFormat, hits, needed);   // a treasure chest (needed < 0) doesn't say how many it needs
         Vector2 jitter = new Vector2(UnityEngine.Random.Range(-popupRandomX, popupRandomX), 0f);
 
-        Func<Vector2> anchor;
-        Vector2 offset;
-        if (automatic && autoPopupsOverCube)
-        {
-            anchor = CubeLocal;
-            offset = cubePopupStartOffset;
-        }
-        else
-        {
-            anchor = CursorLocal;
-            offset = popupStartOffset;
-        }
-
-        StartCoroutine(PopupRoutine(text, color, anchor, offset + jitter, hitPopupSize));
+        bool overCube = automatic && autoPopupsOverCube;
+        ShowPopup(text, color, overCube ? PopupAnchor.Cube : PopupAnchor.Cursor, Vector2.zero, (overCube ? cubePopupStartOffset : popupStartOffset) + jitter, hitPopupSize, 0f);
     }
 
     /// <summary>The click that breaks a tough pixel: shows the full counter (e.g. 5/5) before the payout.</summary>
     private void OnPixelFinalHit(int tierIndex, int needed, bool automatic) => OnPixelHit(tierIndex, needed, needed, automatic);
-
-    private IEnumerator DelayedPopup(float delay, string text, Color color, Func<Vector2> anchor, Vector2 offset)
-    {
-        yield return new WaitForSecondsRealtime(delay);
-        yield return StartCoroutine(PopupRoutine(text, color, anchor, offset, 1f));
-    }
 
     /// <summary>Called for every collected pixel; automatic clicks pop up over the cube, manual ones at the cursor.</summary>
     private void OnPixelCollected(int tierIndex, double amount, bool automatic)
@@ -856,26 +843,23 @@ public class PixelUI : MonoBehaviour
         string text = string.Format(popupFormat, FormatAmount(amount));
         Vector2 jitter = new Vector2(UnityEngine.Random.Range(-popupRandomX, popupRandomX), 0f);
 
-        Func<Vector2> anchor;
-        Vector2 offset;
-
+        PopupAnchor anchor;
+        Vector2 fixedPoint = Vector2.zero, offset;
         if (automatic && autoPopupsOverCube)
         {
-            Vector2 fixedPoint = CubeLocal();
-            anchor = cubePopupFollowsCube ? (Func<Vector2>)CubeLocal : () => fixedPoint;
+            anchor = cubePopupFollowsCube ? PopupAnchor.Cube : PopupAnchor.Fixed;
+            if (anchor == PopupAnchor.Fixed) fixedPoint = CubeLocal();
             offset = cubePopupStartOffset;
         }
         else
         {
-            Vector2 fixedPoint = CursorLocal();
-            anchor = followCursor ? (Func<Vector2>)CursorLocal : () => fixedPoint;
+            anchor = followCursor ? PopupAnchor.Cursor : PopupAnchor.Fixed;
+            if (anchor == PopupAnchor.Fixed) fixedPoint = CursorLocal();
             offset = popupStartOffset;
         }
 
-        if (tier.clicksToCollect > 1 && showHitPopups && toughPayoutDelay > 0f)
-            StartCoroutine(DelayedPopup(toughPayoutDelay, text, color, anchor, offset + jitter)); // after the "5/5"
-        else
-            StartCoroutine(PopupRoutine(text, color, anchor, offset + jitter, 1f));
+        float delay = tier.clicksToCollect > 1 && showHitPopups && toughPayoutDelay > 0f ? toughPayoutDelay : 0f;   // tough blocks: after the "5/5"
+        ShowPopup(text, color, anchor, fixedPoint, offset + jitter, 1f, delay);
     }
 
     /// <summary>Shows (and adds up) "+X" next to a pixel's entry for each click's payout.</summary>
@@ -939,8 +923,7 @@ public class PixelUI : MonoBehaviour
 
         Color color = clicker.Tiers[vacuumTierIndex].UIColor;
         string text = string.Format(vacuumPopupFormat, FormatAmount(total));
-        StartCoroutine(PopupRoutine(text, color, CubeLocal, cubePopupStartOffset + vacuumPopupExtraOffset,
-                                    vacuumPopupSize));
+        ShowPopup(text, color, PopupAnchor.Cube, Vector2.zero, cubePopupStartOffset + vacuumPopupExtraOffset, vacuumPopupSize, 0f);
     }
 
     // ---- player settings: the "+N" popups ----
@@ -966,45 +949,105 @@ public class PixelUI : MonoBehaviour
 
     private static float PopupScale => PopupSizeScale[PopupSizeChoice];
 
-    private IEnumerator PopupRoutine(string text, Color color, Func<Vector2> getAnchor, Vector2 offset, float sizeMultiplier)
+    // ---- the popup pool ----
+    // Popups used to be a new GameObject + TextMeshProUGUI + coroutine each (and each one's outline made its own font material copy that was
+    // never freed). Now up to 'maxPopups' labels are made once, reused oldest-first, and moved by one loop in Update (TickPopups).
+
+    private enum PopupAnchor { Fixed, Cursor, Cube }
+
+    private class Popup
+    {
+        public RectTransform rect;
+        public TextMeshProUGUI label;
+        public bool live;              // in use (waiting out its delay or showing)
+        public float startTime;        // Time.unscaledTime it starts showing (later than now while delayed)
+        public Color color;
+        public PopupAnchor anchor;
+        public Vector2 fixedPoint, offset;
+        public float appliedOutline = -1f;   // (the outline is set once per label: setting it makes TMP copy the font material)
+        public Color appliedOutlineColor;
+    }
+
+    private readonly List<Popup> popups = new List<Popup>();
+
+    private void ShowPopup(string text, Color color, PopupAnchor anchor, Vector2 fixedPoint, Vector2 offset, float sizeMultiplier, float delay)
+    {
+        if (popupCanvasRect == null) return;
+        for (int i = popups.Count - 1; i >= 0; i--) if (popups[i] == null || popups[i].rect == null) popups.RemoveAt(i);   // (the canvas was rebuilt)
+
+        Popup p = null;
+        for (int i = 0; i < popups.Count; i++) if (!popups[i].live) { p = popups[i]; break; }
+        if (p == null && popups.Count < Mathf.Max(1, maxPopups)) { p = MakePopup(); popups.Add(p); }
+        if (p == null)   // all in use: take the one that started first
+        {
+            p = popups[0];
+            for (int i = 1; i < popups.Count; i++) if (popups[i].startTime < p.startTime) p = popups[i];
+        }
+
+        TextMeshProUGUI tmp = p.label;
+        if (font != null && tmp.font != font) tmp.font = font;
+        if (popupOutlineWidth > 0f && (p.appliedOutline != popupOutlineWidth || p.appliedOutlineColor != popupOutlineColor))
+        {
+            tmp.outlineColor = popupOutlineColor;
+            tmp.outlineWidth = popupOutlineWidth;
+            p.appliedOutline = popupOutlineWidth;
+            p.appliedOutlineColor = popupOutlineColor;
+        }
+        tmp.text = text;
+        tmp.fontSize = popupFontSize * sizeMultiplier * PopupScale;
+        p.color = color;
+        p.anchor = anchor;
+        p.fixedPoint = fixedPoint;
+        p.offset = offset;
+        p.startTime = Time.unscaledTime + Mathf.Max(0f, delay);
+        p.live = true;
+        p.rect.SetAsLastSibling();   // (newest on top, as before)
+        if (delay > 0f) tmp.enabled = false;
+        else PlacePopup(p, 0f);
+    }
+
+    private Popup MakePopup()
     {
         GameObject go = new GameObject("GainPopup", typeof(RectTransform));
         go.transform.SetParent(popupCanvasRect, false);
-
         RectTransform rt = go.GetComponent<RectTransform>();
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
         rt.sizeDelta = new Vector2(600f, 150f); // wide enough that the text never needs to wrap
 
         TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
-        tmp.text = text;
-        tmp.fontSize = popupFontSize * sizeMultiplier * PopupScale;
         tmp.fontStyle = FontStyles.Bold;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.raycastTarget = false;
         if (font != null) tmp.font = font;
-        if (popupOutlineWidth > 0f)
+        tmp.enabled = false;
+        return new Popup { rect = rt, label = tmp };
+    }
+
+    /// <summary>Puts a showing popup where it belongs 'k' (0..1) of the way through its life.</summary>
+    private void PlacePopup(Popup p, float k)
+    {
+        Vector2 anchor = p.anchor == PopupAnchor.Cube ? CubeLocal() : p.anchor == PopupAnchor.Cursor ? CursorLocal() : p.fixedPoint;
+        p.rect.anchoredPosition = anchor + p.offset + Vector2.up * (popupRise * k);
+        p.rect.localScale = Vector3.one * popupScale.Evaluate(k);
+        Color c = p.color;
+        c.a = p.color.a * popupAlpha.Evaluate(k);
+        p.label.color = c;
+        if (!p.label.enabled) p.label.enabled = true;
+    }
+
+    /// <summary>Moves and fades every popup in use (once per frame), and frees the finished ones.</summary>
+    private void TickPopups()
+    {
+        float now = Time.unscaledTime;
+        for (int i = 0; i < popups.Count; i++)
         {
-            tmp.outlineColor = popupOutlineColor;
-            tmp.outlineWidth = popupOutlineWidth;
+            Popup p = popups[i];
+            if (p == null || !p.live || p.rect == null) continue;
+            if (now < p.startTime) continue;   // (still waiting out its delay)
+            float t = now - p.startTime;
+            if (t >= popupDuration) { p.live = false; p.label.enabled = false; continue; }
+            PlacePopup(p, popupDuration > 0f ? Mathf.Clamp01(t / popupDuration) : 1f);
         }
-
-        float t = 0f;
-        while (t < popupDuration)
-        {
-            t += Time.unscaledDeltaTime;
-            float k = popupDuration > 0f ? Mathf.Clamp01(t / popupDuration) : 1f;
-
-            rt.anchoredPosition = getAnchor() + offset + Vector2.up * (popupRise * k);
-            rt.localScale = Vector3.one * popupScale.Evaluate(k);
-
-            Color c = color;
-            c.a = color.a * popupAlpha.Evaluate(k);
-            tmp.color = c;
-
-            yield return null;
-        }
-
-        Destroy(go);
     }
 
     // ------------------------------------------------------------------

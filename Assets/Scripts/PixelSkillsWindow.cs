@@ -285,7 +285,9 @@ public partial class PixelSkills
         BuildTip();
         windowObject.SetActive(false);
         PixelWindows.Register(this, 14, () => WindowOpen, () => PixelPop.Hide(windowObject));
-        Changed += () => { if (WindowOpen) RefreshWindow(); };
+        // (Changed also fires on every XP gain - twice per collected block - so it only moves the next refresh up to within 0.1 s
+        //  instead of re-laying out the whole window on every click; Update does the refresh)
+        Changed += () => { if (WindowOpen) refreshTimer = Mathf.Min(refreshTimer, 0.1f); };
         built = true;
     }
 

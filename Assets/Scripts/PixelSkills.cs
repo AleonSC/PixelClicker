@@ -630,7 +630,12 @@ public partial class PixelSkills : MonoBehaviour
         };
     }
 
-    public SkillPack Find(string id) => packs.Find(p => p.id == id);
+    // (a plain loop: Find runs many times per spawn roll and per frame, and List.Find with a lambda makes a new closure on every call)
+    public SkillPack Find(string id)
+    {
+        for (int i = 0; i < packs.Count; i++) if (packs[i].id == id) return packs[i];
+        return null;
+    }
 
     /// <summary>Can the player train / use this pack yet?</summary>
     public bool IsAvailable(SkillPack pack)
@@ -744,7 +749,9 @@ public partial class PixelSkills : MonoBehaviour
         PixelSkills s = Instance;
         if (s == null) return false;
         SkillPack pack = s.Find(s.ActiveId);
-        if (pack == null || string.IsNullOrEmpty(pack.fillerType) || !Enum.TryParse(pack.fillerType, out type)) return false;
+        PixelClicker.PixelType[] filler = ParseTypes(pack != null ? pack.fillerType : null);
+        if (filler.Length == 0) return false;
+        type = filler[0];
         float start = pack.fillerStartShare > 0f ? pack.fillerStartShare : 0.6f;
         float end = pack.fillerEndShare > 0f ? pack.fillerEndShare : 0.1f;
         int fade = pack.fillerFadeLevel > 1 ? pack.fillerFadeLevel : 20;
@@ -760,11 +767,11 @@ public partial class PixelSkills : MonoBehaviour
         PixelSkills s = Instance;
         if (s == null) return false;
         SkillPack pack = s.Find(s.ActiveId);
-        if (pack == null || string.IsNullOrEmpty(pack.fillerType) || !Enum.TryParse(pack.fillerType, out PixelClicker.PixelType main)) return false;
-        into.Add(main);
-        if (!string.IsNullOrEmpty(pack.extraFillerTypes))
-            foreach (string part in pack.extraFillerTypes.Split(','))
-                if (Enum.TryParse(part.Trim(), out PixelClicker.PixelType extra) && !into.Contains(extra)) into.Add(extra);
+        PixelClicker.PixelType[] filler = ParseTypes(pack != null ? pack.fillerType : null);
+        if (filler.Length == 0) return false;
+        into.Add(filler[0]);
+        foreach (PixelClicker.PixelType extra in ParseTypes(pack.extraFillerTypes))
+            if (!into.Contains(extra)) into.Add(extra);
         return true;
     }
 
@@ -777,15 +784,27 @@ public partial class PixelSkills : MonoBehaviour
     private static bool TryParseHazard(string list, out PixelClicker.PixelType type)
     {
         type = PixelClicker.PixelType.White;
-        string[] parts = list.Split(',');
-        int found = 0;
-        foreach (string raw in parts)
-        {
-            if (!Enum.TryParse(raw.Trim(), out PixelClicker.PixelType t)) continue;
-            found++;
-            if (UnityEngine.Random.value < 1f / found) type = t;
-        }
-        return found > 0;
+        PixelClicker.PixelType[] parsed = ParseTypes(list);
+        if (parsed.Length == 0) return false;
+        type = parsed[UnityEngine.Random.Range(0, parsed.Length)];
+        return true;
+    }
+
+    // The packs' block settings are text ("Twig", "Pinecone,Moss", "Mold,Toadstool") and are read on every spawn roll: each distinct text is parsed once and remembered.
+    private static readonly System.Collections.Generic.Dictionary<string, PixelClicker.PixelType[]> parsedTypeLists = new System.Collections.Generic.Dictionary<string, PixelClicker.PixelType[]>();
+    private static readonly PixelClicker.PixelType[] noTypes = new PixelClicker.PixelType[0];
+
+    /// <summary>The pixel types named in a comma-separated setting, in order, unknown names skipped (cached; do not change the array). Empty for null / "".</summary>
+    public static PixelClicker.PixelType[] ParseTypes(string list)
+    {
+        if (string.IsNullOrEmpty(list)) return noTypes;
+        if (parsedTypeLists.TryGetValue(list, out PixelClicker.PixelType[] cached)) return cached;
+        System.Collections.Generic.List<PixelClicker.PixelType> found = new System.Collections.Generic.List<PixelClicker.PixelType>();
+        foreach (string raw in list.Split(','))
+            if (Enum.TryParse(raw.Trim(), out PixelClicker.PixelType t)) found.Add(t);
+        PixelClicker.PixelType[] result = found.Count > 0 ? found.ToArray() : noTypes;
+        parsedTypeLists[list] = result;
+        return result;
     }
 
     /// <summary>
@@ -926,7 +945,7 @@ public partial class PixelSkills : MonoBehaviour
     public static bool IsOptIn(PixelClicker.PixelType type) => false;   // (Wood used to be an opt-in block; it is part of the Woodcutting pack now)
 
     /// <summary>Is the opt-in block (Wood, Rock) switched on?</summary>
-    public static bool OptInOn(PixelClicker.PixelType type) => !OffSet.Contains(type.ToString());
+    public static bool OptInOn(PixelClicker.PixelType type) => !OffSet.Contains(PixelClicker.TypeName(type));
 
     private const string OffPref = "PixelClicker.Setting.OptInOff";
     private static System.Collections.Generic.HashSet<string> offCache;
@@ -955,7 +974,7 @@ public partial class PixelSkills : MonoBehaviour
     /// <summary>Has a skill tree node that unlocks this block as a toggle been bought?</summary>
     public bool GuestUnlocked(PixelClicker.PixelType type)
     {
-        string name = type.ToString();
+        string name = PixelClicker.TypeName(type);
         foreach (SkillPack p in packs)
             if (p.nodes != null)
                 foreach (TreeNode n in p.nodes)
@@ -968,7 +987,7 @@ public partial class PixelSkills : MonoBehaviour
     }
 
     /// <summary>Is the guest block unlocked and switched on (it spawns in every rotation)?</summary>
-    public bool GuestOn(PixelClicker.PixelType type) => GuestSet.Contains(type.ToString()) && GuestUnlocked(type);
+    public bool GuestOn(PixelClicker.PixelType type) => GuestSet.Contains(PixelClicker.TypeName(type)) && GuestUnlocked(type);
 
     public void SetGuest(PixelClicker.PixelType type, bool on)
     {

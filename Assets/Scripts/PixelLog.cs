@@ -650,6 +650,7 @@ public class PixelLog : MonoBehaviour
     private void OnPixelCollected(int tierIndex, double amount, bool automatic)
     {
         if (!showGainDeltas || rows == null || tierIndex < 0 || tierIndex >= rows.Length) return;
+        if (panelObject == null || !panelObject.activeSelf) return;   // (runs on every click: no '+N' to update while the Log is closed)
         Row row = rows[tierIndex];
         if (row == null || row.delta == null) return;
 

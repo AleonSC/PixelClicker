@@ -135,6 +135,18 @@ public partial class PixelClicker
     /// <summary>The Fishing skill pack's blocks: Fish, Seaweed, Shell, Pearl and the filler Driftwood (the Jellyfish is its hazard).</summary>
     public static bool IsFishBlock(PixelType type) => PixelBlockTags.Has(type, PixelTag.Fish);   // (the tag table in PixelBlockTags.cs)
 
+    private static readonly System.Collections.Generic.Dictionary<PixelType, string> typeNames = new System.Collections.Generic.Dictionary<PixelType, string>();
+
+    /// <summary>
+    /// The type's name ("Red", "HornetNest") - the same text as type.ToString(), but made once per type and remembered.
+    /// Use it in code that runs per click / per frame (ToString on an enum builds a new string every call).
+    /// </summary>
+    public static string TypeName(PixelType type)
+    {
+        if (!typeNames.TryGetValue(type, out string name)) { name = type.ToString(); typeNames[type] = name; }
+        return name;
+    }
+
     /// <summary>Ores taken out of Mining (none at the moment: Lead, Zinc and Nickel are back). Tag a block RetiredOre to keep it out of the spawns.</summary>
     public static bool IsRetiredOre(PixelType type) => PixelBlockTags.Has(type, PixelTag.RetiredOre);   // (the tag table in PixelBlockTags.cs)
 

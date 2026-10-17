@@ -1976,11 +1976,15 @@ public partial class PixelClicker : MonoBehaviour
     {
         if (tiers == null) return;
 
+        // (this runs on every currency change - every click - and these labels are optional Inspector extras, normally all empty:
+        //  only format the numbers a label actually shows)
         System.Text.StringBuilder sb = summaryLabel != null ? new System.Text.StringBuilder() : null;
 
         for (int i = 0; i < tiers.Length; i++)
         {
             PixelTier t = tiers[i];
+            bool toSummary = sb != null && t.unlocked;
+            if (t.countLabel == null && !toSummary) continue;
             string amount = FormatNumber(t.count);
 
             if (t.countLabel != null)
@@ -1989,7 +1993,7 @@ public partial class PixelClicker : MonoBehaviour
                 t.countLabel.text = string.Format(summaryLineFormat, t.displayName, amount);
             }
 
-            if (sb != null && t.unlocked)
+            if (toSummary)
             {
                 if (sb.Length > 0) sb.Append('\n');
                 sb.AppendFormat(summaryLineFormat, t.displayName, amount);
