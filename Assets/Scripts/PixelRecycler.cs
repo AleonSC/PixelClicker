@@ -221,7 +221,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
 
     // ---- Building ----
 
-    private const float WidthHusks = 5f, DepthHusks = 4f, HeightHusks = 3f;
+    private const float WidthHusks = 5f, DepthHusks = 4f, HeightHusks = 3.6f;   // (height 3 -> 3.6 on 2026-10-17: a bit taller)
     private static readonly Color BodyColor = new Color(0.25f, 0.55f, 0.32f, 1f), LidColor = new Color(0.2f, 0.45f, 0.27f, 1f), ButtonColor = new Color(0.9f, 0.2f, 0.18f, 1f);
 
     /// <summary>Builds a placed Recycler at 'point' (with its behaviour).</summary>
