@@ -137,7 +137,7 @@ public partial class PixelFloor
         if (PixelCameraIntro.Moving || PixelTitleScreen.Showing || PixelTitleScreen.Reversing) return;
         PixelClicker clicker = PixelFind.First<PixelClicker>();
         if (clicker == null) return;
-        Camera cam = PixelOrbitCamera.HomeCamera != null ? PixelOrbitCamera.HomeCamera : (clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main);   // the NORMAL view, like the view bounds
+        Camera cam = PixelOrbitCamera.HomeCamera != null ? PixelOrbitCamera.HomeCamera : clicker.ViewCamera;   // the NORMAL view, like the view bounds
         if (cam == null) return;
 
         Vector3 b = clicker.CubeBasePosition;

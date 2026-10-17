@@ -337,7 +337,7 @@ public class PixelRecycler : MonoBehaviour
     private void Update()
     {
         if (clicker == null) return;
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (counter != null && cam != null) counter.transform.rotation = Quaternion.LookRotation(counter.transform.position - cam.transform.position, cam.transform.up);
 
         UpdateButtonFlash();

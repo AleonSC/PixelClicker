@@ -200,7 +200,7 @@ public class PixelClickerAura : MonoBehaviour
         UpdateMask(on);
         if (!on) return;
 
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null) return;
         float baseSize = clicker.PixelBaseSize;
         float t = Time.unscaledTime * breatheSpeed * Mathf.PI * 2f;

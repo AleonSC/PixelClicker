@@ -198,7 +198,7 @@ public class PixelBeanstalk : MonoBehaviour
     {
         Current = this;
         clicker = owner;
-        cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        cam = clicker.ViewCamera;
         unit = clicker.PixelBaseSize;
         dragonTier = dragonTierIndex;
         PixelStats.Clear("bean.pending");
@@ -365,7 +365,7 @@ public class PixelBeanstalk : MonoBehaviour
 
         if (age >= WitherAfterSeconds) { Finish(true); return; }
         if (grow < 1f || PixelPauseMenu.IsPaused || PointerOverUI()) return;
-        if (cam == null) cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        if (cam == null) cam = clicker.ViewCamera;
         if (cam == null) return;
 
         Vector2 pointer = PointerPosition();

@@ -273,7 +273,7 @@ public class PixelSolarPanel : MonoBehaviour
     /// <summary>Is the pointer on this panel (nothing nearer in the way: the cube, an old pixel)?</summary>
     private bool PointerOnThis()
     {
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null) return false;
         RaycastHit[] hits = Physics.RaycastAll(cam.ScreenPointToRay(PixelInput.PointerPosition()), 1000f, ~0, QueryTriggerInteraction.Ignore);
         System.Array.Sort(hits, (x, y) => x.distance.CompareTo(y.distance));

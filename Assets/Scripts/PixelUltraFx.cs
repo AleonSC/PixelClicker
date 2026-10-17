@@ -17,7 +17,7 @@ public class PixelUltraFx : MonoBehaviour
     {
         if (clicker == null) return;
         if (sound) PixelAudio.Play("ultra_gain");
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null) return;
 
         GameObject go = new GameObject("Ultra Gain Fx");

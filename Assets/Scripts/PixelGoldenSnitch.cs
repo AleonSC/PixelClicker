@@ -137,7 +137,7 @@ public class PixelGoldenSnitch : MonoBehaviour
     private void OnEnable() { if (clicker != null) clicker.PixelMaterialized += OnMaterialized; }
     private void OnDisable() { if (clicker != null) clicker.PixelMaterialized -= OnMaterialized; Cleanup(); }
 
-    private Camera Cam => clicker != null && clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+    private Camera Cam => PixelClicker.ViewCameraOf(clicker);
 
     private void OnMaterialized(int tierIndex)
     {

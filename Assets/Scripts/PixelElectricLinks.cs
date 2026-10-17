@@ -173,7 +173,7 @@ public class PixelElectricLinks : MonoBehaviour
     private void DrawPetMeter()
     {
         if (!showPetMeter || petBody == null) { if (meterRoot != null && meterRoot.activeSelf) meterRoot.SetActive(false); return; }
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null) return;
         if (meterRoot == null)
         {
@@ -325,7 +325,7 @@ public class PixelElectricLinks : MonoBehaviour
         scratch.Clear();
         petBody = null;
         if (PixelPets.TryGetActivePetBody(PixelClicker.PixelType.Electric, out Transform petT)) petBody = petT.GetComponent<Rigidbody>();
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         foreach (Rigidbody body in clicker.OldPixels)
         {
             if (!IsElectric(body, out _) || clicker.IsFlyingPixel(body)) continue;

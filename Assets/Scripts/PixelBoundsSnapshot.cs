@@ -18,7 +18,7 @@ public static class PixelBoundsSnapshot
         PixelClicker clicker = PixelFind.First<PixelClicker>();
         if (clicker == null) return null;
         var sb = new StringBuilder(4096);
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         Camera home = PixelOrbitCamera.HomeCamera != null ? PixelOrbitCamera.HomeCamera : cam;
         PixelFloor floor = PixelFloor.Instance;
         float barFraction = 0f;

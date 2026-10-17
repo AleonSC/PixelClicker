@@ -173,7 +173,7 @@ public class PixelWeakspotMinigame : PixelMinigame
     /// <summary>Is the minigame there and switched on? (If not, fish are reeled in with 7-25 plain clicks.)</summary>
     public static bool FishingAvailable
     {
-        get { PixelWeakspotMinigame m = PixelFind.First<PixelWeakspotMinigame>(); return m != null && !m.UserDisabled; }
+        get { PixelWeakspotMinigame m = PixelFind.Cached<PixelWeakspotMinigame>(); return m != null && !m.UserDisabled; }
     }
 
     /// <summary>Starts a round for a fish on the cube (Fishing). 'done' gets true when every spot was hit, false otherwise. False = could not start (the caller catches the fish the plain way).</summary>
@@ -304,7 +304,7 @@ public class PixelWeakspotMinigame : PixelMinigame
 
     private bool TryStart()
     {
-        mainCam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        mainCam = clicker.ViewCamera;
         if (mainCam == null || clicker.PixelTransform == null) return false;
         int tier = clicker.CurrentClickTierIndex;
         if (tier < 0 || tier >= clicker.Tiers.Length) return false;

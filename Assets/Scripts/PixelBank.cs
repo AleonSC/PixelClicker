@@ -640,7 +640,7 @@ public class PixelBank : MonoBehaviour
     {
         if (!HoseOn || hoseRoot == null) return;
 
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (consumables == null) consumables = PixelFind.First<PixelConsumables>();
         bool placing = consumables != null && consumables.IsPlacing;
         bool shown = cam != null && !placing;

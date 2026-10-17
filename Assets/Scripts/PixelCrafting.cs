@@ -802,8 +802,8 @@ public class PixelCrafting : MonoBehaviour
         PixelWindows.Register(this, 25, () => windowObject != null && PixelPop.IsOpen(windowObject), Close); // Escape closes the whole Crafting window, the recipe book with it (the book only toggles from its button)
     }
 
-    private float SideWidth { get { PixelShop shop = PixelFind.First<PixelShop>(); return shop != null ? shop.CurrencyPanelWidth : 380f; } }
-    private float SideGap { get { PixelShop shop = PixelFind.First<PixelShop>(); return shop != null ? shop.CurrencyPanelGap : 10f; } }
+    private float SideWidth { get { PixelShop shop = PixelFind.Cached<PixelShop>(); return shop != null ? shop.CurrencyPanelWidth : 380f; } }
+    private float SideGap { get { PixelShop shop = PixelFind.Cached<PixelShop>(); return shop != null ? shop.CurrencyPanelGap : 10f; } }
 
     /// <summary>The Materials list: a panel hanging off the left of the window, laid out like the shop's Currency list (a spinning cube and an amount per row).</summary>
     private void BuildMaterialsPanel()

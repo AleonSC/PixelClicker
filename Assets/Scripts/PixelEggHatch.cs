@@ -118,7 +118,7 @@ public class PixelEggHatch : MonoBehaviour
 
         Vector2 size = canvasRect.rect.size;
         SetupCamera(size);
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         Vector2 screen = cam != null ? (Vector2)cam.WorldToScreenPoint(eggWorld) : new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
         Vector2 startC = new Vector2(Mathf.Clamp(screen.x / Screen.width * size.x, 0f, size.x), Mathf.Clamp(screen.y / Screen.height * size.y, 0f, size.y));
         Vector2 start = ToStudio(startC, size);

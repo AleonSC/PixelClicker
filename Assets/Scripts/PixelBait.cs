@@ -31,7 +31,7 @@ public static class PixelBait
         perPellet = clicker.BaitPerPellet;
         int count = clicker.BaitPellets, max = clicker.BaitMaxPellets;
         float size = clicker.PixelBaseSize;
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         int dropped = 0;
         for (int i = 0; i < count; i++)
         {

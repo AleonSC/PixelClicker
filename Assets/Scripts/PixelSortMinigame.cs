@@ -307,7 +307,7 @@ public class PixelSortMinigame : PixelMinigame
 
     private bool TryStart(bool dev)
     {
-        cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        cam = clicker.ViewCamera;
         if (cam == null) return false;
 
         // The old pixels lying around, grouped by type.

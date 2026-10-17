@@ -85,7 +85,7 @@ public class PixelHazardTell : MonoBehaviour
         sign.transform.position = cube.position + Vector3.up * (size * 1.0f + 0.08f * size * Mathf.Sin(time * 3f));
         Vector3 camPos;
         if (PixelFirstPerson.TryGetViewRay(out Ray ray)) camPos = ray.origin;
-        else { Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main; camPos = cam != null ? cam.transform.position : cube.position + Vector3.back; }
+        else { Camera cam = clicker.ViewCamera; camPos = cam != null ? cam.transform.position : cube.position + Vector3.back; }
         Vector3 away = sign.transform.position - camPos;
         if (away.sqrMagnitude > 0.0001f) sign.transform.rotation = Quaternion.LookRotation(away.normalized);
         Color sc = Color.Lerp(Color.white, warningColor, 0.25f * pulse);

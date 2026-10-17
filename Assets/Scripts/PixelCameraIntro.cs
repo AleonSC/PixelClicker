@@ -101,7 +101,7 @@ public class PixelCameraIntro : MonoBehaviour
     {
         prepared = true;
         if (clicker == null || !playIntro || !Enabled) { done = true; return; }
-        cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        cam = clicker.ViewCamera;
         if (cam == null || clicker.PixelTransform == null) { done = true; return; }
 
         // The scene's own pose is where the camera ends up.

@@ -84,7 +84,7 @@ public class PixelContainerHose : MonoBehaviour
     public static Vector3 Snap(PixelClicker c, Vector3 p, out bool snapped)
     {
         snapped = false;
-        Camera cam = c.TargetCamera != null ? c.TargetCamera : Camera.main;
+        Camera cam = c.ViewCamera;
         if (cam == null) return p;
         Vector2 mouse = PixelInput.PointerPosition();
         Ray ray = cam.ScreenPointToRay(mouse);
@@ -246,7 +246,7 @@ public class PixelContainerHose : MonoBehaviour
     private void Face()
     {
         if (status == null || path == null || !status.gameObject.activeSelf) return;
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         status.transform.position = path[path.Length / 2] + Vector3.up * 1.2f * unit;
         if (cam != null) status.transform.rotation = Quaternion.LookRotation(status.transform.position - cam.transform.position, cam.transform.up);
     }

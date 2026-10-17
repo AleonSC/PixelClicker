@@ -717,7 +717,7 @@ public partial class PixelPets : MonoBehaviour
 
     private Pet PetUnderPointer()
     {
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null) return null;
         Ray ray = cam.ScreenPointToRay(PointerPosition());
 
@@ -745,7 +745,7 @@ public partial class PixelPets : MonoBehaviour
     private void BeginHold(Pet p)
     {
         Rigidbody rb = p.body.GetComponent<Rigidbody>();
-        dragCamera = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        dragCamera = clicker.ViewCamera;
         if (rb == null || dragCamera == null) return;
         held = p;
         rb.useGravity = false;
@@ -1063,7 +1063,7 @@ public partial class PixelPets : MonoBehaviour
 
     private bool OutsideView(Vector3 pos)
     {
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null) return false;
         Vector3 vp = cam.WorldToViewportPoint(pos);
         float bars = PixelHud.Instance != null
@@ -1263,7 +1263,7 @@ public partial class PixelPets : MonoBehaviour
 
     private void LateUpdate()
     {
-        Camera cam = clicker != null ? (clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main) : null;
+        Camera cam = clicker != null ? clicker.ViewCamera : null;
         foreach (Pet p in pets)
         {
             if (p.counterGo == null) continue;

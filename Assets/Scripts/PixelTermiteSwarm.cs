@@ -270,7 +270,7 @@ public class PixelTermiteSwarm : MonoBehaviour
         if (PixelFirstPerson.Active) { if (!PixelFirstPerson.TryGetViewRay(out ray)) return; }
         else
         {
-            Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+            Camera cam = clicker.ViewCamera;
             if (cam == null || PixelInput.PointerOverUI()) return;
             ray = cam.ScreenPointToRay(PixelInput.PointerPosition());
         }
@@ -298,7 +298,7 @@ public class PixelTermiteSwarm : MonoBehaviour
         if (dt <= 0f) return;
         life += dt;
         float time = Time.time;
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (hunting) CheckClicks();
 
         // Pixels that went away some other way (despawned, vacuumed, grabbed) free their termite.

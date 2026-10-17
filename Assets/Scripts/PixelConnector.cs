@@ -121,7 +121,7 @@ public class PixelConnector : MonoBehaviour, IPixelBeltAcceptor
     {
         snappedPoint = point; snappedYaw = yaw;
         float u = Mathf.Max(0.05f, c.OldPixelWorldSize);
-        Camera cam = c.TargetCamera != null ? c.TargetCamera : Camera.main;
+        Camera cam = c.ViewCamera;
         Vector2 mouse = PixelInput.PointerPosition();
         PixelFunnel best = null; float bestScore = float.MaxValue;
         foreach (PixelFunnel f in PixelFunnel.Working)
@@ -211,7 +211,7 @@ public class PixelConnector : MonoBehaviour, IPixelBeltAcceptor
     public static Vector3 Snap(PixelClicker c, Vector3 p, out bool snapped)
     {
         Vector3 result = PixelConveyor.Snap(c, p, out bool found);
-        Camera cam = c.TargetCamera != null ? c.TargetCamera : Camera.main;
+        Camera cam = c.ViewCamera;
         Vector2 mouse = PixelInput.PointerPosition();
         float best = 70f * 70f;
         if (found && cam != null) { Vector3 sp0 = cam.WorldToScreenPoint(result); if (sp0.z > 0f) best = Mathf.Min(best, (new Vector2(sp0.x, sp0.y) - mouse).sqrMagnitude); }

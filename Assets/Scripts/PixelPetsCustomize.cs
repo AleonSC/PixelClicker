@@ -553,7 +553,7 @@ public partial class PixelPets
         float width = Mathf.Clamp(tagLabel.GetPreferredValues(name).x + 36f + 52f, 170f, 480f);
         tagRect.sizeDelta = new Vector2(width, 60f);
 
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null) return;
         Vector3 screen = cam.WorldToScreenPoint(tagPet.body.transform.position + Vector3.up * clicker.PixelBaseSize * 0.9f);
         RectTransformUtility.ScreenPointToLocalPointInRectangle(tagCanvasRect, screen, null, out Vector2 local);

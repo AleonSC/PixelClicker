@@ -67,7 +67,7 @@ public class PixelToadstoolDaze : MonoBehaviour
     private void Jerk()
     {
         if (!active || clicker == null || clicker.PixelTransform == null || PixelMinigame.TakeoverActive) return;
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null) return;
         float unit = Mathf.Max(0.1f, clicker.PixelBaseSize);
         Vector3 home = clicker.CubeBasePosition;

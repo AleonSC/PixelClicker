@@ -345,7 +345,7 @@ public class PixelBreakoutMinigame : PixelMinigame
 
     private bool TryStart(bool dev)
     {
-        cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        cam = clicker.ViewCamera;
         if (cam == null) return false;
 
         // The old pixels lying around become the bricks.

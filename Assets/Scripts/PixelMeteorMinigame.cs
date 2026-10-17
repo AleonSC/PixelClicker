@@ -302,7 +302,7 @@ public class PixelMeteorMinigame : PixelMinigame
         onMeteorAppeared?.Invoke();
         Report(MinigameEvent.Spawned);
 
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null) { meteorActive = false; yield break; }
 
         float depth = 10f;

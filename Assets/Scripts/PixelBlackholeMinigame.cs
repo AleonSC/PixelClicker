@@ -426,7 +426,7 @@ public class PixelBlackholeMinigame : PixelMinigame
                 }
                 punch = Mathf.MoveTowards(punch, 0f, Time.deltaTime * 4f);
 
-                Camera cam = clicker != null && clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+                Camera cam = PixelClicker.ViewCameraOf(clicker);
 
                 // Visible for a few seconds after activity (a pixel consumed, or the mouse over the hole), then it fades away.
                 if (counterShowOnHover && cam != null && size > 0.3f && MouseOverHole(cam, center, currentRadius)) lastActivity = t;
@@ -648,7 +648,7 @@ public class PixelBlackholeMinigame : PixelMinigame
         SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
         sr.sprite = softSprite;
         sr.sortingOrder = 5;
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
 
         float size = Mathf.Max(0.4f, fullRadius * 0.45f);
         const float duration = 0.3f;
@@ -724,7 +724,7 @@ public class PixelBlackholeMinigame : PixelMinigame
     private bool TryPickSpot(out Vector3 point, float holeRadius)
     {
         point = Vector3.zero;
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null) return false;
 
         for (int attempt = 0; attempt < 24; attempt++)

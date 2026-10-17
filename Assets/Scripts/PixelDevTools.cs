@@ -1496,7 +1496,7 @@ public class PixelDevTools : MonoBehaviour
 
         if (overUI || PixelBank.HoseOn) return;
 
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null) return;
 
         // Left: spawn old pixels at the cursor (hold to keep spawning).

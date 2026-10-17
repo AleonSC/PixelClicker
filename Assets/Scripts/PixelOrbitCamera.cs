@@ -171,7 +171,7 @@ public class PixelOrbitCamera : MonoBehaviour
     private void ApplyBaseView()
     {
         if (!useBaseView || Active || clicker == null || clicker.PixelTransform == null) return;
-        Camera c = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera c = clicker.ViewCamera;
         if (c == null) return;
         float y = baseTurn * Mathf.Deg2Rad, p = V(baseTilt, 89f) * Mathf.Deg2Rad;
         Vector3 dir = new Vector3(Mathf.Sin(y) * Mathf.Cos(p), Mathf.Sin(p), Mathf.Cos(y) * Mathf.Cos(p));
@@ -195,7 +195,7 @@ public class PixelOrbitCamera : MonoBehaviour
         PixelZoom.ResetNow();   // (the orbit starts from the normal view, not a zoomed one)
         if (PixelPauseMenu.IsPaused || PixelCalm.CameraBusy) return false;
         foreach (PixelMinigame m in PixelMinigame.All) if (m != null && m.Busy && m.NeedsNormalCamera) return false;
-        cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        cam = clicker.ViewCamera;
         if (cam == null) return false;
 
         homePos = cam.transform.position;

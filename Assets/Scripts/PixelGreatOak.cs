@@ -203,7 +203,7 @@ public class PixelGreatOak : MonoBehaviour
         else
         {
             if (PixelInput.PointerOverUI()) return;
-            Camera cam = clicker != null && clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+            Camera cam = PixelClicker.ViewCameraOf(clicker);
             if (cam == null) return;
             ray = cam.ScreenPointToRay(PixelInput.PointerPosition());
         }

@@ -272,25 +272,8 @@ public class PixelPixelGuide : MonoBehaviour
         tipRect.SetAsLastSibling();
     }
 
-    private RectTransform CreateInfoBox(Transform parent, float size, System.Func<string> source)
-    {
-        GameObject info = new GameObject("Info", typeof(RectTransform), typeof(Image));
-        info.transform.SetParent(parent, false);
-        info.GetComponent<Image>().color = new Color(0.95f, 0.55f, 0.12f, 1f);
-        PixelUIKit.StyleButton(info.GetComponent<Image>());
-        Shadow dropShadow = info.AddComponent<Shadow>();
-        dropShadow.effectColor = new Color(0f, 0f, 0f, 0.45f);
-        dropShadow.effectDistance = new Vector2(0f, -2f);
-        RectTransform rect = info.GetComponent<RectTransform>();
-        rect.sizeDelta = new Vector2(size, size);
-        TMP_Text mark = PixelUIKit.CreateText(Font, info.transform, "Mark", "!", size * 0.75f, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
-        mark.raycastTarget = false;
-        PixelUIKit.Stretch(mark.rectTransform);
-        PixelHoverTip tip = info.AddComponent<PixelHoverTip>();
-        tip.onEnter = () => hoverTip = source;
-        tip.onExit = () => { if (hoverTip == source) hoverTip = null; };
-        return rect;
-    }
+    private RectTransform CreateInfoBox(Transform parent, float size, System.Func<string> source) =>
+        PixelUIKit.CreateInfoBadge(Font, parent, size, () => hoverTip = source, () => { if (hoverTip == source) hoverTip = null; });   // (the shared orange '!')
 
     private void Toggle()
     {

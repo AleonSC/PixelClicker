@@ -1418,7 +1418,7 @@ public class PixelConsumables : MonoBehaviour
     /// <summary>The placed device under the mouse (nearest first). Looks at the device's visible parts, not its range markings. 'onlyDisarmed' = only devices still waiting for their first click.</summary>
     private PixelPlacedDevice DeviceUnderPointer(bool onlyDisarmed = false)
     {
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null) return null;
         Ray ray = cam.ScreenPointToRay(PointerPosition());
 
@@ -1886,7 +1886,7 @@ public class PixelConsumables : MonoBehaviour
         GameObject root = null;
         try
         {
-            Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+            Camera cam = clicker.ViewCamera;
             switch (kind)
             {
                 case DeviceKind.Fan:
@@ -2261,7 +2261,7 @@ public class PixelConsumables : MonoBehaviour
     public GameObject CreateGhost(int deviceIndex, Vector3 point, float yaw, float bend)
     {
         Device d = EffectiveDevice(devices[deviceIndex]);
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (d.kind == DeviceKind.Sorter)
         {
             PixelSorterDevice.Parts parts = PixelSorterDevice.Parts.Create(clicker, d, cam, true, previewOpacity);
@@ -2299,7 +2299,7 @@ public class PixelConsumables : MonoBehaviour
 
         placingIndex = deviceIndex;
         placeStartFrame = Time.frameCount;
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         placingYaw = cam != null ? cam.transform.eulerAngles.y : 0f; // a fan starts out blowing away from the camera
         if (devices[deviceIndex].kind == DeviceKind.Funnel) placingYaw = 0f;   // (the funnel's turn is only a nudge on top of "away from the cube")
         rawYaw = placingYaw;
@@ -2465,7 +2465,7 @@ public class PixelConsumables : MonoBehaviour
     private void UpdateSorterPlacement()
     {
         Device d = devices[placingIndex];
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
 
         if (sorterPhase == 0)
         {
@@ -2537,7 +2537,7 @@ public class PixelConsumables : MonoBehaviour
     private PixelPlacedDevice SpawnDevice(int index, Vector3 point, float yaw, float duration, float aim, float bend, int force)
     {
         Device d = EffectiveDevice(devices[index]);
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         PixelPlacedDevice result;
         PixelPlacedDevice.DisarmedText = string.IsNullOrEmpty(disarmedText) ? "Click to start" : disarmedText;
         PixelPlacedDevice.ArmFadeSeconds = armFadeSeconds > 0f ? armFadeSeconds : 0.7f;
@@ -2765,7 +2765,7 @@ public class PixelConsumables : MonoBehaviour
     public bool TryGetFloorPoint(Vector2 screenPosition, out Vector3 point)
     {
         point = Vector3.zero;
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null) return false;
 
         Ray ray = cam.ScreenPointToRay(screenPosition);

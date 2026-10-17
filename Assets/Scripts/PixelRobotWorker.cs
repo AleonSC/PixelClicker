@@ -263,7 +263,7 @@ public partial class PixelRobotWorker : MonoBehaviour
         else UpdateBubble();
     }
 
-    private Camera Cam => clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+    private Camera Cam => clicker.ViewCamera;
 
     /// <summary>One model unit in world units (a fixed size relative to the main pixel).</summary>
     private float UnitScale => clicker.PixelBaseSize * robotScale / 2.5f;

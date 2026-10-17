@@ -275,12 +275,12 @@ public class PixelWoodChipper : MonoBehaviour
         if (broken && sparks != null && Random.value < dt * 2.5f) EmitSparks(2 + Random.Range(0, 3));
         if (barRoot != null)
         {
-            Camera cam = clicker != null && clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+            Camera cam = PixelClicker.ViewCameraOf(clicker);
             if (cam != null) barRoot.rotation = cam.transform.rotation;
         }
         if (brokenLabel != null)
         {
-            Camera cam2 = clicker != null && clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+            Camera cam2 = PixelClicker.ViewCameraOf(clicker);
             if (cam2 != null) brokenLabel.transform.rotation = cam2.transform.rotation;
         }
     }

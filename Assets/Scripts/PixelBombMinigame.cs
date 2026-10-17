@@ -347,7 +347,7 @@ public class PixelBombMinigame : PixelMinigame
         onBombAppeared?.Invoke();
         Report(MinigameEvent.Spawned);
 
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null) { bombActive = false; yield break; }
 
         // Place the bomb beside the cube.

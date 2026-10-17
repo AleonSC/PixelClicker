@@ -207,7 +207,7 @@ public class PixelEvilTreeMinigame : PixelMinigame
     private IEnumerator TreeRoutine()
     {
         treeActive = true;
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null || !TryPickSpot(cam, out Vector3 ground)) { treeActive = false; spawnTimer = PixelMinigameLimits.RetrySeconds; yield break; }
         Report(MinigameEvent.Spawned);
         PixelHints.Announce("An evil tree sprouted!", "An evil tree sprouted! Chop it down before it grows too strong. It flails, so aim carefully.");

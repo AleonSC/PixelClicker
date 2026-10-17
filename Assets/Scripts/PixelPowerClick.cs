@@ -81,7 +81,7 @@ public class PixelPowerClick : MonoBehaviour
     {
         if (cooldownLeft > 0f && !PixelCalm.InMenu) cooldownLeft -= Time.unscaledDeltaTime;
         if (disablePowerClick || clicker == null || (requireTreeNode && !PixelSkills.HasStandardNode("power"))) { Cancel(); UpdateFx(); return; }
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null) return;
 
         bool blocked = Blocked();

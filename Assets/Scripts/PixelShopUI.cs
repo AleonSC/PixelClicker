@@ -987,26 +987,8 @@ public partial class PixelShop
 
     /// <summary>Stretches a text across a horizontal band of its parent (anchors are 0..1 vertically).</summary>
     /// <summary>An orange box with an exclamation mark: hovering it shows 'source()' (an item's description) as a tooltip. The caller places it.</summary>
-    private RectTransform CreateInfoBox(Transform parent, float size, System.Func<string> source)
-    {
-        GameObject info = new GameObject("Info", typeof(RectTransform), typeof(Image));
-        info.transform.SetParent(parent, false);
-        info.GetComponent<Image>().color = new Color(0.95f, 0.55f, 0.12f, 1f);
-        PixelUIKit.StyleButton(info.GetComponent<Image>());   // the bevelled, rounded look
-        Shadow dropShadow = info.AddComponent<Shadow>();      // and a little lift off the card
-        dropShadow.effectColor = new Color(0f, 0f, 0f, 0.45f);
-        dropShadow.effectDistance = new Vector2(0f, -2f);
-        RectTransform rect = info.GetComponent<RectTransform>();
-        rect.sizeDelta = new Vector2(size, size);
-        TMP_Text mark = CreateText(info.transform, "Mark", "!", buyFontSize, TextAlignmentOptions.Center, FontStyles.Bold);
-        mark.color = Color.white;
-        mark.raycastTarget = false;
-        PixelUIKit.Stretch(mark.rectTransform);
-        PixelHoverTip tip = info.AddComponent<PixelHoverTip>();
-        tip.onEnter = () => hoverTip = source;
-        tip.onExit = () => { if (hoverTip == source) hoverTip = null; };
-        return rect;
-    }
+    private RectTransform CreateInfoBox(Transform parent, float size, System.Func<string> source) =>
+        PixelUIKit.CreateInfoBadge(font, parent, size, () => hoverTip = source, () => { if (hoverTip == source) hoverTip = null; });   // (the shared orange '!')
 
     /// <summary>
     /// A row's name line with the info box in front of it (the description is a tooltip now): the name band is taller and the

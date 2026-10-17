@@ -852,6 +852,12 @@ public partial class PixelClicker : MonoBehaviour
     public TMP_FontAsset UIFont => uiFont;
     public Transform PixelTransform => pixelTransform;
     public Camera TargetCamera => targetCamera;
+
+    /// <summary>The camera the game is seen through: the clicker's target camera, else Camera.main. (One helper for the 'TargetCamera ?? Camera.main' that was written out in 60 scripts.)</summary>
+    public Camera ViewCamera => targetCamera != null ? targetCamera : Camera.main;
+
+    /// <summary>ViewCamera of 'c', or Camera.main when there is no clicker.</summary>
+    public static Camera ViewCameraOf(PixelClicker c) => c != null ? c.ViewCamera : Camera.main;
     public double ClickMultiplier { get => clickMultiplier; set => clickMultiplier = value; }
 
     /// <summary>Raised when an old pixel hits the floor (or any surface). Passes how hard, 0..1. Used by the sound system.</summary>

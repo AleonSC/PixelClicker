@@ -162,11 +162,7 @@ public class PixelCollectionGallery : MonoBehaviour
     /// <summary>The scene's directional light(s) reach every object however far away: they are switched off while the gallery is open (and again if the game turns one back on).</summary>
     private void SwitchOffSun()
     {
-#if UNITY_2023_1_OR_NEWER
-        Light[] all = FindObjectsByType<Light>(FindObjectsSortMode.None);
-#else
-        Light[] all = FindObjectsOfType<Light>();
-#endif
+        Light[] all = PixelFind.All<Light>();
         foreach (Light l in all)
             if (l != null && l.type == LightType.Directional && l.enabled && !l.transform.IsChildOf(transform)) { l.enabled = false; switchedOff.Add(l); }
     }

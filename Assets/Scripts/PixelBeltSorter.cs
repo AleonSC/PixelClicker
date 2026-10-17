@@ -165,7 +165,7 @@ public class PixelBeltSorter : MonoBehaviour
     {
         ok = true;
         if (PixelFirstPerson.Active) { ok = PixelFirstPerson.TryGetViewRay(out Ray r); return r; }
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null) { ok = false; return new Ray(); }
         return cam.ScreenPointToRay(PixelInput.PointerPosition());
     }
@@ -190,7 +190,7 @@ public class PixelBeltSorter : MonoBehaviour
     private bool SlotPicked()
     {
         if (slotModel == null || PixelInput.PointerOverUI()) return false;
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null || PixelFirstPerson.Active) return false;
         Vector3 sp = cam.WorldToScreenPoint(slotModel.position);
         if (sp.z <= 0f) return false;

@@ -495,11 +495,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         {
             Renderer best = null;
             float bestArea = 0f;
-#if UNITY_2023_1_OR_NEWER
-            Renderer[] everything = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
-#else
-            Renderer[] everything = FindObjectsOfType<Renderer>();
-#endif
+            Renderer[] everything = PixelFind.All<Renderer>();
             foreach (Renderer r in everything)
             {
                 if (r == null || !r.enabled || !r.gameObject.activeInHierarchy || !(r is MeshRenderer) || IsDevShape(r.transform)) continue;

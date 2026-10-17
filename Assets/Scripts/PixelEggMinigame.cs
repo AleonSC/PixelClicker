@@ -186,7 +186,7 @@ public class PixelEgg : MonoBehaviour
     {
         Current = this;
         clicker = owner;
-        cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        cam = clicker.ViewCamera;
         need = Mathf.Max(1, clicksNeeded);
         clicks = Mathf.Clamp(clicksSoFar, 0, need - 1);
         bornTime = Time.time;
@@ -250,7 +250,7 @@ public class PixelEgg : MonoBehaviour
     private void Update()
     {
         if (clicker == null) return;
-        if (cam == null) cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        if (cam == null) cam = clicker.ViewCamera;
         if (cam == null || body == null) return;
 
         if (!clicker.CubeHidden && !PixelMinigame.TakeoverActive) clicker.SetCubeShrink(0.02f, 0.4f);   // something else gave the cube back: keep it away while the egg stands in for it

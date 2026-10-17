@@ -339,7 +339,7 @@ public class PixelFeatureTester : MonoBehaviour
     private bool TryGroundPoint(out Vector3 point)
     {
         point = Vector3.zero;
-        Camera cam = clicker != null && clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = PixelClicker.ViewCameraOf(clicker);
         if (cam == null) return false;
         Ray ray = cam.ScreenPointToRay(PixelInput.PointerPosition());
         Plane ground = new Plane(Vector3.up, new Vector3(0f, PixelConveyor.FloorY(clicker), 0f));
@@ -387,7 +387,7 @@ public class PixelFeatureTester : MonoBehaviour
     /// <summary>The nearest placed tester object under the mouse (by its visible parts); null if the cube or an old pixel is in front of it.</summary>
     private GameObject ObjectUnderPointer()
     {
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null) return null;
         Ray ray = cam.ScreenPointToRay(PixelInput.PointerPosition());
         GameObject best = null;
@@ -535,7 +535,7 @@ public class PixelFeatureTester : MonoBehaviour
 
     private void ToggleUnderPointer()
     {
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null) return;
         RaycastHit[] hits = Physics.RaycastAll(cam.ScreenPointToRay(PixelInput.PointerPosition()), 1000f, ~0, QueryTriggerInteraction.Ignore);
         System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
@@ -553,7 +553,7 @@ public class PixelFeatureTester : MonoBehaviour
 
     private void SelectInRect(Vector2 a, Vector2 b)
     {
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null) return;
         Rect r = Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
         foreach (PixelConveyor belt in PixelConveyor.All)
@@ -671,7 +671,7 @@ public class PixelFeatureTester : MonoBehaviour
         if (linkPanel == null) { EndLink(true); return; }
         if (ghost != null) ghost.SetActive(false);
         if (Time.frameCount == placeStartFrame) return;
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null) return;
         if (PixelInput.LeftPressed() && !PixelInput.PointerOverUI())
         {
@@ -771,7 +771,7 @@ public class PixelFeatureTester : MonoBehaviour
             ghost.SetActive(true);
             ghost.transform.SetPositionAndRotation(stagePoint, Quaternion.Euler(0f, stageYaw, 0f));
         }
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam != null && ghost != null && !PixelInput.PointerOverUI())
         {
             Vector3 toCam = cam.transform.position - stagePoint; toCam.y = 0f;

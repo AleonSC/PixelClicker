@@ -88,7 +88,7 @@ public class PixelTreasureMap : MonoBehaviour
         if (clicker == null) return;
         if (!showing && queue.Count > 0) StartCoroutine(Show(queue.Dequeue()));
 
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         bool blocked = cam == null || PixelCalm.InMenu || (Time.timeScale <= 0f && !PixelTimeStop.IsStopped) || PointerOverUI() || PixelClicker.GodMode;
         Mark hovered = null;
         float radius = clickRadiusPixels > 0f ? clickRadiusPixels : 80f;
@@ -230,7 +230,7 @@ public class PixelTreasureMap : MonoBehaviour
     {
         showing = true;
         float size = clicker.PixelBaseSize;
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null) { showing = false; yield break; }
 
         Vector3 spot;

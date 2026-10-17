@@ -96,7 +96,7 @@ public class PixelConveyor : MonoBehaviour
     /// <summary>The belt whose exit is nearest the mouse: within groundReach of the ground point, or within about 80 screen pixels of the mouse (so raised ends can be picked). Null if none.</summary>
     public static PixelConveyor NearestExit(PixelClicker c, Vector3 groundPoint, float groundReach)
     {
-        Camera cam = c.TargetCamera != null ? c.TargetCamera : Camera.main;
+        Camera cam = c.ViewCamera;
         Vector2 mouse = PixelInput.PointerPosition();
         PixelConveyor best = null;
         float bestScore = float.MaxValue;
@@ -257,7 +257,7 @@ public class PixelConveyor : MonoBehaviour
     public static Vector3 Snap(PixelClicker c, Vector3 p, out bool snapped)
     {
         bool found = false;
-        Camera cam = c.TargetCamera != null ? c.TargetCamera : Camera.main;
+        Camera cam = c.ViewCamera;
         Vector2 mouse = PixelInput.PointerPosition();
         float best = 70f * 70f;                       // screen pixels
         float groundReach = c.OldPixelWorldSize * 0.9f;
@@ -800,7 +800,7 @@ public class PixelConveyorSystem : MonoBehaviour
         }
         // Normal view: a quick right CLICK turns the belt round (holding the button deletes a tester object instead, see PixelFeatureTester).
         if (!(PixelInput.RightPressed() || PixelInput.RightHeld() || flipTap.Pending)) return;
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         PixelConveyor belt = cam != null && !PixelInput.PointerOverUI() ? BeltUnder(cam.ScreenPointToRay(PixelInput.PointerPosition()), 1000f) : null;
         if (flipTap.Update(belt) && belt != null) belt.Flip();
     }

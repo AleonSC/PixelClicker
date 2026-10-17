@@ -291,7 +291,7 @@ public class PixelFirstPerson : MonoBehaviour
     {
         PixelZoom.ResetNow();
         PixelOrthoView.ForcePerspectiveNow();   // (first person is always the normal 3D view)
-        mainCamera = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        mainCamera = clicker.ViewCamera;
         if (mainCamera == null) return;
         PixelWindows.CloseAllExcept(this);
 

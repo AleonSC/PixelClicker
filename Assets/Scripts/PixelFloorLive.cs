@@ -76,7 +76,7 @@ public partial class PixelFloor
     {
         centre = Vector3.zero; radius = 10f; alpha = 0f;
         if (floorRenderer == null) return false;
-        PixelClicker clicker = PixelFind.First<PixelClicker>();
+        PixelClicker clicker = PixelFind.Cached<PixelClicker>();
         if (clicker == null || clicker.PixelTransform == null) return false;
         FadeRadii(clicker, out float r0, out float r1);
         Vector3 c = clicker.CubeBasePosition;
@@ -727,7 +727,7 @@ public class PixelFloorOverlay : MonoBehaviour
         g.transform.localPosition = pos;
         g.transform.localRotation = Quaternion.Euler(euler);
         g.transform.localScale = scale;
-        PixelClicker clicker = PixelFind.First<PixelClicker>();
+        PixelClicker clicker = PixelFind.Cached<PixelClicker>();
         Material m = clicker != null ? clicker.CreateVisualMaterial(color, false) : null;
         Renderer r = g.GetComponent<Renderer>();
         if (m != null) r.sharedMaterial = m;
@@ -894,7 +894,7 @@ public class PixelFloorOverlay : MonoBehaviour
         if (!PixelFirstPerson.TryGetViewRay(out ray))
         {
             PixelClicker clicker = PixelFind.First<PixelClicker>();
-            Camera cam = clicker != null && clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+            Camera cam = PixelClicker.ViewCameraOf(clicker);
             if (cam == null) return false;
             ray = cam.ScreenPointToRay(PixelInput.PointerPosition());
         }

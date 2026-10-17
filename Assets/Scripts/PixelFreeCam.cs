@@ -59,7 +59,7 @@ public class PixelFreeCam : MonoBehaviour
         PixelZoom.ResetNow();
         if (PixelPauseMenu.IsPaused || PixelCalm.CameraBusy) return false;
         foreach (PixelMinigame m in PixelMinigame.All) if (m != null && m.Busy && m.NeedsNormalCamera) return false;
-        cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        cam = clicker.ViewCamera;
         if (cam == null) return false;
         homePos = cam.transform.position; homeRot = cam.transform.rotation;
         homeFov = cam.fieldOfView; homeOrtho = cam.orthographicSize; homeOrthographic = cam.orthographic;

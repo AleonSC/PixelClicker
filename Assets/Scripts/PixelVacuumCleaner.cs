@@ -199,7 +199,7 @@ public class PixelVacuumCleaner : MonoBehaviour
     // Every frame
     // ------------------------------------------------------------------
 
-    private Camera Cam => clicker != null && clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+    private Camera Cam => PixelClicker.ViewCameraOf(clicker);
 
     private Vector3 RestPoint() => transform.TransformPoint(new Vector3(0.75f * unit, 0.5f * unit, 0.2f * unit));
     private Vector3 IntakePoint => transform.TransformPoint(new Vector3(0f, 0.12f * unit, 1.0f * unit));

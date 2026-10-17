@@ -276,7 +276,7 @@ public class PixelStardustMinigame : PixelMinigame
 
     private void CreateStar()
     {
-        Camera cam = clicker != null && clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = PixelClicker.ViewCameraOf(clicker);
         if (cam == null || clicker.PixelTransform == null) return;
 
         // It starts above the top of the screen, beside the cube (at the cube's distance), and falls onto the old pixels' floor.
@@ -391,7 +391,7 @@ public class PixelStardustMinigame : PixelMinigame
     private void Update()
     {
         if (stars.Count == 0) return;
-        Camera cam = clicker != null && clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = PixelClicker.ViewCameraOf(clicker);
         if (cam == null) return;
 
         bool click = Time.timeScale > 0f && LeftPressed() && !PointerOverUI() && !PixelClicker.ExternalClickBlock && !PixelClicker.GodMode;

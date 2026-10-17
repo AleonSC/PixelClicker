@@ -110,7 +110,7 @@ public class PixelZoom : MonoBehaviour
     {
         if (disableZoom || clicker == null || clicker.PixelTransform == null) return;
         if (NeedsNormalView()) return;
-        if (cam == null) cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        if (cam == null) cam = clicker.ViewCamera;
         if (cam == null) return;
 
         bool atNormal = !Zoomed && Mathf.Approximately(factor, 1f);

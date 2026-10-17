@@ -1244,3 +1244,5 @@
 [2026-10-16 18:11 UTC] Code cleanup: Pocket, Toggles and the visitor windows use the shared one-line text helper (PixelUIKit.FitOneLine) instead of their own copies, and the orange '!' info badge is one shared piece (PixelUIKit.CreateInfoBadge) used by the Skills cards and Toggles rows.
 [2026-10-16 18:13 UTC] Code cleanup: removed unused code - the shop's old RGB / Combo Meter goal helpers and the old synth code for Wood, Bark and Heartwood (replaced by the new chop; the storage rack sound uses it too).
 [2026-10-17 02:20 UTC] CLAUDE.md: new standing rule - look for an existing helper before writing code for a common job, and never paste a private copy of one.
+[2026-10-17 02:25 UTC] Code cleanup (pattern hunt): new PixelClicker.ViewCamera helper replaces the 'TargetCamera or Camera.main' line written out 91 times in 60 scripts; the Pixel Guide and Shop use the shared orange '!' badge; a few lookups that ran every frame now use the cached search.
+[2026-10-17 02:25 UTC] Fixed the day / night cycle using a Unity-6-only scene search without the version check (it would not compile on older Unity); it and four other scripts now use the shared PixelFind.All.

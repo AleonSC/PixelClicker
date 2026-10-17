@@ -406,7 +406,7 @@ public class PixelGhostMinigame : PixelMinigame
     public Vector2? GhostScreenPosition()
     {
         if (!ghostActive || ghostTransform == null) return null;
-        Camera cam = clicker != null && clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = PixelClicker.ViewCameraOf(clicker);
         if (cam == null) return null;
         Vector3 sp = cam.WorldToScreenPoint(ghostTransform.position);
         return sp.z > 0f ? new Vector2(sp.x, sp.y) : (Vector2?)null;
@@ -421,7 +421,7 @@ public class PixelGhostMinigame : PixelMinigame
         Report(MinigameEvent.Spawned);
         onGhostAppeared?.Invoke();
 
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null) { ghostActive = false; yield break; }
 
         // Cube with a see-through material and a (trigger) collider for clicking.

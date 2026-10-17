@@ -111,7 +111,7 @@ public class PixelDayNight : MonoBehaviour
     {
         sun = RenderSettings.sun;
         if (sun == null)
-            foreach (Light l in FindObjectsByType<Light>(FindObjectsSortMode.None))
+            foreach (Light l in PixelFind.All<Light>())   // (the version-safe search: FindObjectsByType alone broke older Unity)
                 if (l != null && l.type == LightType.Directional) { sun = l; break; }
         if (sun == null) return;
         captured = true;

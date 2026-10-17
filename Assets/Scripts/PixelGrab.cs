@@ -228,14 +228,14 @@ public class PixelGrab : MonoBehaviour
     public void BeginHold(Rigidbody body)
     {
         if (!Working || clicker == null || held != null || body == null) return;
-        cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        cam = clicker.ViewCamera;
         if (cam == null) return;
         Grab(body, body.GetComponent<OldPixelDespawn>(), cam.ScreenPointToRay(PointerPosition()));
     }
 
     private void TryGrab()
     {
-        cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        cam = clicker.ViewCamera;
         if (cam == null) return;
 
         Ray ray = cam.ScreenPointToRay(PointerPosition());

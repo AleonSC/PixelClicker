@@ -203,7 +203,7 @@ public class PixelOvercharge : MonoBehaviour
     /// <summary>Just above the cube on screen (canvas units), kept on screen.</summary>
     private Vector2 StartPosition()
     {
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         Vector2 screen = new Vector2(Screen.width * 0.5f, Screen.height * 0.6f);
         if (cam != null && clicker.PixelTransform != null)
         {

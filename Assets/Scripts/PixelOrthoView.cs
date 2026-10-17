@@ -88,7 +88,7 @@ public class PixelOrthoView : MonoBehaviour
     private void LateUpdate()
     {
         if (clicker == null) return;
-        Camera now = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera now = clicker.ViewCamera;
         if (now == null) return;
         if (cam != now) { if (cam != null) Restore(); cam = now; lastBlend = -1f; }
 

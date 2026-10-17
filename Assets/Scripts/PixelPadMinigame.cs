@@ -368,7 +368,7 @@ public class PixelPadMinigame : PixelMinigame
     {
         padActive = true;
         foreach (object owner in claimOwners) ReleaseArea(owner);   // last round's claims are still 'active' (padActive is true again) and would block every corner
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         int target = PickTargetTier();
         holeRadius = (holeRadiusPixels > 0f ? holeRadiusPixels : 1.3f) * Mathf.Max(0.1f, clicker.PixelBaseSize);
         if (cam == null || target < 0)

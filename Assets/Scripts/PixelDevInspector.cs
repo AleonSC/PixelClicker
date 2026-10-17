@@ -517,11 +517,7 @@ public class PixelDevInspector : MonoBehaviour
         systems.Clear();
         HashSet<Type> seen = new HashSet<Type>();
         List<TMP_Dropdown.OptionData> options = new List<TMP_Dropdown.OptionData>();
-#if UNITY_2023_1_OR_NEWER
-        MonoBehaviour[] all = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
-#else
-        MonoBehaviour[] all = FindObjectsOfType<MonoBehaviour>();
-#endif
+        MonoBehaviour[] all = PixelFind.All<MonoBehaviour>();
         List<MonoBehaviour> sorted = new List<MonoBehaviour>();
         foreach (MonoBehaviour mb in all)
             if (mb != null && IsGameType(mb.GetType()) && mb.GetType() != typeof(PixelDevInspector) && mb.GetType() != typeof(OldPixelInfo) && mb.GetType() != typeof(OldPixelDespawn) && seen.Add(mb.GetType()))
@@ -663,11 +659,7 @@ public class PixelDevInspector : MonoBehaviour
             {
                 oldCount = PixelFind.Count<OldPixelInfo>();
                 Rigidbody[] bodies =
-#if UNITY_2023_1_OR_NEWER
-                    FindObjectsByType<Rigidbody>(FindObjectsSortMode.None);
-#else
-                    FindObjectsOfType<Rigidbody>();
-#endif
+                    PixelFind.All<Rigidbody>();
                 bodyCount = bodies.Length;
                 awakeCount = 0;
                 foreach (Rigidbody b in bodies) if (!b.IsSleeping()) awakeCount++;

@@ -125,7 +125,7 @@ public class PixelDragonFind : MonoBehaviour
     {
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (clicker == null || !clicker.IsValidTierIndex(tierIndex)) return;
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         Vector2 screen = cam != null ? (Vector2)cam.WorldToScreenPoint(worldPosition) : new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
         queue.Enqueue(new Request { tier = tierIndex, screenPos = screen });
         if (!playing) StartCoroutine(Show());

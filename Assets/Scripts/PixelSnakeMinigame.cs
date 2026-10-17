@@ -322,7 +322,7 @@ public class PixelSnakeMinigame : PixelMinigame
 
     private bool TryStart(bool dev)
     {
-        cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        cam = clicker.ViewCamera;
         if (cam == null) return false;
 
         // The old pixels lying around (not flying meteors, not ones already vanishing or being held).

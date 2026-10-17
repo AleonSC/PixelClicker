@@ -99,7 +99,7 @@ public class PixelBaitBucket : MonoBehaviour
         if (skills == null || skills.ActiveId != PixelSkills.FishingId) { message = "The Bait Bucket needs Fishing as the skill in play"; return false; }
         if (Placed) { message = "A Bait Bucket is already out"; return false; }
         if (PixelTitleScreen.Showing || PixelCameraIntro.Moving || PixelMinigame.TakeoverActive) { message = "Not now"; return false; }
-        instance.cam = instance.clicker.TargetCamera != null ? instance.clicker.TargetCamera : Camera.main;
+        instance.cam = instance.clicker.ViewCamera;
         if (instance.cam == null) return false;
         instance.Build();
         message = "Bait Bucket set out. Drop Fish and Water pixels into it - stored fish make more fish show up. It leaves when you stop Fishing.";

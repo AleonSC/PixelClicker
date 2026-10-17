@@ -797,7 +797,7 @@ public class PixelUI : MonoBehaviour
     /// <summary>World position of the cube in the popup canvas's local space.</summary>
     private Vector2 CubeLocal()
     {
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        Camera cam = clicker.ViewCamera;
         if (cam == null || clicker.PixelTransform == null) return lastCubeLocal;
 
         Vector3 screen = cam.WorldToScreenPoint(clicker.PixelTransform.position);

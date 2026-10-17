@@ -207,7 +207,7 @@ public class PixelBlinkMinigame : PixelMinigame
 
     private bool TryStart()
     {
-        cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        cam = clicker.ViewCamera;
         if (cam == null || clicker.PixelTransform == null) return false;
 
         tierIndex = clicker.CurrentClickTierIndex;
