@@ -9,7 +9,8 @@
 //      first person, the new-game intro, dev pickers...).
 //   5. Cube: the live cube is under the pointer, even with a husk lying in front of it - Block Hold, clearing a hazard, the shuffle tap.
 //   6. Blocked again: a takeover minigame (its husks are its pieces), the camera intro, time frozen by something other than Time Stop.
-//   7. Husk: the nearest thing under the pointer is a husk that can be crushed (PixelHuskCrush.CanCrush) - Husk Crush. Husk = that body.
+//   7. Husk: a crushable husk is under the pointer, or (PixelHuskCrush.PickAt, pickMarginPixels) the nearest one on the screen is within a
+//      small margin of it - Husk Crush. Husk = that body.
 //   8. None.
 //   THE PRESS KEEPS ITS TARGET (2026-10-17, Charge Crush): the owner worked out on the frame the right button goes down is remembered (PressOwner)
 //   while it stays held. A press that started on a husk stays the husk's: Current keeps answering Husk (Husk = that body, null once it is gone)
@@ -64,7 +65,8 @@ public static class PixelRightClick
         Vector2 screen = PixelInput.PointerPosition();
         if (clicker.IsLiveCubeAt(screen)) return Owner.Cube;
         if (PixelMinigame.TakeoverActive || PixelCameraIntro.ClicksLocked || (Time.timeScale <= 0f && !PixelTimeStop.IsStopped)) return Owner.Blocked;
-        if (clicker.TryGetBlockAt(screen, out _, out bool live, out Rigidbody body) && !live && PixelHuskCrush.CanCrush(clicker, body))
+        Rigidbody body = PixelHuskCrush.PickAt(clicker, screen);   // (exact hit, else the nearest crushable husk within a small screen margin)
+        if (body != null)
         {
             husk = body;
             return Owner.Husk;

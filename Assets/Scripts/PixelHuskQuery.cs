@@ -7,6 +7,8 @@
 //   - Husk.Tier / TypeOf / Fading (vanishing or already gone) / HeldByPlayer.
 //   - Near(clicker, centre, radius, results, flat): every husk within a radius (flat = horizontal distance only), alive ones only unless asked.
 //   - CountOfType(clicker, type): how many husks of a pixel type are lying out (e.g. Acorns for the Great Oak chance).
+//   - NearestOnScreen(clicker, screen, marginPx, accept): the husk whose EDGE on the screen is nearest the pointer, within marginPx screen pixels
+//     (its own on-screen size counts, so a far, small or moving husk is as easy to hit as a near one). Husk Crush uses it when the exact ray misses.
 //   Used by the zone-style systems (Sap fields, Mold, the Great Oak boost, the Magnet, Nuclear radiation) and - since the 2026-10-17 device pass - every
 //   device / container script (Recycler, Storage Crate, Bank hose, belts, sorters, the Sweeper, electric links, Quantum Organizer, Funnel, hoses...).
 //   A card missing at the first look (a husk still being made) is looked for again. A NEW zone effect should use Near instead of its own loop.
@@ -109,6 +111,34 @@ public static class PixelHuskQuery
             results.Add(h);
         }
         return results.Count;
+    }
+
+    /// <summary>
+    /// The husk nearest the screen point, measured from the edge of its on-screen size (a husk under the point is at 0), if it is within
+    /// marginPx screen pixels and 'accept' says yes; null when none is. A forgiving pick for small, far-away or moving husks.
+    /// </summary>
+    public static Rigidbody NearestOnScreen(PixelClicker clicker, Vector2 screen, float marginPx, System.Func<PixelClicker, Rigidbody, bool> accept)
+    {
+        Camera cam = clicker != null ? clicker.ViewCamera : null;
+        if (cam == null) return null;
+        Rigidbody best = null;
+        float bestEdge = Mathf.Max(0f, marginPx);
+        Vector3 up = cam.transform.up;
+        var list = clicker.OldPixels;
+        for (int i = 0; i < list.Count; i++)
+        {
+            Rigidbody b = list[i];
+            if (b == null) continue;
+            Vector3 centre = cam.WorldToScreenPoint(b.position);
+            if (centre.z <= 0f) continue;   // behind the camera
+            float half = b.transform.lossyScale.x * 0.5f;
+            float radius = (cam.WorldToScreenPoint(b.position + up * half) - centre).magnitude;   // its on-screen half size
+            float edge = Vector2.Distance(screen, centre) - radius;
+            if (edge > bestEdge || (accept != null && !accept(clicker, b))) continue;
+            best = b;
+            bestEdge = edge;
+        }
+        return best;
     }
 
     /// <summary>How many husks of this pixel type are lying out (vanishing ones too).</summary>

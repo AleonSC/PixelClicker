@@ -7,6 +7,9 @@
 //   - XP: xpShare (0.25) of the XP a manual click on that block gives (PixelSkills.ClickXpOf: 1 for a skill block, Standard's flat XP for a pure
 //     one), to the husk's own skill via PixelSkills.AddHuskXp(crushed: true) - pure husks train Standard, wood husks Woodcutting... The crush's popup
 //     always shows, small amounts with decimals (PixelSkillsPopups).
+//   - PICKING (PickAt, used by PixelRightClick): the husk exactly under the pointer, else the nearest crushable husk whose on-screen edge is
+//     within pickMarginPixels (28 at 1080p) - PixelHuskQuery.NearestOnScreen - so small, far and moving husks are easy to hit; never while the
+//     pointer is on the cube (even mid-materialize).
 //   - CanCrush: a loose husk ON the floor's husk list that a container could take (PixelHuskHolder.Takeable: not vanishing, not held / reserved by a
 //     machine - Recycler, Storage Crate, Sorting Hopper, Bait Bucket -, not riding a belt, not in the hand, not a fly-away), not a rare collectible
 //     (Dragon / God / Prime Cubes, the Golden Snitch) and not in neverCrush.
@@ -46,6 +49,10 @@ public class PixelHuskCrush : MonoBehaviour
 
     [Tooltip("Pixel types whose husks can never be crushed (the rare collectibles - Dragon, God and Prime Cubes, the Golden Snitch - never can, whatever this list says).")]
     [SerializeField] private PixelClicker.PixelType[] neverCrush = new PixelClicker.PixelType[0];
+
+    [Min(0f)]
+    [Tooltip("How forgiving the right-click is: when the pointer is not exactly on a husk, the nearest crushable husk whose edge is within this many screen pixels (at 1080p, scaled with the screen height) is crushed instead. Helps with small, far-away and moving husks. 0 = the coded default (28); a tiny value like 0.01 = exact hits only.")]
+    [SerializeField] private float pickMarginPixels = 28f;
 
     [Header("Feedback")]
     [Tooltip("Sound of a crush (a PixelAudio id).")]
@@ -184,6 +191,34 @@ public class PixelHuskCrush : MonoBehaviour
         PixelHuskQuery.Husk h = PixelHuskQuery.Get(body);
         if (!PixelHuskQuery.TypeOf(clicker, h, out PixelClicker.PixelType type) || !CrushableType(type)) return false;
         return IsOnFloor(clicker, body);
+    }
+
+    private static readonly System.Func<PixelClicker, Rigidbody, bool> crushable = CanCrush;
+
+    /// <summary>
+    /// The husk a right click at this screen point crushes: the one exactly under it, else (pickMarginPixels) the nearest crushable husk on the
+    /// screen within the margin. Read by PixelRightClick (it has already ruled out the cube, devices, pets and tools).
+    /// </summary>
+    public static Rigidbody PickAt(PixelClicker clicker, Vector2 screen)
+    {
+        if (clicker == null || instance == null) return null;
+        if (clicker.TryGetBlockAt(screen, out _, out bool live, out Rigidbody body) && !live && CanCrush(clicker, body)) return body;
+        if (CubeUnder(clicker, screen)) return null;   // (on the cube while it materializes: never a husk beside it)
+        float margin = instance.pickMarginPixels > 0f ? instance.pickMarginPixels : 28f;
+        return PixelHuskQuery.NearestOnScreen(clicker, screen, margin * Screen.height / 1080f, crushable);
+    }
+
+    /// <summary>Is any part of the cube (also while it materializes) under the screen point?</summary>
+    private static bool CubeUnder(PixelClicker clicker, Vector2 screen)
+    {
+        RaycastHit[] hits = clicker.PointerHits(screen, out int count);
+        Transform cube = clicker.PixelTransform, box = clicker.HitboxTransform;
+        for (int i = 0; i < count; i++)
+        {
+            Transform t = hits[i].transform;
+            if (t != null && ((box != null && t == box) || (cube != null && (t == cube || t.IsChildOf(cube))))) return true;
+        }
+        return false;
     }
 
     /// <summary>Husks of this type can be crushed (not a rare collectible, not in neverCrush).</summary>
