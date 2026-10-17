@@ -3179,12 +3179,18 @@ public class PixelPauseMenu : MonoBehaviour
         CloseLookList();
         RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
 
-        // Full-screen catcher: a click anywhere else closes the list.
-        lookListRoot = new GameObject("Look List", typeof(RectTransform), typeof(Image), typeof(Button));
+        lookListRoot = new GameObject("Look List", typeof(RectTransform));
         lookListRoot.transform.SetParent(canvasRoot.transform, false);
-        lookListRoot.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.01f);
         PixelUIKit.Stretch(lookListRoot.GetComponent<RectTransform>());
-        lookListRoot.GetComponent<Button>().onClick.AddListener(CloseLookList);
+
+        // Full-screen catcher: a click anywhere else closes the list. It sits BESIDE the list box, not around it:
+        // as the box's parent it would also take presses on the scroll bar (Unity hands a click to the nearest
+        // click handler above what was pressed), so letting go of a dragged scroll bar closed the list.
+        GameObject catcher = new GameObject("Click Catcher", typeof(RectTransform), typeof(Image), typeof(Button));
+        catcher.transform.SetParent(lookListRoot.transform, false);
+        catcher.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.01f);
+        PixelUIKit.Stretch(catcher.GetComponent<RectTransform>());
+        catcher.GetComponent<Button>().onClick.AddListener(CloseLookList);
 
         Vector3[] corners = new Vector3[4];
         anchor.GetWorldCorners(corners);
