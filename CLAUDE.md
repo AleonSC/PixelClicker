@@ -5,13 +5,13 @@
 ## The game at a glance (full index: `docs/Index.md`)
 - **Core loop:** click the cube's block -> its currency + a HUSK drops (material, never currency); blocks roll from unlocked tiers (`PixelClicker` + partials, `PixelBlockCatalog` cards/tags, `PixelLooks` 3D looks, `PixelBlockRules` special / hold blocks). Tough blocks, hazards, fillers, rare drops.
 - **Progression:** Shop (packs, upgrades, Operation, consumables), Skills (Standard tree: Block Hold, Power Click, Next up, Shuffle; gathering skills Woodcutting / Foraging / Fishing, dev Mining / Farming / Electrician / Firemaking; Mastery, perks, level-up popups), Crafting, Bank, Time Stop, Combo, Auto Clicker, UFO Helper, offline progress, achievements, stats.
-- **Husk economy / machines:** Recycler (streak XP), Storage Crate, Quantum Organizer, Funnel, Magnet, Fan, Vacuum, Sorters, Sprinkler, attuned devices, zone effects (Sap, Mold, Nuclear, gravity well via `PixelHuskQuery`); tester factory (conveyors, kiln, elevator, splitter, belt sorter, hose, trash can, robot, vacuum cleaner).
+- **Husk economy / machines:** Recycler (streak XP) + Sorting Hopper, Storage Crate, Quantum Organizer, Funnel, Magnet, Fan, Vacuum, Sorters, Sprinkler, attuned devices, zone effects (Sap, Mold, Nuclear, gravity well via `PixelHuskQuery`); tester factory (conveyors, kiln, elevator, splitter, belt sorter, hose, trash can, robot, vacuum cleaner).
 - **Minigames:** takeover and side games (Black Hole, Ghost, Meteor, Stardust, Evil Tree, Snake, Sorting Race, Dash, Traffic, Evade, Blink, Breakout, Bomb, Ultra Holes, Weak Spots), limited by `PixelMinigameLimits`.
 - **Characters:** Cubie (guide / shopkeeper, tutorials), visitors (Tinkerer, Wizard, Entrepreneur, Farmer, Prospector, Lumberjack, cats Egg / Bean), pets (outfits, studio).
 - **Rares and shows:** Dragon Cubes + wish, God Cubes, Prime Cubes + Gauntlet / Cubelette, Golden Snitch, Treasure, Collection Log + gallery.
 - **World and camera:** floors, skies, day / night, filters, flat view, orbit / zoom / top-down / first person / free cam, view bounds.
 - **UI:** code-built (`PixelUIKit`), HUD bars, Inventory, Log / event log, Toggles, Pocket, tooltips, Pixel Guide, Database, notices / tips / Did you know, pause menu (settings, save / load, guide), title screen.
-- **Shared foundations:** `PixelSystems` (system list), `PixelFind`, `PixelPrefs`, `PixelStatics`, `PixelCalm`, `PixelHuskQuery`, `PixelHuskTicker`, `PixelPointerClaim`, `PixelCarryHandles`, `PixelInstantItems`, `PixelTierPicture`, `PixelAudio` (+ code-made synths), save system.
+- **Shared foundations:** `PixelSystems` (system list), `PixelFind`, `PixelPrefs`, `PixelStatics`, `PixelCalm`, `PixelHuskQuery`, `PixelHuskHolder` (container steps), `PixelHuskTicker`, `PixelPointerClaim`, `PixelCarryHandles`, `PixelInstantItems`, `PixelTierPicture`, `PixelAudio` (+ code-made synths), save system.
 - **Dev tools (Dev Hub, F9):** widgets / cheats, Docs (to-do, changelog, notes), Tester, Inspector, Look Studio, Setups, Events, Sounds, Console, snapshots, balance report, session recorder, crash logs.
 
 ## Finding things

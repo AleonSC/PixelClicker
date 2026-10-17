@@ -1285,3 +1285,6 @@
 [2026-10-17 11:49 UTC] Fixed the floor helper Sstep returning a hard step when its edges fall (e.g. Sstep(1, 0.9, k)): Coral Reef's corals never showed, and Moon Surface, Red Planet, Still Pond, Hyperspace and Rain Alley now get the soft edges their code meant.
 [2026-10-17 11:52 UTC] Added a pinned 'Devices' session (husk machines, devices and the tester factory) to the session list in the notes.
 [2026-10-17 11:55 UTC] Designed the Sorting Hopper (written into the game design doc and the to-do): an early husk tool that snaps onto the Recycler's back and lets one chosen husk type through for a steady streak, while the others despawn as normal; it becomes Standard's level 3-4 unlock, with the Storage Crate moving to 4-5.
+[2026-10-17 12:10 UTC] Pulled the shared 'take a husk and keep it' steps out of the Recycler, Storage Crate and Bait Bucket into one helper (PixelHuskHolder); they now all use it.
+[2026-10-17 12:10 UTC] Built the Sorting Hopper: a tray that latches onto a Recycler's back and slides one chosen husk type (pick it with the flag) through the back hatch as a steady streak, while other husks lie in it and fade; on sale in the shop from Standard level 3 for 150 White.
+[2026-10-17 12:10 UTC] To-do: marked the Sorting Hopper done.

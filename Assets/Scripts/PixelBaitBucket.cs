@@ -11,6 +11,7 @@
 //   (PixelPointerClaim / ClaimsPointer keep the cube and Pixel Grabbing out of it) takes the last stored pixel out into the mouse's hand. Not
 //   saved: a bucket is gone after a load (its contents are lost). Its bail is a carrying handle (shared PixelCarryHandles): drag it to move
 //   the bucket anywhere on the floor (scroll / Q / E turn it); the bucket's own click steps aside while the bail has the pointer.
+//   Which husks it may take, the fly-in and taking one out into the hand are the shared PixelHuskHolder steps.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using TMPro;
@@ -165,11 +166,8 @@ public class PixelBaitBucket : MonoBehaviour
         List<Rigidbody> snapshot = new List<Rigidbody>(list);
         foreach (Rigidbody body in snapshot)
         {
-            if (body == null || body.isKinematic) continue;
-            OldPixelDespawn despawn = PixelHuskQuery.Get(body).despawn;
-            if (despawn != null && (despawn.Held || despawn.IsDespawning)) continue;   // taken when you let go
+            if (!PixelHuskHolder.Takeable(clicker, body) || !InZone(body.position)) continue;   // (one in the hand is taken when you let go)
             OldPixelInfo info = PixelHuskQuery.Get(body).info;
-            if (info == null || !clicker.IsValidTierIndex(info.tierIndex) || !InZone(body.position)) continue;
             PixelClicker.PixelType type = clicker.Tiers[info.tierIndex].type;
             bool fish = type == PixelClicker.PixelType.Fish, water = type == PixelClicker.PixelType.Water;
             if (fish && fishCount >= FishCap) continue;
@@ -181,30 +179,9 @@ public class PixelBaitBucket : MonoBehaviour
             stored.Add(new Entry { tier = tier, amount = amount, fish = fish });
             if (fish) { fishCount++; AddModel(tier); } else waterCount++;
             PixelAudio.Play("device_place");
-            StartCoroutine(FlyIn(body));
+            StartCoroutine(PixelHuskHolder.FlyIn(body.gameObject, null, root.transform.TransformPoint(new Vector3(0f, 0.9f, 0f)), false, 0.3f));   // (shared: it shrinks into the bucket)
             Refresh();
         }
-    }
-
-    private System.Collections.IEnumerator FlyIn(Rigidbody body)
-    {
-        if (body == null) yield break;
-        Transform t = body.transform;
-        foreach (Collider c in body.GetComponents<Collider>()) c.enabled = false;
-        body.isKinematic = true;
-        OldPixelDespawn d = PixelHuskQuery.Get(body).despawn;
-        if (d != null) d.enabled = false;
-        Vector3 start = t.position, startScale = t.localScale;
-        Vector3 target = root != null ? root.transform.TransformPoint(new Vector3(0f, 0.9f, 0f)) : start;
-        for (float time = 0f; time < 0.3f; time += Time.deltaTime)
-        {
-            if (t == null) yield break;
-            float k = Mathf.Clamp01(time / 0.3f);
-            t.position = Vector3.Lerp(start, target, k * k);
-            t.localScale = startScale * (1f - k * 0.9f);
-            yield return null;
-        }
-        if (t != null) Destroy(t.gameObject);
     }
 
     private void HandleMouse()
@@ -239,11 +216,7 @@ public class PixelBaitBucket : MonoBehaviour
         if (e.fish) { fishCount--; RemoveModel(); } else waterCount--;
         Refresh();
         Vector3 at = root.transform.position + Vector3.up * scale * 1.4f;
-        if (!clicker.SpawnStoredPixel(e.tier, e.amount, at, Vector3.zero)) return;
-        IReadOnlyList<Rigidbody> pixels = clicker.OldPixels;
-        Rigidbody body = pixels.Count > 0 ? pixels[pixels.Count - 1] : null;
-        PixelGrab grab = PixelFind.First<PixelGrab>();
-        if (body != null && grab != null) grab.BeginHold(body);
+        PixelHuskHolder.SpawnIntoHand(clicker, e.tier, e.amount, at);
     }
 
     private void ReleaseAll()
