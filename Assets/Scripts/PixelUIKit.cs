@@ -1171,6 +1171,32 @@ public static class PixelUIKit
         if (!scrolls) scroll.content.anchoredPosition = Vector2.zero;
     }
 
+    /// <summary>A square tick box (a Toggle: box image + a drawn tick that shows while it is on), 'size' wide. Place it yourself.</summary>
+    public static Toggle CreateTickBox(Transform parent, float size, Color boxColor, Color tickColor)
+    {
+        GameObject boxGo = new GameObject("Tick Box", typeof(RectTransform), typeof(Image), typeof(Toggle));
+        boxGo.transform.SetParent(parent, false);
+        Image bg = boxGo.GetComponent<Image>();
+        bg.color = boxColor;
+        boxGo.GetComponent<RectTransform>().sizeDelta = new Vector2(size, size);
+
+        GameObject tick = new GameObject("Tick", typeof(RectTransform), typeof(Image));
+        tick.transform.SetParent(boxGo.transform, false);
+        Image tickImage = tick.GetComponent<Image>();
+        tickImage.sprite = TickSprite();
+        tickImage.color = tickColor;
+        tickImage.raycastTarget = false;
+        RectTransform kr = tick.GetComponent<RectTransform>();
+        Stretch(kr);
+        kr.offsetMin = new Vector2(size * 0.1f, size * 0.1f);
+        kr.offsetMax = new Vector2(-size * 0.1f, -size * 0.1f);
+
+        Toggle toggle = boxGo.GetComponent<Toggle>();
+        toggle.targetGraphic = bg;
+        toggle.graphic = tickImage;
+        return toggle;
+    }
+
     /// <summary>A horizontal 0..1 slider built in code (track, fill and a draggable handle).</summary>
     public static Slider CreateSlider(Transform parent, string objectName, Color trackColor, Color fillColor, Color handleColor)
     {
@@ -1311,4 +1337,13 @@ public class PixelDropdownListEscape : MonoBehaviour
         list.SetAsLastSibling();
         moved = list;
     }
+}
+
+/// <summary>Hands drags on a UI element to code (onDrag gets the pointer data each frame of a drag, onBegin / onEnd when it starts / stops). Add it to any raycast-target graphic.</summary>
+public class PixelDragRelay : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+{
+    public System.Action<PointerEventData> onBegin, onDrag, onEnd;
+    public void OnBeginDrag(PointerEventData e) { onBegin?.Invoke(e); }
+    public void OnDrag(PointerEventData e) { onDrag?.Invoke(e); }
+    public void OnEndDrag(PointerEventData e) { onEnd?.Invoke(e); }
 }

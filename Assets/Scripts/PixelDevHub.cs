@@ -3,7 +3,7 @@
 //   The DEV HUB: ONE window for every dev tool (opens with PixelAction.DevTools, F9, the pause menu's Dev Tools button; PixelDevTools.OpenPanel / Close
 //   delegate here). It replaces the old Dev Tools panel, the Inspector window and the Mock up window.
 //   * The window itself is a PixelWindowChrome window: drag by the header (kept between the black bars), minimize and dock to the left / right screen edge.
-//   * FILING-CABINET TABS along the top: Main (PixelDevTools' widgets), To-Do, Changelog, Inspector (PixelDevInspector), Shapes (PixelDevShapes), UI Mock (PixelDevMockup). Drag a tab
+//   * FILING-CABINET TABS along the top: Main (PixelDevTools' widgets), To-Do, Changelog, Inspector (PixelDevInspector), Shapes (PixelDevShapes), UI Mock (PixelDevMockup), Looks (PixelLookStudio). Drag a tab
 //     sideways to REARRANGE the tabs; drag it down out of the strip to POP IT OUT into its own floating window (drag that window by its header, '-' minimizes it); the 'Dock' button or
 //     dropping the floating window on the hub puts it back as a tab. Order, active tab, floating tabs + their places and the hub's open state are saved (PlayerPrefs PixelClicker.Dev.Hub.*).
 //   * Tools get their content root with PixelDevHub.TabRoot(id) (a top-left anchored RectTransform of the tab's design size, 700 x 780 or 500 x 780 for the mockups) and learn when they
@@ -249,6 +249,7 @@ public class PixelDevHub : MonoBehaviour
         {
             { "main", "Main", "700" }, { "docs", "Docs", "700" }, { "tester", "Tester", "700" },
             { "inspector", "Inspector", "700" }, { "shapes", "Shapes", "500" }, { "uimock", "UI Mock", "500" },
+            { "looks", "Looks", "700" },
         };
         string saved = PixelPrefs.GetString(P + "Order", "");
         List<string> order = new List<string>(saved.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries));
@@ -289,6 +290,7 @@ public class PixelDevHub : MonoBehaviour
         PixelDevInspector.Boot();
         PixelDevDocs.Boot();
         PixelFeatureTester.Boot();
+        PixelLookStudio.Boot();
         windowRect.gameObject.SetActive(true);
         canvasRoot.SetActive(false);
     }
@@ -311,6 +313,8 @@ public class PixelDevHub : MonoBehaviour
                 rows = new[] { "............", ".#########..", ".#.......##.", ".#.#####.#..", ".#.......#..", ".#.#####.#..", ".#.......#..", ".#.#####.#..", ".#########..", "............" }; break;
             case "inspector":  // a magnifying glass
                 rows = new[] { "............", "...#####....", "..#.....#...", ".#.......#..", ".#.......#..", ".#.......#..", "..#.....#...", "...#####.#..", ".........##.", "..........##" }; break;
+            case "looks":      // a paint brush
+                rows = new[] { "..........##", ".........###", "........###.", ".......###..", "......###...", "....####....", "...####.....", "..####......", ".###........", "##.........." }; break;
             case "shapes":     // a square and a circle
                 rows = new[] { "#######.....", "#.....#.....", "#.....#.##..", "#.....####..", "#######.###.", "......#####.", "......#####.", ".......###..", "............", "............" }; break;
             default:           // a window with a title bar (UI mock)

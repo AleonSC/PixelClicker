@@ -1560,29 +1560,12 @@ public class PixelDevTools : MonoBehaviour
                                               TextAlignmentOptions.MidlineLeft, FontStyles.Normal, textColor);
         Place(text.rectTransform, 40f, y, width - rowHeight - 10f);
 
-        GameObject boxGo = new GameObject("Tick Box", typeof(RectTransform), typeof(Image), typeof(Toggle));
-        boxGo.transform.SetParent(parent, false);
-        Image bg = boxGo.GetComponent<Image>();
-        bg.color = tickBoxColor;
+        Toggle toggle = PixelUIKit.CreateTickBox(parent, rowHeight, tickBoxColor, tickColor);
+        GameObject boxGo = toggle.gameObject;
         RectTransform br = boxGo.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(0f, 1f);
-        br.sizeDelta = new Vector2(rowHeight, rowHeight);
         br.anchoredPosition = new Vector2(40f + width - rowHeight, -y);
 
-        GameObject tick = new GameObject("Tick", typeof(RectTransform), typeof(Image));
-        tick.transform.SetParent(boxGo.transform, false);
-        Image tickImage = tick.GetComponent<Image>();
-        tickImage.sprite = PixelUIKit.TickSprite();
-        tickImage.color = tickColor;
-        tickImage.raycastTarget = false;
-        RectTransform kr = tick.GetComponent<RectTransform>();
-        PixelUIKit.Stretch(kr);
-        kr.offsetMin = new Vector2(rowHeight * 0.1f, rowHeight * 0.1f);
-        kr.offsetMax = new Vector2(-rowHeight * 0.1f, -rowHeight * 0.1f);
-
-        Toggle toggle = boxGo.GetComponent<Toggle>();
-        toggle.targetGraphic = bg;
-        toggle.graphic = tickImage;
         toggle.isOn = initial;
         toggle.onValueChanged.AddListener(on => onChange(on));
         toggle.onValueChanged.AddListener(_ => PixelAudio.Play("ui_click"));
@@ -1639,6 +1622,9 @@ public class PixelDevTools : MonoBehaviour
         go.GetComponent<PixelDevTip>().rect = tipRect;
         go.SetActive(false);
     }
+
+    /// <summary>The Dev Tools' hover tooltip for any dev tool (the Look Studio...): shows 'text' next to the mouse while it is over 'target'. Does nothing before Dev Tools exists.</summary>
+    public static void Tip(GameObject target, string text) { if (instance != null) instance.AddTip(target, text); }
 
     /// <summary>Shows 'text' in a small box next to the mouse while it is over 'target'.</summary>
     private void AddTip(GameObject target, string text)

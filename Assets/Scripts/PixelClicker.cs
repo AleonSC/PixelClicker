@@ -1680,13 +1680,14 @@ public partial class PixelClicker : MonoBehaviour
 
     private void OnDisable() => PixelDisplaySettings.ColorBlindChanged -= RefreshLooks;
 
-    /// <summary>Re-draws the pixel on the cube with its current look (e.g. after the colour-blind setting changed).</summary>
-    private void RefreshLooks()
+    /// <summary>Re-draws the pixel on the cube with its current look (e.g. after the colour-blind setting changed, or an edit in the Look Studio).</summary>
+    public void RefreshLooks()
     {
         if (pixelRenderer == null || tiers == null || tiers.Length == 0) return;
         if (liveExtras != null) Destroy(liveExtras);
         liveExtras = null;
         liveExtrasBuilt = false;
+        liveGlowShellType = (PixelType)(-1);   // the glow shell is built again too (its colour / strength may have changed)
         ApplyTierLook(GetClickTier());
     }
 

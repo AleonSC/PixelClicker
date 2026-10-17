@@ -92,6 +92,26 @@ public partial class PixelClicker
     }
 
     /// <summary>The look of a tier, or null (looks off / none defined).</summary>
+    /// <summary>
+    /// The look of this pixel type to EDIT at run time (the Look Studio): the one in the Pixel Looks list, or a new plain one added to the list when the
+    /// type has none yet. Changes show after RefreshLooks (the cube) / PixelTierPicture.Rebuild (pictures); husks already on the floor keep their old look.
+    /// </summary>
+    public PixelLook EditableLook(PixelType type)
+    {
+        PixelLook look = PixelLooks.Find(looks, type);
+        if (look != null) return look;
+        look = new PixelLook { type = type };
+        List<PixelLook> list = new List<PixelLook>(looks ?? new PixelLook[0]) { look };
+        looks = list.ToArray();
+        return look;
+    }
+
+    /// <summary>The look this pixel type has now, or null (Pixel Looks switched off, or the type has none).</summary>
+    public PixelLook CurrentLook(PixelType type) => useLooks ? PixelLooks.Find(looks, type) : null;
+
+    /// <summary>False when 'Use Looks' is switched off on PixelClicker (every pixel is then a plain coloured cube).</summary>
+    public bool UseLooks => useLooks;
+
     private PixelLook LookOf(PixelTier tier) => useLooks && tier != null ? PixelLooks.Find(looks, tier.type) : null;
 
     /// <summary>The colour the 3D pixel is drawn in: the look's colour (alpha scaled) or the tier's own.</summary>

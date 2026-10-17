@@ -29,7 +29,7 @@ One window for every dev tool: drag, minimize, dock to a screen side (`PixelWind
 
 ## Hub tabs: icons, Docs, Notes
 
-Hub tabs are small: each shows only a pixel-art icon, the active tab also shows its name (`PixelDevHub.LayoutTabs`, icons drawn from text in `TabIcon`). Tabs now: Main, Docs, Inspector, Shapes, UI Mock. **Docs** (`PixelDevDocs.cs`) has three permanent sub-tabs: To-Do, Changelog and **Notes** (your own notes typed in-game: list on the left, title + multi-line text on the right, auto-saved to `<persistentDataPath>/DevNotes.json`, Delete confirms with a second click). `PixelInputCaret` draws the text cursor in the Inspector / Notes fields.
+Hub tabs are small: each shows only a pixel-art icon, the active tab also shows its name (`PixelDevHub.LayoutTabs`, icons drawn from text in `TabIcon`). Tabs now: Main, Docs, Tester, Inspector, Shapes, UI Mock, Looks (`PixelLookStudio.cs`: the in-game pixel look editor, see its header). **Docs** (`PixelDevDocs.cs`) has three permanent sub-tabs: To-Do, Changelog and **Notes** (your own notes typed in-game: list on the left, title + multi-line text on the right, auto-saved to `<persistentDataPath>/DevNotes.json`, Delete confirms with a second click). `PixelInputCaret` draws the text cursor in the Inspector / Notes fields.
 
 
 ## Spawn widgets (replaced the on-screen spawn selector)
