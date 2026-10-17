@@ -1289,3 +1289,4 @@
 [2026-10-17 12:10 UTC] Built the Sorting Hopper: a tray that latches onto a Recycler's back and slides one chosen husk type (pick it with the flag) through the back hatch as a steady streak, while other husks lie in it and fade; on sale in the shop from Standard level 3 for 150 White.
 [2026-10-17 12:10 UTC] To-do: marked the Sorting Hopper done.
 [2026-10-17 12:12 UTC] Added a pinned 'Husks and Physics' session (how husks and pets move, grab, throw and settle) to the session list in the notes, and a to-do item to make thrown husks tumble instead of slide.
+[2026-10-17 12:14 UTC] Thrown husks now tumble end over end instead of skidding flat: letting go gives them a spin along the throw and a little extra grip for a few seconds so their corners catch (tune it under Pixel Grab > Tumbling when thrown).

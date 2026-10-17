@@ -15,6 +15,11 @@
 //   used to jitter / bounce against the floor and piles): while held a husk is interpolated, uses continuous collisions, can't tumble
 //   (freezeSpinWhileHeld), is pushed out of things gently (heldDepenetrationSpeed 2) and is lifted heldAutoLift (0.35) widths off what it
 //   rested on; all of it is put back on release. PixelShop finds/adds it.
+//   TUMBLING WHEN THROWN (2026-10-17, thrown husks used to skid flat): on release StartTumble gives a husk thrown faster than
+//   minTumbleSpeed sideways a roll along the throw (axis = up x sideways velocity, speed = travel / half height x throwSpin, capped
+//   maxThrowSpin - maxAngularVelocity is raised for it, Unity's default 7 rad/s was too low - plus spinWobble on the axis) and for
+//   thrownGripSeconds swaps its collider to a grippy copy of its own material (friction >= thrownGrip, combined by Maximum; husk materials
+//   normally combine friction by Minimum so corners never caught). EndThrownGrip puts the original back (time over, or grabbed again).
 //   Tags: OldPixelInfo.heldByPlayer / lastHeldTime / RecentlyHeld(seconds) = 'recently held by the player' (held now, or let go within recentlyHeldSeconds 0 = 6, Inspector); the Storage Crate
 //   stores a tagged pixel that lands in its footprint from any height.
 //   GROUND CLAMP (2026-10-16): a held husk is never pushed into the surface under it (TryGroundUnder: highest still collider straight below, husks skipped);
@@ -104,6 +109,26 @@ public class PixelGrab : MonoBehaviour
     [Min(0f)]
     [Tooltip("Fastest a thrown pixel can leave your hand (world units per second).")]
     [SerializeField] private float maxThrowSpeed = 25f;
+
+    [Header("Tumbling when thrown")]
+    [Range(0f, 2f)]
+    [Tooltip("Spin a thrown husk gets when you let go, so it tumbles end over end instead of skidding flat. 1 = it rolls exactly as fast as it travels (like a die rolled across a table), 0 = no spin (the old skid).")]
+    [SerializeField] private float throwSpin = 0.8f;
+    [Min(0f)]
+    [Tooltip("Fastest a thrown husk may spin (turns per second x 6.28, radians per second). Unity's own cap is 7, which made hard throws look like slides.")]
+    [SerializeField] private float maxThrowSpin = 25f;
+    [Min(0f)]
+    [Tooltip("A husk let go slower than this sideways (world units per second) gets no spin: a set-down stays a set-down.")]
+    [SerializeField] private float minTumbleSpeed = 1.5f;
+    [Range(0f, 1f)]
+    [Tooltip("Random wobble added to the spin axis (0 = every throw rolls perfectly straight, 1 = quite wild). A little makes throws look natural.")]
+    [SerializeField] private float spinWobble = 0.25f;
+    [Range(0f, 1.5f)]
+    [Tooltip("Grip of a thrown husk for a moment after the throw (0 = slippery, 1 = rubbery). Husks are normally slippery against each other and the floor, so their corners never caught and spinning ones still slid; this lets the edges catch and tip it over. 0 = keep its normal grip.")]
+    [SerializeField] private float thrownGrip = 0.6f;
+    [Min(0f)]
+    [Tooltip("Seconds a thrown husk keeps that extra grip, then it goes back to its normal material (so piles and machines behave as before).")]
+    [SerializeField] private float thrownGripSeconds = 2.5f;
 
     [Header("Gentle collisions")]
     [Tooltip("Turns off the gentle-collision rules below (a carried / thrown pixel hits the others with its full weight and they fly as far as physics says).")]
@@ -331,6 +356,7 @@ public class PixelGrab : MonoBehaviour
         heldWasDepenetration = body.maxDepenetrationVelocity;
         body.interpolation = RigidbodyInterpolation.Interpolate;
         if (!body.isKinematic) body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+        EndThrownGrip(body);   // re-grabbed while still grippy from a throw: put its own material back first
         if (freezeSpinWhileHeld) { body.freezeRotation = true; if (!body.isKinematic) body.angularVelocity = Vector3.zero; }
         body.maxDepenetrationVelocity = heldDepenetrationSpeed;
         Collider heldCol = body.GetComponent<Collider>();
@@ -489,6 +515,7 @@ public class PixelGrab : MonoBehaviour
     private void FixedUpdate()
     {
         LimitReactions();
+        UpdateThrownGrip();
         if (held == null) return;
         if (cam == null) { Release(); return; }
 
@@ -566,12 +593,99 @@ public class PixelGrab : MonoBehaviour
         if (!held.isKinematic) held.collisionDetectionMode = heldWasDetection;
         held.freezeRotation = heldWasFreezeRotation;
         held.maxDepenetrationVelocity = heldWasDepenetration;
+        StartTumble(held, v);   // after freezeRotation is put back, or the spin would be ignored
         if (heldDespawn != null) { heldDespawn.Held = false; PixelRecycler.KeepIfOver(held); }   // let go over a Recycler: its timer can't run out before the bin takes it
         held = null;
         heldDespawn = null;
         heldGravity = null;
         PixelAudio.Play("drop");
     }
+
+    // ---- Tumbling when thrown: spin along the throw + a little grip so corners catch and tip it over ----
+    private struct GripRestore { public Collider col; public UnityEngine.Object original; public float until; }
+    private readonly System.Collections.Generic.Dictionary<Rigidbody, GripRestore> thrownGripUntil = new System.Collections.Generic.Dictionary<Rigidbody, GripRestore>();
+    private readonly System.Collections.Generic.Dictionary<UnityEngine.Object, UnityEngine.Object> grippyMaterials = new System.Collections.Generic.Dictionary<UnityEngine.Object, UnityEngine.Object>();
+
+    /// <summary>Gives a thrown husk a roll that matches its throw (axis = up x sideways velocity, like a die rolled across a table) and, for a moment, more grip.</summary>
+    private void StartTumble(Rigidbody body, Vector3 v)
+    {
+        if (body == null || body.isKinematic) return;
+        Vector3 side = new Vector3(v.x, 0f, v.z);
+        if (side.magnitude < minTumbleSpeed || throwSpin <= 0f) return;
+
+        Collider col = body.GetComponent<Collider>();
+        float radius = col != null ? Mathf.Max(0.01f, col.bounds.extents.y) : 0.05f;
+        Vector3 axis = Vector3.Cross(Vector3.up, side).normalized;
+        if (spinWobble > 0f) axis = (axis + Random.insideUnitSphere * spinWobble).normalized;
+        float spin = Mathf.Min(side.magnitude / radius * throwSpin, maxThrowSpin);
+        if (body.maxAngularVelocity < spin) body.maxAngularVelocity = spin;   // Unity caps spin at 7 rad/s by default
+        body.angularVelocity = axis * spin;
+
+        if (thrownGrip > 0f && thrownGripSeconds > 0f && col != null)
+        {
+            if (!thrownGripUntil.TryGetValue(body, out GripRestore r)) r = new GripRestore { col = col, original = col.sharedMaterial };
+            col.sharedMaterial = GrippyCopy(col.sharedMaterial);
+            r.until = Time.time + thrownGripSeconds;
+            thrownGripUntil[body] = r;
+        }
+    }
+
+    /// <summary>Puts a thrown husk's own physics material back (grip time over, or it was grabbed again).</summary>
+    private void EndThrownGrip(Rigidbody body)
+    {
+        if (!thrownGripUntil.TryGetValue(body, out GripRestore r)) return;
+        if (r.col != null) SetPhysicsMaterial(r.col, r.original);
+        thrownGripUntil.Remove(body);
+    }
+
+    private void UpdateThrownGrip()
+    {
+        if (thrownGripUntil.Count == 0) return;
+        float now = Time.time;
+        scratch.Clear();
+        foreach (var pair in thrownGripUntil) if (pair.Key == null || pair.Value.col == null || pair.Value.until < now) scratch.Add(pair.Key);
+        foreach (Rigidbody done in scratch)
+        {
+            if (done != null) EndThrownGrip(done);
+            else thrownGripUntil.Remove(done);
+        }
+    }
+
+#if UNITY_6000_0_OR_NEWER
+    /// <summary>A copy of a husk's material with at least thrownGrip friction, combined by Maximum so its own grip wins against slippery floors / husks (cached per original).</summary>
+    private PhysicsMaterial GrippyCopy(PhysicsMaterial original)
+    {
+        UnityEngine.Object key = original != null ? (UnityEngine.Object)original : this;
+        float grip = Mathf.Max(thrownGrip, original != null ? original.dynamicFriction : 0f);
+        if (grippyMaterials.TryGetValue(key, out UnityEngine.Object cached) && cached != null && Mathf.Approximately(((PhysicsMaterial)cached).dynamicFriction, grip))
+            return (PhysicsMaterial)cached;
+        PhysicsMaterial m = new PhysicsMaterial((original != null ? original.name : "OldPixel") + "_Thrown")
+        {
+            bounciness = original != null ? original.bounciness : 0f, dynamicFriction = grip, staticFriction = grip,
+            bounceCombine = original != null ? original.bounceCombine : PhysicsMaterialCombine.Average, frictionCombine = PhysicsMaterialCombine.Maximum
+        };
+        grippyMaterials[key] = m;
+        return m;
+    }
+    private static void SetPhysicsMaterial(Collider col, UnityEngine.Object m) { col.sharedMaterial = (PhysicsMaterial)m; }
+#else
+    /// <summary>A copy of a husk's material with at least thrownGrip friction, combined by Maximum so its own grip wins against slippery floors / husks (cached per original).</summary>
+    private PhysicMaterial GrippyCopy(PhysicMaterial original)
+    {
+        UnityEngine.Object key = original != null ? (UnityEngine.Object)original : this;
+        float grip = Mathf.Max(thrownGrip, original != null ? original.dynamicFriction : 0f);
+        if (grippyMaterials.TryGetValue(key, out UnityEngine.Object cached) && cached != null && Mathf.Approximately(((PhysicMaterial)cached).dynamicFriction, grip))
+            return (PhysicMaterial)cached;
+        PhysicMaterial m = new PhysicMaterial((original != null ? original.name : "OldPixel") + "_Thrown")
+        {
+            bounciness = original != null ? original.bounciness : 0f, dynamicFriction = grip, staticFriction = grip,
+            bounceCombine = original != null ? original.bounceCombine : PhysicMaterialCombine.Average, frictionCombine = PhysicMaterialCombine.Maximum
+        };
+        grippyMaterials[key] = m;
+        return m;
+    }
+    private static void SetPhysicsMaterial(Collider col, UnityEngine.Object m) { col.sharedMaterial = (PhysicMaterial)m; }
+#endif
 
     private static Vector3 GetVelocity(Rigidbody rb)
     {
