@@ -17,7 +17,7 @@
 //   the coin slot and the buttons; 6 fade to black, then the normal title intro.
 //   'GAME OVER' + scanlines are a world-space canvas just in front of the cabinet's screen (not in the space picture). The cabinet and the alien
 //   float in the dark (no floor).
-//   At launch it first waits on black until frames come smoothly (settleSeconds), and the timeline moves at most maxFrameStep per frame, so loading
+//   At launch it first waits on black until frames come smoothly (maxSettleTime), and the timeline moves at most maxFrameStep per frame, so loading
 //   hitches slow it down instead of skipping scenes. The space set is built small and scaled up (SpaceScale) to keep float precision far from the origin.
 //   No per-frame allocations (everything is cached when it is built; the timeline runs in one coroutine on unscaled time).
 // ---------------------------------------------------
@@ -43,9 +43,9 @@ public class PixelStudioIntro : MonoBehaviour
     [SerializeField, Min(0.05f), Tooltip("The fade to black at the end.")] private float fadeSeconds = 0.6f;
     [SerializeField, Min(0.05f), Tooltip("The quicker fade to black after a skip.")] private float skipFadeSeconds = 0.25f;
     [SerializeField, Min(1f), Tooltip("Blinks per second of 'GAME OVER'.")] private float blinkRate = 5f;
-    [SerializeField, Min(0f), Tooltip("The fade in from black at the start (after the set has rendered its first frames).")] private float fadeInSeconds = 0.35f;
+    [SerializeField, Min(0f), Tooltip("The fade in from black at the start (after the set has rendered its first frames).")] private float fadeInTime = 1.2f;
     [SerializeField, Range(0.02f, 0.2f), Tooltip("The most the timeline moves on in one frame: a slow frame (the game is still loading at launch) slows it down instead of skipping scenes.")] private float maxFrameStep = 0.05f;
-    [SerializeField, Min(0f), Tooltip("Most seconds it waits (on black) at the start for the game's loading hitches to settle before it begins.")] private float settleSeconds = 2f;
+    [SerializeField, Min(0f), Tooltip("Most seconds it waits (on black) at the start for the game's loading hitches to settle before it begins.")] private float maxSettleTime = 0.6f;
 
     [Header("Space colours")]
     [SerializeField] private Color oceanColor = new Color(0.07f, 0.22f, 0.55f, 1f);
@@ -65,6 +65,8 @@ public class PixelStudioIntro : MonoBehaviour
     [SerializeField] private Color marqueeColor = new Color(1f, 0.75f, 0.2f, 1f);
     [SerializeField] private Color marqueeTextColor = new Color(0.12f, 0.05f, 0.25f, 1f);
     [SerializeField] private Color bezelColor = new Color(0.05f, 0.05f, 0.07f, 1f);
+    [SerializeField, Range(0.5f, 3f), Tooltip("Size of the alien (1 = a small cube a third of the cabinet's height).")] private float alienSize = 1.75f;
+    [SerializeField, Tooltip("Where the alien stands, relative to the cabinet's foot (x = left / right, z = in front; the control panel ends at z -0.47).")] private Vector3 alienPosition = new Vector3(-0.3f, 0f, -0.75f);
     [SerializeField] private Color alienColor = new Color(0.35f, 0.9f, 0.35f, 1f);
     [SerializeField] private Color buttonColorA = new Color(1f, 0.2f, 0.25f, 1f);
     [SerializeField] private Color buttonColorB = new Color(0.2f, 0.6f, 1f, 1f);
@@ -147,7 +149,7 @@ public class PixelStudioIntro : MonoBehaviour
         // so the first seconds of the story aren't lost in one long frame.
         float waited = 0f;
         int calm = 0;
-        while (calm < 3 && waited < settleSeconds)
+        while (calm < 3 && waited < maxSettleTime)
         {
             yield return null;
             waited += Time.unscaledDeltaTime;
@@ -166,7 +168,7 @@ public class PixelStudioIntro : MonoBehaviour
             if (!jingle && t >= overStart) { jingle = true; PixelAudio.Play("studio_gameover"); }
             if (!hum && t >= revealStart) { hum = true; PixelAudio.StartLoop("studio_hum"); }
             Pose(t, zoomStart, overStart, revealStart, alienStart);
-            fade.color = new Color(0f, 0f, 0f, fadeInSeconds > 0f ? 1f - Mathf.Clamp01(t / fadeInSeconds) : 0f);
+            fade.color = new Color(0f, 0f, 0f, fadeInTime > 0f ? 1f - Smooth(t / fadeInTime) : 0f);
             yield return null;
             t += Mathf.Min(Time.unscaledDeltaTime, maxFrameStep);
         }
@@ -524,8 +526,9 @@ public class PixelStudioIntro : MonoBehaviour
     {
         alien = new GameObject("Alien").transform;
         alien.SetParent(arcade, false);
-        alien.localPosition = new Vector3(-0.42f, 0f, -0.62f);
+        alien.localPosition = alienPosition;
         alien.localRotation = Quaternion.Euler(0f, 25f, 0f);   // (turned a little towards the cabinet)
+        alien.localScale = Vector3.one * alienSize;
         kit.Box("Leg L", alien, new Vector3(-0.08f, 0.06f, 0f), new Vector3(0.07f, 0.12f, 0.07f), alienColor * 0.8f);
         kit.Box("Leg R", alien, new Vector3(0.08f, 0.06f, 0f), new Vector3(0.07f, 0.12f, 0.07f), alienColor * 0.8f);
         alienBody = new GameObject("Body Pivot").transform;

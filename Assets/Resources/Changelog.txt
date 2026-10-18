@@ -1394,3 +1394,4 @@
 [2026-10-18 13:26 UTC] Removed the blue line under the title plates of the pause menu and its Settings / Stats / Save screens.
 [2026-10-18 13:29 UTC] Fixed the studio intro showing black and then cutting out after GAME OVER: it now waits for the launch hitches to settle, fades in, never jumps more than a short step per frame, and its space scene is scaled up so the tiny Earth renders properly.
 [2026-10-18 13:48 UTC] Studio intro: 'GAME OVER' now shows (drawn on the cabinet's screen instead of through the space camera), and the floor under the arcade cabinet is gone so it floats.
+[2026-10-18 13:55 UTC] Studio intro: the alien is bigger (Inspector size) and stands closer to the cabinet, the intro fades in smoothly over 1.2 s, and it waits at most 0.6 s on black after booting instead of up to 2 s.
