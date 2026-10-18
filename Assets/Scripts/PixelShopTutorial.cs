@@ -12,7 +12,7 @@
 //   Cubie narrates it (PixelGuideVendor.BeginNarration/EndNarration: he slides in at the bottom right at 0.85 scale, stands still and
 //   points at the shop window with a stick (pointer: arm + stick + gold tip turned towards the shop's on-screen centre every frame,
 //   ShopPointTarget; his left arm hides meanwhile) and taps it on each new step (NarratorReact), no speech box, and leaves when the
-//   tutorial ends); every box has one height (UniformHeight, from the longest step, min boxHeight) so Got it never moves; the shop
+//   tutorial ends); every box has one height (from the longest step, min boxHeight) so Got it never moves - the flow is the shared PixelTutorialRunner; the shop
 //   window has a blue '?' hold button left of its X (the pause menu's PixelHoldButton with a fill bar, helpHoldSeconds 0.7 on
 //   PixelShop) that calls Replay(); remembered as hint id shop_tutorial (PixelHints.IsTipSeen/SetTipSeen; Settings > Replay tutorial
 //   clears it, so it replays after the intro if the shop is unlocked).
@@ -63,7 +63,8 @@ public class PixelShopTutorial : MonoBehaviour
     [SerializeField] private float dimSeconds = 0f;
 
     private PixelShop shop;
-    private bool running;
+    private PixelTutorialRunner runner;   // the shared tutorial flow (dim, Cubie, Got it boxes, done key)
+    private bool running => runner != null && runner.Running;
     private float readyTimer;
     private bool requested;
     private static PixelShopTutorial instance;
@@ -101,15 +102,24 @@ public class PixelShopTutorial : MonoBehaviour
 
     private void BeginRun()
     {
-        running = true;
         requested = false;
-        PixelTutorialDim.Begin(() => ShowStep(0), dimAmount, dimSeconds);
-    }
-
-    private void EndRun()
-    {
-        running = false;
-        PixelTutorialDim.End();
+        if (runner == null)
+            runner = new PixelTutorialRunner
+            {
+                doneKey = DoneKey,
+                beside = () => shop != null ? shop.PanelRect : null,   // the boxes sit just right of the shop window
+                minBoxHeight = boxHeight, dimAmount = dimAmount, dimSeconds = dimSeconds,
+                onFinish = () => PixelHints.SetTipSeen(SeenId),
+            };
+        runner.minBoxHeight = boxHeight;
+        // Each step opens the tab / section it describes; Cubie points at the shop window (his default, no override).
+        List<PixelTutorialRunner.Step> list = new List<PixelTutorialRunner.Step>();
+        foreach (Step st in steps)
+        {
+            Step step = st;
+            list.Add(new PixelTutorialRunner.Step { text = step.text, enter = () => { if (shop != null) shop.TutorialOpen(step.tab, step.subTab); } });
+        }
+        runner.Run(list);
     }
 
     private void Update()
@@ -142,34 +152,6 @@ public class PixelShopTutorial : MonoBehaviour
     {
         if (running || shop == null) return;
         if (steps == null || steps.Count == 0) steps = DefaultSteps();
-        PixelNotice.Hide();
         BeginRun();
-    }
-
-    /// <summary>One height for every box: tall enough for the longest step (a rough characters-per-line estimate), never under boxHeight, so Got it never moves.</summary>
-    private float UniformHeight()
-    {
-        int longest = 0;
-        foreach (Step st in steps) if (st != null && st.text != null) longest = Mathf.Max(longest, st.text.Length);
-        int lines = Mathf.CeilToInt(longest / 28f) + 1;
-        return Mathf.Max(boxHeight, 124f + lines * 30f);
-    }
-
-    private void ShowStep(int index)
-    {
-        if (index >= steps.Count || shop == null)
-        {
-            EndRun();
-            PixelGuideVendor.EndNarration();
-            PixelHints.SetTipSeen(SeenId);
-            PixelStats.Best(DoneKey, 1d);
-            return;
-        }
-
-        if (index > 0) PixelGuideVendor.NarratorReact();
-        if (index == 0) PixelGuideVendor.BeginNarration();   // Cubie narrates his shop from the bottom right
-        Step step = steps[index];
-        shop.TutorialOpen(step.tab, step.subTab);
-        PixelNotice.Show(step.text, 0f, small: true, beside: shop.PanelRect, onClosed: () => ShowStep(index + 1), minHeight: UniformHeight(), onBack: index > 0 ? (System.Action)(() => ShowStep(index - 1)) : null, onSkip: () => ShowStep(steps.Count));
     }
 }

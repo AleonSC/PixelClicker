@@ -8,7 +8,7 @@
 //   (PixelGuideVendor.BeginNarration) and his stick points at the part each step describes (PixelGuideVendor.PointOverride,
 //   TutorialFocus Window / Header / Cards / Train / Tree / Mastery / Pin), each step is a small Got it box beside the Skills window
 //   (PixelNotice beside: windowRect); the Train / Tree steps look at the first real pack with a tree and the player's own selection
-//   comes back at the end. Remembered per save as stat guide.skillsTutorial (TutorialDoneKey, cleared by Settings > Replay tutorial).
+//   comes back at the end. The flow is the shared PixelTutorialRunner. Remembered per save as stat guide.skillsTutorial (TutorialDoneKey, cleared by Settings > Replay tutorial).
 //   It replaced the old one-box introText / skills_intro tip. PixelTutorialDim is shared with the shop tutorial (dimAmount /
 //   dimSeconds still live on PixelShopTutorial).
 // ---------------------------------------------------
@@ -49,7 +49,8 @@ public partial class PixelSkills
     [Tooltip("The steps, in order. Empty = the built-in steps. Each shows its text beside the Skills window while Cubie points at its focus.")]
     [SerializeField] private List<TutorialStep> tutorialSteps = new List<TutorialStep>();
 
-    private bool tutorialRunning;
+    private PixelTutorialRunner tutorialRunner;   // the shared tutorial flow
+    private bool tutorialRunning => tutorialRunner != null && tutorialRunner.Running;
     private float tutorialReady;
     private int tutorialSavedSelection = -1;
 
@@ -94,44 +95,34 @@ public partial class PixelSkills
     {
         if (tutorialRunning || !built) return;
         if (tutorialSteps == null || tutorialSteps.Count == 0) tutorialSteps = DefaultTutorialSteps();
-        PixelNotice.Hide();
-        tutorialRunning = true;
-        PixelTutorialDim.Begin(() => { TutorialShowStep(0); });
-    }
-
-    private void TutorialShowStep(int index)
-    {
-        if (index >= tutorialSteps.Count)
+        if (tutorialRunner == null)
+            tutorialRunner = new PixelTutorialRunner
+            {
+                doneKey = TutorialDoneKey,
+                beside = () => windowRect,   // the boxes sit just right of the Skills window
+                onBegin = OpenWindow,
+                onFinish = () => { if (tutorialSavedSelection >= 0) { selected = tutorialSavedSelection; tutorialSavedSelection = -1; RefreshWindow(); } },   // the player's own selection comes back
+            };
+        List<PixelTutorialRunner.Step> list = new List<PixelTutorialRunner.Step>();
+        foreach (TutorialStep st in tutorialSteps)
         {
-            tutorialRunning = false;
-            PixelGuideVendor.PointOverride = null;
-            PixelGuideVendor.EndNarration();
-            if (tutorialSavedSelection >= 0) { selected = tutorialSavedSelection; tutorialSavedSelection = -1; RefreshWindow(); }
-            PixelTutorialDim.End();
-            PixelStats.Best(TutorialDoneKey, 1d);
-            return;
+            TutorialStep step = st;
+            list.Add(new PixelTutorialRunner.Step
+            {
+                text = step.text,
+                enter = () =>
+                {
+                    // The Tree / Train steps need a pack with a tree on screen: look at the first real pack.
+                    if (step.focus != TutorialFocus.Tree && step.focus != TutorialFocus.Train) return;
+                    if (tutorialSavedSelection < 0) tutorialSavedSelection = selected;
+                    int pick = packs.FindIndex(p => p.id != StandardId && IsAvailable(p) && p.nodes != null && p.nodes.Length > 0);
+                    if (pick >= 0) selected = pick;
+                    RefreshWindow();
+                },
+                point = () => TutorialTarget(step.focus),
+            });
         }
-        if (index == 0) { PixelGuideVendor.BeginNarration(); OpenWindow(); }
-        else PixelGuideVendor.NarratorReact();
-
-        TutorialStep step = tutorialSteps[index];
-        // The Tree / Train steps need a pack with a tree on screen: look at the first real pack (the player's own selection comes back at the end).
-        if (step.focus == TutorialFocus.Tree || step.focus == TutorialFocus.Train)
-        {
-            if (tutorialSavedSelection < 0) tutorialSavedSelection = selected;
-            int pick = packs.FindIndex(p => p.id != StandardId && IsAvailable(p) && p.nodes != null && p.nodes.Length > 0);
-            if (pick >= 0) selected = pick;
-            RefreshWindow();
-        }
-        PixelGuideVendor.PointOverride = () => TutorialTarget(step.focus);
-        PixelNotice.Show(step.text, 0f, small: true, beside: windowRect, onClosed: () => TutorialShowStep(index + 1), minHeight: TutorialBoxHeight(), onBack: index > 0 ? (System.Action)(() => TutorialShowStep(index - 1)) : null, onSkip: () => TutorialShowStep(tutorialSteps.Count));
-    }
-
-    private float TutorialBoxHeight()
-    {
-        int longest = 0;
-        foreach (TutorialStep st in tutorialSteps) if (st != null && st.text != null) longest = Mathf.Max(longest, st.text.Length);
-        return Mathf.Max(260f, 124f + (Mathf.CeilToInt(longest / 28f) + 1) * 30f);
+        tutorialRunner.Run(list);
     }
 
     /// <summary>The middle of the focused part of the window, in screen pixels (null = the whole window).</summary>

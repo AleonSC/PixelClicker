@@ -5,7 +5,7 @@
 //   no Cubie visit, no other tip / window / tutorial, shop closed, not paused, startDelay 2 s) the screen dims and pauses (PixelTutorialDim) and Cubie narrates like the shop tutorial (BeginNarration, stick
 //   at the part each step describes via PixelGuideVendor.PointOverride, small Got it boxes that follow the Toggles window - PixelNotice nearScreen): the Toggles tab, the Upgrades group (where the Auto Clicker
 //   is ticked on), the other groups. (The old last step, a hint at skills and the Lumberjack's Pack, was removed: the Skills tab now appears with Standard's level-2 popup.)
-//   Steps are an Inspector list (empty = the built-ins). Done = stat guide.togglesTutorial
+//   Steps are an Inspector list (empty = the built-ins), run by the shared PixelTutorialRunner. Done = stat guide.togglesTutorial
 //   (Settings > Replay tutorial clears it and, when the Toggles tab is there, asks for it again). Skipped entirely when TipsEnabled is off.
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -37,7 +37,8 @@ public class PixelTogglesTutorial : MonoBehaviour
     [SerializeField] private List<Step> steps = new List<Step>();
 
     private static PixelTogglesTutorial instance;
-    private bool running;
+    private PixelTutorialRunner runner;   // the shared tutorial flow
+    private bool running => runner != null && runner.Running;
     private float ready;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -91,15 +92,34 @@ public class PixelTogglesTutorial : MonoBehaviour
         if (ready < (startDelay > 0f ? startDelay : 2f)) return;
         if (steps == null || steps.Count == 0) steps = DefaultSteps();
         steps.RemoveAll(st => st != null && st.text != null && (st.text.Contains("Lumberjack's Pack") || st.text.Contains("Woodcutter's Pack")));   // (skills are introduced by Standard's level-2 popup now, not here; also drops it from a saved Inspector list)
-        running = true;
-        PixelTutorialDim.Begin(() => ShowStep(0));
-    }
-
-    private float BoxHeight()
-    {
-        int longest = 0;
-        foreach (Step st in steps) if (st != null && st.text != null) longest = Mathf.Max(longest, st.text.Length);
-        return Mathf.Max(260f, 124f + (Mathf.CeilToInt(longest / 28f) + 1) * 30f);
+        if (runner == null)
+            runner = new PixelTutorialRunner
+            {
+                doneKey = DoneKey,
+                nearScreen = BoxAnchor,   // the boxes follow the Toggles window (or a spot on the right when it is closed)
+                onFinish = () => { PixelToggles.TutorialClose(); PixelStats.Clear(DueKey); },
+            };
+        PixelShop shopForPointer = shop;   // (the Shop button step points at it)
+        List<PixelTutorialRunner.Step> list = new List<PixelTutorialRunner.Step>();
+        foreach (Step st in steps)
+        {
+            Step step = st;
+            list.Add(new PixelTutorialRunner.Step
+            {
+                text = step.text,
+                enter = () => { if (step.group >= 0) PixelToggles.TutorialOpen(step.group); else if (step.group == -2) PixelToggles.TutorialClose(); },
+                point = () =>
+                {
+                    switch (step.focus)
+                    {
+                        case Focus.Tab: return Centre(PixelToggles.TabRect);
+                        case Focus.ShopButton: return shopForPointer != null ? Centre(shopForPointer.ShopButtonRect) : null;
+                        default: return Centre(PixelToggles.WindowRect) ?? Centre(PixelToggles.TabRect);
+                    }
+                },
+            });
+        }
+        runner.Run(list);
     }
 
     private static Vector3? Centre(RectTransform r)
@@ -122,37 +142,5 @@ public class PixelTogglesTutorial : MonoBehaviour
         }
         // The window is closed (the tab is in the bottom right corner, where Cubie stands and would cover the box): the box sits to the left of a spot at the middle of the right side instead.
         return new Vector2(Screen.width * 0.97f, Screen.height * 0.5f);
-    }
-
-    private void ShowStep(int index)
-    {
-        if (index >= steps.Count)
-        {
-            running = false;
-            PixelGuideVendor.PointOverride = null;
-            PixelGuideVendor.EndNarration();
-            PixelToggles.TutorialClose();
-            PixelTutorialDim.End();
-            PixelStats.Best(DoneKey, 1d);
-            PixelStats.Clear(DueKey);
-            return;
-        }
-        if (index == 0) PixelGuideVendor.BeginNarration();
-        else PixelGuideVendor.NarratorReact();
-
-        Step step = steps[index];
-        if (step.group >= 0) PixelToggles.TutorialOpen(step.group);
-        else if (step.group == -2) PixelToggles.TutorialClose();
-        PixelShop shop = PixelFind.First<PixelShop>();
-        PixelGuideVendor.PointOverride = () =>
-        {
-            switch (step.focus)
-            {
-                case Focus.Tab: return Centre(PixelToggles.TabRect);
-                case Focus.ShopButton: return shop != null ? Centre(shop.ShopButtonRect) : null;
-                default: return Centre(PixelToggles.WindowRect) ?? Centre(PixelToggles.TabRect);
-            }
-        };
-        PixelNotice.Show(step.text, 0f, small: true, nearScreen: BoxAnchor, onClosed: () => ShowStep(index + 1), minHeight: BoxHeight(), onBack: index > 0 ? (System.Action)(() => ShowStep(index - 1)) : null, onSkip: () => ShowStep(steps.Count));
     }
 }
