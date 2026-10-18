@@ -188,14 +188,10 @@ public class PixelBank : MonoBehaviour, IPixelSaved
     [Tooltip("Hover tip on the square hose button (here and in the Bank window). {0} = the key bound to the hose.")]
     [SerializeField] private string hoseTipText = "Hose: click here or press {0} to equip it or put it away";
 
-    [Tooltip("Colour of the Bank tab.")]
+    [Tooltip("Colour of the Bank tab (the Bank's own teal, kept as a plain colour rather than a PixelUITheme role).")]
     [SerializeField] private Color bankButtonColor = new Color(0.25f, 0.55f, 0.6f, 1f);
 
-    [Tooltip("Colour of the hose button while the hose is put away.")]
-    [SerializeField] private Color hoseButtonColor = new Color(0.3f, 0.3f, 0.36f, 1f);
-
-    [Tooltip("Colour of the hose button while the hose is equipped.")]
-    [SerializeField] private Color hoseButtonOnColor = new Color(0.3f, 0.7f, 0.4f, 1f);
+    // (the hose buttons use the PixelUITheme roles: Success while the hose is equipped, Neutral while it is put away)
 
     [Tooltip("Button text colour.")]
     [SerializeField] private Color buttonTextColor = Color.white;
@@ -1199,8 +1195,7 @@ public class PixelBank : MonoBehaviour, IPixelSaved
         Button bank = PixelUIKit.CreateButton(font, canvasRoot.transform, "Bank Button", bankButtonText, hud.ButtonSize,
                                               bankButtonColor, buttonTextColor, 30f);
         // The square hose button sits on the tab's right (the side nearest the screen), so it is the part that slides out first.
-        hoseButton = PixelUIKit.CreateButton(font, canvasRoot.transform, "Hose Button", "", hud.ButtonSize, hoseButtonColor,
-                                             buttonTextColor, 30f);
+        hoseButton = PixelUIKit.CreateButton(font, canvasRoot.transform, "Hose Button", "", hud.ButtonSize, ButtonRole.Neutral, 30f);
         hoseButtonImage = hoseButton.GetComponent<Image>();
 
         float tabWidth = hud.ButtonSize.x * bankTabWidthFraction, hoseSize = hud.ButtonSize.y;
@@ -1346,7 +1341,7 @@ public class PixelBank : MonoBehaviour, IPixelSaved
 
     private void BuildWindowHoseButton()
     {
-        Button b = windowParts.AddHeaderButton("Window Hose Button", "", true, hoseButtonColor);   // the left header slot
+        Button b = windowParts.AddHeaderButton("Window Hose Button", "", true, ButtonRole.Neutral);   // the left header slot
         windowHoseImage = b.GetComponent<Image>();
         b.onClick.AddListener(() => SetHose(!HoseOn));
 
@@ -1383,8 +1378,9 @@ public class PixelBank : MonoBehaviour, IPixelSaved
     private void RefreshHoseButton()
     {
         if (hoseButtonImage == null) return;
-        hoseButtonImage.color = HoseOn ? hoseButtonOnColor : hoseButtonColor;
-        if (windowHoseImage != null) windowHoseImage.color = HoseOn ? hoseButtonOnColor : hoseButtonColor;
+        ButtonRole role = HoseOn ? ButtonRole.Success : ButtonRole.Neutral;
+        PixelUIKit.SetRole(hoseButtonImage, role);
+        if (windowHoseImage != null) PixelUIKit.SetRole(windowHoseImage, role);
     }
 
     private void ToggleWindow()
