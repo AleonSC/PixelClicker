@@ -216,6 +216,7 @@ public class PixelSnakeMinigame : PixelMinigame
     protected override void Awake()
     {
         base.Awake();
+        PixelHuskPool.HuskReleasing += OnHuskReleasing;
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (clicker == null)
         {
@@ -230,9 +231,18 @@ public class PixelSnakeMinigame : PixelMinigame
     protected override void OnDestroy()
     {
         base.OnDestroy();
+        PixelHuskPool.HuskReleasing -= OnHuskReleasing;
         if (activeRound) EndRound(false, null);
         bystanderFactor = 1f;
         UpdateBystanders();
+    }
+
+    // (PixelHuskPool: the husk is going away and may be reused - let go of it, as if it had been destroyed; the round-end restore skips it)
+    private void OnHuskReleasing(Rigidbody body)
+    {
+        foreach (Piece p in targets) if (p.body == body) { p.body = null; p.tf = null; p.despawn = null; }   // (dropped from the targets in the next step, like a destroyed one)
+        foreach (Piece p in bodyPieces) if (p.body == body) { p.body = null; p.tf = null; p.despawn = null; }
+        for (int i = bystanders.Count - 1; i >= 0; i--) if (bystanders[i].body == body) bystanders.RemoveAt(i);
     }
 
     protected override void OnDespawned()
@@ -643,7 +653,8 @@ public class PixelSnakeMinigame : PixelMinigame
             clicker.AddUltra(1);
             ultraRoundCount++;
             PixelHints.Announce("Ultra pixel gained!");
-            PixelUltraFx.Play(clicker, bodyPieces[bodyPieces.Count - 1].body.position);
+            Rigidbody last = bodyPieces[bodyPieces.Count - 1].body;
+            PixelUltraFx.Play(clicker, last != null ? last.position : headPos);
         }
 
         targets.Clear();

@@ -112,8 +112,13 @@ public class PixelBlockTooltip : MonoBehaviour
         grab = PixelFind.First<PixelGrab>();
     }
 
+    private void Awake() => PixelHuskPool.HuskReleasing += OnHuskReleasing;
+    // (PixelHuskPool: the husk is going away and may be reused - let go of it)
+    private void OnHuskReleasing(Rigidbody body) { if (shownBody == body) shownBody = null; }
+
     private void OnDestroy()
     {
+        PixelHuskPool.HuskReleasing -= OnHuskReleasing;
         if (canvasObject != null) Destroy(canvasObject);
     }
 

@@ -539,7 +539,7 @@ public partial class PixelClicker : MonoBehaviour
     [SerializeField] private float huskSleepThreshold = 0.03f;
 
     [Tooltip("Reuse the objects of husks that have vanished for new husks instead of making new ones each click (PixelHuskPool). Turn off if a husk ever behaves oddly after a lot of clicking: everything works the same without it.")]
-    [SerializeField] private bool poolHusks = false;
+    [SerializeField] private bool huskPooling = true;
 
     [Min(0)]
     [Tooltip("The most vanished husks kept switched off for reuse.")]
@@ -909,7 +909,7 @@ public partial class PixelClicker : MonoBehaviour
     private void Awake()
     {
         PixelSystems.AddMissing(gameObject);   // every system component not already in the scene (the list and their groups: PixelSystems.cs)
-        PixelHuskPool.Enabled = poolHusks;
+        PixelHuskPool.Enabled = huskPooling;
         PixelHuskPool.MaxPooled = huskPoolSize;
         if (pixelTransform == null) pixelTransform = transform;
         if (pixelRenderer == null) pixelRenderer = pixelTransform.GetComponentInChildren<Renderer>();
@@ -2149,7 +2149,7 @@ public partial class PixelClicker : MonoBehaviour
 #if UNITY_EDITOR
     private void OnValidate()
     {
-        PixelHuskPool.Enabled = poolHusks;
+        PixelHuskPool.Enabled = huskPooling;
         PixelHuskPool.MaxPooled = huskPoolSize;
         if (tiers != null && tiers.Length > 0)
             activeTierIndex = Mathf.Clamp(activeTierIndex, 0, tiers.Length - 1);

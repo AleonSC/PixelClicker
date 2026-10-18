@@ -205,6 +205,7 @@ public class PixelSortMinigame : PixelMinigame
     protected override void Awake()
     {
         base.Awake();
+        PixelHuskPool.HuskReleasing += OnHuskReleasing;
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (clicker == null)
         {
@@ -219,10 +220,19 @@ public class PixelSortMinigame : PixelMinigame
     protected override void OnDestroy()
     {
         base.OnDestroy();
+        PixelHuskPool.HuskReleasing -= OnHuskReleasing;
         if (activeRound) EndRound(false, null);
         activeRound = false;
         bystanderFactor = 1f;
         UpdateBystanders(); // put the other old pixels back at once
+    }
+
+    // (PixelHuskPool: the husk is going away and may be reused - let go of it, as if it had been destroyed; the round-end restore skips it)
+    private void OnHuskReleasing(Rigidbody body)
+    {
+        foreach (Piece p in pieces) if (p.body == body) { p.body = null; p.tf = null; p.despawn = null; }
+        if (order != null && selected >= 0 && selected < order.Length && order[selected] != null && order[selected].tf == null) { selected = -1; ResetSelectedLook(); }   // (a picked piece that went can't be swapped)
+        for (int i = bystanders.Count - 1; i >= 0; i--) if (bystanders[i].body == body) bystanders.RemoveAt(i);
     }
 
     protected override void OnDespawned()

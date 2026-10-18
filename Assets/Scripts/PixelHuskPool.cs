@@ -1,7 +1,7 @@
 // ---- System notes ----
 // PixelHuskPool.cs
 //   HUSK POOLING: a husk whose despawn finishes (OldPixelDespawn's swell-and-shrink end) is switched off and kept, and the next husk that drops
-//   reuses it instead of a new GameObject + Rigidbody + MeshFilter + MeshRenderer. Switch: PixelClicker 'poolHusks' (+ 'huskPoolSize').
+//   reuses it instead of a new GameObject + Rigidbody + MeshFilter + MeshRenderer. Switch: PixelClicker 'huskPooling' (+ 'huskPoolSize'), on by default.
 //   THE RULES that keep a reused husk from coming back into someone's list as a different block:
 //   - Release(go) fires HuskReleasing(body) FIRST. Every system that keeps references to loose husks across frames (links, zone effects,
 //     magnets, belts, grab, joints, caches...) listens and drops the body there and then. Pooling or not, the event always fires, so a
@@ -24,7 +24,7 @@ public static class PixelHuskPool
     /// <summary>A loose husk is about to go (pooled or destroyed): drop every reference to it NOW. Fires before it is switched off.</summary>
     public static event Action<Rigidbody> HuskReleasing;
 
-    /// <summary>Pool husks at all (PixelClicker 'poolHusks').</summary>
+    /// <summary>Pool husks at all (PixelClicker 'huskPooling').</summary>
     public static bool Enabled { get; set; }
     /// <summary>The most switched-off husks kept for reuse (PixelClicker 'huskPoolSize').</summary>
     public static int MaxPooled { get; set; } = 64;

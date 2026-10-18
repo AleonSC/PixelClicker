@@ -111,6 +111,11 @@ public class PixelBeltSorter : MonoBehaviour, IPixelSocketDevice
 
     // ---------------- behaviour ----------------
 
+    private void Awake() => PixelHuskPool.HuskReleasing += OnHuskReleasing;
+    private void OnDestroy() => PixelHuskPool.HuskReleasing -= OnHuskReleasing;
+    // (PixelHuskPool: the husk is going away and may be reused - let go of it)
+    private void OnHuskReleasing(Rigidbody body) => ignoreUntil.Remove(body);
+
     private void OnEnable() { if (!all.Contains(this)) all.Add(this); PixelCouplings.Register(this); }
     private void OnDisable() { all.Remove(this); PixelCouplings.Unregister(this); }
 

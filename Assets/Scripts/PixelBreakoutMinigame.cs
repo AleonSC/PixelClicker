@@ -238,6 +238,7 @@ public class PixelBreakoutMinigame : PixelMinigame
     protected override void Awake()
     {
         base.Awake();
+        PixelHuskPool.HuskReleasing += OnHuskReleasing;
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (clicker == null)
         {
@@ -252,9 +253,22 @@ public class PixelBreakoutMinigame : PixelMinigame
     protected override void OnDestroy()
     {
         base.OnDestroy();
+        PixelHuskPool.HuskReleasing -= OnHuskReleasing;
         if (activeRound) EndRound(false, null);
         bystanderFactor = 1f;
         UpdateBystanders();
+    }
+
+    // (PixelHuskPool: the husk is going away and may be reused - let go of it, as if it had been destroyed; the round-end restore skips it)
+    private void OnHuskReleasing(Rigidbody body)
+    {
+        foreach (Brick br in bricks)
+        {
+            if (br.body != body) continue;
+            if (br.alive) { br.alive = false; bricksLeft = Mathf.Max(0, bricksLeft - 1); }
+            br.body = null; br.tf = null; br.despawn = null;
+        }
+        for (int i = bystanders.Count - 1; i >= 0; i--) if (bystanders[i].body == body) bystanders.RemoveAt(i);
     }
 
     protected override void OnDespawned()

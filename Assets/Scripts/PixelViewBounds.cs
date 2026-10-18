@@ -75,6 +75,10 @@ public class PixelViewBounds : MonoBehaviour
     // Planes only change when the camera or the bars do; infos are looked up once per old pixel.
     private struct Entry { public OldPixelInfo info; public BoxCollider box; }
     private readonly Dictionary<Rigidbody, Entry> infoCache = new Dictionary<Rigidbody, Entry>();
+
+    private void OnDestroy() => PixelHuskPool.HuskReleasing -= OnHuskReleasing;
+    // (PixelHuskPool: the husk is going away and may be reused - let go of it)
+    private void OnHuskReleasing(Rigidbody body) => infoCache.Remove(body);
     private Vector3 planesPosition, planesForward;
     private float planesFov = -1f, planesAspect, planesBars = -1f, planesOrtho;
     private bool planesIsOrtho;
@@ -82,6 +86,7 @@ public class PixelViewBounds : MonoBehaviour
 
     private void Awake()
     {
+        PixelHuskPool.HuskReleasing += OnHuskReleasing;
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (clicker == null)
         {

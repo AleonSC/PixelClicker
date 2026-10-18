@@ -70,7 +70,15 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelSocketDevice, IPixelHu
         PixelCouplings.Register(this);
     }
 
-    private void OnDestroy() { PixelCouplings.Unregister(this); }
+    private void Awake() => PixelHuskPool.HuskReleasing += OnHuskReleasing;
+    private void OnDestroy() { PixelCouplings.Unregister(this); PixelHuskPool.HuskReleasing -= OnHuskReleasing; }
+
+    // (PixelHuskPool: the husk is going away and may be reused - let go of it)
+    private void OnHuskReleasing(Rigidbody body)
+    {
+        ignoreUntil.Remove(body);
+        if (lastHeld == body) lastHeld = null;
+    }
 
     // ---- Sockets (PixelSockets.cs): 'in' and 'out' on the front ----
     private PixelSocket[] sockets = new PixelSocket[0];

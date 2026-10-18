@@ -180,11 +180,16 @@ public class PixelVacuumCleaner : MonoBehaviour
         PixelWindows.Register(this, 205, () => driven == this, StopDriving);   // Escape stops driving
     }
 
+    private void Awake() => PixelHuskPool.HuskReleasing += OnHuskReleasing;
+    // (PixelHuskPool: the husk is going away and may be reused - let go of it)
+    private void OnHuskReleasing(Rigidbody body) => ignoreUntil.Remove(body);
+
     private void OnEnable() { if (!all.Contains(this)) all.Add(this); }
     private void OnDisable() { all.Remove(this); if (driven == this) driven = null; }
 
     private void OnDestroy()
     {
+        PixelHuskPool.HuskReleasing -= OnHuskReleasing;
         if (ghost) return;
         PixelWindows.Unregister(this);
         if (driven == this) driven = null;

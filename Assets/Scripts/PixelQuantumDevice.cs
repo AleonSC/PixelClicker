@@ -87,7 +87,10 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
         PixelCouplings.Register(this);   // its SIDE socket: In = hoses / belts drop husks onto the pad, Out = a hose pulls stored husks
     }
 
-    private void OnDestroy() { PixelCouplings.Unregister(this); }
+    private void Awake() => PixelHuskPool.HuskReleasing += OnHuskReleasing;
+    private void OnDestroy() { PixelCouplings.Unregister(this); PixelHuskPool.HuskReleasing -= OnHuskReleasing; }
+    // (PixelHuskPool: the husk is going away and may be reused - let go of it)
+    private void OnHuskReleasing(Rigidbody body) => ignoreUntil.Remove(body);
 
     // ---- Socket (PixelSockets.cs): one 'side' socket, In or Out ----
     private PixelSocket[] sockets = new PixelSocket[0];

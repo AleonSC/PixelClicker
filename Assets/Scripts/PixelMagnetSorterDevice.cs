@@ -63,6 +63,11 @@ public class PixelMagnetSorterDevice : PixelPlacedDevice
     private readonly List<Stock> stock = new List<Stock>();
     private readonly Pipe[] pipes = new Pipe[3];
     private readonly Dictionary<Rigidbody, float> ignoreUntil = new Dictionary<Rigidbody, float>();
+
+    private void Awake() => PixelHuskPool.HuskReleasing += OnHuskReleasing;
+    private void OnDestroy() => PixelHuskPool.HuskReleasing -= OnHuskReleasing;
+    // (PixelHuskPool: the husk is going away and may be reused - let go of it)
+    private void OnHuskReleasing(Rigidbody body) => ignoreUntil.Remove(body);
     private TMP_Text boxLabel;
     private Pipe grabbed;
     private Material pipeMaterial;
