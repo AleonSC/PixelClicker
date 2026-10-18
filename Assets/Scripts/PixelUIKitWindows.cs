@@ -9,7 +9,8 @@
 //     (-8, -6), and PixelWindowChrome: dragged by the header (kept between the black bars), minimize '-', dock to a screen edge,
 //     position saved under prefKey (+ .X / .Y / .Min / .Dock / .DockY). Anchored at the TOP LEFT (PixelWindowChrome works that way).
 //   Extra header buttons go in the standard slots with parts.AddHeaderButton(name, label, left, colour) (same size as the X: left slots
-//   from the top-left corner, right slots just left of the X). headerHeight override (only when the header must hold more) and styled: false
+//   from the top-left corner, right slots just left of the X); anything else (an info badge, an icon) with parts.PlaceInHeaderSlot(rect, left).
+//   The title's room grows with them (FitTitle), so a title never runs under a header item. headerHeight override (only when the header must hold more) and styled: false
 //   (a plain background, the Collection Log's book) are the two allowed exceptions.
 //   Every window gets StyleWindow, a PixelPop (open / close animation) and its X wired to the given onClose. The owner still
 //   registers with PixelWindows (Escape) and builds its own content below HeaderHeight. Dialogs that close with their own
@@ -44,9 +45,21 @@ public sealed class PixelWindowParts
     public Button AddHeaderButton(string objectName, string label, bool left, Color color)
     {
         float size = Tool ? PixelUIKit.ToolCloseSize : PixelUIKit.WindowCloseSize;
-        Vector2 at = Tool ? PixelUIKit.ToolCloseOffset : PixelUIKit.WindowCloseOffset;
         Button b = PixelUIKit.CreateButton(Font, Rect, objectName, label, new Vector2(size, size), color, Color.white, size * 0.4f);
-        RectTransform r = b.GetComponent<RectTransform>();
+        PlaceInHeaderSlot(b.GetComponent<RectTransform>(), left);
+        return b;
+    }
+
+    /// <summary>
+    /// Puts any header item (a button made elsewhere, an info badge, an icon) into the next standard slot, sized like the X; the title's
+    /// room shrinks so it never runs under it. AddHeaderButton uses this too.
+    /// </summary>
+    public void PlaceInHeaderSlot(RectTransform r, bool left)
+    {
+        float size = Tool ? PixelUIKit.ToolCloseSize : PixelUIKit.WindowCloseSize;
+        Vector2 at = Tool ? PixelUIKit.ToolCloseOffset : PixelUIKit.WindowCloseOffset;
+        r.SetParent(Rect, false);
+        r.sizeDelta = new Vector2(size, size);
         if (left)
         {
             r.anchorMin = r.anchorMax = r.pivot = new Vector2(0f, 1f);
@@ -58,8 +71,22 @@ public sealed class PixelWindowParts
             r.anchorMin = r.anchorMax = r.pivot = new Vector2(1f, 1f);
             r.anchoredPosition = new Vector2(-(at.x + taken * (size + 8f)), -at.y);
         }
-        if (Chrome != null) Chrome.Keep(b.gameObject);
-        return b;
+        if (Chrome != null) Chrome.Keep(r.gameObject);
+        FitTitle();
+    }
+
+    /// <summary>Keeps the centred title clear of every header item on both sides (same room left and right so it stays centred).</summary>
+    internal void FitTitle()
+    {
+        if (Title == null) return;
+        float size = Tool ? PixelUIKit.ToolCloseSize : PixelUIKit.WindowCloseSize;
+        Vector2 at = Tool ? PixelUIKit.ToolCloseOffset : PixelUIKit.WindowCloseOffset;
+        int right = (Close != null ? 1 : 0) + (Chrome != null ? 1 : 0) + rightButtons;
+        int most = Mathf.Max(leftButtons, right);
+        float room = most > 0 ? at.x + most * (size + 8f) : 16f;
+        RectTransform tr = Title.rectTransform;
+        tr.offsetMin = new Vector2(room, tr.offsetMin.y);
+        tr.offsetMax = new Vector2(-room, tr.offsetMax.y);
     }
 
     /// <summary>Sets the window's full height (use this instead of Rect.sizeDelta: a minimized Tool window remembers it for when it opens up again).</summary>
@@ -136,6 +163,7 @@ public static partial class PixelUIKit
             if (w.Close != null) w.Chrome.Keep(w.Close.gameObject);
             w.Chrome.Keep(w.Title.gameObject);
         }
+        w.FitTitle();
         return w;
     }
 }

@@ -190,11 +190,8 @@ public class PixelPixelGuide : MonoBehaviour
         float listTop = headerH + 10f;
         PixelMenuFx.AddWindowLine(windowObject.transform, headerH - 2f);
 
-        // The orange ! (what this window is for) in the standard left header slot, opposite the X: the shared info badge (a hover tip,
-        // not a button, so it is placed by hand at the slot's size and spot instead of with parts.AddHeaderButton).
-        RectTransform infoRect = CreateInfoBox(windowObject.transform, PixelUIKit.WindowCloseSize, () => infoText);
-        infoRect.anchorMin = infoRect.anchorMax = infoRect.pivot = new Vector2(0f, 1f);
-        infoRect.anchoredPosition = new Vector2(PixelUIKit.WindowCloseOffset.x, -PixelUIKit.WindowCloseOffset.y);
+        // The orange ! (what this window is for) in the standard left header slot, opposite the X (the shared info badge: a hover tip, not a button).
+        parts.PlaceInHeaderSlot(CreateInfoBox(windowObject.transform, PixelUIKit.WindowCloseSize, () => infoText), true);
 
         scroll = PixelUIKit.CreateScrollView(windowObject.transform, "Pixel List", new Color(1f, 1f, 1f, 0.35f), 12f, rowHeight, out content, out bar);
         PixelScrollBarFade barFade = bar != null ? bar.GetComponent<PixelScrollBarFade>() : null;
