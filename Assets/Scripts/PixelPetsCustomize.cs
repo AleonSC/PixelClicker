@@ -10,6 +10,7 @@ using static PixelInput;
 /// customization window, where the player renames the pet and spins it in a 3D view (click and drag) while the arrows on
 /// either side change its outfit. Outfits are made of small accessories (hats, glasses, scarves, capes...) generated from
 /// a fixed seed, so every outfit still leaves most of the pet visible and recognisable.
+/// The customization window is the standard window as a dialog (PixelUIKit.CreateWindow, no X; Done closes it).
 /// </summary>
 public partial class PixelPets
 {
@@ -717,15 +718,11 @@ public partial class PixelPets
         dim.GetComponent<Image>().color = dimColor;
         PixelUIKit.Stretch(dim.GetComponent<RectTransform>());
 
-        GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image));
-        box.transform.SetParent(dim.transform, false);
-        PixelUIKit.StyleWindow(box.GetComponent<Image>(), panelColor);
-        RectTransform br = box.GetComponent<RectTransform>();
-        br.anchorMin = br.anchorMax = br.pivot = new Vector2(0.5f, 0.5f);
-        br.sizeDelta = new Vector2(860f, 940f);
-
-        TMP_Text title = PixelUIKit.CreateText(font, box.transform, "Title", customizeTitle, 52f, TextAlignmentOptions.Center, FontStyles.Bold, titleColor);
-        TopRow(title.rectTransform, -24f, 70f, 0f);
+        // The standard window as a dialog (PixelUIKit.CreateWindow, no X: 'Done' closes it). Title in the pets' title colour.
+        PixelWindowParts parts = PixelUIKit.CreateWindow(font, dim.transform, "Box", customizeTitle, new Vector2(860f, 940f), panelColor,
+                                                         PixelUIKit.WindowKind.Fixed, null, closeButton: false);
+        parts.Title.color = titleColor;
+        GameObject box = parts.Root;   // (the content below starts at y 104, under the header)
 
         TMP_Text nameLabel = PixelUIKit.CreateText(font, box.transform, "Name Label", nameLabelText, 26f, TextAlignmentOptions.MidlineLeft, FontStyles.Normal,
                                                    new Color(1f, 1f, 1f, 0.7f));
