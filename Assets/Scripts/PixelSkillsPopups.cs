@@ -5,12 +5,14 @@
 //   window's Update; XP from the auto clicker is gathered separately and appears beside the cube instead (xpFromAuto set by
 //   OnCollected, FlushAutoXpPopup, CubeScreenPoint, rises beside the cube and follows it); text in the pack's accent colour, hangs
 //   just under the mouse cursor and follows it (drifting a little further down as it fades), on its own canvas 106 so it never mixes
-//   with the other +n texts; hideXpPopups, xpPopupSize). A Husk Crush (AddHuskXp crushed) marks its XP 'show decimals' (xpPopupDecimals ->
+//   with the other +n texts; hideXpPopups, xpPopupSize 0 = 40). LOOK (2026-10-18, easier to see): a dark rounded plate behind the text (xpPopupPlate,
+//   xpPopupPlateColor), the skill colour lightened towards white (xpPopupLighten), a quick pop as it appears, stays xpPopupSeconds (2). A Husk Crush (AddHuskXp crushed) marks its XP 'show decimals' (xpPopupDecimals ->
 //   AddHuskXp(popupText) shows a short text INSTEAD of the '+n XP' line (Husk Crush's bonuses, ShowPopupText). xpPendingDecimals): that popup shows the gathered amount even under 1, rounded to 2 decimals ('+0.25 Standard XP'), so every crush is seen.
 // ---------------------------------------------------
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// Part of <see cref="PixelSkills"/>: a rising '+n Skill XP' popup in the skill's own colour whenever the skill in training gains XP. XP that comes
@@ -29,8 +31,19 @@ public partial class PixelSkills
     [SerializeField] private float xpPopupGatherSeconds = 0f;
 
     [Min(0f)]
-    [Tooltip("Text size of the popup. 0 = 34.")]
+    [Tooltip("Text size of the popup. 0 = 40.")]
     [SerializeField] private float xpPopupSize = 0f;
+
+    [Tooltip("A dark rounded plate behind each XP popup so it reads over any floor or sky.")]
+    [SerializeField] private bool xpPopupPlate = true;
+    [Tooltip("Colour of the plate behind the XP popups (alpha = how dark).")]
+    [SerializeField] private Color xpPopupPlateColor = new Color(0.03f, 0.04f, 0.07f, 0.78f);
+    [Range(0f, 0.8f)]
+    [Tooltip("How far the skill's colour is lightened towards white for the popup text (brighter = easier to read).")]
+    [SerializeField] private float xpPopupLighten = 0.3f;
+    [Min(0.3f)]
+    [Tooltip("Seconds an XP popup stays (it fades over the second half).")]
+    [SerializeField] private float xpPopupSeconds = 2f;
 
     private GameObject xpCanvas;
     private double xpPending;
@@ -145,22 +158,41 @@ public partial class PixelSkills
         RectTransform canvasRect = xpCanvas.GetComponent<RectTransform>();
         float xJitter = Random.Range(-24f, 24f);
 
-        float size = xpPopupSize > 1f ? xpPopupSize : 34f;
-        TMP_Text t = PixelUIKit.CreateText(Font, xpCanvas.transform, "Skill XP", text, size, TextAlignmentOptions.Center, FontStyles.Bold, pack.accent);
-        t.raycastTarget = false;
-        RectTransform r = t.rectTransform;
+        float size = xpPopupSize > 1f ? xpPopupSize : 40f;
+        Color textColor = Color.Lerp(pack.accent, Color.white, xpPopupLighten);
+        textColor.a = 1f;
+        // A dark rounded plate (sized to the text) holds the text, so the popup stands out over a bright floor or sky; the whole popup moves together.
+        GameObject holder = new GameObject("Skill XP", typeof(RectTransform), typeof(CanvasGroup));
+        holder.transform.SetParent(xpCanvas.transform, false);
+        RectTransform r = holder.GetComponent<RectTransform>();
         r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
-        r.sizeDelta = new Vector2(520f, size * 1.6f);
-        StartCoroutine(RiseXpPopup(t, r, canvasRect, xJitter, pack.accent, nearCube));
+        TMP_Text t = PixelUIKit.CreateText(Font, holder.transform, "Text", text, size, TextAlignmentOptions.Center, FontStyles.Bold, textColor);
+        t.raycastTarget = false;
+        Vector2 pref = t.GetPreferredValues(text, 900f, 0f);
+        r.sizeDelta = new Vector2(pref.x + size * 0.9f, size * 1.45f);
+        if (xpPopupPlate)
+        {
+            GameObject plate = new GameObject("Plate", typeof(RectTransform), typeof(Image));
+            plate.transform.SetParent(holder.transform, false);
+            plate.transform.SetAsFirstSibling();
+            Image img = plate.GetComponent<Image>();
+            PixelUIKit.StyleBox(img);
+            img.color = xpPopupPlateColor;
+            img.raycastTarget = false;
+            PixelUIKit.Stretch(img.rectTransform);
+        }
+        PixelUIKit.Stretch(t.rectTransform);
+        StartCoroutine(RiseXpPopup(holder.GetComponent<CanvasGroup>(), r, canvasRect, xJitter, nearCube));
     }
 
     /// <summary>The popup hangs just under the mouse cursor, follows it, drifts a little further down and fades.</summary>
-    private IEnumerator RiseXpPopup(TMP_Text t, RectTransform r, RectTransform canvasRect, float xJitter, Color color, bool nearCube)
+    private IEnumerator RiseXpPopup(CanvasGroup g, RectTransform r, RectTransform canvasRect, float xJitter, bool nearCube)
     {
         float time = 0f;
-        const float life = 1.5f;
+        float life = Mathf.Max(0.3f, xpPopupSeconds);
+        Transform t = g.transform;
         Vector2 lastCube = Vector2.zero;
-        while (time < life && t != null)
+        while (time < life && g != null)
         {
             time += Time.unscaledDeltaTime;
             float k = Mathf.Clamp01(time / life);
@@ -177,9 +209,9 @@ public partial class PixelSkills
                 RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local);
                 r.anchoredPosition = local + new Vector2(xJitter, -56f - 50f * k);
             }
-            Color c = color;
-            c.a = k < 0.5f ? 1f : 1f - (k - 0.5f) / 0.5f;
-            t.color = c;
+            g.alpha = k < 0.5f ? 1f : 1f - (k - 0.5f) / 0.5f;
+            float pop = time < 0.18f ? 1f + 0.35f * Mathf.Sin(time / 0.18f * Mathf.PI) : 1f;   // (a quick pop as it appears, so the eye catches it)
+            t.localScale = new Vector3(pop, pop, 1f);
             yield return null;
         }
         if (t != null) Destroy(t.gameObject);
