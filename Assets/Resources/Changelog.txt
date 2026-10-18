@@ -1415,3 +1415,4 @@
 [2026-10-18 15:25 UTC] Right-clicking a husk now crushes it even when a machine is under or behind it (Husk Crush beats the device panel), and a right press that started on a husk never turns into removing the machine.
 [2026-10-18 15:29 UTC] New Standard perks for crushing husks: from level 7 every crushed husk takes a little off Power Click's cooldown, from level 8 it refills the Block Hold meter a little, and from level 9 it takes a little off Charge Crush's cooldown.
 [2026-10-18 15:30 UTC] New Standard perk 'Double floor': from level 10 the floor holds twice as many husks.
+[2026-10-18 15:36 UTC] Double floor changed: Standard level 10 now makes the floor itself twice as big (like the Dev Hub's Double floor area) instead of doubling how many husks it holds.

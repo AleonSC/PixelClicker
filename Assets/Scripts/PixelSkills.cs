@@ -576,6 +576,8 @@ public partial class PixelSkills : MonoBehaviour
                 if (pack.perks != null)
                 {
                     // Perks added later (2026-10-18: the crush refund perks, Double floor): any missing one is added to a saved Standard pack, kept in level order.
+                    foreach (Perk pk in pack.perks)   // (the first wording of Double floor, 2026-10-18, was about the husk limit)
+                        if (pk != null && pk.text == "Double floor: the floor holds twice as many husks") pk.text = DoubleFloorPerk;
                     System.Collections.Generic.List<Perk> withLater = new System.Collections.Generic.List<Perk>(pack.perks);
                     bool added = false;
                     foreach (Perk def in StandardPerks())

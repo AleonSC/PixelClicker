@@ -754,7 +754,9 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
 
     /// <summary>Dev Hub tick box 'Double floor area': the floor circle (picture, wireframe, borders and the pixel / first person limits) is twice as wide.</summary>
     public static bool DoubleArea { get; set; }
-    public static float AreaScale => DoubleArea ? 2f : 1f;
+
+    /// <summary>How many times as wide the floor area is: the Dev Hub's 'Double floor area' (x2) or the Standard skill's 'Double floor' perk (x2 from level 10, PixelSkills.StandardFloorScale), whichever is bigger.</summary>
+    public static float AreaScale => Mathf.Max(DoubleArea ? 2f : 1f, PixelSkills.StandardFloorScale);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetAreaScale() { DoubleArea = false; }
