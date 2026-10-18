@@ -36,7 +36,8 @@
 //   while carried every husk inside is frozen into the bin each frame and any that still ends up outside is let go and uncounted at once
 //   (KeepContentsWhileCarried). A husk that leaves the bin is handed back to the floor's husk list (AdoptOldPixel), never left orphaned.
 //   Pressing the button freezes every counted husk into the bin first (a still-settling one could be jostled out by the shake, let go and caught
-//   again after the cycle) and tips any UNCOUNTED husk lying in the bin out over the front / back rim (EjectUncounted), also again before paying.
+//   again after the cycle) and POPS any UNCOUNTED husk lying in the bin (OVERFILLED past capacity) up and out over the front / back rim (EjectUncounted,
+//   overfillPopSpeed; only the front with a hopper on the back), also again before paying.
 //   BUTTON ONLY (2026-10-18, auto recycling removed): husks that land in the bin (or are drawn in by the suction) wait there; as soon as ONE is inside the
 //   red button flashes; pressing it shuts the lid, shakes for ProcessSeconds (Operation: Speed takes time off) and pays every husk inside.
 //   CURRENCY ONLY (2026-10-17 rework, docs/GameDesign.md section 6 'Husk routing rework'): each husk pays payoutShare (50%) of what a click on it pays now
@@ -104,7 +105,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     [SerializeField] private bool suckIn = true;
     [Min(0f)]
     [Tooltip("How far past the rim (sideways, in husk widths) a near miss is still sucked in. Bigger = fewer misses.")]
-    [SerializeField] private float suckReach = 1f;
+    [SerializeField] private float suckReach = 0.85f;
     [Min(0.05f)]
     [Tooltip("Seconds a sucked husk takes to glide into the bin.")]
     [SerializeField] private float suckSeconds = 0.3f;
@@ -117,7 +118,12 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     [SerializeField] private float suctionRadius = 2f;
     [Min(0f)]
     [Tooltip("How strong the ring's pull is (an acceleration in husk widths per second squared; stronger close to the rim, weaker at the edge of the ring).")]
-    [SerializeField] private float suctionStrength = 6f;
+    [SerializeField] private float suctionStrength = 5f;
+
+    [Header("Overfilling")]
+    [Min(0f)]
+    [Tooltip("When the button is pressed, husks lying in the bin past its capacity POP out over the rim at this speed (world units per second; a little random spread).")]
+    [SerializeField] private float overfillPopSpeed = 3.2f;
 
     [Header("Paying out (press the button)")]
     [Tooltip("Skill XP per recycled husk (it trains the husk's own skill; pure husks train Standard). 0 since the 2026-10-17 rework: the Recycler is CURRENCY ONLY - husk XP comes from Husk Crush and the skill machines. The streak does not multiply it.")]
@@ -818,30 +824,33 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     }
 
     /// <summary>
-    /// Husks lying in the bin that are NOT counted (the bin was full, or one fell in as the lid closed) are tipped out over the front / back rim,
-    /// so the bin holds exactly what is recycled and nothing seems to survive a cycle. (Over the Z rims: the handles stick out on the X ends.)
+    /// Husks lying in the bin that are NOT counted (the bin was OVERFILLED past its capacity, or one fell in as the lid closed) POP out when the button
+    /// is pressed: lifted just over the rim and launched up and out with a little spin, so the bin holds exactly what is recycled. Out over the front /
+    /// back rim (the handles stick out on the X ends); only the front while a Sorting Hopper sits on the back. The suction may draw them back in after
+    /// the cycle, which is fine - they are counted then.
     /// </summary>
     private void EjectUncounted()
     {
         if (clicker == null) return;
+        bool hopperBehind = PixelCouplings.Occupied(this, HatchSocket);
+        int popped = 0;
         IReadOnlyList<Rigidbody> pixels = clicker.OldPixels;
         for (int i = pixels.Count - 1; i >= 0; i--)
         {
             Rigidbody b = pixels[i];
-            if (b == null || inside.Contains(b) || !KeepsHold(b.position)) continue;
+            if (b == null || b.isKinematic || inside.Contains(b) || sucking.Contains(b) || !KeepsHold(b.position)) continue;
             OldPixelInfo info = PixelHuskQuery.Get(b).info;
             if (info != null && info.heldByPlayer) continue;
             Vector3 p = transform.InverseTransformPoint(b.position);
-            float side = p.z >= 0f ? 1f : -1f;
+            float side = hopperBehind ? -1f : (p.z >= 0f ? 1f : -1f);
             float size = b.transform.lossyScale.x;
-            b.position = transform.TransformPoint(new Vector3(p.x, wallH + size, side * (innerD * 0.5f + size * 1.2f)));
-            Vector3 push = transform.TransformDirection(new Vector3(0f, 0.6f, side)) * 1.2f;
-#if UNITY_6000_0_OR_NEWER
-            b.linearVelocity = push;
-#else
-            b.velocity = push;
-#endif
+            b.position = transform.TransformPoint(new Vector3(p.x, wallH, side * innerD * 0.3f)) + Vector3.up * size;   // (just over the rim, so the walls and the closing lid don't catch it)
+            Vector3 dir = transform.TransformDirection(new Vector3(Random.Range(-0.35f, 0.35f), 1.3f, side)).normalized;
+            PixelHuskHolder.SetVelocity(b, dir * overfillPopSpeed * Random.Range(0.85f, 1.15f));
+            b.angularVelocity = Random.insideUnitSphere * 8f;
+            popped++;
         }
+        if (popped > 0) PixelAudio.Play("click");
     }
 
     private bool Inside(Vector3 world)
