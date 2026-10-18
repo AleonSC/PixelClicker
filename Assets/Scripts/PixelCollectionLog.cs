@@ -7,6 +7,8 @@
 //   GALLERY: every entry page has a small CAMERA button (top right of the page) that walks you into PixelCollectionGallery (a pitch black first person room with all the cubes floating and lit, built on entering and
 //   destroyed on leaving); the settings are under the Gallery header here, and leaving brings the book back on the same page.
 //   Pictures are PixelTierPicture (a real model, turning). To add an entry: add a line to Entries (type + flavour text).
+//   The book is a standard Fixed window (PixelUIKit.CreateWindow, styled: false so it keeps its plain leather cover; no window title, the pages have
+//   their own): the standard grey X sits in the leather band at the top, and the pages start below the standard header height.
 // ----------------------
 using TMPro;
 using UnityEngine;
@@ -15,7 +17,7 @@ using UnityEngine.UI;
 public class PixelCollectionLog : MonoBehaviour
 {
     [Header("Book")]
-    [Tooltip("Size of the open book (canvas units). 0 = 1240 x 760.")]
+    [Tooltip("Size of the open book (canvas units). 0 = 1240 x 812.")]
     [SerializeField] private Vector2 bookSize = Vector2.zero;
     [Tooltip("Seconds a page takes to turn. 0 = 0.28.")]
     [SerializeField] private float turnSeconds = 0f;
@@ -192,18 +194,19 @@ public class PixelCollectionLog : MonoBehaviour
     {
         TMP_FontAsset font = clicker.UIFont;
         canvasRoot = PixelUIKit.CreateCanvas("Collection Log", 600, new Vector2(1920f, 1080f), true);
-        Vector2 size = bookSize.x > 100f && bookSize.y > 100f ? bookSize : new Vector2(1240f, 760f);
+        Vector2 size = bookSize.x > 100f && bookSize.y > 100f ? bookSize : new Vector2(1240f, 812f);   // (812: the pages keep their old 668 height under the 90 header strip)
 
-        bookObject = new GameObject("Book", typeof(RectTransform), typeof(Image), typeof(PixelPop));
-        bookObject.transform.SetParent(canvasRoot.transform, false);
-        RectTransform br = bookObject.GetComponent<RectTransform>();
-        br.sizeDelta = size;
-        Image cover = bookObject.GetComponent<Image>();
-        cover.color = new Color(0.34f, 0.19f, 0.09f, 1f);   // the leather cover (a plain rectangle: the pages sit on it)
+        // The standard Fixed window with a plain leather cover instead of the usual style (the pages sit on it). No window title: each page has its own.
+        PixelWindowParts parts = PixelUIKit.CreateWindow(font, canvasRoot.transform, "Book", "", size, new Color(0.34f, 0.19f, 0.09f, 1f),
+                                                         PixelUIKit.WindowKind.Fixed, Close, styled: false);
+        bookObject = parts.Root;
+        RectTransform br = parts.Rect;
 
-        float pad = 26f, pageW = (size.x - pad * 2f - 8f) * 0.5f, pageH = size.y - pad * 2f - 40f;
-        left = BuildPage(font, br, "Left Page", new Vector2(1f, 0.5f), new Vector2(-4f, 8f), new Vector2(pageW, pageH));
-        right = BuildPage(font, br, "Right Page", new Vector2(0f, 0.5f), new Vector2(4f, 8f), new Vector2(pageW, pageH));
+        // The pages fill the book below the header strip (where the X sits) and above the hint line at the bottom.
+        float pad = 26f, bottom = 54f, pageW = (size.x - pad * 2f - 8f) * 0.5f, pageH = size.y - parts.HeaderHeight - bottom;
+        float pageY = (bottom - parts.HeaderHeight) * 0.5f;   // centre of the pages (the band above is wider than the one below)
+        left = BuildPage(font, br, "Left Page", new Vector2(1f, 0.5f), new Vector2(-4f, pageY), new Vector2(pageW, pageH));
+        right = BuildPage(font, br, "Right Page", new Vector2(0f, 0.5f), new Vector2(4f, pageY), new Vector2(pageW, pageH));
         // Pages: click right = forward, click left = back.
         left.cameraButton.onClick.AddListener(() => EnterGallery(left.entry));
         right.cameraButton.onClick.AddListener(() => EnterGallery(right.entry));
@@ -215,18 +218,12 @@ public class PixelCollectionLog : MonoBehaviour
         spine.GetComponent<Image>().color = new Color(0.2f, 0.1f, 0.04f, 0.9f);
         spine.GetComponent<Image>().raycastTarget = false;
         RectTransform sr = spine.GetComponent<RectTransform>();
-        sr.sizeDelta = new Vector2(8f, pageH + 6f); sr.anchoredPosition = new Vector2(0f, 8f);
+        sr.sizeDelta = new Vector2(8f, pageH + 6f); sr.anchoredPosition = new Vector2(0f, pageY);
 
         TMP_Text hint = PixelUIKit.CreateText(font, br, "Hint", hintText, 22f, TextAlignmentOptions.Center, FontStyles.Italic, new Color(1f, 0.9f, 0.7f, 0.8f));
         RectTransform hr = hint.rectTransform;
         hr.anchorMin = new Vector2(0f, 0f); hr.anchorMax = new Vector2(1f, 0f); hr.pivot = new Vector2(0.5f, 0f);
         hr.sizeDelta = new Vector2(0f, 34f); hr.anchoredPosition = new Vector2(0f, 4f);
-
-        Button close = PixelUIKit.CreateButton(font, br, "Close", "X", new Vector2(56f, 56f), new Color(0.5f, 0.22f, 0.22f, 1f), Color.white, 32f);
-        RectTransform cr = close.GetComponent<RectTransform>();
-        cr.anchorMin = cr.anchorMax = new Vector2(1f, 1f); cr.pivot = new Vector2(1f, 1f);
-        cr.anchoredPosition = new Vector2(-6f, -6f);
-        close.onClick.AddListener(Close);
     }
 
     private Page BuildPage(TMP_FontAsset font, RectTransform parent, string name, Vector2 pivot, Vector2 pos, Vector2 size)
