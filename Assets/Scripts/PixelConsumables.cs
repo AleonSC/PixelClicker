@@ -1061,7 +1061,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         {
             kind = DeviceKind.JunctionBox,
             displayName = "Junction Box",
-            description = "A box with eight coupling sockets, two on each side. Fit couplings and connect belts or hoses: a belt or hose bringing husks in makes that coupling an IN, one taking husks away makes it an OUT. Husks that come in are shared out in turn between the outputs - or sent to the output whose FILTER is their type (drop a husk on a coupling, or click / scroll it, to set its filter). When no output can take a husk it waits in a small buffer. A Sorting Hopper can latch onto its back. It stays until you remove it.",
+            description = "A box with eight coupling sockets, two on each side, and an opening on top that gently draws in husks just above it. Fit couplings and connect belts or hoses: a belt or hose bringing husks in makes that coupling an IN, one taking husks away makes it an OUT. Husks that go in are taken apart and new ones come out: they are shared out in turn between the outputs - or sent to the output whose FILTER is their type (drop a husk on a coupling, or click / scroll it, to set its filter). When no output can take a husk it waits in a small buffer. A Sorting Hopper can latch onto its back. It stays until you remove it.",
             requiredType = PixelClicker.PixelType.White,
             costs = new[]   // (placeholder: the price and unlock are the Shops session's call - monochrome, as machines are)
             {

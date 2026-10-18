@@ -84,6 +84,9 @@ chute (the same "find a belt that starts here" copy) moved onto a built-in bare 
 - **Routing** (AcceptHusk): 1) the Out coupling whose FILTER is the husk's type (waits in the buffer while that one is full); 2) else round robin over the
   unfiltered Out couplings with a belt that has room (`Emit`); 3) else the BUFFER (`bufferSize` 8, data); full = refused. Hoses pulling from an Out coupling
   take from the buffer (`IPixelHuskSource`: the filter type there, or any type no filtered output wants).
+- **In = deleted, out = new (2026-10-18):** every husk that goes in is deleted (it shrinks into the box) and its type + value come out as a NEW husk
+  spawned at an output onto its belt (or wait in the buffer). **Top opening:** a square hole in the lid takes husks that drop in, with a gentle suction
+  for husks just above the box (Inspector: suckRadiusHusks, suckHeightHusks, suckStrength). A Sorting Hopper's feed pipe reaches over the opening.
 - **Filters**: one per coupling - drop a husk you were holding on it, or click / scroll it (unlocked types + none); a small block spins over it; hover shows the card.
 - **Hosts a Sorting Hopper** (`IPixelHopperHost`, shared with the Recycler): the hopper occupies `b0` / `b1`, its feed pipe drops into the top hatch (`TakeFeed` routes it).
   The Sweeper sees it as a container with room (buffer room).

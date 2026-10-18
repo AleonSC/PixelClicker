@@ -6,7 +6,11 @@
 //   all flow Both, kind Husk, autoDirection. Placed and saved as a permanent device (the PixelChipperDevice stub next to it; PlacedState.extra = filters + buffer).
 //   - DIRECTION from what is attached (UpdateDirections, every routeSeconds): a belt that ENDS at a coupling's port or a hose that PUSHES into it = In; a belt
 //     that STARTS at it or a hose that PULLS from it = Out; nothing = idle (PixelCoupling.SetAuto; its arrow shows it, idle shows none).
-//   - ROUTING a husk that comes in (AcceptHusk, from a belt / hose / the Sweeper / a Sorting Hopper's feed pipe):
+//   - TOP OPENING (2026-10-18): a square hole in the lid (HoleHusks) takes husks that drop in, and a gentle suction (suckRadiusHusks / suckHeightHusks /
+//     suckStrength) draws husks just above the box towards it (FixedUpdate, Swallow).
+//   - IN = DELETED, OUT = NEW (2026-10-18): every husk that goes in (a coupling, the top opening, the Sweeper) is deleted - it shrinks into the box - and its
+//     type + value come out as a NEW husk spawned at an output coupling onto its belt (TakeData / SpawnOut), or wait in the buffer.
+//   - ROUTING a husk that comes in (AcceptHusk, from a belt / hose / the Sweeper / a Sorting Hopper's feed pipe / the top opening):
 //       1) to an OUT coupling whose FILTER is the husk's type (it waits in the buffer while that output is full);
 //       2) otherwise ROUND ROBIN across the unfiltered Out couplings (PixelCouplings.Emit onto the belt starting there, only while it has room);
 //       3) otherwise into the BUFFER (bufferSize, 8): kept as data, retried every routeSeconds; a hose pulling from an Out coupling takes from it
@@ -14,7 +18,7 @@
 //   - FILTERS (one per coupling, used while it is an output): drop a husk you were holding onto a coupling (within filterDropReach) to set it to that type;
 //     left-click / scroll a coupling to step through the unlocked types (and none). A small block of the filter type spins over the coupling; hovering the
 //     coupling shows the block card (PixelBlockTooltip.ShowFor). Clicks on a coupling are claimed (PixelPointerClaim.ClaimButton).
-//   - A SORTING HOPPER latches onto its back like onto a Recycler (IPixelHopperHost: it occupies b0 / b1, its feed pipe drops into the top hatch -> TakeFeed
+//   - A SORTING HOPPER latches onto its back like onto a Recycler (IPixelHopperHost: it occupies b0 / b1, its feed pipe reaches over the top opening -> TakeFeed
 //     routes the husk). The SWEEPER treats it as a container with room (IPixelStrayTarget + IPixelHuskRoom = buffer room).
 //   - Device card / panel (FillDeviceInfo): buffer n / size, each coupling's way and filter; panel actions Clear filters / Empty buffer (the buffer's husks
 //     pop out on top).
@@ -38,6 +42,19 @@ public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoo
     [Min(0.2f)]
     [Tooltip("A husk the player was holding that lands this close to a coupling's port (husk widths) sets that coupling's filter to its type.")]
     [SerializeField] private float filterDropReach = 1.2f;
+    [Header("Top opening")]
+    [Tooltip("The square opening in the lid takes husks that fall into it, and gently draws in husks just above the box.")]
+    [SerializeField] private bool topOpening = true;
+    [Min(0f)]
+    [Tooltip("How far from the opening's middle (husk widths, sideways) the gentle suction reaches, for husks above the lid.")]
+    [SerializeField] private float suckRadiusHusks = 2.5f;
+    [Min(0.5f)]
+    [Tooltip("How high above the lid (husk widths) the suction reaches.")]
+    [SerializeField] private float suckHeightHusks = 3f;
+    [Min(0f)]
+    [Tooltip("How strong the pull towards the opening is (an acceleration in husk widths per second squared; slight on purpose).")]
+    [SerializeField] private float suckStrength = 3f;
+
     [Tooltip("Colour of the glowing band (it flashes brighter for a moment when a husk is routed).")]
     [SerializeField] private Color bandColor = new Color(0.3f, 0.95f, 0.95f, 1f);
 
@@ -68,7 +85,7 @@ public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoo
     // ---- Building ----
 
     // In husk widths (u): the box's side (square) and height, and how far apart the two sockets on a side are.
-    private const float SideHusks = 4f, HeightHusks = 2.6f, SocketSpread = 1f;
+    private const float SideHusks = 4f, HeightHusks = 2.6f, SocketSpread = 1f, HoleHusks = 1.6f;
     private static readonly Color BodyColor = new Color(0.22f, 0.36f, 0.42f, 1f), LidColor = new Color(0.18f, 0.3f, 0.35f, 1f),
                                   Metal = new Color(0.72f, 0.75f, 0.78f, 1f), Dark = new Color(0.12f, 0.14f, 0.15f, 1f);
 
@@ -107,12 +124,22 @@ public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoo
             for (int sz = -1; sz <= 1; sz += 2)
                 kit.Box("Foot", tr, new Vector3(sx * (half + t), t * 0.1f, sz * (half + t)), new Vector3(t * 1.2f, t * 0.4f, t * 1.2f), Metal, default, false, 0.8f, 0.6f);
         kit.Box("Body", tr, new Vector3(0f, h * 0.5f, 0f), new Vector3(w + 2f * t, h, w + 2f * t), BodyColor, default, colliders, 0.3f, 0.55f);
-        kit.Box("Lid", tr, new Vector3(0f, h + t * 0.15f, 0f), new Vector3(w + 2.2f * t, t * 0.3f, w + 2.2f * t), LidColor, default, colliders, 0.45f, 0.6f);
-        // The junction cross on the lid (four arms from a hub, like paths meeting) and the small top hatch a Sorting Hopper's pipe feeds.
-        kit.Box("Cross X", tr, new Vector3(0f, h + t * 0.35f, 0f), new Vector3(w * 0.8f, t * 0.12f, t * 0.6f), glow, default, false, 0f, 0.8f, glow * 0.6f);
-        kit.Box("Cross Z", tr, new Vector3(0f, h + t * 0.35f, 0f), new Vector3(t * 0.6f, t * 0.12f, w * 0.8f), glow, default, false, 0f, 0.8f, glow * 0.6f);
-        kit.Cyl("Hub", tr, new Vector3(0f, h + t * 0.42f, 0f), u * 0.45f, t * 0.25f, Metal, default, 0.85f, 0.7f);
-        kit.Box("Top Hatch", tr, new Vector3(0f, h + t * 0.32f, half * 0.55f), new Vector3(u * 1.1f, t * 0.12f, u * 0.9f), Dark, default, false, 0.1f, 0.3f);
+        // The lid with a square OPENING in the middle (four pieces round it), a dark throat inside and a glowing metal ring round it: husks dropped in
+        // (or drawn in by its gentle suction) go into the box.
+        float lw = w + 2.2f * t, hole = HoleHusks * u, side = (lw - hole) * 0.5f, ly = h + t * 0.15f;
+        kit.Box("Lid Front", tr, new Vector3(0f, ly, -(hole + side) * 0.5f), new Vector3(lw, t * 0.3f, side), LidColor, default, colliders, 0.45f, 0.6f);
+        kit.Box("Lid Back", tr, new Vector3(0f, ly, (hole + side) * 0.5f), new Vector3(lw, t * 0.3f, side), LidColor, default, colliders, 0.45f, 0.6f);
+        kit.Box("Lid Left", tr, new Vector3(-(hole + side) * 0.5f, ly, 0f), new Vector3(side, t * 0.3f, hole), LidColor, default, colliders, 0.45f, 0.6f);
+        kit.Box("Lid Right", tr, new Vector3((hole + side) * 0.5f, ly, 0f), new Vector3(side, t * 0.3f, hole), LidColor, default, colliders, 0.45f, 0.6f);
+        kit.Box("Throat", tr, new Vector3(0f, h + t * 0.02f, 0f), new Vector3(hole, t * 0.04f, hole), Color.black, default, false, 0f, 0.1f);
+        for (int k = 0; k < 4; k++)
+        {
+            bool alongX = k < 2;
+            float sgn = k % 2 == 0 ? -1f : 1f;
+            Vector3 at = alongX ? new Vector3(0f, h + t * 0.36f, sgn * (hole + t * 0.3f) * 0.5f) : new Vector3(sgn * (hole + t * 0.3f) * 0.5f, h + t * 0.36f, 0f);
+            Vector3 size = alongX ? new Vector3(hole + t * 0.6f, t * 0.14f, t * 0.3f) : new Vector3(t * 0.3f, t * 0.14f, hole + t * 0.6f);
+            kit.Box("Opening Ring", tr, at, size, glow, default, false, 0.3f, 0.8f, glow * 0.5f);
+        }
         // Brushed-metal corner pillars and a rim round the lid.
         for (int sx = -1; sx <= 1; sx += 2)
             for (int sz = -1; sz <= 1; sz += 2)
@@ -183,19 +210,51 @@ public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoo
 
     private bool Fresh => (transform.localScale - baseScale).sqrMagnitude <= 0.0001f;
 
-    /// <summary>A husk arrives (kinematic, still on the husk list): routed to an output now, or kept in the buffer; refused when neither can take it.</summary>
-    public bool AcceptHusk(PixelSocket socket, Rigidbody husk)
+    /// <summary>
+    /// A husk arrives (kinematic, still on the husk list): it is TAKEN IN and deleted (it shrinks into the box) and a NEW husk of the same type and value
+    /// comes out of an output (TakeData) - or waits in the buffer. Refused when neither has room.
+    /// </summary>
+    public bool AcceptHusk(PixelSocket socket, Rigidbody husk) => Swallow(husk, socket, transform.position + Vector3.up * HeightHusks * Unit(clicker) * transform.lossyScale.x * 0.5f);
+
+    /// <summary>Takes a husk off the floor into the box (deleted: it shrinks to 'into') and routes its type + value. False = no room (it stays a husk).</summary>
+    private bool Swallow(Rigidbody husk, PixelSocket from, Vector3 into)
     {
         if (husk == null || clicker == null) return false;
         OldPixelInfo info = PixelHuskQuery.Get(husk).info;
-        if (info == null || !clicker.IsValidTierIndex(info.tierIndex)) return false;
+        if (info == null || !clicker.IsValidTierIndex(info.tierIndex) || !HasRoomFor(info.tierIndex, from)) return false;
         int tier = info.tierIndex;
-        PixelCoupling outlet = Fresh ? PickOutput(tier, socket) : null;
-        if (outlet != null && PixelCouplings.Emit(this, outlet.Socket.id, husk)) { Routed(); return true; }
-        if (buffer.Count >= bufferSize || !clicker.ReleaseOldPixel(husk, false)) return false;
-        buffer.Add(new Held { tier = tier, amount = info.amount });
-        StartCoroutine(PixelHuskHolder.FlyIn(husk.gameObject, null, transform.position + Vector3.up * HeightHusks * Unit(clicker) * transform.lossyScale.x * 0.5f, false, 0.15f));
+        double amount = info.amount;
+        if (!clicker.ReleaseOldPixel(husk, false)) return false;
+        StartCoroutine(PixelHuskHolder.FlyIn(husk.gameObject, null, into, false, 0.15f));
+        TakeData(tier, amount, from);
+        return true;
+    }
+
+    /// <summary>Can a husk of this type go in now: an output for it, or room in the buffer?</summary>
+    private bool HasRoomFor(int tier, PixelSocket from) => buffer.Count < bufferSize || (Fresh && PickOutput(tier, from, false) != null);
+
+    /// <summary>A husk's type + value inside the box: a NEW husk comes out of an output now (SpawnOut), else it waits in the buffer. False = no room at all.</summary>
+    private bool TakeData(int tier, double amount, PixelSocket from)
+    {
+        PixelCoupling outlet = Fresh ? PickOutput(tier, from) : null;
+        if (outlet != null && SpawnOut(outlet, tier, amount)) return true;
+        if (buffer.Count >= bufferSize) return false;
+        buffer.Add(new Held { tier = tier, amount = amount });
         PixelStats.Count("junction.buffered");
+        return true;
+    }
+
+    /// <summary>Spits a new husk out of this Out coupling onto the belt starting there. False if it could not be made.</summary>
+    private bool SpawnOut(PixelCoupling outlet, int tier, double amount)
+    {
+        int before = clicker.OldPixels.Count;
+        if (!clicker.SpawnStoredPixel(tier, amount, outlet.PortWorld + Vector3.up * 0.6f * Unit(clicker), Vector3.zero) || clicker.OldPixels.Count <= before) return false;
+        Rigidbody body = clicker.OldPixels[clicker.OldPixels.Count - 1];
+        if (body == null) return false;
+        OldPixelPopIn pop = body.GetComponent<OldPixelPopIn>();
+        if (pop != null) pop.Finish();
+        PixelCouplings.Emit(this, outlet.Socket.id, body);   // (onto the belt; if that fails it just drops by the coupling)
+        Routed();
         return true;
     }
 
@@ -215,7 +274,7 @@ public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoo
     }
 
     /// <summary>A belt output that can take this husk now: its filter output (only it), else the next unfiltered one in turn. Null = none (buffer it).</summary>
-    private PixelCoupling PickOutput(int tier, PixelSocket from)
+    private PixelCoupling PickOutput(int tier, PixelSocket from, bool advance = true)
     {
         if (FilteredOutputFor(tier))
         {
@@ -234,7 +293,7 @@ public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoo
             if (s == from || FilterOf(s) >= 0) continue;
             PixelCoupling c = BeltOutput(s);
             if (c == null) continue;
-            roundRobin = i;
+            if (advance) roundRobin = i;
             return c;
         }
         return null;
@@ -270,6 +329,45 @@ public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoo
             return true;
         }
         return false;
+    }
+
+    // ---- The top opening ----
+
+    private static readonly List<PixelHuskQuery.Husk> nearScratch = new List<PixelHuskQuery.Husk>();
+
+    /// <summary>
+    /// Husks just above the box are drawn gently towards the opening in the lid; one that reaches it (over the hole, at lid height) is swallowed:
+    /// deleted, and a new one comes out of an output (or waits in the buffer). Only husks nobody else owns (PixelHuskHolder.Takeable).
+    /// </summary>
+    private void FixedUpdate()
+    {
+        if (!topOpening || clicker == null || !Fresh || PixelCalm.InMenu || (carry != null && carry.Dragging) || (device != null && device.IsEnding)) return;
+        float u = Unit(clicker), s = transform.lossyScale.x, h = HeightHusks * u, holeHalf = HoleHusks * u * 0.5f, reach = Mathf.Max(holeHalf, suckRadiusHusks * u);
+        Vector3 hole = transform.TransformPoint(new Vector3(0f, h, 0f));
+        PixelHuskQuery.Near(clicker, hole, (reach + suckHeightHusks * u) * s, nearScratch);
+        float dt = Time.fixedDeltaTime;
+        foreach (PixelHuskQuery.Husk q in nearScratch)
+        {
+            Rigidbody b = q.body;
+            if (b == null || !PixelHuskHolder.Takeable(clicker, b)) continue;
+            Vector3 local = transform.InverseTransformPoint(b.position);
+            if (local.y < h - 0.3f * u || local.y > h + suckHeightHusks * u) continue;
+            float d = new Vector2(local.x, local.z).magnitude;
+            if (Mathf.Abs(local.x) <= holeHalf && Mathf.Abs(local.z) <= holeHalf && local.y <= h + 0.7f * u)
+            {
+                Swallow(b, null, transform.TransformPoint(new Vector3(0f, h * 0.5f, 0f)));   // (in through the opening)
+                continue;
+            }
+            if (d > reach || d < 1e-4f || suckStrength <= 0f) continue;
+            float k = 1f - d / reach;
+            Vector3 toHole = transform.TransformDirection(new Vector3(-local.x, 0f, -local.z) / d);
+            Vector3 dv = (toHole * (0.4f + 0.6f * k) + Vector3.down * 0.3f * k) * suckStrength * u * s * dt;
+#if UNITY_6000_0_OR_NEWER
+            b.linearVelocity += dv;
+#else
+            b.velocity += dv;
+#endif
+        }
     }
 
     // ---- Every frame ----
@@ -308,21 +406,13 @@ public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoo
     private void RetryBuffer()
     {
         if (buffer.Count == 0) return;
-        float u = Unit(clicker);
         HashSet<PixelCoupling> used = null;
         for (int i = 0; i < buffer.Count; i++)
         {
             PixelCoupling c = PickOutput(buffer[i].tier, null);
             if (c == null || (used != null && used.Contains(c))) continue;
-            int before = clicker.OldPixels.Count;
-            if (!clicker.SpawnStoredPixel(buffer[i].tier, buffer[i].amount, c.PortWorld + Vector3.up * 0.6f * u, Vector3.zero) || clicker.OldPixels.Count <= before) continue;
-            Rigidbody body = clicker.OldPixels[clicker.OldPixels.Count - 1];
-            if (body == null) continue;
-            OldPixelPopIn pop = body.GetComponent<OldPixelPopIn>();
-            if (pop != null) pop.Finish();
-            if (!PixelCouplings.Emit(this, c.Socket.id, body)) continue;   // (spawned next to the box: it just drops there)
+            if (!SpawnOut(c, buffer[i].tier, buffer[i].amount)) continue;
             buffer.RemoveAt(i--);
-            Routed();
             if (used == null) used = new HashSet<PixelCoupling>();
             used.Add(c);
         }
@@ -438,31 +528,14 @@ public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoo
     public string HostName => "Junction Box";
     public IEnumerable<string> HopperSockets { get { yield return "b0"; yield return "b1"; } }
     public float BackEdgeLocalZ => Unit(clicker) * (SideHusks * 0.5f + 0.45f);
-    public Vector3 FeedDropPoint => transform.TransformPoint(new Vector3(0f, HeightHusks * Unit(clicker) + 0.35f * Unit(clicker), SideHusks * Unit(clicker) * 0.5f * 0.55f));
+    public Vector3 FeedDropPoint => transform.TransformPoint(new Vector3(0f, HeightHusks * Unit(clicker) + 0.35f * Unit(clicker), 0f));   // (over the top opening)
     public bool Fading => !Fresh;
     public bool CanTakeFeed => Fresh && (carry == null || !carry.Dragging) && buffer.Count < bufferSize;
 
     /// <summary>A hopper feeds a husk into the top hatch: routed like any husk coming in (to an output now, else the buffer). False = full.</summary>
     public bool TakeFeed(int tier, double amount, Vector3 at, Vector3 velocity)
     {
-        if (clicker == null || !clicker.IsValidTierIndex(tier)) return false;
-        PixelCoupling outlet = PickOutput(tier, null);
-        if (outlet != null)
-        {
-            int before = clicker.OldPixels.Count;
-            if (clicker.SpawnStoredPixel(tier, amount, outlet.PortWorld + Vector3.up * 0.6f * Unit(clicker), Vector3.zero) && clicker.OldPixels.Count > before)
-            {
-                Rigidbody body = clicker.OldPixels[clicker.OldPixels.Count - 1];
-                OldPixelPopIn pop = body != null ? body.GetComponent<OldPixelPopIn>() : null;
-                if (pop != null) pop.Finish();
-                if (body != null && PixelCouplings.Emit(this, outlet.Socket.id, body)) { Routed(); return true; }
-                return true;   // (spawned by the box: it drops there)
-            }
-        }
-        if (buffer.Count >= bufferSize) return false;
-        buffer.Add(new Held { tier = tier, amount = amount });
-        PixelStats.Count("junction.buffered");
-        return true;
+        return clicker != null && clicker.IsValidTierIndex(tier) && TakeData(tier, amount, null);
     }
 
     // ---- The device card / panel ----
