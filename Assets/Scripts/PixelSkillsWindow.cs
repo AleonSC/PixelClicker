@@ -5,6 +5,8 @@
 //   and connector line, alpha by distance to the edge). A button at the tree window's TOP LEFT (treeExpandButton, arrow glyph) makes
 //   the tree cover the Skills window (treeExpanded: UpdateTreeLayout starts the tree at the window's left edge); pressing again,
 //   closing the tree or the window gives the window back.
+//   Both windows are standard Fixed windows (PixelUIKit.CreateWindow): Skills has the pin in the left header slot and ? in the right one,
+//   the tree has the expand arrow in the left slot. Both keep their own anchoring (Skills at the left edge, the tree stretched beside it).
 // ---------------------------------------------------
 using System.Collections.Generic;
 using TMPro;
@@ -65,6 +67,7 @@ public partial class PixelSkills
     }
 
     private GameObject canvasRoot, windowObject, tabObject;
+    private PixelWindowParts windowParts, treeParts;   // the standard windows (PixelUIKit.CreateWindow) of the Skills window and the tree window
     private Button tabButton, trainButton;
     private PixelDockedButton tabDock;
     private CanvasGroup tabGroup;
@@ -130,40 +133,28 @@ public partial class PixelSkills
         PixelMenuKeys.Register(PixelAction.Skills, tabButton);
         tabObject.SetActive(false);
 
-        // ---- The window. ----
-        windowObject = new GameObject("Skills Window", typeof(RectTransform), typeof(Image), typeof(PixelPop));
-        windowObject.transform.SetParent(canvasRoot.transform, false);
-        PixelUIKit.StyleWindow(windowObject.GetComponent<Image>(), panelColor);
-        windowRect = windowObject.GetComponent<RectTransform>();
+        // ---- The window: the standard Fixed window (PixelUIKit.CreateWindow: title, X, header slots). ----
+        windowParts = PixelUIKit.CreateWindow(Font, canvasRoot.transform, "Skills Window", windowTitle, windowSize, panelColor,
+                                              PixelUIKit.WindowKind.Fixed, () => PixelPop.Hide(windowObject));
+        windowObject = windowParts.Root;
+        windowRect = windowParts.Rect;
+        // (The builder centres Fixed windows; this one opens from the left edge, taking the place of the tabs while it is open.)
         windowRect.anchorMin = windowRect.anchorMax = windowRect.pivot = new Vector2(0f, 0.5f);
-        windowRect.sizeDelta = windowSize;
-        windowRect.anchoredPosition = new Vector2(gapToButton + hud.SideShownInset, 0f);   // takes the place of the tabs while it is open
-
-        TMP_Text title = PixelUIKit.CreateText(Font, windowObject.transform, "Title", windowTitle, 56f, TextAlignmentOptions.Center, FontStyles.Bold, textColor);
-        PixelUIKit.Caps(title);
-        Place(title.rectTransform, 0f, 1f, 1f, 1f, new Vector2(180f, -84f), new Vector2(-180f, -14f));   // (room for the pin button on the left and the ? and X buttons on the right)
-
-        Button close = PixelUIKit.CreateButton(Font, windowObject.transform, "Close", "X", new Vector2(70f, 70f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 36f);
-        RectTransform cr = close.GetComponent<RectTransform>();
-        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
-        cr.anchoredPosition = new Vector2(-14f, -12f);
-        close.onClick.AddListener(() => PixelPop.Hide(windowObject));
-        // '?' next to the X: plays Cubie's skills intro again, for anyone who wants to go into it more.
-        Button help = PixelUIKit.CreateButton(Font, windowObject.transform, "Help", "?", new Vector2(70f, 70f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 36f);
-        RectTransform hr = help.GetComponent<RectTransform>();
-        hr.anchorMin = hr.anchorMax = hr.pivot = new Vector2(1f, 1f);
-        hr.anchoredPosition = new Vector2(-14f - 70f - 10f, -12f);
+        windowRect.anchoredPosition = new Vector2(gapToButton + hud.SideShownInset, 0f);
+        float header = windowParts.HeaderHeight;
+        // '?' in the right header slot (next to the X): plays Cubie's skills intro again, for anyone who wants to go into it more.
+        Button help = windowParts.AddHeaderButton("Help", "?", false, PixelUIKit.WindowButtonColor);
         help.onClick.AddListener(StartTutorial);
-        PixelMenuFx.AddWindowLine(windowObject.transform, 90f);
-        BuildPinButton();   // top left: pins the training skill with an XP bar in a small window you can move
+        PixelMenuFx.AddWindowLine(windowObject.transform, header);
+        BuildPinButton();   // left header slot: pins the training skill with an XP bar in a small window you can move
         // Header: "Training: Mining  Lv 3" + an XP bar.
         headerLabel = PixelUIKit.CreateText(Font, windowObject.transform, "Header", "", 34f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);
-        Place(headerLabel.rectTransform, 0f, 1f, 0.6f, 1f, new Vector2(30f, -158f), new Vector2(-6f, -100f));   // the left part of the row (the minigame bonus has the right part, so they never overlap)
+        Place(headerLabel.rectTransform, 0f, 1f, 0.6f, 1f, new Vector2(30f, -(header + 68f)), new Vector2(-6f, -(header + 10f)));   // the left part of the row (the minigame bonus has the right part, so they never overlap)
         headerLabel.enableAutoSizing = true; headerLabel.fontSizeMax = 34f; headerLabel.fontSizeMin = 16f;
         headerLabel.textWrappingMode = TextWrappingModes.NoWrap;
         // Right side of the header: the XP multiplier from the minigames that are switched on.
         minigameBonusLabel = PixelUIKit.CreateText(Font, windowObject.transform, "Minigame Bonus", "", 28f, TextAlignmentOptions.MidlineRight, FontStyles.Bold, new Color(1f, 0.85f, 0.35f, 1f));
-        Place(minigameBonusLabel.rectTransform, 0.6f, 1f, 1f, 1f, new Vector2(0f, -158f), new Vector2(-30f, -100f));
+        Place(minigameBonusLabel.rectTransform, 0.6f, 1f, 1f, 1f, new Vector2(0f, -(header + 68f)), new Vector2(-30f, -(header + 10f)));
         minigameBonusLabel.raycastTarget = false;
         minigameBonusLabel.enableAutoSizing = true; minigameBonusLabel.fontSizeMax = 28f; minigameBonusLabel.fontSizeMin = 13f;
         minigameBonusLabel.textWrappingMode = TextWrappingModes.NoWrap;
@@ -173,7 +164,7 @@ public partial class PixelSkills
         Image trackImage = track.GetComponent<Image>();
         trackImage.color = new Color(0.05f, 0.05f, 0.08f, 1f);
         PixelUIKit.StyleBox(trackImage, true);
-        Place(track.GetComponent<RectTransform>(), 0f, 1f, 1f, 1f, new Vector2(30f, -188f), new Vector2(-30f, -162f));
+        Place(track.GetComponent<RectTransform>(), 0f, 1f, 1f, 1f, new Vector2(30f, -(header + 98f)), new Vector2(-30f, -(header + 72f)));
         GameObject fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
         fill.transform.SetParent(track.transform, false);
         fill.GetComponent<Image>().color = new Color(0.3f, 0.8f, 0.45f, 1f);
@@ -193,7 +184,7 @@ public partial class PixelSkills
         lr.anchorMax = new Vector2(0f, 1f);
         lr.pivot = new Vector2(0f, 0.5f);
         lr.offsetMin = new Vector2(26f, 84f);
-        lr.offsetMax = new Vector2(26f + 330f, -204f);
+        lr.offsetMax = new Vector2(26f + 330f, -(header + 114f));
         for (int i = 0; i < packs.Count; i++) cards.Add(BuildCard(i));
 
         // Right: the selected pack.
@@ -206,7 +197,7 @@ public partial class PixelSkills
         dr.anchorMin = new Vector2(0f, 0f);
         dr.anchorMax = new Vector2(1f, 1f);
         dr.offsetMin = new Vector2(380f, 84f);
-        dr.offsetMax = new Vector2(-26f, -204f);
+        dr.offsetMax = new Vector2(-26f, -(header + 114f));
 
         detailName = PixelUIKit.CreateText(Font, detail.transform, "Name", "", 44f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);
         PixelUIKit.Caps(detailName);
