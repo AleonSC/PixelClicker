@@ -14,6 +14,9 @@ using UnityEngine.UI;
 /// and the recipe appears: what it makes and what it costs. Craft takes the cost from your inventory and puts the
 /// result into your consumables.
 ///
+/// The window is the standard Fixed window (PixelUIKit.CreateWindow; the recipe-book button sits in its left header slot);
+/// the Materials and Recipe Book side panels hang off it and are built here.
+///
 /// Recipes are an Inspector list (two ingredients -> a potion or device), so new ones need no code.
 /// Add this to any GameObject. PixelShop adds it automatically if it is missing.
 /// </summary>
@@ -256,7 +259,7 @@ public class PixelCrafting : MonoBehaviour
     [Tooltip("Text size of the window.")]
     [SerializeField] private float fontSize = 30f;
 
-    [Tooltip("Title text size.")]
+    [Tooltip("Base title size of the Materials (x0.8) and Recipe Book (x0.7) side panels (the window's own title is the standard window title).")]
     [SerializeField] private float titleFontSize = 48f;
 
     [Tooltip("How fast the cubes spin (degrees per second).")]
@@ -382,6 +385,7 @@ public class PixelCrafting : MonoBehaviour
     private GameObject canvasRoot;
     private GameObject buttonObject;
     private GameObject windowObject;
+    private PixelWindowParts windowParts;   // the standard window (PixelUIKit.CreateWindow)
     private readonly Slot[] slots = new Slot[2];
     private readonly List<Cell> cells = new List<Cell>();
     private float RowHeight => cellSize * 0.7f;   // one line of the Materials list
@@ -640,34 +644,12 @@ public class PixelCrafting : MonoBehaviour
         open.onClick.AddListener(Toggle);
         PixelMenuKeys.Register(PixelAction.Crafting, open);
 
-        // --- Window
-        windowObject = new GameObject("Crafting Window", typeof(RectTransform), typeof(Image), typeof(PixelPop));
-        windowObject.transform.SetParent(canvasRoot.transform, false);
-        PixelUIKit.StyleWindow(windowObject.GetComponent<Image>(), panelColor);
-        RectTransform wr = windowObject.GetComponent<RectTransform>();
-        wr.anchorMin = wr.anchorMax = wr.pivot = new Vector2(0.5f, 0.5f);
-        wr.anchoredPosition = Vector2.zero;
-
-        float titleH = titleFontSize * 1.4f;
-        float y = 20f;
-
-        TMP_Text title = MakeLabel(windowObject.transform, "Title", windowTitle, titleFontSize, TextAlignmentOptions.Center, FontStyles.Bold);
-        PixelUIKit.Caps(title);
-        RectTransform tr = title.rectTransform;
-        tr.anchorMin = new Vector2(0f, 1f);
-        tr.anchorMax = new Vector2(1f, 1f);
-        tr.pivot = new Vector2(0.5f, 1f);
-        tr.sizeDelta = new Vector2(-200f, titleH);
-        tr.anchoredPosition = new Vector2(0f, -y);
-        PixelMenuFx.AddWindowLine(windowObject.transform, y + titleH + 4f);
-
-        Button close = PixelUIKit.CreateButton(font, windowObject.transform, "Close", "X", new Vector2(70f, 70f),
-                                               new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 36f);
-        RectTransform cr = close.GetComponent<RectTransform>();
-        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
-        cr.anchoredPosition = new Vector2(-20f, -14f);
-        close.onClick.AddListener(Close);
-        y += titleH + 14f;
+        // --- Window: the standard Fixed window (PixelUIKit.CreateWindow: title, X, header slots); FitWindow sizes it when it opens.
+        windowParts = PixelUIKit.CreateWindow(font, canvasRoot.transform, "Crafting Window", windowTitle, new Vector2(windowWidth, 700f), panelColor,
+                                              PixelUIKit.WindowKind.Fixed, Close);
+        windowObject = windowParts.Root;
+        PixelMenuFx.AddWindowLine(windowObject.transform, windowParts.HeaderHeight);
+        float y = windowParts.HeaderHeight + 10f;
 
         // Everything except the title / close / book button lives in a body that FitWindow centres a little in the free height.
         GameObject body = new GameObject("Body", typeof(RectTransform));
@@ -964,14 +946,10 @@ public class PixelCrafting : MonoBehaviour
     private string IngredientText(Ingredient ing) =>
         ItemName(ItemOf(ing)) + " x" + PixelClicker.FormatNumber(ing.Amount);
 
-    /// <summary>A small hand-drawn book (cover, pages, spine) on a button, top-left of the crafting window.</summary>
+    /// <summary>A small hand-drawn book (cover, pages, spine) on a button in the crafting window's left header slot.</summary>
     private void BuildBookButton()
     {
-        Button b = PixelUIKit.CreateButton(font, windowObject.transform, "Book Button", "", new Vector2(70f, 70f),
-                                           new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 20f);
-        RectTransform r = b.GetComponent<RectTransform>();
-        r.anchorMin = r.anchorMax = r.pivot = new Vector2(0f, 1f);
-        r.anchoredPosition = new Vector2(20f, -14f);
+        Button b = windowParts.AddHeaderButton("Book Button", "", true, PixelUIKit.WindowButtonColor);   // the left header slot
         b.onClick.AddListener(OpenBook);
 
         Image Part(string name, Color color, Vector2 size, Vector2 pos)
@@ -1015,14 +993,19 @@ public class PixelCrafting : MonoBehaviour
         tr.anchorMin = new Vector2(0f, 1f);
         tr.anchorMax = new Vector2(1f, 1f);
         tr.pivot = new Vector2(0.5f, 1f);
-        tr.sizeDelta = new Vector2(-150f, titleH);
+        float closeSize = PixelUIKit.WindowCloseSize;
+        tr.sizeDelta = new Vector2(-2f * (closeSize + PixelUIKit.WindowCloseOffset.x + 8f), titleH);   // clear of the X on both sides
         tr.anchoredPosition = new Vector2(0f, -20f);
+        title.enableAutoSizing = true;   // (a narrow panel: the title shrinks rather than wrapping)
+        title.fontSizeMax = titleFontSize * 0.7f;
+        title.fontSizeMin = 14f;
 
-        Button close = PixelUIKit.CreateButton(font, bookObject.transform, "Close", "X", new Vector2(60f, 60f),
-                                               new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 32f);
+        // The X in the standard window look (size, place and grey from PixelUIKit's window constants).
+        Button close = PixelUIKit.CreateButton(font, bookObject.transform, "Close", "X", new Vector2(closeSize, closeSize),
+                                               PixelUIKit.WindowButtonColor, textColor, closeSize * 0.4f);
         RectTransform cr = close.GetComponent<RectTransform>();
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
-        cr.anchoredPosition = new Vector2(-14f, -14f);
+        cr.anchoredPosition = new Vector2(-PixelUIKit.WindowCloseOffset.x, -PixelUIKit.WindowCloseOffset.y);
         close.onClick.AddListener(CloseBook);
 
         // Search box under the title
