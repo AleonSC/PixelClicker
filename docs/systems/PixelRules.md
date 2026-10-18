@@ -70,6 +70,10 @@ A husk lands, maybe rolls or tips once, and stays put - no more bouncing about.
 - **Heaps are free:** a resting husk falls asleep quickly (`huskSleepThreshold` 0.03, Rigidbody.sleepThreshold; Unity's default 0.005) and stays asleep - the script gravity (`ScaledGravity`) no longer pushes sleeping husks, which used to keep every husk awake for ever. Anything that touches one wakes it as usual (a grab, a crush taking a husk out from under it, Recycler suction, Magnet, Fan, belts, another husk landing on it).
 - **Throws still tumble:** a thrown husk gets its spin and brief extra grip (`PixelGrab`, 'Tumbling when thrown'); its throw grip (`thrownGrip` 0.85) stays above the resting friction 0.65 so corners catch and tip it over.
 
+## Crafting uses husks (agreed 2026-10-18, not built)
+
+Currency buys access (shop); husks build things: crafting consumes HUSKS stored in the Workbench (one placeable bench, keeps its stock when moved), not pixel currency. Design: docs/GameDesign.md section 8 'Crafting uses husks: the Workbench'.
+
 ## The Recycler (built 2026-10-15, `PixelRecycler.cs`)
 
 **Reworked 2026-10-17 (docs/GameDesign.md section 6 'Husk routing rework'):** the Recycler is CURRENCY ONLY - each husk pays 50% of a click's value times the same-type streak (cap 80%, never above 95% of a click), and NO XP; XP from husks comes from Husk Crush and the skill machines. A modest suction ring round the rim draws nearby loose husks in (Operation: Suction), several Recyclers can stand at once at a rising price (x2 each), and whoever captures a husk first owns it (`PixelHuskHolder`). Edge-click aiming is now Standard's tree node 'Aimed Clicks' (Standard 3).

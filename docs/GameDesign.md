@@ -441,6 +441,21 @@ Chips / Magic Wood have no use yet.
 - **Tools:** the Dev Hub's Balance report (per-skill XP, minutes to level), `PixelBalanceReport.cs`.
 - Open: the long-term sink **(Q9)**, offline progress **(Q10)**.
 
+### Crafting uses husks: the Workbench (Agreed 2026-10-18, not built)
+**Rule: currency buys ACCESS (shop packs, devices, upgrades); HUSKS BUILD THINGS (crafting).** Crafting used pixel currency, which broke
+the pixel rules (the husk is the material, currency is the value already taken out). Husks now have three routes: money (Recycler), XP
+(Husk Crush), items (crafting).
+
+- **The Workbench:** a permanent placeable; only ONE can stand (placing it again moves it, like the Funnel) until an upgrade allows a
+  second. Remove and place it freely - **it keeps its stored husks** (the stock travels with the bench item), so moving it never costs.
+- **Set up crafting = pick a recipe on the bench** (device card / right-click panel). The bench then only ACCEPTS husks that recipe needs
+  (others bounce off - no wasting materials by accident), shows progress ("Red potion: Glass 3/5, Red 1/3"), and stored husks don't fade.
+- **Craft:** click Craft when it has enough; later an **Auto-craft** toggle (an upgrade) lets a belt-fed bench keep crafting by itself.
+- **Feeding:** by hand (grab and drop), by belt / hose through its couplings, from the Sorting Hopper or the Junction Box (a filtered
+  Junction output per colour suits it exactly). Later the Pixel Bank's stored husks can count as a second source.
+- **Recipes shrink to husk amounts** (one click = one husk): e.g. 5 Glass + 3 Red husks -> Red potion; combo potions take the extra
+  pixel as a husk. The crafting window / recipe book stay; they read the bench's stock instead of currency.
+
 ### Shop consumable pricing (Agreed 2026-10-17, built 2026-10-17)
 Why: the early devices cost White (or Gray) only, but the shop opens after all six pure colours are unlocked (the 10:50 report: RGB at
 3:59, shop at 4:29), so White drains while the other five pile up. Income in that report (per minute, session average): White 113,
