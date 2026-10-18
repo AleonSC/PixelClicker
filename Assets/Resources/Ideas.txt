@@ -21,6 +21,12 @@ Loose ideas that are NOT on the to-do yet. Claude adds to this when an idea come
 - Heat (Firemaking, later Smithing): fuel and heat for the Kiln, Charcoal and burning.
 - Link (late game): wireless pairs that pass a husk or effect between two devices, like the Quantum Organizer's teleport.
 
+# More transports (later, after belt / tube / chute / robot arm / launcher)
+- Water flume (Fishing / Farming): husks float along a water channel; floaty husks (Seaweed, Leaf) ride it best.
+- Mag-rail (Electrician): husks hover along a powered rail - the fastest ground route.
+- Teleport pads (late game, Quantum Organizer tech): a pair; husks entering one come out of the other, any distance.
+- Drone courier (UFO Helper theme): flies batches between two pads every few seconds, over everything.
+
 # Code clean-ups worth doing some day
 - Split PixelShop further into separate logic and UI classes.
 - One shared game object that owns the references, instead of scene searches.
