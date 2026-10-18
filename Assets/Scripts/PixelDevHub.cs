@@ -2,7 +2,8 @@
 // PixelDevHub.cs
 //   The DEV HUB: ONE window for every dev tool (opens with PixelAction.DevTools, F9, the pause menu's Dev Tools button; PixelDevTools.OpenPanel / Close
 //   delegate here). It replaces the old Dev Tools panel, the Inspector window and the Mock up window.
-//   * The window itself is a PixelWindowChrome window: drag by the header (kept between the black bars), minimize and dock to the left / right screen edge.
+//   * The window itself is a standard Tool window (PixelUIKit.CreateWindow + PixelWindowChrome): centred title, grey X, drag by the header (kept between the black bars), minimize,
+//     dock to the left / right screen edge, the corner grip scales it; the search box sits at the left of the header (no PixelPop: the hub opens with its canvas).
 //   * FILING-CABINET TABS along the top: Main (PixelDevTools' widgets), To-Do, Changelog, Inspector (PixelDevInspector), Shapes (PixelDevShapes), UI Mock (PixelDevMockup), Looks (PixelLookStudio),
 //     Setups (PixelDevSetups), Events (PixelDevEvents), Sounds (PixelDevSounds), Console (PixelDevConsole); new tabs build with PixelDevUI. Drag a tab
 //     sideways to REARRANGE the tabs; drag it down out of the strip to POP IT OUT into its own floating window (drag that window by its header, '-' minimizes it); the 'Dock' button or
@@ -20,7 +21,7 @@ using UnityEngine.UI;
 
 public class PixelDevHub : MonoBehaviour
 {
-    public const float ContentW = 700f, ContentH = 780f, HeaderH = 52f, TabStripH = 36f, Pad = 8f, FloatHeaderH = 44f;
+    public const float ContentW = 700f, ContentH = 780f, HeaderH = PixelUIKit.ToolHeaderHeight, TabStripH = 36f, Pad = 8f, FloatHeaderH = 44f;
     private const string P = "PixelClicker.Dev.Hub.";
 
     public sealed class Tab
@@ -45,6 +46,7 @@ public class PixelDevHub : MonoBehaviour
     private readonly List<Button> searchRows = new List<Button>();
     private readonly List<SearchEntry> shownResults = new List<SearchEntry>();
     private const int MaxResults = 8;
+    private const float SearchX = 12f, SearchW = 250f, ResultsW = 356f;   // the box sits left of the centred title; the results drop down wider
 
     /// <summary>Adds something to the hub's search: its label (shown in the results), the tab it lives in, what to do once its tab is open (scroll to it...), and extra words that also match.</summary>
     public static void RegisterSearch(string label, string tabId, Action reveal, string keywords = "")
@@ -55,8 +57,8 @@ public class PixelDevHub : MonoBehaviour
 
     private void BuildSearch()
     {
-        searchField = PixelUIKit.CreateInputField(font, windowRect, "Search Field", new Vector2(356f, 34f), new Color(0.06f, 0.07f, 0.1f, 1f), TextColor, 20f, "Search the hub...");
-        PlaceTL(searchField.GetComponent<RectTransform>(), 190f, 9f, 356f, 34f);
+        searchField = PixelUIKit.CreateInputField(font, windowRect, "Search Field", new Vector2(SearchW, 34f), new Color(0.06f, 0.07f, 0.1f, 1f), TextColor, 20f, "Search the hub...");
+        PlaceTL(searchField.GetComponent<RectTransform>(), SearchX, (HeaderH - 34f) * 0.5f, SearchW, 34f);   // (the left of the header, clear of the centred title)
         searchField.onValueChanged.AddListener(RefreshSearch);
         searchField.onSubmit.AddListener(_ => { if (shownResults.Count > 0) ChooseResult(shownResults[0]); });
         GameObject panelGo = new GameObject("Search Results", typeof(RectTransform), typeof(Image));
@@ -64,7 +66,7 @@ public class PixelDevHub : MonoBehaviour
         panelGo.GetComponent<Image>().color = new Color(0.1f, 0.12f, 0.18f, 0.98f);
         PixelUIKit.StyleBox(panelGo.GetComponent<Image>());
         searchPanel = panelGo.GetComponent<RectTransform>();
-        PlaceTL(searchPanel, 190f, 46f, 356f, 40f);
+        PlaceTL(searchPanel, SearchX, HeaderH - 6f, ResultsW, 40f);
         panelGo.SetActive(false);
         foreach (Tab t in tabs) searchEntries.Add(new SearchEntry { label = "Tab: " + t.title, tabId = t.id, keywords = t.id });
     }
@@ -113,9 +115,9 @@ public class PixelDevHub : MonoBehaviour
             searchRows[0].gameObject.SetActive(true);
             searchRows[0].GetComponentInChildren<TMP_Text>().text = "Nothing found";
             PlaceTL((RectTransform)searchRows[0].transform, 8f, 4f, 340f, 32f);
-            searchPanel.sizeDelta = new Vector2(356f, 40f);
+            searchPanel.sizeDelta = new Vector2(ResultsW, 40f);
         }
-        else searchPanel.sizeDelta = new Vector2(356f, 8f + shownResults.Count * 34f);
+        else searchPanel.sizeDelta = new Vector2(ResultsW, 8f + shownResults.Count * 34f);
         searchPanel.SetAsLastSibling();
     }
 
@@ -219,21 +221,15 @@ public class PixelDevHub : MonoBehaviour
         canvasRect = canvasRoot.GetComponent<RectTransform>();
 
         // ---- the main window ----
-        GameObject w = new GameObject("Hub Window", typeof(RectTransform), typeof(Image), typeof(PixelBringToFront));
-        w.transform.SetParent(canvasRoot.transform, false);
-        windowRect = w.GetComponent<RectTransform>();
-        PlaceTL(windowRect, 0f, 0f, ContentW + Pad * 2f, HeaderH + TabStripH + ContentH + Pad);
-        PixelUIKit.StyleWindow(w.GetComponent<Image>(), PanelColor);
-
-        TMP_Text title = PixelUIKit.CreateText(font, windowRect, "Title", "DEV HUB", 30f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, TextColor);
-        PlaceTL(title.rectTransform, 18f, 0f, 300f, HeaderH);
-        title.raycastTarget = false;
-        Button close = PixelUIKit.CreateButton(font, windowRect, "Close", "X", new Vector2(40f, 40f), new Color(0.6f, 0.2f, 0.2f, 1f), TextColor, 26f);
-        RectTransform cr = close.GetComponent<RectTransform>();
-        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
-        cr.anchoredPosition = new Vector2(-8f, -6f);
-        cr.sizeDelta = new Vector2(40f, 40f);
-        close.onClick.AddListener(() => SetOpen(false));
+        // A standard Tool window (PixelUIKit.CreateWindow): centred title, grey X, drag by the header, minimize, dock to a screen edge, place saved under its old key.
+        PixelWindowParts parts = PixelUIKit.CreateWindow(font, canvasRoot.transform, "Hub Window", "Dev Hub", new Vector2(ContentW + Pad * 2f, HeaderH + TabStripH + ContentH + Pad),
+                                                         PanelColor, PixelUIKit.WindowKind.Tool, () => SetOpen(false), P + "Window");
+        // The hub has no open / close animation (it opens with its canvas) and its resize grip SCALES it: PixelPop would keep putting the scale back to its own.
+        DestroyImmediate(parts.Root.GetComponent<PixelPop>());
+        parts.Rect.localScale = Vector3.one;
+        parts.Root.AddComponent<PixelBringToFront>();
+        windowRect = parts.Rect;
+        chrome = parts.Chrome;
 
         GameObject stripGo = new GameObject("Tab Strip", typeof(RectTransform));
         stripGo.transform.SetParent(windowRect, false);
@@ -271,12 +267,11 @@ public class PixelDevHub : MonoBehaviour
         }
         active = Find(PixelPrefs.GetString(P + "Active", "main")) ?? tabs[0];
 
-        chrome = PixelWindowChrome.Attach(windowRect, font, P + "Window", HeaderH, 8f + 40f + 8f, 6f, 40f, new Color(0.3f, 0.36f, 0.5f, 1f), TextColor, 26f);
-        chrome.Keep(title.gameObject);
-        chrome.Keep(close.gameObject);
         chrome.EnableResize();   // the grip in the bottom-right corner scales the whole hub
         BuildSearch();
         chrome.Keep(searchField.gameObject);
+        // (A hub saved minimized was folded up before its tabs existed: fold it again so they hide too.)
+        if (chrome.Minimized) { chrome.SetMinimized(false, false); chrome.SetMinimized(true, false); }
         gameObject.AddComponent<PixelDevTextEdit>().Setup(canvasRoot.transform, font);   // right click any label to set your own text
 
         // Tabs that were floating when the game last closed come back where they were.
