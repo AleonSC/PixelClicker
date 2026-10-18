@@ -325,10 +325,13 @@ public partial class PixelSkills
     private void BuildTreeWindow()
     {
         PixelHud hud = PixelHud.Ensure(gameObject);
-        treeWindow = new GameObject("Skill Tree Window", typeof(RectTransform), typeof(Image), typeof(PixelPop));
-        treeWindow.transform.SetParent(canvasRoot.transform, false);
-        PixelUIKit.StyleWindow(treeWindow.GetComponent<Image>(), panelColor);
-        treeRect = treeWindow.GetComponent<RectTransform>();
+        // The standard Fixed window (PixelUIKit.CreateWindow); its title is set per skill in RefreshWindow.
+        treeParts = PixelUIKit.CreateWindow(Font, canvasRoot.transform, "Skill Tree Window", "", windowSize, panelColor,
+                                            PixelUIKit.WindowKind.Fixed, () => PixelPop.Hide(treeWindow));
+        treeWindow = treeParts.Root;
+        treeRect = treeParts.Rect;
+        treeTitle = treeParts.Title;
+        // (The builder centres Fixed windows; this one stretches from right of the Skills window to the right screen edge - UpdateTreeLayout keeps it there.)
         float left = windowRect.anchoredPosition.x + windowSize.x + 14f;
         float right = gapToButton + hud.SideShownInset;
         treeRect.anchorMin = new Vector2(0f, 0.5f);
@@ -336,31 +339,16 @@ public partial class PixelSkills
         treeRect.pivot = new Vector2(0f, 0.5f);
         treeRect.offsetMin = new Vector2(left, -windowSize.y * 0.5f);
         treeRect.offsetMax = new Vector2(-right, windowSize.y * 0.5f);
+        float header = treeParts.HeaderHeight;
 
-        treeTitle = PixelUIKit.CreateText(Font, treeWindow.transform, "Title", "", 52f, TextAlignmentOptions.Center, FontStyles.Bold, textColor);
-        PixelUIKit.Caps(treeTitle);
-        treeTitle.enableAutoSizing = true;
-        treeTitle.fontSizeMax = 52f;
-        treeTitle.fontSizeMin = 24f;
-        Place(treeTitle.rectTransform, 0f, 1f, 1f, 1f, new Vector2(100f, -84f), new Vector2(-100f, -14f));
-
-        Button close = PixelUIKit.CreateButton(Font, treeWindow.transform, "Close", "X", new Vector2(70f, 70f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 36f);
-        RectTransform cr = close.GetComponent<RectTransform>();
-        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
-        cr.anchoredPosition = new Vector2(-14f, -12f);
-        close.onClick.AddListener(() => PixelPop.Hide(treeWindow));
-
-        // Top left: makes the tree cover the Skills window for a bigger view; pressing it again gives the window back.
-        treeExpandButton = PixelUIKit.CreateButton(Font, treeWindow.transform, "Expand", "<", new Vector2(70f, 70f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 36f);
-        RectTransform er = treeExpandButton.GetComponent<RectTransform>();
-        er.anchorMin = er.anchorMax = er.pivot = new Vector2(0f, 1f);
-        er.anchoredPosition = new Vector2(14f, -12f);
+        // Left header slot: makes the tree cover the Skills window for a bigger view; pressing it again gives the window back.
+        treeExpandButton = treeParts.AddHeaderButton("Expand", "<", true, PixelUIKit.WindowButtonColor);
         PixelUIKit.UseArrowGlyph(treeExpandButton, true);
         treeExpandGlyph = treeExpandButton.transform.Find("Triangle");
         treeExpandButton.onClick.AddListener(() => { treeExpanded = !treeExpanded; ApplyTreeExpandGlyph(); UpdateTreeLayout(); if (nodeScroll != null) nodeScroll.horizontalNormalizedPosition = 0f; RefreshWindow(); });   // re-laid out in the same frame, so nothing jumps
 
         pointsLabel = PixelUIKit.CreateText(Font, treeWindow.transform, "Points", "", 30f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, perkUnlockedColor);
-        Place(pointsLabel.rectTransform, 0f, 1f, 1f, 1f, new Vector2(34f, -150f), new Vector2(-34f, -100f));
+        Place(pointsLabel.rectTransform, 0f, 1f, 1f, 1f, new Vector2(34f, -(header + 60f)), new Vector2(-34f, -(header + 10f)));
 
         // The nodes live in a sideways scroll view (wheel / drag) whose left and right edges fade out while there is more to see.
         GameObject view = new GameObject("Node View", typeof(RectTransform), typeof(Image), typeof(RectMask2D), typeof(ScrollRect), typeof(PixelScrollFadeX));
@@ -370,8 +358,8 @@ public partial class PixelSkills
         nodeView.anchorMin = new Vector2(0f, 1f);
         nodeView.anchorMax = new Vector2(1f, 1f);
         nodeView.pivot = new Vector2(0f, 1f);
-        nodeView.offsetMin = new Vector2(34f, -150f - treeAreaHeight);
-        nodeView.offsetMax = new Vector2(-34f, -150f);
+        nodeView.offsetMin = new Vector2(34f, -(header + 60f) - treeAreaHeight);
+        nodeView.offsetMax = new Vector2(-34f, -(header + 60f));
 
         GameObject area = new GameObject("Nodes", typeof(RectTransform));
         area.transform.SetParent(view.transform, false);
