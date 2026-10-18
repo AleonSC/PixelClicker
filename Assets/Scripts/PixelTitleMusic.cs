@@ -59,7 +59,7 @@ public class PixelTitleMusic : MonoBehaviour
         rect.anchoredPosition = new Vector2(0f, Margin);
 
         float arrow = Height;
-        Color arrowColor = new Color(0.2f, 0.3f, 0.5f, 1f);
+        Color arrowColor = new Color(0.2f, 0.3f, 0.5f, 1f);   // (plain colour, role Custom on purpose: the arrows, speaker and shuffle match the track drop-down they sit around)
         Button prev = PixelUIKit.CreateButton(font, transform, "Previous", "<", new Vector2(arrow, Height), arrowColor, Color.white, 28f);
         Button next = PixelUIKit.CreateButton(font, transform, "Next", ">", new Vector2(arrow, Height), arrowColor, Color.white, 28f);
         PixelUIKit.UseArrowGlyph(prev, true);
