@@ -12,6 +12,7 @@
 //   (CustomBase; BuildOutfit handles them, so live pets, title-screen pets and previews all use them; deleting one renumbers / clears
 //   pets wearing it); the outfit arrows cycle OutfitChoices(type) = built-ins then the custom ones that fit that pet. Saved as JSON in
 //   PlayerPrefs PixelClicker.Setting.PetOutfits (per save file via PixelSettingsSync, reloaded by PixelPets.ReloadOutfitsFromPrefs).
+//   The window is the standard window as a dialog (PixelUIKit.CreateWindow, no X; Done closes it).
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -410,17 +411,12 @@ public partial class PixelPets
         dim.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.6f);
         PixelUIKit.Stretch(dim.GetComponent<RectTransform>());
 
-        GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image));
-        box.transform.SetParent(dim.transform, false);
-        PixelUIKit.StyleWindow(box.GetComponent<Image>(), panelColor);
-        RectTransform br = box.GetComponent<RectTransform>();
-        br.anchorMin = br.anchorMax = br.pivot = new Vector2(0.5f, 0.5f);
-        br.sizeDelta = new Vector2(1800f, 980f);
-        Transform t = box.transform;
+        // The standard window as a dialog (PixelUIKit.CreateWindow, no X: 'Done' closes it). Title in the pets' title colour.
+        PixelWindowParts parts = PixelUIKit.CreateWindow(font, dim.transform, "Box", "Outfit Studio", new Vector2(1800f, 980f), panelColor,
+                                                         PixelUIKit.WindowKind.Fixed, null, closeButton: false);
+        parts.Title.color = titleColor;
+        Transform t = parts.Root.transform;   // (the content below starts at y 100, under the header)
         Color box2 = new Color(0.2f, 0.2f, 0.27f, 1f), grey = new Color(0.32f, 0.36f, 0.48f, 1f), red = new Color(0.65f, 0.25f, 0.25f, 1f);
-
-        TMP_Text title = PixelUIKit.CreateText(font, t, "Title", "OUTFIT STUDIO", 46f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, titleColor);
-        Put(title.rectTransform, 40f, 20f, 800f, 64f);
 
         // ---- Left: the 3D view + the dummy ----
         GameObject view = new GameObject("View", typeof(RectTransform), typeof(RawImage), typeof(EventTrigger));
