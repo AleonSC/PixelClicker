@@ -382,6 +382,7 @@ public static partial class PixelUIKit
         Color applied = ButtonTinted(baseColor, ButtonRole.Custom);
         if (ButtonColorOn) image.color = applied;
         buttonImages.Add(new ButtonEntry { image = image, baseColor = baseColor, applied = applied, role = ButtonRole.Custom });
+        buttonIndex[image] = buttonImages.Count - 1;
         if (buttonImages.Count > 600) buttonImages.RemoveAll(e => e.image == null);
     }
 
@@ -400,9 +401,10 @@ public static partial class PixelUIKit
     public static void SetRole(Image image, ButtonRole role)
     {
         if (image == null) return;
-        int at = buttonImages.FindIndex(e => e.image == image);
+        int at = IndexOfButton(image);
         if (at < 0) { StyleButton(image); at = buttonImages.Count - 1; }
         ButtonEntry e = buttonImages[at];
+        if (e.role == role && role != ButtonRole.Custom && Near(image.color, e.applied)) return;   // (already in that role: cheap to call every refresh)
         e.role = role;
         if (role != ButtonRole.Custom) e.baseColor = PixelUITheme.ColorOf(role);
         e.applied = ButtonTinted(e.baseColor, role);
@@ -418,6 +420,16 @@ public static partial class PixelUIKit
     private static float buttonHueCache = -1f, buttonSatCache = -1f;
     private struct ButtonEntry { public Image image; public Color baseColor, applied; public ButtonRole role; }
     private static readonly System.Collections.Generic.List<ButtonEntry> buttonImages = new System.Collections.Generic.List<ButtonEntry>();
+    private static readonly System.Collections.Generic.Dictionary<Image, int> buttonIndex = new System.Collections.Generic.Dictionary<Image, int>();   // image -> place in buttonImages (rebuilt when the list is tidied)
+
+    /// <summary>Where an image is in the button list (-1 = not registered); quick, so SetRole can be called on every refresh.</summary>
+    private static int IndexOfButton(Image image)
+    {
+        if (buttonIndex.TryGetValue(image, out int i) && i < buttonImages.Count && buttonImages[i].image == image) return i;
+        buttonIndex.Clear();
+        for (int k = 0; k < buttonImages.Count; k++) if (buttonImages[k].image != null) buttonIndex[buttonImages[k].image] = k;
+        return buttonIndex.TryGetValue(image, out i) ? i : -1;
+    }
 
     /// <summary>Use the player's own colour for the (neutral) buttons. Off by default. Coloured buttons (red Quit, green confirm...) keep their meaning colour. Applies to every button at once.</summary>
     public static bool ButtonColorOn
