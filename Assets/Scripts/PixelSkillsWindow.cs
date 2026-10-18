@@ -143,7 +143,7 @@ public partial class PixelSkills
         windowRect.anchoredPosition = new Vector2(gapToButton + hud.SideShownInset, 0f);
         float header = windowParts.HeaderHeight;
         // '?' in the right header slot (next to the X): plays Cubie's skills intro again, for anyone who wants to go into it more.
-        Button help = windowParts.AddHeaderButton("Help", "?", false, PixelUIKit.WindowButtonColor);
+        Button help = windowParts.AddHeaderButton("Help", "?", false);
         help.onClick.AddListener(StartTutorial);
         PixelMenuFx.AddWindowLine(windowObject.transform, header);
         BuildPinButton();   // left header slot: pins the training skill with an XP bar in a small window you can move
@@ -342,7 +342,7 @@ public partial class PixelSkills
         float header = treeParts.HeaderHeight;
 
         // Left header slot: makes the tree cover the Skills window for a bigger view; pressing it again gives the window back.
-        treeExpandButton = treeParts.AddHeaderButton("Expand", "<", true, PixelUIKit.WindowButtonColor);
+        treeExpandButton = treeParts.AddHeaderButton("Expand", "<", true);
         PixelUIKit.UseArrowGlyph(treeExpandButton, true);
         treeExpandGlyph = treeExpandButton.transform.Find("Triangle");
         treeExpandButton.onClick.AddListener(() => { treeExpanded = !treeExpanded; ApplyTreeExpandGlyph(); UpdateTreeLayout(); if (nodeScroll != null) nodeScroll.horizontalNormalizedPosition = 0f; RefreshWindow(); });   // re-laid out in the same frame, so nothing jumps

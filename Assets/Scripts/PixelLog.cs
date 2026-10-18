@@ -730,7 +730,7 @@ public class PixelLog : MonoBehaviour
         PixelMenuFx.AddWindowLine(panelObject.transform, headerHeight - 6f, panelPadding);
 
         // The Collection Log: a book button in the left header slot.
-        Button book = windowParts.AddHeaderButton("Collection Log Button", "", true, PixelUIKit.WindowButtonColor);
+        Button book = windowParts.AddHeaderButton("Collection Log Button", "", true);
         GameObject bookIcon = new GameObject("Icon", typeof(RectTransform), typeof(Image));
         bookIcon.transform.SetParent(book.transform, false);
         Image bookImage = bookIcon.GetComponent<Image>();
@@ -847,7 +847,7 @@ public class PixelLog : MonoBehaviour
             summaryBarGo.transform.SetParent(group.transform, false);
             Image trough = summaryBarGo.GetComponent<Image>();
             trough.color = new Color(0.07f, 0.07f, 0.1f, 1f);
-            PixelUIKit.StyleButton(trough);
+            PixelUIKit.StyleButtonLook(trough);   // (the button shape only: a progress trough must not take the custom button colour)
             RectTransform sr = summaryBarGo.GetComponent<RectTransform>();
             sr.anchorMin = new Vector2(0f, 1f);
             sr.anchorMax = new Vector2(1f, 1f);

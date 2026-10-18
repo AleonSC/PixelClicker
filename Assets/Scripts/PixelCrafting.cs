@@ -949,7 +949,7 @@ public class PixelCrafting : MonoBehaviour
     /// <summary>A small hand-drawn book (cover, pages, spine) on a button in the crafting window's left header slot.</summary>
     private void BuildBookButton()
     {
-        Button b = windowParts.AddHeaderButton("Book Button", "", true, PixelUIKit.WindowButtonColor);   // the left header slot
+        Button b = windowParts.AddHeaderButton("Book Button", "", true);   // the left header slot
         b.onClick.AddListener(OpenBook);
 
         Image Part(string name, Color color, Vector2 size, Vector2 pos)

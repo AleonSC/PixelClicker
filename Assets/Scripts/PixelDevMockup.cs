@@ -269,7 +269,7 @@ public class PixelDevMockup : MonoBehaviour
             case PieceKind.Button:
                 p.bg.sprite = null;
                 p.bg.color = colour;
-                PixelUIKit.StyleButton(p.bg);
+                PixelUIKit.StyleButtonLook(p.bg);   // (a mock-up of a button, not a real one: its own colour)
                 break;
             case PieceKind.Text:
                 p.bg.color = new Color(1f, 1f, 1f, 0f);   // invisible, but still catches the mouse so it can be dragged

@@ -958,7 +958,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             GameObject go = new GameObject("Ware", typeof(RectTransform), typeof(Image));
             go.transform.SetParent(waresContent, false);
             go.GetComponent<Image>().color = new Color(0.16f, 0.16f, 0.2f, 1f);
-            PixelUIKit.StyleButton(go.GetComponent<Image>());   // rounded, like the buttons
+            PixelUIKit.StyleButtonLook(go.GetComponent<Image>());   // rounded, like the buttons (the look only: a row is not recoloured as a button)
             go.GetComponent<Image>().raycastTarget = false;
             row.rect = go.GetComponent<RectTransform>();
             row.rect.anchorMin = new Vector2(0f, 1f);

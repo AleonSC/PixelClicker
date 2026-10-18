@@ -42,6 +42,14 @@ public sealed class PixelWindowParts
     /// An extra header button in the standard slots (same size as the X): left = from the top-left corner inwards (pin, book, hose, info, expand...),
     /// right = just left of the X (and of a Tool window's minimize), going leftwards (a ? help button...). Label "" = an icon button (add the icon yourself).
     /// </summary>
+    public Button AddHeaderButton(string objectName, string label, bool left, ButtonRole role = ButtonRole.Neutral)
+    {
+        Button b = AddHeaderButton(objectName, label, left, PixelUITheme.ColorOf(role));
+        PixelUIKit.SetRole(b, role);
+        return b;
+    }
+
+    /// <summary>AddHeaderButton with its own colour (role Custom) - for a button whose colour shows a state of its own (the Bank's hose on / off).</summary>
     public Button AddHeaderButton(string objectName, string label, bool left, Color color)
     {
         float size = Tool ? PixelUIKit.ToolCloseSize : PixelUIKit.WindowCloseSize;
@@ -106,7 +114,8 @@ public static partial class PixelUIKit
     public static readonly Vector2 WindowCloseOffset = new Vector2(14f, 12f);   // from the top-right corner
     public const float ToolHeaderHeight = 56f, ToolTitleSize = 30f, ToolCloseSize = 44f;
     public static readonly Vector2 ToolCloseOffset = new Vector2(8f, 6f);
-    public static readonly Color WindowButtonColor = new Color(0.3f, 0.3f, 0.35f, 1f);   // the X and the chrome buttons (grey, never red)
+    /// <summary>The Neutral button colour (the X and header buttons are role Neutral; see PixelUITheme). Kept for code that needs the colour itself.</summary>
+    public static Color WindowButtonColor => PixelUITheme.ColorOf(ButtonRole.Neutral);
 
     /// <summary>
     /// A window in the standard look (see the header of PixelUIKitWindows.cs). 'parent' is a full-screen canvas. Tool windows need a
@@ -151,7 +160,7 @@ public static partial class PixelUIKit
 
         if (closeButton)
         {
-            w.Close = CreateButton(font, w.Root.transform, "Close", "X", new Vector2(closeSize, closeSize), WindowButtonColor, Color.white, closeSize * 0.4f);
+            w.Close = CreateButton(font, w.Root.transform, "Close", "X", new Vector2(closeSize, closeSize), ButtonRole.Neutral, closeSize * 0.4f);
             RectTransform cr = w.Close.GetComponent<RectTransform>();
             cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
             cr.anchoredPosition = new Vector2(-closeAt.x, -closeAt.y);
@@ -165,6 +174,11 @@ public static partial class PixelUIKit
                                                 w.HeaderHeight, firstRight, closeAt.y, ToolCloseSize, WindowButtonColor, Color.white, ToolCloseSize * 0.5f);
             if (w.Close != null) w.Chrome.Keep(w.Close.gameObject);
             w.Chrome.Keep(w.Title.gameObject);
+            foreach (string chromeButton in new[] { "Chrome Minimize", "Chrome Undock" })   // (the chrome's own buttons are Neutral too)
+            {
+                Transform t = w.Rect.Find(chromeButton);
+                if (t != null) SetRole(t.GetComponent<Button>(), ButtonRole.Neutral);
+            }
         }
         w.FitTitle();
         return w;

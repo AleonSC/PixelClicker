@@ -114,6 +114,15 @@ public static partial class PixelUIKit
     }
 
     /// <summary>A coloured button with a centred bold label that stretches over it.</summary>
+    /// <summary>A button in a ROLE (Neutral, Primary, Selected, Success, Danger): its colour comes from PixelUITheme and follows the custom button colour where that role does. Prefer this over a plain colour.</summary>
+    public static Button CreateButton(TMP_FontAsset font, Transform parent, string objectName, string label, Vector2 size,
+                                      ButtonRole role, float labelSize)
+    {
+        Button b = CreateButton(font, parent, objectName, label, size, PixelUITheme.ColorOf(role), Color.white, labelSize);
+        SetRole(b, role);
+        return b;
+    }
+
     public static Button CreateButton(TMP_FontAsset font, Transform parent, string objectName, string label, Vector2 size,
                                       Color color, Color labelColor, float labelSize)
     {
@@ -364,17 +373,42 @@ public static partial class PixelUIKit
         return Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(12, 12, 12, 12));
     }
 
-    /// <summary>Gives a button's background image the bevelled look (also used by the shop's own button builder).</summary>
+    /// <summary>Gives a button's background image the bevelled look and registers it for the custom button colour (role Custom: its own colour; SetRole gives it a role).</summary>
     public static void StyleButton(Image image)
+    {
+        if (image == null) return;
+        StyleButtonLook(image);
+        Color baseColor = image.color;
+        Color applied = ButtonTinted(baseColor, ButtonRole.Custom);
+        if (ButtonColorOn) image.color = applied;
+        buttonImages.Add(new ButtonEntry { image = image, baseColor = baseColor, applied = applied, role = ButtonRole.Custom });
+        if (buttonImages.Count > 600) buttonImages.RemoveAll(e => e.image == null);
+    }
+
+    /// <summary>Only the bevelled button LOOK, for things that are not buttons (a colour swatch, a progress trough, a list row): never recoloured by the custom button colour.</summary>
+    public static void StyleButtonLook(Image image)
     {
         if (image == null) return;
         image.sprite = ButtonSprite();
         image.type = Image.Type.Sliced;
-        Color baseColor = image.color;
-        Color applied = ButtonTinted(baseColor);
-        if (ButtonColorOn) image.color = applied;
-        buttonImages.Add(new ButtonEntry { image = image, baseColor = baseColor, applied = applied });
-        if (buttonImages.Count > 600) buttonImages.RemoveAll(e => e.image == null);
+    }
+
+    /// <summary>Puts a button in a role (also to switch it later: a tab turning Selected and back to Neutral). Its colour then always comes from PixelUITheme.</summary>
+    public static void SetRole(Button button, ButtonRole role) { if (button != null) SetRole(button.targetGraphic as Image ?? button.GetComponent<Image>(), role); }
+
+    /// <summary>Same as SetRole(Button, role) for a button's background image (or any image styled with StyleButton).</summary>
+    public static void SetRole(Image image, ButtonRole role)
+    {
+        if (image == null) return;
+        int at = buttonImages.FindIndex(e => e.image == image);
+        if (at < 0) { StyleButton(image); at = buttonImages.Count - 1; }
+        ButtonEntry e = buttonImages[at];
+        e.role = role;
+        if (role != ButtonRole.Custom) e.baseColor = PixelUITheme.ColorOf(role);
+        e.applied = ButtonTinted(e.baseColor, role);
+        Color c = e.applied; c.a = role == ButtonRole.Custom ? image.color.a : e.baseColor.a;
+        image.color = c;
+        buttonImages[at] = e;
     }
 
     // ---- the player's own button colour (Settings > 'Custom UI button colour') ----
@@ -382,7 +416,7 @@ public static partial class PixelUIKit
     private const string PrefButtonColor = "PixelClicker.Setting.UiButtonColor", PrefButtonHue = "PixelClicker.Setting.UiButtonHue", PrefButtonSat = "PixelClicker.Setting.UiButtonSat";
     private static int buttonColorCache = -1;
     private static float buttonHueCache = -1f, buttonSatCache = -1f;
-    private struct ButtonEntry { public Image image; public Color baseColor, applied; }
+    private struct ButtonEntry { public Image image; public Color baseColor, applied; public ButtonRole role; }
     private static readonly System.Collections.Generic.List<ButtonEntry> buttonImages = new System.Collections.Generic.List<ButtonEntry>();
 
     /// <summary>Use the player's own colour for the (neutral) buttons. Off by default. Coloured buttons (red Quit, green confirm...) keep their meaning colour. Applies to every button at once.</summary>
@@ -411,13 +445,17 @@ public static partial class PixelUIKit
 
     public static void ReloadButtonColorFromPrefs() { buttonColorCache = -1; buttonHueCache = -1f; buttonSatCache = -1f; RefreshButtons(); }
 
-    /// <summary>A button colour with the player's hue applied; strongly coloured buttons are left alone.</summary>
-    private static Color ButtonTinted(Color c)
+    /// <summary>
+    /// A button colour with the player's custom button colour applied. Role Custom (a plain colour): only weakly coloured buttons follow it (strongly
+    /// coloured ones keep their meaning). Other roles: as PixelUITheme says (Neutral / Primary / Selected follow, Success / Danger don't).
+    /// </summary>
+    private static Color ButtonTinted(Color c, ButtonRole role)
     {
         if (!ButtonColorOn) return c;
         Color.RGBToHSV(c, out _, out float s, out float v);
-        if (s > 0.45f) return c;
-        Color o = Color.HSVToRGB(ButtonHue, Mathf.Max(s, ButtonSat), Mathf.Min(1f, v * 1.5f + 0.05f));
+        if (role == ButtonRole.Custom ? s > 0.45f : !PixelUITheme.Follows(role)) return c;
+        bool grey = s <= 0.45f;   // (a grey button is lifted so the hue shows; a coloured one keeps its brightness, so Selected stays brighter than Neutral)
+        Color o = Color.HSVToRGB(ButtonHue, Mathf.Max(s, ButtonSat), grey ? Mathf.Min(1f, v * 1.5f + 0.05f) : v);
         o.a = c.a;
         return o;
     }
@@ -431,8 +469,9 @@ public static partial class PixelUIKit
         {
             ButtonEntry e = buttonImages[i];
             if (e.image == null) { buttonImages.RemoveAt(i); continue; }
-            Color target = ButtonTinted(e.baseColor);
-            if (Near(e.image.color, e.applied)) { Color c = target; c.a = e.image.color.a; e.image.color = c; }
+            if (e.role != ButtonRole.Custom) e.baseColor = PixelUITheme.ColorOf(e.role);   // (a theme colour may have changed)
+            Color target = ButtonTinted(e.baseColor, e.role);
+            if (e.role != ButtonRole.Custom || Near(e.image.color, e.applied)) { Color c = target; c.a = e.image.color.a; e.image.color = c; }
             e.applied = target;
             buttonImages[i] = e;
         }

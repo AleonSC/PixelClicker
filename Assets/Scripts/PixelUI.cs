@@ -1291,7 +1291,7 @@ public class PixelUI : MonoBehaviour
         sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0f, 0.5f);
         sr.sizeDelta = new Vector2(swatchSize, swatchSize);
         sr.anchoredPosition = new Vector2(4f, 0f);
-        PixelUIKit.StyleButton(swImage);
+        PixelUIKit.StyleButtonLook(swImage);   // (the button shape only: the swatch shows the pixel's own colour)
 
         TMP_Text amount = MakeText(label.transform, "Amount", "", fontSize, TextAlignmentOptions.MidlineRight, FontStyles.Bold, RowTextColor);
         amount.raycastTarget = false;

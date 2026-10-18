@@ -554,7 +554,7 @@ public partial class PixelShop
 #endif
 
         // Back arrow in the standard left header slot (the X on the right also returns to the shop).
-        Button back = parts.AddHeaderButton("Back", backText, true, PixelUIKit.WindowButtonColor);
+        Button back = parts.AddHeaderButton("Back", backText, true);
         ShopButtonExtras(back);
         PixelUIKit.UseArrowGlyph(back, true);   // a drawn backwards triangle instead of the "<" letter
         back.onClick.AddListener(CloseUpgradesWindow);
