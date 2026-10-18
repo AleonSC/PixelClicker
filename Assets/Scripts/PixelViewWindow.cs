@@ -49,9 +49,6 @@ public class PixelViewWindow : MonoBehaviour
     [Tooltip("Colour of the ticks and the slider fills.")]
     [SerializeField] private Color accentColor = new Color(0.3f, 0.85f, 0.5f, 1f);
 
-    [Tooltip("Colour of the hold buttons.")]
-    [SerializeField] private Color buttonColor = new Color(0.25f, 0.4f, 0.7f, 1f);
-
     [Header("Start view (used until the player picks one: no saved view setting)")]
     [Tooltip("The view a fresh save starts in (and the one the camera returns to after a takeover minigame) until the player picks another. Orbital = the default camera.")]
     [SerializeField] private PixelViewKind startView = PixelViewKind.Orbital;
@@ -385,7 +382,8 @@ public class PixelViewWindow : MonoBehaviour
 
     private PixelHoldPress HoldButton(Transform parent, string text, float x, float y, float w)
     {
-        Button b = PixelUIKit.CreateButton(font, parent, text, text, new Vector2(w, 46f), buttonColor, Color.white, 24f);
+        Button b = PixelUIKit.CreateButton(font, parent, text, text, new Vector2(w, 46f), ButtonRole.Neutral, 24f);
+
         Place(b.GetComponent<RectTransform>(), x, y, w, 46f);
         return b.gameObject.AddComponent<PixelHoldPress>();
     }

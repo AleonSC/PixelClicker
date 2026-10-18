@@ -106,9 +106,6 @@ public class PixelOfflineProgress : MonoBehaviour
     [Tooltip("Text colour.")]
     [SerializeField] private Color textColor = Color.white;
 
-    [Tooltip("Button colour.")]
-    [SerializeField] private Color buttonColor = new Color(0.2f, 0.45f, 0.9f, 1f);
-
     [Tooltip("Sorting order of the window's canvas (below the pause menu).")]
     [SerializeField] private int sortingOrder = 480;
 
@@ -333,8 +330,10 @@ public class PixelOfflineProgress : MonoBehaviour
         if (lineCount > 0) BuildScrollList(window.transform, lines.ToString(), y, viewH, listH, textWidth);
         y += viewH + 30f;
 
-        Button ok = PixelUIKit.CreateButton(font, window.transform, "Continue Button", buttonText, buttonSize, buttonColor,
+        Button ok = PixelUIKit.CreateButton(font, window.transform, "Continue Button", buttonText, buttonSize, PixelUITheme.ColorOf(ButtonRole.Success),
                                             textColor, lineFontSize);
+        PixelUIKit.SetRole(ok, ButtonRole.Success);
+
         RectTransform br = ok.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(0.5f, 1f);
         br.anchoredPosition = new Vector2(0f, -y);
