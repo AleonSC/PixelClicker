@@ -1401,3 +1401,4 @@
 [2026-10-18 14:11 UTC] Recycler: removed the 'drop husks in' text and the timer from above the bin; hovering the bin now shows a small floating down arrow with the time left beside it, which goes away when the pointer leaves (the streak still shows while it runs).
 [2026-10-18 14:20 UTC] Recycler is now button-only (auto recycling removed, suction kept; the button flashes once a husk is inside), twice as wide and deep by default with Speed / Size as its only upgrades; the Sorting Hopper gets the same hover arrow (shared PixelHoverMarker), sizes itself to its Recycler and has its own Speed / Size upgrades.
 [2026-10-18 14:27 UTC] The device hover arrow (Recycler, Sorting Hopper) is now one solid arrow shape - a shaft with a triangle head - instead of three bars that looked like a trident.
+[2026-10-18 14:30 UTC] The clicker glow aura (white halo behind the cube) no longer shows on the title screen / main menu.

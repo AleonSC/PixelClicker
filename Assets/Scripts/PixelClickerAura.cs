@@ -3,7 +3,7 @@
 //   A soft glow BEHIND the clicker cube to make it easier to find without touching the pixels themselves (Settings > Interface > 'Clicker glow aura', PixelClickerAura.Enabled,
 //   PlayerPrefs PixelClicker.Setting.ClickerAura, default ON, saved per profile). A camera-facing quad with a radial fade (Sprites/Default, alpha blended) sits just behind the cube as seen
 //   from the camera, so the cube hides the middle and a halo shows round it from any view. Its colour is the colour of the pixel being clicked (washed towards white), fades smoothly when the
-//   tier changes and breathes slowly. The cube is CUT OUT of it: PixelDepthMask.shader (Resources) draws a copy of the cube's main mesh that writes only depth, in queue 3001 between the cube and the aura (3002), so a transparent cube doesn't show the glow through itself. Added by PixelClicker.Awake. Tunables are [SerializeField] fields.
+//   tier changes and breathes slowly. The cube is CUT OUT of it: PixelDepthMask.shader (Resources) draws a copy of the cube's main mesh that writes only depth, in queue 3001 between the cube and the aura (3002), so a transparent cube doesn't show the glow through itself. Hidden while the title screen shows. Added by PixelClicker.Awake. Tunables are [SerializeField] fields.
 // ---------------------------------------------------
 using UnityEngine;
 
@@ -194,7 +194,8 @@ public class PixelClickerAura : MonoBehaviour
         if (clicker == null || clicker.PixelTransform == null) return;
         comboBlend = Mathf.MoveTowards(comboBlend, ComboHighlight ? 1f : 0f, Time.unscaledDeltaTime * 5f);
         stakeBlend = Mathf.MoveTowards(stakeBlend, StakeHighlight.a > 0f ? 1f : 0f, Time.unscaledDeltaTime * 5f);
-        bool on = (Enabled || comboBlend > 0.001f || stakeBlend > 0.001f) && clicker.PixelTransform.gameObject.activeInHierarchy;
+        bool on = (Enabled || comboBlend > 0.001f || stakeBlend > 0.001f) && clicker.PixelTransform.gameObject.activeInHierarchy
+                  && !PixelTitleScreen.Showing;   // (never on the title screen / main menu)
         if (quad == null) { if (!on) return; Build(); if (quad == null) return; }
         if (quadRenderer.enabled != on) quadRenderer.enabled = on;
         UpdateMask(on);
