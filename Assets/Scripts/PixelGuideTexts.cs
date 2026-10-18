@@ -13,7 +13,7 @@ public static class PixelGuideTexts
     private static void ResetStatics() { cachedClicker = null; }
 
     /// <summary>The game's numbers for the bait text come from the real settings (PixelClicker's Fishing group), so the text can't drift from what the game does.</summary>
-    private static void BaitNumbers(out int pellets, out int percent, out int seconds)
+    public static void BaitNumbers(out int pellets, out int percent, out int seconds)
     {
         if (cachedClicker == null) cachedClicker = PixelFind.First<PixelClicker>();
         pellets = cachedClicker != null ? cachedClicker.BaitPellets : 6;
@@ -31,7 +31,7 @@ public static class PixelGuideTexts
             sb.Append("\n\n<b>Tough:</b> it takes ").Append(t.clicksToCollect).Append(" clicks; only the last click pays.");
         if (t.stallsHold) sb.Append("\n\n<b>Stall:</b> every click on it freezes your Block Hold meter for about ").Append((t.stallSeconds > 0f ? t.stallSeconds : 1.5f).ToString("0.#")).Append(" seconds and tops the meter up a little, so a held block keeps its bonus for as long as you keep working on this one.");
         sb.Append(PixelBlockRules.GuideNotes(type));   // special / hold role, from the rules
-        sb.Append("\n\n<b>Old pixel:</b> ").Append(OldPixel(type));
+        sb.Append("\n\n<b>Husk:</b> ").Append(OldPixel(type));
         return sb.ToString();
     }
 
@@ -40,6 +40,8 @@ public static class PixelGuideTexts
 
     private static string OldPixelOwn(PixelClicker.PixelType type)
     {
+        string edited = PixelTextOverrides.Husk(type);   // the user's own text (Assets/Resources/PixelTexts.txt) wins
+        if (edited != null) return edited;
         string fromCard = PixelBlockCatalog.OldPixelText(type);   // most texts live on the block's entry in PixelBlockCatalog.cs
         if (fromCard != null) return fromCard;
         switch (type)
@@ -55,6 +57,8 @@ public static class PixelGuideTexts
 
     private static string Mechanics(PixelClicker.PixelType type, PixelClicker.PixelTier t)
     {
+        string edited = PixelTextOverrides.Guide(type, t);   // the user's own text (Assets/Resources/PixelTexts.txt) wins
+        if (edited != null) return edited;
         System.Func<PixelClicker.PixelTier, string> fromCard = PixelBlockCatalog.GuideText(type);   // most texts live on the block's entry in PixelBlockCatalog.cs
         if (fromCard != null) return fromCard(t);
         switch (type)

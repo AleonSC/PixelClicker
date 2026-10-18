@@ -566,7 +566,7 @@ public class PixelBlockTooltip : MonoBehaviour
         fr.anchoredPosition = new Vector2(20f, -26f); fr.sizeDelta = new Vector2(110f, 110f);
         PlaceText(nameText, 146f, -22f, (cardWidth > 0f ? cardWidth : 560f) - 166f, 46f);
 
-        string desc = shownLive ? PixelGuideTexts.Describe(t.type, t) : "<b>Old pixel:</b> " + PixelGuideTexts.OldPixel(t.type);
+        string desc = shownLive ? PixelGuideTexts.Describe(t.type, t) : "<b>Husk:</b> " + PixelGuideTexts.OldPixel(t.type);
         descText.text = desc;
 
         float w = cardWidth > 0f ? cardWidth : 560f;

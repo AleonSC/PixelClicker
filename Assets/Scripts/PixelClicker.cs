@@ -1017,6 +1017,17 @@ public partial class PixelClicker : MonoBehaviour
         EnsureGodCubes();
         EnsureGoldenSnitch();
         foreach (PixelTier legacy in tiers) if (legacy != null && legacy.type == PixelType.HornetNest && legacy.displayName == "Hornet Nest") legacy.displayName = "Termite Hive";   // renamed
+        ReapplyTextOverrides(false);
+#if UNITY_EDITOR
+        PixelTextOverrides.AppendMissing(this);   // (the file lists every pixel type, new ones too)
+#endif
+    }
+
+    /// <summary>Gives every tier its name from Assets/Resources/PixelTexts.txt (PixelTextOverrides); Dev Hub's 'Reload pixel texts' calls it after a Reload.</summary>
+    public void ReapplyTextOverrides(bool refreshUI = true)
+    {
+        foreach (PixelTier t in tiers) PixelTextOverrides.ApplyName(t);
+        if (refreshUI) RefreshUI();
     }
 
     private void Start()

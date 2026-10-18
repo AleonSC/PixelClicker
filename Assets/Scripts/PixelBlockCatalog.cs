@@ -8,6 +8,7 @@
 //     - oldPixel what its old pixel does (PixelGuideTexts.OldPixel; null = the general text).
 //     - soundAs  play another block's click / break sounds (PixelAudio; null = its own 'pixel_<name>' sounds).
 //     - fxAs     use another block's break burst (PixelFarmFx.Break; null = its own).
+//   USER TEXTS: Assets/Resources/PixelTexts.txt (PixelTextOverrides) overrides the name / guide / husk text of any block; the texts here are the defaults.
 //   ADDING A BLOCK: give it one entry here (tags + guide at least). PixelGuideTexts keeps only the few texts that need its own helpers (the Bait numbers).
 //   The tags were generated from the old hand-written lists and the texts moved over word for word (checked to give the same answers).
 // ---------------------------------------------------

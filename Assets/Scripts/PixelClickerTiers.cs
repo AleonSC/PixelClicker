@@ -190,6 +190,7 @@ public partial class PixelClicker
 
         PixelTier copy = definition.Clone();
         copy.unlocked = false;
+        PixelTextOverrides.ApplyName(copy);   // (the user's name from PixelTexts.txt)
         // Keep Count / Total Collected typed on the shop's definition (as for normal tiers);
         // Starting Amount raises Count if it's higher.
         if (copy.count < copy.startingAmount) copy.count = copy.startingAmount;

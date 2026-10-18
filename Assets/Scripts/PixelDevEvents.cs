@@ -108,6 +108,13 @@ public class PixelDevEvents : MonoBehaviour
         PixelDevUI.Heading(root, "Launch", 10f, y, 400f); y += 38f;
         PixelDevUI.Button(root, "Studio intro", 10f, y, 330f, RowH, PixelDevUI.Green, () =>
             SetStatus(PixelStudioIntro.Replay() ? "Playing the Galactic Arcade studio intro (any key skips)." : "The studio intro is already playing (or missing)."));
+        PixelDevUI.Button(root, "Reload pixel texts", 348f, y, 342f, RowH, PixelDevUI.ButtonColor, () =>
+        {
+            PixelTextOverrides.Reload();
+            PixelClicker c = PixelFind.Cached<PixelClicker>();
+            if (c != null) c.ReapplyTextOverrides();
+            SetStatus("Read Assets/Resources/PixelTexts.txt again: names, guide and husk texts updated.");
+        });
         y += RowH + 18f;
 
         PixelDevUI.Heading(root, "Your own text", 10f, y, 400f); y += 38f;
