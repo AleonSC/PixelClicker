@@ -10,6 +10,8 @@
 //   (each press is shorter than holdDelay).
 //   Not on: rare drops, hazards, Fish (Weak Spots) and the Golden Snitch; never while a husk is grabbed, a block is held (right mouse),
 //   a takeover minigame runs, in first person, in a menu or while time is stopped. Switch: disablePowerClick. Stats: power.clicks.
+//   RIGHT CLICK while charging (2026-10-18) cancels it and KEEPS the charge (savedCharge): the next charge starts at that level (no cooldown).
+//   PixelRightClick gives that right press to the charge (Owner.Charge, read from PixelPowerClick.Charging), so Block Hold / hazard clearing ignore it.
 //   Component in PixelSystems (group Core); its overlay canvas sits under the windows.
 // ---------------------------------------------------
 using TMPro;
@@ -58,6 +60,13 @@ public class PixelPowerClick : MonoBehaviour
     private enum State { Idle, Pressed, Charging, Ready }
     private State state = State.Idle;
     private float pressTime, charge, cooldownLeft, fxTime;
+    private float savedCharge;   // a charge cancelled with a right click (0..1): the next charge starts from it
+
+    /// <summary>A power click is charging (or full) right now: a right press cancels it (PixelRightClick gives that press to it, Owner.Charge).</summary>
+    public static bool Charging { get; private set; }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { Charging = false; }
     private bool shaking;
 
     // UI
@@ -90,7 +99,7 @@ public class PixelPowerClick : MonoBehaviour
         switch (state)
         {
             case State.Idle:
-                if (!blocked && cooldownLeft <= 0f && PixelInput.LeftPressed() && !PixelInput.PointerOverUI() && clicker.IsLiveCubeAt(pointer) && AllowedBlock())
+                if (!blocked && cooldownLeft <= 0f && PixelInput.LeftPressed() && !PixelInput.PointerOverUI() && !PixelClicker.ExternalClickBlock && clicker.IsLiveCubeAt(pointer) && AllowedBlock())
                 {
                     state = State.Pressed;
                     pressTime = Time.unscaledTime;
@@ -98,11 +107,20 @@ public class PixelPowerClick : MonoBehaviour
                 break;
             case State.Pressed:
                 if (blocked || !PixelInput.LeftHeld()) { Cancel(); break; }
-                if (Time.unscaledTime - pressTime >= holdDelay) { state = State.Charging; charge = 0f; PixelAudio.Play("overcharge", 0.6f); }
+                if (Time.unscaledTime - pressTime >= holdDelay) { state = State.Charging; charge = savedCharge; savedCharge = 0f; PixelAudio.Play("overcharge", 0.6f); }   // (a charge cancelled with a right click carries on from where it stopped)
                 break;
             case State.Charging:
             case State.Ready:
                 if (blocked || !AllowedBlock()) { Cancel(); break; }
+                if (PixelInput.RightPressed())
+                {
+                    // RIGHT CLICK = cancel, keeping the charge: the next power click starts at this level (no cooldown). PixelRightClick gives this
+                    // press to the charge (Owner.Charge), so it never starts Block Hold or clears a hazard.
+                    savedCharge = charge;
+                    Cancel();
+                    PixelAudio.Play("ui_click", 0.8f);
+                    break;
+                }
                 if (!PixelInput.LeftHeld())
                 {
                     if (state == State.Ready) Fire(cam);
@@ -118,6 +136,7 @@ public class PixelPowerClick : MonoBehaviour
                 break;
         }
 
+        Charging = state == State.Charging || state == State.Ready;
         EnsureUI();
         LayoutRings(cam, pointer);
         UpdateFx();
@@ -144,6 +163,7 @@ public class PixelPowerClick : MonoBehaviour
 
     private void Cancel()
     {
+        Charging = false;
         state = State.Idle;
         charge = 0f;
         StopShake();
@@ -151,6 +171,7 @@ public class PixelPowerClick : MonoBehaviour
 
     private void Fire(Camera cam)
     {
+        Charging = false;
         StopShake();
         state = State.Idle;
         charge = 0f;

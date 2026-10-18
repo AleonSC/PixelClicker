@@ -3,6 +3,7 @@
 //   ONE place that decides who a RIGHT click in the world belongs to (added with Husk Crush, 2026-10-17). Each user asks PixelRightClick.Current
 //   (worked out once per frame) instead of stacking its own checks. In order of priority:
 //   1. Blocked: a menu, the pointer over UI.
+//   1b. Charge: a Power Click is charging (PixelPowerClick.Charging) - a right press cancels it and keeps the charge; nothing else gets it.
 //   2. Tool: the Bank hose is out, a device is being placed, the Conveyor Belt Kit / a tester piece is placing - they keep the right button.
 //   3. Pet: a pet is under the pointer (or held / its menu is open) - right-click opens its menu (PixelPetsMenu).
 //   4. WorldPart: anything else holding the mouse (PixelClicker.ExternalClickBlock: a device part that claimed the pointer, the UFO Helper,
@@ -16,7 +17,8 @@
 //   while it stays held. A press that started on a husk stays the husk's: Current keeps answering Husk (Husk = that body, null once it is gone)
 //   until the button is let go, so a hold that drifts onto the cube never starts Block Hold (its deferred start re-asks Current while held) and
 //   a hold on the cube never turns into a husk charge (PixelHuskCrush only charges when PressOwner is Husk). The press is caught by whoever asks
-//   first that frame; PixelHuskCrush asks on every press frame, so it is always caught. Released = PressOwner None again.
+//   first that frame; PixelHuskCrush asks on every press frame, so it is always caught. Released = PressOwner None again. A press that cancelled a
+//   Power Click charge (Charge) is kept the same way, so Block Hold's deferred start never picks it up after the cancel.
 //   Users: PixelBlockHold.CanStart (Cube), PixelClicker's hazard / bottle right-click (Cube), PixelHuskCrush (Husk). Systems that still check the
 //   right button on their own (belt flip, device / tester-object removal holds, the pet menu itself) are covered by the order above; a NEW right-click
 //   use adds its owner here instead of its own check.
@@ -25,7 +27,7 @@ using UnityEngine;
 
 public static class PixelRightClick
 {
-    public enum Owner { None, Blocked, Tool, Pet, WorldPart, Cube, Husk }
+    public enum Owner { None, Blocked, Tool, Pet, WorldPart, Cube, Husk, Charge }
 
     private static int frame = -1;
     private static Owner owner, pressOwner;
@@ -48,7 +50,7 @@ public static class PixelRightClick
         if (frame == Time.frameCount) return;
         frame = Time.frameCount;
         bool pressed = PixelInput.RightPressed(), held = PixelInput.RightHeld();
-        if (!pressed && held && pressOwner == Owner.Husk) { owner = Owner.Husk; husk = pressHusk; return; }   // a hold that started on a husk stays the husk's
+        if (!pressed && held && (pressOwner == Owner.Husk || pressOwner == Owner.Charge)) { owner = pressOwner; husk = pressOwner == Owner.Husk ? pressHusk : null; return; }   // a hold that started on a husk (or cancelled a power click) stays that owner's
         husk = null;
         owner = Decide(PixelFind.Cached<PixelClicker>());
         if (pressed) { pressOwner = owner; pressHusk = husk; }
@@ -58,6 +60,7 @@ public static class PixelRightClick
     private static Owner Decide(PixelClicker clicker)
     {
         if (clicker == null || PixelCalm.InMenu || PixelInput.PointerOverUI()) return Owner.Blocked;
+        if (PixelPowerClick.Charging) return Owner.Charge;   // a power click is charging: the right button cancels it (keeping the charge)
         PixelConsumables consumables = PixelFind.Cached<PixelConsumables>();
         if (PixelBank.HoseOn || PixelFeatureTester.Placing || (consumables != null && consumables.IsPlacing)) return Owner.Tool;
         if (PixelPets.HoveringPet) return Owner.Pet;

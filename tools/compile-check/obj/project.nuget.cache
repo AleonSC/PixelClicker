@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "OmFLsrhR/Jz3kdmVgQpuuMLAIXFAKPnfzW8ZLiQmQw5yMRYNBN2rTUBsa2RYwGbBWZ2vf2kyFjsnW86t72fqCg==",
+  "dgSpecHash": "LMXymrSSuggFvXDqF8TsG658fkuCGBTw9gY6qL4F2VaDj7DNLVu1c3aIIujJWvDuuSIQx5Q9S90lmktMn9soHw==",
   "success": true,
-  "projectFilePath": "/home/user/PixelClicker/.claude/worktrees/agent-a576a584a3fe34b9d/tools/compile-check/CompileCheck.csproj",
+  "projectFilePath": "/home/user/PixelClicker/tools/compile-check/CompileCheck.csproj",
   "expectedPackageFiles": [
     "/root/.nuget/packages/microsoft.netframework.referenceassemblies/1.0.3/microsoft.netframework.referenceassemblies.1.0.3.nupkg.sha512",
     "/root/.nuget/packages/microsoft.netframework.referenceassemblies.net48/1.0.3/microsoft.netframework.referenceassemblies.net48.1.0.3.nupkg.sha512"
