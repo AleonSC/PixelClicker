@@ -1395,3 +1395,4 @@
 [2026-10-18 13:29 UTC] Fixed the studio intro showing black and then cutting out after GAME OVER: it now waits for the launch hitches to settle, fades in, never jumps more than a short step per frame, and its space scene is scaled up so the tiny Earth renders properly.
 [2026-10-18 13:48 UTC] Studio intro: 'GAME OVER' now shows (drawn on the cabinet's screen instead of through the space camera), and the floor under the arcade cabinet is gone so it floats.
 [2026-10-18 13:55 UTC] Studio intro: the alien is bigger (Inspector size) and stands closer to the cabinet, the intro fades in smoothly over 1.2 s, and it waits at most 0.6 s on black after booting instead of up to 2 s.
+[2026-10-18 14:04 UTC] The main menu cube now changes block on the beat of the music that is playing; each song's tempo (and where its first beat lands) can be set in PixelAudio's new 'Music Tempos' list, songs not listed count as 90 bpm, and with no music the cube keeps its own 90 bpm pace.

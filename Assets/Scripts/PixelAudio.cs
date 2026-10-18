@@ -113,6 +113,25 @@ public partial class PixelAudio : MonoBehaviour
     [Tooltip("Volume of the music tracks (multiplied by the Music volume setting).")]
     [SerializeField] private float musicTrackVolume = 1f;
 
+    [Serializable]
+    public class TrackTempo
+    {
+        [Tooltip("The music clip (a Music Track or a music cue's clip).")]
+        public AudioClip clip;
+        [Min(1f)]
+        [Tooltip("The song's tempo in beats per minute.")]
+        public float bpm = 90f;
+        [Min(0f)]
+        [Tooltip("Seconds into the song where the first beat lands (any silence or pickup before it).")]
+        public float firstBeatSeconds = 0f;
+    }
+
+    [Tooltip("Tempo of songs that are not in 'Music Tempos' (beats per minute). Things that move to the music (the main menu cube) use it.")]
+    [SerializeField] private float defaultMusicBpm = 90f;
+
+    [Tooltip("Each song's tempo and where its first beat lands, so things can move in time with it (the main menu cube changes on the beat). Songs not listed use 'Default Music Bpm' with the first beat at 0 s.")]
+    [SerializeField] private List<TrackTempo> musicTempos = new List<TrackTempo>();
+
     // ------------------------------------------------------------------
     // Runtime
     // ------------------------------------------------------------------
@@ -862,6 +881,26 @@ public partial class PixelAudio : MonoBehaviour
             if (cueActive >= 0 && cueSource != null && cueSource.clip != null && cueGain > 0.05f) return cueSource.clip;
             return musicSource != null ? musicSource.clip : null;
         }
+    }
+
+    /// <summary>
+    /// Where the audible music is in beats (0 = its first beat, 1.5 = halfway between the 2nd and 3rd; negative = before the first beat),
+    /// from the playing source's sample position and the song's tempo in musicTempos (defaultMusicBpm when not listed).
+    /// False while no music plays (stopped, paused, between songs) - the caller then keeps its own clock.
+    /// </summary>
+    public bool TryGetMusicBeat(out double beat)
+    {
+        beat = 0d;
+        AudioSource src = cueActive >= 0 && cueSource != null && cueSource.clip != null && cueGain > 0.05f ? cueSource : musicSource;
+        if (src == null || src.clip == null || !src.isPlaying || src.clip.frequency <= 0) return false;
+        float bpm = defaultMusicBpm, first = 0f;
+        if (musicTempos != null)
+            for (int i = 0; i < musicTempos.Count; i++)
+                if (musicTempos[i] != null && musicTempos[i].clip == src.clip) { bpm = musicTempos[i].bpm; first = musicTempos[i].firstBeatSeconds; break; }
+        if (bpm <= 0f) return false;
+        double seconds = (double)src.timeSamples / src.clip.frequency;   // (sample position: exact, unlike AudioSource.time)
+        beat = (seconds - first) * bpm / 60d;
+        return true;
     }
 
     /// <summary>The Music Tracks index of a clip (-1 = not one of them).</summary>
