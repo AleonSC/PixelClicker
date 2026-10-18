@@ -557,6 +557,8 @@ public class PixelCrafting : MonoBehaviour
     private GameObject tipRoot;
     private RectTransform tipRect;
     private TMP_Text tipLabel;
+    private string tipMeasured;   // (the tip text last measured)
+    private RectTransform tipCanvasRect;
 
     /// <summary>The empty boxes breathe (a faint plus and a glowing rim); a box under the mouse lights up, a filled one glows steadily.</summary>
     private void AnimateSlots()
@@ -606,12 +608,17 @@ public class PixelCrafting : MonoBehaviour
         }
         if (!tipRoot.activeSelf) tipRoot.SetActive(true);
         tipRoot.transform.SetAsLastSibling();
-        if (tipLabel.text != craftTip) tipLabel.text = craftTip;
-        float width = 380f;
-        float height = Mathf.Ceil(tipLabel.GetPreferredValues(craftTip, width - 28f, 0f).y) + 18f;
-        tipRect.sizeDelta = new Vector2(width, height);
+        if (tipLabel.text != craftTip || tipMeasured != craftTip)   // (measured only when the text changed)
+        {
+            tipLabel.text = craftTip;
+            tipMeasured = craftTip;
+            float width = 380f;
+            float height = Mathf.Ceil(tipLabel.GetPreferredValues(craftTip, width - 28f, 0f).y) + 18f;
+            tipRect.sizeDelta = new Vector2(width, height);
+        }
 
-        RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
+        if (tipCanvasRect == null) tipCanvasRect = canvasRoot.GetComponent<RectTransform>();
+        RectTransform canvasRect = tipCanvasRect;
         if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local)) return;
         PixelUIKit.PlaceTooltip(tipRect, canvasRect, local);
     }

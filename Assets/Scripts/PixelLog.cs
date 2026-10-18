@@ -598,6 +598,11 @@ public class PixelLog : MonoBehaviour
         return t >= 0 ? clicker.Tiers[t].displayName : type.ToString();
     }
 
+    // The tip's text is built again when the hovered row changes or every 0.2 s (its progress can move); it is measured only when the text changed.
+    private int tipShownTab = -1, tipShownIndex = -1;
+    private float tipRebuildTimer;
+    private string tipShownText;
+
     private void UpdateAchievementTip()
     {
         bool showAch = currentTab == 1 && hoverAchievement >= 0 && achievements != null && hoverAchievement < achievements.Count;
@@ -623,11 +628,21 @@ public class PixelLog : MonoBehaviour
         if (!tipRoot.activeSelf) tipRoot.SetActive(true);
         tipRoot.transform.SetAsLastSibling();
 
-        string text = showGoal ? GoalTipText(shownGoals[hoverGoal]) : AchievementTipText(hoverAchievement);
-        const float width = 620f;
-        tipLabel.text = text;
-        float h = Mathf.Ceil(tipLabel.GetPreferredValues(text, width - 32f, 0f).y) + 28f;
-        tipRect.sizeDelta = new Vector2(width, h);
+        int index = showGoal ? hoverGoal : hoverAchievement;
+        tipRebuildTimer -= Time.unscaledDeltaTime;
+        if (currentTab != tipShownTab || index != tipShownIndex || tipRebuildTimer <= 0f)
+        {
+            tipShownTab = currentTab; tipShownIndex = index; tipRebuildTimer = 0.2f;
+            string text = showGoal ? GoalTipText(shownGoals[hoverGoal]) : AchievementTipText(hoverAchievement);
+            if (text != tipShownText)
+            {
+                tipShownText = text;
+                const float width = 620f;
+                tipLabel.text = text;
+                float h = Mathf.Ceil(tipLabel.GetPreferredValues(text, width - 32f, 0f).y) + 28f;
+                tipRect.sizeDelta = new Vector2(width, h);
+            }
+        }
 
         RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
         RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local);

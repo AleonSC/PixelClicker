@@ -6,6 +6,8 @@
 //   clipped until it has slid below it and is drawn OVER the bar's edge effect). It slides back under the bar when the text is empty or Show(label, false).
 //   Create(..., stackBelow: true) hangs the box under the other boxes (PixelStatusLines uses it). Show(label, bool) / IsShown(label). Box size follows the text (boxPadding, maxWidth). A thin accent line along the bottom takes the label's colour.
 //   Fixed look values live in the consts at the top (not Inspector fields: the box has no component of its own in the scene).
+//   Cheap when idle: the text is measured only when it (or the font size) changes, and the layout is only written when something moved
+//   (slide, bar height, the box above, text, colour), so a settled box - hidden or shown - costs a few comparisons a frame.
 // ----------------------
 using TMPro;
 using UnityEngine;
@@ -25,6 +27,15 @@ public class PixelStatusBox : MonoBehaviour
     private bool wanted = true, stackBelow;
     private float shownBottom;   // how far below the bar this box currently reaches (so a stackBelow box starts under it)
     private float slide;   // 0 = hidden under the bar, 1 = fully out
+
+    // What the last Layout used: it only runs again when one of these changed.
+    private string measuredText;
+    private float measuredFontSize = -1f;
+    private Vector2 measured;
+    private float laidSlide = -1f, laidBar = -1f, laidBelow = -1f;
+    private Color laidColor;
+
+    private static readonly System.Collections.Generic.Dictionary<TMP_Text, PixelStatusBox> byLabel = new System.Collections.Generic.Dictionary<TMP_Text, PixelStatusBox>();
 
     /// <summary>Makes the box (inside a clipping strip under the top bar) and returns its text label. stackBelow = it hangs under the other status boxes instead of right under the bar.</summary>
     public static TMP_Text Create(TMP_FontAsset font, Transform canvas, float fontSize, bool stackBelow = false)
@@ -54,6 +65,7 @@ public class PixelStatusBox : MonoBehaviour
         PixelStatusBox sb = clipGo.AddComponent<PixelStatusBox>();
         sb.label = text; sb.clip = clipGo.GetComponent<RectTransform>(); sb.box = boxGo.GetComponent<RectTransform>();
         sb.boxImage = bg; sb.accent = acc; sb.stackBelow = stackBelow;
+        byLabel[text] = sb;
         sb.Layout(0f);
         return text;
     }
@@ -61,46 +73,73 @@ public class PixelStatusBox : MonoBehaviour
     /// <summary>Slides the box out (true) or back under the bar (false). An empty text also keeps it hidden.</summary>
     public static void Show(TMP_Text label, bool shown)
     {
-        PixelStatusBox sb = label != null ? label.GetComponentInParent<PixelStatusBox>() : null;
+        PixelStatusBox sb = BoxOf(label);
         if (sb != null) sb.wanted = shown;
     }
 
     /// <summary>Is the box showing (mostly slid out)?</summary>
     public static bool IsShown(TMP_Text label)
     {
-        PixelStatusBox sb = label != null ? label.GetComponentInParent<PixelStatusBox>() : null;
+        PixelStatusBox sb = BoxOf(label);
         return sb != null && sb.wanted && sb.slide > 0.5f;
     }
+
+    private static PixelStatusBox BoxOf(TMP_Text label)
+    {
+        if (label == null) return null;
+        if (byLabel.TryGetValue(label, out PixelStatusBox sb) && sb != null) return sb;
+        sb = label.GetComponentInParent<PixelStatusBox>();   // (a label made before this list existed)
+        if (sb != null) byLabel[label] = sb;
+        return sb;
+    }
+
+    private void OnDestroy() { if (label != null) byLabel.Remove(label); }
 
     private void OnEnable() { if (!all.Contains(this)) all.Add(this); }
     private void OnDisable() { all.Remove(this); }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { all.Clear(); }
+    private static void ResetStatics() { all.Clear(); byLabel.Clear(); }
 
     private void LateUpdate()
     {
         if (label == null) return;
         bool visible = wanted && !string.IsNullOrEmpty(label.text);
         slide = Mathf.MoveTowards(slide, visible ? 1f : 0f, Time.unscaledDeltaTime / SlideSeconds);
+        float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
+        float below = stackBelow ? BelowOthers() : 0f;
+        if (slide == laidSlide && bar == laidBar && below == laidBelow && label.text == measuredText
+            && label.fontSize == measuredFontSize && label.color == laidColor) return;   // nothing moved: the layout from last frame still stands
         Layout(slide);
+    }
+
+    private float BelowOthers()
+    {
+        float below = 0f;
+        foreach (PixelStatusBox other in all)
+            if (other != null && other != this && !other.stackBelow) below = Mathf.Max(below, other.shownBottom);
+        return below;
     }
 
     private void Layout(float t)
     {
         float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        string text = string.IsNullOrEmpty(label.text) ? " " : label.text;
-        Vector2 pref = label.GetPreferredValues(text);
-        if (pref.x + Padding.x * 2f > MaxWidth)
-            pref = new Vector2(MaxWidth - Padding.x * 2f, label.GetPreferredValues(text, MaxWidth - Padding.x * 2f, 0f).y);   // too wide for one line: measure the wrapped height so the box grows to fit every line
-        float w = Mathf.Min(pref.x + Padding.x * 2f, MaxWidth), h = pref.y + Padding.y * 2f + AccentHeight;
+        if (label.text != measuredText || label.fontSize != measuredFontSize)
+        {
+            measuredText = label.text;
+            measuredFontSize = label.fontSize;
+            string text = string.IsNullOrEmpty(label.text) ? " " : label.text;
+            Vector2 pref = label.GetPreferredValues(text);
+            if (pref.x + Padding.x * 2f > MaxWidth)
+                pref = new Vector2(MaxWidth - Padding.x * 2f, label.GetPreferredValues(text, MaxWidth - Padding.x * 2f, 0f).y);   // too wide for one line: measure the wrapped height so the box grows to fit every line
+            measured = pref;
+        }
+        Vector2 pref2 = measured;
+        float w = Mathf.Min(pref2.x + Padding.x * 2f, MaxWidth), h = pref2.y + Padding.y * 2f + AccentHeight;
 
         clip.anchorMin = new Vector2(0f, 1f); clip.anchorMax = new Vector2(1f, 1f); clip.pivot = new Vector2(0.5f, 1f);
         clip.sizeDelta = new Vector2(0f, h + GapBelowBar + 24f);
-        float below = 0f;
-        if (stackBelow)
-            foreach (PixelStatusBox other in all)
-                if (other != null && other != this && !other.stackBelow) below = Mathf.Max(below, other.shownBottom);
+        float below = stackBelow ? BelowOthers() : 0f;
         clip.anchoredPosition = new Vector2(0f, -(bar + below));
 
         float e = 1f - (1f - t) * (1f - t) * (1f - t);   // ease out
@@ -112,5 +151,6 @@ public class PixelStatusBox : MonoBehaviour
 
         Color c = label.color;
         accent.color = new Color(c.r, c.g, c.b, 0.85f * c.a);
+        laidSlide = t; laidBar = bar; laidBelow = below; laidColor = c;
     }
 }

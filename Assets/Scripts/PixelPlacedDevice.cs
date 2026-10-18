@@ -298,7 +298,7 @@ public abstract class PixelPlacedDevice : MonoBehaviour
         if (!Armed)
         {
             // Waiting for the first click: no countdown, no effect.
-            if (timerText != null && timerText.text != DisarmedText) timerText.text = DisarmedText;
+            if (timerText != null && timerText.text != DisarmedText) { timerText.text = DisarmedText; shownSeconds = int.MinValue; }
             return;
         }
 
@@ -306,7 +306,7 @@ public abstract class PixelPlacedDevice : MonoBehaviour
         {
             OnTick();
             if (dying) return;
-            if (timerText != null) timerText.text = UsesLabel();
+            if (timerText != null) { timerText.text = UsesLabel(); shownSeconds = int.MinValue; }
             return;
         }
 
@@ -318,8 +318,20 @@ public abstract class PixelPlacedDevice : MonoBehaviour
         }
 
         OnTick();
-        if (timerText != null) timerText.text = string.Format(timerFormat, Mathf.CeilToInt(remaining)) + (Powered ? "\n<color=#7FD4FF>POWERED</color>" : "");
+        if (timerText != null)
+        {
+            int secondsShown = Mathf.CeilToInt(remaining);
+            if (secondsShown != shownSeconds || Powered != shownPowered)   // (only when the number or the POWERED line changes, not every frame)
+            {
+                shownSeconds = secondsShown;
+                shownPowered = Powered;
+                timerText.text = string.Format(timerFormat, secondsShown) + (Powered ? "\n<color=#7FD4FF>POWERED</color>" : "");
+            }
+        }
     }
+
+    private int shownSeconds = int.MinValue;
+    private bool shownPowered;
 
     private void LateUpdate()
     {

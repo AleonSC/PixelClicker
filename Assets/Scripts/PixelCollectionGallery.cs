@@ -394,13 +394,20 @@ public class PixelCollectionGallery : MonoBehaviour
     }
 
     private readonly List<Item> byDistance = new List<Item>();
+    private Vector3 sortEye;
+    private System.Comparison<Item> byEyeDistance;   // (made once: a lambda capturing 'eye' made a new delegate every frame)
+    private int CompareByEye(Item a, Item b) => (a.root.position - sortEye).sqrMagnitude.CompareTo((b.root.position - sortEye).sqrMagnitude);
+    private Item infoShown;
+    private bool infoShownKnown, infoShowing;
 
     /// <summary>Only the nearest few cube lights are on (the pipeline only shades so many at once, and they would pop in and out otherwise); the floor grid glows round you and every cube.</summary>
     private void UpdateLights(Vector3 eye)
     {
         byDistance.Clear();
         byDistance.AddRange(items);
-        byDistance.Sort((a, b) => (a.root.position - eye).sqrMagnitude.CompareTo((b.root.position - eye).sqrMagnitude));
+        sortEye = eye;
+        if (byEyeDistance == null) byEyeDistance = CompareByEye;
+        byDistance.Sort(byEyeDistance);
         int lit = 0;
         foreach (Item it in byDistance)
         {
@@ -429,6 +436,9 @@ public class PixelCollectionGallery : MonoBehaviour
             float a = Vector3.Angle(fwd, to);
             if (a < bestAngle) { bestAngle = a; best = it; }
         }
+        // (the text is only built again when the cube in front of you changes)
+        if (best == infoShown && infoShowing == (best != null) && (best == null || best.known == infoShownKnown)) return;
+        infoShown = best; infoShowing = best != null; infoShownKnown = best != null && best.known;
         if (best == null) { infoLabel.text = ""; return; }
         string name = best.known ? PixelCollectionLog.EntryName(clicker, best.entry) : "???";
         string text = best.known ? PixelCollectionLog.EntryFlavour(best.entry) : "Not found yet";

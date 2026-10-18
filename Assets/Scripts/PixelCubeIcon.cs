@@ -1,6 +1,8 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelCubeIcon.cs
 //   UI MaskableGraphic drawing a tiny spinning shaded 3D cube (no camera/render texture) - achievement icons.
+//   Redraws at most PixelTierPicture.MaxFps times a second (the shared redraw limit, PixelTierPicture.Due) and not at all while culled
+//   (scrolled out of a masked list); the vertex buffers are shared, so a redraw allocates nothing.
 // ---------------------------------------------------
 using UnityEngine;
 using UnityEngine.UI;
@@ -35,10 +37,18 @@ public class PixelCubeIcon : MaskableGraphic
         raycastTarget = false;
     }
 
+    private float lastDrawn = -1f;
+
     private void Update()
     {
+        if (canvasRenderer != null && canvasRenderer.cull) return;   // scrolled out of view: nothing to redraw
+        if (!PixelTierPicture.Due(ref lastDrawn)) return;           // (each redraw rebuilds the canvas batch: ~30 a second is plenty for a slow spin)
         SetVerticesDirty(); // redraw with the new angle
     }
+
+    // Shared by every icon (OnPopulateMesh runs on the main thread, one icon at a time).
+    private static readonly UIVertex[] quad = new UIVertex[4];
+    private static readonly Vector3[] corners = new Vector3[4];
 
     protected override void OnPopulateMesh(VertexHelper vh)
     {
@@ -52,7 +62,6 @@ public class PixelCubeIcon : MaskableGraphic
         // Spin around the cube's own vertical axis first, then tip the top toward the viewer.
         Quaternion rotation = Quaternion.Euler(-tiltDegrees, 0f, 0f) * Quaternion.Euler(0f, yaw, 0f);
 
-        UIVertex[] quad = new UIVertex[4];
         foreach (Vector3 normal in Normals)
         {
             Vector3 n = rotation * normal;
@@ -62,10 +71,7 @@ public class PixelCubeIcon : MaskableGraphic
             Vector3 u = normal.x != 0f ? Vector3.up : Vector3.right;
             Vector3 v = Vector3.Cross(normal, u);
 
-            Vector3[] corners =
-            {
-                normal + u + v, normal + u - v, normal - u - v, normal - u + v
-            };
+            corners[0] = normal + u + v; corners[1] = normal + u - v; corners[2] = normal - u - v; corners[3] = normal - u + v;
 
             float light = 0.5f + 0.5f * Mathf.Max(0f, Vector3.Dot(n, LightDirection));
             Color faceColor = new Color(color.r * light, color.g * light, color.b * light, color.a);

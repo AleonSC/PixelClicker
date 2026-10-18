@@ -571,6 +571,9 @@ public partial class PixelSkills
         go.SetActive(false);
     }
 
+    private string tipMeasured;
+    private RectTransform tipCanvasRect;
+
     private void UpdateTip()
     {
         if (tipRect == null) return;
@@ -578,13 +581,17 @@ public partial class PixelSkills
         bool show = !string.IsNullOrEmpty(text);
         if (tipRect.gameObject.activeSelf != show) tipRect.gameObject.SetActive(show);
         if (!show) return;
-        PixelUIKit.SetText(tipText, text);
-        float wrap = Mathf.Min(460f, tipText.GetPreferredValues(text).x + 4f);   // (short tips like the XP box fit their text; long ones wrap at 460)
-        Vector2 pref = tipText.GetPreferredValues(text, wrap, 0f);
-        tipText.rectTransform.sizeDelta = new Vector2(wrap, pref.y);
-        Vector2 size = new Vector2(wrap + 28f, pref.y + 20f);
-        tipRect.sizeDelta = size;
-        RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
+        if (text != tipMeasured)   // (measured only when the text changed, not every frame while hovering)
+        {
+            tipMeasured = text;
+            PixelUIKit.SetText(tipText, text);
+            float wrap = Mathf.Min(460f, tipText.GetPreferredValues(text).x + 4f);   // (short tips like the XP box fit their text; long ones wrap at 460)
+            Vector2 pref = tipText.GetPreferredValues(text, wrap, 0f);
+            tipText.rectTransform.sizeDelta = new Vector2(wrap, pref.y);
+            tipRect.sizeDelta = new Vector2(wrap + 28f, pref.y + 20f);
+        }
+        if (tipCanvasRect == null) tipCanvasRect = canvasRoot.GetComponent<RectTransform>();
+        RectTransform canvasRect = tipCanvasRect;
         RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local);
         PixelUIKit.PlaceTooltip(tipRect, canvasRect, local);
         tipRect.SetAsLastSibling();

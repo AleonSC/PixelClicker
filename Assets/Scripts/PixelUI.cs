@@ -2350,6 +2350,14 @@ public class PixelUI : MonoBehaviour
 
     private float windowFade = 1f;
 
+    // The guide line is worked out ~10 times a second (it formats numbers and looks at the goals), and the box is only re-measured
+    // when its text or size changed (it used to do both every frame for the whole early game).
+    private const float GuideRebuildSeconds = 0.1f;
+    private float guideRebuildTimer;
+    private string builtGuideText, measuredGuideText;
+    private float measuredGuideSize = -1f;
+    private RectTransform guideRootRect;
+
     private void UpdateGuide()
     {
         if (guideLabel == null) return;
@@ -2370,7 +2378,9 @@ public class PixelUI : MonoBehaviour
         }
         else if (showTierGuide && !PixelHints.IntroHoldsGuide) // hidden until the new-game intro tips have been read
         {
-            text = BuildGuideText();
+            guideRebuildTimer -= Time.unscaledDeltaTime;
+            if (guideRebuildTimer <= 0f) { guideRebuildTimer = GuideRebuildSeconds; builtGuideText = BuildGuideText(); }
+            text = builtGuideText;
         }
         if (PixelGuideVendor.ShopHold) { text = shopGuideText; unlockTimer = 0f; }   // Cubie's hold: the 'buy the RGB Pack' line stays and animates
         PixelClicker.ClickHint = unlockTimer <= 0f && !string.IsNullOrEmpty(text) && showTierGuide; // the cube pulses while this text shows and nothing was collected yet
@@ -2400,10 +2410,15 @@ public class PixelUI : MonoBehaviour
         bg.a = guideBackgroundOpacity * fade;
         guideBackground.color = bg;
 
-        // Fit the box around the text.
-        Vector2 preferred = guideLabel.GetPreferredValues(text);
-        guideRoot.GetComponent<RectTransform>().sizeDelta =
-            new Vector2(preferred.x + guideBoxPadding.x * 2f, preferred.y + guideBoxPadding.y * 2f);
+        // Fit the box around the text (only when the text or its size changed).
+        if (text != measuredGuideText || size != measuredGuideSize)
+        {
+            measuredGuideText = text;
+            measuredGuideSize = size;
+            Vector2 preferred = guideLabel.GetPreferredValues(text);
+            if (guideRootRect == null) guideRootRect = guideRoot.GetComponent<RectTransform>();
+            guideRootRect.sizeDelta = new Vector2(preferred.x + guideBoxPadding.x * 2f, preferred.y + guideBoxPadding.y * 2f);
+        }
     }
 
     private void BuildActiveHud()
@@ -2418,6 +2433,11 @@ public class PixelUI : MonoBehaviour
         }
     }
 
+    // The potion line's texts, made again only when what they show changed (they used to be formatted every frame).
+    private string hudPlacingOwn, hudPlacingName, hudPlacingText;
+    private int hudPotionIndex = -1, hudPotionSeconds = -1;
+    private string hudPotionText, hudCancelText;
+
     private void UpdateActiveHud()
     {
         if (hudLabel == null) return;
@@ -2430,24 +2450,37 @@ public class PixelUI : MonoBehaviour
 
         if (placing)
         {
-            string own = consumables.PlacingMessage;
-            hudLabel.text = string.Format(string.IsNullOrEmpty(own) ? placingHudFormat : own, consumables.PlacingName);
+            string own = consumables.PlacingMessage, placingName = consumables.PlacingName;
+            if (hudPlacingText == null || own != hudPlacingOwn || placingName != hudPlacingName)
+            {
+                hudPlacingOwn = own; hudPlacingName = placingName;
+                hudPlacingText = string.Format(string.IsNullOrEmpty(own) ? placingHudFormat : own, placingName);
+            }
+            hudLabel.text = hudPlacingText;
             hudLabel.color = Color.white;
             return;
         }
 
         // Hold the right mouse button on the line to cancel the potion.
         PixelConsumables.Potion running = consumables.Get(consumables.ActiveIndex);
+        int secondsLeft = Mathf.CeilToInt(consumables.Remaining);
+        if (hudPotionText == null || consumables.ActiveIndex != hudPotionIndex || secondsLeft != hudPotionSeconds)
+        {
+            if (consumables.ActiveIndex != hudPotionIndex || hudCancelText == null) hudCancelText = string.Format(consumables.CancelPotionText, running.displayName);
+            hudPotionIndex = consumables.ActiveIndex;
+            hudPotionSeconds = secondsLeft;
+            hudPotionText = string.Format(activeHudFormat, running.displayName, secondsLeft);
+        }
         if (PixelHold.Update(this, PointerOverHudLabel() ? hudLabel : null, consumables.RemoveHoldSeconds,
-                             string.Format(consumables.CancelPotionText, running.displayName), consumables.RemoveMeterColor))
+                             hudCancelText, consumables.RemoveMeterColor))
         {
             consumables.CancelActive();
             PixelRemoveTint.Shake(hudLabel.transform, 0f);
             return;
         }
 
-        PixelConsumables.Potion potion = consumables.Get(consumables.ActiveIndex);
-        hudLabel.text = string.Format(activeHudFormat, potion.displayName, Mathf.CeilToInt(consumables.Remaining));
+        PixelConsumables.Potion potion = running;
+        hudLabel.text = hudPotionText;
 
         int tierIndex = clicker.IndexOf(potion.type);
         Color lineColor = activeHudUsesTierColor && tierIndex >= 0 ? clicker.Tiers[tierIndex].UIColor : Color.white;

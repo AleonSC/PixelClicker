@@ -83,6 +83,7 @@ public static class PixelKeys
         typingFrame = -1;
         current = null;
         Changed = null;
+        replaced.Clear();
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
         reverse = null;
 #endif
@@ -95,6 +96,7 @@ public static class PixelKeys
     {
         current = null;
         Load();
+        replaced.Clear();   // (the key names in already-replaced texts are out of date)
         Changed?.Invoke();
     }
 
@@ -133,6 +135,7 @@ public static class PixelKeys
         }
         current[index] = key;
         Save(index);
+        replaced.Clear();   // (the key names in already-replaced texts are out of date)
         Changed?.Invoke();
     }
 
@@ -144,6 +147,7 @@ public static class PixelKeys
             current[i] = Defaults[i];
             Save(i);
         }
+        replaced.Clear();   // (the key names in already-replaced texts are out of date)
         Changed?.Invoke();
     }
 
@@ -192,9 +196,22 @@ public static class PixelKeys
     /// Replaces {key:Action} placeholders with the current key names. Older texts that still spell out the default keys
     /// ("Q / E", "Press T to freeze time", "press B for the hose") are updated too.
     /// </summary>
+    // Replace runs every frame for some texts (the Time Stop meter, the device placing message) and builds ~30 strings each time:
+    // the answer per input text is remembered until a binding changes (cleared with Changed). Capped so texts with changing numbers can't pile up.
+    private static readonly System.Collections.Generic.Dictionary<string, string> replaced = new System.Collections.Generic.Dictionary<string, string>();
+
     public static string Replace(string text)
     {
         if (string.IsNullOrEmpty(text)) return text;
+        if (replaced.TryGetValue(text, out string done)) return done;
+        string result = ReplaceNow(text);
+        if (replaced.Count >= 256) replaced.Clear();
+        replaced[text] = result;
+        return result;
+    }
+
+    private static string ReplaceNow(string text)
+    {
 
         for (int i = 0; i < Defaults.Length; i++)
         {

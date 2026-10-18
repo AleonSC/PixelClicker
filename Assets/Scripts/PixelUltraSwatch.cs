@@ -5,6 +5,8 @@ using UnityEngine.UI;
 /// The animated swatch of the Ultra pixel row in the Inventory: a rounded chip whose colour slowly cycles through the rainbow,
 /// with a soft glow breathing behind it, a bright diagonal shine that sweeps across now and then, and a few twinkling sparkles.
 /// Put it on the swatch Image (it adds its own mask, glow, shine and sparkles). Uses unscaled time, so it keeps moving while paused.
+/// Every colour change makes the whole Inventory canvas rebuild, so it animates at most PixelTierPicture.MaxFps times a second
+/// (the shared redraw limit) and not at all while its row is scrolled out of view.
 /// </summary>
 public class PixelUltraSwatch : MonoBehaviour
 {
@@ -67,8 +69,12 @@ public class PixelUltraSwatch : MonoBehaviour
         if (glow != null) Destroy(glow.gameObject);
     }
 
+    private float lastDrawn = -1f;
+
     private void Update()
     {
+        if (image == null || image.canvasRenderer.cull) return;   // (scrolled out of the list)
+        if (!PixelTierPicture.Due(ref lastDrawn)) return;
         float t = Time.unscaledTime;
         Color c = Color.HSVToRGB(Mathf.Repeat(t * 0.22f, 1f), 0.62f, 1f);
         image.color = c;

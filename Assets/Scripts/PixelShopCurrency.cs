@@ -39,6 +39,9 @@ public partial class PixelShop
     private CurrencyRow[] currencyRows;
     private RectTransform currencyViewRect;
     private RectTransform currencyTipRect;
+    private string currencyTipShown;   // (the tip text last measured, so the box is only measured again when it changes)
+    private bool currencyTipWasCard;
+    private Vector2 currencyTipSize;
     private TMP_Text currencyTipText;
     private RectTransform currencyCanvasRect;
     private int currencyHover = -1;
@@ -260,7 +263,14 @@ public partial class PixelShop
 
         // A purchase card's '!' box shows the item's description (wrapped); the currency list shows name + amount on one line each.
         Vector2 size;
-        if (cardTip)
+        string wanted = cardTip ? tipString : null;
+        if (!cardTip)
+        {
+            PixelClicker.PixelTier hovered = clicker.Tiers[currencyHover];
+            wanted = hovered.displayName + "\n" + hovered.count.ToString("#,0.##");
+        }
+        if (wanted == currencyTipShown && cardTip == currencyTipWasCard) size = currencyTipSize;   // (same text as last frame: no need to measure it again)
+        else if (cardTip)
         {
             const float wrapWidth = 460f;
 #if UNITY_2023_1_OR_NEWER
@@ -280,11 +290,11 @@ public partial class PixelShop
 #else
             currencyTipText.enableWordWrapping = false;
 #endif
-            PixelClicker.PixelTier tier = clicker.Tiers[currencyHover];
-            PixelUIKit.SetText(currencyTipText, tier.displayName + "\n" + tier.count.ToString("#,0.##"));
+            PixelUIKit.SetText(currencyTipText, wanted);
             size = currencyTipText.GetPreferredValues() + new Vector2(28f, 20f);
             currencyTipText.rectTransform.sizeDelta = size - new Vector2(28f, 20f);
         }
+        currencyTipShown = wanted; currencyTipWasCard = cardTip; currencyTipSize = size;
         currencyTipRect.sizeDelta = size;
 
         Vector2 local;
