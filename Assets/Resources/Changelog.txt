@@ -1388,3 +1388,5 @@
 [2026-10-18 12:55 UTC] Menu screens (Settings, Stats, Save / Load, Guide, Key binds...) now have a sunken title plate with a glowing accent line: the X sits neatly inside its right end, a small pixel ornament balances it on the left, and the title is centred between them.
 [2026-10-18 12:58 UTC] Added a pinned Sound session to the project notes: it looks after all of the game's audio (sound system, code-made sounds, music, volumes, the Dev Hub Sounds tab) and its work goes straight to the main branch.
 [2026-10-18 13:00 UTC] The main menu cube now changes block in time at 90 beats per minute (one change per beat, about every 0.67 s) instead of once a second; the tempo is the 'Cube Show Bpm' value on the title screen.
+[2026-10-18 13:07 UTC] The main pause menu now has the same title plate as the other menu screens, with 'Paused' on the left and the search box set into its right end.
+[2026-10-18 13:07 UTC] Fancy pause menu: every so often a small cube in one of your pixel colours drops out from behind a menu window's title plate and falls behind the buttons with a glowing light trail.

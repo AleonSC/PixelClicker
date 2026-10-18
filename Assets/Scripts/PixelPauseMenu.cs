@@ -1147,28 +1147,34 @@ public class PixelPauseMenu : MonoBehaviour
         panelRect.sizeDelta = panelSize;
         panelRect.anchoredPosition = Vector2.zero;
 
-        TMP_Text title = MakeText(panel.transform, "Title", menuTitle, titleFontSize, FontStyles.Bold);
+        // The same title plate as every menu screen: "Paused" on the left (after the ornament), the search box in its right end (where the X sits elsewhere).
+        RectTransform plate = BuildTitlePlate(panel.transform);
+        float plateSide = PlateHeight - 2f * PlatePad;
+        float searchWidth = (mainPanelWidth - 2f * PlateMargin) * 0.5f;
+        TMP_Text title = MakeText(plate, "Title", menuTitle, titleFontSize, FontStyles.Bold);
         PixelUIKit.Caps(title);
-        title.alignment = TextAlignmentOptions.MidlineLeft;   // "Paused" on the left, the search box on the right
+        title.raycastTarget = false;
+        title.alignment = TextAlignmentOptions.MidlineLeft;
+        title.enableAutoSizing = true;
+        title.fontSizeMax = titleFontSize;
+        title.fontSizeMin = 20f;
         RectTransform tr = title.rectTransform;
-        tr.anchorMin = new Vector2(0f, 1f);
-        tr.anchorMax = new Vector2(0.5f, 1f);
-        tr.pivot = new Vector2(0f, 1f);
-        tr.sizeDelta = new Vector2(0f, titleFontSize * 1.6f);
-        tr.anchoredPosition = new Vector2(40f, -30f);
+        tr.anchorMin = Vector2.zero;
+        tr.anchorMax = Vector2.one;
+        tr.offsetMin = new Vector2(PlatePad + plateSide + 12f, 2f);
+        tr.offsetMax = new Vector2(-(PlatePad + searchWidth + 12f), 0f);
 
-        float searchWidth = (mainPanelWidth - 80f) * 0.5f;
-        menuSearchField = PixelUIKit.CreateInputField(font, panel.transform, "Menu Search", new Vector2(searchWidth, titleFontSize * 1.2f),
+        menuSearchField = PixelUIKit.CreateInputField(font, plate, "Menu Search", new Vector2(searchWidth, plateSide),
                                                       tickBoxColor, textColor, rowFontSize * 0.85f, menuSearchPlaceholder);
         RectTransform msr = menuSearchField.GetComponent<RectTransform>();
-        msr.anchorMin = msr.anchorMax = msr.pivot = new Vector2(1f, 1f);
-        msr.sizeDelta = new Vector2(searchWidth, titleFontSize * 1.2f);
-        msr.anchoredPosition = new Vector2(-40f, -30f - titleFontSize * 0.2f);
+        msr.anchorMin = msr.anchorMax = msr.pivot = new Vector2(1f, 0.5f);
+        msr.sizeDelta = new Vector2(searchWidth, plateSide);
+        msr.anchoredPosition = new Vector2(-PlatePad, 0f);   // the same gaps as the X on the other screens
         menuSearchField.onValueChanged.AddListener(OnMenuSearchChanged);
         StyleSearchBox(menuSearchField);
-        menuSearchTop = 30f + titleFontSize * 1.6f + 20f;
+        menuSearchTop = PlateMargin + PlateHeight + 20f;
 
-        float y = 30f + titleFontSize * 1.6f + 20f;
+        float y = PlateMargin + PlateHeight + 20f;
         List<MenuEntry> entries = new List<MenuEntry>();
 
         // Build every screen first, then list the buttons in the order they appear (two per row).
@@ -1205,7 +1211,7 @@ public class PixelPauseMenu : MonoBehaviour
         mainEntries = entries;
 
         PixelMenuFx.BuildBackdrop(menuRoot.transform, panelRect);   // the fancy menu's motes, vignette and panel glow (hidden when the setting is off)
-        PixelMenuFx.BuildTitleLine(panelRect, 40f, -(30f + titleFontSize * 1.6f + 6f), mainPanelWidth - 80f);
+        PixelMenuFx.BuildTitleLine(panelRect, 40f, -(PlateMargin + PlateHeight + 8f), mainPanelWidth - 80f);   // (just under the title plate)
 
         menuRoot.SetActive(false);
     }
@@ -1270,11 +1276,34 @@ public class PixelPauseMenu : MonoBehaviour
         rect.sizeDelta = panelSize;
         rect.anchoredPosition = Vector2.zero;
 
-        // The title plate: a sunken rounded band across the top with a thin glowing accent line along its bottom. The X sits in its
-        // right end (AddCloseX) and a small pixel ornament mirrors it on the left, so the title is centred between two matched ends.
+        RectTransform plate = BuildTitlePlate(panel.transform);
+        float plateH = PlateHeight, side = plateH - 2f * PlatePad;
+        TMP_Text t = MakeText(plate, "Title", title, titleFontSize, FontStyles.Bold);
+        PixelUIKit.Caps(t);
+        t.raycastTarget = false;
+        t.enableAutoSizing = true;   // (a long title shrinks instead of running under the X)
+        t.fontSizeMax = titleFontSize;
+        t.fontSizeMin = 20f;
+        RectTransform tr = t.rectTransform;
+        tr.anchorMin = Vector2.zero;
+        tr.anchorMax = Vector2.one;
+        float room = PlatePad + side + 12f;   // the same room on both sides: truly centred
+        tr.offsetMin = new Vector2(room, 2f);
+        tr.offsetMax = new Vector2(-room, 0f);
+
+        y = PlateMargin + plateH + 16f;
+        return panel;
+    }
+
+    /// <summary>
+    /// The title plate across the top of a menu window: a sunken rounded band with a thin glowing accent line along its bottom and a
+    /// three-pixel ornament at its left end (the X or the search box sits in its right end). Small cubes fall from behind it (PixelMenuCubeFall).
+    /// </summary>
+    private RectTransform BuildTitlePlate(Transform panel)
+    {
         float plateH = PlateHeight;
         GameObject plateGo = new GameObject("Title Plate", typeof(RectTransform), typeof(Image));
-        plateGo.transform.SetParent(panel.transform, false);
+        plateGo.transform.SetParent(panel, false);
         Image plateImage = plateGo.GetComponent<Image>();
         plateImage.color = titlePlateColor;
         plateImage.raycastTarget = false;
@@ -1321,21 +1350,8 @@ public class PixelPauseMenu : MonoBehaviour
             dr.anchoredPosition = new Vector2((i - 1) * px * 1.25f, (1 - i) * px * 1.25f);
         }
 
-        TMP_Text t = MakeText(plate, "Title", title, titleFontSize, FontStyles.Bold);
-        PixelUIKit.Caps(t);
-        t.raycastTarget = false;
-        t.enableAutoSizing = true;   // (a long title shrinks instead of running under the X)
-        t.fontSizeMax = titleFontSize;
-        t.fontSizeMin = 20f;
-        RectTransform tr = t.rectTransform;
-        tr.anchorMin = Vector2.zero;
-        tr.anchorMax = Vector2.one;
-        float room = PlatePad + side + 12f;   // the same room on both sides: truly centred
-        tr.offsetMin = new Vector2(room, 2f);
-        tr.offsetMax = new Vector2(-room, 0f);
-
-        y = PlateMargin + plateH + 16f;
-        return panel;
+        PixelMenuFx.AddCubeFall(panel as RectTransform, plate);   // (fancy menu: little cubes with light trails drop from behind the plate)
+        return plate;
     }
 
     // The title plate's geometry (BuildSectionPanel / AddCloseX share it).

@@ -11,6 +11,8 @@
 //   * The SETTINGS and STATS screens get the lighter button animation (PixelMenuFx.DecorateAll: brighten, shine, press; no scaling inside scroll lists).
 //   * The docked HUD buttons also get the light animation WITH the idle shine (DecorateHud), and the SHOP gets the same treatment (its buttons, a glow behind the panel and the sliding title line; PixelShop.BuildPanel / CreateButton).
 //   * PixelQuitFx: the Quit to... box darkens the screen and pours flickering red neon light round the window (PixelPauseMenu.BuildQuitPanel).
+//   * PixelMenuCubeFall (PixelPauseMenu.BuildTitlePlate -> AddCubeFall): every so often a small cube in an unlocked pixel's colour slips out from behind a menu
+//     window's title plate and falls (gravity, a little spin) with a glowing light trail, behind the buttons, fading out before the window's bottom (pooled, clipped to the window).
 //   Everything runs on unscaled time (the game is paused while the menu shows).
 // ---------------------------------------------------
 using UnityEngine;
@@ -19,6 +21,19 @@ using UnityEngine.UI;
 
 public static class PixelMenuFx
 {
+    /// <summary>Small cubes with light trails that drop from behind a window's title plate now and then, behind everything else in the window.</summary>
+    public static void AddCubeFall(RectTransform panel, RectTransform plate)
+    {
+        if (panel == null || plate == null || panel.GetComponentInChildren<PixelMenuCubeFall>(true) != null) return;
+        GameObject layer = new GameObject("Cube Fall", typeof(RectTransform), typeof(RectMask2D), typeof(PixelMenuCubeFall));
+        layer.transform.SetParent(panel, false);
+        layer.transform.SetAsFirstSibling();   // behind the plate, the buttons and everything else in the window
+        RectTransform lr = layer.GetComponent<RectTransform>();
+        lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one;
+        lr.offsetMin = new Vector2(8f, 8f); lr.offsetMax = new Vector2(-8f, -8f);   // (clipped just inside the window's rounded edge)
+        layer.GetComponent<PixelMenuCubeFall>().plate = plate;
+    }
+
     private const string Pref = "PixelClicker.Setting.FancyMenu";
     private static int cache = -1;
 
@@ -635,5 +650,167 @@ public class PixelQuitFx : MonoBehaviour
         r.localScale = target.localScale;
         r.sizeDelta = target.sizeDelta + new Vector2(grow * 2f, grow * 2f);
         if (target.anchorMin != target.anchorMax) { r.offsetMin = target.offsetMin - new Vector2(grow, grow); r.offsetMax = target.offsetMax + new Vector2(grow, grow); }
+    }
+}
+
+
+/// <summary>
+/// The falling cubes behind a menu window (see PixelMenuFx.AddCubeFall): now and then a small cube in an unlocked pixel's colour slips out from under
+/// the title plate's bottom edge and falls with a glowing trail, spinning a little, fading out before the window's bottom. Pooled; fancy menu only.
+/// </summary>
+public class PixelMenuCubeFall : MonoBehaviour
+{
+    public RectTransform plate;
+
+    private const int MaxCubes = 10;
+    private const float Gravity = 900f, MinGap = 0.8f, MaxGap = 2.2f;
+
+    private sealed class Cube
+    {
+        public RectTransform body, trail;
+        public Image bodyImage, trailImage;
+        public Vector2 pos, vel;
+        public float angle, spin, size, age;
+        public Color color;
+        public bool alive;
+    }
+
+    private readonly Cube[] cubes = new Cube[MaxCubes];
+    private RectTransform rect;
+    private float nextSpawn = 0.4f;
+    private static Sprite trailSprite;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { trailSprite = null; }
+
+    /// <summary>A soft vertical fade (clear at the top, solid at the bottom) for the light trails.</summary>
+    private static Sprite TrailSprite()
+    {
+        if (trailSprite != null) return trailSprite;
+        const int h = 32;
+        Texture2D tex = new Texture2D(4, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+        Color[] px = new Color[4 * h];
+        for (int y = 0; y < h; y++)
+        {
+            float a = Mathf.Pow(y / (h - 1f), 1.6f);   // (y = 0 is the bottom of the texture: the end at the cube)
+            a = 1f - a;
+            for (int x = 0; x < 4; x++) px[y * 4 + x] = new Color(1f, 1f, 1f, a * (x == 0 || x == 3 ? 0.45f : 1f));   // (softer edges)
+        }
+        tex.SetPixels(px);
+        tex.Apply();
+        trailSprite = Sprite.Create(tex, new Rect(0, 0, 4, h), new Vector2(0.5f, 0f), 100f);
+        return trailSprite;
+    }
+
+    private void Awake() { rect = GetComponent<RectTransform>(); }
+
+    private void OnDisable()
+    {
+        foreach (Cube c in cubes) if (c != null && c.alive) Kill(c);   // (a fresh rain each time the window opens)
+        nextSpawn = 0.4f;
+    }
+
+    private Cube Make()
+    {
+        Cube c = new Cube();
+        GameObject t = new GameObject("Trail", typeof(RectTransform), typeof(Image));
+        t.transform.SetParent(transform, false);
+        c.trail = t.GetComponent<RectTransform>();
+        c.trailImage = t.GetComponent<Image>();
+        c.trailImage.sprite = TrailSprite();
+        c.trailImage.raycastTarget = false;
+        c.trail.pivot = new Vector2(0.5f, 0f);
+        GameObject b = new GameObject("Cube", typeof(RectTransform), typeof(Image));
+        b.transform.SetParent(transform, false);
+        c.body = b.GetComponent<RectTransform>();
+        c.bodyImage = b.GetComponent<Image>();
+        c.bodyImage.raycastTarget = false;
+        c.trail.anchorMin = c.trail.anchorMax = c.body.anchorMin = c.body.anchorMax = new Vector2(0.5f, 0.5f);
+        return c;
+    }
+
+    private static void Kill(Cube c)
+    {
+        c.alive = false;
+        c.body.gameObject.SetActive(false);
+        c.trail.gameObject.SetActive(false);
+    }
+
+    private static Color RandomPixelColor()
+    {
+        PixelClicker clicker = PixelFind.Cached<PixelClicker>();
+        if (clicker != null && clicker.Tiers != null && clicker.Tiers.Length > 0)
+        {
+            for (int tries = 0; tries < 8; tries++)
+            {
+                PixelClicker.PixelTier t = clicker.Tiers[Random.Range(0, clicker.Tiers.Length)];
+                if (t != null && t.unlocked) return t.UIColor;
+            }
+        }
+        return Color.HSVToRGB(Random.value, 0.55f, 1f);
+    }
+
+    private void Spawn()
+    {
+        if (plate == null || rect == null) return;
+        Cube c = null;
+        for (int i = 0; i < cubes.Length; i++)
+        {
+            if (cubes[i] == null) cubes[i] = Make();
+            if (!cubes[i].alive) { c = cubes[i]; break; }
+        }
+        if (c == null) return;   // (all ten are falling)
+        // Start just above the plate's bottom edge (hidden behind it), somewhere along its width.
+        Vector3[] w = new Vector3[4];
+        plate.GetWorldCorners(w);
+        Vector2 bl = rect.InverseTransformPoint(w[0]), br = rect.InverseTransformPoint(w[3]);
+        float inset = (br.x - bl.x) * 0.08f;
+        c.size = Random.Range(9f, 16f);
+        c.pos = new Vector2(Random.Range(bl.x + inset, br.x - inset), bl.y + c.size);
+        c.vel = new Vector2(Random.Range(-30f, 30f), Random.Range(-60f, -20f));
+        c.angle = Random.Range(0f, 90f);
+        c.spin = Random.Range(-160f, 160f);
+        c.age = 0f;
+        c.color = RandomPixelColor();
+        c.bodyImage.color = c.color;
+        c.body.sizeDelta = new Vector2(c.size, c.size);
+        c.alive = true;
+        c.body.gameObject.SetActive(true);
+        c.trail.gameObject.SetActive(true);
+    }
+
+    private void Update()
+    {
+        if (rect == null) return;
+        bool on = PixelMenuFx.Enabled;
+        float dt = Mathf.Min(Time.unscaledDeltaTime, 0.05f);
+        if (on)
+        {
+            nextSpawn -= dt;
+            if (nextSpawn <= 0f) { Spawn(); nextSpawn = Random.Range(MinGap, MaxGap); }
+        }
+        float bottom = rect.rect.yMin;
+        for (int i = 0; i < cubes.Length; i++)
+        {
+            Cube c = cubes[i];
+            if (c == null || !c.alive) continue;
+            if (!on) { Kill(c); continue; }
+            c.age += dt;
+            c.vel.y -= Gravity * dt;
+            c.pos += c.vel * dt;
+            c.angle += c.spin * dt;
+            if (c.pos.y < bottom - 20f) { Kill(c); continue; }
+            float fade = Mathf.Clamp01((c.pos.y - bottom) / 120f) * Mathf.Clamp01(c.age / 0.12f);
+            c.body.anchoredPosition = c.pos;
+            c.body.localRotation = Quaternion.Euler(0f, 0f, c.angle);
+            c.bodyImage.color = new Color(c.color.r, c.color.g, c.color.b, fade);
+            // The light trail: points back along the way it came, longer the faster it falls, a brighter tint of its colour.
+            float speed = c.vel.magnitude;
+            c.trail.anchoredPosition = c.pos;
+            c.trail.sizeDelta = new Vector2(c.size * 0.6f, Mathf.Clamp(speed * 0.12f, 8f, 140f));
+            c.trail.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(-c.vel.x, -c.vel.y) * -Mathf.Rad2Deg);
+            Color glow = Color.Lerp(c.color, Color.white, 0.35f);
+            c.trailImage.color = new Color(glow.r, glow.g, glow.b, 0.75f * fade);
+        }
     }
 }
