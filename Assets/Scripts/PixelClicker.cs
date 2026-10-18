@@ -494,7 +494,8 @@ public partial class PixelClicker : MonoBehaviour
     /// <summary>Linear drag of old pixels (see <see cref="OldPixelGravityScale"/>).</summary>
     public float OldPixelDrag => fallingCopyDrag;
 
-    public int OldPixelCap => (oldPixelCapOverride > 0 ? Mathf.Max(oldPixelCapOverride, baseOldPixelCap) : baseOldPixelCap) + PixelSkills.StandardCapacityBonus;   // + the Standard skill's 'Roomy floor' perk
+    public int OldPixelCap => Mathf.RoundToInt(((oldPixelCapOverride > 0 ? Mathf.Max(oldPixelCapOverride, baseOldPixelCap) : baseOldPixelCap) + PixelSkills.StandardCapacityBonus)
+                                               * PixelSkills.StandardFloorMultiplier);   // + the Standard skill's 'Roomy floor' perk, x2 from its 'Double floor' perk (level 10)
 
     /// <summary>Called by the shop's Old Pixel Capacity upgrade (0 = back to the Inspector value).</summary>
     public void SetOldPixelCap(int value) => oldPixelCapOverride = Mathf.Max(0, value);

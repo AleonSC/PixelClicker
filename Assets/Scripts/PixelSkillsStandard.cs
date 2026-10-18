@@ -6,7 +6,7 @@
 //   (level-1) x lifetimePerLevel 5 s (husks last oldPixelLifetime 35 s by default (15 s before 2026-10-18), so Standard level 2 = 40 s, level 7 = 65 s; the field was
 //   renamed from fallingCopyLifetime so the old saved 6 s is dropped), added in PixelClicker.FallingCopyLifetime, which all old-pixel
 //   despawn timers read) and Roomy floor (StandardCapacityBonus = (level-3) x capacityPerLevel 10 from level 4 (was 5 on a 50 floor; 10 on the 120 floor = 160 at level 7), added to
-//   PixelClicker.OldPixelCap), Steady grip (level 3) and Firm grip (level 5): Block Hold's meter starts at half length and each adds 10% of that
+//   PixelClicker.OldPixelCap; 'Double floor' (level 10, 2026-10-18: StandardFloorMultiplier x2 on the whole limit, doubleFloorLevel / doubleFloorFactor)), Steady grip (level 3) and Firm grip (level 5): Block Hold's meter starts at half length and each adds 10% of that
 //   (PixelBlockHold.GripFactor reads the Standard level); 'Sharper clicks' (level 7) is still 'coming soon'. Standard shows level / XP bars in the Skills window
 //   and the tracker like any skill, has no bonus bank, filler or hazard and does not count towards Mastery.
 //   XP CURVE RETUNE (2026-10-17, from the 10:50 session report: level 4 at 8:21, plan ~20 min; Recycler streak XP 2,620 out-earned click XP 2,357):
@@ -87,6 +87,26 @@ public partial class PixelSkills
             PixelSkills s = Instance;
             if (s == null || s.disableSkills) return 0f;
             return (s.StandardLevel - 1) * (s.lifetimePerLevel > 0f ? s.lifetimePerLevel : 5f);
+        }
+    }
+
+    [Min(0)]
+    [Tooltip("Perk 'Double floor': from this Standard level the floor holds doubleFloorFactor times as many husks (after Roomy floor). 0 = the coded default (10).")]
+    [SerializeField] private int doubleFloorLevel = 0;
+
+    [Min(0f)]
+    [Tooltip("Perk 'Double floor': what the husk floor limit is multiplied by from doubleFloorLevel. 0 = the coded default (2).")]
+    [SerializeField] private float doubleFloorFactor = 0f;
+
+    /// <summary>What the husk floor limit is multiplied by (Standard perk 'Double floor': x2 from level 10; 1 before).</summary>
+    public static float StandardFloorMultiplier
+    {
+        get
+        {
+            PixelSkills s = Instance;
+            if (s == null || s.disableSkills) return 1f;
+            int level = s.doubleFloorLevel > 0 ? s.doubleFloorLevel : 10;
+            return s.StandardLevel >= level ? Mathf.Max(1f, s.doubleFloorFactor > 0f ? s.doubleFloorFactor : 2f) : 1f;
         }
     }
 
@@ -172,6 +192,7 @@ public partial class PixelSkills
     private const string CrushPerkPower = "Crush recharge: every husk you crush takes a little off Power Click's cooldown";
     private const string CrushPerkGrip = "Crush grip: every husk you crush refills the Block Hold meter a little";
     private const string CrushPerkRhythm = "Crush rhythm: every husk you crush takes a little off Charge Crush's cooldown";
+    private const string DoubleFloorPerk = "Double floor: the floor holds twice as many husks";
 
     private static Perk[] StandardPerks() => new[]
     {
@@ -183,5 +204,6 @@ public partial class PixelSkills
         new Perk { level = 7, text = CrushPerkPower, implemented = true },
         new Perk { level = 8, text = CrushPerkGrip, implemented = true },
         new Perk { level = 9, text = CrushPerkRhythm, implemented = true },
+        new Perk { level = 10, text = DoubleFloorPerk, implemented = true },
     };
 }
