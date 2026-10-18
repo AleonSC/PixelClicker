@@ -1348,3 +1348,4 @@
 [2026-10-17 16:28 UTC] Design + to-do: crush streaks recharge the first move - each crush in a streak takes 1 s off Power Click's cooldown and tops up the Block Hold meter, the early-game payoff for crushing that also gets players using their first move.
 [2026-10-18 02:46 UTC] Design + to-do: the early game feel plan 'click, pile, crush' - husks last ~35 s with a ~120 floor limit, Log goals that alternate clicking and crushing / recycling, and a '???' mystery skill bar from the first click that reveals Standard at level 2.
 [2026-10-18 10:41 UTC] To-do: added UI unification step 5 (one window builder) and step 6 (one tip queue).
+[2026-10-18 10:45 UTC] Docs: added docs/systems/WindowInventory.md, how all 24 windows are built today (title, close X, drag, minimize, dock, tabs, Escape) and where they differ, for the coming window builder.
