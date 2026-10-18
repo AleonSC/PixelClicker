@@ -20,3 +20,5 @@ Hold the RIGHT mouse button on a slot that has a save in the Save / Load window 
 
 
 **Look search (2026-10-16):** the Floor and Sky rows are found by the name of ANY of their looks (`lookRows`, `RowMatches`) in the Settings search, and the pause menu's search lists up to 8 matching floors / skies as results ('Floor: Grass', '(in use)' highlighted) that switch to that look at once.
+
+**Title plate (2026-10-18):** every section screen built with `BuildSectionPanel` (Settings, Stats, Save / Load, Guide, Quit, Restart, Key bindings, Playlist, Changelog) has a sunken rounded title plate across its top (`titlePlateColor`, StyleBox inset) with a thin accent line in the theme's Selected colour; the X (`AddCloseX`) sits inside its right end with equal gaps (PlatePad), a three-pixel ornament mirrors it on the left, and the title is centred between them (auto-shrinks if long). Geometry: PlateMargin / PlatePad / PlateHeight (titleFontSize x 1.45).

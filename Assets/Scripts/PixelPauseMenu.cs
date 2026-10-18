@@ -1270,27 +1270,91 @@ public class PixelPauseMenu : MonoBehaviour
         rect.sizeDelta = panelSize;
         rect.anchoredPosition = Vector2.zero;
 
-        TMP_Text t = MakeText(panel.transform, "Title", title, titleFontSize, FontStyles.Bold);
-        PixelUIKit.Caps(t);
-        RectTransform tr = t.rectTransform;
-        tr.anchorMin = new Vector2(0f, 1f);
-        tr.anchorMax = new Vector2(1f, 1f);
-        tr.pivot = new Vector2(0.5f, 1f);
-        tr.sizeDelta = new Vector2(0f, titleFontSize * 1.6f);
-        tr.anchoredPosition = new Vector2(0f, -30f);
+        // The title plate: a sunken rounded band across the top with a thin glowing accent line along its bottom. The X sits in its
+        // right end (AddCloseX) and a small pixel ornament mirrors it on the left, so the title is centred between two matched ends.
+        float plateH = PlateHeight;
+        GameObject plateGo = new GameObject("Title Plate", typeof(RectTransform), typeof(Image));
+        plateGo.transform.SetParent(panel.transform, false);
+        Image plateImage = plateGo.GetComponent<Image>();
+        plateImage.color = titlePlateColor;
+        plateImage.raycastTarget = false;
+        PixelUIKit.StyleBox(plateImage, true);
+        RectTransform plate = plateGo.GetComponent<RectTransform>();
+        plate.anchorMin = new Vector2(0f, 1f);
+        plate.anchorMax = new Vector2(1f, 1f);
+        plate.pivot = new Vector2(0.5f, 1f);
+        plate.offsetMin = new Vector2(PlateMargin, -PlateMargin - plateH);
+        plate.offsetMax = new Vector2(-PlateMargin, -PlateMargin);
 
-        y = 30f + titleFontSize * 1.6f + 10f;
+        GameObject lineGo = new GameObject("Accent Line", typeof(RectTransform), typeof(Image));
+        lineGo.transform.SetParent(plate, false);
+        Image line = lineGo.GetComponent<Image>();
+        line.color = PixelUITheme.ColorOf(ButtonRole.Selected);
+        line.raycastTarget = false;
+        RectTransform lr = line.rectTransform;
+        lr.anchorMin = new Vector2(0.06f, 0f);
+        lr.anchorMax = new Vector2(0.94f, 0f);
+        lr.pivot = new Vector2(0.5f, 0f);
+        lr.sizeDelta = new Vector2(0f, 3f);
+        lr.anchoredPosition = new Vector2(0f, 4f);
+
+        // The left ornament: three stepped pixels in the accent colour, the same size box as the X so the two ends match.
+        float side = plateH - 2f * PlatePad;
+        GameObject orn = new GameObject("Ornament", typeof(RectTransform));
+        orn.transform.SetParent(plate, false);
+        RectTransform ornRect = orn.GetComponent<RectTransform>();
+        ornRect.anchorMin = ornRect.anchorMax = ornRect.pivot = new Vector2(0f, 0.5f);
+        ornRect.sizeDelta = new Vector2(side, side);
+        ornRect.anchoredPosition = new Vector2(PlatePad, 0f);
+        float px = side * 0.22f;
+        for (int i = 0; i < 3; i++)
+        {
+            GameObject dot = new GameObject("Pixel", typeof(RectTransform), typeof(Image));
+            dot.transform.SetParent(orn.transform, false);
+            Image di = dot.GetComponent<Image>();
+            Color c = PixelUITheme.ColorOf(ButtonRole.Selected);
+            di.color = new Color(c.r, c.g, c.b, 1f - i * 0.28f);
+            di.raycastTarget = false;
+            RectTransform dr = di.rectTransform;
+            dr.anchorMin = dr.anchorMax = dr.pivot = new Vector2(0.5f, 0.5f);
+            dr.sizeDelta = new Vector2(px, px);
+            dr.anchoredPosition = new Vector2((i - 1) * px * 1.25f, (1 - i) * px * 1.25f);
+        }
+
+        TMP_Text t = MakeText(plate, "Title", title, titleFontSize, FontStyles.Bold);
+        PixelUIKit.Caps(t);
+        t.raycastTarget = false;
+        t.enableAutoSizing = true;   // (a long title shrinks instead of running under the X)
+        t.fontSizeMax = titleFontSize;
+        t.fontSizeMin = 20f;
+        RectTransform tr = t.rectTransform;
+        tr.anchorMin = Vector2.zero;
+        tr.anchorMax = Vector2.one;
+        float room = PlatePad + side + 12f;   // the same room on both sides: truly centred
+        tr.offsetMin = new Vector2(room, 2f);
+        tr.offsetMax = new Vector2(-room, 0f);
+
+        y = PlateMargin + plateH + 16f;
         return panel;
     }
+
+    // The title plate's geometry (BuildSectionPanel / AddCloseX share it).
+    private const float PlateMargin = 16f, PlatePad = 10f;
+    private float PlateHeight => titleFontSize * 1.45f;
+
+    [Tooltip("Colour of the sunken title plate behind every menu screen's title (Settings, Stats, Save / Load...).")]
+    [SerializeField] private Color titlePlateColor = new Color(0.02f, 0.03f, 0.06f, 0.75f);
 
     /// <summary>An X at the top right of a section window that goes back (to the main menu, or to 'backTo').</summary>
     private void AddCloseX(GameObject panel, GameObject backTo = null)
     {
-        Button close = MakeButton(panel.transform, "Close Button", "X", new Vector2(60f, 60f), ButtonRole.Neutral, menuButtonFontSize * 0.8f);
+        // Inside the right end of the title plate: the same gap above, below and to its right (mirrors the ornament on the left).
+        float side = PlateHeight - 2f * PlatePad;
+        Button close = MakeButton(panel.transform, "Close Button", "X", new Vector2(side, side), ButtonRole.Neutral, menuButtonFontSize * 0.8f);
         RectTransform cr = close.GetComponent<RectTransform>();
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
-        cr.sizeDelta = new Vector2(60f, 60f);
-        cr.anchoredPosition = new Vector2(-24f, -(30f + titleFontSize * 0.8f - 30f));   // its middle sits level with the middle of the title line
+        cr.sizeDelta = new Vector2(side, side);
+        cr.anchoredPosition = new Vector2(-(PlateMargin + PlatePad), -(PlateMargin + PlatePad));
         close.onClick.AddListener(() => ShowView(backTo != null ? backTo : mainPanel));
     }
 
