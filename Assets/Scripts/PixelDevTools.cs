@@ -181,6 +181,11 @@ public class PixelDevTools : MonoBehaviour
     [SerializeField] private string shopAllText = "All shop items";
     [Tooltip("Text of the 'Max XP' widget's button that fills the picked skill(s) to their level cap.")]
     [SerializeField] private string maxXpText = "Max XP";
+    [Tooltip("Label of the 'Husk pile' widget's button: drops husks round the cube until the floor limit is reached (for profiling a full floor).")]
+    [SerializeField] private string fillFloorText = "Fill floor";
+    [Min(1)]
+    [Tooltip("Husks the 'Fill floor' button drops per frame (spread over frames so the test isn't one giant spike).")]
+    [SerializeField] private int fillFloorPerFrame = 6;
     [Tooltip("Text of the 'Max XP' widget's button that takes the picked skill(s) back to level 1.")]
     [SerializeField] private string resetXpText = "Reset XP";
     [Tooltip("First entry of the 'Max XP' drop-down: acts on every skill.")]
@@ -943,6 +948,7 @@ public class PixelDevTools : MonoBehaviour
             case "focus": return "Focus potions";
             case "shopunlock": return "Unlock";
             case "maxxp": return "Max XP";
+            case "huskpile": return "Husk pile";
             case "devreports": return "Dev reports";
             case "superrares": return "Super Rares";
             case "reset": return "Reset counts";
@@ -953,6 +959,30 @@ public class PixelDevTools : MonoBehaviour
             case "god": return "God mode";
             case "clicks": return "Click count";
             default: return id;
+        }
+    }
+
+    /// <summary>The 'Fill floor' button: random unlocked husks dropped in a ring round the cube, a few per frame, until the floor limit is reached.</summary>
+    private System.Collections.IEnumerator FillFloorWithHusks()
+    {
+        PixelClicker c = PixelFind.Cached<PixelClicker>();
+        if (c == null || c.PixelTransform == null) yield break;
+        List<int> pool = new List<int>();
+        for (int i = 0; i < c.Tiers.Length; i++)
+            if (c.Tiers[i] != null && c.Tiers[i].unlocked && !c.Tiers[i].flyAway) pool.Add(i);
+        if (pool.Count == 0) yield break;
+        float unit = c.PixelBaseSize;
+        int guard = 1000;
+        while (c.OldPixels.Count < c.OldPixelCap && guard-- > 0)
+        {
+            for (int k = 0; k < fillFloorPerFrame && c.OldPixels.Count < c.OldPixelCap; k++)
+            {
+                Vector2 ring = Random.insideUnitCircle.normalized * Random.Range(2f, 6f) * unit;
+                Vector3 at = c.PixelTransform.position + new Vector3(ring.x, Random.Range(0f, 1f) * unit, ring.y);
+                int tier = pool[Random.Range(0, pool.Count)];
+                c.SpawnStoredPixel(tier, c.Tiers[tier].amountPerClick, at, Random.insideUnitSphere * 0.5f);
+            }
+            yield return null;
         }
     }
 
@@ -1105,6 +1135,14 @@ public class PixelDevTools : MonoBehaviour
         AddTip(resetXp.gameObject, "Take all XP away from the picked skill (or every skill): back to level 1.");
         Widget(root, board, "maxxp", start, y);
         FillSkillXpDropdown();
+
+        // ---- Husk pile: fill the floor up to the husk limit, to profile a full floor (Dev Inspector's World tab shows bodies / awake). ----
+        start = root.childCount;
+        Button fillFloor = PixelUIKit.CreateButton(font, root, "Fill Floor Button", fillFloorText, new Vector2(bw, rowHeight), buttonColor, textColor, fontSize);
+        Place(fillFloor.GetComponent<RectTransform>(), 40f, y, bw);
+        fillFloor.onClick.AddListener(() => StartCoroutine(FillFloorWithHusks()));
+        AddTip(fillFloor.gameObject, "Drop random husks round the cube until the floor limit is reached. Profile with Window > Analysis > Profiler; the Dev Inspector's World tab shows how many bodies are awake.");
+        Widget(root, board, "huskpile", start, y);
 
         // ---- Super Rares: pick a Dragon / God / Prime Cube, the Cubelette or the Golden Snitch and Spawn it on the clicker cube; Gauntlet gives a Prime Gauntlet. ----
         start = root.childCount;
