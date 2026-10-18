@@ -51,9 +51,9 @@ Every minigame you own and keep switched on adds to your XP gain.
 # Potions and Devices
 Open the Inventory's Consumables tab. Right-click a potion to drink it: for a while only that pixel type comes up. Right-click a device to place it, then left-click the floor. Placing snaps to a grid; hold Shift for free placement. A placed timed device stays grey and asleep until you left-click it once. Hold the right button on a placed device to remove it, or on the potion line at the top to cancel a potion (no refunds).
 <b>Recycler</b> - for 5 minutes, recycles every husk that lands in it for half its value and XP (same-colour streaks give more XP). <b>Storage Crate</b> - holds 10 husks; drop them on it and click the crate, click one to take it out. Drag either by its handles to move it.
-<b>Fan</b> blows husks along the floor. <b>Vacuum Device</b> pulls husks in for skill XP. <b>Magnet</b> heaps husks around itself. <b>Sorter</b> wraps around the cube and spits every husk out of an aimable pipe. <b>Quantum Organizer</b> stores husks of up to three types. <b>Funnel</b> catches husks under the cube and carries them to an output on the floor. <b>Sprinkler</b> waters growing sprouts.
+<b>Fan</b> blows husks along the floor. <b>Magnet</b> heaps husks around itself.
 <b>Charge Booster</b> and <b>Lightning Rod</b> work with Electric pixels: Electric husks link to nearby devices and keep them running.
-Crafting a Fan, Vacuum Device or Magnet with a single-pixel potion makes an attuned copy that only moves husks of that type. Some devices come from skills or vendors: the Wood Chipper (Woodcutting), the Bait Bucket (Fishing), the Conveyor Belt Kit (Electrician).
+Crafting a Fan or Magnet with a single-pixel potion makes an attuned copy that only moves husks of that type. Some devices come from skills or vendors, such as the Wood Chipper (Woodcutting).
 Special items: <b>Combo Fuel</b> keeps your combo alive when the bar runs out, <b>Ghost Bait</b> calls three slow ghosts, <b>Pet Treat</b> makes your pets hyper for a minute.
 
 # Special Pixels

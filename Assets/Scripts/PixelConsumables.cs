@@ -374,6 +374,9 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         [Tooltip("Not sold in the shop: only a visiting vendor (the Lumberjack) sells it - until the skill below reaches its level, then the shop sells it too.")]
         public bool vendorOnly = false;
 
+        [Tooltip("Dev Tools only: never sold in the shop or by a visitor (whatever the settings above say); the Dev Hub's 'Dev items' widget gives it. For items taken out of the game for now.")]
+        public bool devOnly = false;
+
         [Tooltip("Optional: the skill (id, e.g. woodcutting) whose level opens this item in the shop even though it is 'vendor only'. Empty = never.")]
         public string shopSkillId = "";
         [Min(0)]
@@ -488,7 +491,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     [Tooltip("Add the default Vacuum Device if the list has none (e.g. when this component was added before devices existed).")]
     [SerializeField] private bool addDefaultDevices = true;
 
-    [SerializeField, HideInInspector] private int consumablePriceVersion;   // 1 = the 2026-10-17 repricing (2-3 pure colours per item); see ResetDefaultDevicePrices
+    [SerializeField, HideInInspector] private int consumablePriceVersion;   // 1 = the 2026-10-17 repricing (2-3 pure colours per item; see ResetDefaultDevicePrices), 2 = the 2026-10-18 dev-only items
 
     [Header("Prices")]
     [Tooltip("Potion and device prices paid in a pixel type are multiplied by that pixel's Value upgrade multiplier, so they stay worth the same as its payout grows. Off = the prices typed above, always.")]
@@ -661,6 +664,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     {
         return new Device
         {
+            devOnly = true,   // (2026-10-18: out of the shop for now, Dev Hub > Main > Dev items gives it)
             costs = new[]
             {
                 new PixelShop.PackCost { type = PixelClicker.PixelType.Glass,  amount = 100 },
@@ -792,6 +796,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     {
         return new Device
         {
+            devOnly = true,   // (2026-10-18: out of the shop for now, Dev Hub > Main > Dev items gives it)
             kind = DeviceKind.Funnel,
             displayName = "Funnel",
             description = "A wide glass funnel that hangs under the clicker cube and catches the pixels that fall off it. They are carried down a see-through tube and come out at an output on the floor - click where you want it. Fit a coupling on its output and start a conveyor belt there to feed it. Only one stands at a time: placing it again moves it.",
@@ -842,6 +847,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     {
         return new Device
         {
+            devOnly = true,   // (2026-10-18: out of the shop for now, Dev Hub > Main > Dev items gives it)
             kind = DeviceKind.QuantumOrganizer,
             displayName = "Quantum Organizer",
             description = "A pad with walls. Switch it on, then drop a pixel onto the pad to bind that pixel type to it (up to three types). Every loose old pixel of a bound type is dematerialized with a glitch and rematerializes inside the box as storage (up to 60 pixels). Click the box to let some out again; everything comes out when its {duration} seconds run out.",
@@ -906,6 +912,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     {
         return new Device
         {
+            devOnly = true,   // (2026-10-18: out of the shop for now, Dev Hub > Main > Dev items gives it)
             kind = DeviceKind.Sprinkler,
             displayName = "Sprinkler",
             description = "Place it near your seeds. For {duration} seconds it waters every growing sprout and Seed pet within {radius} units once a second, so they grow far faster.",
@@ -928,6 +935,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     {
         return new Device
         {
+            devOnly = true,   // (2026-10-18: out of the shop for now, Dev Hub > Main > Dev items gives it)
             kind = DeviceKind.Sorter,
             displayName = "Sorter",
             description = "Wraps around the cube. For {duration} seconds every pixel you collect is spat out of its pipe in a stream. Scroll to aim the pipe.",
@@ -986,6 +994,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     {
         return new Device
         {
+            devOnly = true,   // (2026-10-18: out of the shop for now, Dev Hub > Main > Dev items gives it)
             kind = DeviceKind.BaitBucket,
             displayName = "Bait Bucket",
             description = "Right-click to set it out (needs Fishing as the skill in play). A bucket stands on the floor until you stop Fishing. Drag Fish and Water pixels into it (Pixel Grabbing): they are stored with their value instead of splashing or fading, and every stored fish makes more fish show up. Click the bucket to take a pixel out again. You can only hold one.",
@@ -1110,6 +1119,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     {
         return new Device
         {
+            devOnly = true,   // (2026-10-18: out of the shop for now, Dev Hub > Main > Dev items gives it)
             kind = DeviceKind.ConveyorBelt,
             vendorOnly = true,
             shopSkillId = "electrician",   // Electrician level 5 puts it on sale in the shop
@@ -1425,6 +1435,19 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             consumablePriceVersion = 1;
             added = true;
         }
+        if (consumablePriceVersion < 2 && devices != null)
+        {
+            // 2026-10-18: the Quantum Organizer, Funnel, Sprinkler, Vacuum Device, Sorter, Bait Bucket and Conveyor Belt Kit leave the
+            // shop for the Dev Tools: saved devices take the coded devOnly flag.
+            foreach (Device d in devices)
+            {
+                if (d == null || d.attuned || d.kind == DeviceKind.Seed) continue;
+                foreach (System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>> maker in DefaultDeviceMakers)
+                    if (maker.Key == d.kind) { d.devOnly = maker.Value().devOnly; break; }
+            }
+            consumablePriceVersion = 2;
+            added = true;
+        }
 
         if (devices != null)
             foreach (Device d in devices)
@@ -1654,7 +1677,11 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         return potions[item] != null && (!potions[item].craftOnly || potions[item].owned > 0);
     }
 
-    public bool ItemNotSold(int item) => IsDevice(item) && devices[item - potions.Length].craftOnly;
+    /// <summary>Never sold, by the shop or a visitor: craft-only devices and Dev Tools-only ones (Device.devOnly).</summary>
+    public bool ItemNotSold(int item) => IsDevice(item) && (devices[item - potions.Length].craftOnly || devices[item - potions.Length].devOnly);
+
+    /// <summary>A Dev Tools-only device (Device.devOnly): not on sale anywhere, given by the Dev Hub's 'Dev items' widget.</summary>
+    public bool ItemDevOnly(int item) => IsDevice(item) && !devices[item - potions.Length].attuned && devices[item - potions.Length].devOnly;
 
     /// <summary>A device only a visiting vendor sells (not listed in the shop).</summary>
     public bool ItemVendorOnly(int item)

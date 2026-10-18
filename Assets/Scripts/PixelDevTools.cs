@@ -196,6 +196,9 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Text of the 'Super Rares' widget's button that puts a Prime Gauntlet in your inventory.")]
     [SerializeField] private string giveGauntletText = "Gauntlet";
 
+    [Tooltip("Text of the 'Dev items' widget's button that puts the picked dev-only device in your inventory.")]
+    [SerializeField] private string giveDevItemText = "Give";
+
     [Tooltip("Label of the click-count row (how many clicks one click counts as).")]
     [SerializeField] private string clickCountText = "Clicks per click";
 
@@ -951,6 +954,7 @@ public class PixelDevTools : MonoBehaviour
             case "huskpile": return "Husk pile";
             case "devreports": return "Dev reports";
             case "superrares": return "Super Rares";
+            case "devitems": return "Dev items";
             case "reset": return "Reset counts";
             case "clear": return "Clear key";
             case "infinite": return "Infinite resources";
@@ -1166,6 +1170,17 @@ public class PixelDevTools : MonoBehaviour
         });
         Widget(root, board, "superrares", start, y, 2);
         FillRareDropdown();
+
+        // ---- Dev items: the devices taken out of the shop (Device.devOnly) - pick one and Give puts one in your inventory. ----
+        start = root.childCount;
+        devItemDropdown = PixelUIKit.CreateDropdown(font, root, "Dev Items Dropdown", new Vector2(dropW, rowHeight), boxColor, listColor, textColor, fontSize);
+        Place(devItemDropdown.GetComponent<RectTransform>(), 40f, y, dropW);
+        Button giveItem = PixelUIKit.CreateButton(font, root, "Give Dev Item Button", giveDevItemText, new Vector2(bw, rowHeight), buttonColor, textColor, fontSize);
+        Place(giveItem.GetComponent<RectTransform>(), 40f + dropW + gap, y, bw);
+        giveItem.onClick.AddListener(GiveDevItem);
+        AddTip(giveItem.gameObject, "Put one of the picked item in your inventory. These devices are not on sale anywhere for now (Quantum Organizer, Funnel, Sprinkler, Vacuum Device, Sorter, Bait Bucket, Conveyor Belt Kit).");
+        Widget(root, board, "devitems", start, y);
+        FillDevItemDropdown();
     }
 
     private const float WidgetRowGap = 10f;   // space between the rows of a multi-row widget card
@@ -1201,6 +1216,34 @@ public class PixelDevTools : MonoBehaviour
         if (PixelGoldenSnitch.Active && rareTypes[v] == PixelClicker.PixelType.GoldenSnitch) return;   // (one snitch at a time)
         clicker.DevSwapCurrentPixel(rareTypes[v]);
         FillRareDropdown();
+    }
+
+    private TMP_Dropdown devItemDropdown;
+    private readonly List<int> devItems = new List<int>();   // item index for each drop-down entry
+
+    /// <summary>Fills the 'Dev items' drop-down with every Dev Tools-only device (PixelConsumables.ItemDevOnly).</summary>
+    private void FillDevItemDropdown()
+    {
+        if (devItemDropdown == null) return;
+        PixelConsumables consumables = PixelFind.Cached<PixelConsumables>();
+        devItems.Clear();
+        List<string> options = new List<string>();
+        if (consumables != null)
+            for (int i = 0; i < consumables.ItemCount; i++)
+                if (consumables.ItemDevOnly(i)) { devItems.Add(i); options.Add(consumables.ItemName(i)); }
+        devItemDropdown.ClearOptions();
+        devItemDropdown.AddOptions(options);
+        devItemDropdown.RefreshShownValue();
+    }
+
+    /// <summary>Gives one of the picked Dev Tools-only device.</summary>
+    private void GiveDevItem()
+    {
+        PixelConsumables consumables = PixelFind.Cached<PixelConsumables>();
+        if (consumables == null || devItemDropdown == null) return;
+        if (devItems.Count == 0) FillDevItemDropdown();
+        int v = devItemDropdown.value;
+        if (v >= 0 && v < devItems.Count) consumables.AddItem(devItems[v], 1);
     }
 
     /// <summary>Gives one Prime Gauntlet (DeviceKind.Gauntlet) to the inventory.</summary>

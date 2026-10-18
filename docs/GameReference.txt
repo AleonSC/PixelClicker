@@ -63,7 +63,7 @@ PROJECT RULES (from CLAUDE.md)
 - Every variable editable in Unity ([SerializeField] private + [Tooltip]); field initializers don't reach already-serialized components (use Awake / OnValidate fix-ups).
 - Enum values are only appended. Copy the whole Assets/Scripts folder together. Compile check: tools/compile-check/check.sh.
 - Save compatibility is not a concern during development. Skill packs are chosen only in the Skills window. Player-facing texts say "husk".
-GENERATED: 2026-10-18 15:36 UTC
+GENERATED: 2026-10-18 16:04 UTC
 
 === 2. DATA MODEL (from CLAUDE.md) ===
 - PixelTier: name, colour/UIColor, PixelType enum (see PixelClicker.cs; values are only ever appended so saves stay valid), TierUnlockMode (PreviousTierThreshold / ShopOnly), spawnWeight, randomPayout + payoutMin/Max (a random whole amount per harvest, e.g. Electric 1-15; amountPerClick = the average for estimates; migrated by packDataVersion 3), clicksToCollect (tough pixels: only the last click pays; PixelClicker.PixelHit event for the others), startingAmount, translucent / materialOverride, glow + glowIntensity (emission on a runtime material copy + point light), vacuum flag, spawnSwitch (Auto = Glass, Luminescent and the IsSpecialType types get a spawn toggle in the Toggles window, see PixelTier.CanSwitchOff; spawnDisabled saved; CanSpawn used by PickSpawnTier), flyAway/flyDirection/flySpeed (old pixel streaks away in a straight camera-relative line with a smooth tapered trail instead of falling - Meteor; flyRandomDirection + flyAngleRange 10-170 deg = a random direction on the top half of the screen), count, totalCollected, unlocked.
@@ -1658,6 +1658,10 @@ Prices (repriced 2026-10-17, design in docs/GameDesign.md section 8)
 - Skill items (Wood Chipper, Bait Bucket, Conveyor Belt Kit, Lumberjack's Focus, Pesticide Spray) stay in their skill's blocks; costs in a pack's own material (Glass, Electric, Water, Vacuum, Obsidian) are kept. Potions and seeds are priced at run time from their pixel's output (potionPriceFromOutput, seedPriceFactor), in that pixel.
 - The Recycler's price doubles for each one held or standing (priceGrowthPerOwned 2).
 - The coded defaults reach a saved scene through consumablePriceVersion (1 = this repricing) -> ResetDefaultDevicePrices (also the context menu 'Reset Built-in Device Prices'); DefaultDeviceMakers is the one table of built-in device kinds. Bump the version after the next repricing.
+
+Dev Tools-only devices (2026-10-18)
+- Device.devOnly: never sold by the shop or a visitor (ItemNotSold covers it, so the shop tabs, search, TryBuyItems and visitors' wares all skip it); Dev Hub > Main > Dev items widget gives one (PixelConsumables.ItemDevOnly). Saved scenes took the flag through consumablePriceVersion 2.
+- Dev-only now: Quantum Organizer, Funnel, Sprinkler, Vacuum Device, Sorter, Bait Bucket, Conveyor Belt Kit (the kit is also placed from Dev Hub > Tester > Conveyor Belt). Attuned Vacuum Devices still exist in Crafting but need a Vacuum Device from the Dev Tools.
 --- docs/systems/PixelCouplings.md ---
 Sockets and couplings - one way to connect belts and hoses to devices
 
