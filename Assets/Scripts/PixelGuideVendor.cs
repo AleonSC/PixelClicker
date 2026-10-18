@@ -23,6 +23,7 @@
 //   (EnsureDefaultPages in Awake and the editor's OnValidate, like PixelHints), so Cubie's lines are edited in the Inspector.
 //   Visit 1 waits until visitOneAfterWhiteClicks (100) White pixels have been clicked (the White tier's timesCollected). A visit-1 page containing {recycler} hands over a Recycler
 //   (PixelConsumables.GiveDevice; text recyclerGiftText); a page list without the token still gets it when the visit ends.
+//   The speech box is the standard window as a dialog (PixelUIKit.CreateWindow, no X), teal, at the right edge beside Cubie.
 // ---------------------------------------------------
 using System.Collections;
 using System.Text;
@@ -834,14 +835,13 @@ public class PixelGuideVendor : MonoBehaviour
         ar.localScale = Vector3.one * scale;
         DrawCharacter(art.transform);
 
-        // Speech box.
-        GameObject pg = new GameObject("Speech", typeof(RectTransform), typeof(Image), typeof(PixelPop));
-        pg.transform.SetParent(canvasRoot.transform, false);
-        PixelUIKit.StyleWindow(pg.GetComponent<Image>(), new Color(0.07f, 0.17f, 0.19f, 0.97f));   // the same rounded glowing frame as every window, tinted teal like Cubie
-        panel = pg.GetComponent<RectTransform>();
+        // Speech box: the standard window as a dialog (PixelUIKit.CreateWindow, no X - Next / Escape move on), tinted teal like Cubie,
+        // his name as the title. Moved from the centre to the right edge, just left of Cubie.
+        PixelWindowParts parts = PixelUIKit.CreateWindow(Font, canvasRoot.transform, "Speech", characterName, new Vector2(760f, 500f),
+                                                         new Color(0.07f, 0.17f, 0.19f, 0.97f), PixelUIKit.WindowKind.Fixed, null, closeButton: false);
+        panel = parts.Rect;
         panel.anchorMin = panel.anchorMax = new Vector2(1f, 0.5f);
         panel.pivot = new Vector2(1f, 0.5f);
-        panel.sizeDelta = new Vector2(760f, 500f);
         panel.anchoredPosition = new Vector2(-(characterRect.sizeDelta.x + 130f), 0f);
 
         // A little tail on the right edge, pointing at Cubie.
@@ -858,17 +858,15 @@ public class PixelGuideVendor : MonoBehaviour
         tailRect.anchoredPosition = new Vector2(8f, 0f);
         tailRect.localRotation = Quaternion.Euler(0f, 0f, 45f);
 
-        TMP_Text title = PixelUIKit.CreateText(Font, panel, "Name", characterName, 56f, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0.5f, 0.95f, 0.85f));
-        nameLabel = title;
-        PixelUIKit.Caps(title);
-        SetRect(title.rectTransform, 0f, 1f, 1f, 1f, new Vector2(20f, -84f), new Vector2(-20f, -16f));
+        nameLabel = parts.Title;
+        nameLabel.color = new Color(0.5f, 0.95f, 0.85f);   // (teal; it shimmers while he talks)
 
         message = PixelUIKit.CreateText(Font, panel, "Message", "", 34f, TextAlignmentOptions.Center, FontStyles.Normal, Color.white);
         message.richText = true;
         message.enableAutoSizing = true;
         message.fontSizeMax = 34f;
         message.fontSizeMin = 18f;
-        SetRect(message.rectTransform, 0f, 0f, 1f, 1f, new Vector2(36f, 130f), new Vector2(-36f, -96f));
+        SetRect(message.rectTransform, 0f, 0f, 1f, 1f, new Vector2(36f, 130f), new Vector2(-36f, -(parts.HeaderHeight + 6f)));
 
         nextButton = PixelUIKit.CreateButton(Font, panel, "Next", nextText, new Vector2(300f, 80f), new Color(0.2f, 0.55f, 0.5f, 1f), Color.white, 38f);
         PixelUIKit.Caps(nextButton);
