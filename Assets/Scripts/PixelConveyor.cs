@@ -835,18 +835,11 @@ public class PixelConveyorSystem : MonoBehaviour
         if (font == null) return;
         PixelUIKit.EnsureEventSystem();
         editorRoot = PixelUIKit.CreateCanvas("Belt Speed", 330, new Vector2(1920f, 1080f), true);   // (clickable: the buttons need a GraphicRaycaster)
-        GameObject panel = new GameObject("Panel", typeof(RectTransform), typeof(Image));
-        panel.transform.SetParent(editorRoot.transform, false);
-        RectTransform pr = panel.GetComponent<RectTransform>();
-        pr.anchorMin = pr.anchorMax = pr.pivot = new Vector2(0.5f, 0.5f);
-        pr.sizeDelta = new Vector2(520f, 300f);
-        Image bg = panel.GetComponent<Image>();
-        PixelUIKit.StyleWindow(bg, new Color(0.1f, 0.12f, 0.18f, 0.96f));
-
-        speedTitle = PixelUIKit.CreateText(font, panel.transform, "Title", "BELT SPEED", 32f, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
-        RectTransform tr = speedTitle.rectTransform;
-        tr.anchorMin = tr.anchorMax = tr.pivot = new Vector2(0.5f, 1f);
-        tr.sizeDelta = new Vector2(480f, 50f); tr.anchoredPosition = new Vector2(0f, -16f);
+        // A standard dialog (PixelUIKit.CreateWindow, no X: its own Close button below), in the theme's window colour; no grow-in (as before).
+        PixelWindowParts parts = PixelUIKit.CreateWindow(font, editorRoot.transform, "Panel", "Belt speed", new Vector2(520f, 300f),
+                                                         PixelUIKit.WindowKind.Fixed, null, closeButton: false, pop: false);
+        GameObject panel = parts.Root;
+        speedTitle = parts.Title;
 
         TMP_Text hint = PixelUIKit.CreateText(font, panel.transform, "Hint", "cube widths per second (0 stops the belt)", 20f, TextAlignmentOptions.Center, FontStyles.Italic, new Color(0.75f, 0.82f, 0.95f, 1f));
         RectTransform hr = hint.rectTransform;

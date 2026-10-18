@@ -85,7 +85,7 @@ public class PixelEggHatch : MonoBehaviour
     private void Awake()
     {
         instance = this;
-        PixelWindows.Register(this, 165, () => playing, () => skipRequested = true);   // Escape skips the show
+        PixelWindows.Register(this, 165, () => playing, () => skipRequested = true);   // Escape skips the show   // escape-only: skips the show
     }
 
     private void OnDestroy()

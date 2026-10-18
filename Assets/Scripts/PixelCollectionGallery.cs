@@ -144,7 +144,7 @@ public class PixelCollectionGallery : MonoBehaviour
         pos = ClampToBounds(new Vector3(start.x, 1.7f, start.z - 1.3f));
         yaw = 0f; pitch = 0f;
 
-        PixelWindows.Register(this, 180, () => instance == this, Leave);
+        PixelWindows.Register(this, 180, () => instance == this, Leave);   // escape-only: leaves the 3D gallery (not a window)
         PixelClicker.ExternalClickBlock = true;
         oldLock = Cursor.lockState; oldCursorVisible = Cursor.visible;
         Cursor.lockState = CursorLockMode.Locked; Cursor.visible = false;

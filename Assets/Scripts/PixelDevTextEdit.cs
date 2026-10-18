@@ -190,7 +190,7 @@ public class PixelDevTextEdit : MonoBehaviour
             local.y = Mathf.Clamp(local.y, -half.y + size.y * 0.5f + 10f, half.y - size.y * 0.5f - 10f);
             box.anchoredPosition = local;
         }
-        if (!registered) { PixelWindows.Register(this, 230, () => box != null && box.gameObject.activeSelf, CloseBox); registered = true; }
+        if (!registered) { PixelWindows.Register(this, 230, () => box != null && box.gameObject.activeSelf, CloseBox); registered = true; }   // escape-only: dev text-edit box
         input.Select();
         input.ActivateInputField();
     }

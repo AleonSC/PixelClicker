@@ -1889,8 +1889,8 @@ public partial class PixelShop : MonoBehaviour
         builtOk = true;
 
         // Escape closes the upgrades window first, then the shop.
-        PixelWindows.Register(this, 40, () => subPanelObject != null && subPanelObject.activeSelf, CloseUpgradesWindow);
-        PixelWindows.Register(this, 30, () => panelObject != null && PixelPop.IsOpen(panelObject), () => PixelPop.Hide(panelObject));
+        PixelWindows.Register(this, 40, () => subPanelObject != null && subPanelObject.activeSelf, CloseUpgradesWindow);   // window-built-in: PixelShopUI.cs (CreateWindow)
+        PixelWindows.Register(this, 30, () => panelObject != null && PixelPop.IsOpen(panelObject), () => PixelPop.Hide(panelObject));   // window-built-in: PixelShopUI.cs (CreateWindow)
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         // Diagnostic: where each pack is listed and what it is waiting for.

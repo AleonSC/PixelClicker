@@ -259,7 +259,7 @@ public partial class PixelTitleScreen : MonoBehaviour
     private void Awake()
     {
         PlayTime = Time.time;
-        PixelWindows.Register(this, 1000, () => Showing, () => { }); // Escape does nothing here
+        PixelWindows.Register(this, 1000, () => Showing, () => { }); // Escape does nothing here   // escape-only: blocks the pause menu on the title screen
         if (!showTitleScreen) return; // the component stays, so "Main menu" can still bring the screen back
         Open(false);
     }

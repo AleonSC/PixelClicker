@@ -8,6 +8,7 @@
 //   * DOCK to the left / right edge: drag it against a side (a pale strip shows where) and it docks at that height with only a sliver showing; it slides out while the mouse is
 //     near it or you are typing in it; an undock arrow puts it back. Dragging a docked window by its header also undocks it and carries it off.
 //   Optional: defaultPlacer (first-time position). Users: Dev Hub, the Next up window, and every Tool window of PixelUIKit.CreateWindow (View).
+//   StateChanged: raised on minimize / restore and dock / undock (Pocket lays itself out from it).
 //   SetFullHeight(h): the owner's way to size the window (a minimized one remembers it); PlaceNow(): put a never-placed window at its first spot before showing it.
 //   RESIZE: EnableResize() adds a grip in the bottom-right corner that SCALES the window (0.55x - 1.6x, saved as prefKey + Scale; the Dev Hub uses it),
 //   never bigger than fits between the black bars and the screen sides (MaxFittingScale; re-checked on load and when the game window changes size), so the grip stays reachable.
@@ -25,6 +26,9 @@ public class PixelWindowChrome : MonoBehaviour
 
     public bool Minimized => minimized;
     public bool Docked => dockSide != 0;
+
+    /// <summary>Raised whenever the window is minimized / restored or docked / undocked (owners that lay out by that state listen instead of checking every frame).</summary>
+    public event System.Action StateChanged;
 
     /// <summary>The window's size on the canvas (its own size times the resize scale).</summary>
     private Vector2 Size => window.sizeDelta * window.localScale.x;
@@ -254,6 +258,7 @@ public class PixelWindowChrome : MonoBehaviour
         window.sizeDelta = new Vector2(window.sizeDelta.x, minimized ? headerHeight : restoreHeight);
         Clamp();
         if (save) { PixelPrefs.SetInt(prefKey + ".Min", minimized ? 1 : 0); Save(); }
+        StateChanged?.Invoke();
     }
 
     /// <summary>
@@ -283,6 +288,7 @@ public class PixelWindowChrome : MonoBehaviour
         dockSlide = 1f;
         ApplyState();
         PixelAudio.Play("ui_click");
+        StateChanged?.Invoke();
     }
 
     private void Undock()
@@ -296,6 +302,7 @@ public class PixelWindowChrome : MonoBehaviour
         ApplyState();
         Save();
         PixelAudio.Play("ui_click");
+        StateChanged?.Invoke();
     }
 
     private void ApplyState()

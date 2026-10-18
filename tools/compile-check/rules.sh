@@ -13,4 +13,18 @@ if [ -n "$HITS" ]; then
   FAIL=1
 fi
 
+# Rule: a script that registers with PixelWindows (so Escape closes it) builds its window with PixelUIKit.CreateWindow (the one standard
+# window: header, title, X, chrome, theme colour). A registration that only takes Escape for a MODE (placing, first person, a show...) says so
+# on its line with a comment containing 'escape-only:' and the reason; a window built with CreateWindow in another file of the same class says
+# 'window-built-in: <file>'.
+for f in $(grep -rl --include='*.cs' 'PixelWindows\.Register(' .); do
+  case "$f" in ./PixelWindows.cs) continue;; esac
+  grep -q 'CreateWindow(' "$f" && continue
+  BAD=$(grep -n 'PixelWindows\.Register(' "$f" | grep -vE '^[0-9]+:\s*//' | grep -v 'escape-only:' | grep -v 'window-built-in:' | cut -d: -f1)
+  for n in $BAD; do
+    echo "${f#./}:$n: rule: a window registered with PixelWindows must be built with PixelUIKit.CreateWindow (or mark the line '// escape-only: <reason>' / '// window-built-in: <file>')"
+    FAIL=1
+  done
+done
+
 exit $FAIL

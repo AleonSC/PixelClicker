@@ -60,7 +60,7 @@ public class PixelEyedropper : MonoBehaviour
         if (!registered)
         {
             registered = true;
-            PixelWindows.Register(this, 175, () => active, Cancel);   // Escape cancels instead of opening the pause menu
+            PixelWindows.Register(this, 175, () => active, Cancel);   // Escape cancels instead of opening the pause menu   // escape-only: cancels the eyedropper
         }
         PixelPauseMenu.SetMenuVisible(false);
         yield return new WaitForEndOfFrame();

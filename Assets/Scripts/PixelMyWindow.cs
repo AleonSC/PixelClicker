@@ -28,7 +28,7 @@
 //   one while the mouse is over the window); a hint shows until something was hovered.
 //   TABS (always shown under the header): Pinned | Event log (only while the log is docked) | Keybinds (PixelCustomKeys.BuildView: bind items / tools to your own keys).
 //   Header buttons (LayoutHeaderButtons): Info sits in the first right slot after the X and the chrome's '-' (one slot further in while the chrome's undock arrow shows), Edit
-//   (hidden, no Edit mode) after it; the title stays centred clear of them. Layout reruns when the chrome minimizes / docks (laidMinimized / laidDocked). The corner grip still
+//   (hidden, no Edit mode) after it; the title stays centred clear of them. Layout reruns when the chrome minimizes / docks (its StateChanged event). The corner grip still
 //   changes the window's WIDTH / HEIGHT (ResizeBy -> PixelWindowParts.SetHeight), not its scale.
 // ---------------------------------------------------
 using System;
@@ -215,7 +215,6 @@ public class PixelMyWindow : MonoBehaviour
     private PixelWindowParts parts;
     private PixelWindowChrome chrome;
     private bool minimized => chrome != null && chrome.Minimized;
-    private bool laidMinimized, laidDocked;   // what Layout last laid out for (the chrome's '-' and docking change these behind its back)
     private float fullHeight = 660f;          // the window's height when not minimized (saved as H; the resize grip changes it)
     private Button closeButton, tabPinnedButton, tabLogButton, tabKeysButton;
     private Image tabKeysImage;
@@ -354,8 +353,7 @@ public class PixelMyWindow : MonoBehaviour
         closeButton = parts.Close;
         titleLabel = parts.Title;
         chrome.defaultPlacer = cs => new Vector2(cs.x - windowRect.sizeDelta.x - 22f, -(cs.y - BarInset() - fullHeight));   // first time: right side, just above the bottom bar
-        Transform chromeMin = windowRect.Find("Chrome Minimize");   // (lay the window out at once when '-' is clicked, not a frame later)
-        if (chromeMin != null && chromeMin.GetComponent<Button>() != null) chromeMin.GetComponent<Button>().onClick.AddListener(Layout);
+        chrome.StateChanged += Layout;   // (minimized / restored, docked / undocked: lay the window out at once)
 
         // Info (a right header slot): pins the hover tooltip into this window (and unpins it).
         hoverDockButton = parts.AddHeaderButton("Dock Info", "Info", false);
@@ -591,8 +589,6 @@ public class PixelMyWindow : MonoBehaviour
     private void Layout()
     {
         if (scroll == null) return;
-        laidMinimized = minimized;
-        laidDocked = chrome != null && chrome.Docked;
         const bool docked = true;   // (the Event log tab is always there now)
         if (showLogTab) showKeysTab = false;
         bool logTab = docked && showLogTab;
@@ -1548,7 +1544,6 @@ public class PixelMyWindow : MonoBehaviour
         saveTimer -= Time.unscaledDeltaTime;
         if (geometryDirty && saveTimer <= 0f && !PixelInput.LeftHeld()) { SaveGeometry(); saveTimer = 0.5f; }
 
-        if (chrome != null && (chrome.Minimized != laidMinimized || chrome.Docked != laidDocked)) Layout();   // ('-' or a dock / undock by the chrome)
         if (open) UpdateRemoveHold();
         if (!open) return;
         sampleTimer -= Time.unscaledDeltaTime;

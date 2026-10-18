@@ -214,7 +214,7 @@ public class PixelFirstPerson : MonoBehaviour
     {
         instance = this;
         clicker = PixelFind.First<PixelClicker>();
-        PixelWindows.Register(this, 120, () => Active, Exit); // Escape leaves first person mode before it would open the pause menu
+        PixelWindows.Register(this, 120, () => Active, Exit); // Escape leaves first person mode before it would open the pause menu   // escape-only: leaves first person
         windowRegistered = true;
         PixelHuskPool.HuskReleasing += OnHuskReleasing;
     }

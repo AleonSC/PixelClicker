@@ -145,19 +145,11 @@ public class PixelInfinity : MonoBehaviour
         Image dim = NewImage("Dim", canvasRoot.transform, new Color(0f, 0f, 0f, 0.55f));
         PixelUIKit.Stretch(dim.rectTransform);
 
-        GameObject panelGo = new GameObject("Panel", typeof(RectTransform), typeof(Image));
-        panelGo.transform.SetParent(canvasRoot.transform, false);
-        RectTransform panel = panelGo.GetComponent<RectTransform>();
-        panel.sizeDelta = new Vector2(1180f, 760f);
-        PixelUIKit.StyleWindow(panelGo.GetComponent<Image>(), new Color(0.1f, 0.08f, 0.04f, 0.97f));
-
-        TMP_Text title = PixelUIKit.CreateText(font, panel, "Title", "Prime Gauntlet", 52f, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 0.85f, 0.35f, 1f));
-        title.rectTransform.anchorMin = new Vector2(0f, 1f); title.rectTransform.anchorMax = new Vector2(1f, 1f); title.rectTransform.pivot = new Vector2(0.5f, 1f);
-        title.rectTransform.sizeDelta = new Vector2(0f, 80f); title.rectTransform.anchoredPosition = new Vector2(0f, -16f);
-        Button x = PixelUIKit.CreateButton(font, panel, "Close", "X", new Vector2(60f, 60f), ButtonRole.Neutral, 34f);
-        x.GetComponent<RectTransform>().anchorMin = x.GetComponent<RectTransform>().anchorMax = new Vector2(1f, 1f);
-        x.GetComponent<RectTransform>().anchoredPosition = new Vector2(-44f, -44f);
-        x.onClick.AddListener(Close);
+        // The standard Fixed window (PixelUIKit.CreateWindow) in the Gauntlet's own gold-brown, with a gold title.
+        PixelWindowParts parts = PixelUIKit.CreateWindow(font, canvasRoot.transform, "Panel", "Prime Gauntlet", new Vector2(1180f, 760f), new Color(0.1f, 0.08f, 0.04f, 0.97f),
+                                                         PixelUIKit.WindowKind.Fixed, Close);
+        parts.Title.color = new Color(1f, 0.85f, 0.35f, 1f);
+        RectTransform panel = parts.Rect;
 
         // The cube laid flat: a cross of six faces on the left.
         float s = socketSize > 0f ? socketSize : 150f, gap = 10f;
@@ -216,7 +208,7 @@ public class PixelInfinity : MonoBehaviour
         forge = PixelUIKit.CreateButton(font, panel, "Forge", "Forge the Cubelette", new Vector2(520f, 84f), new Color(0.85f, 0.62f, 0.12f, 1f), Color.white, 38f);
         forge.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -320f);
         forge.onClick.AddListener(() => { if (!forging) StartCoroutine(Forge()); });
-        PixelPop.Show(panelGo);
+        PixelPop.Show(parts.Root);
     }
 
     private void Refresh()

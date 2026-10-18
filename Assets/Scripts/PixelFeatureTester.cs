@@ -200,7 +200,7 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].linkAfterPlace = true;
 
         if (PixelDevTools.Available) Build(PixelDevHub.TabRoot("tester"));   // (in a normal build there is no tab: the Conveyor Belt item starts placing through StartFeature)
-        PixelWindows.Register(this, 210, () => placing != null || selecting, StopPlacing);   // Escape stops placing first
+        PixelWindows.Register(this, 210, () => placing != null || selecting, StopPlacing);   // Escape stops placing first   // escape-only: stops placing / selecting
     }
 
     private void OnDestroy()

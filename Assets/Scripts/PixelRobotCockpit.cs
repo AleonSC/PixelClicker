@@ -86,7 +86,7 @@ public partial class PixelRobotWorker
         BuildCockpitUi();
         if (bubbleCanvas != null) bubbleCanvas.SetActive(false);
         Piloting = true;
-        PixelWindows.Register(cockpitKey, 125, () => Piloting, ExitCockpit);
+        PixelWindows.Register(cockpitKey, 125, () => Piloting, ExitCockpit);   // escape-only: leaves the cockpit
         enterFrame = Time.frameCount;
         PositionPassenger();
         PixelAudio.Play("ui_click");

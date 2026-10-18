@@ -177,7 +177,7 @@ public class PixelVacuumCleaner : MonoBehaviour
     {
         if (ghost) return;
         GetComponentsInChildren(true, ownColliders);
-        PixelWindows.Register(this, 205, () => driven == this, StopDriving);   // Escape stops driving
+        PixelWindows.Register(this, 205, () => driven == this, StopDriving);   // Escape stops driving   // escape-only: stops driving
     }
 
     private void Awake() => PixelHuskPool.HuskReleasing += OnHuskReleasing;

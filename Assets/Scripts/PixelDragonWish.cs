@@ -182,7 +182,7 @@ public class PixelDragonWish : MonoBehaviour
         }
         PixelStats.Count("dragon.summons");
         Freeze();
-        PixelWindows.Register(this, 160, () => busy, () => { }); // Escape does nothing during the wish (but doesn't open the pause menu)
+        PixelWindows.Register(this, 160, () => busy, () => { }); // Escape does nothing during the wish (but doesn't open the pause menu)   // escape-only: blocks the pause menu during the wish
         PixelAudio.Play("dragon_summon");
         PixelHints.Announce("The seven Dragon Cubes begin to glow...");
 

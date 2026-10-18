@@ -350,7 +350,7 @@ public class PixelNoticeBox : MonoBehaviour
     private void Awake()
     {
         // Escape closes the tip box (and drops the tips still waiting behind it), like pressing Got it.
-        PixelWindows.Register(this, 140, () => IsOpen, () => { PixelHints.ClearQueue(); Close(); });
+        PixelWindows.Register(this, 140, () => IsOpen, () => { PixelHints.ClearQueue(); Close(); });   // escape-only: closes the tip box (not a window)
     }
 
     private void OnDestroy() { Unfreeze(); PixelWindows.Unregister(this); }

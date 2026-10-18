@@ -105,7 +105,7 @@ public class PixelDragonFind : MonoBehaviour
     {
         instance = this;
         // Escape skips the show (the cube is already yours); it must not open the pause menu while one plays.
-        PixelWindows.Register(this, 165, () => playing, () => skipRequested = true);
+        PixelWindows.Register(this, 165, () => playing, () => skipRequested = true);   // escape-only: skips the show
     }
     private void OnDestroy()
     {

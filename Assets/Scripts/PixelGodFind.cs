@@ -84,7 +84,7 @@ public class PixelGodFind : MonoBehaviour
     private void Awake()
     {
         instance = this;
-        PixelWindows.Register(this, 165, () => playing, () => skipRequested = true);   // Escape skips the show (the cube is already yours)
+        PixelWindows.Register(this, 165, () => playing, () => skipRequested = true);   // Escape skips the show (the cube is already yours)   // escape-only: skips the show
     }
 
     private void OnDestroy()

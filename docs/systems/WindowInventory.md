@@ -68,10 +68,11 @@ Built by `PixelUIKit.CreateWindow` (`PixelUIKitWindows.cs`); the numbers are con
 - [x] Next up - Tool window: title 30 centred (was 22 left), header 36 -> 56 (taller), width 200 -> 260, grey 44 minimize / undock, still no X, place kept.
 - [x] Dev Hub - Tool window: title centred, red 40 X -> grey 44, search box moved to the left of the header (250 wide), no grow-in (it scales itself), place / scale kept.
 - [x] Pocket - Tool window: its own drag / minimize / dock copy removed (chrome), title centred, X 44 in the corner, '-' text button instead of the bar icon, Info a square 44 button, place / minimized / docked state kept.
+- [x] Prime Gauntlet - title 52 -> 48 (still gold, ~11 higher), X 60 -> standard 70 in the corner; keeps its gold-brown window.
+- [x] Belt speed editor - a standard dialog: title 'BELT SPEED' 32 -> 48, the theme window colour (was its own blue-grey); its Close button stays (no X).
 - Not on the builder (widgets, by choice): the skill tracker, the pinned Inventory.
 
 ## Known gaps (builder)
 - The chrome's undock arrow uses the first right slot: a Tool window with an extra right header button must shift it while docked (Pocket does, LayoutHeaderButtons).
-- No 'minimized / docked changed' event on the chrome (Pocket polls it).
 - Title colour is set after CreateWindow where a window keeps its own (pets yellow, visitors / Cubie their colour).
-- No compile-check guard yet against hand-built window headers (StyleWindow is also used for tooltips / tip boxes, so it needs a better signal).
+- Guarded: tools/compile-check/rules.sh fails when a script registers a window with PixelWindows without building it with CreateWindow (escape-only / window-built-in markers for the exceptions). The chrome raises StateChanged on minimize / dock.

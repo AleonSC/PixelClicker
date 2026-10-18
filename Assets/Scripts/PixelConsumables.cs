@@ -1459,7 +1459,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         PixelSaveRegistry.Register(this);
         PixelSaveRegistry.Register(worldPart = new WorldPart(this));
         // Escape cancels placing a device before it closes anything else.
-        PixelWindows.Register(this, 100, () => IsPlacing, CancelPlacement);
+        PixelWindows.Register(this, 100, () => IsPlacing, CancelPlacement);   // escape-only: cancels placing a device
 
         if (clicker == null)
         {
