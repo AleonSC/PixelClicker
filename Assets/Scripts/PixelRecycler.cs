@@ -1,6 +1,7 @@
 // ---- System notes ----
 // PixelRecycler.cs
-//   TIMED + UPGRADES (2026-10-16): a placed Recycler lasts durationSeconds (300 s; PixelRecyclerDevice counts down, 'm:ss left' under the counter,
+//   TIMED + UPGRADES (2026-10-16): a placed Recycler lasts durationSeconds (300 s; PixelRecyclerDevice counts down; hovering the bin shows a small floating DOWN ARROW with the
+//   'm:ss' left beside it - UpdateHoverMarker, gone when the pointer leaves; the counter only shows a running streak,
 //   it shrinks away with whatever is inside when time is up). Upgrades > Operation: Run Time (+60 s a level), Bin Size (+15% a level - the whole bin
 //   and its catching area scale, Place sizeFactor = the device's radius), Streak Power (+0.06 to the streak cap a level, StreakCap) and Suction (+0.75 husk
 //   widths of suction ring a level, SuctionReach).
@@ -416,7 +417,65 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
         counter.alignment = TextAlignmentOptions.Center;
         counter.color = counterColor;
         if (clicker != null && clicker.UIFont != null) counter.font = clicker.UIFont;
+        BuildHoverMarker(u);
         RefreshCounter();
+    }
+
+    // ---- Hover marker: a small floating down arrow over the bin with the time left beside it, only while the pointer is on the Recycler ----
+
+    [Tooltip("Colour of the floating arrow (and the time beside it) that shows while the pointer is on the Recycler.")]
+    [SerializeField] private Color hoverArrowColor = new Color(0.55f, 1f, 0.6f, 1f);
+
+    private Transform hoverMarker, hoverArrow;
+    private TextMeshPro hoverTime;
+    private float hoverShow;   // 0..1 (it pops in / out)
+
+    private void BuildHoverMarker(float u)
+    {
+        GameObject m = new GameObject("Hover Marker");
+        m.transform.SetParent(transform, false);
+        m.transform.localPosition = new Vector3(0f, wallH + u * 1.1f, 0f);
+        hoverMarker = m.transform;
+        GameObject a = new GameObject("Hover Arrow");
+        a.transform.SetParent(hoverMarker, false);
+        hoverArrow = a.transform;
+        PixelFactoryKit kit = new PixelFactoryKit(clicker, false);
+        Color c = hoverArrowColor;
+        // A small down arrow: a short shaft and a head of two slanted bars meeting at the bottom.
+        kit.Box("Hover Arrow Shaft", hoverArrow, new Vector3(0f, 0.22f * u, 0f), new Vector3(0.14f * u, 0.42f * u, 0.06f * u), c, default, false, 0f, 0.6f, c);
+        for (int sx = -1; sx <= 1; sx += 2)
+            kit.Box("Hover Arrow Head", hoverArrow, new Vector3(sx * 0.11f * u, -0.04f * u, 0f), new Vector3(0.12f * u, 0.36f * u, 0.06f * u), c, new Vector3(0f, 0f, sx * 40f), false, 0f, 0.6f, c);
+        GameObject tg = new GameObject("Hover Time");
+        tg.transform.SetParent(hoverMarker, false);
+        tg.transform.localPosition = new Vector3(0.55f * u, 0.1f * u, 0f);
+        hoverTime = tg.AddComponent<TextMeshPro>();
+        hoverTime.fontSize = 2.6f;
+        hoverTime.fontStyle = FontStyles.Bold;
+        hoverTime.alignment = TextAlignmentOptions.MidlineLeft;
+        hoverTime.rectTransform.pivot = new Vector2(0f, 0.5f);
+        hoverTime.rectTransform.sizeDelta = new Vector2(4f, 1f);
+        hoverTime.color = c;
+        if (clicker != null && clicker.UIFont != null) hoverTime.font = clicker.UIFont;
+        hoverMarker.gameObject.SetActive(false);
+    }
+
+    /// <summary>The marker shows (popping in, bobbing, facing the camera, the time left ticking) while the pointer is on the bin, and goes when it leaves.</summary>
+    private void UpdateHoverMarker(Camera cam)
+    {
+        if (hoverMarker == null) return;
+        bool over = cam != null && device != null && !PixelInput.PointerOverUI() && !PixelCalm.InMenu && device.HitTest(cam.ScreenPointToRay(PixelInput.PointerPosition()), out _);
+        hoverShow = Mathf.MoveTowards(hoverShow, over ? 1f : 0f, Time.unscaledDeltaTime / 0.12f);
+        bool show = hoverShow > 0.001f;
+        if (hoverMarker.gameObject.activeSelf != show) hoverMarker.gameObject.SetActive(show);
+        if (!show) return;
+        hoverMarker.localScale = Vector3.one * Mathf.SmoothStep(0f, 1f, hoverShow);
+        if (cam != null) hoverMarker.rotation = Quaternion.LookRotation(hoverMarker.position - cam.transform.position, Vector3.up);
+        if (hoverArrow != null) hoverArrow.localPosition = new Vector3(0f, Mathf.Sin(Time.unscaledTime * 4f) * 0.08f * Unit(clicker), 0f);
+        if (hoverTime != null)
+        {
+            string t = TimeLeftText();
+            if (hoverTime.text != t) hoverTime.text = t;
+        }
     }
 
     private void OnEnable() { if (!all.Contains(this)) all.Add(this); PixelCouplings.Register(this); }
@@ -558,7 +617,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
 
         UpdateButtonFlash();
         if (device == null) device = GetComponent<PixelPlacedDevice>();
-        if (device != null && Mathf.CeilToInt(device.Remaining) != shownSecond) { shownSecond = Mathf.CeilToInt(device.Remaining); RefreshCounter(); }   // (the time left ticks on the counter)
+        UpdateHoverMarker(cam);
         foreach (Rigidbody b in inside)   // a frozen husk you start to grab is let loose at once (Pixel Grabbing steers it with its velocity)
         {
             if (b == null || !b.isKinematic) continue;
@@ -893,8 +952,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
         {
             // Auto mode: the counter shows the streak (type + multiplier) while it lasts.
             bool showStreak = clicker != null && clicker.IsValidTierIndex(streakTier) && streakCount > 0 && Time.time - lastRecycleTime <= streakTimeout;
-            counter.text = (showStreak ? clicker.Tiers[streakTier].displayName.Replace(" Pixels", "") + " streak\n<size=80%>x" + StreakMultiplier.ToString("0.0") + " pay</size>"
-                                       : "<size=70%>drop husks in</size>") + TimeLeftLine();
+            counter.text = showStreak ? clicker.Tiers[streakTier].displayName.Replace(" Pixels", "") + " streak\n<size=80%>x" + StreakMultiplier.ToString("0.0") + " pay</size>" : "";   // (nothing between streaks: the time left shows on hover)
             return;
         }
         int cap = Mathf.Max(1, capacity);
@@ -902,15 +960,14 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     }
 
     private PixelPlacedDevice device;
-    private int shownSecond = -1;
 
-    /// <summary>'4:32 left' under the counter while the Recycler's run time ticks down (it packs up when it reaches 0).</summary>
-    private string TimeLeftLine()
+    /// <summary>'4:32' - the Recycler's run time left (it packs up at 0), shown beside the hover arrow. Empty when it does not count down.</summary>
+    private string TimeLeftText()
     {
         if (device == null) device = GetComponent<PixelPlacedDevice>();
         if (device == null || device.Remaining > 1e7f) return "";
         int sec = Mathf.Max(0, Mathf.CeilToInt(device.Remaining));
-        return "\n<size=60%>" + (sec / 60) + ":" + (sec % 60).ToString("00") + " left</size>";
+        return (sec / 60) + ":" + (sec % 60).ToString("00");
     }
 
     // ---- Processing ----
