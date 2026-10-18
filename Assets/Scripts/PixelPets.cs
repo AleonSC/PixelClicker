@@ -6,7 +6,7 @@ using static PixelInput;
 
 /// <summary>
 /// Pets. Every click on a pixel has a very small chance to give you a "pet" version of that pixel type (one pet per type).
-/// Finding one freezes the game behind a popup. The pet is a cube the size of the main pixel that roams the floor by itself,
+/// Finding one freezes the game behind a popup (the standard window as a dialog, no X; OK closes it). The pet is a cube the size of the main pixel that roams the floor by itself,
 /// hopping, rolling and bouncing around. Each pet has a tick box in the Toggles window's "Pets" tab. Pets are saved with the game.
 ///
 /// Added by PixelClicker.Awake.
@@ -507,19 +507,11 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
         dim.GetComponent<Image>().color = dimColor;
         PixelUIKit.Stretch(dim.GetComponent<RectTransform>());
 
-        GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image));
-        box.transform.SetParent(dim.transform, false);
-        PixelUIKit.StyleWindow(box.GetComponent<Image>(), panelColor);
-        RectTransform br = box.GetComponent<RectTransform>();
-        br.anchorMin = br.anchorMax = br.pivot = new Vector2(0.5f, 0.5f);
-        br.sizeDelta = new Vector2(760f, 660f);
-
-        TMP_Text title = PixelUIKit.CreateText(font, box.transform, "Title", popupTitle, 64f, TextAlignmentOptions.Center,
-                                               FontStyles.Bold, titleColor);
-        RectTransform tr = title.rectTransform;
-        tr.anchorMin = new Vector2(0f, 1f); tr.anchorMax = new Vector2(1f, 1f); tr.pivot = new Vector2(0.5f, 1f);
-        tr.sizeDelta = new Vector2(0f, 90f);
-        tr.anchoredPosition = new Vector2(0f, -24f);
+        // The standard window as a dialog (PixelUIKit.CreateWindow, no X: OK closes it). Title in the pets' title colour.
+        PixelWindowParts parts = PixelUIKit.CreateWindow(font, dim.transform, "Box", popupTitle, new Vector2(760f, 660f), panelColor,
+                                                         PixelUIKit.WindowKind.Fixed, null, closeButton: false);
+        parts.Title.color = titleColor;
+        GameObject box = parts.Root;   // (the content below starts at y 120, under the header)
 
         // A big spinning cube in the pet's colour.
         int tier = TierOf(type);
