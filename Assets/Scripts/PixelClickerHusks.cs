@@ -85,6 +85,7 @@ public partial class PixelClicker
                 if (!hideVacuumContents) vacuumContents.Add(info.tierIndex);
             }
 
+            if (info != null) info.claimed = true;   // (the suction owns it now: never pooled mid-suck - SuckRoutine destroys it)
             StartCoroutine(SuckRoutine(body, target));
         }
 

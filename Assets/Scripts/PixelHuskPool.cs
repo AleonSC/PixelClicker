@@ -8,8 +8,10 @@
 //     holder cannot tell the difference. A NEW system that keeps husk references must listen too (or only keep husks it claimed).
 //   - Only husks nobody CLAIMED are pooled. ReleaseOldPixel / ClaimOldPixel / AbsorbOldPixel mark the husk (OldPixelInfo.claimed): its new
 //     owner (a device, the Bank, a minigame) destroys it the normal way. Husks taken off the list by the floor cap are not claimed.
-//   - On reuse (Take) every component except Transform / Rigidbody / MeshFilter / MeshRenderer and every child object is removed at once
-//     (DestroyImmediate, so GetComponent never finds the old ones), the collider is made new by the spawn code (that also clears any
+//   - On release the husk is switched off and every component except Transform / Rigidbody / MeshFilter / MeshRenderer and every child
+//     object is removed at once (DestroyImmediate, so GetComponent never finds the old ones and their OnDestroy cleanup - a gravity well's
+//     ring, a mold shell's material - runs now, not when it is reused); the despawn that called Release goes at the end of the frame.
+//     On reuse (Take) it is cleaned again (anything left over), the collider is made new by the spawn code (that also clears any
 //     Physics.IgnoreCollision pairs of the old collider) and the rigidbody / renderer are put back to a fresh state.
 //   Restart: the pooled objects go with the scene; the list drops them (and is cleared by PixelStatics).
 // ---------------------------------------------------
@@ -70,7 +72,8 @@ public static class PixelHuskPool
 
         bool poolable = Enabled && body != null && info != null && !info.claimed && pooled.Count < Mathf.Max(0, MaxPooled);
         if (!poolable) { UnityEngine.Object.Destroy(go); return; }
-        go.SetActive(false);   // (its helpers leave the ticker in OnDisable; it is cleaned only when it is reused)
+        go.SetActive(false);   // (its helpers leave the ticker in OnDisable)
+        Strip(go, true);
         go.transform.SetParent(Root(), false);
         pooled.Add(go);
     }
@@ -114,7 +117,11 @@ public static class PixelHuskPool
     }
 
     /// <summary>Back to a bare object: no extra components or children, a fresh rigidbody and renderer.</summary>
-    private static void Clean(GameObject go)
+    /// <summary>
+    /// Removes every child object and every component except Transform / Rigidbody / MeshFilter / MeshRenderer.
+    /// 'releasing' = called from inside the husk's own OldPixelDespawn (which is still running): that one goes with a normal Destroy.
+    /// </summary>
+    private static void Strip(GameObject go, bool releasing)
     {
         Transform t = go.transform;
         for (int i = t.childCount - 1; i >= 0; i--) UnityEngine.Object.DestroyImmediate(t.GetChild(i).gameObject);
@@ -123,8 +130,18 @@ public static class PixelHuskPool
         // Joints first (they need the rigidbody), then everything else that isn't one of the four kept parts.
         foreach (Component c in scratch) if (c is Joint) UnityEngine.Object.DestroyImmediate(c);
         foreach (Component c in scratch)
-            if (c != null && !(c is Transform) && !(c is Rigidbody) && !(c is MeshFilter) && !(c is MeshRenderer)) UnityEngine.Object.DestroyImmediate(c);
+        {
+            if (c == null || c is Transform || c is Rigidbody || c is MeshFilter || c is MeshRenderer) continue;
+            if (releasing && c is OldPixelDespawn) UnityEngine.Object.Destroy(c);
+            else UnityEngine.Object.DestroyImmediate(c);
+        }
         scratch.Clear();
+    }
+
+    private static void Clean(GameObject go)
+    {
+        Strip(go, false);
+        Transform t = go.transform;
 
         t.SetParent(null, false);
         t.localScale = Vector3.one;
@@ -144,6 +161,7 @@ public static class PixelHuskPool
             rb.mass = 1f;
             rb.sleepThreshold = Physics.sleepThreshold;
             rb.maxAngularVelocity = 7f;
+            rb.maxDepenetrationVelocity = Physics.defaultMaxDepenetrationVelocity;   // (Pixel Grabbing changes it)
             rb.ResetCenterOfMass();
             rb.ResetInertiaTensor();
 #if UNITY_6000_0_OR_NEWER
