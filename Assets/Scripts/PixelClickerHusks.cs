@@ -70,7 +70,7 @@ public partial class PixelClicker
             Rigidbody body = oldPixels[i];
             if (body == null || body == exclude) continue;
 
-            OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+            OldPixelInfo info = PixelHuskQuery.Get(body).info;
             if (info != null && IsValidTier(info.tierIndex))
             {
                 if (husksPayCurrency)
@@ -280,7 +280,7 @@ public partial class PixelClicker
 
         if (credit && husksPayCurrency)   // pixel rules: a husk never pays its value again
         {
-            OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+            OldPixelInfo info = PixelHuskQuery.Get(body).info;
             if (info != null && IsValidTier(info.tierIndex)) AddCurrency(info.tierIndex, info.amount);
         }
         return true;
@@ -307,8 +307,19 @@ public partial class PixelClicker
     }
 
     /// <summary>The sound id of a pixel type's own bounce ("pixel_bounce_electric"), or null for an invalid tier. PixelAudio falls back to the plain landing sound if no such sound has clips.</summary>
-    private string BounceSoundId(int tierIndex) =>
-        IsValidTier(tierIndex) ? "pixel_bounce_" + tiers[tierIndex].type.ToString().ToLowerInvariant() : null;
+    private string BounceSoundId(int tierIndex)
+    {
+        if (!IsValidTier(tierIndex)) return null;
+        PixelType type = tiers[tierIndex].type;
+        if (!bounceSoundIds.TryGetValue(type, out string id)) { id = "pixel_bounce_" + TypeName(type).ToLowerInvariant(); bounceSoundIds[type] = id; }
+        return id;
+    }
+
+    // (made once per type / colour instead of for every husk that drops)
+    private static readonly Dictionary<PixelType, string> bounceSoundIds = new Dictionary<PixelType, string>();
+    private static AnimationCurve lightTrailCurve, flyTrailCurve;
+    private readonly Dictionary<Color, Gradient> lightTrailGradients = new Dictionary<Color, Gradient>(), flyTrailGradients = new Dictionary<Color, Gradient>();
+    private float lightTrailGradientBrightness = -1f;
 
 #if UNITY_6000_0_OR_NEWER
     private PhysicsMaterial oldPixelPhysics;
@@ -467,12 +478,18 @@ public partial class PixelClicker
         trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         trail.receiveShadows = false;
         trail.widthMultiplier = copy.transform.lossyScale.x * lightTrailWidth;
-        trail.widthCurve = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(1f, 0f));
+        if (lightTrailCurve == null) lightTrailCurve = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(1f, 0f));
+        trail.widthCurve = lightTrailCurve;   // (the trail keeps its own copy, so one shared curve / gradient per colour is enough)
 
-        Gradient g = new Gradient();
-        g.SetKeys(
-            new[] { new GradientColorKey(hot, 0f), new GradientColorKey(tierColor, 1f) },
-            new[] { new GradientAlphaKey(0.9f, 0f), new GradientAlphaKey(0f, 1f) });
+        if (lightTrailGradientBrightness != lightTrailBrightness) { lightTrailGradients.Clear(); lightTrailGradientBrightness = lightTrailBrightness; }
+        if (!lightTrailGradients.TryGetValue(tierColor, out Gradient g))
+        {
+            g = new Gradient();
+            g.SetKeys(
+                new[] { new GradientColorKey(hot, 0f), new GradientColorKey(tierColor, 1f) },
+                new[] { new GradientAlphaKey(0.9f, 0f), new GradientAlphaKey(0f, 1f) });
+            lightTrailGradients[tierColor] = g;
+        }
         trail.colorGradient = g;
     }
 
@@ -730,11 +747,16 @@ public partial class PixelClicker
                 trail.numCapVertices = 6;
                 trail.numCornerVertices = 4;
                 trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                trail.widthCurve = new AnimationCurve(new Keyframe(0f, 1f, 0f, -0.6f), new Keyframe(0.35f, 0.62f), new Keyframe(1f, 0f, -1.2f, 0f));
-                Gradient fade = new Gradient();
-                fade.SetKeys(
-                    new[] { new GradientColorKey(Color.Lerp(tc, Color.white, 0.25f), 0f), new GradientColorKey(tc, 0.4f), new GradientColorKey(tc, 1f) },
-                    new[] { new GradientAlphaKey(0.85f, 0f), new GradientAlphaKey(0.5f, 0.35f), new GradientAlphaKey(0.18f, 0.7f), new GradientAlphaKey(0f, 1f) });
+                if (flyTrailCurve == null) flyTrailCurve = new AnimationCurve(new Keyframe(0f, 1f, 0f, -0.6f), new Keyframe(0.35f, 0.62f), new Keyframe(1f, 0f, -1.2f, 0f));
+                trail.widthCurve = flyTrailCurve;
+                if (!flyTrailGradients.TryGetValue(tc, out Gradient fade))
+                {
+                    fade = new Gradient();
+                    fade.SetKeys(
+                        new[] { new GradientColorKey(Color.Lerp(tc, Color.white, 0.25f), 0f), new GradientColorKey(tc, 0.4f), new GradientColorKey(tc, 1f) },
+                        new[] { new GradientAlphaKey(0.85f, 0f), new GradientAlphaKey(0.5f, 0.35f), new GradientAlphaKey(0.18f, 0.7f), new GradientAlphaKey(0f, 1f) });
+                    flyTrailGradients[tc] = fade;
+                }
                 trail.colorGradient = fade;
             }
         }
@@ -920,9 +942,7 @@ public partial class PixelClicker
     /// <summary>True while an old pixel is still streaking away in a straight line (a meteor pixel nobody has caught).</summary>
     public bool IsFlyingPixel(Rigidbody body)
     {
-        if (body == null) return false;
-        OldPixelFlight flight = body.GetComponent<OldPixelFlight>();
-        return flight != null && flight.Flying;
+        return OldPixelFlight.IsFlying(body);   // (a set lookup: this runs for every husk every physics step in several systems)
     }
 
     /// <summary>

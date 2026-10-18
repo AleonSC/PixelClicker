@@ -95,14 +95,14 @@ public sealed class PixelPathCarrier
         for (int i = items.Count - 1; i >= 0; i--)
         {
             Item c = items[i];
-            OldPixelInfo info = c.rb != null ? c.rb.GetComponent<OldPixelInfo>() : null;
+            OldPixelInfo info = c.rb != null ? PixelHuskQuery.Get(c.rb).info : null;
             if (c.rb == null || (info != null && info.heldByPlayer))   // gone, or grabbed (the grab's business now)
             {
                 if (c.rb != null) { set.Remove(c.rb); carriedAll.Remove(c.rb); }
                 items.RemoveAt(i);
                 continue;
             }
-            OldPixelDespawn despawn = c.rb.GetComponent<OldPixelDespawn>();
+            OldPixelDespawn despawn = PixelHuskQuery.Get(c.rb).despawn;
             if (despawn != null) despawn.KeepAlive();
 
             if (c.approach < 1f)

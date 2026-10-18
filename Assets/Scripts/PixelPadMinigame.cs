@@ -346,7 +346,7 @@ public class PixelPadMinigame : PixelMinigame
             Rigidbody body = list[i];
             if (body == null || body.isKinematic) continue;
             if (clicker.IsFlyingPixel(body)) continue;
-            OldPixelDespawn d = body.GetComponent<OldPixelDespawn>();
+            OldPixelDespawn d = PixelHuskQuery.Get(body).despawn;
             if (d != null && (d.Held || d.IsDespawning)) continue;
             foreach (Hole h in holes)
             {

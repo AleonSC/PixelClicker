@@ -1715,6 +1715,9 @@ public class OldPixelGravityWell : MonoBehaviour
     private readonly HashSet<Rigidbody> members = new HashSet<Rigidbody>();
     private readonly HashSet<Rigidbody> inReach = new HashSet<Rigidbody>();
     private readonly List<Rigidbody> candidates = new List<Rigidbody>();
+    private readonly List<Rigidbody> leaving = new List<Rigidbody>();   // (reused every step: members that are no longer in reach)
+    private Vector3 sortCentre;
+    private Comparison<Rigidbody> byDistance;   // (made once: a lambda capturing the centre made a new one every physics step)
     private static readonly Dictionary<Rigidbody, OldPixelGravityWell> claims = new Dictionary<Rigidbody, OldPixelGravityWell>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -1819,7 +1822,7 @@ public class OldPixelGravityWell : MonoBehaviour
                         if (steered.y < 0f && other.position.y <= centre.y + 0.3f) steered.y = 0f; // skim along the floor, not into it
                         SetVelocityOf(other, steered * (fs * Mathf.Clamp01(1f - 1.2f * Time.fixedDeltaTime)));
                     }
-                    OldPixelDespawn fd = other.GetComponent<OldPixelDespawn>();
+                    OldPixelDespawn fd = PixelHuskQuery.Get(other).despawn;
                     if (fd != null) fd.KeepAlive();
                     continue;
                 }
@@ -1827,27 +1830,29 @@ public class OldPixelGravityWell : MonoBehaviour
                 SetVelocityOf(other, VelocityOf(other) * 0.2f);
             }
             if (other.isKinematic) continue;
-            OldPixelDespawn despawn = other.GetComponent<OldPixelDespawn>();
+            if ((centre - other.position).sqrMagnitude > radius * radius) continue;   // (the distance first: most husks are out of reach)
+            OldPixelDespawn despawn = PixelHuskQuery.Get(other).despawn;
             if (despawn != null && (despawn.Held || despawn.IsDespawning)) continue; // carried by the player / vanishing
-
-            if ((centre - other.position).magnitude > radius) continue;
             candidates.Add(other);
             inReach.Add(other);
         }
 
         // Keep the pixels already held that are still in reach; free the others.
-        members.RemoveWhere(m =>
+        leaving.Clear();
+        foreach (Rigidbody m in members) if (m == null || !inReach.Contains(m)) leaving.Add(m);
+        foreach (Rigidbody m in leaving)
         {
-            bool keep = m != null && inReach.Contains(m);
-            if (!keep && claims.TryGetValue(m, out OldPixelGravityWell owner) && owner == this) claims.Remove(m);
-            return !keep;
-        });
+            members.Remove(m);
+            if (m != null && claims.TryGetValue(m, out OldPixelGravityWell owner) && owner == this) claims.Remove(m);
+        }
 
         // Fill the free slots with the nearest unclaimed pixels in reach (other gravity wells count as pixels too, which forces spacing).
         int cap = look != null && look.wellMaxPixels > 0 ? look.wellMaxPixels : 20;
         if (members.Count < cap)
         {
-            candidates.Sort((a, b) => (centre - a.position).sqrMagnitude.CompareTo((centre - b.position).sqrMagnitude));
+            sortCentre = centre;
+            if (byDistance == null) byDistance = (a, b) => (sortCentre - a.position).sqrMagnitude.CompareTo((sortCentre - b.position).sqrMagnitude);
+            candidates.Sort(byDistance);
             foreach (Rigidbody c in candidates)
             {
                 if (members.Count >= cap) break;
@@ -1862,7 +1867,7 @@ public class OldPixelGravityWell : MonoBehaviour
         {
             Vector3 to = centre - other.position;
             float distance = to.magnitude;
-            OldPixelDespawn despawn = other.GetComponent<OldPixelDespawn>();
+            OldPixelDespawn despawn = PixelHuskQuery.Get(other).despawn;
             if (despawn != null) despawn.KeepAlive(); // held by the well: it doesn't age while the well works
             if (distance < 0.08f) continue;
 

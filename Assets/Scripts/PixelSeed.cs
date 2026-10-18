@@ -462,6 +462,9 @@ public class OldPixelSplash : MonoBehaviour
     private bool done;
     private float stillTime;
     private Rigidbody body;
+    private OldPixelDespawn despawnCard;   // (looked up once: the despawn is added just after Setup, so on first use)
+
+    private OldPixelDespawn Despawn => despawnCard != null ? despawnCard : (despawnCard = GetComponent<OldPixelDespawn>());
 
     public void Setup(PixelClicker owner)
     {
@@ -476,7 +479,7 @@ public class OldPixelSplash : MonoBehaviour
         if (collision.contactCount == 0) return;
         ContactPoint contact = collision.GetContact(0);
         if (contact.normal.y < 0.4f) return; // only the ground, not a wall or the cube
-        OldPixelDespawn despawn = GetComponent<OldPixelDespawn>();
+        OldPixelDespawn despawn = Despawn;
         if (despawn != null && despawn.Held) return; // carried by the player
         Splash(contact.point);
     }
@@ -497,7 +500,7 @@ public class OldPixelSplash : MonoBehaviour
 #else
         float speed = body.velocity.magnitude;
 #endif
-        OldPixelDespawn despawn = GetComponent<OldPixelDespawn>();
+        OldPixelDespawn despawn = Despawn;
         if (despawn != null && (despawn.Held || despawn.IsDespawning)) { stillTime = 0f; return; }
         stillTime = speed < 0.1f && !body.isKinematic ? stillTime + Time.deltaTime : 0f;
         if (stillTime > 1.5f) Splash(transform.position);

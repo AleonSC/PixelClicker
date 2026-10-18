@@ -185,7 +185,27 @@ public class OldPixelPopIn : MonoBehaviour, IHuskTick
 /// <summary>Marks a meteor-style old pixel that is still flying away in a straight line (cleared when it is caught).</summary>
 public class OldPixelFlight : MonoBehaviour
 {
-    public bool Flying = true;
+    // The bodies still flying, so PixelClicker.IsFlyingPixel is a set lookup instead of a GetComponent on every husk every physics step
+    // (most husks never fly). A husk leaves the set when it lands (Flying = false) or this component goes (destroyed, or stripped by PixelHuskPool).
+    private static readonly HashSet<Rigidbody> flying = new HashSet<Rigidbody>();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() => flying.Clear();
+
+    private Rigidbody body;
+    private bool isFlying = true;
+
+    /// <summary>Is this body a meteor-style husk still flying away?</summary>
+    public static bool IsFlying(Rigidbody b) => b != null && flying.Contains(b);
+
+    public bool Flying
+    {
+        get => isFlying;
+        set { isFlying = value; if (body == null) body = GetComponent<Rigidbody>(); if (body == null) return; if (value) flying.Add(body); else flying.Remove(body); }
+    }
+
+    private void Awake() { body = GetComponent<Rigidbody>(); if (body != null && isFlying) flying.Add(body); }
+    private void OnDestroy() { if (body != null) flying.Remove(body); }
 }
 
 public class OldPixelDespawn : MonoBehaviour, IHuskTick

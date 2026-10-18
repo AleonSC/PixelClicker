@@ -44,6 +44,8 @@ public class OldPixelStream : MonoBehaviour
 #endif
     }
 
+    private static readonly RaycastHit[] downHits = new RaycastHit[16];   // (reused by every stream each physics step)
+
     private void FixedUpdate()
     {
         if (landed || body == null || clicker == null) return;
@@ -55,14 +57,15 @@ public class OldPixelStream : MonoBehaviour
         if (v.y > 0.05f) return; // still rising
 
         float reach = half + Mathf.Max(0f, -v.y) * Time.fixedDeltaTime * 1.5f + 0.04f;
-        RaycastHit[] hits = Physics.RaycastAll(body.position, Vector3.down, reach, ~0, QueryTriggerInteraction.Ignore);
+        int count = Physics.RaycastNonAlloc(body.position, Vector3.down, downHits, reach, ~0, QueryTriggerInteraction.Ignore);
         float best = float.MaxValue;
         RaycastHit ground = default;
         bool found = false;
-        foreach (RaycastHit h in hits)
+        for (int i = 0; i < count; i++)
         {
-            if (h.collider == null || h.collider == box || h.collider.transform.IsChildOf(transform)) continue;
-            if (h.collider.GetComponentInParent<OldPixelInfo>() != null) continue; // other old pixels are not the ground
+            RaycastHit h = downHits[i];
+            if (h.distance >= best || h.collider == null || h.collider == box || h.collider.transform.IsChildOf(transform)) continue;   // (nearest first: the cheap test before the husk check)
+            if (h.rigidbody != null ? PixelHuskQuery.Get(h.rigidbody).info != null : h.collider.GetComponentInParent<OldPixelInfo>() != null) continue; // other old pixels are not the ground
             if (clicker.PixelTransform != null && h.collider.transform.IsChildOf(clicker.PixelTransform)) continue; // nor is the cube
             if (h.normal.y < 0.4f) continue;                                       // nor walls
             if (h.distance < best) { best = h.distance; ground = h; found = true; }

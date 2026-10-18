@@ -73,7 +73,7 @@ public class PixelViewBounds : MonoBehaviour
     private readonly bool[] used = new bool[5];
 
     // Planes only change when the camera or the bars do; infos are looked up once per old pixel.
-    private struct Entry { public OldPixelInfo info; public BoxCollider box; }
+    private struct Entry { public OldPixelInfo info; public BoxCollider box; public bool ignores; }   // ignores = its look ignores the view bounds (worked out once per husk)
     private readonly Dictionary<Rigidbody, Entry> infoCache = new Dictionary<Rigidbody, Entry>();
 
     private void OnDestroy() => PixelHuskPool.HuskReleasing -= OnHuskReleasing;
@@ -134,14 +134,15 @@ public class PixelViewBounds : MonoBehaviour
             Rigidbody body = pixels[i];
             if (body == null || body.isKinematic) continue;
 
-            if (!infoCache.TryGetValue(body, out Entry entry))
+            if (!infoCache.TryGetValue(body, out Entry entry) || entry.info == null)   // (looked again while the husk is still getting its cards)
             {
                 entry = new Entry { info = body.GetComponent<OldPixelInfo>(), box = body.GetComponent<BoxCollider>() };
+                entry.ignores = entry.info != null && clicker.IgnoresViewBounds(entry.info.tierIndex);
                 infoCache[body] = entry;
             }
             OldPixelInfo info = entry.info;
             if (info != null && info.tierIndex >= 0 && info.tierIndex < clicker.Tiers.Length &&
-                (clicker.IsFlyingPixel(body) || clicker.IgnoresViewBounds(info.tierIndex))) continue;
+                (entry.ignores || clicker.IsFlyingPixel(body))) continue;
 
             Vector3 position = body.position;
             Vector3 velocity = GetVelocity(body);

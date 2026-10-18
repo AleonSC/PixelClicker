@@ -23,6 +23,15 @@ public class OldPixelRadiation : MonoBehaviour
     private float tick, ringTimer;
     private Light glow;
 
+    // The bodies of the Nuclear husks (they are immune to each other): a set lookup instead of a GetComponent per nearby husk per tick.
+    private static readonly System.Collections.Generic.HashSet<GameObject> radiating = new System.Collections.Generic.HashSet<GameObject>();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() => radiating.Clear();
+
+    private void Awake() => radiating.Add(gameObject);
+    private void OnDestroy() => radiating.Remove(gameObject);   // (also when PixelHuskPool strips a reused husk)
+
     public void Setup(PixelClicker owner, float radiusPixels, float ageSecondsPerSecond)
     {
         clicker = owner;
@@ -65,7 +74,7 @@ public class OldPixelRadiation : MonoBehaviour
         foreach (PixelHuskQuery.Husk h in nearby)
         {
             if (h.body.gameObject == gameObject) continue;
-            if (h.body.GetComponent<OldPixelRadiation>() != null) continue;   // Nuclear pixels are immune to each other
+            if (radiating.Contains(h.body.gameObject)) continue;   // Nuclear pixels are immune to each other
             if (h.despawn != null) h.despawn.Hasten(hastenPerSecond * step);
         }
     }

@@ -38,15 +38,16 @@ public partial class PixelClicker
         solarClusterTimer = 0.15f;
 
         int solar = IndexOf(PixelType.Solar);
-        if (solar < 0) return;
+        if (solar < 0 || !tiers[solar].unlocked) return;   // (no Solar husks can drop while Solar is locked: skip the scan)
         solarBodies.Clear();
         solarDespawns.Clear();
         foreach (Rigidbody rb in oldPixels)
         {
             if (rb == null) continue;
-            OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
+            PixelHuskQuery.Husk h = PixelHuskQuery.Get(rb);
+            OldPixelInfo info = h.info;
             if (info == null || info.tierIndex != solar) continue;
-            OldPixelDespawn d = rb.GetComponent<OldPixelDespawn>();
+            OldPixelDespawn d = h.despawn;
             if (d == null || d.IsDespawning) continue;
             solarBodies.Add(rb);
             solarDespawns.Add(d);
@@ -434,7 +435,7 @@ public partial class PixelClicker
         foreach (Rigidbody body in oldPixels)
         {
             if (body == null) continue;
-            OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+            OldPixelInfo info = PixelHuskQuery.Get(body).info;
             if (info != null && IsValidTier(info.tierIndex) && IsConductorType(Tiers[info.tierIndex].type) && ++n >= 30) break;
         }
         return n;
