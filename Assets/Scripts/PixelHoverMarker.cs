@@ -1,7 +1,7 @@
 // ---- System notes ----
 // PixelHoverMarker.cs
 //   A small floating DOWN ARROW over a placed device that shows only while the pointer is on the device (pops in / out, bobs, faces the camera), with
-//   an optional short text beside it (the Recycler's 'm:ss' left). ONE shared piece: the Recycler and the Sorting Hopper use it (Attach); a new device
+//   an optional short text beside it (the arrow is ONE solid mesh - shaft + triangle head - since 2026-10-18; three bars read as a trident) (the Recycler's 'm:ss' left). ONE shared piece: the Recycler and the Sorting Hopper use it (Attach); a new device
 //   that wants the same 'this is where it goes' hint attaches one too. 'isOver' says whether a pointer ray is on the device (usually its
 //   PixelPlacedDevice.HitTest); the marker's own parts are named "Hover ..." so they read as part of the device.
 // ---------------------------------------------------
@@ -44,10 +44,11 @@ public class PixelHoverMarker : MonoBehaviour
         arrow.SetParent(body, false);
         PixelFactoryKit kit = new PixelFactoryKit(clicker, false);
         Color c = color;
-        // A short shaft and a head of two slanted bars meeting at the bottom.
-        kit.Box("Hover Arrow Shaft", arrow, new Vector3(0f, 0.22f * u, 0f), new Vector3(0.14f * u, 0.42f * u, 0.06f * u), c, default, false, 0f, 0.6f, c);
-        for (int sx = -1; sx <= 1; sx += 2)
-            kit.Box("Hover Arrow Head", arrow, new Vector3(sx * 0.11f * u, -0.04f * u, 0f), new Vector3(0.12f * u, 0.36f * u, 0.06f * u), c, new Vector3(0f, 0f, sx * 40f), false, 0f, 0.6f, c);
+        // ONE solid arrow: the classic outline (a shaft and a wide triangle head pointing down), extruded a little so it has depth.
+        GameObject a = new GameObject("Hover Arrow Shape");
+        a.transform.SetParent(arrow, false);
+        a.AddComponent<MeshFilter>().sharedMesh = ArrowMesh(u);
+        a.AddComponent<MeshRenderer>().sharedMaterial = kit.Mat(c, 0f, 0.6f, c * 0.6f);
         if (text != null)
         {
             GameObject tg = new GameObject("Hover Text");
@@ -85,5 +86,58 @@ public class PixelHoverMarker : MonoBehaviour
             string t = text();
             if (label.text != t) label.text = t;
         }
+    }
+
+    private static Mesh arrowMesh;
+    private static float arrowMeshU = -1f;
+
+    /// <summary>A flat arrow pointing down (tip at y = 0), 'u' sized, with front, back and side faces (shared by every marker of that size).</summary>
+    private static Mesh ArrowMesh(float u)
+    {
+        if (arrowMesh != null && Mathf.Approximately(arrowMeshU, u)) return arrowMesh;
+        // The outline, going round: the tip, the head's right corner, into the shaft, up the shaft, across, down, the head's left corner.
+        Vector2[] o =
+        {
+            new Vector2(0f, 0f), new Vector2(0.3f, 0.3f), new Vector2(0.11f, 0.3f), new Vector2(0.11f, 0.72f),
+            new Vector2(-0.11f, 0.72f), new Vector2(-0.11f, 0.3f), new Vector2(-0.3f, 0.3f),
+        };
+        float d = 0.04f * u;
+        var v = new System.Collections.Generic.List<Vector3>();
+        var t = new System.Collections.Generic.List<int>();
+        // Front and back faces: the head triangle (0,1,6) and the shaft quad (2,3,4,5).
+        int[][] faces = { new[] { 0, 6, 1 }, new[] { 2, 5, 4 }, new[] { 2, 4, 3 } };
+        // Every face is added twice, once each way round with its own corners, so it shows from both sides and lights properly.
+        for (int side = -1; side <= 1; side += 2)
+            for (int way = 0; way < 2; way++)
+            {
+                int b = v.Count;
+                foreach (Vector2 p in o) v.Add(new Vector3(p.x * u, p.y * u, side * d));
+                foreach (int[] f in faces)
+                {
+                    t.Add(b + f[0]);
+                    t.Add(b + (way == 0 ? f[1] : f[2]));
+                    t.Add(b + (way == 0 ? f[2] : f[1]));
+                }
+            }
+        // The rim: one quad for every edge of the outline.
+        for (int i = 0; i < o.Length; i++)
+        {
+            Vector2 p0 = o[i] * u, p1 = o[(i + 1) % o.Length] * u;
+            for (int way = 0; way < 2; way++)
+            {
+                int b = v.Count;
+                v.Add(new Vector3(p0.x, p0.y, -d)); v.Add(new Vector3(p1.x, p1.y, -d));
+                v.Add(new Vector3(p1.x, p1.y, d)); v.Add(new Vector3(p0.x, p0.y, d));
+                if (way == 0) { t.Add(b); t.Add(b + 2); t.Add(b + 1); t.Add(b); t.Add(b + 3); t.Add(b + 2); }
+                else { t.Add(b); t.Add(b + 1); t.Add(b + 2); t.Add(b); t.Add(b + 2); t.Add(b + 3); }
+            }
+        }
+        arrowMesh = new Mesh { name = "Hover Arrow" };
+        arrowMesh.SetVertices(v);
+        arrowMesh.SetTriangles(t, 0);
+        arrowMesh.RecalculateNormals();
+        arrowMesh.RecalculateBounds();
+        arrowMeshU = u;
+        return arrowMesh;
     }
 }
