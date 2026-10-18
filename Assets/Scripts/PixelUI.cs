@@ -98,7 +98,7 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Button text size.")]
     [SerializeField] private float buttonFontSize = 38f;
 
-    [Tooltip("Button colour.")]
+    [Tooltip("The HUD Inventory button's own colour (each HUD corner button has an identity colour of its own).")]
     [SerializeField] private Color buttonColor = new Color(0.25f, 0.6f, 0.4f, 1f);
 
     [Tooltip("Button text colour.")]
@@ -141,10 +141,7 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Tab text colour.")]
     [SerializeField] private Color subTabTextColor = Color.white;
 
-    [Tooltip("Colour of the selected tab.")]
-    [SerializeField] private Color subTabActiveColor = new Color(0.25f, 0.6f, 0.4f, 1f);
-
-    [Tooltip("Colour of the other tab.")]
+    [Tooltip("Background colour of the consumables drop-down and search box (the tabs themselves use the Neutral / Selected button roles).")]
     [SerializeField] private Color subTabInactiveColor = new Color(0.22f, 0.22f, 0.28f, 1f);
 
     [Tooltip("Gap under the tab buttons.")]
@@ -1071,7 +1068,7 @@ public class PixelUI : MonoBehaviour
 
         // --- Inventory button
         Button button = MakeButton(autoRoot.transform, "Inventory Button", inventoryButtonText, buttonSize, buttonColor,
-                                   buttonTextColor, buttonFontSize);
+                                   buttonTextColor, buttonFontSize);   // (role Custom: the HUD button's own identity colour)
         buttonLabel = button.GetComponentInChildren<TMP_Text>();
         if (uppercaseButton) buttonLabel.fontStyle |= FontStyles.UpperCase;
         RectTransform br = button.GetComponent<RectTransform>();
@@ -1555,7 +1552,11 @@ public class PixelUI : MonoBehaviour
         }
         if (compactSmallButton != null && compactSmallButton.gameObject.activeSelf != compact) compactSmallButton.gameObject.SetActive(compact);
         if (compactStickButton != null && compactStickButton.gameObject.activeSelf != compact) compactStickButton.gameObject.SetActive(compact);
-        if (compactButton != null) compactButton.GetComponent<Image>().color = compact ? new Color(0.2f, 0.6f, 0.3f, 1f) : PixelUIKit.WindowButtonColor;
+        if (compactButton != null && shownCompactOn != compact)   // (Refresh runs often: only re-role on a change)
+        {
+            shownCompactOn = compact;
+            PixelUIKit.SetRole(compactButton, compact ? ButtonRole.Success : ButtonRole.Neutral);
+        }
     }
 
     /// <summary>The place the currency lines and potion rows live: the scrolling list in automatic mode, else the box itself.</summary>
@@ -1629,6 +1630,7 @@ public class PixelUI : MonoBehaviour
     {
         string[] names = { currencyTabText, consumablesTabText, materialsTabText };
         subTabImages = new Image[names.Length];
+        shownSubTab = -1;
 
         float innerWidth = panelWidth - panelPadding * 2f;
         float tabWidth = (innerWidth - 8f * (names.Length - 1)) / names.Length;
@@ -1637,7 +1639,7 @@ public class PixelUI : MonoBehaviour
         for (int i = 0; i < names.Length; i++)
         {
             Button tab = MakeButton(boxObject.transform, "Tab " + names[i], names[i],
-                                    new Vector2(tabWidth, subTabHeight), subTabInactiveColor, subTabTextColor,
+                                    new Vector2(tabWidth, subTabHeight), PixelUITheme.ColorOf(ButtonRole.Neutral), subTabTextColor,
                                     subTabFontSize > 0f ? subTabFontSize : 28f);
             PixelUIKit.Caps(tab);
             subTabImages[i] = tab.GetComponent<Image>();
@@ -1729,7 +1731,7 @@ public class PixelUI : MonoBehaviour
     {
         if (!autoMode) return;
         float size = CompactToggleSize;
-        compactButton = windowParts.AddHeaderButton("Compact Toggle", "", true, PixelUIKit.WindowButtonColor);   // the standard left header slot
+        compactButton = windowParts.AddHeaderButton("Compact Toggle", "", true);   // the standard left header slot
 
         PixelUIKit.AddPinIcon(compactButton, size * 0.57f);   // the same pushpin as the Skills window's pin button
 
@@ -1755,6 +1757,8 @@ public class PixelUI : MonoBehaviour
     private Button compactSmallButton, compactStickButton;
     private TMP_Text compactSmallLabel;
     private Image compactStickImage;
+    private bool? shownCompactOn, shownStuck;   // the compact toggle's / lock's last shown state (null = not set yet)
+    private int shownSubTab = -1;               // the Inventory tab last shown as Selected
     private GameObject compactLockClosed, compactLockOpen;
     private PixelPopoutDrag compactDrag;
     private bool compactSmall, compactStuck, compactPrefsLoaded, compactPlaced;
@@ -1780,7 +1784,8 @@ public class PixelUI : MonoBehaviour
         compactDrag.onMoved = () => { KeepCompactOnScreen(); compactDesired = boxRect.anchoredPosition; SaveCompactPosition(); };
 
         float small = size * 0.5f;
-        compactSmallButton = MakeButton(boxObject.transform, "Compact Minimise", "", new Vector2(small, small), PixelUIKit.WindowButtonColor, Color.white, small * 0.7f);
+        compactSmallButton = MakeButton(boxObject.transform, "Compact Minimise", "", new Vector2(small, small), PixelUITheme.ColorOf(ButtonRole.Neutral), Color.white, small * 0.7f);
+        PixelUIKit.SetRole(compactSmallButton, ButtonRole.Neutral);
         RectTransform a = compactSmallButton.GetComponent<RectTransform>();
         a.anchorMin = a.anchorMax = a.pivot = new Vector2(1f, 1f);
         a.anchoredPosition = new Vector2(-panelPadding, -panelPadding * 0.5f);
@@ -1795,7 +1800,8 @@ public class PixelUI : MonoBehaviour
         t1.onEnter = () => tooltipCustomText = compactSmall ? "Show the whole list" : "Minimise to just the buttons";
         t1.onExit = HideTooltip;
 
-        compactStickButton = MakeButton(boxObject.transform, "Compact Stick", "", new Vector2(small, small), PixelUIKit.WindowButtonColor, Color.white, small * 0.7f);
+        compactStickButton = MakeButton(boxObject.transform, "Compact Stick", "", new Vector2(small, small), PixelUITheme.ColorOf(ButtonRole.Neutral), Color.white, small * 0.7f);
+        PixelUIKit.SetRole(compactStickButton, ButtonRole.Neutral);
         RectTransform b = compactStickButton.GetComponent<RectTransform>();
         b.anchorMin = b.anchorMax = b.pivot = new Vector2(1f, 1f);
         b.anchoredPosition = new Vector2(-panelPadding, -panelPadding * 0.5f - small - 4f);
@@ -1899,7 +1905,11 @@ public class PixelUI : MonoBehaviour
         if (!compact) return;
         boxRect.anchoredPosition = compactDesired;   // always back to the chosen spot (maximising may have pushed it up to fit on screen)
         KeepCompactOnScreen();
-        if (compactStickImage != null) compactStickImage.color = compactStuck ? new Color(0.2f, 0.55f, 0.3f, 1f) : PixelUIKit.WindowButtonColor;
+        if (compactStickImage != null && shownStuck != compactStuck)   // (runs often: only re-role on a change)
+        {
+            shownStuck = compactStuck;
+            PixelUIKit.SetRole(compactStickImage, compactStuck ? ButtonRole.Success : ButtonRole.Neutral);
+        }
         if (compactLockClosed != null && compactLockClosed.activeSelf != compactStuck) compactLockClosed.SetActive(compactStuck);
         if (compactLockOpen != null && compactLockOpen.activeSelf == compactStuck) compactLockOpen.SetActive(!compactStuck);
         if (compactSmallLabel != null) PixelUIKit.SetText(compactSmallLabel, compactSmall ? "+" : "-");
@@ -1911,7 +1921,8 @@ public class PixelUI : MonoBehaviour
     /// <summary>A second button beside the toggle, only while the simplified view is on: swaps between the currency list (shows a potion) and the potion list (shows a coin).</summary>
     private void BuildCompactSwitch(float size)
     {
-        compactSwitch = MakeButton(boxObject.transform, "Compact Switch", "", new Vector2(size, size), PixelUIKit.WindowButtonColor, Color.white, size * 0.5f);
+        compactSwitch = MakeButton(boxObject.transform, "Compact Switch", "", new Vector2(size, size), PixelUITheme.ColorOf(ButtonRole.Neutral), Color.white, size * 0.5f);
+        PixelUIKit.SetRole(compactSwitch, ButtonRole.Neutral);
         RectTransform rt = compactSwitch.GetComponent<RectTransform>();
         rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
         rt.anchoredPosition = compactButton.GetComponent<RectTransform>().anchoredPosition + new Vector2(size + 8f, 0f);   // just right of the pin
@@ -2017,9 +2028,10 @@ public class PixelUI : MonoBehaviour
 
     private void UpdateSubTabs()
     {
-        if (subTabImages == null) return;
+        if (subTabImages == null || shownSubTab == inventoryTab) return;   // (Refresh runs often: only re-role on a change)
+        shownSubTab = inventoryTab;
         for (int i = 0; i < subTabImages.Length; i++)
-            subTabImages[i].color = i == inventoryTab ? subTabActiveColor : subTabInactiveColor;
+            PixelUIKit.SetRole(subTabImages[i], i == inventoryTab ? ButtonRole.Selected : ButtonRole.Neutral);
     }
 
     /// <summary>Builds one clickable line per potion kind (shown only while you own some), plus the status and hint texts.</summary>
