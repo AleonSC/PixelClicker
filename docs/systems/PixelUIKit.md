@@ -8,3 +8,10 @@ Shared static helpers for code-built UI: `EnsureEventSystem`, `CreateCanvas`, `C
 
 ### Custom UI button colour
 Settings > Interface > 'Custom UI button colour' (tick box + eyedropper, PixelUIKit.ButtonColorOn / SetButtonColorFromColor, PlayerPrefs PixelClicker.Setting.UiButtonColor / UiButtonHue / UiButtonSat, per save via PixelSettingsSync). PixelUIKit.StyleButton registers every button image and its base colour; RefreshButtons recolours them all at once (neutral buttons take the picked hue, strongly coloured ones such as red Quit keep theirs; a button whose colour something else changed, like a selected row, is left alone). Replaces the retired 'Pixel-assemble menu buttons' effect (PixelDockFx).
+
+
+## Button roles (UI unification step 3)
+- Make a button by MEANING: `PixelUIKit.CreateButton(font, parent, name, label, size, ButtonRole.X, labelSize)`; switch it later with `PixelUIKit.SetRole(button or image, role)` (a tab: `SetRole(img, open ? ButtonRole.Selected : ButtonRole.Neutral)`; an on/off toggle: Success when on, Neutral when off). Never set a role button's `Image.color` by hand.
+- Roles and their colours live in `PixelUITheme` (a system component, Inspector-editable): Neutral (ordinary, window X / header buttons, inactive tabs), Primary (main action, every '?' help button), Selected (open tab / chosen item), Success (green confirm), Danger (red quit / delete / reject). Neutral, Primary and Selected follow the custom button colour; Success and Danger keep their meaning colour (ticks in the Inspector).
+- A plain colour (`CreateButton(..., Color color, ...)`) = role Custom: only for truly unique colours (a skill's accent, a vendor's theme colour, gold); weakly coloured Custom buttons still follow the custom colour (the old rule).
+- Not a button but should look like one (a colour swatch, a progress trough, a list row): `StyleButtonLook(image)` - the shape only, never recoloured.
