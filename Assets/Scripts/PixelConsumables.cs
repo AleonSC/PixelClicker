@@ -555,6 +555,9 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     [Min(0.1f)]
     [Tooltip("How long (seconds) you hold the right mouse button on a placed device to remove it. The same hold cancels the running potion.")]
     [SerializeField] private float removeHoldSeconds = 0.8f;
+    [Tooltip("Seconds the right button must already be held on a device before the remove ring starts (a shorter right TAP opens the device panel instead, PixelDeviceCard).")]
+    [SerializeField] private float removeStartDelay = 0.25f;
+    private float rightDownAt = -10f;
 
     [Tooltip("Text above the meter while cancelling the running potion. {0} = potion name.")]
     [SerializeField] private string cancelPotionText = "Cancelling {0}...";
@@ -763,7 +766,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         {
             kind = DeviceKind.SortingHopper,
             displayName = "Sorting Hopper",
-            description = "A big funnel that stands behind a Recycler and holds up to 20 husks dropped into it. Click it to pick a filter: that type goes into the Recycler, one after another (so the streak builds); every other husk drops out of its side tube. It stays until you remove it.",
+            description = "A big funnel that stands behind a Recycler and holds up to 20 husks dropped into it. Right-click it and press Select filter: that type goes into the Recycler, one after another (so the streak builds); every other husk drops out of its side tube. It stays until you remove it.",
             requiredType = PixelClicker.PixelType.White,
             costs = new[]
             {
@@ -1671,17 +1674,16 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     private void UpdateRemoval()
     {
         PixelPlacedDevice target = null;
-        if (!IsPlacing && !PixelBank.HoseOn && !PixelClicker.GodMode && Time.frameCount != placeEndFrame && (RightPressed() || RightHeld()) && !PointerOverUI())
-            target = DeviceUnderPointer();
+        if (RightPressed()) rightDownAt = Time.unscaledTime;
+        if (!IsPlacing && !PixelBank.HoseOn && !PixelClicker.GodMode && Time.frameCount != placeEndFrame && RightHeld() && Time.unscaledTime - rightDownAt >= removeStartDelay && !PointerOverUI())
+            target = DeviceUnderPointer();   // (only after removeStartDelay: a quick tap is the device panel's, PixelDeviceCard)
 
         // Only a ring fills round the cursor (no text), a buildup sound rises, and the device glows red as it fills.
         bool done = PixelHold.Update(this, target, removeHoldSeconds, "", removeMeterColor, true, "remove_buildup");
         if (glowDevice != null && glowDevice != target) glowDevice.SetRemoveGlow(0f);
         if (done)
         {
-            target.SetRemoveGlow(1f);   // (it shrinks away glowing)
-            target.RemoveNow();
-            PixelAudio.Play("device_remove");
+            RemoveDevice(target);
             glowDevice = null;
             return;
         }
@@ -1690,6 +1692,22 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     }
 
     private PixelPlacedDevice glowDevice;
+
+    /// <summary>Removes a placed device the way the right-button hold does (it shrinks away glowing red; sound device_remove). Also the device panel's Remove button.</summary>
+    public void RemoveDevice(PixelPlacedDevice target)
+    {
+        if (target == null || target.IsRemoving) return;
+        target.SetRemoveGlow(1f);   // (it shrinks away glowing)
+        target.RemoveNow();
+        PixelAudio.Play("device_remove");
+    }
+
+    /// <summary>The placed device under the pointer (nearest, and only when nothing of the clicker cube is in front of it; null over UI or while placing). Used by PixelRightClick and the device card.</summary>
+    public PixelPlacedDevice DeviceAtPointer()
+    {
+        if (IsPlacing || PixelBank.HoseOn || PixelClicker.GodMode || PointerOverUI() || clicker == null) return null;
+        return DeviceUnderPointer();
+    }
     private static readonly RaycastHit[] cubeHits = new RaycastHit[64];   // (reused by DeviceUnderPointer)
 
     /// <summary>The placed device under the mouse (nearest first). Looks at the device's visible parts, not its range markings. 'onlyDisarmed' = only devices still waiting for their first click.</summary>
@@ -2073,6 +2091,9 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         if (opShop == null) opShop = PixelFind.First<PixelShop>();
         return opShop != null ? opShop.OperationBonus(kind, stat) : 0f;
     }
+
+    /// <summary>The device entry at this index with its Operation upgrades applied (null for a bad index). The device info panel reads run time / reach from it.</summary>
+    public Device EffectiveDeviceAt(int index) => devices != null && index >= 0 && index < devices.Length && devices[index] != null ? EffectiveDevice(devices[index]) : null;
 
     /// <summary>A copy of the device with the Operation upgrades applied (duration, reach, strength, uses...). Used whenever a device is placed, previewed or described.</summary>
     private Device EffectiveDevice(Device d)

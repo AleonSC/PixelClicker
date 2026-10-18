@@ -15,6 +15,7 @@
 //   The placed device is the permanent PixelChipperDevice stub (bought, kept, placed, saved, removed - hold the right button on it - like every device). Unlock:
 //   vendorOnly + shopSkillId 'standard' / level 5 (on sale in the shop from Standard 5, pure currency). Saved: the wind left (PlacedState.extra 'W,seconds').
 //   No carry handles: it roams away from its home pad, so it is moved by picking it up (removing) and placing it again. Stats sweeper.rescued.
+//   DEVICE CARD (PixelDeviceCard, FillDeviceInfo): wind left as the bar, what it is doing; the panel adds range and this session's rescues.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -22,7 +23,7 @@ using UnityEngine;
 /// <summary>A container the Sweeper may drop stray husks into (it takes them through AcceptHusk and says its room through IPixelHuskRoom).</summary>
 public interface IPixelStrayTarget { }
 
-public class PixelSweeper : MonoBehaviour
+public class PixelSweeper : MonoBehaviour, IPixelDeviceInfo
 {
     [Header("Sweeper")]
     [Min(1f)]
@@ -76,6 +77,7 @@ public class PixelSweeper : MonoBehaviour
     private TMPro.TextMeshPro windLabel;
     private State state = State.Idle;
     private Rigidbody target;
+    private int sessionRescued;   // husks it brought to a container since it was placed / loaded (the device panel)
     private IPixelSocketDevice container;
     private float containerReach;
     private float windLeft, nextSearch, pauseUntil;
@@ -90,6 +92,20 @@ public class PixelSweeper : MonoBehaviour
     // ---------------- building ----------------
 
     private static float Unit(PixelClicker c) => c != null && c.OldPixelWorldSize > 0f ? c.OldPixelWorldSize : 0.5f;
+
+    /// <summary>The shared device card / panel: wind left (the bar), what it is doing; the panel adds its range and this session's rescues.</summary>
+    public void FillDeviceInfo(PixelDeviceInfo info)
+    {
+        if (motorFitted) info.Note("Motor fitted - never runs down");
+        else if (RunDown) { info.Note("<color=#FFD27F>Run down - click it to wind it up</color>"); info.Progress = 0f; info.ProgressLabel = "no wind left"; }
+        else { info.Progress = Mathf.Clamp01(windLeft / Mathf.Max(1f, runSeconds)); info.ProgressLabel = PixelDeviceInfo.Clock(windLeft) + " of wind"; }
+        info.Add("Doing", state == State.ToHusk ? "fetching a fading husk" : state == State.ToContainer ? "carrying a husk to a container" : "waiting at home");
+        if (!info.Full) return;
+        info.Add("Range", rangeCubes.ToString("0") + " cubes from its pad");
+        info.Add("Wind", PixelDeviceInfo.Clock(runSeconds) + " per wind-up");
+        info.Heading("This session");
+        info.Add("Husks rescued", sessionRescued.ToString());
+    }
 
     /// <summary>A placed Sweeper with its home pad at 'point' (wound up and ready).</summary>
     public static GameObject Place(PixelClicker c, Vector3 point, float yaw)
@@ -349,7 +365,7 @@ public class PixelSweeper : MonoBehaviour
         PixelSocket intake = IntakeOf(container);
         PixelHuskHolder.Unreserve(husk, Vector3.zero);
         husk.isKinematic = true;
-        if (intake != null && container.AcceptHusk(intake, husk)) { PixelStats.Count("sweeper.rescued"); PixelAudio.Play("device_place", 1.2f, 0.5f); return; }
+        if (intake != null && container.AcceptHusk(intake, husk)) { PixelStats.Count("sweeper.rescued"); sessionRescued++; PixelAudio.Play("device_place", 1.2f, 0.5f); return; }
         husk.isKinematic = false;
         husk.position = botPos + Vector3.up * 0.8f * unit;
     }

@@ -6,6 +6,8 @@
 //   1b. Charge: a Power Click is charging (PixelPowerClick.Charging) - a right press cancels it (no cooldown); nothing else gets it.
 //   2. Tool: the Bank hose is out, a device is being placed, the Conveyor Belt Kit / a tester piece is placing - they keep the right button.
 //   3. Pet: a pet is under the pointer (or held / its menu is open) - right-click opens its menu (PixelPetsMenu).
+//   3b. Device: a placed device is under the pointer (PixelConsumables.DeviceAtPointer; the cube in front wins) - a right TAP opens the shared
+//      device info panel (PixelDeviceCard), a right HOLD still removes it (PixelConsumables.UpdateRemoval). Device = that device.
 //   4. WorldPart: anything else holding the mouse (PixelClicker.ExternalClickBlock: a device part that claimed the pointer, the UFO Helper,
 //      first person, the new-game intro, dev pickers...).
 //   5. Cube: the live cube is under the pointer, even with a husk lying in front of it - Block Hold, clearing a hazard, the shuffle tap.
@@ -27,20 +29,24 @@ using UnityEngine;
 
 public static class PixelRightClick
 {
-    public enum Owner { None, Blocked, Tool, Pet, WorldPart, Cube, Husk, Charge }
+    public enum Owner { None, Blocked, Tool, Pet, WorldPart, Cube, Husk, Charge, Device }
 
     private static int frame = -1;
     private static Owner owner, pressOwner;
     private static Rigidbody husk, pressHusk;
+    private static PixelPlacedDevice device;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { frame = -1; owner = pressOwner = Owner.None; husk = pressHusk = null; }
+    private static void ResetStatics() { frame = -1; owner = pressOwner = Owner.None; husk = pressHusk = null; device = null; }
 
     /// <summary>Who a right click at the pointer belongs to this frame.</summary>
     public static Owner Current { get { Resolve(); return owner; } }
 
     /// <summary>The husk a right click would crush this frame (null unless Current is Husk).</summary>
     public static Rigidbody Husk { get { Resolve(); return owner == Owner.Husk ? husk : null; } }
+
+    /// <summary>The placed device a right click would open the info panel of this frame (null unless Current is Device).</summary>
+    public static PixelPlacedDevice Device { get { Resolve(); return owner == Owner.Device ? device : null; } }
 
     /// <summary>Who the right button's current press belongs to (worked out on the frame it went down; None when the button is up).</summary>
     public static Owner PressOwner { get { Resolve(); return pressOwner; } }
@@ -52,6 +58,7 @@ public static class PixelRightClick
         bool pressed = PixelInput.RightPressed(), held = PixelInput.RightHeld();
         if (!pressed && held && (pressOwner == Owner.Husk || pressOwner == Owner.Charge)) { owner = pressOwner; husk = pressOwner == Owner.Husk ? pressHusk : null; return; }   // a hold that started on a husk (or cancelled a power click) stays that owner's
         husk = null;
+        device = null;
         owner = Decide(PixelFind.Cached<PixelClicker>());
         if (pressed) { pressOwner = owner; pressHusk = husk; }
         else if (!held) { pressOwner = Owner.None; pressHusk = null; }
@@ -64,6 +71,11 @@ public static class PixelRightClick
         PixelConsumables consumables = PixelFind.Cached<PixelConsumables>();
         if (PixelBank.HoseOn || PixelFeatureTester.Placing || (consumables != null && consumables.IsPlacing)) return Owner.Tool;
         if (PixelPets.HoveringPet) return Owner.Pet;
+        if (consumables != null && !PixelFirstPerson.Active && !PixelMinigame.TakeoverActive && !PixelCameraIntro.ClicksLocked)
+        {
+            PixelPlacedDevice d = consumables.DeviceAtPointer();   // (nearest device whose parts are under the pointer, never with the cube in front)
+            if (d != null) { device = d; return Owner.Device; }
+        }
         if (PixelClicker.ExternalClickBlock || PixelClicker.GodMode) return Owner.WorldPart;
         Vector2 screen = PixelInput.PointerPosition();
         if (clicker.IsLiveCubeAt(screen)) return Owner.Cube;

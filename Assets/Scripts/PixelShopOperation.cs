@@ -47,6 +47,27 @@ public partial class PixelShop
     /// <summary>The level bought of an upgrade (kept as a saved stat counter).</summary>
     public int OperationLevel(PixelOperationUpgrade u) => u == null ? 0 : Mathf.Clamp((int)PixelStats.Total(OperationKey(u)), 0, u.maxLevel);
 
+    /// <summary>The device info panel (PixelDeviceCard): adds one 'name  level / max' line per Operation upgrade of this consumable.</summary>
+    public void AddOperationLevels(PixelConsumables.DeviceKind kind, PixelDeviceInfo info)
+    {
+        if (operationUpgrades == null || info == null) return;
+        foreach (PixelOperationUpgrade u in operationUpgrades)
+            if (u != null && u.device == kind) info.Add(u.displayName, "Lv " + OperationLevel(u) + " / " + u.maxLevel);
+    }
+
+    /// <summary>Is this consumable on the Operation tab (so the device panel's Upgrades button can open it)?</summary>
+    public bool HasOperationRow(PixelConsumables.DeviceKind kind) => System.Array.IndexOf(OperationKinds, kind) >= 0 && consumables != null && consumables.OperationListed(kind);
+
+    /// <summary>The device info panel's Upgrades button: opens the shop on Upgrades > Operation with this consumable's upgrade window open.</summary>
+    public bool OpenOperationFor(PixelConsumables.DeviceKind kind)
+    {
+        int index = System.Array.IndexOf(OperationKinds, kind);
+        if (index < 0 || panelObject == null || !builtOk) return false;
+        TutorialOpen(ShopTab.Upgrades, 2);
+        OpenOperationWindow(index);
+        return true;
+    }
+
     /// <summary>The total change the bought upgrades make to one stat of a consumable.</summary>
     public float OperationBonus(PixelConsumables.DeviceKind kind, PixelOperationStat stat)
     {

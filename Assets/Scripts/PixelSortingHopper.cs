@@ -17,11 +17,11 @@
 //       it can't take one);
 //       every OTHER type -> out of the SIDE TUBE (+x side, down to the floor behind the bin, where the Recycler's suction leaves it alone: BehindHopper).
 //     No filter chosen = it just holds everything.
-//   - THE DEVICE WINDOW (PixelSortingHopperWindow): left-click the hopper to open it: the filter (picture + name) with a 'Select filter' button that
-//     shows every unlocked husk type to pick from (or None), what it holds, and an 'Empty out' button (everything out of the side tube).
-//     The click claims the pointer (PixelPointerClaim.ClaimButton) unless the cube is in front (PixelCarryHandles.CubeInFront).
+//   - THE DEVICE CARD / PANEL (PixelDeviceCard, FillDeviceInfo): hover = filter, feeds a Recycler or not, holding n / room; right-click tap = the panel
+//     with what it holds per type, the feed gap, this session's totals and two buttons of its own (PixelDeviceInfo.AddAction): SELECT FILTER (opens
+//     PixelSortingHopperWindow, a grid of every unlocked husk type + None) and EMPTY OUT (everything out of the side tube).
 //   - The filter shows on a little flag on the bowl's back-left corner (tinted its colour, the block spinning on top). A floating down arrow
-//     (PixelHoverMarker) with 'held / room' shows on hover.
+//     (PixelHoverMarker) shows on hover.
 //   Removing it lets everything it holds out of the side tube first.
 //   Unlock: vendorOnly + shopSkillId 'standard' / level 3 = it appears in the shop at Standard level 3 (no vendor sells it); bought for White.
 //   SOCKETS (PixelSockets.cs): its own 'back' socket (In) takes belts / hoses: AcceptHusk takes the husk in (refused when full).
@@ -33,7 +33,7 @@ using System.Globalization;
 using System.Text;
 using UnityEngine;
 
-public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, IPixelStrayTarget
+public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, IPixelStrayTarget, IPixelDeviceInfo
 {
     [Header("Sorting Hopper")]
     [Tooltip("Seconds between two husks leaving the hopper (into the Recycler or out of the side tube).")]
@@ -211,7 +211,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         Transform flag = transform.Find("Flag");
         flagRenderer = flag != null ? flag.GetComponent<Renderer>() : null;
         SetFilter(-1);
-        PixelHoverMarker.Attach(transform, new Vector3(0f, BowlTopHusks * su + 1.1f * su, 0f), su, hoverArrowColor, PointerOnHopper, () => held.Count + " / " + Room);
+        PixelHoverMarker.Attach(transform, new Vector3(0f, BowlTopHusks * su + 1.1f * su, 0f), su, hoverArrowColor, PointerOnHopper);   // (the numbers are on the device card)
     }
 
     /// <summary>Is a pointer ray on the hopper (its parts, as the device's own hover / remove check sees them)?</summary>
@@ -234,6 +234,30 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
 
     /// <summary>A husk comes in through the back coupling (or from the Sweeper): taken in at once. Refused when full.</summary>
     public bool AcceptHusk(PixelSocket socket, Rigidbody husk) => husk != null && clicker != null && held.Count < Room && TakeIn(husk);
+
+    private int sessionFed, sessionRejected, sessionEjected;   // since it was placed / loaded (the device panel)
+
+    /// <summary>The shared device card / panel: filter, the Recycler it feeds, what it holds; the panel adds each type held, the feed gap, this session's totals and its buttons.</summary>
+    public void FillDeviceInfo(PixelDeviceInfo info)
+    {
+        info.Add("Filter", clicker != null && clicker.IsValidTierIndex(filterTier) ? Name(filterTier) : "none (it just holds)");
+        info.Add("Feeds", recycler != null ? "the Recycler in front of it" : "<color=#FFD27F>no Recycler - the filter type waits</color>");
+        info.Add("Holding", held.Count + " / " + Room);
+        info.Progress = held.Count / (float)Room;
+        info.ProgressLabel = held.Count >= Room ? "full" : "";
+        if (!info.Full) return;
+        SortedDictionary<int, int> counts = new SortedDictionary<int, int>();
+        foreach (Held h in held) { counts.TryGetValue(h.tier, out int n); counts[h.tier] = n + 1; }
+        foreach (KeyValuePair<int, int> kv in counts) if (clicker.IsValidTierIndex(kv.Key)) info.Add("  " + Name(kv.Key), "x" + kv.Value + (kv.Key == filterTier ? "  (filter)" : ""));
+        info.Add("Feed gap", FeedInterval.ToString("0.00") + " s");
+        info.Heading("This session");
+        info.Add("Into the Recycler", sessionFed.ToString());
+        info.Add("Out of the side tube", (sessionRejected + sessionEjected).ToString());
+        info.AddAction("Select filter", () => PixelSortingHopperWindow.Open(this));
+        info.AddAction("Empty out", EmptyOut, ButtonRole.Danger);
+    }
+
+    private string Name(int tier) => clicker.Tiers[tier].displayName.Replace(" Pixels", "");
 
     private void OnDestroy()
     {
@@ -314,7 +338,6 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         bool fading = (transform.localScale - baseScale).sqrMagnitude > 0.0001f;   // the floor's props fade (main menu, after a load): wait
         if (fading || PixelCalm.InMenu || Time.timeScale <= 0f) return;
 
-        HandleClick(clicker.ViewCamera);
         KeepLatched();
         Feed();
 
@@ -322,18 +345,6 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         if (tick > 0f) return;
         tick = 0.1f;
         Catch();
-    }
-
-    /// <summary>Pointer on the hopper (the cube not in front): claims the click; a left click opens the device window.</summary>
-    private void HandleClick(Camera cam)
-    {
-        if (cam == null || device == null || PixelInput.PointerOverUI() || PixelCarryHandles.Hot || PixelFeatureTester.Placing) return;
-        PixelConsumables c = PixelFind.Cached<PixelConsumables>();
-        if (c != null && c.IsPlacing) return;
-        Ray ray = cam.ScreenPointToRay(PixelInput.PointerPosition());
-        if (!device.HitTest(ray, out float distance) || PixelCarryHandles.CubeInFront(ray, distance)) return;
-        PixelPointerClaim.ClaimButton();
-        if (PixelInput.LeftPressed()) PixelSortingHopperWindow.Open(this);
     }
 
     /// <summary>Latches onto a free Recycler within reach (every half second when it has none) and follows it when it is carried.</summary>
@@ -405,8 +416,8 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
             if (filtered && !binReady) continue;   // (it waits for the bin)
             Held h = held[i];
             held.RemoveAt(i);
-            if (filtered) { SendIntoBin(h); PixelStats.Count("hopper.husks"); }
-            else { SendOutSide(h, 1f); PixelStats.Count("hopper.rejected"); }
+            if (filtered) { SendIntoBin(h); PixelStats.Count("hopper.husks"); sessionFed++; }
+            else { SendOutSide(h, 1f); PixelStats.Count("hopper.rejected"); sessionRejected++; }
             nextFeed = Time.time + FeedInterval;
             PixelSortingHopperWindow.Changed(this);
             return;
@@ -436,6 +447,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         foreach (Held h in held) SendOutSide(h, 2.5f);
         held.Clear();
         PixelStats.Count("hopper.ejected", n);
+        sessionEjected += n;
         PixelAudio.Play("device_place");
         PixelSortingHopperWindow.Changed(this);
     }
