@@ -2,7 +2,8 @@
 // PixelViewWindow.cs
 //   FREE CAM (4th tick box, PixelFreeCam.cs): a detached camera flown by hand (WASD, Space / C, Shift, middle drag to look); never saved as the player's view, no zoom slider, no flat view.
 //   The View window (component added by PixelClicker.Awake; opens ONLY with its key, PixelAction.ViewWindow, default V; closes with the
-//   key, its X or Escape (PixelWindows 130); a small draggable window that does not pause the game; disableViewWindow). It replaces the
+//   key, its X or Escape (PixelWindows 130); a standard Tool window (PixelUIKit.CreateWindow: drag by the header, minimize, dock to a screen edge,
+//   position saved under PixelClicker.ViewWindow.Window.*; first time at the right edge half way down) that does not pause the game; disableViewWindow). It replaces the
 //   old F (view) and X (zoom) keys, which are retired: View tick boxes - First person, Orbital, Top down (the normal view) - where ticking
 //   one unticks the others (PixelViewWindow.SetView: leaves the current view, enters the new one; an orbital <-> top down switch just
 //   re-aims the same camera, PixelOrbitCamera.SetTopDown); an 'Orthographic (flat) view' tick box (PixelOrthoView.Enabled, the same
@@ -81,13 +82,12 @@ public class PixelViewWindow : MonoBehaviour
     }
 
     private static void SaveKind(PixelViewKind kind) { if (kind == PixelViewKind.FreeCam) return; PixelPrefs.SetInt(PrefKind, kind == PixelViewKind.FirstPerson ? 0 : (int)kind); }   // (the free cam is never the saved view)   // (first person is never restored by itself)
-    private static Vector2 savedPosition = new Vector2(-40f, 0f);
 
     /// <summary>True while the window is open (first person gives the mouse back meanwhile).</summary>
     public static bool IsOpen => instance != null && PixelPop.IsOpen(instance.window);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { instance = null; savedPosition = new Vector2(-40f, 0f); InvertScroll = true; }
+    private static void ResetStatics() { instance = null; InvertScroll = true; }
 
     /// <summary>The view in use right now.</summary>
     public static PixelViewKind CurrentView =>
@@ -125,6 +125,7 @@ public class PixelViewWindow : MonoBehaviour
     private PixelClicker clicker;
     private GameObject canvasRoot, window;
     private RectTransform windowRect;
+    private PixelWindowParts parts;   // the standard window it is built on (PixelUIKit.CreateWindow)
     private TMP_FontAsset font;
     private readonly Toggle[] viewTicks = new Toggle[4];   // First person, Orbital, Top down, Free cam
     private Toggle orthoTick, autoTick, invertTick;
@@ -220,7 +221,7 @@ public class PixelViewWindow : MonoBehaviour
     {
         if (window == null) Build();
         if (window == null) return;
-        windowRect.anchoredPosition = savedPosition;
+        parts.Chrome.PlaceNow();   // (its saved spot, or the first-time one, before it shows)
         PixelPop.Show(window);
         Sync();
     }
@@ -417,32 +418,14 @@ public class PixelViewWindow : MonoBehaviour
         canvasRoot = PixelUIKit.CreateCanvas("View Window Canvas", 135, new Vector2(1920f, 1080f), true);
         canvasRoot.transform.SetParent(transform, false);
 
-        window = new GameObject("View Window", typeof(RectTransform), typeof(Image), typeof(PixelPop));
-        window.transform.SetParent(canvasRoot.transform, false);
-        PixelUIKit.StyleWindow(window.GetComponent<Image>(), panelColor);
-        windowRect = window.GetComponent<RectTransform>();
-        windowRect.anchorMin = windowRect.anchorMax = windowRect.pivot = new Vector2(1f, 0.5f);
-
-        float y = 12f;
-        // Header: the whole strip drags the window; X closes it.
-        GameObject handle = new GameObject("Drag Handle", typeof(RectTransform), typeof(Image), typeof(PixelPopoutDrag));
-        handle.transform.SetParent(window.transform, false);
-        handle.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.06f);
-        Place(handle.GetComponent<RectTransform>(), 8f, 8f, Width - 16f, 56f);
-        PixelPopoutDrag drag = handle.GetComponent<PixelPopoutDrag>();
-        drag.target = windowRect;
-        drag.canvas = canvasRoot.GetComponent<Canvas>();
-        drag.onMoved = () => savedPosition = windowRect.anchoredPosition;
-        TMP_Text title = Label(handle.transform, "VIEW", 32f, FontStyles.Bold, Color.white, TextAlignmentOptions.Center);
-        PixelUIKit.Stretch(title.rectTransform);
-        title.rectTransform.offsetMax = new Vector2(-60f, 0f);
-
-        Button close = PixelUIKit.CreateButton(font, window.transform, "Close", "X", new Vector2(46f, 46f), new Color(0.6f, 0.25f, 0.25f, 1f), Color.white, 26f);
-        RectTransform cr = close.GetComponent<RectTransform>();
-        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
-        cr.anchoredPosition = new Vector2(-14f, -13f);
-        close.onClick.AddListener(Close);
-        y = 78f;
+        // The standard Tool window (PixelUIKit.CreateWindow): title, X, drag by the header, minimize, dock to a screen edge, position saved.
+        parts = PixelUIKit.CreateWindow(font, canvasRoot.transform, "View Window", "View", new Vector2(Width, 400f), panelColor,
+                                        PixelUIKit.WindowKind.Tool, Close, "PixelClicker.ViewWindow.Window");
+        window = parts.Root;
+        windowRect = parts.Rect;
+        // First time ever: at the right edge, half way down (where it always opened before it remembered its spot).
+        parts.Chrome.defaultPlacer = cs => new Vector2(cs.x - windowRect.sizeDelta.x - 40f, -(cs.y - windowRect.sizeDelta.y) * 0.5f);
+        float y = parts.HeaderHeight + 22f;
 
         // The controls of each view show as a vertical tooltip beside the window while the mouse is over its row (nothing is drawn at the bottom of the screen any more).
         GameObject tip = new GameObject("View Tip", typeof(RectTransform), typeof(Image));
@@ -526,7 +509,7 @@ public class PixelViewWindow : MonoBehaviour
         y += oy + 116f;
 
         TMP_Text hint = Label(window.transform, "Press " + PixelKeys.Name(PixelAction.ViewWindow) + " again to close", 18f, FontStyles.Italic, new Color(0.7f, 0.75f, 0.85f), TextAlignmentOptions.Center);
-        windowRect.sizeDelta = new Vector2(Width, y + 52f);
+        parts.SetHeight(y + 52f);
         Place(hint.rectTransform, Pad, y + 12f, Width - Pad * 2f, 28f);
 
         window.SetActive(false);

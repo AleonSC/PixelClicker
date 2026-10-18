@@ -7,7 +7,8 @@
 //   * MINIMIZE (button '-'): everything except the header, the handle and the chrome buttons is hidden and the window shrinks to the header (restores exactly what was showing).
 //   * DOCK to the left / right edge: drag it against a side (a pale strip shows where) and it docks at that height with only a sliver showing; it slides out while the mouse is
 //     near it or you are typing in it; an undock arrow puts it back. Dragging a docked window by its header also undocks it and carries it off.
-//   Optional: defaultPlacer (first-time position). Users: Dev Hub, the Next up window.
+//   Optional: defaultPlacer (first-time position). Users: Dev Hub, the Next up window, and every Tool window of PixelUIKit.CreateWindow (View).
+//   SetFullHeight(h): the owner's way to size the window (a minimized one remembers it); PlaceNow(): put a never-placed window at its first spot before showing it.
 //   RESIZE: EnableResize() adds a grip in the bottom-right corner that SCALES the window (0.55x - 1.6x, saved as prefKey + Scale; the Dev Hub uses it).
 //   Saved in PlayerPrefs prefKey + Min / Dock / DockY / X / Y (not part of the game save).
 // ---------------------------------------------------
@@ -187,6 +188,25 @@ public class PixelWindowChrome : MonoBehaviour
         if (dockSide != 0) dockY = p.y;
     }
 
+    /// <summary>The owner sets the window's full height here (a minimized window remembers it and opens up to it).</summary>
+    public void SetFullHeight(float height)
+    {
+        restoreHeight = height;
+        if (!minimized) window.sizeDelta = new Vector2(window.sizeDelta.x, height);
+        Clamp();
+    }
+
+    /// <summary>Puts a window that has never been placed at its first-time spot now (call before showing it, so it doesn't flash at the corner for a frame).</summary>
+    public void PlaceNow()
+    {
+        if (placed || canvasRect == null) return;
+        Vector2 cs = canvasRect.rect.size;
+        if (cs.x < 100f || cs.y < 100f) return;
+        placed = true;
+        window.anchoredPosition = defaultPlacer != null ? defaultPlacer(cs) : new Vector2((cs.x - Size.x) * 0.5f, -(cs.y - Size.y) * 0.5f);
+        Clamp();
+    }
+
     /// <summary>Brings the window into view for the owner: un-minimizes it, slides a docked one fully out and puts it on top.</summary>
     public void Wake()
     {
@@ -288,12 +308,7 @@ public class PixelWindowChrome : MonoBehaviour
         if (canvasRect == null) return;
         Vector2 cs = canvasRect.rect.size;
         if (cs.x < 100f || cs.y < 100f) return;
-        if (!placed)
-        {
-            placed = true;   // first time ever: centre it
-            window.anchoredPosition = defaultPlacer != null ? defaultPlacer(cs) : new Vector2((cs.x - Size.x) * 0.5f, -(cs.y - Size.y) * 0.5f);
-            Clamp();
-        }
+        if (!placed) PlaceNow();   // first time ever: its default spot (centred unless a defaultPlacer says otherwise)
         else if (cs != lastCanvasSize) Clamp();
         lastCanvasSize = cs;
 

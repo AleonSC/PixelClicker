@@ -41,5 +41,12 @@ Use it to see what changes when a window moves onto the builder. Sizes are canva
 - Top-left header slot used for different things (pin, book, hose, info, expand, search); a ? help button only in Shop (80) and Skills (70).
 - Collection Log is the only main window without StyleWindow (on purpose: a leather book).
 
-## The standard
-Not chosen yet (questions put to the user 2026-10-18: which windows drag, which minimize / dock, the standard X and title size, whether Done / Continue dialogs get an X). Fill this in once decided, before moving windows onto the builder.
+## The standard (chosen by the user 2026-10-18)
+Built by `PixelUIKit.CreateWindow` (`PixelUIKitWindows.cs`); the numbers are constants at the top of that file.
+- **Fixed windows** (the big HUD windows: Inventory, Log, Shop + Upgrades, Skills, Skill Tree, Toggles, Crafting, Bank, Game Database, Pixel Guide, Collection Log, UFO helper): open in place, NOT draggable, no minimize. Header 90, title 48 centred in capitals, grey X 70 at (-14, -12).
+- **Tool windows** (View, Pocket, skill tracker, Next up, Dev Hub; the pinned Inventory keeps its own drag): draggable by the header with the position saved, minimize, dock to a screen edge (PixelWindowChrome). Header 56, title 30 centred in capitals, grey X 44 at (-8, -6), minimize just left of it.
+- **Dialogs** (Outfit Studio, Pet Customize, visitor greeting / wares, Cubie's speech, offline summary, pet found): NO X - their Done / Continue / Next button is the choice (CreateWindow closeButton: false); fixed in the middle.
+- Close X is always grey (no red ones).
+
+## Progress (one window per commit)
+- [x] View - Tool window: title 30 (was 32), grey X 44 (was red 46), NEW: minimize, dock to a screen edge, position remembered between sessions (it used to reset).

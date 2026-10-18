@@ -7,7 +7,7 @@ using UnityEngine.UI;
 /// Small shared helpers for the code-built UI (canvas, event system, text, buttons), so every UI script
 /// builds things the same way instead of carrying its own copy.
 /// </summary>
-public static class PixelUIKit
+public static partial class PixelUIKit
 {
     /// <summary>Makes sure the scene has an EventSystem (with the right input module for the active input system).</summary>
     public static void EnsureEventSystem()
