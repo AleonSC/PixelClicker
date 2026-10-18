@@ -335,7 +335,7 @@ public partial class PixelSkills
         if (pack == null) return;
         {
             int level = LevelOf(pack, out double into, out double need);
-            PixelUIKit.SetText(trackerName, pack.displayName + "   Lv " + level);
+            PixelUIKit.SetText(trackerName, pack.id == StandardId && StandardHidden ? ShownName(pack) : pack.displayName + "   Lv " + level);   // (the mystery bar: just '???')
             double bonus = Bonus(pack);
             PixelUIKit.SetText(trackerXp, PixelClicker.FormatNumberShort(into) + " / " + PixelClicker.FormatNumberShort(need) + " XP"
                 + (bonus >= 1d ? "   <color=#ffd54a>Bonus " + PixelClicker.FormatNumberShort(bonus) + "</color>" : ""));
@@ -408,6 +408,7 @@ public partial class PixelSkills
         if (!trackerBuilt && trackerOn && SkillsTabUnlocked) { EnsureTracker(); }
         ApplyTrackerVisibility();
         if (!trackerBuilt || !(trackerOn || trackerIntro)) return;
+        UpdateReveal();   // (Standard's level 2 reveal: the punch and gold flash)
         trackerTimer -= Time.unscaledDeltaTime;
         if (trackerTimer > 0f) return;
         trackerTimer = 0.25f;

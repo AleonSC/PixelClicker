@@ -547,7 +547,7 @@ public partial class PixelSkills : MonoBehaviour
                 }   // level 2 now takes the 380 XP level 4 used to (the whole curve x4.75, growth stays 1.5)
                 if (pack.perks != null)   // the level 2 popup that introduces the skill
                     foreach (Perk perk in pack.perks)
-                        if (perk != null && perk.level == 2 && (string.IsNullOrEmpty(perk.noticeText) || perk.noticeText.Contains("Every pixel you click gives Standard XP") || perk.noticeText.Contains("every level unlocks a perk.\n\nYour first perk") || perk.noticeText.Contains("Later points take the other one and branch further."))) perk.noticeText = StandardLevel2Notice;
+                        if (perk != null && perk.level == 2 && (string.IsNullOrEmpty(perk.noticeText) || perk.noticeText.Contains("Every pixel you click gives Standard XP") || perk.noticeText.Contains("every level unlocks a perk.\n\nYour first perk") || perk.noticeText.Contains("Later points take the other one and branch further.") || perk.noticeText.StartsWith("Standard level 2! Surprise"))) perk.noticeText = StandardLevel2Notice;
                 if (pack.perks != null)   // the level 3 popup: the second point is a choice - the skipped move or Aimed Clicks (2026-10-17)
                     foreach (Perk perk in pack.perks)
                         if (perk != null && perk.level == 3 && string.IsNullOrEmpty(perk.noticeText) && perk.text != null && perk.text.StartsWith("Steady grip")) { perk.noticeText = StandardLevel3Notice; perk.noticeInWindow = true; }
@@ -904,7 +904,7 @@ public partial class PixelSkills : MonoBehaviour
         level = level > 0 ? Mathf.Min(level + 1, Mathf.RoundToInt(0.9f / step)) : 1;
         penaltyLevels[id] = level;
         penaltyEnds[id] = Time.time + seconds;
-        string name = Instance != null && Instance.Find(id) != null ? Instance.Find(id).displayName : "Skill";
+        string name = Instance != null && Instance.Find(id) != null ? ShownName(Instance.Find(id)) : "Skill";
         return name + " XP -" + Mathf.RoundToInt(level * step * 100f) + "% for " + Mathf.RoundToInt(seconds) + " seconds.";
     }
 
@@ -1283,6 +1283,13 @@ public partial class PixelSkills : MonoBehaviour
         if (pack != null && popupText != null && !hideXpPopups) ShowPopupText(pack, popupText, false);
     }
 
+    /// <summary>A reward's XP (PixelGoals): exactly 'xp' to that skill (no multipliers), with its popup.</summary>
+    public void AddRewardXp(string skillId, double xp)
+    {
+        if (disableSkills || xp <= 0d) return;
+        AddXpFlat(Find(skillId) ?? Find(StandardId), xp, true);
+    }
+
     /// <summary>The XP one manual click on this block gives its skill before multipliers: 1 for a skill's block, Standard's flat XP per block for a pure one (Husk Crush pays a share of it).</summary>
     public double ClickXpOf(int tierIndex) => PackForTier(tierIndex) != null ? 1d : StandardXpPerBlock;
 
@@ -1298,7 +1305,7 @@ public partial class PixelSkills : MonoBehaviour
     {
         SkillPack owner = PackOfType(type);
         if (owner == null || owner.id == StandardId) owner = Find(StandardId);
-        return owner != null ? owner.displayName : "Standard";
+        return owner != null ? ShownName(owner) : "Standard";
     }
 
     /// <summary>Extra XP for the skill being trained (the shuffle bonus): goes through AddXp, so penalties, minigame multipliers and the bonus bank apply as usual.</summary>
@@ -1371,7 +1378,7 @@ public partial class PixelSkills : MonoBehaviour
         SkillPack pack = s.PackOfType(type);
         if (pack == null || pack.id == OfflineId) pack = s.Find(StandardId);
         if (pack == null) return false;
-        skillName = pack.displayName;
+        skillName = ShownName(pack);   // ('???' for Standard until level 2)
         level = s.LevelOf(pack);
         return true;
     }
@@ -1417,7 +1424,9 @@ public partial class PixelSkills : MonoBehaviour
         int after = LevelOf(pack);
         if (after > before) QueuePerkNotices(pack, before, after);
         if (after > before && (pack.id != StandardId || after > 2)) PixelSkillLevelPopup.Show(pack, after, pack.id == OfflineId ? 0 : after - before);   // the small badge popup (Standard's level 2 has its own big popup)
-        if (after > before)
+        bool revealed = pack.id == StandardId && before < 2 && after >= 2 && !showStandardNameEarly && !disableSkills;
+        if (revealed) RevealStandard();   // the mystery bar flips to 'Standard' (its own event log line)
+        else if (after > before)
             PixelHints.Announce(pack.displayName + " level " + after, "Your " + pack.displayName + " skill reached level " + after + " (+" + (after - before) + " skill point" + (after - before == 1 ? "" : "s") + ").");
         Changed?.Invoke();
     }

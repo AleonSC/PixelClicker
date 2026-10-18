@@ -132,7 +132,7 @@ public partial class PixelSkills
     }
 
     private void ShowXpPopup(SkillPack pack, double amount, bool nearCube) =>
-        ShowPopupText(pack, "+" + amount.ToString(amount == System.Math.Floor(amount) ? "0" : "0.##") + " " + pack.displayName + " XP", nearCube);
+        ShowPopupText(pack, "+" + amount.ToString(amount == System.Math.Floor(amount) ? "0" : "0.##") + " " + ShownName(pack) + " XP", nearCube);
 
     /// <summary>The popup itself, with any text (the '+n XP' line, or a Husk Crush bonus text that replaces it).</summary>
     private void ShowPopupText(SkillPack pack, string text, bool nearCube)

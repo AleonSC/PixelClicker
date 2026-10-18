@@ -251,6 +251,7 @@ public class PixelHuskCrush : MonoBehaviour
         streakCount = now - lastCrushTime <= Mathf.Max(0.05f, streakWindow) ? streakCount + 1 : 0;
         lastCrushTime = now;
         bestStreak = Mathf.Max(bestStreak, streakCount + 1);
+        PixelStats.Best("husk.crush.streak", streakCount + 1);   // (the best streak ever, per save: the 'crush streak of 5' goal reads it)
         float streak = StreakMultiplierAt(streakCount);
 
         PixelHuskQuery.Husk h = PixelHuskQuery.Get(body);

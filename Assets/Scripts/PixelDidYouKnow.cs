@@ -206,6 +206,7 @@ public class PixelDidYouKnow : MonoBehaviour
             string tip = tips[bag[pick]];
             bag.RemoveAt(pick);
             if (tip.StartsWith("shop:")) { if (!shopOn) continue; tip = tip.Substring(5).Trim(); }
+            if (PixelSkills.StandardHidden && tip.Contains("Standard")) continue;   // (the mystery bar: no tip names Standard before its level 2 reveal)
             if (tips.Count > 1 && tip == lastTip) continue;
             return tip;
         }

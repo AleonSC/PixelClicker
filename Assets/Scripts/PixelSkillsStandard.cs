@@ -14,6 +14,11 @@
 //   standardXpShare (0.5) of its XP (PixelRecycler; skill husks keep it all). Modelled at the report's pace (clicks ~218 XP/min + half the Recycler's
 //   ~242 + some crushing ~ 360/min): levels 2-7 at about 3 / 8 / 16 / 27 / 44 / 69 min - Auto Clicker upgrades raise the pace later, pulling 6-7
 //   towards the 45 / 60 min targets. Check the next report's Standard timeline and nudge baseXp / standardXpShare from there.
+//   MYSTERY BAR (2026-10-18, design 'Early game feel: click, pile, crush' point 3): until Standard level 2 its name is hidden - ShownName(pack) answers
+//   mysteryName ('???') for Standard while StandardHidden, and EVERY player-facing skill name goes through it (the early tracker, XP / crush popups '+1 ???',
+//   the XP hover box - mysteryHoverText 'Something is growing...' -, the Skills window, block tooltips, Husk Crush's guide note, the Game Database, which also
+//   hides entries that name Standard). Level 2 reveals it (RevealStandard from AddXpFlat): a fanfare (sound, gold punch on the tracker, an event log line)
+//   and then the level-2 popup, which now opens on the mystery. showStandardNameEarly = the name from the start.
 //   SKILL TREE (2026-10-16, DefaultNodes(StandardId), PixelSkills.HasStandardNode): the first point (level 2) goes on 'Block Hold' (hold; Block Hold
 //   is no longer available from the start - PixelBlockHold.requireTreeNode) or 'Power Click' (power, PixelPowerClick.requireTreeNode); branches
 //   hold -> lucky (+10% stake win) -> highroller (cost 2, stakes grow 50% faster) and power -> quick (charge 40% faster) -> aftershock (cost 2,
@@ -98,8 +103,67 @@ public partial class PixelSkills
 
     private double StandardXpPerBlock => standardXpPerBlock > 0f ? standardXpPerBlock : 1d;
 
+    // ---- The mystery bar (2026-10-18, design 'Early game feel' point 3) ----
+    [Header("Mystery bar (Standard's name hidden until level 2)")]
+    [Tooltip("Off (default) = until Standard reaches level 2 its name shows as the mystery name everywhere (the early tracker, XP popups, tooltips, the Skills window, the Game Database), and level 2 reveals it with a fanfare. On = 'Standard' from the start.")]
+    [SerializeField] private bool showStandardNameEarly = false;
+
+    [Tooltip("What Standard is called until level 2. Empty = '???'.")]
+    [SerializeField] private string mysteryName = "";
+
+    [TextArea(1, 3)]
+    [Tooltip("Hover text of the mystery bar (the early tracker's XP bar) until level 2. Empty = 'Something is growing...'.")]
+    [SerializeField] private string mysteryHoverText = "";
+
+    private string MysteryName => string.IsNullOrEmpty(mysteryName) ? "???" : mysteryName;
+    private string MysteryHover => string.IsNullOrEmpty(mysteryHoverText) ? "Something is growing..." : mysteryHoverText;
+
+    /// <summary>Standard's name is still a mystery: below level 2 (and not switched off). ONE check - every player-facing name goes through ShownName.</summary>
+    public static bool StandardHidden
+    {
+        get
+        {
+            PixelSkills s = Instance;
+            return s != null && !s.disableSkills && !s.showStandardNameEarly && s.StandardLevel < 2;
+        }
+    }
+
+    /// <summary>The name a skill is SHOWN with: Standard is '???' until level 2 (the mystery bar), every other skill its displayName. Use it for every player-facing skill name.</summary>
+    public static string ShownName(SkillPack pack)
+    {
+        if (pack == null) return "";
+        return pack.id == StandardId && StandardHidden ? Instance.MysteryName : pack.displayName;
+    }
+
+    /// <summary>The hidden name used while Standard is a mystery ('???').</summary>
+    public static string MysteryLabel => Instance != null ? Instance.MysteryName : "???";
+
+    private float revealStartedAt = -99f;
+    private const float RevealSeconds = 1.4f;
+
+    /// <summary>Standard just reached level 2 while its name was hidden: the bar flips to 'Standard' with a short fanfare (sound, gold flash and a punch on the tracker, an event log line); the level-2 popup follows through the perk notices.</summary>
+    private void RevealStandard()
+    {
+        revealStartedAt = Time.unscaledTime;
+        PixelAudio.Play("achievement");
+        PixelAudio.Play("snitch_ready", 1.2f);
+        PixelHints.Announce(MysteryName + " is Standard!", "The mystery bar was your first skill all along: Standard. It just reached level 2.");
+        RefreshTracker();
+    }
+
+    /// <summary>The reveal's look on the tracker (called every frame while it plays): a punch in size and a gold name fading back.</summary>
+    private void UpdateReveal()
+    {
+        float t = (Time.unscaledTime - revealStartedAt) / RevealSeconds;
+        if (t < 0f || t > 1.05f || trackerRect == null || trackerName == null) return;
+        if (t >= 1f) { trackerRect.localScale = Vector3.one; trackerName.color = textColor; revealStartedAt = -99f; return; }
+        float punch = 1f + 0.18f * Mathf.Sin(t * Mathf.PI) * (1f - t * 0.5f);
+        trackerRect.localScale = Vector3.one * punch;
+        trackerName.color = Color.Lerp(new Color(1f, 0.85f, 0.3f, 1f), textColor, t * t);
+    }
+
     /// <summary>The popup at Standard level 2: it introduces skills (the perk's noticeText, editable on the Standard pack's level 2 perk).</summary>
-    private const string StandardLevel2Notice = "Standard level 2! Surprise: you have been training a skill all along. Every block you collect gives 1 Standard XP, and every level gives a perk AND a skill point.\n\nSpend your point in Standard's skill tree (the tree button on its card): Block Hold or Power Click - two new ways to click. At level 3 your next point can take the other one - or Aimed Clicks, to throw husks where you want them. Later points branch further.\n\nYour first perk, Lingering pixels: husks on the floor last 5 seconds longer for every Standard level.";
+    private const string StandardLevel2Notice = "That ??? bar was a skill all along: STANDARD - and it just reached level 2! Every block you collect gives it 1 XP (crushing husks too), and every level gives a perk AND a skill point.\n\nSpend your point in Standard's skill tree (the tree button on its card): Block Hold or Power Click - two new ways to click. At level 3 your next point can take the other one - or Aimed Clicks, to throw husks where you want them. Later points branch further.\n\nYour first perk, Lingering pixels: husks on the floor last 5 seconds longer for every Standard level.";
 
     /// <summary>The popup at Standard level 3: the second point is a choice between the move you skipped and Aimed Clicks.</summary>
     private const string StandardLevel3Notice = "Standard level 3 - another skill point! Take the move you skipped (Block Hold or Power Click), or Aimed Clicks: click near the cube's edge and its husk flies out of that side, so you can send husks to a Recycler or a clear spot. Until then every husk scatters at random.\n\nYour perk, Steady grip: Block Hold lasts 10% longer.";

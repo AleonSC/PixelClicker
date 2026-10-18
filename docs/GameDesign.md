@@ -180,7 +180,7 @@ Minutes 15-60, roughly: level the first skill until its filler thins out, spend 
 click), get the first husk machine (the to-do's Standard-XP deposit box), the skill's vendor visits (Big Tim), maybe one forgiving
 minigame (the to-do's Early Cube Dash).
 
-### Early game feel: click, pile, crush (Agreed 2026-10-18, not built)
+### Early game feel: click, pile, crush (Agreed 2026-10-18; points 2 + 3 built 2026-10-18 - `PixelGoals.cs` goal table, the mystery bar via `PixelSkills.ShownName`; point 1 is the Husks and Physics session's)
 The developer's playtests: clicks and husks felt like they COMPETE - husks fade in ~15 s so they demand attention at the same moment as
 the cube, and the early goals ('click N', 'earn 300 White') all say "click", so crushing feels off-task. The fix is a RHYTHM: click a
 bunch, build a pile, then get told to crush it.

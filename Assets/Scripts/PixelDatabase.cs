@@ -24,6 +24,7 @@
 //   button, drop-down choices, current value), so screen filters, day / night length, floor off modes and every other option can be found by searching; the Floor / Sky rows link to each look.
 //   PIN: Entry.pinType / pinKey (pixel = currency row, skill, achievement, listable consumable = favorite) drive the window's 'Pin to My Window' button (PixelMyWindow.CanPin / IsPinned / TogglePin).
 //   Known leak: a discovered entry's reference text still contains the hidden name, so searching for that exact name finds the discovered entry.
+//   MYSTERY BAR (2026-10-18): while PixelSkills.StandardHidden (Standard below level 2) every entry whose name or text says 'Standard' is undiscovered.
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -410,6 +411,23 @@ public static class PixelDatabase
         foreach (Entry t in texts)
             foreach (Entry target in mentionable)
                 if (ContainsWord(t.detail, target.name) || ContainsWord(t.name, target.name)) Link(t, "Mentions", target, "Mentioned in tip / guide");
+
+        // ---- Goals (PixelGoals' table: one entry per row, discovered once it has appeared in the Log's Goals tab) ----
+        PixelGoals goalTable = PixelGoals.Instance;
+        if (goalTable != null && goalTable.Defs != null)
+            foreach (PixelGoals.GoalDef g in goalTable.Defs)
+            {
+                if (g == null || !g.enabled || string.IsNullOrEmpty(g.title)) continue;
+                string reward = goalTable.RewardText(g);
+                Entry ge = Add("Goal", g.title, g.description + "\nTarget: " + g.target.ToString("0.#") + (reward.Length > 0 ? "\nReward: " + reward : "") + (PixelGoals.Done(g) ? "\nDone." : ""));
+                ge.discovered = PixelGoals.Shown(g);
+            }
+
+        // The mystery bar (PixelSkills.StandardHidden): until Standard level 2 every entry that names it (the skill, its tree nodes, tips and guide
+        // lines about it) is undiscovered, so the database never spoils the name.
+        if (PixelSkills.StandardHidden)
+            foreach (Entry e in entries)
+                if (ContainsWord(e.name, "Standard") || ContainsWord(e.detail, "Standard")) e.discovered = false;
 
         foreach (Entry e in entries)
         {
