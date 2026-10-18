@@ -575,7 +575,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         PixelUIKit.Stretch(t.rectTransform);
         t.rectTransform.offsetMin = new Vector2(16f, 10f);
         t.rectTransform.offsetMax = new Vector2(-46f, -10f);
-        Button x = PixelUIKit.CreateButton(Font, b.transform, "Dismiss", "X", new Vector2(36f, 36f), new Color(0.5f, 0.22f, 0.22f, 1f), Color.white, 22f);
+        Button x = PixelUIKit.CreateButton(Font, b.transform, "Dismiss", "X", new Vector2(36f, 36f), ButtonRole.Neutral, 22f);
         RectTransform xr = x.GetComponent<RectTransform>();
         xr.anchorMin = xr.anchorMax = xr.pivot = new Vector2(1f, 1f);
         xr.anchoredPosition = new Vector2(-6f, -6f);
@@ -719,7 +719,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         PixelUIKit.SetText(row.stockLabel, "");
         row.buy.interactable = !t.done && afford;
         PixelUIKit.SetText(row.buyLabel, t.done ? "Sold" : TradeText);
-        row.buyImage.color = t.done || !afford ? new Color(0.3f, 0.3f, 0.35f, 1f) : new Color(0.2f, 0.55f, 0.3f, 1f);
+        PixelUIKit.SetRole(row.buyImage, t.done || !afford ? ButtonRole.Neutral : ButtonRole.Success);
     }
 
     private void RefreshWares()
@@ -748,7 +748,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             foreach (PixelShop.PackCost c in price) if (!CanAfford(c)) afford = false;
             row.buy.interactable = !full && !soldOut && afford;
             PixelUIKit.SetText(row.buyLabel, soldOut ? "Sold out" : full ? fullText : buyText);
-            row.buyImage.color = full || soldOut || !afford ? new Color(0.3f, 0.3f, 0.35f, 1f) : new Color(0.2f, 0.55f, 0.3f, 1f);
+            PixelUIKit.SetRole(row.buyImage, full || soldOut || !afford ? ButtonRole.Neutral : ButtonRole.Success);
         }
     }
 
@@ -860,11 +860,11 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         greetMessage = message;
         Anchor(message.rectTransform, 0f, 0f, 1f, 1f, new Vector2(36f, 130f), new Vector2(-36f, -(greetBox.HeaderHeight + 2f)));
 
-        Button accept = PixelUIKit.CreateButton(Font, greetingPanel, "Accept", AcceptLabel, new Vector2(300f, 80f), new Color(0.2f, 0.55f, 0.3f, 1f), Color.white, 36f);
+        Button accept = PixelUIKit.CreateButton(Font, greetingPanel, "Accept", AcceptLabel, new Vector2(300f, 80f), ButtonRole.Success, 36f);
         PixelUIKit.Caps(accept);
         Corner(accept.GetComponent<RectTransform>(), new Vector2(0.25f, 0f), new Vector2(0f, 36f));
         accept.onClick.AddListener(() => { if (Typing) { FinishType(); return; } if (decision == 0) decision = 1; });
-        Button reject = PixelUIKit.CreateButton(Font, greetingPanel, "Reject", RejectLabel, new Vector2(300f, 80f), new Color(0.5f, 0.22f, 0.22f, 1f), Color.white, 36f);
+        Button reject = PixelUIKit.CreateButton(Font, greetingPanel, "Reject", RejectLabel, new Vector2(300f, 80f), ButtonRole.Danger, 36f);
         PixelUIKit.Caps(reject);
         Corner(reject.GetComponent<RectTransform>(), new Vector2(0.75f, 0f), new Vector2(0f, 36f));
         reject.onClick.AddListener(() => { if (Typing) { FinishType(); return; } if (decision == 0) decision = 2; });
@@ -917,7 +917,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             for (int i = 0; i < 2; i++)
             {
                 int captured = i;
-                Button tb = PixelUIKit.CreateButton(Font, waresPanel, "Tab " + names[i], names[i], new Vector2(220f, 52f), new Color(0.22f, 0.24f, 0.32f, 1f), Color.white, 30f);
+                Button tb = PixelUIKit.CreateButton(Font, waresPanel, "Tab " + names[i], names[i], new Vector2(220f, 52f), ButtonRole.Neutral, 30f);
                 PixelUIKit.Caps(tb);
                 RectTransform tr = tb.GetComponent<RectTransform>();
                 tr.anchorMin = tr.anchorMax = tr.pivot = new Vector2(0.5f, 1f);
@@ -992,7 +992,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             row.stockLabel.enableAutoSizing = true; row.stockLabel.fontSizeMax = 24f; row.stockLabel.fontSizeMin = 11f;
             Anchor(row.stockLabel.rectTransform, 0.62f, 0.55f, 1f, 1f, new Vector2(0f, 0f), new Vector2(-190f, -6f));
 
-            row.buy = PixelUIKit.CreateButton(Font, go.transform, "Buy", isTrade ? TradeText : buyText, new Vector2(150f, 70f), new Color(0.2f, 0.55f, 0.3f, 1f), Color.white, 32f);
+            row.buy = PixelUIKit.CreateButton(Font, go.transform, "Buy", isTrade ? TradeText : buyText, new Vector2(150f, 70f), ButtonRole.Success, 32f);
             row.buyImage = row.buy.GetComponent<Image>();
             row.buyLabel = row.buy.GetComponentInChildren<TMP_Text>();
             RectTransform br = row.buy.GetComponent<RectTransform>();
@@ -1009,7 +1009,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         shopTab = 0;
         LayoutRows(rowH);
 
-        Button done = PixelUIKit.CreateButton(Font, waresPanel, "Done", doneText, new Vector2(320f, 80f), new Color(0.3f, 0.3f, 0.38f, 1f), Color.white, 36f);
+        Button done = PixelUIKit.CreateButton(Font, waresPanel, "Done", doneText, new Vector2(320f, 80f), ButtonRole.Neutral, 36f);
         PixelUIKit.Caps(done);
         Corner(done.GetComponent<RectTransform>(), new Vector2(0.5f, 0f), new Vector2(0f, 20f));
         done.onClick.AddListener(() => waresDone = true);
@@ -1027,12 +1027,12 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             am.fontSizeMin = 18f;
             asideMessage = am;
             Anchor(am.rectTransform, 0f, 0f, 1f, 1f, new Vector2(36f, 130f), new Vector2(-36f, -(aside.HeaderHeight + 2f)));
-            Button next = PixelUIKit.CreateButton(Font, asidePanel, "Next", "Next", new Vector2(300f, 80f), new Color(0.2f, 0.55f, 0.3f, 1f), Color.white, 36f);
+            Button next = PixelUIKit.CreateButton(Font, asidePanel, "Next", "Next", new Vector2(300f, 80f), ButtonRole.Success, 36f);
             PixelUIKit.Caps(next);
             Corner(next.GetComponent<RectTransform>(), new Vector2(0.5f, 0f), new Vector2(0f, 36f));
             next.onClick.AddListener(() => { if (Typing) { FinishType(); return; } asideDone = true; });
             // a small back arrow: hold it to return to the greeting
-            Button back = PixelUIKit.CreateButton(Font, asidePanel, "Back", "<", new Vector2(64f, 56f), new Color(0.3f, 0.3f, 0.4f, 1f), Color.white, 32f);
+            Button back = PixelUIKit.CreateButton(Font, asidePanel, "Back", "<", new Vector2(64f, 56f), ButtonRole.Neutral, 32f);
             PixelUIKit.UseArrowGlyph(back, true);
             RectTransform bkr = back.GetComponent<RectTransform>();
             bkr.anchorMin = bkr.anchorMax = Vector2.zero;
@@ -1081,7 +1081,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         }
         if (tabButtons != null)
             for (int i = 0; i < tabButtons.Length; i++)
-                tabButtons[i].GetComponent<Image>().color = i == shopTab ? new Color(0.25f, 0.5f, 0.75f, 1f) : new Color(0.22f, 0.24f, 0.32f, 1f);
+                PixelUIKit.SetRole(tabButtons[i], i == shopTab ? ButtonRole.Selected : ButtonRole.Neutral);
         RefreshWares();
     }
 

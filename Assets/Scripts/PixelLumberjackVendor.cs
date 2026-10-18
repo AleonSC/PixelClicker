@@ -217,7 +217,7 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
         visitRolls.Clear();
         offerWood = -1;
         TMP_FontAsset font = VendorFont;
-        Color box = new Color(0.16f, 0.16f, 0.22f, 1f), green = new Color(0.2f, 0.55f, 0.3f, 1f), grey = new Color(0.3f, 0.3f, 0.38f, 1f);
+        Color box = new Color(0.16f, 0.16f, 0.22f, 1f);
 
         Label(font, parent, "Sell", 0f, 50f, 0f, 0.2f);
         woodDropdown = PixelUIKit.CreateDropdown(font, parent, "Wood", new Vector2(100f, 50f), box, box, Color.white, 24f);
@@ -235,7 +235,7 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
         for (int i = 0; i < 4; i++)
         {
             float f = frac[i];
-            Button b = PixelUIKit.CreateButton(font, parent, quick[i], quick[i], new Vector2(100f, 44f), grey, Color.white, 22f);
+            Button b = PixelUIKit.CreateButton(font, parent, quick[i], quick[i], new Vector2(100f, 44f), ButtonRole.Neutral, 22f);
             Place(b.GetComponent<RectTransform>(), 160f, 44f, i * 0.13f, i * 0.13f + 0.12f);
             b.onClick.AddListener(() => { if (amountSlider.maxValue >= 1f) { amountSlider.value = Mathf.Max(1f, Mathf.Floor(amountSlider.maxValue * f)); } });
         }
@@ -247,6 +247,7 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
         Place(payDropdown.GetComponent<RectTransform>(), 222f, 50f, 0.2f, 1f);
         payDropdown.onValueChanged.AddListener(_ => { if (!panelUpdating) ClearOffer(); });
 
+        // (the Lumberjack's own orange - his theme colour, like the slider - so it stays a plain colour, not a role)
         askButton = PixelUIKit.CreateButton(font, parent, "Ask", "Ask for an offer", new Vector2(100f, 60f), new Color(0.65f, 0.35f, 0.2f, 1f), Color.white, 28f);
         Place(askButton.GetComponent<RectTransform>(), 292f, 60f, 0.2f, 0.8f);
         askButton.onClick.AddListener(AskOffer);
@@ -257,10 +258,10 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
         offerLabel.textWrappingMode = TextWrappingModes.Normal;
         Place(offerLabel.rectTransform, 366f, 110f, 0f, 1f);
 
-        acceptButton = PixelUIKit.CreateButton(font, parent, "Accept", "Accept", new Vector2(100f, 60f), green, Color.white, 28f);
+        acceptButton = PixelUIKit.CreateButton(font, parent, "Accept", "Accept", new Vector2(100f, 60f), ButtonRole.Success, 28f);
         Place(acceptButton.GetComponent<RectTransform>(), 486f, 60f, 0.12f, 0.46f);
         acceptButton.onClick.AddListener(AcceptOffer);
-        declineButton = PixelUIKit.CreateButton(font, parent, "Decline", "Decline", new Vector2(100f, 60f), new Color(0.5f, 0.22f, 0.22f, 1f), Color.white, 28f);
+        declineButton = PixelUIKit.CreateButton(font, parent, "Decline", "Decline", new Vector2(100f, 60f), ButtonRole.Danger, 28f);
         Place(declineButton.GetComponent<RectTransform>(), 486f, 60f, 0.54f, 0.88f);
         declineButton.onClick.AddListener(() => { ClearOffer("Suit yourself. Ask again if you change your mind."); });
         RefreshLists();
