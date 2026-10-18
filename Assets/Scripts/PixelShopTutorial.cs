@@ -75,8 +75,16 @@ public class PixelShopTutorial : MonoBehaviour
     /// <summary>Starts the tutorial at the next calm moment without the usual start delay (Cubie's hold ends when the player opens the shop).</summary>
     public static void RequestStart() { if (instance != null) instance.requested = true; }
 
+    private bool wanted;   // its start conditions have held long enough: PixelTipQueue starts it at its turn
+
     private void Awake()
     {
+        PixelTipQueue.Register(this, PixelTipQueue.Priority.Tutorial, "Shop tutorial", () => wanted && !running, () =>
+        {
+            wanted = false;
+            if (steps == null || steps.Count == 0) steps = DefaultSteps();
+            BeginRun();
+        });
         instance = this;
         shop = GetComponent<PixelShop>();
         if (shop == null) shop = PixelFind.First<PixelShop>();
@@ -122,8 +130,11 @@ public class PixelShopTutorial : MonoBehaviour
         runner.Run(list);
     }
 
+    private void OnDestroy() { PixelTipQueue.Unregister(this); }
+
     private void Update()
     {
+        wanted = false;
         if (running || !enableTutorial || shop == null || !shop.ShopAvailable) { readyTimer = 0f; return; }
         if (PixelStats.Total(DoneKey) >= 1d || !PixelHints.TipsEnabled) return;   // remembered per save (the tip flag in PlayerPrefs is global, so a new game never replayed it)
         if (!autoStart)
@@ -142,9 +153,7 @@ public class PixelShopTutorial : MonoBehaviour
         }
         readyTimer += Time.unscaledDeltaTime;
         if (readyTimer < startDelay && !requested) return;
-
-        if (steps == null || steps.Count == 0) steps = DefaultSteps();
-        BeginRun();
+        wanted = true;   // (PixelTipQueue starts it when it is its turn)
     }
 
     /// <summary>Plays the tutorial again now (the shop's blue ? button), whether or not it was seen.</summary>

@@ -52,6 +52,7 @@ public partial class PixelSkills
     private PixelTutorialRunner tutorialRunner;   // the shared tutorial flow
     private bool tutorialRunning => tutorialRunner != null && tutorialRunner.Running;
     private float tutorialReady;
+    private bool tutorialWanted;   // its start conditions have held long enough: PixelTipQueue starts it at its turn
     private int tutorialSavedSelection = -1;
 
     /// <summary>True while the tutorial runs.</summary>
@@ -76,6 +77,7 @@ public partial class PixelSkills
     /// <summary>Called every frame from the window's Update: starts the tutorial when it is due.</summary>
     private void UpdateTutorialStart(bool available, bool open)
     {
+        tutorialWanted = false;
         if (tutorialRunning || !enableTutorial || !autoStartTutorial || !available) { tutorialReady = 0f; return; }
         if (PixelStats.Total(TutorialDoneKey) >= 1d || !PixelHints.TipsEnabled) return;
         PixelShop shop = PixelFind.First<PixelShop>();
@@ -87,7 +89,7 @@ public partial class PixelSkills
         }
         tutorialReady += Time.unscaledDeltaTime;
         if (tutorialReady < (tutorialStartDelay > 0f ? tutorialStartDelay : 2f)) return;
-        StartTutorial();
+        tutorialWanted = true;   // (PixelTipQueue starts it when it is its turn)
     }
 
     /// <summary>Plays the tutorial now, whether or not it was seen.</summary>

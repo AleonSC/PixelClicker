@@ -1378,3 +1378,5 @@
 [2026-10-18 12:29 UTC] To-do: Early game feel 4 (goals are the early unlocks) marked done.
 [2026-10-18 12:30 UTC] Fixed the Dev Hub (any scalable window) growing past the screen with its resize grip: it now stops at the size that fits between the black bars, and an already too-big one shrinks back to fit when the game starts or the game window changes size.
 [2026-10-18 12:39 UTC] The achievement popup's moved spot is now saved with the save file: a new game starts with the popup in its default place, while your current game keeps your spot between sessions (and loading a save brings back that save's spot).
+[2026-10-18 12:43 UTC] One tip queue (UI unification step 6, PixelTipQueue): the tutorials, perk popups, first-time tips and Did you know now take turns (in that order, one at a time with a short gap) instead of each deciding on its own, so two that become ready together no longer cover each other; each still keeps its own rules for when it may show.
+[2026-10-18 12:43 UTC] To-do: UI unification step 6 (one tip queue) done.

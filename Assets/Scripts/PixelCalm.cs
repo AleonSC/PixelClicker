@@ -8,7 +8,8 @@
 //   - CameraBusy: something else owns the camera (title screen / its swing, the camera intro, a takeover minigame). Orbital / free cam / zoom.
 //   - ForTip: a calm moment for a tip box or tutorial (in the game, no other tip or tutorial dim, Cubie not visiting or about to (a visit whose trigger is met: AboutToVisit, not the whole time before his second visit), the
 //     new-game intro over, no takeover minigame, time running). Perk popups, the shop / skills / toggles tutorials.
-//   Scripts with their own extra conditions keep them next to the shared check.
+//   Scripts with their own extra conditions keep them next to the shared check. WHO shows next when several are ready is PixelTipQueue's job
+//   (tutorials > perk popups > first-time tips > Did you know): a new tip source registers there instead of showing a box by itself.
 // ---------------------------------------------------
 using UnityEngine;
 

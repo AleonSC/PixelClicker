@@ -216,10 +216,14 @@ public partial class PixelSkills : MonoBehaviour
     {
         Instance = this;
         EnsureDefaults();
+        // Perk popups and the skills tutorial take their turn in the one tip queue (PixelTipQueue).
+        PixelTipQueue.Register(this, PixelTipQueue.Priority.PerkPopup, "Perk popups", () => perkNotices.Count > 0 && PixelHints.TipsEnabled && PixelCalm.ForTip, ShowNextPerkNotice);
+        PixelTipQueue.Register(this, PixelTipQueue.Priority.Tutorial, "Skills tutorial", () => tutorialWanted && !tutorialRunning, () => { tutorialWanted = false; StartTutorial(); });
     }
 
     private void OnDestroy()
     {
+        PixelTipQueue.Unregister(this);
         if (Instance == this) Instance = null;
         if (clicker != null) clicker.PixelCollected -= OnCollected;
     }
@@ -1351,9 +1355,13 @@ public partial class PixelSkills : MonoBehaviour
 
     private void UpdatePerkNotices()
     {
+        if (perkNotices.Count > 0 && !PixelHints.TipsEnabled) perkNotices.Clear();   // (PixelTipQueue shows them one by one: ShowNextPerkNotice)
+    }
+
+    /// <summary>Shows the next queued perk popup (called by PixelTipQueue when it is this source's turn).</summary>
+    private void ShowNextPerkNotice()
+    {
         if (perkNotices.Count == 0) return;
-        if (!PixelHints.TipsEnabled) { perkNotices.Clear(); return; }
-        if (!PixelCalm.ForTip) return;
         PerkNotice notice = perkNotices.Dequeue();
         int index = packs.FindIndex(p => p.id == notice.packId);
         if (!notice.inWindow || !built || index < 0 || PixelTutorialDim.Active) { PixelNotice.Show(notice.text, freezeTime: notice.inWindow); return; }

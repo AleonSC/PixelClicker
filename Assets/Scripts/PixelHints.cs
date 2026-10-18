@@ -363,6 +363,8 @@ public class PixelHints : MonoBehaviour, IPixelSaved
         PixelSaveRegistry.Register(this);
         instance = this;
         EnsureDefaultHints();
+        // The first-time tips take their turn in the one tip queue (PixelTipQueue): this queue still decides WHICH tip and how it looks.
+        PixelTipQueue.Register(this, PixelTipQueue.Priority.FirstTimeTip, "First-time tips", () => queue.Count > 0 && waitTimer <= 0f, ShowNextTip);
     }
 
     private void OnEnable()
@@ -387,6 +389,7 @@ public class PixelHints : MonoBehaviour, IPixelSaved
 
     private void OnDestroy()
     {
+        PixelTipQueue.Unregister(this);
         PixelSaveRegistry.Unregister(this);
         if (instance == this) instance = null;
     }
@@ -1018,8 +1021,13 @@ public class PixelHints : MonoBehaviour, IPixelSaved
         wasShowing = showing;
 
         if (queue.Count == 0 || showing) return;
-        if (waitTimer > 0f) { waitTimer -= Time.unscaledDeltaTime; return; }
+        if (waitTimer > 0f) waitTimer -= Time.unscaledDeltaTime;   // (PixelTipQueue shows the next tip once it is 0: ShowNextTip)
+    }
 
+    /// <summary>Shows the next queued first-time tip (called by PixelTipQueue when it is this source's turn).</summary>
+    private void ShowNextTip()
+    {
+        if (queue.Count == 0) return;
         Hint next = queue.Dequeue();
         // The tips for something that just happened in a minigame are small; the rest are shop-sized.
         // The first ghost tip appears beside the ghost and stops time until it is closed.

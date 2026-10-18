@@ -64,8 +64,15 @@ public class PixelTogglesTutorial : MonoBehaviour
         if (PixelToggles.TabVisible) PixelStats.Best(DueKey, 1d);
     }
 
-    private void Awake() { instance = this; }
-    private void OnDestroy() { if (instance == this) instance = null; }
+    private bool wanted;   // its start conditions have held long enough: PixelTipQueue starts it at its turn
+
+    private void Awake()
+    {
+        instance = this;
+        PixelTipQueue.Register(this, PixelTipQueue.Priority.Tutorial, "Toggles tutorial", () => wanted && !running, () => { wanted = false; StartRun(); });
+    }
+
+    private void OnDestroy() { PixelTipQueue.Unregister(this); if (instance == this) instance = null; }
 
     private static List<Step> DefaultSteps()
     {
@@ -79,6 +86,7 @@ public class PixelTogglesTutorial : MonoBehaviour
 
     private void Update()
     {
+        wanted = false;
         if (running || !Due) { ready = 0f; return; }
         PixelShop shop = PixelFind.Cached<PixelShop>();
         bool shopTutorialDue = shop != null && shop.ShopAvailable && PixelStats.Total(PixelShopTutorial.DoneKey) < 1d;
@@ -90,6 +98,12 @@ public class PixelTogglesTutorial : MonoBehaviour
         }
         ready += Time.unscaledDeltaTime;
         if (ready < (startDelay > 0f ? startDelay : 2f)) return;
+        wanted = true;   // (PixelTipQueue starts it when it is its turn: StartRun)
+    }
+
+    private void StartRun()
+    {
+        PixelShop shop = PixelFind.Cached<PixelShop>();
         if (steps == null || steps.Count == 0) steps = DefaultSteps();
         steps.RemoveAll(st => st != null && st.text != null && (st.text.Contains("Lumberjack's Pack") || st.text.Contains("Woodcutter's Pack")));   // (skills are introduced by Standard's level-2 popup now, not here; also drops it from a saved Inspector list)
         if (runner == null)

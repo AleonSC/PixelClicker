@@ -131,8 +131,13 @@ public class PixelDidYouKnow : MonoBehaviour
     private TMP_Text headingLabel, bodyLabel, iconLabel;
     private float boxHeight = 120f;
 
+    private bool tipWanted;   // its time and calm have come: PixelTipQueue shows the tip at its turn (after tutorials, perk popups and first-time tips)
+
+    private void OnDestroy() { PixelTipQueue.Unregister(this); }
+
     private void Start()
     {
+        PixelTipQueue.Register(this, PixelTipQueue.Priority.DidYouKnow, "Did you know", () => Enabled && tipWanted && !showing && !placing && !Busy, () => { tipWanted = false; ShowTip(NextTip()); });
         LoadTips();
         nextTipAt = Mathf.Max(5f, firstDelaySeconds);
         dock = Mathf.Clamp(PixelPrefs.GetInt(PrefDock, 1), 0, 2);
@@ -178,8 +183,9 @@ public class PixelDidYouKnow : MonoBehaviour
         {
             playTime += Time.timeScale > 0f ? dt : 0f;
             calmTimer = Busy ? 0f : calmTimer + dt;
-            if (playTime >= nextTipAt && calmTimer >= calmSeconds && tips.Count > 0) ShowTip(NextTip());
+            tipWanted = playTime >= nextTipAt && calmTimer >= calmSeconds && tips.Count > 0;   // (PixelTipQueue shows it at its turn)
         }
+        else tipWanted = false;
 
         if (placing) { TickPlacing(); return; }
         HandlePointer();
