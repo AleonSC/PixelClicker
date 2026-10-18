@@ -12,6 +12,7 @@
 //   WORLD OBJECTS: ShowFor(tier, note) - called every frame by a placed thing whose part the pointer is on (the Sorting Hopper's filter flag) -
 //   shows a SMALL card for that block type instead (the turning 3D block, its name and the given note; no stats / bar), whatever the tooltip mode,
 //   and never docked in My Window.
+//   HoveringBlock (static, this frame): a block / husk card is wanted - the device card (PixelDeviceCard) waits then.
 //   The pinned card is always the FULL card (or the small one under a minimized window): the tooltip mode and Alt (tap or hold) only change the floating in-game card.
 // ---------------------------------------------------
 using TMPro;
@@ -292,8 +293,12 @@ public class PixelBlockTooltip : MonoBehaviour
                (!whileHeld && (PointerOverUI() || (grab != null && grab.HeldBody != null))) || PixelBank.HoseOn;
     }
 
+    /// <summary>True this frame when the pointer is on a block / husk (or a world object's ShowFor) that this card shows: the device card (PixelDeviceCard) stays hidden then.</summary>
+    public static bool HoveringBlock { get; private set; }
+
     private void Update()
     {
+        HoveringBlock = false;
         if (clicker == null) { clicker = PixelFind.Cached<PixelClicker>(); return; }
         if (grab == null) grab = PixelFind.Cached<PixelGrab>();
         UpdateAlt();
@@ -313,6 +318,7 @@ public class PixelBlockTooltip : MonoBehaviour
             tier = heldInfo.tierIndex; live = false; body = heldBody; hovering = true;
         }
         else hovering = !Suppressed(false, pinned) && clicker.TryGetBlockAt(PointerPosition(), out tier, out live, out body);
+        HoveringBlock = hovering;   // (the device card waits while a block / husk card is wanted: PixelDeviceCard)
 
         // Pinned to My Window (its Info button): the card lives in the window instead of following the mouse, and keeps the last block shown while the mouse is over the window.
         if (pinned)

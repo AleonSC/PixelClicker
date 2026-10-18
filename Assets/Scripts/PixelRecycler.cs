@@ -1,7 +1,7 @@
 // ---- System notes ----
 // PixelRecycler.cs
-//   TIMED + UPGRADES: a placed Recycler lasts durationSeconds (300 s; PixelRecyclerDevice counts down; hovering the bin shows a small floating DOWN ARROW with the
-//   'm:ss' left beside it - the shared PixelHoverMarker, gone when the pointer leaves),
+//   TIMED + UPGRADES: a placed Recycler lasts durationSeconds (300 s; PixelRecyclerDevice counts down; hovering the bin shows a small floating DOWN ARROW - the
+//   shared PixelHoverMarker, gone when the pointer leaves; the time left is on the shared device card, PixelDeviceCard),
 //   it shrinks away with whatever is inside when time is up). Upgrades > Operation (2026-10-18: one of each): SPEED (-0.3 s of shaking a level,
 //   ProcessSeconds) and SIZE (+0.3 to the size factor a level - the whole bin, its catching area and its capacity grow; Place sizeFactor = the device's
 //   radius). (Run Time, Streak Power and Suction rows were removed; their stats still work at their base values.)
@@ -12,7 +12,7 @@
 //   Drop old pixels (husks) into it - Pixel Grabbing, or anything that lands inside: a husk that comes to rest inside the bin's walls is CAPTURED
 //   (PixelClicker.ReleaseOldPixel without credit, so it leaves the floor's old-pixel list: no despawn count, no cap, no vacuum, no termites; its
 //   OldPixelDespawn is Held so it never shrinks away). The husks stay in the bin as real physical pixels until it is closed. Up to 'capacity' (10)
-//   can be inside; a counter above the bin shows 'n / 10'. Husks inside never despawn (their OldPixelDespawn.Held is re-set every tick, so poking one with
+//   can be inside; a small RING above the bin fills as they go in (PixelWorldRing; amber when full) and the device card says 'n / 25'. Husks inside never despawn (their OldPixelDespawn.Held is re-set every tick, so poking one with
 //   Pixel Grabbing cannot start its timer; one taken out of the bin is let go again; with the bin full, extra husks lying in it get KeepAlive). Click the
 //   red BUTTON on its front: a slatted LID extends out of the inner back edge and STRETCHES over the opening (Lid Pivot z scale 0.02 -> 1, lidSeconds), the
 //   bin SHAKES harder and harder for processSeconds (2 s, shakeStrength) while the band pulses amber, then every husk inside is recycled into
@@ -43,9 +43,9 @@
 //   CURRENCY ONLY (2026-10-17 rework, docs/GameDesign.md section 6 'Husk routing rework'): each husk pays payoutShare (50%) of what a click on it pays now
 //   as BONUS currency (AddBonusCurrency: not towards the next tier's unlock), times the same-type STREAK within that batch (in the order the husks went
 //   in: +streakStep 0.1 per same-type husk, a different type keeps streakKeepOnSwitch of it, cap streakMaxMultiplier 1.6), never more than
-//   maxShareOfClick (95%) of a click; the counter shows the batch's streak for a moment after paying. NO skill XP (xpPerHusk 0).
+//   maxShareOfClick (95%) of a click; the device card shows the last batch's streak (FillDeviceInfo: inside, last streak; the panel adds pay share, shake time, size and this session's husks / batches / paid). NO skill XP (xpPerHusk 0).
 //   SIZE (2026-10-18): placed twice as wide and deep as the first bin by default (DefaultSize 2 = the Device's radius; Operation: Size adds +0.3 a
-//   level); it holds capacity (25) husks at that size, more by floor area when bigger (Capacity). A floating down arrow with the time left shows on hover.
+//   level); it holds capacity (25) husks at that size, more by floor area when bigger (Capacity). A floating down arrow shows on hover (the time left is on the device card).
 //   SEVERAL RECYCLERS: any number can stand at once; the shop price rises with every one held or standing (Device.priceGrowthPerOwned 1.8, PixelConsumables
 //   Laddered). ONE OWNER PER HUSK: Capture, the suction and the suck-in only take husks PixelHuskHolder.Takeable says are free (a husk the Sweeper / hopper /
 //   another bin has reserved or captured is left alone).
@@ -68,7 +68,7 @@ using System.Text;
 using TMPro;
 using UnityEngine;
 
-public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, IPixelStrayTarget
+public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, IPixelStrayTarget, IPixelDeviceInfo
 {
     [Tooltip("How many husks fit in the bin at the default size (2). A bigger bin (Operation: Size) holds more - by its floor area.")]
     [SerializeField] private int capacity = 25;
@@ -142,7 +142,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     [Tooltip("The most a recycled husk may ever pay, as a share of what a click on that block pays (streak and upgrades included): it never out-earns clicking.")]
     [SerializeField] private float maxShareOfClick = 0.95f;
 
-    [Tooltip("Colour of the 'n / 12' counter above the bin.")]
+    [Tooltip("Colour of the small ring above the bin that fills as husks go in (the device card shows the numbers).")]
     [SerializeField] private Color counterColor = new Color(0.75f, 1f, 0.75f, 1f);
 
     private static readonly List<PixelRecycler> all = new List<PixelRecycler>();
@@ -265,10 +265,12 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     private Collider buttonCollider;
     private Renderer buttonRenderer;
     private Vector3 buttonScale;
-    private TextMeshPro counter;
+    private PixelWorldRing ring;   // (how full the bin is; the numbers are on the device card)
+    private int sessionHusks, sessionCycles, lastBatchRun;   // what this bin did since it was placed / loaded (the device panel)
+    private double sessionPaid;
     private readonly List<Rigidbody> inside = new List<Rigidbody>();
     private int streakTier = -1, streakCount;
-    private float lastPayAt = -100f;   // (the streak shown on the counter for a moment after a payout)
+    private float lastPayAt = -100f;   // (when the last batch was paid)
     private readonly Dictionary<Rigidbody, float> restSeconds = new Dictionary<Rigidbody, float>();   // how long each captured husk has lain still
     private float tick;
     private bool processing;
@@ -425,16 +427,8 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
         buttonRenderer = button != null ? button.GetComponent<Renderer>() : null;
         if (button != null) buttonScale = button.localScale;
 
-        GameObject cg = new GameObject("Counter");
-        cg.transform.SetParent(transform, false);
-        cg.transform.localPosition = new Vector3(0f, wallH + u * 1.6f, 0f);
-        counter = cg.AddComponent<TextMeshPro>();
-        counter.fontSize = 4f;
-        counter.fontStyle = FontStyles.Bold;
-        counter.alignment = TextAlignmentOptions.Center;
-        counter.color = counterColor;
-        if (clicker != null && clicker.UIFont != null) counter.font = clicker.UIFont;
-        PixelHoverMarker.Attach(transform, new Vector3(0f, wallH + u * 1.1f, 0f), u, hoverArrowColor, PointerOnBin, TimeLeftText);   // (shared with the Sorting Hopper)
+        ring = PixelWorldRing.Attach(transform, new Vector3(0f, wallH + u * 1.6f, 0f), u * 0.45f, counterColor);
+        PixelHoverMarker.Attach(transform, new Vector3(0f, wallH + u * 1.1f, 0f), u, hoverArrowColor, PointerOnBin);   // (shared with the Sorting Hopper; the time left is on the device card)
         RefreshCounter();
     }
 
@@ -583,11 +577,9 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     {
         if (clicker == null) return;
         Camera cam = clicker.ViewCamera;
-        if (counter != null && cam != null) counter.transform.rotation = Quaternion.LookRotation(counter.transform.position - cam.transform.position, cam.transform.up);
 
         UpdateButtonFlash();
         if (device == null) device = GetComponent<PixelPlacedDevice>();
-        if (Time.time - lastPayAt < 3.5f) RefreshCounter();   // (the streak shown after a payout clears itself)
         foreach (Rigidbody b in inside)   // a frozen husk you start to grab is let loose at once (Pixel Grabbing steers it with its velocity)
         {
             if (b == null || !b.isKinematic) continue;
@@ -868,22 +860,30 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
 
     private void RefreshCounter()
     {
-        if (counter == null) return;
+        if (ring == null) return;
         int cap = Capacity;
-        bool showStreak = clicker != null && clicker.IsValidTierIndex(streakTier) && streakCount > 0 && Time.time - lastPayAt < 3f;
-        if (showStreak) { counter.text = clicker.Tiers[streakTier].displayName.Replace(" Pixels", "") + " streak\n<size=80%>x" + StreakMultiplier.ToString("0.0") + " pay</size>"; return; }   // (just after a payout)
-        counter.text = inside.Count == 0 ? "" : inside.Count + " / " + cap + (inside.Count >= cap ? "\n<size=60%>full - press the button</size>" : "");
+        ring.Set(inside.Count == 0 ? -1f : inside.Count / (float)cap, inside.Count >= cap ? flashColor : counterColor);
     }
 
     private PixelPlacedDevice device;
 
-    /// <summary>'4:32' - the Recycler's run time left (it packs up at 0), shown beside the hover arrow. Empty when it does not count down.</summary>
-    private string TimeLeftText()
+    /// <summary>The shared device card / panel (PixelDeviceCard): what is inside, the last batch's streak; the panel adds this session's totals.</summary>
+    public void FillDeviceInfo(PixelDeviceInfo info)
     {
-        if (device == null) device = GetComponent<PixelPlacedDevice>();
-        if (device == null || device.Remaining > 1e7f) return "";
-        int sec = Mathf.Max(0, Mathf.CeilToInt(device.Remaining));
-        return (sec / 60) + ":" + (sec % 60).ToString("00");
+        int cap = Capacity;
+        info.Add("Inside", inside.Count + " / " + cap + (inside.Count >= cap ? "  <color=#FFE27F>full - press the button</color>" : ""));
+        if (processing) info.Note("<color=#FFC266>Recycling...</color>");
+        else if (inside.Count > 0) info.Note("<color=#9FB0CC>Press the red button to recycle them.</color>");
+        if (lastBatchRun > 1 && clicker != null && clicker.IsValidTierIndex(streakTier))
+            info.Add("Last streak", lastBatchRun + " " + clicker.Tiers[streakTier].displayName.Replace(" Pixels", "") + " in a row");
+        if (!info.Full) return;
+        info.Add("Pays", Mathf.RoundToInt(payoutShare * 100f) + "% of a click, up to x" + StreakCap.ToString("0.0") + " with a streak");
+        info.Add("Shake time", ProcessSeconds.ToString("0.0") + " s");
+        info.Add("Bin size", "x" + SizeFactor.ToString("0.0"));
+        info.Heading("This session");
+        info.Add("Husks recycled", sessionHusks.ToString());
+        info.Add("Batches", sessionCycles.ToString());
+        info.Add("Paid", PixelClicker.FormatNumberShort(sessionPaid) + " (all types)");
     }
 
     // ---- Processing ----
@@ -956,6 +956,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
             count++;
         }
         if (bestRun > 0) PixelStats.Best("recycler.streak", bestRun);
+        lastBatchRun = bestRun;
         if (xpTotal > 0d) PixelStats.Count("recycler.xp", xpTotal);
         lastPayAt = Time.time;
         inside.Clear();
@@ -976,6 +977,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
             double paidTotal = 0d;
             foreach (KeyValuePair<int, double> kv in paid) if (kv.Value > 0d) paidTotal += kv.Value;
             PixelStats.Count("recycler.paid", paidTotal);   // (pixels of every type added up)
+            sessionHusks += count; sessionCycles++; sessionPaid += paidTotal;
             PixelAudio.Play("purchase");
             PixelHints.Announce("Recycled " + count + " husk" + (count == 1 ? "" : "s") + (sb.Length > 0 ? ": " + sb : "."));
         }

@@ -1,7 +1,10 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelPlacedDevice.cs
+//   INFO CARD / PANEL: BuildInfo(PixelDeviceInfo) fills the shared hover card / right-click panel (PixelDeviceCard): common lines here, subclasses override
+//   AddInfo, behaviour components next to a stub implement IPixelDeviceInfo (PixelDeviceInfo.cs).
 //   SetRemoveGlow(0..1): while the right mouse button is held on the device (PixelConsumables.UpdateRemoval + PixelHold ring) it tints red, glows and lights up red as the ring fills.
-//   Abstract base of placed devices: countdown, timer text facing the camera, shrink-away (InitCommon, OnTick, IsDying). Armed /
+//   Abstract base of placed devices: countdown (shown as a small RING, PixelWorldRing, once switched on - the timer text only says 'Click to start'
+//   before that and the uses-mode labels like the Charge Booster's CLICK!), shrink-away (InitCommon, OnTick, IsDying). Armed /
 //   disarmed: every device you place starts DISARMED (Disarm() right after SpawnDevice; grey via per-renderer property blocks -
 //   ApplyTint / ClearTint, a desaturated dull version of each material's colour, emission off; the countdown does not run, OnTick is
 //   not called, the timer text shows DisarmedText 'Click to start'; subclasses must check Armed in FixedUpdate / event handlers: fan,
@@ -38,7 +41,6 @@ public abstract class PixelPlacedDevice : MonoBehaviour
     protected Camera cam;
 
     private TextMeshPro timerText;
-    private string timerFormat;
     private float remaining;
     private float shrinkSeconds;
     private bool dying;
@@ -283,13 +285,75 @@ public abstract class PixelPlacedDevice : MonoBehaviour
         clicker = owner;
         cam = camera;
         timerText = timer;
-        timerFormat = format;
         remaining = duration;
         shrinkSeconds = Mathf.Max(0.01f, shrinkTime);
     }
 
     /// <summary>Called every frame while the device is still working.</summary>
     protected virtual void OnTick() { }
+
+    // --- The shared device card / panel (PixelDeviceCard, PixelDeviceInfo.cs) ---
+
+    /// <summary>True for a device that never runs out (the Wood Chipper, Sweeper, Sorting Hopper, Funnel... stubs: a countdown of 1e9 s).</summary>
+    public bool Permanent => !usesMode && remaining > 1e8f;
+
+    private static readonly List<IPixelDeviceInfo> infoScratch = new List<IPixelDeviceInfo>();
+    private static PixelConsumables infoConsumables;
+    private static PixelShop infoShop;
+
+    /// <summary>
+    /// Fills the shared card / panel: the common lines here (name, time or uses left with the bar, 'Click to start', powered, attuned; Full: run time,
+    /// reach, Operation levels), then this device's own AddInfo, then every IPixelDeviceInfo component on the same object (the behaviour next to a stub).
+    /// </summary>
+    public void BuildInfo(PixelDeviceInfo info)
+    {
+        if (infoConsumables == null) infoConsumables = PixelFind.Cached<PixelConsumables>();
+        PixelConsumables.Device d = infoConsumables != null ? infoConsumables.EffectiveDeviceAt(DeviceIndex) : null;
+        info.Title = d != null ? d.displayName : name;
+        if (!Armed) info.Note("<color=#FFD27F>" + DisarmedText + "</color>");
+        else if (usesMode)
+        {
+            info.Add("Uses left", usesLeft.ToString());
+            int total = d != null ? Mathf.Max(d.uses, usesLeft) : usesLeft;
+            if (total > 0) { info.Progress = usesLeft / (float)total; info.ProgressLabel = usesLeft + " / " + total + " uses"; }
+        }
+        else if (!Permanent)
+        {
+            float full = d != null && d.durationSeconds > 0f ? Mathf.Max(d.durationSeconds, remaining) : remaining;
+            info.Progress = full > 0f ? Mathf.Clamp01(remaining / full) : 0f;
+            info.ProgressLabel = PixelDeviceInfo.Clock(remaining) + " left";
+        }
+        if (Powered) info.Note("<color=#7FD4FF>Powered - the timer waits</color>");
+        if (AttuneTier >= 0 && clicker != null && clicker.IsValidTierIndex(AttuneTier)) info.Add("Attuned to", clicker.Tiers[AttuneTier].displayName);
+
+        AddInfo(info);
+        GetComponents(infoScratch);
+        for (int i = 0; i < infoScratch.Count; i++) if (!ReferenceEquals(infoScratch[i], this)) infoScratch[i].FillDeviceInfo(info);
+        infoScratch.Clear();
+
+        if (info.Full && d != null)
+        {
+            info.Heading("Device");
+            info.Add("Run time", Permanent ? "permanent" : usesMode ? d.uses + " uses" : PixelDeviceInfo.Clock(d.durationSeconds));
+            if (d.radius > 0f && d.kind != PixelConsumables.DeviceKind.Recycler) info.Add("Reach", d.radius.ToString("0.#") + " units");
+            if (infoShop == null) infoShop = PixelFind.Cached<PixelShop>();
+            if (infoShop != null) infoShop.AddOperationLevels(d.kind, info);
+        }
+    }
+
+    /// <summary>A device's own lines for the card / panel (add the key stats always, the rest only when info.Full).</summary>
+    protected virtual void AddInfo(PixelDeviceInfo info) { }
+
+    /// <summary>Which kind of device this is (from its entry in the consumables' list), or null when unknown.</summary>
+    public PixelConsumables.DeviceKind? Kind
+    {
+        get
+        {
+            if (infoConsumables == null) infoConsumables = PixelFind.Cached<PixelConsumables>();
+            PixelConsumables.Device d = infoConsumables != null && DeviceIndex >= 0 ? infoConsumables.EffectiveDeviceAt(DeviceIndex) : null;
+            return d != null ? d.kind : (PixelConsumables.DeviceKind?)null;
+        }
+    }
 
     private void Update()
     {
@@ -299,6 +363,7 @@ public abstract class PixelPlacedDevice : MonoBehaviour
         {
             // Waiting for the first click: no countdown, no effect.
             if (timerText != null && timerText.text != DisarmedText) { timerText.text = DisarmedText; shownSeconds = int.MinValue; }
+            if (timerRing != null) timerRing.Set(-1f, RingColor);
             return;
         }
 
@@ -318,20 +383,26 @@ public abstract class PixelPlacedDevice : MonoBehaviour
         }
 
         OnTick();
-        if (timerText != null)
+        if (timerText != null && !Permanent)
         {
-            int secondsShown = Mathf.CeilToInt(remaining);
-            if (secondsShown != shownSeconds || Powered != shownPowered)   // (only when the number or the POWERED line changes, not every frame)
+            // The countdown is a small ring now (time left at a glance; the exact time is on the device card, PixelDeviceCard). Blue while powered.
+            if (timerText.text.Length > 0) timerText.text = "";
+            if (timerRing == null)
             {
-                shownSeconds = secondsShown;
-                shownPowered = Powered;
-                timerText.text = string.Format(timerFormat, secondsShown) + (Powered ? "\n<color=#7FD4FF>POWERED</color>" : "");
+                timerRing = PixelWorldRing.Attach(timerText.transform.parent != null ? timerText.transform.parent : transform, timerText.transform.localPosition, 0.2f, RingColor);
+                if (infoConsumables == null) infoConsumables = PixelFind.Cached<PixelConsumables>();
+                PixelConsumables.Device d = infoConsumables != null ? infoConsumables.EffectiveDeviceAt(DeviceIndex) : null;
+                ringFullSeconds = Mathf.Max(remaining, d != null ? d.durationSeconds : 0f, 1f);
             }
+            float left = remaining / ringFullSeconds;
+            timerRing.Set(left, Powered ? PoweredRingColor : left < 0.2f ? LowRingColor : RingColor);
         }
     }
 
     private int shownSeconds = int.MinValue;
-    private bool shownPowered;
+    private PixelWorldRing timerRing;
+    private float ringFullSeconds = 1f;
+    private static readonly Color RingColor = new Color(0.6f, 1f, 0.7f, 1f), LowRingColor = new Color(1f, 0.7f, 0.3f, 1f), PoweredRingColor = new Color(0.5f, 0.83f, 1f, 1f);
 
     private void LateUpdate()
     {
@@ -353,6 +424,7 @@ public abstract class PixelPlacedDevice : MonoBehaviour
         dying = true;
         Ended?.Invoke(this);
         if (timerText != null) timerText.gameObject.SetActive(false);
+        if (timerRing != null) timerRing.Set(-1f, RingColor);
 
         Vector3 start = transform.localScale;
         float t = 0f;

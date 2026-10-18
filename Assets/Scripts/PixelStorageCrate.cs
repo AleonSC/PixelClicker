@@ -13,7 +13,7 @@
 //   Cursor.SetCursor, requested per frame, normal cursor returns when nobody asks), left-drag moves the crate over the floor plane
 //   (DragTo, kept on screen) with the fist cursor, and while dragging scroll / Q / E turn it (PixelConsumables.TurnInput; also when placing it; the yaw is saved in PlacedState). PixelStorageCrate.ClaimsPointer() makes PixelGrab step aside when the click belongs
 //   to the crate; PixelPointerClaim blocks cube clicks. Removing it (Ended) lets everything out. Saved in PlacedState.extra
-//   ('S,slot,tier,amount;'). Tip device_StorageCrate. SOCKETS (PixelSockets.cs): two on the front - 'in' (left, Intake): a coupling there takes belts / hoses in
+//   ('S,slot,tier,amount;'). Tip device_StorageCrate. DEVICE CARD: AddInfo (stored n / 10; the panel lists each section). SOCKETS (PixelSockets.cs): two on the front - 'in' (left, Intake): a coupling there takes belts / hoses in
 //   (AcceptHusk); 'out' (right, Output): a coupling there lets a Container Hose pull stored husks (TakeHuskOut / HuskRoom). Which husks it may take, the fly-in and taking one out into the hand are the shared PixelHuskHolder steps.
 // ---------------------------------------------------
 using System.Collections;
@@ -322,6 +322,19 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelSocketDevice, IPixelHu
 
         Rigidbody body = PixelHuskHolder.SpawnIntoHand(clicker, tier, amount, at);
         if (body != null) ignoreUntil[body] = Time.time + 1.5f;   // (not stored again the moment it is taken out)
+    }
+
+    /// <summary>The shared device card / panel: how many of the 10 sections hold a husk and of which types.</summary>
+    protected override void AddInfo(PixelDeviceInfo info)
+    {
+        int used = 0;
+        for (int i = 0; i < Sections; i++) if (sections[i].tier >= 0) used++;
+        info.Add("Stored", used + " / " + Sections);
+        if (used == 0) info.Note("<color=#9FB0CC>Drag husks over it and click it to store them.</color>");
+        else if (info.Full)
+            for (int i = 0; i < Sections; i++)
+                if (sections[i].tier >= 0 && clicker.IsValidTierIndex(sections[i].tier))
+                    info.Note("Section " + (i + 1) + ": " + clicker.Tiers[sections[i].tier].displayName + "  <color=#9FB0CC>(" + PixelClicker.FormatNumberShort(sections[i].amount) + ")</color>");
     }
 
     private void ReleaseAll()

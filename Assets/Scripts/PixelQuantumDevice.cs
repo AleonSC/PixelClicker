@@ -10,7 +10,8 @@ using Unity.Profiling;
 //   (ReleaseOldPixel(body, false)) and dematerialized with a glitch (GlitchOut: scripts and colliders off, jittering, stretching
 //   slivers, flickering, then destroyed) while a small display model of that type glitches into the box (GlitchIn, AddModel: up to
 //   MaxVisible 18 models per type on a lane of the pad; the stored COUNT and total payout per type are kept in Slot). A floating label
-//   shows the bound types and counts (or 'Drop a pixel on the pad'). Left-click the organizer (PixelPointerClaim blocks cube clicks via
+//   says 'Drop a pixel on the pad' until a type is bound; then a small ring (PixelWorldRing) shows how full it is and the device card
+//   (AddInfo) lists the types and counts. Left-click the organizer (PixelPointerClaim blocks cube clicks via
 //   ExternalClickBlock) to release ReleasePerClick (6) stored pixels as ordinary old pixels with the average stored payout
 //   (SpawnStoredPixel, ignored by the organizer for 10 s); when its time runs out or it is removed (Ended) everything stored comes
 //   out. Saved in PlacedState.extra (ExportState/ImportState, 'Q,tier,count,total;'). It must not define its own Update / LateUpdate:
@@ -57,8 +58,10 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
     private float reach, half, wallHeight;
     private int capacity, stored;
     private float nextScan;
-    private TextMeshPro label;
+    private TextMeshPro label;   // (only the 'drop a pixel on the pad' hint now; the counts are on the device card)
+    private PixelWorldRing ring;  // (how full it is)
     private bool labelDirty = true;
+    private int sessionTaken, sessionReleased;   // this organizer since it was placed / loaded (the device panel)
 
     public void Init(PixelClicker owner, Camera camera, PixelConsumables.Device settings, TextMeshPro timer, string format, float duration, float shrinkTime)
     {
@@ -79,6 +82,7 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
         label.color = Color.white;
         label.rectTransform.sizeDelta = new Vector2(6f, 2f);
         if (clicker.UIFont != null) label.font = clicker.UIFont;
+        ring = PixelWorldRing.Attach(transform, new Vector3(0f, wallHeight + 0.55f, 0f), 0.32f, new Color(0.55f, 0.85f, 1f, 1f));
 
         RefreshLabel();
         Ended += _ => { ReleaseSome(1000); PixelCouplings.Unregister(this); };   // when its time is up (or it is removed) everything stored comes out again
@@ -204,6 +208,7 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
         slot.count++;
         slot.total += amount;
         stored++;
+        sessionTaken++;
         labelDirty = true;
         StartCoroutine(GlitchOut(go));
         AddModel(slot, true);
@@ -239,13 +244,9 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
     {
         labelDirty = false;
         if (label == null) return;
-        if (slots.Count == 0) { label.text = "<alpha=#CC>Drop a pixel on the pad\nto bind its type"; return; }
-        StringBuilder sb = new StringBuilder();
-        foreach (Slot s in slots)
-            sb.Append("<color=#").Append(ColorUtility.ToHtmlStringRGB(clicker.Tiers[s.tier].color)).Append('>').Append(TierName(s.tier)).Append("</color> x")
-              .Append(s.count).Append('\n');
-        sb.Append("<alpha=#99>").Append(stored).Append(" / ").Append(capacity);
-        label.text = sb.ToString();
+        // The floating text is only the first-use hint; once a type is bound a small ring shows how full it is (the device card lists the types and counts).
+        label.text = slots.Count == 0 ? "<alpha=#CC>Drop a pixel on the pad\nto bind its type" : "";
+        if (ring != null) ring.Set(slots.Count == 0 ? -1f : stored / (float)Mathf.Max(1, capacity), new Color(0.55f, 0.85f, 1f, 1f));
     }
 
     /// <summary>Lets up to 'count' stored pixels out (they keep their stored value and drop onto the floor round the pad).</summary>
@@ -307,7 +308,22 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
             }
             if (released >= count) break;
         }
-        if (released > 0) labelDirty = true;
+        if (released > 0) { labelDirty = true; sessionReleased += released; }
+    }
+
+    /// <summary>The shared device card / panel: stored / room, each bound type's count; the panel adds reach and this session's totals.</summary>
+    protected override void AddInfo(PixelDeviceInfo info)
+    {
+        info.Add("Stored", stored + " / " + capacity);
+        if (slots.Count == 0) info.Note("<color=#9FB0CC>Drop a pixel on the pad to bind its type.</color>");
+        foreach (Slot sl in slots)
+            info.Note("<color=#" + ColorUtility.ToHtmlStringRGB(clicker.Tiers[sl.tier].color) + ">" + TierName(sl.tier) + "</color>  x" + sl.count);
+        if (stored > 0) info.Note("<color=#9FB0CC>Click it to let " + ReleasePerClick + " out.</color>");
+        if (!info.Full) return;
+        info.Add("Bound types", slots.Count + " / " + MaxTypes);
+        info.Heading("This session");
+        info.Add("Taken in", sessionTaken.ToString());
+        info.Add("Let out", sessionReleased.ToString());
     }
 
     // ------------------------------------------------------------------

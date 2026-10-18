@@ -26,13 +26,14 @@
 //   Unlock: vendorOnly + shopSkillId 'standard' / level 3 = it appears in the shop at Standard level 3 (no vendor sells it); bought for White.
 //   SOCKETS (PixelSockets.cs): it OCCUPIES its Recycler's 'hatch' socket while latched (and will not latch onto a Recycler with a coupling on the hatch); its own 'back'
 //   socket (In) takes belts / connectors / hoses: AcceptHusk drops the husk into the tray (refused when trayRoom husks lie there).
-//   Stat hopper.husks. Tip device_SortingHopper.
+//   Stat hopper.husks. Tip device_SortingHopper. DEVICE CARD (PixelDeviceCard, FillDeviceInfo): filter, Recycler or not, tray n / room; the panel adds
+//   the feed gap and this session's fed / ejected.
 // ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, IPixelStrayTarget
+public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, IPixelStrayTarget, IPixelDeviceInfo
 {
     [Header("Sorting Hopper")]
     [Tooltip("Seconds between two husks of the chosen type slid into the Recycler (a steady stream).")]
@@ -210,6 +211,21 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
 
     [Tooltip("The most husks lying in the tray before the back coupling refuses more (a belt there then throws them on).")]
     [SerializeField] private int trayRoom = 12;
+
+    private int sessionFed, sessionEjected;   // since it was placed / loaded (the device panel)
+
+    /// <summary>The shared device card / panel: the filter, the Recycler it feeds, what lies in the tray; the panel adds feed speed and this session's totals.</summary>
+    public void FillDeviceInfo(PixelDeviceInfo info)
+    {
+        info.Add("Filter", clicker != null && clicker.IsValidTierIndex(filterTier) ? clicker.Tiers[filterTier].displayName : "none yet (the first husk in sets it)");
+        info.Add("Feeds", recycler != null ? "the Recycler behind it" : "<color=#FFD27F>no Recycler - exit shut</color>");
+        info.Add("In the tray", (Mathf.Max(1, trayRoom) - HuskRoom(null)) + " / " + Mathf.Max(1, trayRoom));
+        if (!info.Full) return;
+        info.Add("Feed gap", FeedInterval.ToString("0.00") + " s");
+        info.Heading("This session");
+        info.Add("Husks fed", sessionFed.ToString());
+        info.Add("Ejected", sessionEjected.ToString());
+    }
 
     public int HuskRoom(PixelSocket socket)
     {
@@ -405,7 +421,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         Vector3 push = bin != null ? (bin.transform.TransformDirection(Vector3.back) + Vector3.down * 0.5f) * dropPush : Vector3.zero;
         if (PixelRecycler.Holds(body)) { body.isKinematic = false; PixelHuskHolder.SetVelocity(body, push); yield break; }   // (the bin already holds its timer)
         PixelHuskHolder.Unreserve(body, push);
-        if (t >= 1f) PixelStats.Count("hopper.husks");
+        if (t >= 1f) { PixelStats.Count("hopper.husks"); sessionFed++; }
     }
 
     // ---- The filter flag ----
@@ -556,7 +572,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
             count++;
         }
         PixelAudio.Play(count > 0 ? "device_place" : "ui_click");
-        if (count > 0) PixelStats.Count("hopper.ejected", count);
+        if (count > 0) { PixelStats.Count("hopper.ejected", count); sessionEjected += count; }
     }
 
     // ---- Saving (PixelConsumables puts this in PlacedState.extra) ----
