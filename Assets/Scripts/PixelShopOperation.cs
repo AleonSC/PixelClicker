@@ -148,7 +148,7 @@ public partial class PixelShop
                 StyleBoxedRow(o.row, upgradesArrowSize.x + 40f, false);
 
                 // The orange upgrade arrow on the right.
-                o.arrow = CreateButton(o.row.rect, "Upgrades Arrow", upgradesArrowText, upgradesArrowSize, upgradesArrowColor, textColor, buyFontSize, out _, out _);
+                o.arrow = CreateButton(o.row.rect, "Upgrades Arrow", upgradesArrowText, upgradesArrowSize, upgradesArrowColor, textColor, buyFontSize, out _, out _);   // (role Custom: the orange arrow is its own colour)
                 PixelUIKit.UseRightTriangle(o.arrow.gameObject, o.arrow.GetComponentInChildren<TMP_Text>(true), textColor, upgradesArrowSize);
                 RectTransform ar = o.arrow.GetComponent<RectTransform>();
                 ar.anchorMin = ar.anchorMax = ar.pivot = new Vector2(1f, 0.5f);
@@ -246,7 +246,7 @@ public partial class PixelShop
             bool canBuy = !maxed && enough;
             row.buyButton.interactable = canBuy;
             row.buyLabel.text = maxed ? maxedText : upgradeText;
-            row.buyImage.color = canBuy ? buyColor : disabledColor;
+            SetShopRole(row.buyImage, canBuy ? ButtonRole.Success : ButtonRole.Neutral);
         }
         if (openOperation >= 0) PixelUIKit.SetText(subTitle, string.Format(operationWindowTitle, consumables.OperationName(openKind)));
     }

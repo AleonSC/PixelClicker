@@ -142,7 +142,7 @@ public partial class PixelShop
         // The pull-out arrow sits at the top left of the shop window (it rides the left edge of the currency panel when that is out).
         currencyOut = PixelPrefs.GetInt(PrefCurrencyOut, 0) != 0;
         currencySlide = currencyOut ? 1f : 0f;
-        currencyArrow = PixelUIKit.CreateButton(font, shopPanel, "Currency Arrow", "", new Vector2(52f, 68f), new Color(0.3f, 0.34f, 0.46f, 1f), Color.white, 28f);
+        currencyArrow = PixelUIKit.CreateButton(font, shopPanel, "Currency Arrow", "", new Vector2(52f, 68f), ButtonRole.Neutral, 28f);
         RectTransform ar2 = currencyArrow.GetComponent<RectTransform>();
         ar2.anchorMin = ar2.anchorMax = new Vector2(0f, 1f);
         ar2.pivot = new Vector2(1f, 1f);

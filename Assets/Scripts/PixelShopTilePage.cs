@@ -123,7 +123,7 @@ public partial class PixelShop
         for (int c = 0; c < n; c++)
         {
             int captured = c;
-            Button chip = CreateButton(page.area.transform, "Chip " + page.chipTitles[c], page.chipTitles[c], Vector2.zero, tabInactiveColor,
+            Button chip = CreateButton(page.area.transform, "Chip " + page.chipTitles[c], page.chipTitles[c], Vector2.zero, ButtonRole.Neutral,
                                        textColor, buyFontSize * 0.75f, out TMP_Text label, out page.chipImages[c]);
             PixelUIKit.Caps(label);
             PlaceTopLeft(chip.GetComponent<RectTransform>(), c * (chipWidth + cardGap), 0f, chipWidth, chipHeight);
@@ -176,7 +176,7 @@ public partial class PixelShop
         if (page.hasCount)
         {
             float stepW = 56f, countW = rightW - stepW * 2f - 16f;
-            page.minus = CreateButton(top, "Minus", "-", Vector2.zero, tabInactiveColor, textColor, buyFontSize, out _, out _);
+            page.minus = CreateButton(top, "Minus", "-", Vector2.zero, ButtonRole.Neutral, textColor, buyFontSize, out _, out _);
             PlaceTopLeft(page.minus.GetComponent<RectTransform>(), rightX, y, stepW, lineH);
             page.minus.onClick.AddListener(() => ChangePageCount(page, -1));
 
@@ -192,13 +192,13 @@ public partial class PixelShop
             });
             page.countField.onEndEdit.AddListener(_ => page.countField.text = page.count.ToString());
 
-            page.plus = CreateButton(top, "Plus", "+", Vector2.zero, tabInactiveColor, textColor, buyFontSize, out _, out _);
+            page.plus = CreateButton(top, "Plus", "+", Vector2.zero, ButtonRole.Neutral, textColor, buyFontSize, out _, out _);
             PlaceTopLeft(page.plus.GetComponent<RectTransform>(), rightX + rightW - stepW, y, stepW, lineH);
             page.plus.onClick.AddListener(() => ChangePageCount(page, +1));
             y += lineH + 8f;
         }
 
-        page.buy = CreateButton(top, "Buy", "", Vector2.zero, buyColor, textColor, buyFontSize, out page.barBuyLabel, out page.buyImage);
+        page.buy = CreateButton(top, "Buy", "", Vector2.zero, ButtonRole.Success, textColor, buyFontSize, out page.barBuyLabel, out page.buyImage);
         PlaceTopLeft(page.buy.GetComponent<RectTransform>(), rightX, y, rightW, lineH);
         page.buy.onClick.AddListener(() => { int id = page.Selected; if (id >= 0) page.purchase(id, PixelInput.ShiftHeld()); });
         if (page.hasCount)
@@ -317,7 +317,7 @@ public partial class PixelShop
     {
         page.buy.interactable = canBuy;
         PixelUIKit.SetText(page.barBuyLabel, label);
-        page.buyImage.color = canBuy ? buyColor : disabledColor;
+        SetShopRole(page.buyImage, canBuy ? ButtonRole.Success : ButtonRole.Neutral);
     }
 
     /// <summary>Sets a tile's price line, corner badge and lock mark (called from a page's fillTile).</summary>
@@ -369,7 +369,7 @@ public partial class PixelShop
 
     private void RefreshTilePage(TilePage page)
     {
-        for (int c = 0; c < page.chipImages.Length; c++) page.chipImages[c].color = c == page.chip ? tabActiveColor : tabInactiveColor;
+        for (int c = 0; c < page.chipImages.Length; c++) SetShopRole(page.chipImages[c], c == page.chip ? ButtonRole.Selected : ButtonRole.Neutral);
 
         page.collect(page.chip, page.ids);
         if (!page.ids.Contains(page.Selected)) page.selected[page.chip] = page.ids.Count > 0 ? page.ids[0] : -1;
