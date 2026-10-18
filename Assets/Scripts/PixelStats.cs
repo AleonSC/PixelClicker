@@ -23,8 +23,22 @@ using UnityEngine;
 /// in the pause menu's Stats section. Add this to any GameObject (e.g. the cube); the pause menu adds one for you
 /// if it is missing.
 /// </summary>
-public class PixelStats : MonoBehaviour
+public class PixelStats : MonoBehaviour, IPixelSaved
 {
+    // ---- save: this system writes its own part of the save file (PixelSaveRegistry) ----
+    [System.Serializable] private class SaveState { public long manual, auto; public double seconds, spent; public ExtraData extra; }
+    string IPixelSaved.SaveId => "stats";
+    int IPixelSaved.SaveOrder => 320;
+    string IPixelSaved.Export() => PixelSaveRegistry.ToJson(new SaveState { manual = ManualClicks, auto = AutoClicks, seconds = PlaySeconds, spent = PixelsSpent, extra = GetExtra() });
+    void IPixelSaved.Import(string data)
+    {
+        SaveState s = PixelSaveRegistry.FromJson<SaveState>(data);
+        if (s == null) { SetState(0, 0, 0d, 0d); SetExtra(null); return; }
+        SetState(s.manual, s.auto, s.seconds, s.spent);
+        SetExtra(s.extra);
+    }
+    private void Awake() => PixelSaveRegistry.Register(this);
+
     [Header("References")]
     [Tooltip("The PixelClicker to watch. Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
@@ -200,6 +214,7 @@ public class PixelStats : MonoBehaviour
 
     private void OnDestroy()
     {
+        PixelSaveRegistry.Unregister(this);
         if (instance == this) instance = null;
         PixelCrafting.Crafted -= OnCrafted;
         PixelMinigame.Happened -= OnMinigame;

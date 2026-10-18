@@ -23,8 +23,107 @@ using static PixelInput;
 /// can edit it): the price (any pixel types and amounts), the duration, the name and the amount owned.
 /// Add this to any GameObject (e.g. the cube). PixelShop adds it automatically if it is missing.
 /// </summary>
-public class PixelConsumables : MonoBehaviour
+public class PixelConsumables : MonoBehaviour, IPixelSaved
 {
+    // ---- save: this system writes its own part of the save file (PixelSaveRegistry) ----
+    // Two parts: what you HOLD (potions, devices; loads with the other inventories) and what is out IN THE WORLD (placed devices and the
+    // running potion; loads after the husks are back, since FinishLoad resets the spawn choice and devices may hold husks).
+    [System.Serializable] private class PotionSave { public int type, owned, second, third, bonus; }   // second / third = (pixel type + 1) of a combo potion, 0 = none; bonus = ghost backpack storage
+    [System.Serializable] private class DeviceSave { public string name; public int owned; }
+    [System.Serializable] private class HeldState { public PotionSave[] potions; public DeviceSave[] devices; }
+    [System.Serializable] private class WorldState { public PlacedState[] placed; public bool hasActive; public int activeType, activeSecond, activeThird; public float activeRemaining; }
+
+    private static int SecondOf(Potion p) => p.craftOnly ? (int)p.secondType + 1 : 0;
+    private static int ThirdOf(Potion p) => p.craftOnly && p.hasThird ? (int)p.thirdType + 1 : 0;
+
+    string IPixelSaved.SaveId => "inventory";
+    int IPixelSaved.SaveOrder => 210;
+
+    string IPixelSaved.Export()
+    {
+        HeldState s = new HeldState();
+        System.Collections.Generic.List<PotionSave> potionSaves = new System.Collections.Generic.List<PotionSave>();
+        for (int i = 0; i < Count; i++)
+        {
+            Potion p = Get(i);
+            if (p.craftOnly && p.owned <= 0 && p.bonusCap <= 0) continue;   // (of the many combo potions only the ones you hold)
+            potionSaves.Add(new PotionSave { type = (int)p.type, owned = p.owned, bonus = p.bonusCap, second = SecondOf(p), third = ThirdOf(p) });
+        }
+        s.potions = potionSaves.ToArray();
+        System.Collections.Generic.List<DeviceSave> deviceSaves = new System.Collections.Generic.List<DeviceSave>();
+        for (int i = 0; i < DeviceCount; i++)
+        {
+            Device d = GetDevice(i);
+            if (d.attuned && d.owned <= 0) continue;   // (there is an attuned device for every pixel type: only the ones you hold)
+            deviceSaves.Add(new DeviceSave { name = d.displayName, owned = d.owned });
+        }
+        s.devices = deviceSaves.ToArray();
+        return PixelSaveRegistry.ToJson(s);
+    }
+
+    void IPixelSaved.Import(string data)
+    {
+        HeldState s = PixelSaveRegistry.FromJson<HeldState>(data);
+        StopActive();
+        for (int i = 0; i < Count; i++)
+        {
+            Potion p = Get(i);
+            int second = SecondOf(p), third = ThirdOf(p);
+            PotionSave saved = s != null && s.potions != null ? System.Array.Find(s.potions, x => x.type == (int)p.type && x.second == second && x.third == third) : null;
+            p.bonusCap = saved != null ? Mathf.Max(0, saved.bonus) : 0;
+            p.owned = saved != null ? ClampHeld(i, saved.owned) : 0;
+        }
+        CancelPlacement();
+        for (int i = 0; i < DeviceCount; i++)
+        {
+            string name = GetDevice(i).displayName;
+            DeviceSave saved = s != null && s.devices != null ? System.Array.Find(s.devices, x => x.name == name) : null;
+            GetDevice(i).owned = saved != null ? ClampDeviceHeld(i, saved.owned) : 0;
+        }
+    }
+
+    /// <summary>The second save part: placed devices and the running potion (after the husks are back on the field).</summary>
+    private class WorldPart : IPixelSaved
+    {
+        private readonly PixelConsumables owner;
+        public WorldPart(PixelConsumables owner) { this.owner = owner; }
+        public string SaveId => "inventoryWorld";
+        public int SaveOrder => PixelSaveRegistry.WorldBand + 120;
+
+        public string Export()
+        {
+            WorldState s = new WorldState { placed = owner.GetPlacedDevices().ToArray() };
+            if (owner.IsActive)
+            {
+                Potion running = owner.Get(owner.ActiveIndex);
+                s.hasActive = true;
+                s.activeType = (int)running.type;
+                s.activeSecond = SecondOf(running);
+                s.activeThird = ThirdOf(running);
+                s.activeRemaining = owner.Remaining;
+            }
+            return PixelSaveRegistry.ToJson(s);
+        }
+
+        public void Import(string data)
+        {
+            WorldState s = PixelSaveRegistry.FromJson<WorldState>(data);
+            owner.ClearPlacedDevices();
+            if (s == null) return;
+            if (s.placed != null) foreach (PlacedState placed in s.placed) owner.RestorePlacedDevice(placed);
+            if (!s.hasActive) return;
+            for (int i = 0; i < owner.Count; i++)
+            {
+                Potion p = owner.Get(i);
+                if ((int)p.type != s.activeType || SecondOf(p) != s.activeSecond || ThirdOf(p) != s.activeThird) continue;
+                owner.RestoreActive(i, s.activeRemaining);
+                break;
+            }
+        }
+    }
+
+    private WorldPart worldPart;
+
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
     {
@@ -1357,6 +1456,8 @@ public class PixelConsumables : MonoBehaviour
 
     private void Awake()
     {
+        PixelSaveRegistry.Register(this);
+        PixelSaveRegistry.Register(worldPart = new WorldPart(this));
         // Escape cancels placing a device before it closes anything else.
         PixelWindows.Register(this, 100, () => IsPlacing, CancelPlacement);
 
@@ -1645,6 +1746,8 @@ public class PixelConsumables : MonoBehaviour
 
     private void OnDestroy()
     {
+        PixelSaveRegistry.Unregister(this);
+        PixelSaveRegistry.Unregister(worldPart);
         PixelWindows.Unregister(this);
         if (preview != null) Destroy(preview);
         if (IsPlacing && clicker != null) clicker.SetClicksBlocked(false);

@@ -49,23 +49,6 @@ public class PixelSaveGame : MonoBehaviour
     }
 
     [Serializable]
-    private class PotionSave
-    {
-        public int type;
-        public int owned;
-        public int second; // 0 = a normal potion; otherwise (second pixel type + 1) of a combo potion
-        public int third;  // 0 = a normal or 2-type potion; otherwise (third pixel type + 1) of a 3-type combo potion
-        public int bonus;  // extra storage from potions kept in the ghost backpack
-    }
-
-    [Serializable]
-    private class DeviceSave
-    {
-        public string name;
-        public int owned;
-    }
-
-    [Serializable]
     private class MinigameSave
     {
         public string id;
@@ -83,44 +66,19 @@ public class PixelSaveGame : MonoBehaviour
         public string savedAt;
         public string slotName = "";   // the save's own name (Save / Load window > Rename): lives in the file, so it travels with it
         public long savedAtTicks;   // UTC, used for offline progress
+        public double playSeconds;  // time played, for the slot list's summary (the stats part keeps the real one)
         public TierSave[] tiers;
         public long ultraPixels = -1;   // Ultra pixels held (-1 = an older save: the per-pixel counts in the tiers are added up)
         public PackSave[] packs;
-        public PotionSave[] potions;
-        public DeviceSave[] devices;
         public MinigameSave[] minigames;
+        public PixelSaveRegistry.Part[] parts;   // every system that saves itself (IPixelSaved: inventory, stats, achievements, Bank, pets, toggles...)
+        public PixelFeatureTester.TesterSave[] testerObjects;   // the Dev Hub tester machines (Wood Chipper, belts + their riders, Kiln, Solar Panels)
+        public PixelClicker.OldPixelState[] oldPixels;   // where the old pixels lie
+        public PixelSettingsSync.Entry[] settings;       // the settings / dev tool choices of this save file
 
         // Older saves (before minigames were saved by id).
         public double singularityCount;
         public double ghostsCaught;
-        public string[] achievements;
-        public long statManualClicks;
-        public long statAutoClicks;
-        public double statPlaySeconds;
-        public double statPixelsSpent;
-        public PixelStats.ExtraData statExtra;
-        public bool hasActivePotion;
-        public int activePotionType;
-        public int activePotionSecond;   // 0 = a normal potion; otherwise (second pixel type + 1) of a combo potion
-        public int activePotionThird;    // 0 = none; otherwise (third pixel type + 1) of a 3-type combo potion
-        public float activePotionRemaining;
-        public PixelConsumables.PlacedState[] placedDevices;
-        public PixelFeatureTester.TesterSave[] testerObjects;   // the Dev Hub tester machines (Wood Chipper, belts + their riders, Kiln, Solar Panels)
-        public PixelBank.Entry[] bank;
-        public bool autoClickerRunning;
-        public bool autoClickerDisabled; // switched off by the player (Toggles window)
-        public bool grabDisabled;
-        public bool timeStopDisabled;
-        public bool comboDisabled;
-        public string[] pets; // "type:off" per pet (PixelPets)
-        public string robot;  // the UFO Helper's job (PixelRobotWorker)
-        public bool robotDisabled;   // switched off in Toggles
-        public string[] eventTexts;
-        public string[] eventFulls;
-        public PixelClicker.OldPixelState[] oldPixels;   // where the old pixels lie
-        public PixelSettingsSync.Entry[] settings;       // the settings / dev tool choices of this save file
-        public float autoClickerInterval;
-        public int autoClickerClicks;
     }
 
     // ------------------------------------------------------------------
@@ -134,26 +92,12 @@ public class PixelSaveGame : MonoBehaviour
     [Tooltip("The shop whose purchases and upgrade levels are saved.")]
     [SerializeField] private PixelShop shop;
 
-    [Tooltip("The potions you own are saved.")]
-    [SerializeField] private PixelConsumables consumables;
 
-    [Tooltip("The play statistics (clicks, time played, pixels spent) that are saved.")]
-    [SerializeField] private PixelStats stats;
 
-    [Tooltip("The achievements whose earned list is saved.")]
-    [SerializeField] private PixelAchievements achievements;
 
-    [Tooltip("The auto clicker's running state, interval and clicks per tick are saved.")]
-    [SerializeField] private PixelAutoClicker autoClicker;
 
-    [Tooltip("Pixel Grabbing (for its on/off switch). Found automatically if left empty.")]
-    [SerializeField] private PixelGrab grab;
 
-    [Tooltip("Time Stop (for its on/off switch). Found automatically if left empty.")]
-    [SerializeField] private PixelTimeStop timeStop;
 
-    [Tooltip("The Pixel Bank whose stored pixels are saved. Found automatically if left empty.")]
-    [SerializeField] private PixelBank bank;
 
     [Tooltip("Fallback font, used only when the PixelClicker's 'UI Font' is empty. Empty = TextMeshPro default font.")]
     [SerializeField] private TMP_FontAsset font;
@@ -289,7 +233,7 @@ public class PixelSaveGame : MonoBehaviour
             SaveData data = JsonUtility.FromJson<SaveData>(File.ReadAllText(path));
             if (data == null) return false;
             savedAt = data.savedAt;
-            playSeconds = data.statPlaySeconds;
+            playSeconds = data.playSeconds;
             if (data.tiers != null) foreach (TierSave t in data.tiers) totalPixels += t.total;
             return true;
         }
@@ -578,15 +522,6 @@ public class PixelSaveGame : MonoBehaviour
     {
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (shop == null) shop = PixelFind.First<PixelShop>();
-        if (autoClicker == null) autoClicker = PixelFind.First<PixelAutoClicker>();
-        if (grab == null) grab = PixelFind.First<PixelGrab>();
-        if (timeStop == null) timeStop = PixelFind.First<PixelTimeStop>();
-        if (bank == null) bank = PixelFind.First<PixelBank>();
-        if (achievements == null) achievements = PixelFind.First<PixelAchievements>();
-        if (stats == null) stats = PixelFind.First<PixelStats>();
-        // Use the potions the shop sells into, so both always agree.
-        if (shop != null && shop.Consumables != null) consumables = shop.Consumables;
-        if (consumables == null) consumables = PixelFind.First<PixelConsumables>();
         if (clicker != null && clicker.UIFont != null) font = clicker.UIFont; // one shared font
     }
 
@@ -652,83 +587,16 @@ public class PixelSaveGame : MonoBehaviour
                     };
             }
 
-            if (consumables != null)
-            {
-                // Every potion, but of the (many) combo potions only the ones you hold.
-                System.Collections.Generic.List<PotionSave> potionSaves = new System.Collections.Generic.List<PotionSave>();
-                for (int i = 0; i < consumables.Count; i++)
-                {
-                    PixelConsumables.Potion saving = consumables.Get(i);
-                    if (saving.craftOnly && saving.owned <= 0 && saving.bonusCap <= 0) continue;
-                    potionSaves.Add(new PotionSave
-                    {
-                        type = (int)saving.type,
-                        owned = saving.owned,
-                        bonus = saving.bonusCap,
-                        second = saving.craftOnly ? (int)saving.secondType + 1 : 0,
-                        third = saving.craftOnly && saving.hasThird ? (int)saving.thirdType + 1 : 0,
-                    });
-                }
-                data.potions = potionSaves.ToArray();
-            }
-
-            if (consumables != null)
-            {
-                List<DeviceSave> deviceSaves = new List<DeviceSave>();
-                for (int i = 0; i < consumables.DeviceCount; i++)
-                {
-                    PixelConsumables.Device devToSave = consumables.GetDevice(i);
-                    if (devToSave.attuned && devToSave.owned <= 0) continue;   // (there is an attuned device for every pixel type: only the ones you hold are saved)
-                    deviceSaves.Add(new DeviceSave { name = devToSave.displayName, owned = devToSave.owned });
-                }
-                data.devices = deviceSaves.ToArray();
-            }
-
-            if (consumables != null && consumables.IsActive)
-            {
-                PixelConsumables.Potion running = consumables.Get(consumables.ActiveIndex);
-                data.hasActivePotion = true;
-                data.activePotionType = (int)running.type;
-                data.activePotionSecond = running.craftOnly ? (int)running.secondType + 1 : 0;
-                data.activePotionThird = running.craftOnly && running.hasThird ? (int)running.thirdType + 1 : 0;
-                data.activePotionRemaining = consumables.Remaining;
-            }
-            if (consumables != null) data.placedDevices = consumables.GetPlacedDevices().ToArray();
             data.testerObjects = PixelFeatureTester.ExportAll();
-            if (bank != null) data.bank = bank.GetState().ToArray();
 
             // Every minigame with a goal counter saves its count under its id.
             System.Collections.Generic.List<MinigameSave> minigameSaves = new System.Collections.Generic.List<MinigameSave>();
             foreach (PixelMinigame m in PixelMinigame.All)
                 if (m != null) minigameSaves.Add(new MinigameSave { id = m.Id, value = m.HasTracker ? m.TrackerCount : 0d, disabled = m.UserDisabled, extra = m.ExtraValue, hasExtra = true });
             data.minigames = minigameSaves.ToArray();
-            if (achievements != null) data.achievements = achievements.GetSaveState();
-            if (stats != null)
-            {
-                data.statManualClicks = stats.ManualClicks;
-                data.statAutoClicks = stats.AutoClicks;
-                data.statPlaySeconds = stats.PlaySeconds;
-                data.statPixelsSpent = stats.PixelsSpent;
-                data.statExtra = stats.GetExtra();
-            }
-
-            if (autoClicker != null)
-            {
-                data.autoClickerRunning = autoClicker.Running;
-                data.autoClickerDisabled = autoClicker.UserDisabled;
-                data.autoClickerInterval = autoClicker.Interval;
-                data.autoClickerClicks = autoClicker.ClicksPerTick;
-            }
-
-            if (grab != null) data.grabDisabled = grab.UserDisabled;
-            if (timeStop != null) data.timeStopDisabled = timeStop.UserDisabled;
-            PixelCombo comboMeter = PixelFind.First<PixelCombo>();
-            if (comboMeter != null) data.comboDisabled = comboMeter.UserDisabled;
-            PixelPets petSystem = PixelFind.First<PixelPets>();
-            if (petSystem != null) data.pets = petSystem.Export();
-            PixelRobotWorker robotWorker = PixelFind.First<PixelRobotWorker>();
-            if (robotWorker != null) { data.robot = robotWorker.Export(); data.robotDisabled = robotWorker.UserDisabled; }
-            PixelHints.ExportHistory(out data.eventTexts, out data.eventFulls);
+            PixelStats playStats = PixelFind.Cached<PixelStats>();
+            data.playSeconds = playStats != null ? playStats.PlaySeconds : 0d;
+            data.parts = PixelSaveRegistry.ExportAll();   // (inventory, stats, achievements, Bank, pets, UFO, toggles, event log...: each system's own part)
             // A minigame that moved the old pixels around (Breakout, Sorting Race...) is running: their positions aren't real now.
             if (!PixelMinigame.TakeoverActive) data.oldPixels = clicker.GetOldPixelStates().ToArray();
             data.settings = PixelSettingsSync.Collect();
@@ -758,7 +626,7 @@ public class PixelSaveGame : MonoBehaviour
             {
                 double totalPixels = 0d;
                 if (data.tiers != null) foreach (TierSave ts in data.tiers) totalPixels += ts.total;
-                string autoShot = PixelAutosaves.Add(json, new PixelAutosaves.Meta { savedAt = data.savedAt, totalPixels = totalPixels, playSeconds = data.statPlaySeconds },
+                string autoShot = PixelAutosaves.Add(json, new PixelAutosaves.Meta { savedAt = data.savedAt, totalPixels = totalPixels, playSeconds = data.playSeconds },
                                                      keepAutosaveHistory ? autosaveHistorySize : 1);
                 if (autoShot != null) shots.Add(autoShot);
                 lastAutosaveTime = Time.realtimeSinceStartup;
@@ -841,53 +709,11 @@ public class PixelSaveGame : MonoBehaviour
                 }
             }
 
-            // Auto clicker.
-            if (autoClicker != null)
-            {
-                if (data.autoClickerInterval > 0f) autoClicker.Interval = data.autoClickerInterval;
-                if (data.autoClickerClicks > 0) autoClicker.ClicksPerTick = data.autoClickerClicks;
-                autoClicker.UserDisabled = data.autoClickerDisabled;
-                if (data.autoClickerRunning) autoClicker.Activate();
-                else autoClicker.Deactivate();
-            }
-
-            if (grab != null) grab.UserDisabled = data.grabDisabled;
-            if (timeStop != null) timeStop.UserDisabled = data.timeStopDisabled;
-            PixelCombo comboMeterLoad = PixelFind.First<PixelCombo>();
-            if (comboMeterLoad != null) comboMeterLoad.UserDisabled = data.comboDisabled;
-            PixelPets petsLoad = PixelFind.First<PixelPets>();
-            if (petsLoad != null) petsLoad.Import(data.pets); // older saves have no pets
-            PixelRobotWorker robotLoad = PixelFind.First<PixelRobotWorker>();
-            if (robotLoad != null) { robotLoad.Import(data.robot); robotLoad.UserDisabled = data.robotDisabled; } // older saves have no robot job
-            PixelHints.ImportHistory(data.eventTexts, data.eventFulls);
+            // The systems that save themselves (PixelSaveRegistry), in bands around the core steps below.
+            PixelSaveRegistry.ImportRange(data.parts, int.MinValue, PixelSaveRegistry.SettingsBand);   // (toggles, auto clicker, pets, UFO, event log)
             if (!skipSettingsOnce) PixelSettingsSync.Apply(data.settings);   // (the profile's settings; Continue from the main menu keeps the ones it already showed)
 
-            // Potions.
-            if (consumables != null)
-            {
-                consumables.StopActive();
-                for (int i = 0; i < consumables.Count; i++)
-                {
-                    PixelConsumables.Potion potion = consumables.Get(i);
-                    int second = potion.craftOnly ? (int)potion.secondType + 1 : 0;
-                    int third = potion.craftOnly && potion.hasThird ? (int)potion.thirdType + 1 : 0;
-                    PotionSave saved = data.potions != null
-                        ? Array.Find(data.potions, p => p.type == (int)potion.type && p.second == second && p.third == third) : null;
-                    consumables.Get(i).bonusCap = saved != null ? Mathf.Max(0, saved.bonus) : 0;
-                    consumables.Get(i).owned = saved != null ? consumables.ClampHeld(i, saved.owned) : 0;
-                }
-            }
-
-            if (consumables != null)
-            {
-                consumables.CancelPlacement();
-                for (int i = 0; i < consumables.DeviceCount; i++)
-                {
-                    DeviceSave saved = data.devices != null
-                        ? Array.Find(data.devices, d => d.name == consumables.GetDevice(i).displayName) : null;
-                    consumables.GetDevice(i).owned = saved != null ? consumables.ClampDeviceHeld(i, saved.owned) : 0;
-                }
-            }
+            PixelSaveRegistry.ImportRange(data.parts, PixelSaveRegistry.SettingsBand, PixelSaveRegistry.MinigamesBand);   // (potion / device inventory)
 
             foreach (PixelMinigame m in PixelMinigame.All)
             {
@@ -905,12 +731,7 @@ public class PixelSaveGame : MonoBehaviour
                 // Older saves stored only one number: for the bomb that was the parts held, so it becomes both.
                 if (saved != null) m.SetExtraValue(saved.hasExtra ? saved.extra : saved.value);
             }
-            if (achievements != null) achievements.SetSaveState(data.achievements);
-            if (stats != null)
-            {
-                stats.SetState(data.statManualClicks, data.statAutoClicks, data.statPlaySeconds, data.statPixelsSpent);
-                stats.SetExtra(data.statExtra);
-            }
+            PixelSaveRegistry.ImportRange(data.parts, PixelSaveRegistry.MinigamesBand, PixelSaveRegistry.WorldBand);   // (achievements, stats)
 
             // Time away: only when the game has just started (loading by hand mid-game must not pay it again).
             if (grantOffline && data.savedAtTicks > 0)
@@ -925,29 +746,8 @@ public class PixelSaveGame : MonoBehaviour
             if (PixelFloor.Instance != null && !PixelTitleScreen.Showing) PixelFloor.Instance.PropsFadeIn();   // pixels and devices fade in after a load
             if (data.oldPixels != null) clicker.RestoreOldPixels(data.oldPixels); // older saves leave the pixels alone
 
-            if (bank != null) bank.SetState(data.bank);
-
-            // The running potion and the devices in the world (after FinishLoad, which resets the spawn choice).
-            if (consumables != null)
-            {
-                consumables.ClearPlacedDevices();
-                if (data.placedDevices != null)
-                    foreach (PixelConsumables.PlacedState placed in data.placedDevices) consumables.RestorePlacedDevice(placed);
-                PixelFeatureTester.ImportAll(data.testerObjects);   // after the devices (a solar panel links to one) and the old pixels (belt riders are made again)
-
-                if (data.hasActivePotion)
-                {
-                    for (int i = 0; i < consumables.Count; i++)
-                    {
-                        PixelConsumables.Potion potion = consumables.Get(i);
-                        int second = potion.craftOnly ? (int)potion.secondType + 1 : 0;
-                        int third = potion.craftOnly && potion.hasThird ? (int)potion.thirdType + 1 : 0;
-                        if ((int)potion.type != data.activePotionType || second != data.activePotionSecond || third != data.activePotionThird) continue;
-                        consumables.RestoreActive(i, data.activePotionRemaining);
-                        break;
-                    }
-                }
-            }
+            PixelSaveRegistry.ImportRange(data.parts, PixelSaveRegistry.WorldBand, int.MaxValue);   // (after the husks are back: Bank, placed devices + the running potion)
+            PixelFeatureTester.ImportAll(data.testerObjects);   // after the devices (a solar panel links to one) and the old pixels (belt riders are made again)
 
             if (logToConsole) Debug.Log("PixelSaveGame: loaded the save from " + data.savedAt + ".", this);
             if (showMessage) ShowMessage("Loaded slot " + CurrentSlot);

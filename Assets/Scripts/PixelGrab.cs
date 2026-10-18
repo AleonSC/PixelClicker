@@ -37,8 +37,15 @@ using static PixelInput;
 ///
 /// Add this to any GameObject. PixelShop adds it automatically if it is missing.
 /// </summary>
-public class PixelGrab : MonoBehaviour
+public class PixelGrab : MonoBehaviour, IPixelSaved
 {
+    // ---- save: this system writes its own part of the save file (PixelSaveRegistry) ----
+    [System.Serializable] private class SaveState { public bool disabled; }
+    string IPixelSaved.SaveId => "grab";
+    int IPixelSaved.SaveOrder => 120;
+    string IPixelSaved.Export() => PixelSaveRegistry.ToJson(new SaveState { disabled = UserDisabled });
+    void IPixelSaved.Import(string data) { SaveState s = PixelSaveRegistry.FromJson<SaveState>(data); UserDisabled = s != null && s.disabled; }
+
     [Header("References")]
     [Tooltip("The PixelClicker whose old pixels can be grabbed. Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
@@ -201,6 +208,7 @@ public class PixelGrab : MonoBehaviour
 
     private void Awake()
     {
+        PixelSaveRegistry.Register(this);
         instance = this;
         if (Mathf.Approximately(thrownGrip, 0.6f)) thrownGrip = 0.85f;   // (2026-10-17) above the new resting husk friction 0.65, so a throw still grips harder than a heap
         grabbingActive = true;   // Pixel Grabbing is unlocked from the start now (it still has its switch in the Toggles window)
@@ -216,6 +224,7 @@ public class PixelGrab : MonoBehaviour
 
     private void OnDestroy()
     {
+        PixelSaveRegistry.Unregister(this);
         if (instance == this) instance = null;
         Release();
         if (clicker != null) clicker.GrabEnabled = false;

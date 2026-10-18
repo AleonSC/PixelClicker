@@ -32,8 +32,15 @@ using UnityEngine.UI;
 ///
 /// Add this to any GameObject. PixelShop adds it automatically if it is missing.
 /// </summary>
-public class PixelTimeStop : MonoBehaviour
+public class PixelTimeStop : MonoBehaviour, IPixelSaved
 {
+    // ---- save: this system writes its own part of the save file (PixelSaveRegistry) ----
+    [System.Serializable] private class SaveState { public bool disabled; }
+    string IPixelSaved.SaveId => "timeStop";
+    int IPixelSaved.SaveOrder => 130;
+    string IPixelSaved.Export() => PixelSaveRegistry.ToJson(new SaveState { disabled = UserDisabled });
+    void IPixelSaved.Import(string data) { SaveState s = PixelSaveRegistry.FromJson<SaveState>(data); UserDisabled = s != null && s.disabled; }
+
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
     {
@@ -222,12 +229,14 @@ public class PixelTimeStop : MonoBehaviour
 
     private void Awake()
     {
+        PixelSaveRegistry.Register(this);
         clicker = PixelFind.First<PixelClicker>();
         baseFixedDelta = Time.fixedDeltaTime;
     }
 
     private void OnDestroy()
     {
+        PixelSaveRegistry.Unregister(this);
         SetStopped(false);
         SetSlowed(false);
         IsStopped = false;

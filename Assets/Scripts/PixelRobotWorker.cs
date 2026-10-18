@@ -14,8 +14,16 @@ using static PixelInput;
 /// ghost and its beam drops a fresh one down, already switched on, as long as you have one to spare. With the "bank a pixel" job it flies
 /// over the nearest loose pixel of the chosen type and abducts it into your Pixel Bank with its beam.
 /// </summary>
-public partial class PixelRobotWorker : MonoBehaviour
+public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
 {
+    // ---- save: this system writes its own part of the save file (PixelSaveRegistry) ----
+    [System.Serializable] private class SaveState { public string job; public bool disabled; }
+    string IPixelSaved.SaveId => "ufo";
+    int IPixelSaved.SaveOrder => 160;
+    string IPixelSaved.Export() => PixelSaveRegistry.ToJson(new SaveState { job = Export(), disabled = UserDisabled });
+    void IPixelSaved.Import(string data) { SaveState s = PixelSaveRegistry.FromJson<SaveState>(data); Import(s != null ? s.job : null); UserDisabled = s != null && s.disabled; }
+    private void Awake() => PixelSaveRegistry.Register(this);
+
     [Header("UFO")]
     [Tooltip("Turn the UFO Helper off completely.")]
     [SerializeField] private bool disableRobot = false;
@@ -220,6 +228,7 @@ public partial class PixelRobotWorker : MonoBehaviour
 
     private void OnDestroy()
     {
+        PixelSaveRegistry.Unregister(this);
         PixelWindows.Unregister(this);
         ExitCockpit();
         Hovering = false;

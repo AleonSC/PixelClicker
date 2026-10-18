@@ -23,8 +23,15 @@ using UnityEngine.InputSystem;
 ///
 /// Add this to any GameObject. PixelShop adds it automatically if it is missing.
 /// </summary>
-public class PixelBank : MonoBehaviour
+public class PixelBank : MonoBehaviour, IPixelSaved
 {
+    // ---- save: this system writes its own part of the save file (PixelSaveRegistry) ----
+    [System.Serializable] private class SaveState { public Entry[] entries; }
+    string IPixelSaved.SaveId => "bank";
+    int IPixelSaved.SaveOrder => PixelSaveRegistry.WorldBand + 110;   // (after the husks are back: the hose may have some in flight)
+    string IPixelSaved.Export() => PixelSaveRegistry.ToJson(new SaveState { entries = GetState().ToArray() });
+    void IPixelSaved.Import(string data) { SaveState s = PixelSaveRegistry.FromJson<SaveState>(data); SetState(s != null ? s.entries : null); }
+
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
     {
@@ -408,6 +415,7 @@ public class PixelBank : MonoBehaviour
 
     private void Awake()
     {
+        PixelSaveRegistry.Register(this);
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (clicker == null)
         {
@@ -429,6 +437,7 @@ public class PixelBank : MonoBehaviour
 
     private void OnDestroy()
     {
+        PixelSaveRegistry.Unregister(this);
         PixelWindows.Unregister(this);
         HoseOn = false;
         PixelClicker.ExternalClickBlock = false;

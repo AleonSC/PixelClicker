@@ -11,8 +11,15 @@ using static PixelInput;
 ///
 /// Added by PixelClicker.Awake.
 /// </summary>
-public partial class PixelPets : MonoBehaviour
+public partial class PixelPets : MonoBehaviour, IPixelSaved
 {
+    // ---- save: this system writes its own part of the save file (PixelSaveRegistry) ----
+    [System.Serializable] private class SaveState { public string[] pets; }
+    string IPixelSaved.SaveId => "pets";
+    int IPixelSaved.SaveOrder => 150;
+    string IPixelSaved.Export() => PixelSaveRegistry.ToJson(new SaveState { pets = Export() });
+    void IPixelSaved.Import(string data) { SaveState s = PixelSaveRegistry.FromJson<SaveState>(data); Import(s != null ? s.pets : null); }
+
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
     {
@@ -393,6 +400,7 @@ public partial class PixelPets : MonoBehaviour
 
     private void Awake()
     {
+        PixelSaveRegistry.Register(this);
         Instance = this;
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (clicker != null && clicker.UIFont != null) font = clicker.UIFont;
@@ -414,6 +422,7 @@ public partial class PixelPets : MonoBehaviour
 
     private void OnDestroy()
     {
+        PixelSaveRegistry.Unregister(this);
         if (Instance == this) Instance = null;
         CleanupCustomize();
         if (PopupOpen) ClosePopup();

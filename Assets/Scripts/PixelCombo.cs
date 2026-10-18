@@ -29,8 +29,15 @@ using UnityEngine.UI;
 ///
 /// Add this to any GameObject. PixelShop adds it automatically if it is missing.
 /// </summary>
-public class PixelCombo : MonoBehaviour
+public class PixelCombo : MonoBehaviour, IPixelSaved
 {
+    // ---- save: this system writes its own part of the save file (PixelSaveRegistry) ----
+    [System.Serializable] private class SaveState { public bool disabled; }
+    string IPixelSaved.SaveId => "combo";
+    int IPixelSaved.SaveOrder => 140;
+    string IPixelSaved.Export() => PixelSaveRegistry.ToJson(new SaveState { disabled = UserDisabled });
+    void IPixelSaved.Import(string data) { SaveState s = PixelSaveRegistry.FromJson<SaveState>(data); UserDisabled = s != null && s.disabled; }
+
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
     {
@@ -355,6 +362,7 @@ public class PixelCombo : MonoBehaviour
 
     private void Awake()
     {
+        PixelSaveRegistry.Register(this);
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (clicker == null)
         {
@@ -382,6 +390,7 @@ public class PixelCombo : MonoBehaviour
 
     private void OnDestroy()
     {
+        PixelSaveRegistry.Unregister(this);
         if (glowSprite != null) Destroy(glowSprite);
         if (flameSprite != null) Destroy(flameSprite);
         if (glowTexture != null) Destroy(glowTexture);

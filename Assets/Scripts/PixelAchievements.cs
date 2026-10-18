@@ -38,8 +38,15 @@ using UnityEngine.UI;
 /// Titles and descriptions may use {pixel} (the pixel type), {target} (the tier being worked on) and {tier} (its roman numeral).
 /// Add this to any GameObject (e.g. the cube). PixelLog adds it automatically if it is missing.
 /// </summary>
-public class PixelAchievements : MonoBehaviour
+public class PixelAchievements : MonoBehaviour, IPixelSaved
 {
+    // ---- save: this system writes its own part of the save file (PixelSaveRegistry) ----
+    [System.Serializable] private class SaveState { public string[] earned; }
+    string IPixelSaved.SaveId => "achievements";
+    int IPixelSaved.SaveOrder => 310;
+    string IPixelSaved.Export() => PixelSaveRegistry.ToJson(new SaveState { earned = GetSaveState() });
+    void IPixelSaved.Import(string data) { SaveState s = PixelSaveRegistry.FromJson<SaveState>(data); SetSaveState(s != null ? s.earned : null); }
+
     /// <summary>What an achievement measures. Add new kinds here, then handle them in GetProgress.</summary>
     public enum Kind
     {
@@ -397,6 +404,7 @@ public class PixelAchievements : MonoBehaviour
 
     private void Awake()
     {
+        PixelSaveRegistry.Register(this);
         if (clicker == null)
         {
             clicker = PixelFind.First<PixelClicker>();
@@ -448,6 +456,7 @@ public class PixelAchievements : MonoBehaviour
 
     private void OnDestroy()
     {
+        PixelSaveRegistry.Unregister(this);
         if (popupCanvas != null) Destroy(popupCanvas);
     }
 

@@ -1,5 +1,7 @@
 # PixelSaveGame
 
+**Save registry (2026-10-18; overrides the per-system wording below).** Systems save themselves: they implement `IPixelSaved` (SaveId, SaveOrder, Export, Import) and register with `PixelSaveRegistry` in Awake (see its header for the load-order bands). The save file keeps one list `SaveData.parts` (id + JSON). Now on the registry: auto clicker (`autoClicker`), Pixel Grabbing / Time Stop / Combo switches (`grab`, `timeStop`, `combo`), pets (`pets`), the UFO job + switch (`ufo`), the event log (`eventLog`), potions + devices held (`inventory`), placed devices + running potion (`inventoryWorld`), achievements, stats, the Bank. PixelSaveGame itself still writes the core: tiers, Ultra, shop packs, minigame counters, husks, settings, the Dev Hub tester machines, plus `playSeconds` as a summary for the slot list. A new thing to save = implement IPixelSaved on its system; nothing to add here.
+
 Moved from CLAUDE.md. The script header comments and `CLAUDE.md` index point here.
 
 ## PixelSaveGame.cs

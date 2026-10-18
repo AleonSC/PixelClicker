@@ -12,8 +12,15 @@ using UnityEngine.UI;
 /// The texts are in the Inspector list (add or edit tips there). Other code calls <c>PixelHints.Trigger("id")</c>.
 /// Added automatically by PixelClicker if the scene has none.
 /// </summary>
-public class PixelHints : MonoBehaviour
+public class PixelHints : MonoBehaviour, IPixelSaved
 {
+    // ---- save: this system writes its own part of the save file (PixelSaveRegistry) ----
+    [System.Serializable] private class SaveState { public string[] texts, fulls; }
+    string IPixelSaved.SaveId => "eventLog";
+    int IPixelSaved.SaveOrder => 170;
+    string IPixelSaved.Export() { ExportHistory(out string[] t, out string[] f); return PixelSaveRegistry.ToJson(new SaveState { texts = t, fulls = f }); }
+    void IPixelSaved.Import(string data) { SaveState s = PixelSaveRegistry.FromJson<SaveState>(data); ImportHistory(s != null ? s.texts : null, s != null ? s.fulls : null); }
+
     [Serializable]
     public class Hint
     {
@@ -353,6 +360,7 @@ public class PixelHints : MonoBehaviour
     {
         if (introRightClickText == "Try the right mouse button too: HOLD it on the block on the cube to pull the block out of the rotation. On the basic blocks (black, gray, white, red, green and blue) the longer you hold (watch the meter by your cursor), the more the block is worth when it comes round again - but the stake can also go bad and pay nothing.") introRightClickText = "Try the right mouse button too: HOLD it on the block on the cube. It's each block's second action. On the pure pixels (black, gray, white, red, green and blue) it puts a stake on the block - the longer you hold (watch the meter by your cursor), the more it is worth when it comes round again, but the stake can also go bad and pay nothing. Skill blocks you meet later do their own thing when held.";   // (2026-10-16: right-hold is each block's second action)
         if (instance != null && instance != this) { Destroy(this); return; }
+        PixelSaveRegistry.Register(this);
         instance = this;
         EnsureDefaultHints();
     }
@@ -379,6 +387,7 @@ public class PixelHints : MonoBehaviour
 
     private void OnDestroy()
     {
+        PixelSaveRegistry.Unregister(this);
         if (instance == this) instance = null;
     }
 

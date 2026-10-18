@@ -15,7 +15,7 @@ using UnityEngine.Events;
 /// Each automatic click behaves like a real click (currency, effects, falling old pixel,
 /// respawn) and its "+N" popup appears over the cube instead of at the mouse cursor.
 /// </summary>
-public class PixelAutoClicker : MonoBehaviour
+public class PixelAutoClicker : MonoBehaviour, IPixelSaved
 {
     [Header("References")]
     [Tooltip("The PixelClicker to click. Found automatically if left empty.")]
@@ -76,6 +76,7 @@ public class PixelAutoClicker : MonoBehaviour
 
     private void Awake()
     {
+        PixelSaveRegistry.Register(this);
         if (clicker == null)
         {
             clicker = PixelFind.First<PixelClicker>();
@@ -126,4 +127,24 @@ public class PixelAutoClicker : MonoBehaviour
 
     /// <summary>Stops the auto clicker.</summary>
     public void Deactivate() => running = false;
+
+    // ---- save (PixelSaveRegistry) ----
+
+    [System.Serializable] private class SaveState { public bool running, disabled; public float interval; public int clicks; }
+
+    string IPixelSaved.SaveId => "autoClicker";
+    int IPixelSaved.SaveOrder => 110;
+    string IPixelSaved.Export() => PixelSaveRegistry.ToJson(new SaveState { running = Running, disabled = UserDisabled, interval = Interval, clicks = ClicksPerTick });
+
+    void IPixelSaved.Import(string data)
+    {
+        SaveState s = PixelSaveRegistry.FromJson<SaveState>(data);
+        if (s != null && s.interval > 0f) Interval = s.interval;
+        if (s != null && s.clicks > 0) ClicksPerTick = s.clicks;
+        UserDisabled = s != null && s.disabled;
+        if (s != null && s.running) Activate(); else Deactivate();
+    }
+
+    private void OnDestroy() => PixelSaveRegistry.Unregister(this);
 }
+
