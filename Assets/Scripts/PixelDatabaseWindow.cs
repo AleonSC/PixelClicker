@@ -136,7 +136,7 @@ public class PixelDatabaseWindow : MonoBehaviour
             bool isToggle = i == tabDefs.GetLength(0);
             string tabLabel = isToggle ? "Show ???" : tabDefs[i, 0];
             string tabCategory = isToggle ? null : tabDefs[i, 1];
-            Button tb = PixelUIKit.CreateButton(Font, windowObject.transform, "Tab " + tabLabel, tabLabel, new Vector2(cellW, 44f), new Color(0.2f, 0.22f, 0.3f, 1f), Color.white, 20f);
+            Button tb = PixelUIKit.CreateButton(Font, windowObject.transform, "Tab " + tabLabel, tabLabel, new Vector2(cellW, 44f), ButtonRole.Neutral, 20f);
             RectTransform tr2 = tb.GetComponent<RectTransform>();
             tr2.anchorMin = tr2.anchorMax = tr2.pivot = new Vector2(0f, 1f);
             tr2.anchoredPosition = new Vector2(30f + (i % tabCols) * (cellW + 6f), -(top + 86f) - (i / tabCols) * 50f);
@@ -195,7 +195,7 @@ public class PixelDatabaseWindow : MonoBehaviour
         pr.anchoredPosition = new Vector2(-22f, -76f);
         picGo.SetActive(false);
         detailRect = detailLabel.rectTransform;
-        pinButton = PixelUIKit.CreateButton(Font, detail.transform, "Pin", "Pin to Pocket", new Vector2(300f, 40f), new Color(0.25f, 0.45f, 0.8f, 1f), Color.white, 20f);
+        pinButton = PixelUIKit.CreateButton(Font, detail.transform, "Pin", "Pin to Pocket", new Vector2(300f, 40f), ButtonRole.Primary, 20f);
         RectTransform pbr = pinButton.GetComponent<RectTransform>();
         pbr.anchorMin = pbr.anchorMax = pbr.pivot = new Vector2(1f, 1f);
         pbr.anchoredPosition = new Vector2(-22f, -278f);
@@ -334,11 +334,8 @@ public class PixelDatabaseWindow : MonoBehaviour
     private void RefreshTabs()
     {
         foreach (KeyValuePair<Button, string> t in tabs)
-        {
-            bool on = t.Value == category;
-            t.Key.GetComponent<Image>().color = on ? (t.Value == null ? new Color(0.35f, 0.45f, 0.7f, 1f) : Color.Lerp(new Color(0.2f, 0.22f, 0.3f), PixelDatabase.CategoryColor(t.Value), 0.55f)) : new Color(0.2f, 0.22f, 0.3f, 1f);
-        }
-        if (showAllButton != null) showAllButton.GetComponent<Image>().color = showAll ? new Color(0.2f, 0.6f, 0.3f, 1f) : new Color(0.2f, 0.22f, 0.3f, 1f);
+            PixelUIKit.SetRole(t.Key, t.Value == category ? ButtonRole.Selected : ButtonRole.Neutral);
+        if (showAllButton != null) PixelUIKit.SetRole(showAllButton, showAll ? ButtonRole.Selected : ButtonRole.Neutral);
     }
 
     /// <summary>The turning 3D picture of a pixel type next to the description (tier index, -1 = none; the text narrows to make room).</summary>
@@ -430,7 +427,9 @@ public class PixelDatabaseWindow : MonoBehaviour
 
         private Button MakeRow()
         {
+            // (list rows keep plain dark colours, role Custom on purpose: a long list of rows, the chosen one lighter and info-only rows darker - see Fill)
             Button b = PixelUIKit.CreateButton(owner.Font, content, "Row", "", new Vector2(0f, rowHeight - 4f), new Color(0.17f, 0.18f, 0.24f, 1f), Color.white, fontSize);
+
             RectTransform r = b.GetComponent<RectTransform>();
             r.anchorMin = new Vector2(0f, 1f);
             r.anchorMax = new Vector2(1f, 1f);

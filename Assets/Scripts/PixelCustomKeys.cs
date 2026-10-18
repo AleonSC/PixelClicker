@@ -264,12 +264,12 @@ public class PixelCustomKeys : MonoBehaviour
         Row(promptMsg.rectTransform, -152f, 60f);
         promptMsg.textWrappingMode = TextWrappingModes.Normal;
 
-        Button cancel = PixelUIKit.CreateButton(font, box.transform, "Cancel", "Cancel", new Vector2(150f, 50f), new Color(0.35f, 0.35f, 0.42f, 1f), Color.white, 22f);
+        Button cancel = PixelUIKit.CreateButton(font, box.transform, "Cancel", "Cancel", new Vector2(150f, 50f), ButtonRole.Neutral, 22f);
         RectTransform cr = cancel.GetComponent<RectTransform>();
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(0.5f, 0f);
         cr.anchoredPosition = new Vector2(-85f, 18f);
         cancel.onClick.AddListener(ClosePrompt);
-        promptConfirm = PixelUIKit.CreateButton(font, box.transform, "Confirm", "Confirm", new Vector2(150f, 50f), new Color(0.2f, 0.6f, 0.3f, 1f), Color.white, 22f);
+        promptConfirm = PixelUIKit.CreateButton(font, box.transform, "Confirm", "Confirm", new Vector2(150f, 50f), ButtonRole.Success, 22f);
         RectTransform fr = promptConfirm.GetComponent<RectTransform>();
         fr.anchorMin = fr.anchorMax = fr.pivot = new Vector2(0.5f, 0f);
         fr.anchoredPosition = new Vector2(85f, 18f);
@@ -375,8 +375,10 @@ public class PixelCustomKeys : MonoBehaviour
             label.rectTransform.offsetMin = new Vector2(12f, 0f); label.rectTransform.offsetMax = new Vector2(-190f, 0f);
 
             bool waiting = capturing == i;
-            Button keyBox = PixelUIKit.CreateButton(font, rt, "Key", waiting ? "Press a key..." : PixelKeys.KeyName((KeyCode)b.key), new Vector2(120f, 40f),
-                                                    waiting ? new Color(0.8f, 0.55f, 0.15f, 1f) : new Color(0.25f, 0.45f, 0.8f, 1f), Color.white, 20f);
+            // The key box is the row's main action (Primary); while it waits for a key it turns orange (a plain colour, role Custom: a one-off 'listening' state).
+            Vector2 keySize = new Vector2(120f, 40f);
+            Button keyBox = waiting ? PixelUIKit.CreateButton(font, rt, "Key", "Press a key...", keySize, new Color(0.8f, 0.55f, 0.15f, 1f), Color.white, 20f)
+                                    : PixelUIKit.CreateButton(font, rt, "Key", PixelKeys.KeyName((KeyCode)b.key), keySize, ButtonRole.Primary, 20f);
             RectTransform kr = keyBox.GetComponent<RectTransform>();
             kr.anchorMin = kr.anchorMax = kr.pivot = new Vector2(1f, 0.5f);
             kr.anchoredPosition = new Vector2(-64f, 0f);
@@ -384,7 +386,8 @@ public class PixelCustomKeys : MonoBehaviour
             kl.enableAutoSizing = true; kl.fontSizeMax = 20f; kl.fontSizeMin = 10f; kl.textWrappingMode = TextWrappingModes.NoWrap;
             keyBox.onClick.AddListener(() => OpenPrompt(bindings[index].target, index));
 
-            Button remove = PixelUIKit.CreateButton(font, rt, "Remove", "X", new Vector2(44f, 40f), new Color(0.55f, 0.22f, 0.2f, 1f), Color.white, 22f);
+            Button remove = PixelUIKit.CreateButton(font, rt, "Remove", "X", new Vector2(44f, 40f), ButtonRole.Danger, 22f);
+
             RectTransform xr = remove.GetComponent<RectTransform>();
             xr.anchorMin = xr.anchorMax = xr.pivot = new Vector2(1f, 0.5f);
             xr.anchoredPosition = new Vector2(-10f, 0f);

@@ -436,8 +436,8 @@ public class PixelCrashLog : MonoBehaviour
         lr.offsetMin = new Vector2(30f, 90f);
         lr.offsetMax = new Vector2(-30f, -20f);
 
-        Button ok = PixelUIKit.CreateButton(font, box.transform, "Ok", noticeOkText, new Vector2(200f, 60f),
-                                            new Color(0.5f, 0.2f, 0.2f, 1f), Color.white, 32f);
+        Button ok = PixelUIKit.CreateButton(font, box.transform, "Ok", noticeOkText, new Vector2(200f, 60f), ButtonRole.Success, 32f);
+
         RectTransform okr = ok.GetComponent<RectTransform>();
         okr.anchorMin = okr.anchorMax = okr.pivot = new Vector2(0.5f, 0f);
         okr.anchoredPosition = new Vector2(0f, 18f);

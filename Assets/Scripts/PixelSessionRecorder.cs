@@ -220,6 +220,7 @@ public class PixelSessionRecorder : MonoBehaviour
         {
             GameObject canvas = PixelUIKit.CreateCanvas("Session REC Button", 950, new Vector2(1920f, 1080f), true);
             PixelUIKit.EnsureEventSystem();
+            // (a plain deep red, role Custom on purpose: the blinking 'recording' badge, not an ordinary button)
             recButton = PixelUIKit.CreateButton(clicker != null ? clicker.UIFont : null, canvas.transform, "REC", "", new Vector2(200f, 46f), new Color(0.55f, 0.08f, 0.1f, 0.92f), Color.white, 20f);
             RectTransform r = recButton.GetComponent<RectTransform>();
             r.anchorMin = r.anchorMax = r.pivot = recButtonAnchor;

@@ -166,6 +166,14 @@ public class PixelFeedback : MonoBehaviour
         return b;
     }
 
+    /// <summary>A button in a ROLE (its colour comes from PixelUITheme).</summary>
+    private Button AddButton(Transform parent, string name, string label, Vector2 pos, Vector2 size, ButtonRole role, float fontSize, UnityEngine.Events.UnityAction onClick)
+    {
+        Button b = AddButton(parent, name, label, pos, size, PixelUITheme.ColorOf(role), fontSize, onClick);
+        PixelUIKit.SetRole(b, role);
+        return b;
+    }
+
     private void BuildWindow()
     {
         PixelUIKit.EnsureEventSystem();
@@ -190,7 +198,7 @@ public class PixelFeedback : MonoBehaviour
         tr.anchorMin = new Vector2(0f, 1f); tr.anchorMax = new Vector2(1f, 1f); tr.pivot = new Vector2(0.5f, 1f);
         tr.sizeDelta = new Vector2(-240f, 64f); tr.anchoredPosition = new Vector2(0f, -14f);
 
-        Button close = AddButton(win.transform, "Close", "X", new Vector2(1400f - 40f - 56f, -14f), new Vector2(56f, 56f), new Color(0.35f, 0.1f, 0.12f, 1f), 30f, () => CloseWindow(true));
+        Button close = AddButton(win.transform, "Close", "X", new Vector2(1400f - 40f - 56f, -14f), new Vector2(56f, 56f), ButtonRole.Neutral, 30f, () => CloseWindow(true));
         close.GetComponent<RectTransform>().anchoredPosition = new Vector2(1400f - 14f - 56f, -14f);
 
         // The text box.
@@ -204,9 +212,9 @@ public class PixelFeedback : MonoBehaviour
 
         // Tool row: screenshot, undo, remove, pencil colours.
         float y = -232f;
-        AddButton(win.transform, "Take Screenshot", "Take screenshot", new Vector2(40f, y), new Vector2(300f, 58f), new Color(0.15f, 0.4f, 0.8f, 1f), 26f, TakeShotClicked);
-        AddButton(win.transform, "Undo", "Undo", new Vector2(356f, y), new Vector2(130f, 58f), new Color(0.3f, 0.32f, 0.38f, 1f), 26f, Undo);
-        AddButton(win.transform, "Remove Shot", "Remove shot", new Vector2(502f, y), new Vector2(210f, 58f), new Color(0.3f, 0.32f, 0.38f, 1f), 24f, RemoveShot);
+        AddButton(win.transform, "Take Screenshot", "Take screenshot", new Vector2(40f, y), new Vector2(300f, 58f), ButtonRole.Primary, 26f, TakeShotClicked);
+        AddButton(win.transform, "Undo", "Undo", new Vector2(356f, y), new Vector2(130f, 58f), ButtonRole.Neutral, 26f, Undo);
+        AddButton(win.transform, "Remove Shot", "Remove shot", new Vector2(502f, y), new Vector2(210f, 58f), ButtonRole.Neutral, 24f, RemoveShot);
         TMP_Text pencil = PixelUIKit.CreateText(font, win.transform, "Pencil Label", "Pencil", 26f, TextAlignmentOptions.MidlineRight, FontStyles.Bold, new Color(1f, 0.88f, 0.5f, 1f));
         PixelUIKit.Caps(pencil);
         RectTransform pr = pencil.rectTransform;
@@ -216,6 +224,7 @@ public class PixelFeedback : MonoBehaviour
         for (int i = 0; i < Palette.Length; i++)
         {
             int index = i;
+            // (stays a plain colour, role Custom: a swatch shows its pencil colour)
             Button sw = AddButton(win.transform, "Colour " + i, "", new Vector2(884f + i * 56f, y - 5f), new Vector2(48f, 48f), Palette[i], 20f, () => { colorIndex = index; RefreshSwatches(); });
             swatches.Add(sw.GetComponent<Image>());
             Outline ring = sw.gameObject.AddComponent<Outline>();
@@ -261,14 +270,14 @@ public class PixelFeedback : MonoBehaviour
 
         // Bottom row.
         float by = -884f;
-        AddButton(win.transform, "Open Folder", "Open feedback folder", new Vector2(40f, by), new Vector2(330f, 56f), new Color(0.3f, 0.32f, 0.38f, 1f), 22f, OpenFolder);
+        AddButton(win.transform, "Open Folder", "Open feedback folder", new Vector2(40f, by), new Vector2(330f, 56f), ButtonRole.Neutral, 22f, OpenFolder);
         status = PixelUIKit.CreateText(font, win.transform, "Status", "", 24f, TextAlignmentOptions.Midline, FontStyles.Bold, new Color(1f, 0.88f, 0.5f, 1f));
         status.raycastTarget = false;
         RectTransform sr = status.rectTransform;
         sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0f, 1f);
         sr.sizeDelta = new Vector2(400f, 56f); sr.anchoredPosition = new Vector2(390f, by);
-        AddButton(win.transform, "Cancel", "Cancel", new Vector2(830f, by), new Vector2(240f, 56f), new Color(0.3f, 0.32f, 0.38f, 1f), 26f, () => CloseWindow(true));
-        AddButton(win.transform, "Save", "Save feedback", new Vector2(1090f, by), new Vector2(270f, 56f), new Color(0.2f, 0.6f, 0.3f, 1f), 26f, Save);
+        AddButton(win.transform, "Cancel", "Cancel", new Vector2(830f, by), new Vector2(240f, 56f), ButtonRole.Neutral, 26f, () => CloseWindow(true));
+        AddButton(win.transform, "Save", "Save feedback", new Vector2(1090f, by), new Vector2(270f, 56f), ButtonRole.Success, 26f, Save);
 
         RefreshShotButtons();
         input.ActivateInputField();
@@ -293,7 +302,8 @@ public class PixelFeedback : MonoBehaviour
         {
             int index = i;
             Button b = PixelUIKit.CreateButton(font, shotRow, "Shot " + (i + 1), (i + 1).ToString(), new Vector2(56f, 46f),
-                                               i == selected ? new Color(0.2f, 0.55f, 0.9f, 1f) : new Color(0.25f, 0.27f, 0.33f, 1f), Color.white, 24f);
+                                               i == selected ? ButtonRole.Selected : ButtonRole.Neutral, 24f);
+
             RectTransform r = b.GetComponent<RectTransform>();
             r.anchorMin = r.anchorMax = r.pivot = new Vector2(0f, 1f);
             r.anchoredPosition = new Vector2(i * 62f, 0f);

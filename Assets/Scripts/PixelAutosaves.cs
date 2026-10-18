@@ -311,7 +311,7 @@ public class PixelAutosaveWindow : MonoBehaviour
     }
 
     private const float Width = 860f, Height = 800f, RowH = 76f, RowGap = 8f;
-    private static readonly Color Back = new Color(0.1f, 0.12f, 0.18f, 0.98f), RowColor = new Color(0.2f, 0.24f, 0.34f, 1f), ButtonColor = new Color(0.25f, 0.5f, 0.85f, 1f);
+    private static readonly Color Back = new Color(0.1f, 0.12f, 0.18f, 0.98f), RowColor = new Color(0.2f, 0.24f, 0.34f, 1f);
 
     private PixelSaveGame save;
     private Action afterLoad;
@@ -363,7 +363,7 @@ public class PixelAutosaveWindow : MonoBehaviour
         sr.sizeDelta = new Vector2(-80f, 54f);
         sr.anchoredPosition = new Vector2(0f, -82f);
 
-        Button close = PixelUIKit.CreateButton(font, window.transform, "Close", "X", new Vector2(56f, 56f), new Color(0.6f, 0.25f, 0.25f, 1f), Color.white, 28f);
+        Button close = PixelUIKit.CreateButton(font, window.transform, "Close", "X", new Vector2(56f, 56f), ButtonRole.Neutral, 28f);
         RectTransform cr = close.GetComponent<RectTransform>();
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
         cr.anchoredPosition = new Vector2(-18f, -18f);
@@ -458,7 +458,8 @@ public class PixelAutosaveWindow : MonoBehaviour
             label.rectTransform.offsetMin = new Vector2(20f, 4f);
             label.rectTransform.offsetMax = new Vector2(-160f, -4f);
 
-            Button load = PixelUIKit.CreateButton(font, row.transform, "Load", "Load", new Vector2(130f, RowH - 24f), ButtonColor, Color.white, 26f);
+            Button load = PixelUIKit.CreateButton(font, row.transform, "Load", "Load", new Vector2(130f, RowH - 24f), ButtonRole.Primary, 26f);
+
             RectTransform lr = load.GetComponent<RectTransform>();
             lr.anchorMin = lr.anchorMax = lr.pivot = new Vector2(1f, 0.5f);
             lr.anchoredPosition = new Vector2(-12f, 0f);
