@@ -15,13 +15,13 @@ hooks, the registry) and `PixelCoupling.cs` (the snap-on coupling piece). Placed
 - **Sockets (data).** Every device declares its SOCKETS: a few lines each - `id`, local position (the PORT, where a belt end / hose end meets
   it, at belt-underside height), outward facing, `flow` = Intake / Output / Both, and a `kind`. Free sockets always show a small PORT PLATE (`PixelSocketPlates`: a chevron, green In / orange Out / teal Both). Sockets sit on openings the device already has:
   Kiln mouth, Storage Crate front, Trash Can side, Recycler back hatch (shared with the Sorting Hopper: a latched hopper occupies it), Sorting
-  Hopper back wall, Quantum Organizer side, Wood Chipper chute, Funnel output, Elevator entry / top, Splitter entry / three sides, Belt Sorter chute.
+  Hopper back wall, Quantum Organizer side, Wood Chipper chute, Funnel output, Elevator entry / top, Junction Box (eight, auto direction), Belt Sorter chute.
 - **Couplings (one shared piece).** ONE model (PixelFactoryKit) and ONE component. Placing it near a free socket snaps it on; it is parented to
   the device so it moves with it (carry handles, turning); removing the device removes its couplings. It is tinted a little with the device's
   colour (`SocketTint`) so it reads as a flange, not a bolt-on.
 - **Direction is shown on the coupling:** a green arrow pointing INTO the device = Intake, an orange arrow pointing OUT = Output, teal arrows
   both ways = Both.
-- **Fitted couplings.** The factory pieces that ARE belt fittings (Elevator, Splitter, Belt Sorter) come with couplings fitted on their sockets
+- **Fitted couplings.** The factory pieces that ARE belt fittings (Elevator, Belt Sorter; the Splitter until it was removed) come with couplings fitted on their sockets
   (`PixelSocket.fitted`): built with the piece, not saved, not removable on their own. Everything else needs a placed coupling.
 - **Belts and hoses connect to a COUPLING, never to the device directly:**
   - a belt END at an Intake coupling's port hands the husk in; a belt START at an Output coupling's port is fed by it;
@@ -52,7 +52,7 @@ kind = a new enum value + its own coupling look + its own hook, never a new syst
 - BOUGHT (2026-10-17): the Coupling (40 Gray + 40 Black, hold 10) and Container Hose (80 White + 80 Black, hold 3) are shop items in Utilities, right after the Recycler and
   Sorting Hopper; right-click one to start placing (PixelInstantItems -> PixelFeatureTester.StartFeature with a 'spend one' callback: one is used up per
   coupling fitted / hose laid, placing stops when none are left). The Dev Hub Tester cards still place them free. Unlocking them by progression is still open.
-- A device can have more sockets than you fill (the Splitter already does).
+- A device can have more sockets than you fill (the Junction Box has eight).
 
 ## Build order (how it was moved over)
 1. Sockets + coupling + hook next to the old interfaces. 2. Devices moved one at a time: Storage Crate, Kiln, Trash Can, Splitter, Elevator,
@@ -73,8 +73,27 @@ chute (the same "find a belt that starts here" copy) moved onto a built-in bare 
 | Funnel | `output` (Out, the spout end; the tube waits while its belt is full) |
 | Wood Chipper | `chute` (Out, on the floor in front of the outlet) |
 | Conveyor Elevator | `in`, `out` (fitted) |
-| Splitter | `in`, `out0` / `out1` / `out2` (fitted) |
+| Junction Box | `f0` `f1` (front), `b0` `b1` (back; a latched Sorting Hopper OCCUPIES both), `l0` `l1`, `r0` `r1` - all Both, **auto direction** |
 | Belt Sorter | `chute` (Out, fitted, bare) |
+
+## The Junction Box (built 2026-10-18, Devices session; design from the Design Discussion chat)
+`PixelJunctionBox.cs`, DeviceKind.JunctionBox 26: a closed box like the Recycler's (carry handles) with **eight sockets, two per side, all Both + `autoDirection`**.
+- **Auto direction** (`PixelSocket.autoDirection`, `PixelCoupling.SetAuto`): a coupling's way comes from what is attached - a belt ENDING at its port
+  (`PixelCouplings.BeltEndingAt`) or a hose PUSHING into it (`PixelContainerHose.Pushes`) = In; a belt STARTING there (`BeltStartingAt`) or a hose PULLING
+  from it (`PixelContainerHose.Pulls`) = Out; nothing = idle (no arrow; counts both ways, so belts and hoses can snap to it). Rechecked every `routeSeconds`.
+- **Routing** (AcceptHusk): 1) the Out coupling whose FILTER is the husk's type (waits in the buffer while that one is full); 2) else round robin over the
+  unfiltered Out couplings with a belt that has room (`Emit`); 3) else the BUFFER (`bufferSize` 8, data); full = refused. Hoses pulling from an Out coupling
+  take from the buffer (`IPixelHuskSource`: the filter type there, or any type no filtered output wants).
+- **Filters**: one per coupling - drop a husk you were holding on it, or click / scroll it (unlocked types + none); a small block spins over it; hover shows the card.
+- **Hosts a Sorting Hopper** (`IPixelHopperHost`, shared with the Recycler): the hopper occupies `b0` / `b1`, its feed pipe drops into the top hatch (`TakeFeed` routes it).
+  The Sweeper sees it as a container with room (buffer room).
+- Saved as a placed device (`PlacedState.extra`: filters + buffer). Price / unlock: the **Shops** session (monochrome, as machines are; a placeholder Gray + Black cost is in the entry, `vendorOnly` so it is not sold yet).
+
+### Overlap with the old tester pieces (reported 2026-10-18)
+- **Splitter** (tester): round robin out of three sides - fully covered by an unfiltered Junction Box. **Removed** the same day at the user's request.
+- **Belt Sorter** (tester): sends one type off to one side of a belt - covered by a Junction Box with one filtered Out coupling and one unfiltered one.
+  It still differs: it sits IN a belt line (no couplings needed) and is cheaper in space. **Recommendation:** retire it once the Junction Box is on sale
+  and players have it; until then keep it as the in-line option.
 
 ## Adding a device
 Implement `IPixelSocketDevice` (SocketRoot, Sockets, SocketTint, AcceptHusk), build the socket list once the device knows its size, call

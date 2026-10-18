@@ -70,7 +70,7 @@ using System.Text;
 using TMPro;
 using UnityEngine;
 
-public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, IPixelStrayTarget, IPixelDeviceInfo
+public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, IPixelStrayTarget, IPixelHopperHost, IPixelDeviceInfo
 {
     [Tooltip("How many husks fit in the bin at the default size (2). A bigger bin (Operation: Size) holds more - by its floor area.")]
     [SerializeField] private int capacity = 25;
@@ -227,6 +227,14 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     public Vector3 HatchOutside => transform.TransformPoint(new Vector3(0f, HatchPassY, BackEdgeLocalZ));
 
     /// <summary>Just inside the back wall, behind the hatch: a husk slid in here falls into the bin (world).</summary>
+    // ---- IPixelHopperHost (a Sorting Hopper on the back) ----
+    public string HostName => "Recycler";
+    public IEnumerable<string> HopperSockets { get { yield return HatchSocket; } }
+    public bool CanTakeFeed => !Busy && !Fading && HoseCanTake;
+
+    /// <summary>A hopper feeds a husk in: it is spawned at the pipe's mouth and falls into the bin (Capture takes it from there).</summary>
+    public bool TakeFeed(int tier, double amount, Vector3 at, Vector3 velocity) => clicker != null && clicker.SpawnStoredPixel(tier, amount, at, velocity);
+
     /// <summary>Where a Sorting Hopper's feed pipe lets a husk go: at rim height, just inside the back wall (world; follows the bin's size).</summary>
     public Vector3 FeedDropPoint => transform.TransformPoint(new Vector3(0f, wallH - Unit(clicker) * 0.45f, innerD * 0.5f - Unit(clicker) * 0.9f));   // (a default bin + hopper: the pipe runs level)
 

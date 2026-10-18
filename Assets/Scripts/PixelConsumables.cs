@@ -232,6 +232,8 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         ContainerHose = 24,
         /// <summary>Placed, permanent: a wind-up clockwork cube (PixelSweeper) that fetches husks close to fading into the nearest Storage Crate / Sorting Hopper / Recycler with room. On sale from Standard level 5.</summary>
         Sweeper = 25,
+        /// <summary>Placed, permanent: a box with eight auto-direction coupling sockets (PixelJunctionBox) that routes husks from its In couplings to its Out ones (filters, round robin, a small buffer). Not on sale yet (Shops session).</summary>
+        JunctionBox = 26,
     }
 
     /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
@@ -1044,6 +1046,30 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         };
     }
 
+    private static Device CreateDefaultJunctionBox()
+    {
+        return new Device
+        {
+            kind = DeviceKind.JunctionBox,
+            displayName = "Junction Box",
+            description = "A box with eight coupling sockets, two on each side. Fit couplings and connect belts or hoses: a belt or hose bringing husks in makes that coupling an IN, one taking husks away makes it an OUT. Husks that come in are shared out in turn between the outputs - or sent to the output whose FILTER is their type (drop a husk on a coupling, or click / scroll it, to set its filter). When no output can take a husk it waits in a small buffer. A Sorting Hopper can latch onto its back. It stays until you remove it.",
+            requiredType = PixelClicker.PixelType.White,
+            costs = new[]   // (placeholder: the price and unlock are the Shops session's call - monochrome, as machines are)
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Gray, amount = 300 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Black, amount = 200 },
+            },
+            maxHeld = 3,
+            durationSeconds = 1e9f,
+            radius = 1f,
+            color = new Color(0.22f, 0.36f, 0.42f, 1f),
+            bodyDiameter = 2f,
+            bodyHeight = 1.3f,
+            vendorOnly = true,   // not on sale anywhere yet: the Shops session sets its price and unlock (Dev Hub > Tester > Junction Box places one)
+            placingMessage = "Scroll or Q / E to turn the {0}, click the floor to place it  (right-click to cancel)",
+        };
+    }
+
     private static Device CreateDefaultCoupling()
     {
         return new Device
@@ -1286,6 +1312,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Coupling, CreateDefaultCoupling),
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ContainerHose, CreateDefaultContainerHose),
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Sweeper, CreateDefaultSweeper),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.JunctionBox, CreateDefaultJunctionBox),
     };
 
     /// <summary>
@@ -2268,6 +2295,9 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
                 case DeviceKind.Sweeper:
                     root = PixelSweeper.CreateDisplay(clicker);
                     break;
+                case DeviceKind.JunctionBox:
+                    root = PixelJunctionBox.CreateDisplay(clicker);
+                    break;
                 default:
                     if (PixelInstantItems.Find(kind) != null) root = BuildItemModel(kind, d);   // instant-use items (PixelInstantItems) have small item models
                     break;
@@ -2591,6 +2621,22 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         return false;
     }
 
+    /// <summary>
+    /// Places a working device of this kind at once, using nothing up (Dev Hub > Tester buttons for devices not on sale yet: the Junction Box).
+    /// It is a normal placed device: saved with the placed devices, removed the usual way. Null if there is no such device entry.
+    /// </summary>
+    public GameObject PlaceDeviceNow(DeviceKind kind, Vector3 point, float yaw)
+    {
+        int index = Array.FindIndex(devices, x => x != null && x.kind == kind);
+        if (index < 0) return null;
+        Device effective = EffectiveDevice(devices[index]);
+        PixelPlacedDevice placed = SpawnDevice(index, point, yaw, UsesKind(kind) ? effective.uses : DeviceSeconds(effective), 0f, 0f, -1);
+        if (placed == null) return null;
+        PixelAudio.Play("device_place");
+        DevicePlaced?.Invoke(kind);
+        return placed.gameObject;
+    }
+
     // Device access for the save system.
     public int DeviceCount => devices.Length;
 
@@ -2757,7 +2803,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         if (hasPoint) preview.transform.position = point;
 
         // A fan can be turned with the mouse wheel or Q / E.
-        if (devices[placingIndex].kind == DeviceKind.Fan || devices[placingIndex].kind == DeviceKind.MagnetSorter || devices[placingIndex].kind == DeviceKind.StorageCrate || devices[placingIndex].kind == DeviceKind.WoodChipper || devices[placingIndex].kind == DeviceKind.Funnel || devices[placingIndex].kind == DeviceKind.Recycler || devices[placingIndex].kind == DeviceKind.SortingHopper)
+        if (devices[placingIndex].kind == DeviceKind.Fan || devices[placingIndex].kind == DeviceKind.MagnetSorter || devices[placingIndex].kind == DeviceKind.StorageCrate || devices[placingIndex].kind == DeviceKind.WoodChipper || devices[placingIndex].kind == DeviceKind.Funnel || devices[placingIndex].kind == DeviceKind.Recycler || devices[placingIndex].kind == DeviceKind.SortingHopper || devices[placingIndex].kind == DeviceKind.JunctionBox)
         {
             rawYaw += TurnInput();
             placingYaw = PixelSnap.Active ? PixelSnap.Yaw(rawYaw) : rawYaw;   // snap the turn to angle steps unless Shift is held (the raw turn keeps counting so Q / E stay smooth)
@@ -2918,7 +2964,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
 
         Device effective = EffectiveDevice(d);
         PixelPlacedDevice placed = SpawnDevice(index, point, placingYaw, UsesKind(d.kind) ? effective.uses : DeviceSeconds(effective), 0f, 0f, -1);
-        if (placed != null && d.kind != DeviceKind.StorageCrate && d.kind != DeviceKind.WoodChipper && d.kind != DeviceKind.Funnel && d.kind != DeviceKind.Recycler && d.kind != DeviceKind.SortingHopper && d.kind != DeviceKind.Sweeper) placed.Disarm();   // (the crate needs no switching on) starts grey and idle until you left-click it
+        if (placed != null && d.kind != DeviceKind.StorageCrate && d.kind != DeviceKind.WoodChipper && d.kind != DeviceKind.Funnel && d.kind != DeviceKind.Recycler && d.kind != DeviceKind.SortingHopper && d.kind != DeviceKind.Sweeper && d.kind != DeviceKind.JunctionBox) placed.Disarm();   // (the crate needs no switching on) starts grey and idle until you left-click it
 
         EndPlacement();
         DevicePlaced?.Invoke(d.kind);
@@ -3010,6 +3056,13 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             PixelChipperDevice sweeperDevice = root.AddComponent<PixelChipperDevice>();   // (the thin permanent-device stub; all the behaviour is in PixelSweeper)
             sweeperDevice.Init(clicker, cam, shrinkSeconds);
             result = sweeperDevice;
+        }
+        else if (d.kind == DeviceKind.JunctionBox)
+        {
+            GameObject root = PixelJunctionBox.Place(clicker, point, yaw);
+            PixelChipperDevice junctionDevice = root.AddComponent<PixelChipperDevice>();   // (the thin permanent-device stub; all the behaviour is in PixelJunctionBox)
+            junctionDevice.Init(clicker, cam, shrinkSeconds);
+            result = junctionDevice;
         }
         else if (d.kind == DeviceKind.SortingHopper)
         {
@@ -3124,6 +3177,8 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             if (hopper != null) state.extra = hopper.ExportState();       // the Sorting Hopper's chosen type
             PixelSweeper sweeper = placed.GetComponent<PixelSweeper>();
             if (sweeper != null) state.extra = sweeper.ExportState();     // the Sweeper's wind left
+            PixelJunctionBox junction = placed.GetComponent<PixelJunctionBox>();
+            if (junction != null) state.extra = junction.ExportState();   // the Junction Box's filters and buffer
             if (placed is PixelSorterDevice sorter)
             {
                 state.aim = sorter.AimDegrees;
@@ -3160,6 +3215,8 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         if (restoredHopper != null) restoredHopper.ImportState(state.extra);
         PixelSweeper restoredSweeper = restored != null ? restored.GetComponent<PixelSweeper>() : null;
         if (restoredSweeper != null) restoredSweeper.ImportState(state.extra);
+        PixelJunctionBox restoredJunction = restored != null ? restored.GetComponent<PixelJunctionBox>() : null;
+        if (restoredJunction != null) restoredJunction.ImportState(state.extra);
         if (restored is PixelStorageCrate restoredCrate) restoredCrate.ImportState(state.extra);
         if (restored != null) PixelCouplings.Import(restored.gameObject, state.couplings);   // its couplings go back on its sockets
     }
@@ -3232,6 +3289,11 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
                 return ghost;
             }
             return displayOnly ? PixelRecycler.CreateDisplay(clicker) : PixelRecycler.Place(clicker, Vector3.zero, 0f);
+        }
+        if (d.kind == DeviceKind.JunctionBox)
+        {
+            suckPoint = null; timer = null;
+            return isPreview ? PixelJunctionBox.CreateGhost(clicker) : displayOnly ? PixelJunctionBox.CreateDisplay(clicker) : PixelJunctionBox.Place(clicker, Vector3.zero, 0f);
         }
         if (d.kind == DeviceKind.Sweeper)
         {

@@ -35,6 +35,18 @@ public class PixelContainerHose : MonoBehaviour
     private float unit = 1f;
     private Vector3 a, b;                       // the ends (world): just above the two couplings' ports
     private PixelCoupling source, target;       // an Out coupling (the device gives husks) and an In coupling (the device takes them)
+
+    private static readonly List<PixelContainerHose> all = new List<PixelContainerHose>();
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { all.Clear(); }
+    private void OnEnable() { if (!ghost && !all.Contains(this)) all.Add(this); }
+    private void OnDisable() { all.Remove(this); }
+
+    /// <summary>Does a placed hose PULL husks out of this coupling (it is the hose's source)? (Auto-direction couplings: Out.)</summary>
+    public static bool Pulls(PixelCoupling c) { foreach (PixelContainerHose h in all) if (h != null && h.source == c) return true; return false; }
+
+    /// <summary>Does a placed hose PUSH husks into this coupling (it is the hose's target)? (Auto-direction couplings: In.)</summary>
+    public static bool Pushes(PixelCoupling c) { foreach (PixelContainerHose h in all) if (h != null && h.target == c) return true; return false; }
     private TMPro.TextMeshPro status;
     private string statusText;
     private Mesh mesh;

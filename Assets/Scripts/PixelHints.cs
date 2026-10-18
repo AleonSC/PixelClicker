@@ -193,6 +193,7 @@ public class PixelHints : MonoBehaviour, IPixelSaved
             case "device_StorageCrate": return "You placed a Storage Crate!";
             case "device_SortingHopper": return "You placed a Sorting Hopper!";
             case "device_Sweeper": return "You placed a Sweeper!";
+            case "device_JunctionBox": return "You placed a Junction Box!";
             case "device_Funnel": return "You placed a Funnel!";
             case "husk_crush": return "Right-click a husk to crush it for XP";
             case "node_standard_aimed": return "Aimed Clicks: click near the cube's edge to aim husks";
@@ -272,6 +273,7 @@ public class PixelHints : MonoBehaviour, IPixelSaved
         H("device_SortingHopper", "Sorting Hopper placed! Put it near a Recycler and it latches onto the back. Husks dropped into its bowl are held (up to 20). Right-click the hopper and press Select filter: that type goes into the Recycler, every other type drops out of its bottom spout."),
         H("device_Funnel", "Funnel placed! Its glass cone hangs under the cube and catches every husk that falls into it, then sends them one by one down the tube to the spout where you placed it (scroll or Q / E turns the spout). Placing it again moves it."),
         H("device_Sweeper", "Sweeper placed! It rolls out from its pad and carries husks that are about to fade to the nearest Storage Crate, Sorting Hopper or Recycler with room. It runs about a minute and slows to a stop - click it to wind it again."),
+        H("device_JunctionBox", "Junction Box placed! Fit couplings on its sides and connect belts or hoses: whatever brings husks in makes that coupling IN, whatever takes them away makes it OUT. Husks are shared out in turn between the outputs, or sent to the one whose filter is their type - drop a husk on a coupling (or click / scroll it) to set its filter."),
         H("device_Magnet", "Magnet placed! It is grey and asleep: left-click it to switch it on. Then it pulls loose old pixels in around it and holds them in a heap without collecting them."),
         H("device_Sorter", "Sorter placed! It is grey and asleep: left-click its ring or pipe to switch it on. Then click its buttons to change how hard old pixels are pushed out of the pipe."),
         H("craft", "Crafted! The new item is in your Inventory under Consumables."),

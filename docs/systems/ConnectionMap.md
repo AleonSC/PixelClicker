@@ -73,7 +73,7 @@ Keep this map current: when a system gets a new link (or loses one), change its 
 | Machine | Takes in | Gives out | Pressure | Skill home | State |
 |---|---|---|---|---|---|
 | Conveyor Belt (+ corner joints) | husks | moves them | space | Electrician (level 5) | Built (a real item at Electrician 5) |
-| Splitter | a belt's husks | shares them over three outputs | space | Electrician? | Built (tester) |
+| Junction Box | husks from belts / hoses / a Sorting Hopper | routes them to its Out couplings (filters, round robin, buffer) | space | Electrician? | Built (device, not on sale yet; replaced the Splitter) |
 | Conveyor Elevator | a belt's husks | lifts them to a higher belt | space | Electrician? | Built (tester) |
 | Container Hose | husks stored in a crate / organizer (Out coupling) | into any In coupling, routed through bend points | space | Electrician? | Built (tester) |
 | Belt Sorter | a belt's husks + one filter block | that type off the side | space, the rotation | Electrician? | Built (tester) |
@@ -98,8 +98,8 @@ Machines can **break** from the wrong input (main cause) or gentle wear (optiona
 | Pressure | Answered by |
 |---|---|
 | **Despawn** (husks vanish) | first person by hand (the first answer), Wood Chipper, Storage Crate, Magnet, Quantum Organizer, Funnel, Recycler (Designed), Kiln |
-| **Machine breakdowns** (wrong input, wear) | sorting before the machine (Belt Sorter, Splitter), repairs in first person (Designed) |
-| **Space** (the floor circle is small) | belts, Splitter, Elevator, hoses, Fan, Sorter, Trash Can, free cam; a bigger floor as a reward (Idea, the dev toggle exists) |
+| **Machine breakdowns** (wrong input, wear) | sorting before the machine (Belt Sorter, Junction Box), repairs in first person (Designed) |
+| **Space** (the floor circle is small) | belts, Junction Box, Elevator, hoses, Fan, Sorter, Trash Can, free cam; a bigger floor as a reward (Idea, the dev toggle exists) |
 | **Hazards** | right-click clearing, Pesticide charges / Sprayer (Designed), Focus potions, Infestation dial (open), sap bait (Designed), Belt Sorter |
 | **One skill at a time** | auto clicker + machines working while you focus elsewhere; Offline Progression |
 | **The rotation** (cannot choose the next block) | Block Hold, Shuffle, potions, lookahead perks (Designed) |

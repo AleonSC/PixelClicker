@@ -7,8 +7,10 @@
 //     pointing OUT = Out. A coupling on a Both socket (Storage Crate, Quantum Organizer) shows a small teal dot: LEFT-CLICK it to switch In / Out
 //     (PixelPointerClaim.ClaimButton keeps the cube and Pixel Grabbing out of that click). Its parts are named "Coupling ..." so the device's own
 //     hover / remove check (PixelPlacedDevice.CountsForHit) leaves them out.
+//   - AUTO DIRECTION (socket.autoDirection, the Junction Box): no teal dot and no click switch; the device calls SetAuto(In / Out / Idle) from what is
+//     attached; idle shows no arrow and counts both ways (IsIn and IsOut) so belts and hoses can snap to it.
 //   - TakeIn(husk) = the device's ONE hook (IPixelSocketDevice.AcceptHusk); PortWorld / FacingWorld = where belts meet it.
-//   - Fitted couplings (socket.fitted: the Elevator, Splitter and Connector, which are belt fittings themselves) are built with the piece (FitBuiltIn),
+//   - Fitted couplings (socket.fitted: the Elevator and Belt Sorter, which are belt fittings themselves) are built with the piece (FitBuiltIn),
 //     are not saved and cannot be removed on their own.
 //   - PLACING (Dev Hub > Tester > 'Coupling'): the ghost (CreateGhost) shows a teal ring on every FREE socket in view and magnetizes to the nearest one
 //     (TrySnapGhost: by screen distance, its arrow shows that socket's direction); a click fits it there (PlaceAt). Hold the right button on a placed
@@ -49,8 +51,27 @@ public class PixelCoupling : MonoBehaviour
     public IPixelSocketDevice Device => device;
     public PixelSocket Socket => socket;
     public bool Fitted => socket != null && socket.fitted;
-    public bool IsIn => socket != null && !outward && socket.CanTakeIn;
-    public bool IsOut => socket != null && outward && socket.CanGiveOut;
+    public bool IsIn => socket != null && (auto ? autoState != AutoState.Out : !outward && socket.CanTakeIn);   // (an idle auto coupling counts both ways: belts / hoses can snap to it)
+    public bool IsOut => socket != null && (auto ? autoState != AutoState.In : outward && socket.CanGiveOut);
+
+    /// <summary>An auto-direction coupling's state (PixelSocket.autoDirection): set by its device from what is attached.</summary>
+    public enum AutoState { Idle, In, Out }
+    private bool auto;
+    private AutoState autoState;
+    public bool Auto => auto;
+    public AutoState Direction => auto ? autoState : outward ? AutoState.Out : AutoState.In;
+
+    /// <summary>An auto-direction coupling: In / Out / idle from what is attached (its device works it out). The arrow shows it; idle = no arrow.</summary>
+    public void SetAuto(AutoState state)
+    {
+        if (!auto || autoState == state) return;
+        autoState = state;
+        outward = state == AutoState.Out;
+        ShowArrow();
+    }
+
+    /// <summary>Is the pointer ray on this coupling's parts?</summary>
+    public bool PointerOver(Camera cam) => cam != null && PointerOn(cam);
     public Vector3 PortWorld => device != null && device.SocketRoot != null ? PixelCouplings.Port(device, socket) : transform.position;
     public Vector3 FacingWorld => device != null && device.SocketRoot != null ? PixelCouplings.Facing(device, socket) : transform.forward;
 
@@ -92,6 +113,7 @@ public class PixelCoupling : MonoBehaviour
         c.device = d;
         c.socket = s;
         c.outward = s.flow == PixelSocketFlow.Output;
+        c.auto = s.autoDirection && s.flow == PixelSocketFlow.Both;
         if (!s.bare) c.Build(false, d.SocketTint);   // (a bare fitted socket is logic only: the piece's own shape shows the way)
         all.Add(c);
         return c;
@@ -121,7 +143,7 @@ public class PixelCoupling : MonoBehaviour
     /// <summary>On a Both socket: In (true) or Out (false). Other sockets keep their own direction.</summary>
     public void SetDirection(bool intake)
     {
-        if (socket == null || socket.flow != PixelSocketFlow.Both) return;
+        if (socket == null || socket.flow != PixelSocketFlow.Both || auto) return;   // (an auto coupling follows what is attached)
         outward = !intake;
         ShowArrow();
     }
@@ -147,7 +169,7 @@ public class PixelCoupling : MonoBehaviour
             kit.Cyl("Coupling Bolt", t, new Vector3(sx * 0.34f * u, 0.82f * u, 0.12f * u), 0.05f * u, 0.06f * u, steel, axis, 0.9f, 0.7f);
         arrowIn = BuildArrow(kit, "Coupling Arrow In", false, inColor);
         arrowOut = BuildArrow(kit, "Coupling Arrow Out", true, outColor);
-        if (socket != null && socket.flow == PixelSocketFlow.Both && !asGhost)   // a teal dot: click to switch In / Out
+        if (socket != null && socket.flow == PixelSocketFlow.Both && !socket.autoDirection && !asGhost)   // a teal dot: click to switch In / Out
             kit.Ball("Coupling Switch", t, new Vector3(0f, 0.5f * u, -0.06f * u), 0.09f * u, new Color(0.3f, 0.95f, 0.95f, 1f), 0.2f, 0.8f);
         ShowArrow();
         parts = GetComponentsInChildren<Renderer>(true);
@@ -167,8 +189,9 @@ public class PixelCoupling : MonoBehaviour
 
     private void ShowArrow()
     {
-        if (arrowIn != null) arrowIn.gameObject.SetActive(!outward);
-        if (arrowOut != null) arrowOut.gameObject.SetActive(outward);
+        bool idle = auto && autoState == AutoState.Idle;
+        if (arrowIn != null) arrowIn.gameObject.SetActive(!idle && !outward);
+        if (arrowOut != null) arrowOut.gameObject.SetActive(!idle && outward);
     }
 
     // ---- every frame: the arrow drifts the way husks go; a Both coupling switches on a click ----
@@ -181,7 +204,7 @@ public class PixelCoupling : MonoBehaviour
             float k = Mathf.Repeat(Time.time * 1.2f, 1f);
             arrow.localPosition = new Vector3(0f, 1.05f * u, 0.2f * u + (outward ? 1f : -1f) * (k - 0.5f) * 2f * Mathf.Max(0f, arrowDrift) * u);
         }
-        if (ghost || socket == null || socket.flow != PixelSocketFlow.Both || PixelCalm.InMenu || PixelInput.PointerOverUI()) return;
+        if (ghost || auto || socket == null || socket.flow != PixelSocketFlow.Both || PixelCalm.InMenu || PixelInput.PointerOverUI()) return;
         PixelClicker clicker = Clicker;
         Camera cam = clicker != null ? clicker.ViewCamera : null;
         if (cam == null || !PointerOn(cam)) return;

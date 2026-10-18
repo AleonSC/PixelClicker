@@ -13,7 +13,8 @@
 //   Optional extras: IPixelHuskSource (a hose may pull stored husks out of an Out coupling: Storage Crate, Quantum Organizer), IPixelHuskRoom (how many
 //   more husks an In coupling's device takes now: a hose only pumps what fits). A socket can be OCCUPIED by something that is not a coupling (the
 //   Sorting Hopper latched on the Recycler's back hatch: Occupy / Vacate). Couplings are saved with their device: Export / Import (socket ids +
-//   direction) into PlacedState.couplings / TesterSave.couplings. Socket KINDS are an open list (PixelSocketKind, appended only): Husk is built;
+//   direction) into PlacedState.couplings / ... An AUTO-DIRECTION socket (autoDirection, the Junction Box) has no fixed way: its device sets its coupling
+//   In / Out / idle from what is attached (PixelCoupling.SetAuto; BeltEndingAt / BeltStartingAt, PixelContainerHose.Pulls / Pushes). Saved / TesterSave.couplings. Socket KINDS are an open list (PixelSocketKind, appended only): Husk is built;
 //   Power (Electrician) and Signal (Automation) are planned, Water / Heat / Link are ideas - each = a new value + its own coupling look + its own hook.
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -53,10 +54,12 @@ public class PixelSocket
     public PixelSocketFlow flow;
     [Tooltip("What flows through it. Only Husk is built.")]
     public PixelSocketKind kind;
-    [Tooltip("A coupling comes fitted with the device (the belt-fitting pieces: Elevator, Splitter, Connector); not saved, not removable on its own.")]
+    [Tooltip("A coupling comes fitted with the device (the belt-fitting pieces: Elevator, Belt Sorter); not saved, not removable on its own.")]
     public bool fitted;
     [Tooltip("A fitted coupling with no model of its own (the piece's own shape is the fitting: the Belt Sorter's chute).")]
     public bool bare;
+    [Tooltip("(Both sockets) The coupling's direction comes from what is attached to it - a belt ending at it / a hose pushing in = In, a belt starting at it / a hose pulling out = Out, nothing = idle (the device sets it: PixelCoupling.SetAuto). No teal switch dot. The Junction Box.")]
+    public bool autoDirection;
 
     public PixelSocket(string id, Vector3 localPosition, Vector3 localFacing, PixelSocketFlow flow, bool fitted = false, PixelSocketKind kind = PixelSocketKind.Husk)
     {
@@ -168,6 +171,18 @@ public static class PixelCouplings
     }
 
     // ---- husks out ----
+
+    /// <summary>The belt that ENDS at this point (its exit within 1.3 cube widths sideways and 1.2 up / down), or null.</summary>
+    public static PixelConveyor BeltEndingAt(Vector3 port)
+    {
+        foreach (PixelConveyor belt in PixelConveyor.All)
+        {
+            if (belt == null || belt.IsGhost) continue;
+            Vector3 d = belt.ExitPoint - port;
+            if (new Vector3(d.x, 0f, d.z).magnitude <= 1.3f * belt.Unit && Mathf.Abs(d.y) <= 1.2f * belt.Unit) return belt;
+        }
+        return null;
+    }
 
     /// <summary>The belt that STARTS at this point (within 1.3 cube widths sideways and 1.2 up / down), or null.</summary>
     public static PixelConveyor BeltStartingAt(Vector3 port)

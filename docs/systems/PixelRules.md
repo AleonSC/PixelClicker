@@ -106,7 +106,7 @@ Rules that keep it balanced:
 Some machines break, and the player goes into first person to repair them.
 
 **Wrong input (the main cause).** A machine that gets something it should not take (e.g. a Gas Pocket husk in the Kiln) bangs, smokes and stops.
-- This makes sorting matter: a Belt Sorter or Splitter protects the machine, not just tidies.
+- This makes sorting matter: a Belt Sorter or Junction Box protects the machine, not just tidies.
 - The player caused it and can fix it for good with a better layout; it teaches what each machine takes.
 - Each machine lists what it accepts (shown in its tooltip / the Database), so a breakdown is never a surprise rule.
 

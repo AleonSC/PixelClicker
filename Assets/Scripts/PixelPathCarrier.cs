@@ -40,7 +40,7 @@ public sealed class PixelPathCarrier
         }
     }
 
-    /// <summary>Is this pixel inside any carrier (a Funnel tube, an Elevator shaft, a Splitter, a Container Hose)? Such pixels cannot be grabbed with the mouse.</summary>
+    /// <summary>Is this pixel inside any carrier (a Funnel tube, an Elevator shaft, a Container Hose)? Such pixels cannot be grabbed with the mouse.</summary>
     /// <summary>Marks a pixel as held by some machine (it cannot be grabbed with the mouse) without it being on a path (the Funnel's pile). Unmark when it is let go.</summary>
     public static void MarkCarried(Rigidbody rb) { if (rb != null) carriedAll.Add(rb); }
     public static void Unmark(Rigidbody rb) { if (rb != null) carriedAll.Remove(rb); }

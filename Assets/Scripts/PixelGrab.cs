@@ -305,7 +305,7 @@ public class PixelGrab : MonoBehaviour, IPixelSaved
             if (body == null) continue;
             bool inRecycler = PixelRecycler.Holds(body);   // a husk kept in a Recycler can be picked back out
             if (!inRecycler && !IsOldPixel(body)) continue;
-            if (PixelPathCarrier.IsCarried(body)) continue;   // inside a Funnel tube / Elevator / Splitter: not to be dragged out
+            if (PixelPathCarrier.IsCarried(body)) continue;   // inside a Funnel tube / Elevator / hose: not to be dragged out
             if (clicker.IsFlyingPixel(body) && !PixelTimeStop.IsSlowed) continue; // a flying meteor can only be caught while time is slowed
 
             OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();

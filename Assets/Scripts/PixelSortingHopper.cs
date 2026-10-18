@@ -26,6 +26,8 @@
 //   - The filter shows on a little flag on the bowl's back-left corner (tinted its colour, the block spinning on top). A floating down arrow
 //     (PixelHoverMarker) shows on hover.
 //   Removing it lets everything it holds out of the bottom spout first.
+//   HOSTS (2026-10-18): it latches onto any IPixelHopperHost (interface below) - the Recycler (occupies 'hatch') and the JUNCTION BOX (occupies b0 / b1;
+//   the feed pipe drops into its top hatch and TakeFeed routes the husk like any other). 'Recycler' in the notes above means 'its host'.
 //   Unlock: vendorOnly + shopSkillId 'standard' / level 3 = it appears in the shop at Standard level 3 (no vendor sells it); bought for White.
 //   SOCKETS (PixelSockets.cs): its own 'back' socket (In) takes belts / hoses: AcceptHusk takes the husk in (refused when full).
 //   Saved in PlacedState.extra: 'F,Type' (or 'F,-') then ';Type,amount' per held husk.
@@ -35,6 +37,28 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using UnityEngine;
+
+/// <summary>
+/// A device a Sorting Hopper latches onto (the Recycler, the Junction Box): the hopper stands behind its back (+z), occupies its HopperSockets and feeds
+/// the filter type in through its feed pipe (TakeFeed). A new host implements this; nothing in the hopper changes.
+/// </summary>
+public interface IPixelHopperHost : IPixelSocketDevice
+{
+    /// <summary>The name the hopper's card shows ('Recycler').</summary>
+    string HostName { get; }
+    /// <summary>The sockets a latched hopper occupies (no coupling may go there meanwhile; a coupling there keeps hoppers off).</summary>
+    IEnumerable<string> HopperSockets { get; }
+    /// <summary>How far behind the host's middle (its own unscaled units, +z) its back ends: the hopper's bowl starts just behind it.</summary>
+    float BackEdgeLocalZ { get; }
+    /// <summary>Where the hopper's feed pipe lets a husk go (world).</summary>
+    Vector3 FeedDropPoint { get; }
+    /// <summary>True while the floor's props fade scales the host (the hopper waits).</summary>
+    bool Fading { get; }
+    /// <summary>May a husk be fed in now?</summary>
+    bool CanTakeFeed { get; }
+    /// <summary>Feeds one husk in (it leaves the pipe at 'at' moving at 'velocity'). False = refused (the hopper keeps it).</summary>
+    bool TakeFeed(int tier, double amount, Vector3 at, Vector3 velocity);
+}
 
 public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, IPixelStrayTarget, IPixelDeviceInfo
 {
@@ -88,7 +112,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
 
     private PixelClicker clicker;
     private PixelPlacedDevice device;
-    private PixelRecycler recycler;          // the bin it is latched onto (null = none: filtered husks wait)
+    private IPixelHopperHost recycler;       // what it is latched onto - a Recycler or a Junction Box (null = none: filtered husks wait)
     private float snapRange = 6f;
     private Vector3 baseScale = Vector3.one;
     private int filterTier = -1;
@@ -239,7 +263,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
     public void FillDeviceInfo(PixelDeviceInfo info)
     {
         info.Add("Filter", clicker != null && clicker.IsValidTierIndex(filterTier) ? Name(filterTier) : "none (it just holds)");
-        info.Add("Feeds", recycler != null ? "the Recycler in front of it" : "<color=#FFD27F>no Recycler - the filter type waits</color>");
+        info.Add("Feeds", recycler != null ? "the " + recycler.HostName + " in front of it" : "<color=#FFD27F>nothing - the filter type waits</color>");
         info.Add("Holding", held.Count + " / " + Room);
         info.Progress = held.Count / (float)Room;
         info.ProgressLabel = held.Count >= Room ? "full" : "";
@@ -249,7 +273,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         foreach (KeyValuePair<int, int> kv in counts) if (clicker.IsValidTierIndex(kv.Key)) info.Add("  " + Name(kv.Key), "x" + kv.Value + (kv.Key == filterTier ? "  (filter)" : ""));
         info.Add("Feed gap", FeedInterval.ToString("0.00") + " s");
         info.Heading("This session");
-        info.Add("Into the Recycler", sessionFed.ToString());
+        info.Add("Fed through the pipe", sessionFed.ToString());
         info.Add("Out of the bottom spout", (sessionRejected + sessionEjected).ToString());
         info.AddAction("Select filter", () => PixelSortingHopperWindow.Open(this));
         info.AddAction("Empty out", EmptyOut, ButtonRole.Danger);
@@ -260,58 +284,68 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
     private void OnDestroy()
     {
         PixelCouplings.Unregister(this);
-        if (recycler != null) PixelCouplings.Vacate(recycler, PixelRecycler.HatchSocket, this);
+        Vacate();
         PixelSortingHopperWindow.Forget(this);
     }
 
-    // ---- Snapping onto a Recycler ----
+    // ---- Snapping onto a host (a Recycler, a Junction Box: IPixelHopperHost) ----
 
-    /// <summary>Is this Recycler free for a hopper (none latched on, not ending)? 'except' = the asking hopper.</summary>
-    private static bool Free(PixelRecycler r, PixelSortingHopper except)
+    private static bool Alive(IPixelHopperHost h) => h != null && !(h is Object o && o == null) && h.SocketRoot != null;
+
+    /// <summary>Is this host free for a hopper (none latched on, no coupling on its hopper sockets, not ending)? 'except' = the asking hopper.</summary>
+    private static bool Free(IPixelHopperHost r, PixelSortingHopper except)
     {
-        if (r == null || Ending(r) || PixelCoupling.On(r, PixelRecycler.HatchSocket) != null) return false;   // (a coupling on the hatch takes the hopper's place)
+        if (!Alive(r) || Ending(r)) return false;
+        foreach (string id in r.HopperSockets) if (PixelCoupling.On(r, id) != null) return false;   // (a coupling there takes the hopper's place)
         foreach (PixelSortingHopper h in all) if (h != null && h != except && h.recycler == r) return false;
         return true;
     }
 
-    private static bool Ending(PixelRecycler r)
+    private static bool Ending(IPixelHopperHost r)
     {
-        PixelPlacedDevice d = r.GetComponent<PixelPlacedDevice>();
+        PixelPlacedDevice d = r.SocketRoot.GetComponent<PixelPlacedDevice>();
         return d != null && d.IsEnding;
     }
 
-    /// <summary>Where a hopper sits on this Recycler's back (position, turn and size): the bowl's front edge just behind the bin's back.</summary>
-    private static void SpotOn(PixelClicker clicker, PixelRecycler r, out Vector3 point, out Quaternion rotation, out float size)
+    private void Vacate()
+    {
+        if (!Alive(recycler)) return;
+        foreach (string id in recycler.HopperSockets) PixelCouplings.Vacate(recycler, id, this);
+    }
+
+    /// <summary>Where a hopper sits on this host's back (position, turn and size): the bowl's front edge just behind the host's back (+z).</summary>
+    private static void SpotOn(PixelClicker clicker, IPixelHopperHost r, out Vector3 point, out Quaternion rotation, out float size)
     {
         float u = Unit(clicker);
+        Transform rt = r.SocketRoot;
         size = UnlatchedSize;   // (its OWN size: a bigger Recycler moves it back, it does not grow it - the feed pipe re-aims to reach over the bin's wall instead)
-        Vector3 back = r.transform.TransformDirection(Vector3.forward); back.y = 0f;
-        point = r.transform.TransformPoint(new Vector3(0f, 0f, r.BackEdgeLocalZ)) + back.normalized * (BowlHusks * 0.5f + 0.3f) * u * size;
-        point.y = r.transform.position.y;
-        rotation = r.transform.rotation;
+        Vector3 back = rt.TransformDirection(Vector3.forward); back.y = 0f;
+        point = rt.TransformPoint(new Vector3(0f, 0f, r.BackEdgeLocalZ)) + back.normalized * (BowlHusks * 0.5f + 0.3f) * u * size;
+        point.y = rt.position.y;
+        rotation = rt.rotation;
     }
 
     /// <summary>
-    /// While placing: the free Recycler whose back spot is within 'reach' of the pointer's floor point. The ghost jumps there (position, turn, size).
-    /// False = none near: the hopper is placed where it is (it latches on later if a Recycler is put down near it).
+    /// While placing: the free host (Recycler / Junction Box) whose back spot is within 'reach' of the pointer's floor point. The ghost jumps there (position, turn, size).
+    /// False = none near: the hopper is placed where it is (it latches on later if a host is put down near it).
     /// </summary>
     public static bool TrySnap(PixelClicker clicker, Vector3 point, float reach, out Vector3 snapPoint, out float snapYaw, out float size)
     {
         snapPoint = point; snapYaw = 0f; size = 1f;
-        PixelRecycler best = Nearest(clicker, point, reach, null);
+        IPixelHopperHost best = Nearest(clicker, point, reach, null);
         if (best == null) return false;
         SpotOn(clicker, best, out snapPoint, out Quaternion rot, out size);
         snapYaw = rot.eulerAngles.y;
         return true;
     }
 
-    private static PixelRecycler Nearest(PixelClicker clicker, Vector3 point, float reach, PixelSortingHopper except)
+    private static IPixelHopperHost Nearest(PixelClicker clicker, Vector3 point, float reach, PixelSortingHopper except)
     {
-        PixelRecycler best = null;
+        IPixelHopperHost best = null;
         float bestD = reach * reach;
-        foreach (PixelRecycler r in PixelRecycler.All)
+        foreach (IPixelSocketDevice d in PixelCouplings.Devices)
         {
-            if (!Free(r, except) || r.Fading) continue;
+            if (!(d is IPixelHopperHost r) || !Free(r, except) || r.Fading) continue;
             SpotOn(clicker, r, out Vector3 spot, out _, out _);
             Vector3 dv = spot - point;
             dv.y = 0f;
@@ -348,14 +382,14 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
     /// <summary>Latches onto a free Recycler within reach (every half second when it has none) and follows it when it is carried.</summary>
     private void KeepLatched()
     {
-        if (recycler != null && (Ending(recycler) || !recycler.isActiveAndEnabled)) { PixelCouplings.Vacate(recycler, PixelRecycler.HatchSocket, this); recycler = null; AimPipe(DefaultPipeExit(Unit(clicker))); }
+        if (recycler != null && (!Alive(recycler) || Ending(recycler) || !((Behaviour)recycler).isActiveAndEnabled)) { Vacate(); recycler = null; AimPipe(DefaultPipeExit(Unit(clicker))); }
         if (recycler == null)
         {
             if (Time.time < nextLook) return;
             nextLook = Time.time + 0.5f;
             recycler = Nearest(clicker, transform.position, snapRange, this);
             if (recycler == null) return;
-            PixelCouplings.Occupy(recycler, PixelRecycler.HatchSocket, this);   // (one hopper per bin; no coupling goes on its hatch meanwhile)
+            foreach (string id in recycler.HopperSockets) PixelCouplings.Occupy(recycler, id, this);   // (one hopper per host; no coupling goes on those sockets meanwhile)
             PixelAudio.Play("device_place");
         }
         if (recycler.Fading) return;
@@ -435,26 +469,31 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
     private void Feed()
     {
         if (held.Count == 0 || filterTier < 0 || Time.time < nextFeed) return;   // (no filter chosen: it just holds)
-        bool binReady = recycler != null && !recycler.Busy && !recycler.Fading && recycler.HoseCanTake;
+        bool binReady = Alive(recycler) && !recycler.Fading && recycler.CanTakeFeed;
         for (int i = 0; i < held.Count; i++)
         {
             bool filtered = held[i].tier == filterTier;
             if (filtered && !binReady) continue;   // (it waits for the bin)
             Held h = held[i];
-            held.RemoveAt(i);
-            if (filtered) { SendIntoBin(h); PixelStats.Count("hopper.husks"); sessionFed++; }
+            if (filtered)
+            {
+                if (!SendIntoBin(h)) continue;   // (the host refused it after all: it stays held)
+                PixelStats.Count("hopper.husks"); sessionFed++;
+            }
             else { SendOutBottom(h, 1f); PixelStats.Count("hopper.rejected"); sessionRejected++; }
+            held.RemoveAt(i);
             nextFeed = Time.time + FeedInterval;
             PixelSortingHopperWindow.Changed(this);
             return;
         }
     }
 
-    private void SendIntoBin(Held h)
+    /// <summary>One husk out of the feed pipe into the host (the Recycler lets it fall into the bin, the Junction Box routes it). False = refused.</summary>
+    private bool SendIntoBin(Held h)
     {
         float u = Unit(clicker);
         Vector3 at = transform.TransformPoint(float.IsNaN(pipeExit.x) ? DefaultPipeExit(u) : pipeExit);
-        clicker.SpawnStoredPixel(h.tier, h.amount, at, Vector3.down * feedPush);
+        return Alive(recycler) && recycler.TakeFeed(h.tier, h.amount, at, Vector3.down * feedPush);
     }
 
     private void SendOutBottom(Held h, float spread)

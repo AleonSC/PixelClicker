@@ -52,7 +52,7 @@ public class PixelFeatureTester : MonoBehaviour
         public SnapFunc snap;
         // Tall features (the Conveyor Elevator): after the base is clicked the mouse sets the HEIGHT, a second click confirms.
         public bool heightStage;
-        public bool groundPlane;      // placed on the flat ground level, not on whatever the mouse ray hits (belts, towers, the Splitter)
+        public bool groundPlane;      // placed on the flat ground level, not on whatever the mouse ray hits (belts, towers, the Junction Box)
         public Func<PixelClicker, Vector3, float, float, GameObject> placeTall;
         public readonly List<GameObject> placed = new List<GameObject>();
         public TMP_Text placeLabel, clearLabel;
@@ -180,13 +180,11 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].placeTall = PixelElevator.PlaceTall;
         features[features.Count - 1].export = PixelElevator.ExportState;
         features[features.Count - 1].import = PixelElevator.ImportState;
-        Register("Splitter",
-                 "A block that snaps to the end of a conveyor belt (bring the ghost near the end) and shares what the belt brings out of its other three sides, one pixel at a time in turn. Start new belts from the three outputs (their first point snaps there); a side without a belt is skipped, and with no belts at all the pixels are flung out of all three sides.",
-                 c => PixelSplitter.CreateGhost(c), (c, p, yw) => PixelSplitter.Place(c, p, yw));
-        features[features.Count - 1].placeSnap = PixelSplitter.TrySnap;
+        Register("Junction Box",
+                 "A box with eight coupling sockets, two on each side (a real device: it is saved with the placed devices; not on sale yet). Fit couplings and connect belts or hoses: a belt ending at a coupling / a hose pushing into it makes it IN, a belt starting at it / a hose pulling from it makes it OUT (its arrow shows which; no arrow = nothing attached). Husks coming in go to the OUT coupling whose filter is their type, else to the unfiltered outputs in turn, else wait in a small buffer (full = it refuses). Set a coupling's filter by dropping a husk on it, or click / scroll it. A Sorting Hopper latches onto its back.",
+                 c => PixelJunctionBox.CreateGhost(c), (c, p, yw) => { PixelConsumables pc = PixelFind.Cached<PixelConsumables>(); return pc != null ? pc.PlaceDeviceNow(PixelConsumables.DeviceKind.JunctionBox, p, yw) : null; });
         features[features.Count - 1].groundPlane = true;
-        features[features.Count - 1].export = PixelSplitter.ExportState;
-        features[features.Count - 1].import = PixelSplitter.ImportState;
+        features[features.Count - 1].live = PixelJunctionBox.Placed;   // (saved and removed as a placed device, not by the tester)
         Register("Kiln",
                  "A brick kiln with a glowing mouth on its front. Anything that goes into the mouth from the side burns (lead a conveyor belt into it, or throw things in): each burnt pixel makes a Charcoal old pixel that comes out of the chute at the back. Charcoal despawns like any old pixel, for now.",
                  c => PixelKiln.CreateGhost(c), (c, p, yw) => PixelKiln.Place(c, p, yw));

@@ -2,7 +2,7 @@
 // PixelRemoveTint.cs
 //   The "being cancelled" look: while the player holds the right button to remove something, it turns RED (colour towards red, a red glow in its emission, a red point light) as the hold ring fills,
 //   exactly like a placed device (PixelPlacedDevice.SetRemoveGlow). PixelRemoveTint.Set(gameObject, 0..1) does it for ANY object (added to it on demand; 0 puts everything back and removes itself):
-//   used by PixelFeatureTester.UpdateDelete (conveyor belts, kilns, splitters, elevators, solar panels, the tester's chipper). Placed devices keep their own SetRemoveGlow (it also dulls them when disarmed).
+//   used by PixelFeatureTester.UpdateDelete (conveyor belts, kilns, elevators, solar panels, the tester's chipper). Placed devices keep their own SetRemoveGlow (it also dulls them when disarmed).
 //   The running potion line (PixelUI.UpdateActiveHud) uses Shake() / RedText() from here: the text reddens and trembles very slightly as the hold fills.
 // ----------------------
 using System.Collections.Generic;
