@@ -847,6 +847,26 @@ public class PixelUI : MonoBehaviour
         ShowPopup(text, color, anchor, fixedPoint, offset + jitter, 1f, delay);
     }
 
+    /// <summary>
+    /// Currency gained somewhere in the world that is NOT a click (a husk recycled in the Recycler): the "+X" next to that currency's entry adds up like a
+    /// click's, and a "+X" popup rises from the world point (smaller than a click's). Nothing when popups are off.
+    /// </summary>
+    public static void ShowWorldGain(int tierIndex, double amount, Vector3 world)
+    {
+        PixelUI ui = inventoryInstance;
+        if (ui == null || ui.clicker == null || amount <= 0d || tierIndex < 0 || tierIndex >= ui.clicker.Tiers.Length) return;
+        ui.AddGainDelta(tierIndex, amount);
+        if (!PopupsEnabled || !ui.showGainPopups || ui.popupCanvasRect == null) return;
+        Camera cam = ui.clicker.ViewCamera;
+        if (cam == null) return;
+        Vector3 screen = cam.WorldToScreenPoint(world);
+        if (screen.z < 0f) return;
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(ui.popupCanvasRect, screen, null, out Vector2 local);
+        PixelClicker.PixelTier tier = ui.clicker.Tiers[tierIndex];
+        Color color = ui.popupUsesTierColor ? tier.UIColor : ui.popupColor;
+        ui.ShowPopup(string.Format(ui.popupFormat, ui.FormatAmount(amount)), color, PopupAnchor.Fixed, local, Vector2.zero, 0.75f, 0f);
+    }
+
     /// <summary>Shows (and adds up) "+X" next to a pixel's entry for each click's payout.</summary>
     private void AddGainDelta(int tierIndex, double amount)
     {

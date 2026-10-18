@@ -57,6 +57,8 @@
 //   SORTING HOPPER (2026-10-18 funnel version): a PixelSortingHopper stands behind the back wall (BackEdgeLocalZ, SizeFactor), occupying the hatch socket;
 //   its feed pipe reaches over the back wall and drops its filter type into the bin, where Capture takes it as usual.
 //   Capturing / letting go / freezing use the shared PixelHuskHolder steps.
+//   FROM ABOVE ONLY (2026-10-18, suctionFromAboveOnly): the ring and the suck-in only take husks higher than the rim (falling / flying over it, up to
+//   suctionHeightHusks); nothing lying beside the bin is drawn in. Each recycled husk shows a '+n' rising over it and adds to the currency's '+n' (PixelUI.ShowWorldGain).
 //   SUCTION RING + SUCK-IN (2026-10-17): a modest ring (suctionRadius 2 husk widths past the rim + the Suction upgrades, suctionStrength) draws LOOSE
 //   husks nearby towards the bin (a little lift by the wall); a husk over the opening or right by the rim (suckReach) is SUCKED IN like the Storage
 //   Crate - it glides into the middle of the bin (SuckOne, suckSeconds) and is caught as usual. Modest on purpose: one bin catches some of a random
@@ -121,6 +123,11 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     [Min(0f)]
     [Tooltip("How strong the ring's pull is (an acceleration in husk widths per second squared; stronger close to the rim, weaker at the edge of the ring).")]
     [SerializeField] private float suctionStrength = 5f;
+    [Tooltip("The suction only reaches husks ABOVE the bin (higher than its rim, falling or flying over it): nothing lying beside it on the floor is drawn in. Off = the old ring round the bin too.")]
+    [SerializeField] private bool suctionFromAboveOnly = true;
+    [Min(0.5f)]
+    [Tooltip("How high above the rim the suction reaches (husk widths).")]
+    [SerializeField] private float suctionHeightHusks = 5f;
 
     [Header("Auto recycling (back on 2026-10-18)")]
     [Tooltip("Every husk that lands in the bin is recycled on its own a moment later - no button. Off = fill the bin and press the button (turn showButton on too).")]
@@ -535,6 +542,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
             bool overOpening = Mathf.Abs(local.x) <= innerW * 0.5f && Mathf.Abs(local.z) <= innerD * 0.5f;
             if (overOpening && local.y < wallH) continue;   // (already inside the walls: Capture takes it)
             if (!overOpening && local.y < wallH * 0.5f && !suction) continue;   // (lying low beside the bin: only taken with the suction ring on)
+            if (suctionFromAboveOnly && local.y < wallH) continue;   // (from above only: nothing beside the bin is sucked in)
             if (BehindHopper(local)) continue;   // (behind a Sorting Hopper: its bottom spout's husks)
             if (local.y > wallH + 4f * u) continue;
             if (Mathf.Abs(local.x) > innerW * 0.5f + suckReach * u || Mathf.Abs(local.z) > innerD * 0.5f + suckReach * u) continue;
@@ -605,7 +613,8 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
             Rigidbody b = h.body;
             if (b == null || inside.Contains(b) || sucking.Contains(b) || !PixelHuskHolder.Takeable(clicker, b)) continue;
             Vector3 local = transform.InverseTransformPoint(b.position);
-            if (local.y > wallH + 4f * u || BehindHopper(local)) continue;
+            if (local.y > wallH + Mathf.Max(0.5f, suctionHeightHusks) * u || BehindHopper(local)) continue;
+            if (suctionFromAboveOnly && local.y < wallH + 0.1f * u) continue;   // (from above only: husks beside the bin on the floor are left alone)
             float ox = Mathf.Max(0f, Mathf.Abs(local.x) - innerW * 0.5f), oz = Mathf.Max(0f, Mathf.Abs(local.z) - innerD * 0.5f);
             float past = Mathf.Sqrt(ox * ox + oz * oz) / u;   // husk widths past the rim (0 = over the opening)
             if (past <= 0f || past > reach) continue;
@@ -614,7 +623,8 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
             toMiddle.y = 0f;
             if (toMiddle.sqrMagnitude < 1e-6f) continue;
             Vector3 dv = toMiddle.normalized * suctionStrength * u * s * (0.3f + 0.7f * k) * dt;
-            if (local.y < wallH * 0.5f && past < 1.5f) dv += Vector3.up * suctionStrength * u * s * 0.6f * k * dt;   // (near the wall: a little lift towards the rim)
+            if (suctionFromAboveOnly) dv += Vector3.down * suctionStrength * u * s * 0.25f * k * dt;   // (drawn down into the opening)
+            else if (local.y < wallH * 0.5f && past < 1.5f) dv += Vector3.up * suctionStrength * u * s * 0.6f * k * dt;   // (near the wall: a little lift towards the rim)
 #if UNITY_6000_0_OR_NEWER
             b.linearVelocity += dv;
 #else
@@ -835,6 +845,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     /// <summary>One husk: currency back (payoutShare of what a click on it pays now x the same-type STREAK, never more than maxShareOfClick of a click); the husk is gone. XP only if xpPerHusk is set (0 by default).</summary>
     private void RecycleOne(Rigidbody b, OldPixelInfo info)
     {
+        Vector3 at = b.position;
         Destroy(b.gameObject);
         if (info == null || clicker == null || !clicker.IsValidTierIndex(info.tierIndex)) return;
         int tier = info.tierIndex;
@@ -846,7 +857,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
         lastRecycleTime = Time.time;
         double share = System.Math.Min(payoutShare * StreakMultiplier, Mathf.Clamp(maxShareOfClick, 0.1f, 1f));   // (the streak boosts the CURRENCY, capped below a click)
         double pay = CurrentValue(tier) * share;
-        if (pay > 0d) clicker.AddBonusCurrency(tier, pay);
+        if (pay > 0d) { clicker.AddBonusCurrency(tier, pay); PixelUI.ShowWorldGain(tier, pay, at + Vector3.up * Unit(clicker) * transform.lossyScale.x); }   // (the currency's '+n' adds up and a '+n' rises over the recycled husk)
         double xp = Mathf.Max(0f, xpPerHusk);
         PixelSkills skills = PixelSkills.Instance;
         if (xp > 0d && skills != null)
