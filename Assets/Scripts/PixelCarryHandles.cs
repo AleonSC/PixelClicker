@@ -7,6 +7,7 @@
 //     (PixelHandCursor), left-drag moves the root over the floor plane (kept on screen) with the fist cursor, scroll / Q / E turn it while dragging
 //     (PixelConsumables.TurnInput). Over(ray) / Dragging tell the owner the pointer is the handles'; static Hot (hovering or dragging any handles)
 //     is part of PixelClicker.ExternalClickBlock and PixelGrab's guard. 'Blocked' (a Func the owner sets) pauses it, e.g. while the Recycler works.
+//   The clicker cube wins: a handle hidden behind the cube (the cube nearer along the mouse ray, CubeInFront) is not hovered or grabbed.
 //   Moves go through a kinematic Rigidbody on the root (MovePosition / MoveRotation in FixedUpdate) so loose husks are pushed, not passed through; it follows the mouse tightly (followSharpness 25 = closes the gap fast, capped at carrySpeedLimit 60 u/s; the old 7 u/s cap made it crawl and keep sliding after the drag) and husks it shoves are slowed to pushedSpeedCap (2.5 u/s) so they slide aside instead of flying. The position / yaw are the root's own, so the saved PlacedState picks up where it was carried to.
 // ---------------------------------------------------
 using System;
@@ -137,11 +138,23 @@ public class PixelCarryHandles : MonoBehaviour
         foreach (Renderer r in GetComponentsInChildren<Renderer>(true)) if (r.name == "Handle") handles.Add(r);
     }
 
-    /// <summary>Is this ray on one of the handles?</summary>
+    /// <summary>Is this ray on one of the handles (and not hidden behind the clicker cube)?</summary>
     public bool Over(Ray ray)
     {
+        float nearest = float.MaxValue;
         foreach (Renderer r in handles)
-            if (r != null && r.enabled && r.bounds.IntersectRay(ray, out _)) return true;
+            if (r != null && r.enabled && r.bounds.IntersectRay(ray, out float d) && d < nearest) nearest = d;
+        return nearest < float.MaxValue && !CubeInFront(ray, nearest);
+    }
+
+    /// <summary>Is the clicker cube (its full-size trigger hitbox) on the ray nearer than 'distance'? Then the click is the cube's, not a handle's behind it.</summary>
+    private static bool CubeInFront(Ray ray, float distance)
+    {
+        PixelClicker clicker = PixelFind.Cached<PixelClicker>();
+        Transform cube = clicker != null ? clicker.PixelTransform : null;
+        if (cube == null) return false;
+        foreach (RaycastHit h in Physics.RaycastAll(ray, distance, ~0, QueryTriggerInteraction.Collide))
+            if (h.transform == cube || h.transform.IsChildOf(cube)) return true;
         return false;
     }
 
