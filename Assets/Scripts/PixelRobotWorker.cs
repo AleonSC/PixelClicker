@@ -13,6 +13,7 @@ using static PixelInput;
 /// place its "ghost" where you want it (nothing is used up yet). From then on, every time that device runs out, the UFO flies over the
 /// ghost and its beam drops a fresh one down, already switched on, as long as you have one to spare. With the "bank a pixel" job it flies
 /// over the nearest loose pixel of the chosen type and abducts it into your Pixel Bank with its beam.
+/// The job window is the standard Fixed window (PixelUIKit.CreateWindow).
 /// </summary>
 public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
 {
@@ -1008,8 +1009,7 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
         PixelWindows.CloseAllExcept(this);
         windowPage = 0;
         BuildWindow();
-        windowRoot.SetActive(true);
-        PixelAudio.Play("menu_open");
+        windowRoot.SetActive(true);   // (the window's PixelPop grows it in and plays the open sound)
     }
 
     private void CloseWindow()
@@ -1055,33 +1055,21 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
         windowRoot = PixelUIKit.CreateCanvas("UFO Helper Window", 520, new Vector2(1920f, 1080f), true);
         PixelUIKit.EnsureEventSystem();
 
-        const float width = 780f, height = 780f, pad = 24f, rowH = 78f, gap = 10f, headerH = 170f, footerH = 96f;
+        const float width = 780f, height = 780f, pad = 24f, rowH = 78f, gap = 10f, footerH = 96f;
 
-        GameObject panel = new GameObject("Panel", typeof(RectTransform), typeof(Image));
-        panel.transform.SetParent(windowRoot.transform, false);
-        PixelUIKit.StyleWindow(panel.GetComponent<Image>(), new Color(0.09f, 0.1f, 0.14f, 0.97f));
-        windowPanel = panel.GetComponent<RectTransform>();
-        windowPanel.anchorMin = windowPanel.anchorMax = windowPanel.pivot = new Vector2(0.5f, 0.5f);
-        windowPanel.sizeDelta = new Vector2(width, height);
+        // The standard Fixed window (PixelUIKit.CreateWindow): title 48 in capitals, grey X 70.
+        PixelWindowParts parts = PixelUIKit.CreateWindow(font, windowRoot.transform, "Panel", ufoTitle, new Vector2(width, height),
+                                                         new Color(0.09f, 0.1f, 0.14f, 0.97f), PixelUIKit.WindowKind.Fixed, CloseWindow);
+        GameObject panel = parts.Root;
+        windowPanel = parts.Rect;
+        float headerH = parts.HeaderHeight + 88f;   // the window header + the question under it
 
         bool pixels = windowPage == 1;
-        TMP_Text title = PixelUIKit.CreateText(font, panel.transform, "Title", ufoTitle, 44f, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
-        PixelUIKit.Caps(title);
-        RectTransform tr = title.rectTransform;
-        tr.anchorMin = new Vector2(0f, 1f); tr.anchorMax = new Vector2(1f, 1f); tr.pivot = new Vector2(0.5f, 1f);
-        tr.sizeDelta = new Vector2(-150f, 70f); tr.anchoredPosition = new Vector2(0f, -pad * 0.5f);
-
-        Button close = PixelUIKit.CreateButton(font, panel.transform, "Close", "X", new Vector2(56f, 56f), new Color(0.55f, 0.2f, 0.2f, 1f), Color.white, 30f);
-        RectTransform cr = close.GetComponent<RectTransform>();
-        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
-        cr.anchoredPosition = new Vector2(-14f, -14f);
-        close.onClick.AddListener(CloseWindow);
-
         TMP_Text ask = PixelUIKit.CreateText(font, panel.transform, "Ask", pixels ? pickPixelText : askText, 28f, TextAlignmentOptions.Center, FontStyles.Normal, new Color(1f, 1f, 1f, 0.85f));
         ask.enableAutoSizing = true; ask.fontSizeMax = 28f; ask.fontSizeMin = 18f;
         RectTransform ar = ask.rectTransform;
         ar.anchorMin = new Vector2(0f, 1f); ar.anchorMax = new Vector2(1f, 1f); ar.pivot = new Vector2(0.5f, 1f);
-        ar.sizeDelta = new Vector2(-pad * 2f, 84f); ar.anchoredPosition = new Vector2(0f, -(pad * 0.5f + 70f));
+        ar.sizeDelta = new Vector2(-pad * 2f, 84f); ar.anchoredPosition = new Vector2(0f, -parts.HeaderHeight);
 
         // The list: a scrolling view between the header and the footer buttons.
         ScrollRect scroll = PixelUIKit.CreateScrollView(panel.transform, "List", new Color(1f, 1f, 1f, 0.35f), 12f, rowH, out RectTransform content, out GameObject bar);

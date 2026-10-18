@@ -10,6 +10,7 @@
 //   (PixelSkills.AddOfflineXp), shown as a line in the Welcome back window; clicking while playing gives it nothing.
 //   OFFLINE TASK: the skill pack picked on the Offline card (PixelSkills.OfflineTask, per save; Standard if none / not owned) is what the character does
 //   while away - it also gets offlineTaskXpPerClick (0.1) x the offline clicks (PixelSkills.AddOfflineTaskXp), its own Welcome back line.
+//   The Welcome back window is the standard window as a dialog (PixelUIKit.CreateWindow, no X; Continue closes it).
 // ---------------------------------------------------
 using System;
 using System.Text;
@@ -84,9 +85,6 @@ public class PixelOfflineProgress : MonoBehaviour
 
     [Tooltip("Window width (canvas units).")]
     [SerializeField] private float windowWidth = 760f;
-
-    [Tooltip("Title text size.")]
-    [SerializeField] private float titleFontSize = 60f;
 
     [Tooltip("Text size of the lines.")]
     [SerializeField] private float lineFontSize = 36f;
@@ -315,23 +313,20 @@ public class PixelOfflineProgress : MonoBehaviour
         if (pendingTaskXp >= 1d) clicksText += "\n+" + PixelClicker.FormatNumber(pendingTaskXp) + " " + pendingTaskName + " XP (your offline task)";
 
         // Measure each wrapped text so nothing overlaps, whatever the text lengths.
-        float titleH = Measure(title, titleFontSize, FontStyles.Bold, textWidth);
         float awayH = Measure(awayText, lineFontSize, FontStyles.Normal, textWidth);
         float clicksH = Measure(clicksText, lineFontSize, FontStyles.Normal, textWidth);
         float listH = lineCount > 0 ? Measure(lines.ToString(), lineFontSize, FontStyles.Bold, textWidth - 24f) : 0f;
         float viewH = Mathf.Min(listH, maxListHeight);
 
-        float height = 40f + titleH + 12f + awayH + 6f + clicksH + 16f + viewH + 30f + buttonSize.y + 40f;
+        // The standard window as a dialog (PixelUIKit.CreateWindow, no X: Continue closes it); the lines start under its header.
+        float top = PixelUIKit.WindowHeaderHeight + 6f;
+        float height = top + awayH + 6f + clicksH + 16f + viewH + 30f + buttonSize.y + 40f;
+        PixelWindowParts parts = PixelUIKit.CreateWindow(font, dim.transform, "Window", title, new Vector2(windowWidth, height), windowColor,
+                                                         PixelUIKit.WindowKind.Fixed, null, closeButton: false);
+        parts.Title.color = textColor;
+        GameObject window = parts.Root;
 
-        GameObject window = new GameObject("Window", typeof(RectTransform), typeof(Image));
-        window.transform.SetParent(dim.transform, false);
-        PixelUIKit.StyleWindow(window.GetComponent<Image>(), windowColor);
-        RectTransform wr = window.GetComponent<RectTransform>();
-        wr.anchorMin = wr.anchorMax = wr.pivot = new Vector2(0.5f, 0.5f);
-        wr.sizeDelta = new Vector2(windowWidth, height);
-
-        float y = 40f;
-        AddLine(window.transform, title, titleFontSize, FontStyles.Bold, ref y, titleH + 12f);
+        float y = top;
         AddLine(window.transform, awayText, lineFontSize, FontStyles.Normal, ref y, awayH + 6f);
         AddLine(window.transform, clicksText, lineFontSize, FontStyles.Normal, ref y, clicksH + 16f);
 

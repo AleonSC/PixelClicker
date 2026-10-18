@@ -7,6 +7,7 @@ using UnityEngine.UI;
 /// The Game Database window (a temporary 'Database' button in the Skills window opens it). A search box lists every pixel, shop pack, skill, consumable,
 /// recipe, minigame, achievement and tip that matches; click one to see what it is and every REFERENCE to it in the game (click a reference to jump to
 /// that entry). The entries and references come from <see cref="PixelDatabase"/>, rebuilt each time the window opens so they reflect the live game.
+/// Built on the standard Fixed window (PixelUIKit.CreateWindow); the search box and tabs sit below its header.
 /// </summary>
 public class PixelDatabaseWindow : MonoBehaviour
 {
@@ -109,31 +110,19 @@ public class PixelDatabaseWindow : MonoBehaviour
         canvasRoot = PixelUIKit.CreateCanvas("Game Database Canvas", 520, new Vector2(1920f, 1080f), true);
         canvasRoot.transform.SetParent(transform, false);
 
-        windowObject = new GameObject("Database Window", typeof(RectTransform), typeof(Image), typeof(PixelPop));
-        windowObject.transform.SetParent(canvasRoot.transform, false);
-        PixelUIKit.StyleWindow(windowObject.GetComponent<Image>(), panelColor);
-        RectTransform wr = windowObject.GetComponent<RectTransform>();
-        wr.anchorMin = wr.anchorMax = wr.pivot = new Vector2(0.5f, 0.5f);
-        wr.sizeDelta = windowSize;
-        wr.anchoredPosition = Vector2.zero;
+        // The standard Fixed window (PixelUIKit.CreateWindow): title 48 in capitals, grey X 70. The search box sits below the header, not in it.
+        PixelWindowParts parts = PixelUIKit.CreateWindow(Font, canvasRoot.transform, "Database Window", "Game Database", windowSize, panelColor,
+                                                         PixelUIKit.WindowKind.Fixed, () => PixelPop.Hide(windowObject));
+        windowObject = parts.Root;
+        float top = parts.HeaderHeight + 14f;   // where the content starts (search box, detail panel)
 
-        TMP_Text title = PixelUIKit.CreateText(Font, windowObject.transform, "Title", "Game Database", 52f, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
-        PixelUIKit.Caps(title);
-        Place(title.rectTransform, 0f, 1f, 1f, 1f, new Vector2(100f, -84f), new Vector2(-100f, -14f));
-
-        Button close = PixelUIKit.CreateButton(Font, windowObject.transform, "Close", "X", new Vector2(70f, 70f), new Color(0.3f, 0.3f, 0.35f, 1f), Color.white, 36f);
-        RectTransform cr = close.GetComponent<RectTransform>();
-        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
-        cr.anchoredPosition = new Vector2(-14f, -12f);
-        close.onClick.AddListener(() => PixelPop.Hide(windowObject));
-
-        // Search box (left, under the title).
+        // Search box (left, under the header).
         search = PixelUIKit.CreateInputField(Font, windowObject.transform, "Search", new Vector2(640f, 70f), new Color(0.16f, 0.16f, 0.2f, 1f), Color.white, 30f,
                                              "Search pixels, items, settings, tips...");
         PixelUIKit.AddSearchIcon(search);
         RectTransform sr = search.GetComponent<RectTransform>();
         sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0f, 1f);
-        sr.anchoredPosition = new Vector2(30f, -104f);
+        sr.anchoredPosition = new Vector2(30f, -top);
         search.onValueChanged.AddListener(_ => { selected = null; Refresh(); });
 
         // Category tabs under the search box (two rows) and the 'show undiscovered' switch as the last cell.
@@ -150,7 +139,7 @@ public class PixelDatabaseWindow : MonoBehaviour
             Button tb = PixelUIKit.CreateButton(Font, windowObject.transform, "Tab " + tabLabel, tabLabel, new Vector2(cellW, 44f), new Color(0.2f, 0.22f, 0.3f, 1f), Color.white, 20f);
             RectTransform tr2 = tb.GetComponent<RectTransform>();
             tr2.anchorMin = tr2.anchorMax = tr2.pivot = new Vector2(0f, 1f);
-            tr2.anchoredPosition = new Vector2(30f + (i % tabCols) * (cellW + 6f), -190f - (i / tabCols) * 50f);
+            tr2.anchoredPosition = new Vector2(30f + (i % tabCols) * (cellW + 6f), -(top + 86f) - (i / tabCols) * 50f);
             TMP_Text tl = tb.GetComponentInChildren<TMP_Text>();
             tl.enableAutoSizing = true; tl.fontSizeMax = 20f; tl.fontSizeMin = 11f;
             tl.margin = new Vector4(4f, 0f, 4f, 0f);
@@ -168,7 +157,7 @@ public class PixelDatabaseWindow : MonoBehaviour
         }
         RefreshTabs();
         int tabRows = (tabDefs.GetLength(0) + 1 + tabCols - 1) / tabCols;
-        float listTop = 190f + tabRows * 50f + 8f;
+        float listTop = top + 86f + tabRows * 50f + 8f;
 
         // Left: the results.
         results = new RowList(this, windowObject.transform, "Results", 62f, 24f);
@@ -186,7 +175,7 @@ public class PixelDatabaseWindow : MonoBehaviour
         RectTransform dr = detail.GetComponent<RectTransform>();
         dr.anchorMin = Vector2.zero; dr.anchorMax = Vector2.one;
         dr.offsetMin = new Vector2(700f, 30f);
-        dr.offsetMax = new Vector2(-30f, -104f);
+        dr.offsetMax = new Vector2(-30f, -top);
 
         titleLabel = PixelUIKit.CreateText(Font, detail.transform, "Name", "", 44f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, Color.white);
         titleLabel.enableAutoSizing = true; titleLabel.fontSizeMax = 44f; titleLabel.fontSizeMin = 20f;
