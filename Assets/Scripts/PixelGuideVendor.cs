@@ -21,7 +21,10 @@
 //   vendor the player switched off in Toggles is never restarted; PixelVisitorMinigame.ScheduleFirstVisit). All texts / numbers are
 //   Inspector fields (disableGuide turns it all off). The page lists (visitOnePages / visitTwoPages) are filled with the built-in lines when empty
 //   (EnsureDefaultPages in Awake and the editor's OnValidate, like PixelHints), so Cubie's lines are edited in the Inspector.
-//   Visit 1 waits until visitOneAfterWhiteClicks (100) White pixels have been clicked (the White tier's timesCollected). A visit-1 page containing {recycler} hands over a Recycler
+//   GOAL-DRIVEN (2026-10-18): visit 1 and visit 2 are REWARDS of the early goals (PixelGoals: Click 50 blocks -> visit 1, Earn 120 Black -> visit 2;
+//   RequestVisit sets guide.visit<n>.due, Visit1Ready / Visit2Ready read it). Only when no enabled goal grants a visit does the old count below apply.
+//   With Cubie off or tips off the Recycler still arrives when visit 1 would have come (the 'Recycle 20 husks' goal needs it).
+//   Fallback: visit 1 waits until visitOneAfterWhiteClicks (100) White pixels have been clicked (the White tier's timesCollected). A visit-1 page containing {recycler} hands over a Recycler
 //   (PixelConsumables.GiveDevice; text recyclerGiftText); a page list without the token still gets it when the visit ends.
 //   The speech box is the standard window as a dialog (PixelUIKit.CreateWindow, no X), teal, at the right edge beside Cubie.
 // ---------------------------------------------------
@@ -58,7 +61,7 @@ public class PixelGuideVendor : MonoBehaviour
     [SerializeField] private float calmSeconds = 1.5f;
 
     [Min(0)]
-    [Tooltip("Visit 1 waits until this many White pixels have been clicked (so Cubie does not turn up the moment the game starts).")]
+    [Tooltip("FALLBACK (only when no PixelGoals row grants visit 1): visit 1 waits until this many White pixels have been clicked (so Cubie does not turn up the moment the game starts).")]
     [SerializeField] private int visitOneAfterWhiteClicks = 100;
     [SerializeField, HideInInspector] private int cubieDataVersion; // 1 = visit 1 after 100 White clicks (was 50); 2 = visit 2 unlocks RGB (new lines)
 
@@ -71,18 +74,37 @@ public class PixelGuideVendor : MonoBehaviour
         return i >= 0 ? c.Tiers[i].totalCollected : 0d;
     }
 
-    /// <summary>Black pixels still to earn before visit 2 (0 = he is due; -1 = no guide / visit 2 already happened).</summary>
+    // ---- Goal-driven visits (2026-10-18, design 'Early game feel' item 2: the early GOALS are the unlocks) ----
+    // A PixelGoals row whose reward is 'Cubie visit 1 / 2' calls RequestVisit: the counter guide.visit<n>.due is set and that visit is due.
+    // While such a row exists (PixelGoals.GrantsVisit), the visit waits for it instead of visitOneAfterWhiteClicks / visitTwoAfterBlack (those
+    // stay as the fallback when no goal grants the visit, so the game never stalls).
+    private const string Visit1DueKey = "guide.visit1.due", Visit2DueKey = "guide.visit2.due";
+
+    /// <summary>A goal's reward: Cubie's visit 1 (the Recycler) or 2 (RGB + the shop) is due now (it still waits for a calm moment).</summary>
+    public static void RequestVisit(int visit)
+    {
+        if (visit == 1) PixelStats.Best(Visit1DueKey, 1d);
+        else if (visit == 2) PixelStats.Best(Visit2DueKey, 1d);
+    }
+
+    /// <summary>Visit 1's trigger is met: its goal was completed (or, without such a goal, visitOneAfterWhiteClicks White clicks).</summary>
+    private bool Visit1Ready => PixelGoals.GrantsVisit(1) ? PixelStats.Total(Visit1DueKey) >= 1d : WhiteClicks() >= visitOneAfterWhiteClicks;
+
+    /// <summary>Visit 2's trigger is met: its goal was completed (or, without such a goal, visitTwoAfterBlack Black earned).</summary>
+    private bool Visit2Ready => PixelGoals.GrantsVisit(2) ? PixelStats.Total(Visit2DueKey) >= 1d : BlackEarned() >= visitTwoAfterBlack;
+
+    /// <summary>Black pixels still to earn before visit 2 (0 = he is due; -1 = no guide / visit 2 already happened / a goal grants visit 2 - the Log's goal shows the progress then).</summary>
     public static int BlackUntilVisitTwo
     {
         get
         {
-            if (instance == null || instance.disableGuide || PixelStats.Total(Stage2Key) >= 1d || instance.ShopThere) return -1;
+            if (instance == null || instance.disableGuide || PixelStats.Total(Stage2Key) >= 1d || instance.ShopThere || PixelGoals.GrantsVisit(2)) return -1;
             return Mathf.Max(0, Mathf.CeilToInt((float)(instance.visitTwoAfterBlack - instance.BlackEarned())));
         }
     }
 
     /// <summary>Visit 2 is due: enough Black earned and RGB not unlocked yet (on Replay tutorial: once the shop exists, as before).</summary>
-    private bool Visit2Due => replaying ? ShopThere : !ShopThere && BlackEarned() >= visitTwoAfterBlack;
+    private bool Visit2Due => replaying ? ShopThere : !ShopThere && Visit2Ready;
 
     private long WhiteClicks()
     {
@@ -122,7 +144,7 @@ public class PixelGuideVendor : MonoBehaviour
 
     [Header("Visit 2: the RGB unlock (2026-10-16)")]
     [Min(1)]
-    [Tooltip("Visit 2 comes once this many Black pixels have been EARNED (the Black tier's lifetime total; Recycler money does not count). He unlocks Red, Green and Blue (the RGB Pack, free and no longer sold) and the shop opens.")]
+    [Tooltip("FALLBACK (only when no PixelGoals row grants visit 2): visit 2 comes once this many Black pixels have been EARNED (the Black tier's lifetime total; Recycler money does not count). He unlocks Red, Green and Blue (the RGB Pack, free and no longer sold) and the shop opens.")]
     [SerializeField] private int visitTwoAfterBlack = 100;
 
     [Min(0)]
@@ -187,7 +209,7 @@ public class PixelGuideVendor : MonoBehaviour
             if (instance == null || instance.disableGuide || !PixelHints.TipsEnabled) return false;
             if (PixelStats.Total(Stage2Key) >= 1d) return false;
             bool s1 = PixelStats.Total(Stage1Key) >= 1d;
-            return instance.Visit2Due || (!s1 && instance.WhiteClicks() >= instance.visitOneAfterWhiteClicks);
+            return instance.Visit2Due || (!s1 && instance.Visit1Ready);
         }
     }
 
@@ -482,7 +504,8 @@ public class PixelGuideVendor : MonoBehaviour
     private void Update()
     {
         // Cubie switched off (disableGuide): RGB still unlocks at the same point, quietly, so the game can go on.
-        if (disableGuide && clicker != null && !ShopThere && BlackEarned() >= visitTwoAfterBlack && shop != null) shop.GrantPackRewarding(PixelClicker.PixelType.Red);
+        if (disableGuide && clicker != null && !ShopThere && Visit2Ready && shop != null) shop.GrantPackRewarding(PixelClicker.PixelType.Red);
+        if (disableGuide && clicker != null && PixelStats.Total(Stage1Key) < 1d && Visit1Ready) { PixelStats.Best(Stage1Key, 1d); GiveRecycler(); }   // (Cubie off: his Recycler still arrives - the 'Recycle 20 husks' goal needs it)
         if (ShopHold) UpdateHold();
         if (ShopHold && !peeking && !disableGuide && !visiting && !narrating) peekRoutine = StartCoroutine(PeekRoutine());
         if (disableGuide || clicker == null || visiting) { if (disableGuide && lastBlocker != "disabled") { lastBlocker = "disabled"; PixelDebug.Info("Cubie is off: disableGuide is ticked", this); } return; }
@@ -510,7 +533,7 @@ public class PixelGuideVendor : MonoBehaviour
             {
                 PixelDebug.Info("Cubie skips his visits: Show first-time tips is off", this);
                 // 'Show first-time tips' is off: Cubie does not turn up with his intros. The game carries on as if they had happened, and the starter gift still arrives once the shop is there.
-                if (!s1) PixelStats.Best(Stage1Key, 1d);
+                if (!s1 && Visit1Ready) { PixelStats.Best(Stage1Key, 1d); GiveRecycler(); }   // (no visit, but the Recycler still arrives: the 'Recycle 20 husks' goal needs it)
                 if (Visit2Due)
                 {
                     PixelStats.Best(Stage2Key, 1d);
@@ -519,7 +542,7 @@ public class PixelGuideVendor : MonoBehaviour
                 }
             }
             else if (Visit2Due) StartCoroutine(Visit(true));
-            else if (!s1 && WhiteClicks() < visitOneAfterWhiteClicks) { if (lastBlocker != "clicks") { lastBlocker = "clicks"; PixelDebug.Info("Cubie visit 1 waits for " + visitOneAfterWhiteClicks + " White pixel clicks", this); } }
+            else if (!s1 && !Visit1Ready) { if (lastBlocker != "clicks") { lastBlocker = "clicks"; PixelDebug.Info(PixelGoals.GrantsVisit(1) ? "Cubie visit 1 waits for its goal (PixelGoals)" : "Cubie visit 1 waits for " + visitOneAfterWhiteClicks + " White pixel clicks", this); } }
             else if (!s1) { PixelDebug.Info("Cubie starts visit 1", this); StartCoroutine(Visit(false)); }
             else if (lastBlocker != "s1done") { lastBlocker = "s1done"; PixelDebug.Info("Cubie visit 1 is already recorded (guide.stage1) - he waits for the shop", this); }
             return;

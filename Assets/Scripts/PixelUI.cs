@@ -209,6 +209,8 @@ public class PixelUI : MonoBehaviour
 
     [Tooltip("Hint while the next tier unlocks by collecting. {0} = pixels still needed, {1} = pixel type you need (White, Gray...).")]
     [SerializeField] private string guideFormat = "Click {0} more {1} pixels to progress to the next tier.";
+    [Tooltip("The guide line while an early GOAL drives the game (PixelGoals: the goals ARE the unlocks). {0} = the goal's title, {1} = progress, {2} = target, {3} = its reward. Empty = '{0}  ({1} / {2})  -  {3}'.")]
+    [SerializeField] private string goalGuideFormat = "";
 
     [Tooltip("Hint once the last guided tier is unlocked and the next one comes from the shop.")]
     [SerializeField] private string shopGuideText = "Open the Shop - Cubie has a few things to show you.";
@@ -2310,9 +2312,21 @@ public class PixelUI : MonoBehaviour
         PixelClicker.PixelTier[] tiers = clicker.Tiers;
         int stages = Mathf.Min(guideTierCount, tiers.Length);
 
+        // The early goals ARE the unlocks (PixelGoals): while one is showing, the line follows it (the progression goal first) - 'Crush 10 husks (3 / 10) - Gray unlock'.
+        PixelGoals goalTable = PixelGoals.Instance;
+        PixelGoals.GoalDef goal = goalTable != null ? goalTable.CurrentGuideGoal() : null;
+        if (goal != null)
+        {
+            string reward = goalTable.RewardText(goal);
+            string format = string.IsNullOrEmpty(goalGuideFormat) ? "{0}  ({1} / {2})  -  {3}" : goalGuideFormat;
+            return string.Format(format, goal.title, FormatAmount(goalTable.Progress(goal)), FormatAmount(goal.target), reward);
+        }
+        if (PixelGuideVendor.AboutToVisit) return null;   // (a goal just asked Cubie over: nothing to count down while he is on his way)
+
         for (int i = 1; i < stages; i++)
         {
             if (tiers[i].unlocked || tiers[i].unlockMode == PixelClicker.TierUnlockMode.ShopOnly) continue;
+            if (tiers[i].unlockMode == PixelClicker.TierUnlockMode.ByGoal && PixelGoals.UnlocksTier(tiers[i].type)) return null;   // (its goal has not appeared yet: no threshold to count)
 
             double remaining = Math.Ceiling(Math.Max(0d, tiers[i].unlockThreshold - tiers[i - 1].totalCollected));
             return string.Format(guideFormat, FormatAmount(remaining), tiers[i - 1].type);

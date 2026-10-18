@@ -4,7 +4,7 @@
 // Start a line with  shop:  to show it only once the Shop button is available. Simple tags like <b>bold</b> work.
 
 You can hold the left mouse button on this box to move it. Put it at a screen edge to dock it there.
-Every pixel type is its own currency. Collect enough of one and the next type unlocks.
+Every pixel type is its own currency. The early colours are unlocked by the goals in your Log: crush husks for Gray, recycle them for Black.
 The pixels that fall off the cube are husks. They are material, not money - find something useful to do with them before they fade.
 Holding the right mouse button on the cube is each block's second action (Block Hold, from Standard's skill tree): a stake on pure pixels, a special job on skill blocks.
 Holding a pure pixel (white, gray, black, red, green, blue) puts a stake on it: when it comes round again it pays more - or nothing.

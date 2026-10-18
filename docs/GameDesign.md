@@ -202,6 +202,8 @@ bunch, build a pile, then get told to crush it.
 | Get a crush streak of 5 | a chunk of Standard XP (the "???" bar jumps; level 2 is close) | bursts and streaks |
 | Earn 100 Black | Cubie's 2nd visit: RGB + the shop | earning still matters |
 
+   **Built 2026-10-18** (`PixelGoals` rows + `TierUnlockMode.ByGoal` + `PixelGuideVendor.RequestVisit`; the Black goal is **Earn 120 Black**,
+   sized with the others for the shop at ~6 min - pace notes in the `PixelGoals.cs` header).
    Size the goals to keep the pace the developer likes (RGB and the shop at about 6 minutes). Build it on the goal table that now exists
    (`PixelGoals`, built 2026-10-18): add reward types 'unlock a tier' and 'start a Cubie visit', and a new tier unlock mode 'by goal'
    (appended to `TierUnlockMode`), so the early progression lives in one table.

@@ -1400,7 +1400,8 @@ public class PixelLog : MonoBehaviour
         for (int i = 1; i < tiers.Length; i++)
         {
             PixelClicker.PixelTier t = tiers[i];
-            if (t.unlocked || t.unlockMode != PixelClicker.TierUnlockMode.PreviousTierThreshold || t.unlockThreshold <= 0d) continue;
+            bool byThreshold = t.unlockMode == PixelClicker.TierUnlockMode.PreviousTierThreshold || (t.unlockMode == PixelClicker.TierUnlockMode.ByGoal && !PixelGoals.UnlocksTier(t.type));   // (a ByGoal tier shows its goal row instead, PixelGoals)
+            if (t.unlocked || !byThreshold || t.unlockThreshold <= 0d) continue;
             goals.Add(new Goal
             {
                 title = string.Format(nextPixelGoalFormat, t.displayName),
