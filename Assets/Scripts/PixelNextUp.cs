@@ -107,13 +107,16 @@ public class PixelNextUp : MonoBehaviour
         if (!canvasRoot.activeSelf) canvasRoot.SetActive(true);
 
         int n = SlotCount;
-        int[] want = new int[n];
+        if (wantScratch == null || wantScratch.Length != n) wantScratch = new int[n];   // (reused every frame; Sync reads its length)
+        int[] want = wantScratch;
         for (int k = 0; k < ahead; k++) want[ahead - 1 - k] = clicker.PeekTierAhead(k);   // farthest ahead at the top
         want[ahead] = clicker.CurrentClickTierIndex;
         want[ahead + 1] = clicker.PreviousTierIndex;
         Sync(want);
         Animate(Time.unscaledDeltaTime);
     }
+
+    private int[] wantScratch;
 
     private int SlotCount => ahead + 2;
     private float SlotY(int i) => ((SlotCount - 1) * 0.5f - i) * Spacing;

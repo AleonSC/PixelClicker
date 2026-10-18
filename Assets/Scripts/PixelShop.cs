@@ -2014,7 +2014,7 @@ public partial class PixelShop : MonoBehaviour
         if (pack.unlocksTimeSlow && timeStop != null && !purchased) timeStop.DeactivateSlow();
         if (pack.unlocksBank && bank != null && !purchased) bank.Deactivate();
         if (pack.unlocksRobot && robot != null && !purchased) robot.Deactivate();
-        if (pack.unlocksBlockHold && !purchased) PixelFind.First<PixelBlockHold>()?.Deactivate();
+        if (pack.unlocksBlockHold && !purchased) PixelFind.Cached<PixelBlockHold>()?.Deactivate();
         if (!purchased && !string.IsNullOrEmpty(pack.unlocksMinigame)) PixelMinigame.Find(pack.unlocksMinigame)?.Deactivate();
     }
 
@@ -2290,7 +2290,7 @@ public partial class PixelShop : MonoBehaviour
         if (pack.unlocksTimeSlow && timeStop != null) timeStop.ActivateSlow();
         if (pack.unlocksBank && bank != null) bank.Activate();
         if (pack.unlocksRobot && robot != null) robot.Activate();
-        if (pack.unlocksBlockHold) PixelFind.First<PixelBlockHold>()?.Activate();
+        if (pack.unlocksBlockHold) PixelFind.Cached<PixelBlockHold>()?.Activate();
         if (!string.IsNullOrEmpty(pack.unlocksMinigame)) ActivateMinigame(pack.unlocksMinigame); // no-op if already running
     }
 

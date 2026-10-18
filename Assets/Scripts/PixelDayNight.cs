@@ -107,12 +107,18 @@ public class PixelDayNight : MonoBehaviour
         TimeOfDay = saved > 0d ? Mathf.Repeat((float)(saved / 10000d), 1f) : (startTimeOfDay > 0f ? startTimeOfDay : 0.38f);
     }
 
+    private float nextSunSearch;
+
     private void Capture()
     {
         sun = RenderSettings.sun;
         if (sun == null)
+        {
+            if (Time.unscaledTime < nextSunSearch) return;   // (a scene with no directional light: look again once a second, not every frame)
+            nextSunSearch = Time.unscaledTime + 1f;
             foreach (Light l in PixelFind.All<Light>())   // (the version-safe search: FindObjectsByType alone broke older Unity)
                 if (l != null && l.type == LightType.Directional) { sun = l; break; }
+        }
         if (sun == null) return;
         captured = true;
         baseIntensity = sun.intensity;

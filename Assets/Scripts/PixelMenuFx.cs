@@ -261,7 +261,7 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
         hoverT = Mathf.MoveTowards(hoverT, hover ? 1f : 0f, dt * 7f);
         float h = hoverT * hoverT * (3f - 2f * hoverT);
         float scale = (lightMode ? 1f : Mathf.Lerp(1f, 1.04f, h)) * (press ? 0.965f : 1f);
-        if (!hudSetting && (button == null || button.interactable)) rect.localScale = Vector3.Lerp(rect.localScale, Vector3.one * scale, 1f - Mathf.Exp(-dt * 20f));   // (a button something else is animating - the title's shrink - is left alone)
+        if (!hudSetting && (button == null || button.interactable)) EaseScale(scale, dt);   // (a button something else is animating - the title's shrink - is left alone)
 
         if (hudSetting)
         {
@@ -272,9 +272,9 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
             float dark = Mathf.Lerp(1f, 0.7f, depth);
             if (hoverT <= 0.001f && pressVis <= 0.001f) { baseColor = image.color; wroteColor = false; }
             else { image.color = new Color(baseColor.r * dark, baseColor.g * dark, baseColor.b * dark, baseColor.a); writtenColor = image.color; wroteColor = true; }
-            if (labelRect != null) labelRect.anchoredPosition = baseLabelPos + new Vector2(0f, -(1.5f * h + 3.5f * pressVis));
+            SetLabelPos(baseLabelPos + new Vector2(0f, -(1.5f * h + 3.5f * pressVis)));
             float s2 = Mathf.Lerp(1f, 0.978f, h) * Mathf.Lerp(1f, 0.96f, pressVis);
-            if (button == null || button.interactable) rect.localScale = Vector3.Lerp(rect.localScale, Vector3.one * s2, 1f - Mathf.Exp(-dt * 20f));
+            if (button == null || button.interactable) EaseScale(s2, dt);
         }
         else if (lightMode && hoverT <= 0.001f) { baseColor = image.color; wroteColor = false; }   // (follow outside colour changes while nothing is happening)
         else
@@ -285,7 +285,7 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
 
         if (!lightMode)
         {
-            if (labelRect != null) labelRect.anchoredPosition = baseLabelPos + new Vector2(10f * h, 0f);
+            SetLabelPos(baseLabelPos + new Vector2(10f * h, 0f));
             stripe.rectTransform.sizeDelta = new Vector2(6f + 10f * h, 0f);
         }
         if (!lightMode || idleSheen)
@@ -298,11 +298,29 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
             shineT += dt * 1.9f;
             float tt = Mathf.Clamp01(shineT);
             shine.anchoredPosition = new Vector2(Mathf.Lerp(-60f, shineRange + 60f, tt), 0f);
-            Image si = shine.GetComponent<Image>();
+            Image si = ShineImage();
             Color c = si.color; c.a = (hudSetting ? 0.5f : 0.24f) * Mathf.Sin(tt * Mathf.PI); si.color = c;
         }
-        else if (shine.anchoredPosition.x > -150f) { shine.anchoredPosition = new Vector2(-200f, 0f); Image si2 = shine.GetComponent<Image>(); Color c2 = si2.color; c2.a = 0f; si2.color = c2; }   // (parked, invisible)
+        else if (shine.anchoredPosition.x > -150f) { shine.anchoredPosition = new Vector2(-200f, 0f); Image si2 = ShineImage(); Color c2 = si2.color; c2.a = 0f; si2.color = c2; }   // (parked, invisible)
     }
+
+    // A button at rest kept rewriting its scale and label position every frame (each write makes the HUD canvas redo its layout): write only on a change.
+    private void EaseScale(float target, float dt)
+    {
+        Vector3 want = Vector3.one * target;
+        Vector3 now = rect.localScale;
+        if (now == want) return;
+        Vector3 next = Vector3.Lerp(now, want, 1f - Mathf.Exp(-dt * 20f));
+        rect.localScale = (next - want).sqrMagnitude < 1e-8f ? want : next;   // (snaps the last tiny step so it really comes to rest)
+    }
+
+    private void SetLabelPos(Vector2 pos)
+    {
+        if (labelRect != null && labelRect.anchoredPosition != pos) labelRect.anchoredPosition = pos;
+    }
+
+    private Image shineImage;
+    private Image ShineImage() => shineImage != null ? shineImage : (shineImage = shine.GetComponent<Image>());
 
     public void OnPointerEnter(PointerEventData d)
     {

@@ -67,8 +67,12 @@ public class PixelMinigameLimits : MonoBehaviour
     {
         // Watch for the moment the last busy minigame finishes: then a breather starts, so waiting minigames don't follow one another straight away.
         bool busy = false, takeover = false;
-        foreach (PixelMinigame m in PixelMinigame.All)
+        System.Collections.Generic.IReadOnlyList<PixelMinigame> all = PixelMinigame.All;
+        for (int i = 0; i < all.Count; i++)   // (a for loop: foreach over the read-only list makes a new enumerator every frame)
+        {
+            PixelMinigame m = all[i];
             if (m != null && m.Running && m.Busy) { busy = true; if (m.Takeover) takeover = true; }
+        }
         if (wasBusy && !busy && !disableBreathers)
         {
             float lo = breatherMinSeconds > 0f ? breatherMinSeconds : 40f;

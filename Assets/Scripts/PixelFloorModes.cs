@@ -129,7 +129,7 @@ public partial class PixelFloor
     private void UpdateGroundShader()
     {
         if (!SelfFading || activeMaterial == null || floorRenderer == null) return;
-        PixelClicker clicker = PixelFind.First<PixelClicker>();
+        PixelClicker clicker = PixelFind.Cached<PixelClicker>();
         if (clicker == null) return;
         FadeRadii(clicker, out float r0, out float r1);   // (the same rim as the wireframe)
         Vector3 centre = clicker.CubeBasePosition;
@@ -156,7 +156,7 @@ public partial class PixelFloor
         if (groundTimer > 0f) return;
         groundTimer = 0.5f;
         if (PixelCameraIntro.Moving || PixelTitleScreen.Showing || PixelTitleScreen.Reversing) return;
-        PixelClicker clicker = PixelFind.First<PixelClicker>();
+        PixelClicker clicker = PixelFind.Cached<PixelClicker>();
         if (clicker == null) return;
         Camera cam = PixelOrbitCamera.HomeCamera != null ? PixelOrbitCamera.HomeCamera : clicker.ViewCamera;   // the NORMAL view, like the view bounds
         if (cam == null) return;
@@ -195,7 +195,7 @@ public partial class PixelFloor
             if (plane != null && plane.activeSelf) plane.SetActive(false);
             return;
         }
-        PixelClicker clicker = PixelFind.First<PixelClicker>();
+        PixelClicker clicker = PixelFind.Cached<PixelClicker>();
         if (clicker == null) return;
         Bounds fb = floorRenderer.bounds;
         if (plane == null)
@@ -257,7 +257,7 @@ public class PixelFloorPulse : MonoBehaviour
     public static void LandedAt(Vector3 point, Vector3 normal, Transform pixel, int tierIndex, float intensity)
     {
         if (!PixelFloor.PulseActive || pixel == null) return;
-        if (clicker == null) clicker = PixelFind.First<PixelClicker>();
+        if (clicker == null) clicker = PixelFind.Cached<PixelClicker>();
         if (clicker == null) return;
         if (instance == null)
         {

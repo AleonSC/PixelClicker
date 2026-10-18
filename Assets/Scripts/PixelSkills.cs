@@ -53,6 +53,14 @@ public partial class PixelSkills : MonoBehaviour
         public bool implemented = false;
         [Tooltip("A pixel type (name) this node unlocks as a toggle: once bought, that skill-only block can be switched on in the Toggles window so it also spawns in other rotations.")]
         public string guestType = "";
+
+        // The unlock counter's name 'skill.<pack>.node.<id>', made once (it is read every frame by the tree and the Standard skills); rebuilt if an id changes.
+        [NonSerialized] private string key, keyPack, keyId;
+        public string KeyIn(string packId)
+        {
+            if (key == null || keyPack != packId || keyId != id) { keyPack = packId; keyId = id; key = "skill." + packId + ".node." + id; }
+            return key;
+        }
     }
 
     [Serializable]
@@ -110,6 +118,22 @@ public partial class PixelSkills : MonoBehaviour
         public Perk[] perks = new Perk[0];
         [Tooltip("The skill tree: nodes you buy with skill points (one point per level above 1).")]
         public TreeNode[] nodes = new TreeNode[0];
+
+        // The XP counter's name 'skill.<id>.xp', made once (read several times per click); rebuilt if the id changes.
+        [NonSerialized] private string xpKey, xpKeyId;
+        public string XpKey
+        {
+            get
+            {
+                if (xpKey == null || xpKeyId != id) { xpKeyId = id; xpKey = "skill." + id + ".xp"; }
+                return xpKey;
+            }
+        }
+
+        // The last level worked out (LevelOf): kept while the XP and the curve are the same (it is asked for several times per click and every frame).
+        [NonSerialized] public double levelXp = -1d, levelBase, levelInto, levelNeed;
+        [NonSerialized] public float levelGrowth;
+        [NonSerialized] public int level;
     }
 
     public const string StandardId = "standard";
@@ -1135,9 +1159,17 @@ public partial class PixelSkills : MonoBehaviour
     /// <summary>Id of the Standard tree node 'Aimed Clicks' (edge-click aiming, PixelBurstPop.AimingOwned).</summary>
     public const string AimedClicksNode = "aimed";
 
-    public static bool HasStandardNode(string nodeId) => PixelStats.Total("skill." + StandardId + ".node." + nodeId) >= 1d;
+    // (the Standard skills ask this every frame: the counter names are made once per node id)
+    private static readonly System.Collections.Generic.Dictionary<string, string> standardNodeKeys = new System.Collections.Generic.Dictionary<string, string>();
 
-    public bool NodeUnlocked(SkillPack pack, TreeNode node) => pack != null && node != null && PixelStats.Total("skill." + pack.id + ".node." + node.id) >= 1d;
+    public static bool HasStandardNode(string nodeId)
+    {
+        if (nodeId == null) return false;
+        if (!standardNodeKeys.TryGetValue(nodeId, out string key)) { key = "skill." + StandardId + ".node." + nodeId; standardNodeKeys[nodeId] = key; }
+        return PixelStats.Total(key) >= 1d;
+    }
+
+    public bool NodeUnlocked(SkillPack pack, TreeNode node) => pack != null && node != null && PixelStats.Total(node.KeyIn(pack.id)) >= 1d;
 
     /// <summary>Every node this one needs ('requires' can list several ids, comma separated; all of them must be unlocked).</summary>
     public System.Collections.Generic.List<TreeNode> ParentsOf(SkillPack pack, TreeNode node)
@@ -1203,7 +1235,7 @@ public partial class PixelSkills : MonoBehaviour
     public bool UnlockNode(SkillPack pack, TreeNode node)
     {
         if (!CanUnlock(pack, node)) return false;
-        PixelStats.Best("skill." + pack.id + ".node." + node.id, 1d);
+        PixelStats.Best(node.KeyIn(pack.id), 1d);
         PixelHints.Announce(pack.displayName + ": " + node.displayName, "You unlocked '" + node.displayName + "' in the " + pack.displayName + " skill tree.");
         PixelHints.Trigger("node_" + pack.id + "_" + node.id);   // a node's first-time tip, if it has one (e.g. node_standard_aimed); unknown ids do nothing
         Changed?.Invoke();
@@ -1212,7 +1244,7 @@ public partial class PixelSkills : MonoBehaviour
 
     // ---- XP and levels ----
 
-    public double Xp(SkillPack pack) => pack == null ? 0d : PixelStats.Total("skill." + pack.id + ".xp");
+    public double Xp(SkillPack pack) => pack == null ? 0d : PixelStats.Total(pack.XpKey);
 
     /// <summary>Level (1 = none yet) and the XP inside it: 'into' of 'need' to the next level.</summary>
     [Header("XP curve")]
@@ -1226,15 +1258,23 @@ public partial class PixelSkills : MonoBehaviour
     public int LevelOf(SkillPack pack, out double into, out double need)
     {
         double xp = Xp(pack);
+        double baseXp = BaseXpOf(pack);
+        if (pack != null && pack.levelXp == xp && pack.levelBase == baseXp && pack.levelGrowth == pack.xpGrowth)
+        {
+            into = pack.levelInto; need = pack.levelNeed;   // (same XP and curve as last time: no need to walk the levels again)
+            return pack.level;
+        }
+        double total = xp;
         int level = 1;
-        need = BaseXpOf(pack);
+        need = baseXp;
         while (xp >= need && level < 99)
         {
             xp -= need;
-            need *= Math.Max(1.05f, pack.xpGrowth);
+            need *= Math.Max(1.05f, pack != null ? pack.xpGrowth : 1.6f);
             level++;
         }
         into = xp;
+        if (pack != null) { pack.levelXp = total; pack.levelBase = baseXp; pack.levelGrowth = pack.xpGrowth; pack.levelInto = into; pack.levelNeed = need; pack.level = level; }
         return level;
     }
 
@@ -1427,7 +1467,7 @@ public partial class PixelSkills : MonoBehaviour
     {
         if (pack == null || xp <= 0d) return;
         int before = LevelOf(pack);
-        PixelStats.Count("skill." + pack.id + ".xp", xp);
+        PixelStats.Count(pack.XpKey, xp);
         if (popup) QueueXpPopup(pack, xp);
         int after = LevelOf(pack);
         if (after > before) QueuePerkNotices(pack, before, after);

@@ -45,6 +45,7 @@ public class PixelMagnetSorterDevice : PixelPlacedDevice
         public Vector3 endLocal;                  // where the nozzle sits, in the device's local space (on the floor)
         public Vector3 previousEnd;
         public int tier = -1;                     // which stored type it shoots (-1 = none)
+        public int shownHave = -2;                // the count its label shows (the text is only rebuilt when it changes)
         public float nextShot;
         public MeshFilter filter;
         public Mesh mesh;
@@ -337,13 +338,16 @@ public class PixelMagnetSorterDevice : PixelPlacedDevice
         if (boxLabel != null)
         {
             boxLabel.transform.rotation = face;
-            string text = total + " / " + settings.boxCapacity;
-            if (boxLabel.text != text) boxLabel.text = text;
+            if (total != shownTotal || settings.boxCapacity != shownCapacity)   // (rebuilt only when a number changes, not every frame)
+            {
+                shownTotal = total; shownCapacity = settings.boxCapacity;
+                boxLabel.text = total + " / " + settings.boxCapacity;
+            }
         }
 
         foreach (Pipe p in pipes)
         {
-            Stock s = p.tier >= 0 ? stock.Find(x => x.tier == p.tier) : null;
+            Stock s = p.tier >= 0 ? FindStock(p.tier) : null;
             int have = s != null ? s.count : 0;
             if (p.modelTier != p.tier)
             {
@@ -355,9 +359,18 @@ public class PixelMagnetSorterDevice : PixelPlacedDevice
             p.holder.rotation = face;
             if (p.model != null) p.model.transform.position = p.holder.position + Vector3.up * 0.25f;
             p.label.transform.localPosition = Vector3.down * 0.15f;
-            string label = p.tier < 0 ? "scroll to pick" : "x" + have;
-            if (p.label.text != label) p.label.text = label;
+            int shown = p.tier < 0 ? -1 : have;
+            if (shown != p.shownHave) { p.shownHave = shown; p.label.text = p.tier < 0 ? "scroll to pick" : "x" + have; }
         }
+    }
+
+    private int shownTotal = -1, shownCapacity = -1;
+
+    /// <summary>The stored stock of a type, or null - without adding one (a plain loop: runs per pipe every frame).</summary>
+    private Stock FindStock(int tier)
+    {
+        for (int i = 0; i < stock.Count; i++) if (stock[i].tier == tier) return stock[i];
+        return null;
     }
 
     private void Shoot()
@@ -366,7 +379,7 @@ public class PixelMagnetSorterDevice : PixelPlacedDevice
         foreach (Pipe p in pipes)
         {
             if (p.tier < 0 || Time.time < p.nextShot) continue;
-            Stock s = stock.Find(x => x.tier == p.tier);
+            Stock s = FindStock(p.tier);
             if (s == null || s.count <= 0) continue;
             p.nextShot = Time.time + Mathf.Max(0.05f, settings.shootInterval);
 

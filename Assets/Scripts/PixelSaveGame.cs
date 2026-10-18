@@ -444,13 +444,24 @@ public class PixelSaveGame : MonoBehaviour
 
     /// <summary>The autosave intervals the player can pick in Settings (seconds; 0 = off).</summary>
     public static readonly float[] AutoSaveChoices = { 0f, 30f, 60f, 300f };
+    private static int autoSaveChoiceCache = -1;
+    private static float autoSaveChoiceReadAt;
     public static readonly string[] AutoSaveNames = { "Off", "30 seconds", "1 minute", "5 minutes" };
 
     /// <summary>Index into <see cref="AutoSaveChoices"/>; -1 (never chosen) = use the Inspector's interval.</summary>
     public static int AutoSaveChoice
     {
-        get => Mathf.Clamp(PixelPrefs.GetInt(PrefAutoSave, -1), -1, AutoSaveChoices.Length - 1);
-        set { PixelPrefs.SetInt(PrefAutoSave, Mathf.Clamp(value, 0, AutoSaveChoices.Length - 1)); PixelPrefs.Save(); }
+        get
+        {
+            // (read every frame by the autosave timer: the setting is read again once a second, so a change - or a save's settings being put back - shows within a second)
+            if (Time.unscaledTime >= autoSaveChoiceReadAt)
+            {
+                autoSaveChoiceReadAt = Time.unscaledTime + 1f;
+                autoSaveChoiceCache = Mathf.Clamp(PixelPrefs.GetInt(PrefAutoSave, -1), -1, AutoSaveChoices.Length - 1);
+            }
+            return autoSaveChoiceCache;
+        }
+        set { PixelPrefs.SetInt(PrefAutoSave, Mathf.Clamp(value, 0, AutoSaveChoices.Length - 1)); PixelPrefs.Save(); autoSaveChoiceReadAt = 0f; }
     }
 
     /// <summary>Show the "saved" message after every autosave? (Settings; before it is chosen, the Inspector's choice applies.)</summary>
@@ -601,7 +612,7 @@ public class PixelSaveGame : MonoBehaviour
             if (!PixelMinigame.TakeoverActive) data.oldPixels = clicker.GetOldPixelStates().ToArray();
             data.settings = PixelSettingsSync.Collect();
 
-            string json = JsonUtility.ToJson(data, true);
+            string json = JsonUtility.ToJson(data, false);   // (no pretty print: smaller and quicker to write, every autosave)
             var shots = new System.Collections.Generic.List<string>();
             if (fileOverride != null)
             {
@@ -654,7 +665,7 @@ public class PixelSaveGame : MonoBehaviour
     public static bool HasLoadedSave { get; internal set; }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetLoadedFlag() { HasLoadedSave = false; }
+    private static void ResetLoadedFlag() { HasLoadedSave = false; autoSaveChoiceReadAt = 0f; }
 
     /// <summary>Reads the save file and applies it. Returns false if there is none or it can't be read.</summary>
     [ContextMenu("Load Now")]

@@ -449,7 +449,8 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
                     if (p.ghostMaterial == null) p.ghostMaterial = p.transparentBase ? p.solidMaterial : clicker.CreateVisualMaterial(new Color(p.color.r, p.color.g, p.color.b, 1f), true);
                     if (p.ghostMaterial != null && p.renderer.sharedMaterial != p.ghostMaterial) p.renderer.sharedMaterial = p.ghostMaterial;
                     Color c = p.color; c.a = p.color.a * fadeAlpha;
-                    MaterialPropertyBlock block = new MaterialPropertyBlock();
+                    MaterialPropertyBlock block = SharedBlock();
+                    block.Clear();
                     block.SetColor("_BaseColor", c);
                     block.SetColor("_Color", c);
                     p.renderer.SetPropertyBlock(block);
@@ -989,11 +990,16 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
         if (alienHead != null) alienHead.localRotation = Quaternion.Euler(0f, hovering ? Mathf.Sin(t * 6f) * 35f : Mathf.Sin(t * 0.8f) * 20f, Mathf.Sin(t * 1.6f) * 5f);
     }
 
+    // One property block reused for every colour change (they run every frame for each light and button while the UFO is out; SetPropertyBlock copies it).
+    private static MaterialPropertyBlock sharedBlock;
+    private static MaterialPropertyBlock SharedBlock() => sharedBlock ?? (sharedBlock = new MaterialPropertyBlock());
+
     private static void SetRendererColor(Renderer r, Color c, float alpha)
     {
         if (r == null) return;
         c.a = alpha;
-        MaterialPropertyBlock block = new MaterialPropertyBlock();
+        MaterialPropertyBlock block = SharedBlock();
+        block.Clear();
         r.GetPropertyBlock(block);
         block.SetColor("_BaseColor", c);
         block.SetColor("_Color", c);

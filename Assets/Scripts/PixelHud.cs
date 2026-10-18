@@ -532,10 +532,10 @@ public class PixelDockedButton : MonoBehaviour
                 if (sortCanvas == null) sortCanvas = gameObject.AddComponent<Canvas>();
                 if (gameObject.GetComponent<UnityEngine.UI.GraphicRaycaster>() == null) gameObject.AddComponent<UnityEngine.UI.GraphicRaycaster>();   // a nested canvas needs its own raycaster for clicks
             }
-            sortCanvas.overrideSorting = true;
-            sortCanvas.sortingOrder = hud.AlwaysOutOrder;
+            if (!sortCanvas.overrideSorting) sortCanvas.overrideSorting = true;   // (only on a change: this runs every frame for every button)
+            if (sortCanvas.sortingOrder != hud.AlwaysOutOrder) sortCanvas.sortingOrder = hud.AlwaysOutOrder;
         }
-        else if (sortCanvas != null) sortCanvas.overrideSorting = false;
+        else if (sortCanvas != null && sortCanvas.overrideSorting) sortCanvas.overrideSorting = false;
     }
 
     private void Update()
@@ -558,7 +558,7 @@ public class PixelDockedButton : MonoBehaviour
             float hiddenInset = groupWidth > 0f ? -(groupWidth - hud.Sliver) : hud.SideHiddenInset;
             float sideInset = Mathf.Lerp(hiddenInset, hud.SideShownInset, Mathf.SmoothStep(0f, 1f, slide));
             float pushSide = (1f - PixelHud.RevealEased) * 420f;   // slid away with the black margins
-            rect.anchoredPosition = new Vector2(anchor.x > 0.5f ? -(sideInset + sideOffsetX) + pushSide : sideInset + sideOffsetX - pushSide, sideOffsetY);
+            SetPos(new Vector2(anchor.x > 0.5f ? -(sideInset + sideOffsetX) + pushSide : sideInset + sideOffsetX - pushSide, sideOffsetY));
             return;
         }
 
@@ -571,7 +571,13 @@ public class PixelDockedButton : MonoBehaviour
         if (groupWidth > 0f) x += -f * groupWidth + sideOffsetX;   // one of a group: the whole group is spread like one button, this member sits at its offset
         else x += f > 0.5f ? -cornerOffset : cornerOffset;
         float push = (1f - PixelHud.RevealEased) * (hud.BandHeight + hud.ButtonSize.y + 40f);
-        rect.anchoredPosition = new Vector2(x, top ? -inset + push : inset - push);
+        SetPos(new Vector2(x, top ? -inset + push : inset - push));
+    }
+
+    // (a settled button kept writing the same position every frame, which makes the HUD canvas redo its layout: write only on a change)
+    private void SetPos(Vector2 pos)
+    {
+        if (rect.anchoredPosition != pos) rect.anchoredPosition = pos;
     }
 
     /// <summary>Is the mouse over (or close to) the spot the button slides out to?</summary>

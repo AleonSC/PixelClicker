@@ -1001,7 +1001,7 @@ public class PixelFloorOverlay : MonoBehaviour
         foreach (Tile old in tiles) if (old.t != null) Destroy(old.t.gameObject);
         tiles.Clear();
         crumbleBuiltReach = reach;
-        PixelClicker clicker = PixelFind.First<PixelClicker>();
+        PixelClicker clicker = PixelFind.Cached<PixelClicker>();
         if (tileMats == null && clicker != null)
         {
             tileMats = new Material[3];
@@ -1103,7 +1103,7 @@ public class PixelFloorOverlay : MonoBehaviour
         Ray ray;
         if (!PixelFirstPerson.TryGetViewRay(out ray))
         {
-            PixelClicker clicker = PixelFind.First<PixelClicker>();
+            PixelClicker clicker = PixelFind.Cached<PixelClicker>();
             Camera cam = PixelClicker.ViewCameraOf(clicker);
             if (cam == null) return false;
             ray = cam.ScreenPointToRay(PixelInput.PointerPosition());

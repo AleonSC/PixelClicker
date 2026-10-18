@@ -186,7 +186,7 @@ public class PixelCrashLog : MonoBehaviour
             sb.AppendLine("quality level=" + QualitySettings.GetQualityLevel() + " (" + (names.Length > 0 ? names[Mathf.Clamp(QualitySettings.GetQualityLevel(), 0, names.Length - 1)] : "?") + ")  levels=" + string.Join(", ", names));
             foreach (string shaderName in new[] { "Sprites/Default", "Universal Render Pipeline/Lit", "Universal Render Pipeline/Simple Lit", "Universal Render Pipeline/Unlit", "Standard" })
                 sb.AppendLine("Shader.Find(\"" + shaderName + "\") = " + (Shader.Find(shaderName) != null ? "found" : "NOT FOUND"));
-            PixelClicker clicker = PixelFind.First<PixelClicker>();
+            PixelClicker clicker = PixelFind.Cached<PixelClicker>();
             if (clicker != null) sb.Append(clicker.DebugGlowReport());
             File.WriteAllText(Path.Combine(folder, "rendering_report.txt"), sb.ToString());
         }
@@ -361,11 +361,11 @@ public class PixelCrashLog : MonoBehaviour
         try
         {
             StringBuilder sb = new StringBuilder();
-            PixelClicker clicker = PixelFind.First<PixelClicker>();
+            PixelClicker clicker = PixelFind.Cached<PixelClicker>();
             sb.AppendLine("  Time scale: " + Time.timeScale.ToString("0.##") + "   Paused: " + PixelPauseMenu.IsPaused +
                           "   Hose: " + PixelBank.HoseOn);
 
-            PixelStats stats = PixelFind.First<PixelStats>();
+            PixelStats stats = PixelFind.Cached<PixelStats>();
             if (stats != null) sb.AppendLine("  Play time: " + (stats.PlaySeconds / 60d).ToString("0.#") + " min");
 
             if (clicker != null)
@@ -377,7 +377,7 @@ public class PixelCrashLog : MonoBehaviour
                 sb.AppendLine("  Old pixels on the floor: " + clicker.OldPixels.Count + "   Ultra held: " + clicker.TotalUltra);
             }
 
-            PixelShop shop = PixelFind.First<PixelShop>();
+            PixelShop shop = PixelFind.Cached<PixelShop>();
             if (shop != null)
             {
                 sb.Append("  Bought:");
@@ -390,7 +390,7 @@ public class PixelCrashLog : MonoBehaviour
                 sb.AppendLine();
             }
 
-            PixelConsumables consumables = PixelFind.First<PixelConsumables>();
+            PixelConsumables consumables = PixelFind.Cached<PixelConsumables>();
             if (consumables != null)
                 sb.AppendLine("  Active potion: " + (consumables.IsActive ? consumables.Get(consumables.ActiveIndex).displayName +
                               " (" + consumables.Remaining.ToString("0") + "s left)" : "none") +
@@ -415,7 +415,7 @@ public class PixelCrashLog : MonoBehaviour
 
     private void ShowNotice()
     {
-        PixelClicker clicker = PixelFind.First<PixelClicker>();
+        PixelClicker clicker = PixelFind.Cached<PixelClicker>();
         if (clicker != null && clicker.UIFont != null) font = clicker.UIFont;
         PixelUIKit.EnsureEventSystem();
 

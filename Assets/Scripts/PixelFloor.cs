@@ -410,7 +410,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     /// </summary>
     private Renderer BuildOwnFloor(Renderer scene)
     {
-        PixelClicker clicker = PixelFind.First<PixelClicker>();
+        PixelClicker clicker = PixelFind.Cached<PixelClicker>();
         if (clicker == null) return null;
         float size = ownFloorSize > 1f ? ownFloorSize : 80f;
         float y = clicker.CubeBasePosition.y - (groundFallDistance > 0f ? groundFallDistance : 10f);
@@ -466,7 +466,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
 
     private Renderer FindFloor()
     {
-        PixelClicker clicker = PixelFind.First<PixelClicker>();
+        PixelClicker clicker = PixelFind.Cached<PixelClicker>();
         if (clicker != null)
         {
             // The first solid, non-moving collider straight below the cube.
@@ -548,7 +548,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         Material source = originalMaterials != null && originalMaterials.Length > 0 ? originalMaterials[0] : null;
         if (source == null)
         {
-            PixelClicker clicker = PixelFind.First<PixelClicker>();
+            PixelClicker clicker = PixelFind.Cached<PixelClicker>();
             source = clicker != null ? clicker.CreateVisualMaterial(Color.white, false) : null;
         }
         if (source == null) return;
@@ -886,8 +886,14 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     private void ApplyProps()
     {
         if (propsK >= 0.999f && propScales.Count == 0) return;
+        // Held at the same size (the title screen keeps them hidden for its whole time) with the same husks and devices out: nothing to redo this frame.
+        PixelClicker clicker = PixelFind.Cached<PixelClicker>();
+        int propCount = (clicker != null ? clicker.OldPixels.Count : 0) + PixelPlacedDevice.All.Count;
+        if (propsK < 0.999f && propsK == lastPropsK && propCount == lastPropCount && Time.unscaledTime < nextPropsCheck) return;   // (checked again twice a second: a husk that was still popping in gets its turn)
+        nextPropsCheck = Time.unscaledTime + 0.5f;
+        lastPropsK = propsK;
+        lastPropCount = propCount;
         propList.Clear();
-        PixelClicker clicker = PixelFind.First<PixelClicker>();
         if (clicker != null) clicker.CollectOldPixelTransforms(propList);
         IReadOnlyList<PixelPlacedDevice> devices = PixelPlacedDevice.All;
         for (int i = 0; i < devices.Count; i++) if (devices[i] != null && !(devices[i] is PixelFunnelDevice)) propList.Add(devices[i].transform);   // (the Funnel is left out: its cone and tube are pinned to the world, so scaling its root would pull them apart)
@@ -933,13 +939,34 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         }
     }
 
+    private float lastPropsK = -1f, nextPropsCheck;
+    private int lastPropCount = -1;
+
+    // The floor object's other renderers (a second mesh, trim): looked up once per floor (and again now and then, in case parts were added), not every frame.
+    private Renderer[] floorExtras;
+    private Renderer floorExtrasOf;
+    private float floorExtrasTime = -10f;
+    private int floorExtrasHidden = -1;   // what was last written to them (-1 = nothing yet)
+
     private void ApplyVisibility()
     {
         ApplyProps();
         UpdateFlatBase();
         floorRenderer.forceRenderingOff = visibility <= 0.001f || HideBaseNow;   // (a see-through style hides the picture but keeps the collider)   // (the renderer stays enabled so bounds and the fog's checks keep working)
         // Any other renderers on the floor object (a second mesh, trim) go with it.
-        foreach (Renderer extra in floorRenderer.GetComponentsInChildren<Renderer>(true)) if (extra != floorRenderer) extra.forceRenderingOff = visibility < 0.999f;
+        if (floorExtras == null || floorExtrasOf != floorRenderer || Time.unscaledTime - floorExtrasTime > 2f)
+        {
+            floorExtras = floorRenderer.GetComponentsInChildren<Renderer>(true);
+            floorExtrasOf = floorRenderer;
+            floorExtrasTime = Time.unscaledTime;
+            floorExtrasHidden = -1;
+        }
+        int hideExtras = visibility < 0.999f ? 1 : 0;
+        if (hideExtras != floorExtrasHidden)
+        {
+            floorExtrasHidden = hideExtras;
+            foreach (Renderer extra in floorExtras) if (extra != null && extra != floorRenderer) extra.forceRenderingOff = hideExtras == 1;
+        }
         if (SelfFading)
         {
             // The ground shader fades itself: no see-through copies of the material are needed.

@@ -887,7 +887,7 @@ public class PixelAchievements : MonoBehaviour, IPixelSaved
     private Vector2 DefaultPopupPosition()
     {
         float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        PixelCombo combo = PixelFind.First<PixelCombo>();
+        PixelCombo combo = PixelFind.Cached<PixelCombo>();
         float above = combo != null ? combo.MeterTopOffset : bar + 140f;   // from the bottom of the screen to the bottom of the popup
         float height = popupCanvasRect != null && popupCanvasRect.rect.height > 10f ? popupCanvasRect.rect.height : 1080f;
         return new Vector2(-popupWidth * 0.5f, -height * 0.5f + above + popupExpandedSize.y * 0.5f);
@@ -920,7 +920,7 @@ public class PixelAchievements : MonoBehaviour, IPixelSaved
     /// <summary>A save's settings were loaded (or a new game reset them): read the popup's pinned spot again.</summary>
     public static void ReloadPopupPin()
     {
-        PixelAchievements a = PixelFind.First<PixelAchievements>();
+        PixelAchievements a = PixelFind.Cached<PixelAchievements>();
         if (a == null) return;
         a.popupPinned = PixelPrefs.HasKey(PrefPopupX) && PixelPrefs.HasKey(PrefPopupY);
         a.popupPinnedPos = new Vector2(PixelPrefs.GetFloat(PrefPopupX, 0f), PixelPrefs.GetFloat(PrefPopupY, 0f));

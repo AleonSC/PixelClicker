@@ -51,8 +51,8 @@ public partial class PixelSkills
     public void DevSetSkillXp(SkillPack p, bool max)
     {
         if (p == null) return;
-        PixelStats.Clear("skill." + p.id + ".xp");
-        if (max) { double cap = CapXp(p); if (cap > 0d) PixelStats.Count("skill." + p.id + ".xp", cap); }
+        PixelStats.Clear(p.XpKey);
+        if (max) { double cap = CapXp(p); if (cap > 0d) PixelStats.Count(p.XpKey, cap); }
         Changed?.Invoke();
     }
 
@@ -63,7 +63,7 @@ public partial class PixelSkills
         {
             if (p == null || p.id == StandardId) continue;
             double missing = CapXp(p) - Xp(p);
-            if (missing > 0d) PixelStats.Count("skill." + p.id + ".xp", missing);
+            if (missing > 0d) PixelStats.Count(p.XpKey, missing);
         }
         Changed?.Invoke();
     }

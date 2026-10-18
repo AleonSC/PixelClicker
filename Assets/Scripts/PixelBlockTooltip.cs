@@ -294,8 +294,8 @@ public class PixelBlockTooltip : MonoBehaviour
 
     private void Update()
     {
-        if (clicker == null) { clicker = PixelFind.First<PixelClicker>(); return; }
-        if (grab == null) grab = PixelFind.First<PixelGrab>();
+        if (clicker == null) { clicker = PixelFind.Cached<PixelClicker>(); return; }
+        if (grab == null) grab = PixelFind.Cached<PixelGrab>();
         UpdateAlt();
         if (EffectiveMode != lastMode) { lastMode = EffectiveMode; nextRefresh = 0f; }   // (peeking at the other kind re-lays the card at once)
 

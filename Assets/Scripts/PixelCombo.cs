@@ -487,6 +487,12 @@ public class PixelCombo : MonoBehaviour, IPixelSaved
         bool visible = Working && showMeter;
         if (canvasRoot.activeSelf != visible) canvasRoot.SetActive(visible);
         if (!visible) return;
+        // Faded out after a while without clicks and every effect wound down: nothing on it changes until the next combo, so skip the per-frame layout and effects.
+        if (combo <= 0 && hideAfterSeconds > 0f && idleSeconds >= hideAfterSeconds && baseAlpha == 0f && pop <= 0f && breakTimer <= 0f && lastLiveTier <= 0)
+        {
+            if (group.alpha != 0f) group.alpha = 0f;
+            return;
+        }
 
         int tier = Tier, unlocked = UnlockedTiers;
         bool atMax = tier > 0 && tier >= unlocked && combo > 0;

@@ -17,6 +17,7 @@ public partial class PixelSkybox
 
     private GameObject rainRoot;
     private ParticleSystem rainSystem;
+    private ParticleSystemRenderer rainRenderer;
     private Material rainMaterial;
 
     private void UpdateRain(Camera cam)
@@ -31,7 +32,7 @@ public partial class PixelSkybox
         if (rainRoot == null) return;
         if (!rainRoot.activeSelf) rainRoot.SetActive(true);
 
-        PixelClicker clicker = PixelFind.First<PixelClicker>();
+        PixelClicker clicker = PixelFind.Cached<PixelClicker>();
         Vector3 target = clicker != null && clicker.PixelTransform != null ? clicker.CubeBasePosition : cam.transform.position + cam.transform.forward * 10f;
         // While orbiting, size the rain from the normal view so it doesn't swell and shrink.
         Vector3 eye = PixelOrbitCamera.HomeCamera != null ? PixelOrbitCamera.HomeCamera.transform.position : cam.transform.position;
@@ -64,8 +65,8 @@ public partial class PixelSkybox
         shape.scale = new Vector3(reach * 5.2f, reach * 5.2f, 0.1f);   // (the box is turned flat: local X / Y spread the drops sideways, local Z is the thin fall direction)
         ParticleSystem.VelocityOverLifetimeModule vel = rainSystem.velocityOverLifetime;
         vel.x = new ParticleSystem.MinMaxCurve(reach * (storm ? 0.45f : 0.15f));
-        ParticleSystemRenderer pr = rainSystem.GetComponent<ParticleSystemRenderer>();
-        pr.lengthScale = 5f + reach * 0.15f;
+        if (rainRenderer == null) rainRenderer = rainSystem.GetComponent<ParticleSystemRenderer>();   // (looked up once: this runs every frame while it rains)
+        rainRenderer.lengthScale = 5f + reach * 0.15f;
     }
 
     private void BuildRain()
