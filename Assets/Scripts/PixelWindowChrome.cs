@@ -262,7 +262,7 @@ public class PixelWindowChrome : MonoBehaviour
     }
 
     /// <summary>
-    /// While minimized, anything that switched on since (the owner builds its content AFTER CreateWindow, so a window saved minimized
+    /// While minimized, anything that switched on since (also a child the owner switched back on after it was folded) (the owner builds its content AFTER CreateWindow, so a window saved minimized
     /// was folded up before its body existed) is folded away too. Kept items (Keep) are left alone.
     /// </summary>
     private void FoldLateContent()
@@ -270,9 +270,9 @@ public class PixelWindowChrome : MonoBehaviour
         foreach (Transform child in window)
         {
             GameObject g = child.gameObject;
-            if (!g.activeSelf || keep.Contains(g) || hidden.Contains(g)) continue;
-            g.SetActive(false);
-            hidden.Add(g);
+            if (!g.activeSelf || keep.Contains(g)) continue;
+            g.SetActive(false);   // (also one already on the list that the owner switched back on while minimized, e.g. a panel re-laying its rows)
+            if (!hidden.Contains(g)) hidden.Add(g);
         }
     }
 
