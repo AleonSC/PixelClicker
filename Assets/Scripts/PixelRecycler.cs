@@ -422,8 +422,14 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     private void OnEnable() { if (!all.Contains(this)) all.Add(this); PixelCouplings.Register(this); }
     private void OnDisable() { all.Remove(this); PixelCouplings.Unregister(this); }
 
+    private void Awake() => PixelHuskPool.HuskReleasing += OnHuskReleasing;
+
+    // (PixelHuskPool: the husk is going away and may be reused - let go of it; SuckOne sees it and stops)
+    private void OnHuskReleasing(Rigidbody body) => sucking.Remove(body);
+
     private void OnDestroy()
     {
+        PixelHuskPool.HuskReleasing -= OnHuskReleasing;
         foreach (Rigidbody b in sucking) if (b != null) PixelHuskHolder.Unreserve(b, Vector3.zero);   // (half way in when the bin went: it falls where it is)
         sucking.Clear();
         foreach (Rigidbody b in inside) if (b != null) Destroy(b.gameObject);   // (not saved: what was inside is lost with the bin)
@@ -472,6 +478,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
         while (t < 1f)
         {
             if (b == null) { sucking.Remove(b); yield break; }
+            if (!sucking.Contains(b)) yield break;   // (it went away mid-way: PixelHuskPool)
             if (PixelHuskQuery.Get(b).HeldByPlayer) { sucking.Remove(b); yield break; }   // (the player grabbed it on the way: theirs)
             if (processing) break;
             t += Time.deltaTime / length;

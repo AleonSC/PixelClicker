@@ -125,10 +125,26 @@ public class PixelElectricLinks : MonoBehaviour
     private void Awake()
     {
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
+        PixelHuskPool.HuskReleasing += OnHuskReleasing;
+    }
+
+    // (PixelHuskPool: the husk is going away and may be reused - let go of it, and of the links that hang off it; the next scan links again)
+    private readonly List<Rigidbody> releaseScratch = new List<Rigidbody>();
+    private void OnHuskReleasing(Rigidbody body)
+    {
+        links.Remove(body);
+        charge.Remove(body);
+        order.Remove(body);
+        fizzling.Remove(body);
+        chainSeeds.Remove(body);
+        releaseScratch.Clear();
+        foreach (KeyValuePair<Rigidbody, Link> kv in links) if (kv.Value.parentBody == body) releaseScratch.Add(kv.Key);
+        foreach (Rigidbody child in releaseScratch) links.Remove(child);
     }
 
     private void OnDestroy()
     {
+        PixelHuskPool.HuskReleasing -= OnHuskReleasing;
         if (boltMesh != null) Destroy(boltMesh);
         if (boltObject != null) Destroy(boltObject);
         if (meterRoot != null) Destroy(meterRoot);

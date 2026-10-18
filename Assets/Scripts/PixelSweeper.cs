@@ -166,7 +166,16 @@ public class PixelSweeper : MonoBehaviour
 
     private void OnEnable() { if (!all.Contains(this)) all.Add(this); }
     private void OnDisable() { all.Remove(this); }
-    private void OnDestroy() { DropTarget(); }
+    private void OnDestroy() { PixelHuskPool.HuskReleasing -= OnHuskReleasing; DropTarget(); }
+    private void Awake() => PixelHuskPool.HuskReleasing += OnHuskReleasing;
+
+    // (PixelHuskPool: the husk is going away and may be reused - let go of it; nothing to put down, it is gone)
+    private void OnHuskReleasing(Rigidbody body)
+    {
+        if (body != target) return;
+        target = null;
+        state = State.Idle;
+    }
 
     // ---------------- saving (PixelConsumables puts this in PlacedState.extra) ----------------
 

@@ -52,10 +52,22 @@ public class PixelSapField : MonoBehaviour
     {
         clicker = GetComponent<PixelClicker>(); if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (lookVersion < 1) { if (circleColor.a > 0.15f) circleColor.a = 0.1f; lookVersion = 1; }   // (a saved scene keeps the old, stronger alpha otherwise)
+        PixelHuskPool.HuskReleasing += OnHuskReleasing;
+    }
+
+    // (PixelHuskPool: the husk is going away and may be reused - let go of it: its circle, its glow and its bonus marks)
+    private void OnHuskReleasing(Rigidbody body)
+    {
+        if (saps.TryGetValue(body, out Sap sap)) { if (sap.circle != null) Destroy(sap.circle); saps.Remove(body); }
+        if (glows.TryGetValue(body, out GameObject glow)) { if (glow != null) Destroy(glow); glows.Remove(body); }
+        boosted.Remove(body);
+        insideNow.Remove(body);
+        foreach (Sap s in saps.Values) s.counted.Remove(body);
     }
 
     private void OnDestroy()
     {
+        PixelHuskPool.HuskReleasing -= OnHuskReleasing;
         foreach (Sap s in saps.Values) if (s.circle != null) Destroy(s.circle);
         foreach (GameObject g in glows.Values) if (g != null) Destroy(g);
         if (circleMaterial != null) Destroy(circleMaterial);

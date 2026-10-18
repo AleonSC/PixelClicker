@@ -190,8 +190,17 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         return true;
     }
 
+    private void Awake() => PixelHuskPool.HuskReleasing += OnHuskReleasing;
+
+    // (PixelHuskPool: the husk is going away and may be reused - let go of it; the Slide coroutine sees it and stops)
+    private void OnHuskReleasing(Rigidbody body)
+    {
+        if (body == sliding) sliding = null;
+    }
+
     private void OnDestroy()
     {
+        PixelHuskPool.HuskReleasing -= OnHuskReleasing;
         PixelCouplings.Unregister(this);
         if (recycler != null) PixelCouplings.Vacate(recycler, PixelRecycler.HatchSocket, this);
         if (sliding != null) PixelHuskHolder.Unreserve(sliding, Vector3.zero);   // (a husk half way through the hatch is let fall)
@@ -338,6 +347,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         while (t < 1f)
         {
             if (body == null) { sliding = null; yield break; }
+            if (sliding != body) yield break;   // (it went away mid-slide: PixelHuskPool)
             if (bin == null || bin.Busy || PixelRecycler.Holds(body)) break;   // (the bin went or started working: let it fall where it is)
             t += Time.deltaTime / length;
             float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t));

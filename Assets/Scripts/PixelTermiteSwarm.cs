@@ -282,8 +282,18 @@ public class PixelTermiteSwarm : MonoBehaviour
         }
     }
 
+    private void Awake() => PixelHuskPool.HuskReleasing += OnHuskReleasing;
+
+    // (PixelHuskPool: the husk is going away and may be reused - let go of it: the termites on it give up)
+    private void OnHuskReleasing(Rigidbody body)
+    {
+        foreach (Target tg in targets)
+            if (tg.rb == body) { if (!tg.done) EndTarget(tg); tg.rb = null; }
+    }
+
     private void OnDestroy()
     {
+        PixelHuskPool.HuskReleasing -= OnHuskReleasing;
         active = Mathf.Max(0, active - termites.Count);
         foreach (Target tg in targets) { if (tg.bar != null) Destroy(tg.bar); if (tg.fillMat != null) Destroy(tg.fillMat); }
         if (bodyMat != null) Destroy(bodyMat);

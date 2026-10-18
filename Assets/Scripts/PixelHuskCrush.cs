@@ -278,10 +278,23 @@ public class PixelHuskCrush : MonoBehaviour
         }
         clicker = GetComponent<PixelClicker>();
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
+        PixelHuskPool.HuskReleasing += OnHuskReleasing;
+    }
+
+    // Chain crushes still waiting to go off (CrushChain), so a husk that goes away meanwhile can be struck off.
+    private readonly List<List<Rigidbody>> runningChains = new List<List<Rigidbody>>();
+
+    // (PixelHuskPool: the husk is going away and may be reused - let go of it: no press on it, and no chain crush later)
+    private void OnHuskReleasing(Rigidbody body)
+    {
+        if (pressTarget == body) CancelCharge();
+        foreach (List<Rigidbody> pending in runningChains)
+            for (int i = 0; i < pending.Count; i++) if (pending[i] == body) pending[i] = null;
     }
 
     private void OnDestroy()
     {
+        PixelHuskPool.HuskReleasing -= OnHuskReleasing;
         if (instance == this) instance = null;
         if (charging) PixelAudio.Stop(BuildupSound);
         if (lineMaterial != null) Destroy(lineMaterial);
@@ -609,13 +622,15 @@ public class PixelHuskCrush : MonoBehaviour
 
     private IEnumerator CrushChain(int tier, List<Rigidbody> bodies)
     {
+        runningChains.Add(bodies);
         float step = Mathf.Max(0f, chainStepSeconds);
         for (int i = 0; i < bodies.Count; i++)
         {
             if (step > 0f) yield return new WaitForSeconds(step);
-            Rigidbody b = bodies[i];
-            if (CanCrush(clicker, b)) CrushOne(b, tier, chainShardCount, 0.92f, "husk.crushed.chain");   // (taken by a machine, picked up or faded meanwhile: skipped)
+            Rigidbody b = bodies[i];   // (null = it went away meanwhile: OnHuskReleasing)
+            if (b != null && CanCrush(clicker, b)) CrushOne(b, tier, chainShardCount, 0.92f, "husk.crushed.chain");   // (taken by a machine, picked up or faded meanwhile: skipped)
         }
+        runningChains.Remove(bodies);
     }
 
     /// <summary>One husk: XP to its skill, Clean Break round it, chunks and a crunch; the husk is gone.</summary>
