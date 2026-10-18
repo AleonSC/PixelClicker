@@ -7,12 +7,12 @@
 # Mouse
 Left-click the cube | Hit the block (collect it)
 Hold left-click on the cube | Power Click (Standard tree): let go at full charge
-Right-click while charging a Power Click | Cancel it, keeping the charge for next time
+Right-click while charging a Power Click | Cancel it (no cooldown)
 Hold right-click on the cube | The block's second action (Block Hold): a stake on pure pixels, the block's own job on skill blocks
 Right-click a hazard block | Clear it safely (some need several clicks)
 Right-click a husk | Crush it for skill XP (more in the air / its last seconds / a streak; never money)
 Hold right-click on a husk | Charge Crush (Standard tree): let go to crush its type inside the ring
-Left-click while charging a Charge Crush | Cancel it, keeping the charge for next time
+Left-click while charging a Charge Crush | Cancel it (no cooldown)
 Tap right-click on a skill's filler | Shuffle it back (starts a shuffle combo)
 Hover a block or husk | Show its tooltip
 Mouse to a screen edge | Slide out the docked buttons

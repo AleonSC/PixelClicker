@@ -39,8 +39,8 @@
 //     ring of the time left and letting go just crushes it like a click. Whose press it is comes from PixelRightClick.PressOwner (a press that
 //     started on a husk stays the husk's while held, so Block Hold never starts from it). A charge is dropped (no cooldown) in a menu, a takeover
 //     minigame, first person or frozen time. Stat husk.chargecrush.
-//     LEFT CLICK while charging (2026-10-18) cancels it and KEEPS the charge (savedCharge): the next charge starts at that level (no cooldown, the
-//     whine is shortened to the rest). While charging the pointer is claimed as a button (PixelPointerClaim.ClaimButton), so that left click never
+//     LEFT CLICK while charging (2026-10-18) cancels it WITHOUT the cooldown: nothing is crushed, the charge is dropped and the next one can start
+//     at once. While charging the pointer is claimed as a button (PixelPointerClaim.ClaimButton), so that left click never
 //     reaches the cube, Pixel Grabbing or Power Click.
 //   - First-time tip 'husk_crush' (PixelHints) once tipAfterClicks manual clicks were made and a crushable husk lies about (not during the intro).
 //   Stats: husk.crushed, husk.crushed.xp (the base XP handed to AddHuskXp, before XP multipliers), husk.crushed.chain (the extra ones Chain Crush
@@ -399,7 +399,6 @@ public class PixelHuskCrush : MonoBehaviour
     private int chargeTier = -1;
     private Vector3 chargeCentre;
     private bool charging, fullDinged;
-    private float savedCharge;   // a charge cancelled with a left click (0..1): the next charge starts from it
 
     private float ChargeTime => Mathf.Max(0.1f, chargeSeconds);
     private float ReachWorld => Mathf.Lerp(Mathf.Max(0f, startReach), Mathf.Max(startReach, maxReach), charge) * clicker.OldPixelWorldSize;
@@ -424,18 +423,16 @@ public class PixelHuskCrush : MonoBehaviour
             if (Time.unscaledTime - pressTime < holdDelay) return;
             if (cooldownLeft > 0f) { ShowCooldownRing(); return; }   // still cooling down: letting go is a click crush
             state = ChargeState.Charging;
-            charge = savedCharge;   // a charge cancelled with a left click carries on from where it stopped
-            savedCharge = 0f;
+            charge = 0f;
             charging = true;
-            fullDinged = charge >= 1f;
-            PixelAudio.Play(BuildupSound, PixelSynth.BuildupSeconds / (ChargeTime * Mathf.Max(0.1f, 1f - charge)));   // the rising whine, stretched to last the rest of the charge
+            fullDinged = false;
+            PixelAudio.Play(BuildupSound, PixelSynth.BuildupSeconds / ChargeTime);   // the rising whine, stretched to last the whole charge
         }
 
         PixelPointerClaim.ClaimButton();   // while charging, the left button is the cancel: the cube and Pixel Grabbing leave that click alone
         if (PixelInput.LeftPressed())
         {
-            // LEFT CLICK = cancel, keeping the charge: the next charge starts at this level (no cooldown).
-            savedCharge = charge;
+            // LEFT CLICK = cancel without the cooldown: nothing is crushed and a new charge can start straight away.
             CancelCharge();
             PixelAudio.Play("ui_click", 0.8f);
             return;

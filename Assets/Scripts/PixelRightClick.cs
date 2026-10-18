@@ -3,7 +3,7 @@
 //   ONE place that decides who a RIGHT click in the world belongs to (added with Husk Crush, 2026-10-17). Each user asks PixelRightClick.Current
 //   (worked out once per frame) instead of stacking its own checks. In order of priority:
 //   1. Blocked: a menu, the pointer over UI.
-//   1b. Charge: a Power Click is charging (PixelPowerClick.Charging) - a right press cancels it and keeps the charge; nothing else gets it.
+//   1b. Charge: a Power Click is charging (PixelPowerClick.Charging) - a right press cancels it (no cooldown); nothing else gets it.
 //   2. Tool: the Bank hose is out, a device is being placed, the Conveyor Belt Kit / a tester piece is placing - they keep the right button.
 //   3. Pet: a pet is under the pointer (or held / its menu is open) - right-click opens its menu (PixelPetsMenu).
 //   4. WorldPart: anything else holding the mouse (PixelClicker.ExternalClickBlock: a device part that claimed the pointer, the UFO Helper,
@@ -60,7 +60,7 @@ public static class PixelRightClick
     private static Owner Decide(PixelClicker clicker)
     {
         if (clicker == null || PixelCalm.InMenu || PixelInput.PointerOverUI()) return Owner.Blocked;
-        if (PixelPowerClick.Charging) return Owner.Charge;   // a power click is charging: the right button cancels it (keeping the charge)
+        if (PixelPowerClick.Charging) return Owner.Charge;   // a power click is charging: the right button cancels it (no cooldown)
         PixelConsumables consumables = PixelFind.Cached<PixelConsumables>();
         if (PixelBank.HoseOn || PixelFeatureTester.Placing || (consumables != null && consumables.IsPlacing)) return Owner.Tool;
         if (PixelPets.HoveringPet) return Owner.Pet;

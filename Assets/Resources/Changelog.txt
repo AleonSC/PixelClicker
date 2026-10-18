@@ -1362,3 +1362,4 @@
 [2026-10-18 11:49 UTC] Button roles (UI unification step 3, core): new PixelUITheme component with one colour per button role (Neutral, Primary, Selected, Success, Danger) and whether it follows the custom button colour; window X / header buttons are Neutral; the Inventory swatches, the Log's progress bars and visitor ware rows no longer get tinted by the custom button colour.
 [2026-10-18 11:51 UTC] Docs: button roles explained in docs/systems/PixelUIKit.md (which role to use, SetRole for tabs and toggles, StyleButtonLook for non-buttons).
 [2026-10-18 11:55 UTC] Button roles: SetRole is now a quick lookup (and does nothing when the button already has that role), so windows can call it on every refresh.
+[2026-10-18 11:57 UTC] Charge cancels changed: a left click on a charging Charge Crush or a right click on a charging Power Click now just cancels it without using the cooldown (the charge is no longer kept for the next one).
