@@ -452,7 +452,14 @@ the pixel rules (the husk is the material, currency is the value already taken o
   (others bounce off - no wasting materials by accident), shows progress ("Red potion: Glass 3/5, Red 1/3"), and stored husks don't fade.
 - **Craft:** click Craft when it has enough; later an **Auto-craft** toggle (an upgrade) lets a belt-fed bench keep crafting by itself.
 - **Feeding:** by hand (grab and drop), by belt / hose through its couplings, from the Sorting Hopper or the Junction Box (a filtered
-  Junction output per colour suits it exactly). Later the Pixel Bank's stored husks can count as a second source.
+  Junction output per colour suits it exactly).
+- **The Pixel Bank becomes the material warehouse (late game, agreed 2026-10-18):** with the Bank owned, the bench gets a 'Use Bank
+  husks' toggle (on by default) - crafting takes from the bench's own stock first, then from the Bank; progress shows both ('Glass 3/5
+  (+40 in Bank)'). Early = feed the bench by hand / belt; late = stash husks in the Bank (hose, UFO Helper) and craft from it. The Bank
+  stays storage, never a cash-in; its storage upgrades are worth more.
+- **The HUD Crafting button becomes the Recipe Book:** browse every recipe and its husk costs without a bench; 'Set on Workbench' sends a
+  recipe to the bench; with no bench placed it offers 'Place Workbench'; a badge / glow when the bench (+ Bank) can craft; maybe a
+  'Recipes 4/12' collection count. Crafting itself happens at the bench (its card's Craft button).
 - **Recipes shrink to husk amounts** (one click = one husk): e.g. 5 Glass + 3 Red husks -> Red potion; combo potions take the extra
   pixel as a husk. The crafting window / recipe book stay; they read the bench's stock instead of currency.
 
