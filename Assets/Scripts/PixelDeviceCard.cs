@@ -160,6 +160,7 @@ public class PixelDeviceCard : MonoBehaviour
     private void RefreshPanel()
     {
         nextPanelRefresh = Time.unscaledTime + refreshSeconds;
+        if (panel.Chrome != null && panel.Chrome.Minimized) return;   // (minimized: only the header shows; the rows are laid out again when it opens up)
         info.Clear();
         info.Full = true;
         panelDevice.BuildInfo(info);
@@ -286,7 +287,11 @@ public class PixelDeviceCard : MonoBehaviour
         TMP_FontAsset font = clicker.UIFont;
         panel = PixelUIKit.CreateWindow(font, canvasGo.transform, "Device Panel", "Device", new Vector2(panelWidth, 300f), PixelUIKit.WindowKind.Tool,
                                         ClosePanel, "PixelClicker.Window.DevicePanel");
-        if (panel.Chrome != null) panel.Chrome.defaultPlacer = cs => new Vector2(cs.x * 0.62f, -cs.y * 0.22f);
+        if (panel.Chrome != null)
+        {
+            panel.Chrome.defaultPlacer = cs => new Vector2(cs.x * 0.62f, -cs.y * 0.22f);
+            panel.Chrome.StateChanged += () => nextPanelRefresh = 0f;   // (opened up again: re-lay the rows at once)
+        }
         panelLines = Text(panel.Root.transform, "Lines", titleSize * 0.8f, PixelUITheme.TextColor);
         panelBar = MakeBar(panel.Root.transform);
         panelHintText = Text(panel.Root.transform, "Hint", titleSize * 0.62f, PixelUITheme.DimTextColor);
