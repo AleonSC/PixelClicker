@@ -1427,3 +1427,4 @@
 [2026-10-18 17:10 UTC] Design + to-do: crafting uses husks, not currency - a single placeable Workbench that keeps its stock when moved, takes only the husks of the chosen recipe and crafts from them (currency buys access, husks build things).
 [2026-10-18 17:12 UTC] Code cleanup: removed leftover code - the retired Wood opt-in switch, the old offline-training checks, code kept only for old save files, an unused pause-menu changelog screen and other unused bits (no change in how the game plays).
 [2026-10-18 17:14 UTC] The Recycler has four coupling holes on its front (In sockets for belts and hoses), and the Junction Box now holds 40 husks, sucks harder from higher and wider, and takes any husk resting on its lid so nothing piles up on top.
+[2026-10-18 17:14 UTC] Design + to-do: the Workbench can draw husks from the Pixel Bank late game ('Use Bank husks'), and the HUD Crafting button becomes a Recipe Book that sends recipes to the bench or offers to place one.
