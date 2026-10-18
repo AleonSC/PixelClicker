@@ -56,6 +56,8 @@ public class PixelInfinity : MonoBehaviour
 
     private void Awake()
     {
+        PixelDialogue.File.Apply("Visitor: wizard", "gauntlet aside", ref wizardAside);   // (the user's text: Assets/Resources/Dialogue.txt)
+        PixelDialogue.File.Flush();
         instance = this;
         PixelWindows.Register(this, 80, () => canvasRoot != null, Close);
     }

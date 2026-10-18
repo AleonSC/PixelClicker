@@ -111,9 +111,10 @@ public class PixelDevEvents : MonoBehaviour
         PixelDevUI.Button(root, "Reload pixel texts", 348f, y, 342f, RowH, PixelDevUI.ButtonColor, () =>
         {
             PixelTextOverrides.Reload();
+            PixelDialogue.File.Reload();
             PixelClicker c = PixelFind.Cached<PixelClicker>();
             if (c != null) c.ReapplyTextOverrides();
-            SetStatus("Read Assets/Resources/PixelTexts.txt again: names, guide and husk texts updated.");
+            SetStatus("Read PixelTexts.txt and Dialogue.txt again: pixel names / guide / husk texts update now; dialogue set at start (tips, Cubie, visitors) needs a new play.");
         });
         y += RowH + 18f;
 

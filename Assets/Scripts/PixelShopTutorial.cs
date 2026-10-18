@@ -86,6 +86,9 @@ public class PixelShopTutorial : MonoBehaviour
             BeginRun();
         });
         instance = this;
+        if (steps == null || steps.Count == 0) steps = DefaultSteps();
+        PixelDialogue.Steps("Tutorial: Shop", steps, st => st.text, (st, t) => st.text = t);   // (the user's texts: Assets/Resources/Dialogue.txt)
+        PixelDialogue.File.Flush();
         shop = GetComponent<PixelShop>();
         if (shop == null) shop = PixelFind.First<PixelShop>();
     }

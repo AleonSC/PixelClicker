@@ -334,7 +334,26 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         if (consumables == null) consumables = PixelFind.First<PixelConsumables>();
         if (startRunning) running = true;
         spawnTimer = firstVisitDelay + StartDelayOffset;
+        // The user's own lines (Assets/Resources/Dialogue.txt, PixelDialogue) win; an empty built-in field keeps meaning 'this visitor's own text'.
+        PixelTextFile f = PixelDialogue.File;
+        string section = "Visitor: " + Id;
+        f.ApplyOr(section, "name", ref visitorName, Pick(visitorName, DefaultName));
+        f.ApplyOr(section, "greeting", ref greeting, Pick(greeting, DefaultGreeting));
+        f.ApplyOr(section, "wares title", ref waresTitle, Pick(waresTitle, DefaultWaresTitle));
+        f.Apply(section, "accept button", ref acceptText);
+        f.Apply(section, "reject button", ref rejectText);
+        f.Apply(section, "done button", ref doneText);
+        f.Apply(section, "buy button", ref buyText);
+        f.Apply(section, "full label", ref fullText);
+        f.ApplyOr(section, "arrival log", ref arrivedLog, Pick(arrivedLog, DefaultArrivedLog));
+        f.Apply(section, "peek bubble", ref peekText);
+        f.Apply(section, "missed log", ref missedLog);
+        ApplyDialogue(f, section);
+        f.Flush();
     }
+
+    /// <summary>A visitor's extra lines (farewells, asides) from Dialogue.txt: override and call f.Apply(section, ...).</summary>
+    protected virtual void ApplyDialogue(PixelTextFile f, string section) { }
 
     protected override void OnDestroy()
     {

@@ -71,6 +71,12 @@ public class PixelEggMinigame : PixelVisitorMinigame
 
     protected override void ModifyWares(List<int> wares) { AsideText = FirstVisitNow ? farewellText : giftFarewellText; }
 
+    protected override void ApplyDialogue(PixelTextFile f, string section)
+    {
+        f.Apply(section, "farewell", ref farewellText);
+        f.Apply(section, "gift farewell", ref giftFarewellText);
+    }
+
     protected override void OnGift()
     {
         if (!FirstVisitNow) { GivePixelGift("Egg", giftTypes, giftClicksMin, giftClicksMax); return; }

@@ -458,6 +458,15 @@ public class PixelGuideVendor : MonoBehaviour
         if (characterName == "Cubby") characterName = "Cubie"; // a scene saved before the rename
         if (cubieDataVersion < 1) { if (visitOneAfterWhiteClicks == 50) visitOneAfterWhiteClicks = 100; cubieDataVersion = 1; }   // (2026-10-16: Cubie comes after 100 White clicks)
         if (cubieDataVersion < 2) { visitTwoPages = DefaultTwo; cubieDataVersion = 2; }   // (2026-10-16: visit 2 now unlocks RGB - the saved shop-intro lines are replaced)
+        // The user's own lines (Assets/Resources/Dialogue.txt, PixelDialogue) win over the Inspector / built-in ones.
+        PixelTextFile f = PixelDialogue.File;
+        f.Apply("Cubie", "name", ref characterName);
+        f.Apply("Cubie", "next button", ref nextText);
+        f.Apply("Cubie", "last button", ref lastText);
+        f.Apply("Cubie", "recycler gift", ref recyclerGiftText);
+        visitOnePages = f.ApplyList("Cubie", "visit 1 page", visitOnePages);
+        visitTwoPages = f.ApplyList("Cubie", "visit 2 page", visitTwoPages);
+        f.Flush();
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (shop == null) shop = PixelFind.First<PixelShop>();
     }

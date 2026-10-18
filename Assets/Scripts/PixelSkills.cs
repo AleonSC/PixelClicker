@@ -240,9 +240,29 @@ public partial class PixelSkills : MonoBehaviour
     {
         Instance = this;
         EnsureDefaults();
+        ApplyDialogueFile();
         // Perk popups and the skills tutorial take their turn in the one tip queue (PixelTipQueue).
         PixelTipQueue.Register(this, PixelTipQueue.Priority.PerkPopup, "Perk popups", () => perkNotices.Count > 0 && PixelHints.TipsEnabled && PixelCalm.ForTip, ShowNextPerkNotice);
         PixelTipQueue.Register(this, PixelTipQueue.Priority.Tutorial, "Skills tutorial", () => tutorialWanted && !tutorialRunning, () => { tutorialWanted = false; StartTutorial(); });
+    }
+
+    /// <summary>The user's own texts from Assets/Resources/Dialogue.txt (PixelDialogue): perk popups, the skills tutorial and the Woodcutting guide.</summary>
+    private void ApplyDialogueFile()
+    {
+        PixelTextFile f = PixelDialogue.File;
+        foreach (SkillPack p in packs)
+        {
+            if (p == null || p.perks == null) continue;
+            foreach (Perk perk in p.perks)
+                if (perk != null && !string.IsNullOrEmpty(perk.noticeText)) f.Apply("Perk popup: " + p.id + " level " + perk.level, "text", ref perk.noticeText);
+        }
+        if (tutorialSteps == null || tutorialSteps.Count == 0) tutorialSteps = DefaultTutorialSteps();
+        PixelDialogue.Steps("Tutorial: Skills", tutorialSteps, st => st.text, (st, t) => st.text = t);
+        if (woodGuideSteps == null || woodGuideSteps.Count == 0) woodGuideSteps = DefaultWoodGuide();
+        f.Apply("Guide: Woodcutting", "question", ref woodGuideQuestion);
+        f.Apply("Guide: Woodcutting", "later", ref woodGuideLaterText);
+        f.ApplyList("Guide: Woodcutting", "step", woodGuideSteps);
+        f.Flush();
     }
 
     private void OnDestroy()

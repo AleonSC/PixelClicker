@@ -69,6 +69,9 @@ public class PixelTogglesTutorial : MonoBehaviour
     private void Awake()
     {
         instance = this;
+        if (steps == null || steps.Count == 0) steps = DefaultSteps();
+        PixelDialogue.Steps("Tutorial: Toggles", steps, st => st.text, (st, t) => st.text = t);   // (the user's texts: Assets/Resources/Dialogue.txt)
+        PixelDialogue.File.Flush();
         PixelTipQueue.Register(this, PixelTipQueue.Priority.Tutorial, "Toggles tutorial", () => wanted && !running, () => { wanted = false; StartRun(); });
     }
 

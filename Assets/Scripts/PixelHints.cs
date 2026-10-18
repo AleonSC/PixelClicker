@@ -365,8 +365,26 @@ public class PixelHints : MonoBehaviour, IPixelSaved
         PixelSaveRegistry.Register(this);
         instance = this;
         EnsureDefaultHints();
+        ApplyDialogueFile();
         // The first-time tips take their turn in the one tip queue (PixelTipQueue): this queue still decides WHICH tip and how it looks.
         PixelTipQueue.Register(this, PixelTipQueue.Priority.FirstTimeTip, "First-time tips", () => queue.Count > 0 && waitTimer <= 0f, ShowNextTip);
+    }
+
+    /// <summary>The user's own texts from Assets/Resources/Dialogue.txt (PixelDialogue) win over the Inspector / built-in tip texts.</summary>
+    private void ApplyDialogueFile()
+    {
+        PixelTextFile f = PixelDialogue.File;
+        foreach (Hint h in hints)
+        {
+            if (h == null || string.IsNullOrEmpty(h.id)) continue;
+            f.Apply("Tip: " + h.id, "text", ref h.text);
+            f.Apply("Tip: " + h.id, "overlay line", ref h.shortText);
+        }
+        f.Apply("Intro tips", "log", ref introLogMessage);
+        f.Apply("Intro tips", "inventory", ref introInventoryText);
+        f.Apply("Intro tips", "earn", ref introEarnText);
+        f.Apply("Intro tips", "right click", ref introRightClickText);
+        f.Flush();
     }
 
     private void OnEnable()

@@ -285,6 +285,8 @@ public class PixelBlackholeMinigame : PixelMinigame
 
     protected override void Awake()
     {
+        PixelDialogue.File.Apply("Minigame: Black Hole", "first hole", ref firstHoleMessage);   // (the user's text: Assets/Resources/Dialogue.txt)
+        PixelDialogue.File.Flush();
         base.Awake();
         if (clicker == null)
         {
@@ -700,7 +702,7 @@ public class PixelBlackholeMinigame : PixelMinigame
         }
         catch (System.Exception) { /* no PlayerPrefs: just show it */ }
 
-        string hintMessage = string.Format(firstHoleMessage, PixelClicker.FormatNumber(singularityThreshold));
+        string hintMessage = string.Format(PixelDialogue.File.Text("Minigame: Black Hole", "first hole", firstHoleMessage), PixelClicker.FormatNumber(singularityThreshold));
         PixelNotice.Show(hintMessage, small: true);
         PixelHints.Announce("A black hole opened!", hintMessage);
     }

@@ -47,6 +47,11 @@ public class PixelFarmerMinigame : PixelVisitorMinigame
             if (consumables.IsDragonSeed(i)) { wares.Insert(0, i); AsideText = dragonAsideText; return; } // first in the list, with a second line of dialogue
     }
 
+    protected override void ApplyDialogue(PixelTextFile f, string section)
+    {
+        f.Apply(section, "dragon aside", ref dragonAsideText);
+    }
+
     protected override bool Highlighted(int item) => consumables != null && consumables.IsDragonSeed(item);
     protected override int StockMin => commonStock.x;
     protected override int StockMax => Mathf.Max(commonStock.y, 1);
