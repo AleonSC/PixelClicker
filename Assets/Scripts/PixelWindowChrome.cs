@@ -236,6 +236,21 @@ public class PixelWindowChrome : MonoBehaviour
         if (save) { PixelPrefs.SetInt(prefKey + ".Min", minimized ? 1 : 0); Save(); }
     }
 
+    /// <summary>
+    /// While minimized, anything that switched on since (the owner builds its content AFTER CreateWindow, so a window saved minimized
+    /// was folded up before its body existed) is folded away too. Kept items (Keep) are left alone.
+    /// </summary>
+    private void FoldLateContent()
+    {
+        foreach (Transform child in window)
+        {
+            GameObject g = child.gameObject;
+            if (!g.activeSelf || keep.Contains(g) || hidden.Contains(g)) continue;
+            g.SetActive(false);
+            hidden.Add(g);
+        }
+    }
+
     private void TryDock()
     {
         if (dockSide != 0 || canvasRect == null) return;
@@ -305,6 +320,7 @@ public class PixelWindowChrome : MonoBehaviour
 
     private void Update()
     {
+        if (minimized) FoldLateContent();
         if (canvasRect == null) return;
         Vector2 cs = canvasRect.rect.size;
         if (cs.x < 100f || cs.y < 100f) return;

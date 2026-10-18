@@ -12,7 +12,7 @@
 //   from the top-left corner, right slots just left of the X); anything else (an info badge, an icon) with parts.PlaceInHeaderSlot(rect, left).
 //   The title's room grows with them (FitTitle), so a title never runs under a header item. headerHeight override (only when the header must hold more) and styled: false
 //   (a plain background, the Collection Log's book) are the two allowed exceptions.
-//   Every window gets StyleWindow, a PixelPop (open / close animation) and its X wired to the given onClose. The owner still
+//   Every window gets StyleWindow, a PixelPop (open / close animation; pop: false for windows rebuilt / re-shown often or that scale themselves) and its X wired to the given onClose. The owner still
 //   registers with PixelWindows (Escape) and builds its own content below HeaderHeight. Dialogs that close with their own
 //   Done / Continue / Next button pass closeButton: false (no X).
 //   Windows moved onto it so far: View (PixelViewWindow).
@@ -114,14 +114,17 @@ public static partial class PixelUIKit
     /// </summary>
     /// <param name="headerHeight">0 = the standard; only for a window whose header must hold more (a search box, two rows) - say why at the call.</param>
     /// <param name="styled">false = keep a plain background in 'background' instead of StyleWindow (the Collection Log's leather book).</param>
+    /// <param name="pop">false = no PixelPop (no grow-in / open sound): a window that is rebuilt or re-shown often (the UFO's pages, Next up after the title
+    /// screen) or that scales itself (the Dev Hub's resize grip, which PixelPop would keep undoing).</param>
     public static PixelWindowParts CreateWindow(TMP_FontAsset font, Transform parent, string objectName, string title, Vector2 size, Color background,
                                                 WindowKind kind, System.Action onClose, string prefKey = null, bool closeButton = true,
-                                                float headerHeight = 0f, bool styled = true)
+                                                float headerHeight = 0f, bool styled = true, bool pop = true)
     {
         bool tool = kind == WindowKind.Tool;
         PixelWindowParts w = new PixelWindowParts { HeaderHeight = headerHeight > 0f ? headerHeight : tool ? ToolHeaderHeight : WindowHeaderHeight, Font = font, Tool = tool };
 
-        w.Root = new GameObject(objectName, typeof(RectTransform), typeof(Image), typeof(PixelPop));
+        w.Root = new GameObject(objectName, typeof(RectTransform), typeof(Image));
+        if (pop) w.Root.AddComponent<PixelPop>();
         w.Root.transform.SetParent(parent, false);
         if (styled) StyleWindow(w.Root.GetComponent<Image>(), background);
         else w.Root.GetComponent<Image>().color = background;

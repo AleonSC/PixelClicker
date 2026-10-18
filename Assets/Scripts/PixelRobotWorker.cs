@@ -1009,7 +1009,8 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
         PixelWindows.CloseAllExcept(this);
         windowPage = 0;
         BuildWindow();
-        windowRoot.SetActive(true);   // (the window's PixelPop grows it in and plays the open sound)
+        windowRoot.SetActive(true);
+        PixelAudio.Play("menu_open");   // (no PixelPop on this window: it is rebuilt on every page switch)
     }
 
     private void CloseWindow()
@@ -1059,7 +1060,8 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
 
         // The standard Fixed window (PixelUIKit.CreateWindow): title 48 in capitals, grey X 70.
         PixelWindowParts parts = PixelUIKit.CreateWindow(font, windowRoot.transform, "Panel", ufoTitle, new Vector2(width, height),
-                                                         new Color(0.09f, 0.1f, 0.14f, 0.97f), PixelUIKit.WindowKind.Fixed, CloseWindow);
+                                                         new Color(0.09f, 0.1f, 0.14f, 0.97f), PixelUIKit.WindowKind.Fixed, CloseWindow,
+                                                         pop: false);   // (rebuilt on every page switch: it must not grow in again each time)
         GameObject panel = parts.Root;
         windowPanel = parts.Rect;
         float headerH = parts.HeaderHeight + 88f;   // the window header + the question under it

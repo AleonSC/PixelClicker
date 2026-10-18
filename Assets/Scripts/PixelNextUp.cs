@@ -249,7 +249,8 @@ public class PixelNextUp : MonoBehaviour
         // A standard Tool window (PixelUIKit.CreateWindow): drag by the header, minimize with '-', dock against a screen side; no X (it is switched off in Settings).
         // The prefKey is the one it always had, so its saved place carries over.
         PixelWindowParts parts = PixelUIKit.CreateWindow(font, canvasRoot.transform, "Window", "Next up", new Vector2(Width, HeaderH + Spacing * SlotCount + 8f),
-                                                         windowColor, PixelUIKit.WindowKind.Tool, null, "PixelClicker.NextUp.Window", closeButton: false);
+                                                         windowColor, PixelUIKit.WindowKind.Tool, null, "PixelClicker.NextUp.Window", closeButton: false,
+                                                         pop: false);   // (it just shows with its canvas, e.g. after the title screen - no grow-in / sound each time)
         panel = parts.Root;
         RectTransform pr = parts.Rect;
         chrome = parts.Chrome;
@@ -280,8 +281,6 @@ public class PixelNextUp : MonoBehaviour
         }
 
         chrome.defaultPlacer = cs => new Vector2(position.x, -(cs.y - pr.sizeDelta.y) * 0.5f - position.y);
-        // (A window saved minimized was folded up before its body existed: fold it again so the body hides too.)
-        if (chrome.Minimized) { chrome.SetMinimized(false, false); chrome.SetMinimized(true, false); }
         built = true;
     }
 }

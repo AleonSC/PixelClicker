@@ -50,3 +50,28 @@ Built by `PixelUIKit.CreateWindow` (`PixelUIKitWindows.cs`); the numbers are con
 
 ## Progress (one window per commit)
 - [x] View - Tool window: title 30 (was 32), grey X 44 (was red 46), NEW: minimize, dock to a screen edge, position remembered between sessions (it used to reset).
+- [x] Inventory - X / pin buttons to the standard spots (2-6 px), Inspector header fields removed (it always has its header now). Pinned (compact) mode unchanged.
+- [x] Log - X 70 moved 6 px right / 2 down, book button to the left slot (14,-12).
+- [x] Collection Log - keeps the leather (styled: false); red 56 X -> grey 70; pages start below a 90 leather strip, so the default book is 52 taller (812).
+- [x] Shop - title 56 -> 48, X 80 -> 70 grey, ? 80 -> 70 in the right slot, header 100 -> 90 (tabs / list / currency panel up 10). Upgrades window: title 48, X / Back 70, now grows in.
+- [x] Toggles - title 44 -> 48, X 64 -> 70, header 100 -> 90 (content up 10).
+- [x] Pixel Guide - title 44 -> 48, X / ! 64 -> 70, header 100 -> 90 (list up 10).
+- [x] Skills - title 56 -> 48; pin / ? in the standard slots (? 2 px).
+- [x] Skill Tree - title 52 -> 48; points + nodes 10 higher.
+- [x] Crafting - X / book 6 px right-ish, title ~9 higher; Recipe Book panel X 60 -> standard 70.
+- [x] Bank - title 44 -> 48, X / hose 64 -> 70, list 12 lower / shorter; NOW grows in / shrinks out like its neighbours.
+- [x] Game Database - title 52 -> 48 (~4 higher), content unchanged.
+- [x] UFO helper - red 56 X -> grey 70, title 44 -> 48, content 8 lower (no grow-in: rebuilt per page).
+- [x] Outfit Studio, Pet Customize, Pet found - dialog titles 48 centred capitals (were 46 left / 52 / 64 no caps), keep their yellow colour; now grow in when shown (pet found: also the open sound).
+- [x] Visitor greeting / aside / wares, Cubie's speech - titles 48 (were 54 / 50 / 56) keep their own colours; wares title no longer wraps, its list 6 lower.
+- [x] Offline summary - "Welcome back!" moved into a standard header (48), the lines below ~30 higher; now grows in.
+- [x] Next up - Tool window: title 30 centred (was 22 left), header 36 -> 56 (taller), width 200 -> 260, grey 44 minimize / undock, still no X, place kept.
+- [x] Dev Hub - Tool window: title centred, red 40 X -> grey 44, search box moved to the left of the header (250 wide), no grow-in (it scales itself), place / scale kept.
+- [x] Pocket - Tool window: its own drag / minimize / dock copy removed (chrome), title centred, X 44 in the corner, '-' text button instead of the bar icon, Info a square 44 button, place / minimized / docked state kept.
+- Not on the builder (widgets, by choice): the skill tracker, the pinned Inventory.
+
+## Known gaps (builder)
+- The chrome's undock arrow uses the first right slot: a Tool window with an extra right header button must shift it while docked (Pocket does, LayoutHeaderButtons).
+- No 'minimized / docked changed' event on the chrome (Pocket polls it).
+- Title colour is set after CreateWindow where a window keeps its own (pets yellow, visitors / Cubie their colour).
+- No compile-check guard yet against hand-built window headers (StyleWindow is also used for tooltips / tip boxes, so it needs a better signal).

@@ -223,10 +223,8 @@ public class PixelDevHub : MonoBehaviour
         // ---- the main window ----
         // A standard Tool window (PixelUIKit.CreateWindow): centred title, grey X, drag by the header, minimize, dock to a screen edge, place saved under its old key.
         PixelWindowParts parts = PixelUIKit.CreateWindow(font, canvasRoot.transform, "Hub Window", "Dev Hub", new Vector2(ContentW + Pad * 2f, HeaderH + TabStripH + ContentH + Pad),
-                                                         PanelColor, PixelUIKit.WindowKind.Tool, () => SetOpen(false), P + "Window");
-        // The hub has no open / close animation (it opens with its canvas) and its resize grip SCALES it: PixelPop would keep putting the scale back to its own.
-        DestroyImmediate(parts.Root.GetComponent<PixelPop>());
-        parts.Rect.localScale = Vector3.one;
+                                                         PanelColor, PixelUIKit.WindowKind.Tool, () => SetOpen(false), P + "Window",
+                                                         pop: false);   // (it opens with its canvas, and its resize grip SCALES it: PixelPop would keep undoing that)
         parts.Root.AddComponent<PixelBringToFront>();
         windowRect = parts.Rect;
         chrome = parts.Chrome;
@@ -270,8 +268,6 @@ public class PixelDevHub : MonoBehaviour
         chrome.EnableResize();   // the grip in the bottom-right corner scales the whole hub
         BuildSearch();
         chrome.Keep(searchField.gameObject);
-        // (A hub saved minimized was folded up before its tabs existed: fold it again so they hide too.)
-        if (chrome.Minimized) { chrome.SetMinimized(false, false); chrome.SetMinimized(true, false); }
         gameObject.AddComponent<PixelDevTextEdit>().Setup(canvasRoot.transform, font);   // right click any label to set your own text
 
         // Tabs that were floating when the game last closed come back where they were.
