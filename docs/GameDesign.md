@@ -180,6 +180,35 @@ Minutes 15-60, roughly: level the first skill until its filler thins out, spend 
 click), get the first husk machine (the to-do's Standard-XP deposit box), the skill's vendor visits (Big Tim), maybe one forgiving
 minigame (the to-do's Early Cube Dash).
 
+### Early game feel: click, pile, crush (Agreed 2026-10-18, not built)
+The developer's playtests: clicks and husks felt like they COMPETE - husks fade in ~15 s so they demand attention at the same moment as
+the cube, and the early goals ('click N', 'earn 300 White') all say "click", so crushing feels off-task. The fix is a RHYTHM: click a
+bunch, build a pile, then get told to crush it.
+
+1. **Husks wait for you:** base husk lifetime ~35 s early (`PixelClicker.oldPixelLifetime`, was 15 s; Standard's Lingering perk still adds
+   on top). **The floor limit rises with it** (~120, was 50) - at ~3.5 blocks a second 50 husks fill the floor in ~14 s and the oldest are
+   culled, so a longer lifetime alone does nothing. Resting husks sleep / settle so a big pile stays cheap (see the husk heaps prompt);
+   re-check performance with ~120 husks.
+2. **Goals alternate clicking and husks** (the Log's Goals tab): click goals keep the unlock path; husk goals appear at the moment they make
+   sense and pay a small reward of their own (a chunk of Standard XP, or a little currency from the goal - never from the husk itself):
+
+| ~When | Goal | Teaches |
+|---|---|---|
+| start | Click 50 times | the core |
+| when ~20 husks lie on the floor | Crush 10 husks | crushing exists and counts |
+| ~1:30 | Earn 300 White (unlock Gray) | the unlock path |
+| right after Cubie's Recycler | Recycle 20 husks | the money route |
+| ~3:00 | Get a crush streak of 5 | bursts and streaks |
+| ... | the click / unlock path continues | |
+
+3. **The skill reveal: a mystery bar from minute 1, revealed at Standard 2 (~5 min).** Standard's XP bar shows from the first click but
+   labelled "???" (hover: "Something is growing..."), XP popups read "+1 ???", and crushing visibly fills it faster. At level 2 it flips
+   to "Standard" with a short fanfare and the first-move choice - the existing level-2 popup ("Surprise: you have been training a skill
+   all along") becomes the payoff of a 5-minute mystery instead of coming out of nowhere. No new system: the existing bar, hidden label.
+
+Test: while crushing, do you feel "I should be clicking"? While clicking, "I'm wasting husks"? If not - it reads as "click for a bit,
+then clear the pile" - it works.
+
 ### Standard - the ability skill (Agreed 2026-10-17, numbers to tune)
 Standard is the skill that levels the LONGEST: it trains all the time (1 flat XP per block, whatever skill is trained), just at its
 own pace. **Two tracks with different jobs:** Standard gives ABILITIES (new ways to click) and GENERAL husk tools; the gathering skills
