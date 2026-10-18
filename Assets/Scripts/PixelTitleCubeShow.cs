@@ -1,6 +1,6 @@
 // ---- System notes ----
 // PixelTitleCubeShow.cs
-//   Part of partial class PixelTitleScreen: while the main menu shows, the cube behind it changes to a random pixel type every cubeShowSeconds (1 s) -
+//   Part of partial class PixelTitleScreen: while the main menu shows, the cube behind it changes to a random pixel type on every beat of cubeShowBpm (90 bpm = every 0.67 s) -
 //   every type in the game (locked ones too; retired ores left out) - through PixelClicker.ShowLookPreview (look only: the game does not change). When
 //   Play is pressed (after a Continue has loaded the save) the menu cube POPS OFF like a husk - a snapshot of its mesh / materials thrown out sideways
 //   and up that spins and shrinks away within huskPopSeconds (0.6 s), on unscaled time, no physics, never a real husk - and the player's own block
@@ -15,8 +15,8 @@ public partial class PixelTitleScreen
     [Header("Menu cube show")]
     [Tooltip("While the main menu shows, the cube changes to a random pixel type (any in the game) every few seconds; on Play it pops off like a husk and your own block appears.")]
     [SerializeField] private bool cubeShow = true;
-    [Tooltip("Seconds between the menu cube's changes.")]
-    [SerializeField] private float cubeShowSeconds = 1f;
+    [Tooltip("Pace of the menu cube's changes in beats per minute: one change per beat (90 = every 0.67 s).")]
+    [SerializeField] private float cubeShowBpm = 90f;
     [Tooltip("Seconds the menu cube's husk takes to fly off and vanish when Play is pressed.")]
     [SerializeField] private float huskPopSeconds = 0.6f;
 
@@ -24,7 +24,7 @@ public partial class PixelTitleScreen
     private int cubeShowTier = -1;
     private readonly List<int> cubeShowPool = new List<int>();
 
-    /// <summary>Called from Update while the screen shows: the next random type every cubeShowSeconds.</summary>
+    /// <summary>Called from Update while the screen shows: the next random type on every beat (cubeShowBpm).</summary>
     private void UpdateCubeShow()
     {
         if (!cubeShow || playing) return;
@@ -32,7 +32,10 @@ public partial class PixelTitleScreen
         if (clicker == null) return;
         cubeShowTimer -= Time.unscaledDeltaTime;
         if (cubeShowTimer > 0f) return;
-        cubeShowTimer = Mathf.Max(0.2f, cubeShowSeconds);
+        // Add the beat instead of setting it, so the changes keep a steady tempo; after a long hitch it starts a fresh beat.
+        float beat = 60f / Mathf.Clamp(cubeShowBpm, 10f, 300f);
+        cubeShowTimer += beat;
+        if (cubeShowTimer <= 0f) cubeShowTimer = beat;
         if (cubeShowPool.Count == 0)
             for (int i = 0; i < clicker.Tiers.Length; i++)
                 if (clicker.Tiers[i] != null && !PixelClicker.IsRetiredOre(clicker.Tiers[i].type)) cubeShowPool.Add(i);
