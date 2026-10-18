@@ -17,6 +17,8 @@ using UnityEngine.UI;
 /// Add this to any GameObject (e.g. the cube). The UI builds itself at runtime.
 /// The panel is a standard Fixed window (PixelUIKit.CreateWindow: title, grey X, the Collection Log book in the left header slot),
 /// kept at its HUD corner instead of the centre.
+/// GOALS tab (CollectGoals): the next pixel unlock, then the data-driven goals of PixelGoals (AddTableGoals: crush / recycle / streak goals with
+/// their own rewards, 2026-10-18), then the hand-built shop / skill goals and the minigame trackers.
 /// </summary>
 public class PixelLog : MonoBehaviour
 {
@@ -1411,6 +1413,9 @@ public class PixelLog : MonoBehaviour
             break; // only the next one
         }
 
+        // The data-driven goals (PixelGoals: crush / recycle / streak goals that alternate with the click and unlock goals), each with its own reward.
+        AddTableGoals(goals);
+
         // Before RGB: earn the Black that brings Cubie's second visit (he unlocks Red, Green and Blue and opens the shop).
         if (goalShop == null) goalShop = PixelFind.First<PixelShop>();
         PixelShop shop = goalShop;
@@ -1470,6 +1475,29 @@ public class PixelLog : MonoBehaviour
             });
         }
         return goals;
+    }
+
+    private readonly List<PixelGoals.GoalDef> tableGoals = new List<PixelGoals.GoalDef>();
+
+    /// <summary>Adds the PixelGoals rows that are showing now (appeared, not done - or just done) to the Goals tab's list.</summary>
+    private void AddTableGoals(List<Goal> goals)
+    {
+        PixelGoals table = PixelGoals.Instance;
+        if (table == null) return;
+        table.ActiveGoals(tableGoals);
+        foreach (PixelGoals.GoalDef d in tableGoals)
+        {
+            string reward = table.RewardText(d);
+            goals.Add(new Goal
+            {
+                title = d.title,
+                description = d.description + (reward.Length > 0 ? "\n<color=#ffd54a>Reward: " + reward + "</color>" : ""),
+                count = PixelGoals.Done(d) ? d.target : table.Progress(d),
+                goal = d.target,
+                skinTier = -1,
+                iconColor = d.counter == PixelGoals.CounterKind.ManualClicksSinceShown ? new Color(0.9f, 0.9f, 0.9f, 1f) : new Color(1f, 0.6f, 0.25f, 1f),
+            });
+        }
     }
 
     private void RefreshGoalsTab()

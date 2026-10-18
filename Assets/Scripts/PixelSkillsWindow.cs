@@ -462,7 +462,7 @@ public partial class PixelSkills
     {
         int count = p.nodes != null ? Mathf.Min(p.nodes.Length, nodeButtons.Count) : 0;
         selectedNode = Mathf.Clamp(selectedNode, 0, Mathf.Max(0, count - 1));
-        PixelUIKit.SetText(treeTitle, p.displayName + " - " + treeTitleText);
+        PixelUIKit.SetText(treeTitle, ShownName(p) + " - " + treeTitleText);
         PixelUIKit.SetText(pointsLabel, "Skill points: " + PointsAvailable(p) + "   (one per level)");
 
         // Three rows at least; a tree with more (Standard's husk branch uses rows 3 and 4) spreads its rows over the same height, and when they
@@ -533,7 +533,7 @@ public partial class PixelSkills
         bool canUnlock = CanUnlock(p, sel);
         unlockButton.interactable = canUnlock;
         PixelUIKit.SetText(unlockLabel, own ? "Unlocked" : canUnlock ? "Unlock (" + sel.cost + " pt)"
-            : NeedsLevel(p, sel) ? "Needs " + p.displayName + " level " + sel.minLevel
+            : NeedsLevel(p, sel) ? "Needs " + ShownName(p) + " level " + sel.minLevel
             : (missing.Length > 0 ? "Needs " + missing : "Not enough points"));
     }
 
@@ -594,6 +594,7 @@ public partial class PixelSkills
     private string PackTip(SkillPack p)
     {
         if (!IsAvailable(p)) return p.unlockHint;
+        if (p.id == StandardId && StandardHidden) return MysteryHover;   // (the mystery bar: its description would spoil the name)
         string tip = p.description;
         if (p.id != StandardId) tip += "\n\n<b>Replaces:</b> " + p.replaces + "\n<b>Spawns:</b> " + p.spawns + "\n<b>XP from:</b> " + p.xpFrom;
         return tip;
@@ -609,6 +610,7 @@ public partial class PixelSkills
         int level = LevelOf(p, out double into, out double need);
         double total = Xp(p);
         string N(double v) => System.Math.Floor(v).ToString("N0", System.Globalization.CultureInfo.InvariantCulture);
+        if (p.id == StandardId && StandardHidden) return MysteryHover + "\nXP: " + N(total) + " / " + N(total - into + need);   // the mystery bar: no name, no level
         string text = p.displayName + ": " + level + "/" + level + "\nCurrent XP: " + N(total);
         if (level >= CapOf(p)) return text + "\nNext level: -\nRemainder: 0";
         return text + "\nNext level: " + N(total - into + need) + "\nRemainder: " + N(need - into);
@@ -834,8 +836,8 @@ public partial class PixelSkills
         double into, need;
         int level = LevelOf(active, out into, out need);
         string trainingFormat = "Training: {0}   Lv {1}";
-        string header = string.Format(trainingFormat, active.displayName, level);
-        if (active.id == OfflineId) header += "   (pixels: " + Find(ActiveId).displayName + ")";
+        string header = string.Format(trainingFormat, ShownName(active), level);
+        if (active.id == OfflineId) header += "   (pixels: " + ShownName(Find(ActiveId)) + ")";
         PixelUIKit.SetText(headerLabel, header);
         int minigames = EnabledMinigames;
         float multiplier = MinigameXpMultiplier;
@@ -854,7 +856,7 @@ public partial class PixelSkills
             double ci, cn;
             int cl = LevelOf(c.pack, out ci, out cn);
             PixelUIKit.SetRole(c.background, i == selected ? ButtonRole.Selected : ButtonRole.Neutral);
-            PixelUIKit.SetText(c.nameLabel, open ? c.pack.displayName : lockedName);
+            PixelUIKit.SetText(c.nameLabel, open ? ShownName(c.pack) : lockedName);
             PixelUIKit.SetText(c.levelLabel, open ? "Lv " + cl : "");
             c.badge.gameObject.SetActive(isActive || pixelsOnly);
             c.treeButton.gameObject.SetActive(open && c.pack.nodes != null && c.pack.nodes.Length > 0);
@@ -869,7 +871,7 @@ public partial class PixelSkills
         selected = Mathf.Clamp(selected, 0, packs.Count - 1);
         SkillPack p = packs[selected];
         bool available = IsAvailable(p);
-        PixelUIKit.SetText(detailName, available ? p.displayName : lockedName);
+        PixelUIKit.SetText(detailName, available ? ShownName(p) : lockedName);
         PixelUIKit.SetText(detailInfo, available && p.id == OfflineId ? "<b>While you're away, your character does:</b>" : "");
 
         // The skill tree has its own window; the button only shows for a skill that has one.
@@ -892,7 +894,7 @@ public partial class PixelSkills
             if (show)
             {
                 bool current = other.id == OfflineTaskPack.id;
-                PixelUIKit.SetText(pixelPackLabels[slot], other.displayName + (current ? "   (offline task)" : ""));
+                PixelUIKit.SetText(pixelPackLabels[slot], ShownName(other) + (current ? "   (offline task)" : ""));
                 PixelUIKit.SetRole(pixelPackButtons[slot], current ? ButtonRole.Selected : ButtonRole.Neutral);
             }
             slot++;

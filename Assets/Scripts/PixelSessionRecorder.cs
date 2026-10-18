@@ -483,6 +483,12 @@ public class PixelSessionRecorder : MonoBehaviour
 
     private void Mark(string what) => timeline.Add(Clock(elapsed) + "  " + what);
 
+    /// <summary>Puts a line on the timeline of the recording in progress (nothing when not recording). E.g. PixelGoals' 'Goal done: ...'.</summary>
+    public static void Note(string what)
+    {
+        if (Instance != null && Instance.recording) Instance.Mark(what);
+    }
+
     // ------------------------------------------------------------------
     // The report
     // ------------------------------------------------------------------
