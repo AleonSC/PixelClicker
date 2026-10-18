@@ -11,7 +11,7 @@
 - **Rares and shows:** Dragon Cubes + wish, God Cubes, Prime Cubes + Gauntlet / Cubelette, Golden Snitch, Treasure, Collection Log + gallery.
 - **World and camera:** floors, skies, day / night, filters, flat view, orbit / zoom / top-down / first person / free cam, view bounds.
 - **UI:** code-built (`PixelUIKit`, window builder `CreateWindow`), HUD bars, Inventory, Log / event log, Toggles, Pocket, tooltips, Pixel Guide, Database, notices / tips / Did you know, pause menu (settings, save / load, guide), title screen.
-- **Shared foundations:** `PixelSystems` (system list), `PixelFind`, `PixelPrefs`, `PixelStatics`, `PixelCalm`, `PixelHuskQuery`, `PixelRightClick` (who owns a right click), `PixelHuskHolder` (container steps), `PixelHuskTicker`, `PixelPointerClaim`, `PixelCarryHandles`, `PixelInstantItems`, `PixelTierPicture`, `PixelAudio` (+ code-made synths), save system (`PixelSaveGame` + `PixelSaveRegistry`: systems save themselves via IPixelSaved).
+- **Shared foundations:** `PixelSystems` (system list), `PixelFind`, `PixelPrefs`, `PixelStatics`, `PixelCalm`, `PixelHuskQuery`, `PixelRightClick` (who owns a right click), `PixelHuskHolder` (container steps), `PixelHuskTicker`, `PixelHuskPool` (a system keeping husk references listens to HuskReleasing), `PixelPointerClaim`, `PixelCarryHandles`, `PixelInstantItems`, `PixelTierPicture`, `PixelAudio` (+ code-made synths), save system (`PixelSaveGame` + `PixelSaveRegistry`: systems save themselves via IPixelSaved).
 - **Dev tools (Dev Hub, F9):** widgets / cheats, Docs (to-do, changelog, notes), Tester, Inspector, Look Studio, Setups, Events, Sounds, Console, snapshots, balance report, session recorder, crash logs.
 
 ## Finding things
