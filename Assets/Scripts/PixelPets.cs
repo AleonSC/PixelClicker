@@ -224,7 +224,7 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
     [Tooltip("Colour of the popup title.")]
     [SerializeField] private Color titleColor = new Color(1f, 0.85f, 0.25f, 1f);
 
-    [Tooltip("Colour of the popup button.")]
+    [Tooltip("Fill colour of the Outfit Studio sliders (the buttons take their colours from the button roles, PixelUITheme).")]
     [SerializeField] private Color buttonColor = new Color(0.2f, 0.65f, 0.35f, 1f);
 
     [Tooltip("Sorting order of the popup's canvas (above every other window, including the dev tools at 700).")]
@@ -536,7 +536,7 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
         message.fontSizeMax = 32f;
         message.fontSizeMin = 18f;
 
-        Button ok = PixelUIKit.CreateButton(font, box.transform, "Button", popupButton, new Vector2(300f, 76f), buttonColor, Color.white, 36f);
+        Button ok = PixelUIKit.CreateButton(font, box.transform, "Button", popupButton, new Vector2(300f, 76f), ButtonRole.Success, 36f);
         RectTransform or = ok.GetComponent<RectTransform>();
         or.anchorMin = or.anchorMax = or.pivot = new Vector2(0.5f, 0f);
         or.anchoredPosition = new Vector2(0f, 34f);

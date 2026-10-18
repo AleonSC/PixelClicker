@@ -387,9 +387,9 @@ public partial class PixelPets
         rt.sizeDelta = new Vector2(w, h);
     }
 
-    private Button StudioButton(Transform parent, string label, float x, float y, float w, float h, Color color, Action onClick, float size = 24f)
+    private Button StudioButton(Transform parent, string label, float x, float y, float w, float h, ButtonRole role, Action onClick, float size = 24f)
     {
-        Button b = PixelUIKit.CreateButton(font, parent, label, label, new Vector2(w, h), color, Color.white, size);
+        Button b = PixelUIKit.CreateButton(font, parent, label, label, new Vector2(w, h), role, size);
         Put(b.GetComponent<RectTransform>(), x, y, w, h);
         b.onClick.AddListener(() => onClick());
         return b;
@@ -416,7 +416,7 @@ public partial class PixelPets
                                                          PixelUIKit.WindowKind.Fixed, null, closeButton: false);
         parts.Title.color = titleColor;
         Transform t = parts.Root.transform;   // (the content below starts at y 100, under the header)
-        Color box2 = new Color(0.2f, 0.2f, 0.27f, 1f), grey = new Color(0.32f, 0.36f, 0.48f, 1f), red = new Color(0.65f, 0.25f, 0.25f, 1f);
+        Color box2 = new Color(0.2f, 0.2f, 0.27f, 1f);
 
         // ---- Left: the 3D view + the dummy ----
         GameObject view = new GameObject("View", typeof(RectTransform), typeof(RawImage), typeof(EventTrigger));
@@ -456,8 +456,8 @@ public partial class PixelPets
         });
         StudioLabel(t, "Drag the view to turn it, mouse wheel to zoom. Build on any pet you own: some look different (blob, sprout, glass).", 30f, 792f, 800f, 70f, 20f, TextAlignmentOptions.TopLeft);
 
-        StudioButton(t, "Wear this outfit", 30f, 880f, 390f, 70f, new Color(0.25f, 0.6f, 0.4f, 1f), WearStudioOutfit, 28f);
-        StudioButton(t, "Done", 440f, 880f, 390f, 70f, buttonColor, CloseStudio, 28f);
+        StudioButton(t, "Wear this outfit", 30f, 880f, 390f, 70f, ButtonRole.Success, WearStudioOutfit, 28f);
+        StudioButton(t, "Done", 440f, 880f, 390f, 70f, ButtonRole.Success, CloseStudio, 28f);
 
         // ---- Right: outfits ----
         float rx = 860f;
@@ -470,8 +470,8 @@ public partial class PixelPets
             studioPiece = CurrentOutfit != null && CurrentOutfit.pieces.Count > 0 ? 0 : -1;
             RefreshStudio();
         });
-        StudioButton(t, "New outfit", rx + 430f, 100f, 230f, 46f, new Color(0.25f, 0.6f, 0.4f, 1f), NewCustomOutfit, 22f);
-        StudioButton(t, "Delete outfit", rx + 670f, 100f, 240f, 46f, red, DeleteCustomOutfit, 22f);
+        StudioButton(t, "New outfit", rx + 430f, 100f, 230f, 46f, ButtonRole.Primary, NewCustomOutfit, 22f);
+        StudioButton(t, "Delete outfit", rx + 670f, 100f, 240f, 46f, ButtonRole.Danger, DeleteCustomOutfit, 22f);
 
         studioNameField = PixelUIKit.CreateInputField(font, t, "Name", new Vector2(420f, 46f), box2, Color.white, 24f, "outfit name");
         studioNameField.characterLimit = 24;
@@ -502,7 +502,7 @@ public partial class PixelPets
         for (int s = 0; s < ShapeNames.Length; s++)
         {
             int shape = s;
-            StudioButton(t, ShapeNames[s], rx + 165f + s * 148f, 212f, 142f, 44f, grey, () => AddShape(shape), 21f);
+            StudioButton(t, ShapeNames[s], rx + 165f + s * 148f, 212f, 142f, 44f, ButtonRole.Neutral, () => AddShape(shape), 21f);
         }
 
         // Piece list
@@ -531,6 +531,7 @@ public partial class PixelPets
         for (int i = 0; i < StudioColors.Length; i++)
         {
             int index = i;
+            // (a swatch SHOWS its colour, so it stays a plain colour, not a role)
             Button sw = PixelUIKit.CreateButton(font, t, "Swatch " + i, "", new Vector2(50f, 40f), StudioColors[i], Color.white, 10f);
             Put(sw.GetComponent<RectTransform>(), rx + i * 57f, 778f, 52f, 40f);
             sw.onClick.AddListener(() => { if (CurrentPiece != null) { CurrentPiece.color = index; SaveCustomOutfits(); RefreshStudio(); } });
@@ -543,7 +544,7 @@ public partial class PixelPets
         studioAlpha.maxValue = 1f;
         studioAlpha.onValueChanged.AddListener(v => { if (!studioUpdating && CurrentPiece != null) { CurrentPiece.alpha = v; SaveCustomOutfits(); RebuildStudioModel(); } });
 
-        Button mirror = StudioButton(t, "Mirror", rx, 876f, 290f, 56f, grey, () =>
+        Button mirror = StudioButton(t, "Mirror", rx, 876f, 290f, 56f, ButtonRole.Neutral, () =>
         {
             if (CurrentPiece == null) return;
             CurrentPiece.mirror = !CurrentPiece.mirror;
@@ -551,8 +552,8 @@ public partial class PixelPets
             RefreshStudio();
         }, 22f);
         studioMirrorLabel = mirror.GetComponentInChildren<TMP_Text>();
-        StudioButton(t, "Duplicate shape", rx + 310f, 876f, 290f, 56f, grey, DuplicatePiece, 22f);
-        StudioButton(t, "Delete shape", rx + 620f, 876f, 290f, 56f, red, DeletePiece, 22f);
+        StudioButton(t, "Duplicate shape", rx + 310f, 876f, 290f, 56f, ButtonRole.Neutral, DuplicatePiece, 22f);
+        StudioButton(t, "Delete shape", rx + 620f, 876f, 290f, 56f, ButtonRole.Danger, DeletePiece, 22f);
     }
 
     // ------------------------------------------------------------------
@@ -680,7 +681,7 @@ public partial class PixelPets
                 int index = i;
                 CPiece p = outfit.pieces[i];
                 Button b = PixelUIKit.CreateButton(font, pieceListContent, "Piece " + i, "#" + (i + 1) + "  " + ShapeNames[Mathf.Clamp(p.shape, 0, ShapeNames.Length - 1)] + (p.mirror ? "  (mirrored)" : ""),
-                                                   new Vector2(880f, 40f), i == studioPiece ? buttonColor : new Color(0.25f, 0.28f, 0.38f, 1f), Color.white, 21f);
+                                                   new Vector2(880f, 40f), i == studioPiece ? ButtonRole.Selected : ButtonRole.Neutral, 21f);
                 RectTransform r = b.GetComponent<RectTransform>();
                 r.anchorMin = new Vector2(0f, 1f); r.anchorMax = new Vector2(1f, 1f); r.pivot = new Vector2(0.5f, 1f);
                 r.offsetMin = new Vector2(4f, 0f); r.offsetMax = new Vector2(-16f, 0f);

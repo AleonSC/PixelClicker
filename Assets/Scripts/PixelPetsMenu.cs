@@ -79,7 +79,7 @@ public partial class PixelPets
         tr.anchorMin = new Vector2(0f, 1f); tr.anchorMax = new Vector2(1f, 1f); tr.pivot = new Vector2(0.5f, 1f);
         tr.sizeDelta = new Vector2(-20f, 36f); tr.anchoredPosition = new Vector2(0f, -8f);
 
-        Button away = PixelUIKit.CreateButton(font, panel.transform, "Pet Away", petAwayText, new Vector2(200f, 52f), new Color(0.5f, 0.25f, 0.25f, 1f), Color.white, 24f);
+        Button away = PixelUIKit.CreateButton(font, panel.transform, "Pet Away", petAwayText, new Vector2(200f, 52f), ButtonRole.Danger, 24f);
         RectTransform ar = away.GetComponent<RectTransform>();
         ar.anchorMin = ar.anchorMax = ar.pivot = new Vector2(0.5f, 0f);
         ar.anchoredPosition = new Vector2(0f, 12f);

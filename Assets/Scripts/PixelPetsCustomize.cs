@@ -758,7 +758,7 @@ public partial class PixelPets
         });
 
         // Spin switch in the preview's top right corner (the player's choice, kept between sessions).
-        Button spin = PixelUIKit.CreateButton(font, view.transform, "Spin", "", new Vector2(150f, 46f), new Color(0.25f, 0.28f, 0.38f, 0.92f), Color.white, 22f);
+        Button spin = PixelUIKit.CreateButton(font, view.transform, "Spin", "", new Vector2(150f, 46f), ButtonRole.Neutral, 22f);
         RectTransform sr = spin.GetComponent<RectTransform>();
         sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(1f, 1f);
         sr.sizeDelta = new Vector2(150f, 46f);
@@ -768,8 +768,8 @@ public partial class PixelPets
         showSpin();
         spin.onClick.AddListener(() => { PreviewSpinOn = !PreviewSpinOn; showSpin(); });
 
-        Button left = PixelUIKit.CreateButton(font, box.transform, "Previous Outfit", "<", new Vector2(110f, 170f), buttonColor, Color.white, 64f);
-        Button right = PixelUIKit.CreateButton(font, box.transform, "Next Outfit", ">", new Vector2(110f, 170f), buttonColor, Color.white, 64f);
+        Button left = PixelUIKit.CreateButton(font, box.transform, "Previous Outfit", "<", new Vector2(110f, 170f), ButtonRole.Neutral, 64f);
+        Button right = PixelUIKit.CreateButton(font, box.transform, "Next Outfit", ">", new Vector2(110f, 170f), ButtonRole.Neutral, 64f);
         PixelUIKit.UseArrowGlyph(left, true);
         PixelUIKit.UseArrowGlyph(right, false);
         foreach (KeyValuePair<Button, float> a in new[] { new KeyValuePair<Button, float>(left, -1f), new KeyValuePair<Button, float>(right, 1f) })
@@ -789,13 +789,13 @@ public partial class PixelPets
         TopRow(outfitLabel.rectTransform, -690f, 60f, 40f);
         UpdateOutfitLabel();
 
-        Button design = PixelUIKit.CreateButton(font, box.transform, "Design", "Design outfits", new Vector2(320f, 80f), new Color(0.3f, 0.4f, 0.75f, 1f), Color.white, 32f);
+        Button design = PixelUIKit.CreateButton(font, box.transform, "Design", "Design outfits", new Vector2(320f, 80f), ButtonRole.Primary, 32f);
         RectTransform gr = design.GetComponent<RectTransform>();
         gr.anchorMin = gr.anchorMax = gr.pivot = new Vector2(0.5f, 0f);
         gr.anchoredPosition = new Vector2(-180f, 36f);
         design.onClick.AddListener(() => OpenStudio(editPet));
 
-        Button done = PixelUIKit.CreateButton(font, box.transform, "Done", doneText, new Vector2(320f, 80f), buttonColor, Color.white, 38f);
+        Button done = PixelUIKit.CreateButton(font, box.transform, "Done", doneText, new Vector2(320f, 80f), ButtonRole.Success, 38f);
         RectTransform dr = done.GetComponent<RectTransform>();
         dr.anchorMin = dr.anchorMax = dr.pivot = new Vector2(0.5f, 0f);
         dr.anchoredPosition = new Vector2(180f, 36f);
