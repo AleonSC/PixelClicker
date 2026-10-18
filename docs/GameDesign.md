@@ -158,7 +158,7 @@ and the developer likes that pace - it leaves room for the tutorials. Do not low
 
 | Time | Step | What it teaches |
 |---|---|---|
-| 0:00-~2:00 | **White** (300 to unlock Gray). Cubie's first visit at 100 White clicks: the Recycler. | Clicking, husks, edge-click aiming. |
+| 0:00-~2:00 | **White** (Gray now unlocks by the 'Crush 10 husks' goal, Black by 'Recycle 20' - see 'Early game feel'). Cubie's first visit after the 'Click 50' goal: the Recycler. | Clicking, husks, edge-click aiming. |
 | ~2:00-4:20 | **Gray** (200 to unlock Black). Standard level 2 (~5:00): the first skill point - Block Hold or Power Click. | The first choice. |
 | ~4:20-6:10 | **Black**: earn 100. | The last plain grind. |
 | ~6:10 | **Cubie's second visit:** RGB is UNLOCKED (not bought - he gives the RGB Pack), a taste of Red / Green / Blue, the shop opens. "The rest of the pure currency: grind it and you're ready to branch off." | Six currencies. |
@@ -189,17 +189,22 @@ bunch, build a pile, then get told to crush it.
    on top). **The floor limit rises with it** (~120, was 50) - at ~3.5 blocks a second 50 husks fill the floor in ~14 s and the oldest are
    culled, so a longer lifetime alone does nothing. Resting husks sleep / settle so a big pile stays cheap (see the husk heaps prompt);
    re-check performance with ~120 husks.
-2. **Goals alternate clicking and husks** (the Log's Goals tab): click goals keep the unlock path; husk goals appear at the moment they make
-   sense and pay a small reward of their own (a chunk of Standard XP, or a little currency from the goal - never from the husk itself):
+2. **Goals alternate clicking and husks, and the early GOALS ARE THE UNLOCKS** (the Log's Goals tab; decided 2026-10-18). Gray and Black
+   no longer unlock by thresholds of the previous colour ('earn 300 White'); each early goal's REWARD is the next step, so every new
+   colour rewards learning one new action (one idea at a time). The colours stay (monochrome still pays for machines in the shop).
+   Husk goals appear at the moment they make sense; rewards come from the goal, never from a husk.
 
-| ~When | Goal | Teaches |
+| Goal | Reward | Teaches |
 |---|---|---|
-| start | Click 50 times | the core |
-| when ~20 husks lie on the floor | Crush 10 husks | crushing exists and counts |
-| ~1:30 | Earn 300 White (unlock Gray) | the unlock path |
-| right after Cubie's Recycler | Recycle 20 husks | the money route |
-| ~3:00 | Get a crush streak of 5 | bursts and streaks |
-| ... | the click / unlock path continues | |
+| Click 50 blocks | Cubie's 1st visit: the Recycler | the core click |
+| Crush 10 husks (shows once ~20 husks lie on the floor) | **Gray unlocks** | crushing |
+| Recycle 20 husks | **Black unlocks** | the money route |
+| Get a crush streak of 5 | a chunk of Standard XP (the "???" bar jumps; level 2 is close) | bursts and streaks |
+| Earn 100 Black | Cubie's 2nd visit: RGB + the shop | earning still matters |
+
+   Size the goals to keep the pace the developer likes (RGB and the shop at about 6 minutes). Build it as ONE data table of goals (id,
+   title, description, counter, target, when it shows, reward = unlock a tier / start a Cubie visit / XP / currency) with a new tier
+   unlock mode 'by goal' (appended to `TierUnlockMode`), so the early progression lives in one table.
 
 3. **The skill reveal: a mystery bar from minute 1, revealed at Standard 2 (~5 min).** Standard's XP bar shows from the first click but
    labelled "???" (hover: "Something is growing..."), XP popups read "+1 ???", and crushing visibly fills it faster. At level 2 it flips
