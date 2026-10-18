@@ -10,6 +10,7 @@
 //   (each press is shorter than holdDelay).
 //   Not on: rare drops, hazards, Fish (Weak Spots) and the Golden Snitch; never while a husk is grabbed, a block is held (right mouse),
 //   a takeover minigame runs, in first person, in a menu or while time is stopped. Switch: disablePowerClick. Stats: power.clicks.
+//   Standard perk 'Crush recharge' (level 7, 2026-10-18): every crushed husk takes a little off the running cooldown (ShortenCooldown, from PixelHuskCrush).
 //   RIGHT CLICK while charging (2026-10-18) cancels it WITHOUT the cooldown (nothing fires; a new charge can start at once).
 //   PixelRightClick gives that right press to the charge (Owner.Charge, read from PixelPowerClick.Charging), so Block Hold / hazard clearing ignore it.
 //   Component in PixelSystems (group Core); its overlay canvas sits under the windows.
@@ -65,7 +66,7 @@ public class PixelPowerClick : MonoBehaviour
     public static bool Charging { get; private set; }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { Charging = false; }
+    private static void ResetStatics() { Charging = false; instance = null; }
     private bool shaking;
 
     // UI
@@ -77,10 +78,21 @@ public class PixelPowerClick : MonoBehaviour
     private float flashT, waveT = 1f, popupT = 1f;
     private Vector2 waveCentre, popupStart;
 
+    private static PixelPowerClick instance;
+
     private void Awake()
     {
+        instance = this;
         clicker = GetComponent<PixelClicker>();
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
+    }
+
+    private void OnDestroy() { if (instance == this) instance = null; }
+
+    /// <summary>Takes seconds off the cooldown that is running (Standard perk 'Crush recharge': every crushed husk, PixelHuskCrush). Nothing when it is not cooling down.</summary>
+    public static void ShortenCooldown(float seconds)
+    {
+        if (instance != null && seconds > 0f && instance.cooldownLeft > 0f) instance.cooldownLeft = Mathf.Max(0f, instance.cooldownLeft - seconds);
     }
 
     private void OnDisable() { StopShake(); }

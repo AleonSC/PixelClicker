@@ -168,6 +168,11 @@ public partial class PixelSkills
     /// <summary>The popup at Standard level 3: the second point is a choice between the move you skipped and Aimed Clicks.</summary>
     private const string StandardLevel3Notice = "Standard level 3 - another skill point! Take the move you skipped (Block Hold or Power Click), or Aimed Clicks: click near the cube's edge and its husk flies out of that side, so you can send husks to a Recycler or a clear spot. Until then every husk scatters at random.\n\nYour perk, Steady grip: Block Hold lasts 10% longer.";
 
+    // The crush refund perks (2026-10-18; PixelHuskCrush.CrushRefunds does the work, its Inspector holds the levels and amounts).
+    private const string CrushPerkPower = "Crush recharge: every husk you crush takes a little off Power Click's cooldown";
+    private const string CrushPerkGrip = "Crush grip: every husk you crush refills the Block Hold meter a little";
+    private const string CrushPerkRhythm = "Crush rhythm: every husk you crush takes a little off Charge Crush's cooldown";
+
     private static Perk[] StandardPerks() => new[]
     {
         new Perk { level = 2, text = "Lingering pixels: husks last 5 seconds longer for every level", implemented = true, noticeText = StandardLevel2Notice },
@@ -175,5 +180,8 @@ public partial class PixelSkills
         new Perk { level = 4, text = "Roomy floor: room for 10 more husks for every level", implemented = true },
         new Perk { level = 5, text = "Firm grip: Block Hold lasts another 10% longer", implemented = true },
         new Perk { level = 7, text = "Sharper clicks: a small bonus to every pixel" },
+        new Perk { level = 7, text = CrushPerkPower, implemented = true },
+        new Perk { level = 8, text = CrushPerkGrip, implemented = true },
+        new Perk { level = 9, text = CrushPerkRhythm, implemented = true },
     };
 }

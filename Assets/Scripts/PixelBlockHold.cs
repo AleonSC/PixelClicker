@@ -20,6 +20,7 @@
 //   CLICKS: every click during a stake hold adds stakePerClick (0.1) to the stake (stakeClickBonus, in StakeValue); every energyEveryClicks (5) clicks give the meter
 //   energyPerClicks (1%), holding or not (OnClick from PixelClicker.CollectInternal; autoClicksCount off = only your own clicks).
 //   A first-time tip (stake_intro) shows after 25 manual clicks. Skill XP is not changed by the stake.
+//   Standard perk 'Crush grip' (level 8, 2026-10-18): every crushed husk refills the meter a little (Refill, from PixelHuskCrush).
 //   Not saved (the meter starts full); the pack itself is saved like any pack. No Toggles switch (right click does nothing else on normal blocks).
 //   Whether a right press is the cube's at all is decided by PixelRightClick (Owner.Cube: the live cube under the pointer, nothing ahead of it in the order).
 // ---------------------------------------------------
@@ -181,6 +182,12 @@ public class PixelBlockHold : MonoBehaviour
 
     public bool Active => (unlocked || !requireShopPack) && !disableBlockHold && (!requireTreeNode || PixelSkills.HasStandardNode("hold"));
     public bool Holding => holding;
+
+    /// <summary>Refills the meter by this share (0..1) at once (Standard perk 'Crush grip': every crushed husk, PixelHuskCrush).</summary>
+    public void Refill(float share)
+    {
+        if (share > 0f) meter = Mathf.Min(1f, meter + share);
+    }
 
     /// <summary>A click landed on a stalling block (PixelTier.stallsHold): the hold meter stops draining for this many seconds.</summary>
     public static void Stall(float seconds, float refill = 0f)

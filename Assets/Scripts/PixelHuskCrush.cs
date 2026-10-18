@@ -42,6 +42,9 @@
 //     LEFT CLICK while charging (2026-10-18) cancels it WITHOUT the cooldown: nothing is crushed, the charge is dropped and the next one can start
 //     at once. While charging the pointer is claimed as a button (PixelPointerClaim.ClaimButton), so that left click never
 //     reaches the cube, Pixel Grabbing or Power Click.
+//   - CRUSH REFUNDS (Standard level perks, 2026-10-18, CrushRefunds): from level 7 every crushed husk takes powerClickRefundSeconds (0.5) off Power
+//     Click's cooldown, from level 8 it refills the Block Hold meter by blockHoldRefill (2%), from level 9 it takes chargeCrushRefundSeconds (0.25)
+//     off Charge Crush's cooldown (not the husks a Charge Crush breaks itself). Perks 'Crush recharge' / 'Crush grip' / 'Crush rhythm' in StandardPerks.
 //   - First-time tip 'husk_crush' (PixelHints) once tipAfterClicks manual clicks were made and a crushable husk lies about (not during the intro).
 //   Stats: husk.crushed, husk.crushed.xp (the base XP handed to AddHuskXp, before XP multipliers), husk.crushed.chain (the extra ones Chain Crush
 //   broke), husk.crushed.charge (the ones a Charge Crush release broke, the held one included), husk.crushed.<skill id> / husk.crushed.xp.<skill id> (per skill); the session recorder reports them. Nothing saved.
@@ -198,6 +201,31 @@ public class PixelHuskCrush : MonoBehaviour
 
     [Tooltip("Colour of the ring that shows the cooldown left (shown while you hold a husk during the cooldown).")]
     [SerializeField] private Color cooldownColor = new Color(0.6f, 0.65f, 0.75f, 0.6f);
+
+    [Header("Crush refunds (Standard level perks)")]
+    [Min(0)]
+    [Tooltip("Standard level of the perk 'Crush recharge': from it, every crushed husk takes powerClickRefundSeconds off Power Click's cooldown. 0 = the coded default (7).")]
+    [SerializeField] private int powerClickRefundLevel = 7;
+
+    [Min(0f)]
+    [Tooltip("Seconds every crushed husk takes off Power Click's cooldown (it is 45 s, 30 with Aftershock). 0 = the coded default (0.5).")]
+    [SerializeField] private float powerClickRefundSeconds = 0.5f;
+
+    [Min(0)]
+    [Tooltip("Standard level of the perk 'Crush grip': from it, every crushed husk refills the Block Hold meter by blockHoldRefill. 0 = the coded default (8).")]
+    [SerializeField] private int blockHoldRefillLevel = 8;
+
+    [Min(0f)]
+    [Tooltip("Share of the Block Hold meter every crushed husk refills (0.02 = 2%). 0 = the coded default (0.02).")]
+    [SerializeField] private float blockHoldRefill = 0.02f;
+
+    [Min(0)]
+    [Tooltip("Standard level of the perk 'Crush rhythm': from it, every crushed husk takes chargeCrushRefundSeconds off Charge Crush's cooldown (not the husks a Charge Crush breaks itself). 0 = the coded default (9).")]
+    [SerializeField] private int chargeCrushRefundLevel = 9;
+
+    [Min(0f)]
+    [Tooltip("Seconds every crushed husk takes off Charge Crush's cooldown (it is 8 s). 0 = the coded default (0.25).")]
+    [SerializeField] private float chargeCrushRefundSeconds = 0.25f;
 
     [Header("Tip")]
     [Min(0)]
@@ -669,9 +697,23 @@ public class PixelHuskCrush : MonoBehaviour
             PixelStats.Count("husk.crushed.xp." + skillId, xp);
         }
         if (PixelSkills.HasStandardNode(CleanNode)) CleanBreak(at);
+        CrushRefunds(howStat == "husk.crushed.charge");
         PixelStats.Count("husk.crushed");
         PixelStats.Count("husk.crushed.xp", xp);
         if (howStat != null) PixelStats.Count(howStat);
+    }
+
+    /// <summary>
+    /// The Standard level perks that make a crush give a little back (2026-10-18): 'Crush recharge' (level 7) - Power Click's cooldown, 'Crush grip'
+    /// (level 8) - the Block Hold meter, 'Crush rhythm' (level 9) - Charge Crush's cooldown (not from the husks a Charge Crush breaks itself, or one
+    /// release would clear its own cooldown). Per crushed husk; the levels and amounts are Inspector values.
+    /// </summary>
+    private void CrushRefunds(bool byChargeCrush)
+    {
+        int level = PixelSkills.LevelOfId(PixelSkills.StandardId);
+        if (level >= (powerClickRefundLevel > 0 ? powerClickRefundLevel : 7)) PixelPowerClick.ShortenCooldown(powerClickRefundSeconds > 0f ? powerClickRefundSeconds : 0.5f);
+        if (level >= (blockHoldRefillLevel > 0 ? blockHoldRefillLevel : 8) && PixelBlockHold.Instance != null) PixelBlockHold.Instance.Refill(blockHoldRefill > 0f ? blockHoldRefill : 0.02f);
+        if (level >= (chargeCrushRefundLevel > 0 ? chargeCrushRefundLevel : 9) && !byChargeCrush && cooldownLeft > 0f) cooldownLeft = Mathf.Max(0f, cooldownLeft - (chargeCrushRefundSeconds > 0f ? chargeCrushRefundSeconds : 0.25f));
     }
 
     /// <summary>Clean Break: the husks lying round a crush get some of their lived time back.</summary>
