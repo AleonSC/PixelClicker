@@ -421,11 +421,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/home/user/PixelClicker/tools/compile-check/CompileCheck.csproj",
+      "projectUniqueName": "/home/user/PixelClicker/.claude/worktrees/agent-a576a584a3fe34b9d/tools/compile-check/CompileCheck.csproj",
       "projectName": "CompileCheck",
-      "projectPath": "/home/user/PixelClicker/tools/compile-check/CompileCheck.csproj",
+      "projectPath": "/home/user/PixelClicker/.claude/worktrees/agent-a576a584a3fe34b9d/tools/compile-check/CompileCheck.csproj",
       "packagesPath": "/root/.nuget/packages/",
-      "outputPath": "/home/user/PixelClicker/tools/compile-check/obj/",
+      "outputPath": "/home/user/PixelClicker/.claude/worktrees/agent-a576a584a3fe34b9d/tools/compile-check/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/root/.nuget/NuGet/NuGet.Config"

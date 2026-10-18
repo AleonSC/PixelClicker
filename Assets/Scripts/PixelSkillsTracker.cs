@@ -62,10 +62,7 @@ public partial class PixelSkills
     /// <summary>The pin button in the Skills window: close the window and pin the tracker (or, if it is already up, take it away again).</summary>
     private void BuildPinButton()
     {
-        Button pin = PixelUIKit.CreateButton(Font, windowObject.transform, "Pin Button", "", new Vector2(70f, 70f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 30f);
-        RectTransform pr = pin.GetComponent<RectTransform>();
-        pr.anchorMin = pr.anchorMax = pr.pivot = new Vector2(0f, 1f);
-        pr.anchoredPosition = new Vector2(14f, -12f);
+        Button pin = windowParts.AddHeaderButton("Pin Button", "", true, PixelUIKit.WindowButtonColor);   // the Skills window's left header slot
         trackerPinImage = pin.GetComponent<Image>();
         PixelUIKit.AddPinIcon(pin, 40f);   // the shared pushpin icon (the Inventory's pin button uses it too)
         pin.onClick.AddListener(PinTracker);
