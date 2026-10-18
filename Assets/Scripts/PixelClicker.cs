@@ -538,6 +538,13 @@ public partial class PixelClicker : MonoBehaviour
     [Tooltip("How still a husk must be before the physics lets it fall asleep (Rigidbody.sleepThreshold; Unity's default is 0.005). Higher = heaps go still sooner and cost nothing; too high and a slow-rolling husk freezes mid-roll. Anything that touches a sleeping husk wakes it.")]
     [SerializeField] private float huskSleepThreshold = 0.03f;
 
+    [Tooltip("Reuse the objects of husks that have vanished for new husks instead of making new ones each click (PixelHuskPool). Turn off if a husk ever behaves oddly after a lot of clicking: everything works the same without it.")]
+    [SerializeField] private bool poolHusks = false;
+
+    [Min(0)]
+    [Tooltip("The most vanished husks kept switched off for reuse.")]
+    [SerializeField] private int huskPoolSize = 64;
+
     [Tooltip("Continuous collision stops fast pixels tunneling through thin floors. Costs slightly more.")]
     [SerializeField] private CollisionDetectionMode collisionDetection = CollisionDetectionMode.ContinuousDynamic;
 
@@ -902,6 +909,8 @@ public partial class PixelClicker : MonoBehaviour
     private void Awake()
     {
         PixelSystems.AddMissing(gameObject);   // every system component not already in the scene (the list and their groups: PixelSystems.cs)
+        PixelHuskPool.Enabled = poolHusks;
+        PixelHuskPool.MaxPooled = huskPoolSize;
         if (pixelTransform == null) pixelTransform = transform;
         if (pixelRenderer == null) pixelRenderer = pixelTransform.GetComponentInChildren<Renderer>();
         if (targetCamera == null) targetCamera = Camera.main;
@@ -1094,7 +1103,7 @@ public partial class PixelClicker : MonoBehaviour
     // The tooltip, aim cursor, Block Hold and Power Click each asked "what is under the pointer?" every frame, each with its own Physics.RaycastAll
     // (a new array every time) and sort. PointerHits does the cast ONCE per frame per screen point into a reused buffer, nearest first.
 
-    private RaycastHit[] pointerHits = new RaycastHit[64];   // (per clicker: the title preview has its own)
+    private RaycastHit[] pointerHits = new RaycastHit[64];
     private int pointerHitCount, pointerHitFrame = -1;
     private Vector2 pointerHitScreen;
     private Camera pointerHitCamera;
@@ -2140,6 +2149,8 @@ public partial class PixelClicker : MonoBehaviour
 #if UNITY_EDITOR
     private void OnValidate()
     {
+        PixelHuskPool.Enabled = poolHusks;
+        PixelHuskPool.MaxPooled = huskPoolSize;
         if (tiers != null && tiers.Length > 0)
             activeTierIndex = Mathf.Clamp(activeTierIndex, 0, tiers.Length - 1);
         materializeDuration = Mathf.Max(0f, materializeDuration);

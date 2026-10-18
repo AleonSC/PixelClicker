@@ -342,7 +342,7 @@ public class OldPixelDespawn : MonoBehaviour, IHuskTick
         else
         {
             float k = (phaseTime - swellSeconds) / shrinkSeconds;
-            if (k >= 1f) { if (naturalEnd) PixelAudio.Play("pixel_vanish"); enabled = false; Destroy(gameObject); return; }   // (enabled = false: no more ticks before the end-of-frame Destroy)   // a small high bloop, only when its own despawn timer ended it (cleared by the capacity limit or used up = silent)
+            if (k >= 1f) { if (naturalEnd) PixelAudio.Play("pixel_vanish"); enabled = false; PixelHuskPool.Release(gameObject); return; }   // (PixelHuskPool: everyone lets go of it, then it is pooled for reuse or destroyed)   // (enabled = false: no more ticks before the end-of-frame Destroy)   // a small high bloop, only when its own despawn timer ended it (cleared by the capacity limit or used up = silent)
             transform.localScale = baseScale * Mathf.Lerp(swellScale, 0f, k * k);
         }
     }
@@ -361,6 +361,9 @@ public class OldPixelInfo : MonoBehaviour
 
     /// <summary>The player is holding this pixel right now (Pixel Grabbing).</summary>
     [HideInInspector] public bool heldByPlayer;
+
+    /// <summary>Something took it off the field list (a device, the Bank, a minigame: ReleaseOldPixel / ClaimOldPixel / AbsorbOldPixel): its new owner destroys it, so it is never pooled.</summary>
+    [HideInInspector] public bool claimed;
 
     /// <summary>Unscaled time the player last let go of this pixel (-99 = never held).</summary>
     [HideInInspector] public float lastHeldTime = -99f;

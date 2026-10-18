@@ -211,6 +211,7 @@ public partial class PixelClicker
     public bool ClaimOldPixel(Rigidbody body)
     {
         if (body == null || !oldPixels.Remove(body)) return false;
+        MarkClaimed(body, true);
         PixelStats.Count("old.shredded");
         return true;
     }
@@ -222,6 +223,7 @@ public partial class PixelClicker
     public bool AbsorbOldPixel(Rigidbody body, Transform target)
     {
         if (body == null || !oldPixels.Remove(body)) return false;
+        MarkClaimed(body, true);
 
         PixelStats.Count("old.vacuumed");
         OldPixelInfo info = body.GetComponent<OldPixelInfo>();
@@ -272,6 +274,7 @@ public partial class PixelClicker
     public bool ReleaseOldPixel(Rigidbody body, bool credit)
     {
         if (body == null || !oldPixels.Remove(body)) return false;
+        MarkClaimed(body, true);
         QuietParticles(body.gameObject);   // a pixel being taken away stops emitting (the Vacuum's suction wind, embers, motes...)
 
         if (credit && husksPayCurrency)   // pixel rules: a husk never pays its value again
@@ -286,6 +289,20 @@ public partial class PixelClicker
     public void AdoptOldPixel(Rigidbody body)
     {
         if (body != null && !oldPixels.Contains(body)) oldPixels.Add(body);
+        MarkClaimed(body, false);
+    }
+
+    /// <summary>A husk taken over by something else (claimed: never pooled, its new owner destroys it) or handed back to the field.</summary>
+    private static void MarkClaimed(Rigidbody body, bool claimed)
+    {
+        OldPixelInfo info = body != null ? PixelHuskQuery.Get(body).info : null;
+        if (info != null) info.claimed = claimed;
+    }
+
+    /// <summary>Takes a husk that is going away off the field list (PixelHuskPool.Release).</summary>
+    public void ForgetOldPixel(Rigidbody body)
+    {
+        if (body != null) oldPixels.Remove(body);
     }
 
     /// <summary>The sound id of a pixel type's own bounce ("pixel_bounce_electric"), or null for an invalid tier. PixelAudio falls back to the plain landing sound if no such sound has clips.</summary>
@@ -576,7 +593,9 @@ public partial class PixelClicker
         else if (!flyType && PixelSorterDevice.Current != null)
             routed = PixelSorterDevice.Current.TryRoute(out routedPosition, out routedVelocity);
 
-        GameObject copy = new GameObject("OldPixel");
+        MeshFilter srcFilterCheck = pixelRenderer != null ? pixelRenderer.GetComponent<MeshFilter>() : null;
+        GameObject copy = srcFilterCheck != null ? PixelHuskPool.Take() : null;   // a vanished husk's object, cleaned (PixelHuskPool), or a new one
+        if (copy == null) copy = new GameObject("OldPixel");
         copy.transform.SetPositionAndRotation(routed ? routedPosition : pixelTransform.position,
                                               stored ? UnityEngine.Random.rotation : pixelTransform.rotation);
         Vector3 sourceScale = pixelTransform.lossyScale;
@@ -593,8 +612,11 @@ public partial class PixelClicker
         Mesh copyMesh = MeshFor(IsValidTier(tierIndex) ? LookOf(tiers[tierIndex]) : null);
         if (srcFilter != null && pixelRenderer != null)
         {
-            copy.AddComponent<MeshFilter>().sharedMesh = copyMesh;
-            MeshRenderer mr = copy.AddComponent<MeshRenderer>();
+            MeshFilter copyFilter = copy.GetComponent<MeshFilter>();
+            if (copyFilter == null) copyFilter = copy.AddComponent<MeshFilter>();
+            copyFilter.sharedMesh = copyMesh;
+            MeshRenderer mr = copy.GetComponent<MeshRenderer>();
+            if (mr == null) mr = copy.AddComponent<MeshRenderer>();
             if (spawnBlock == null) spawnBlock = new MaterialPropertyBlock();
             MaterialPropertyBlock block = spawnBlock;   // (SetPropertyBlock copies it, so one block is reused instead of allocating one per click)
             block.Clear();
@@ -645,7 +667,8 @@ public partial class PixelClicker
                 if (live != null) Physics.IgnoreCollision(box, live);
         }
 
-        Rigidbody rb = copy.AddComponent<Rigidbody>();
+        Rigidbody rb = copy.GetComponent<Rigidbody>();
+        if (rb == null) rb = copy.AddComponent<Rigidbody>();
         rb.mass = Mathf.Max(0.0001f, fallingCopyMass);
         rb.useGravity = false; // gravity applied by ScaledGravity so gravityScale works
         rb.collisionDetectionMode = collisionDetection;

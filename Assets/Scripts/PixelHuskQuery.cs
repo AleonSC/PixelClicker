@@ -41,6 +41,12 @@ public static class PixelHuskQuery
     private static int insertsSincePrune;
     private static readonly List<int> deadScratch = new List<int>();
 
+    /// <summary>Drops a husk from the cache (it is going away: PixelHuskPool reuses the same object for a new husk, which must be looked up afresh).</summary>
+    public static void Forget(Rigidbody body)
+    {
+        if (body != null) cache.Remove(body.GetInstanceID());
+    }
+
     /// <summary>The husk's components (cached after the first look).</summary>
     public static Husk Get(Rigidbody body)
     {
