@@ -359,8 +359,7 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Inner padding of the panel.")]
     [SerializeField] private float panelPadding = 20f;
 
-    [Tooltip("Panel background colour.")]
-    [SerializeField] private Color panelColor = new Color(0.07f, 0.07f, 0.09f, 0.95f);
+    private Color panelColor => PixelUITheme.WindowColor;   // (the theme: PixelUITheme)
 
     [Tooltip("Background colour of each pack row.")]
     [SerializeField] private Color rowColor = new Color(0.16f, 0.16f, 0.2f, 1f);
@@ -481,8 +480,7 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Cost line text size.")]
     [SerializeField] private float costFontSize = 30f;
 
-    [Tooltip("Normal text colour.")]
-    [SerializeField] private Color textColor = Color.white;
+    private Color textColor => PixelUITheme.TextColor;   // (the theme: PixelUITheme)
 
     [Header("Pixels and Consumables Tabs (category chips, tiles, buy bar)")]
     [Tooltip("Label of the Potions category button.")]

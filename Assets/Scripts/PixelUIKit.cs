@@ -174,7 +174,7 @@ public static partial class PixelUIKit
     private static int uiColorCache = -1;
     private static float uiHueCache = -1f, uiSatCache = -1f;
     private static readonly System.Collections.Generic.Dictionary<Color32, Sprite> windowSprites = new System.Collections.Generic.Dictionary<Color32, Sprite>();
-    private struct WindowEntry { public Image image; public Color color; }
+    private struct WindowEntry { public Image image; public Color color; public bool themed; public WindowShade shade; }
     private static readonly System.Collections.Generic.List<WindowEntry> windowImages = new System.Collections.Generic.List<WindowEntry>();
 
     /// <summary>Use the player's own colour for the windows (and their glowing rim) instead of the neutral dark grey. Off by default. Applies to open windows at once.</summary>
@@ -264,6 +264,15 @@ public static partial class PixelUIKit
         ApplyWindow(image, color);
     }
 
+    /// <summary>StyleWindow in a THEME colour (PixelUITheme's window / tool window colour): it follows the theme live. Prefer this over a plain colour.</summary>
+    public static void StyleWindow(Image image, WindowShade shade)
+    {
+        if (image == null) return;
+        Color color = PixelUITheme.ColorOf(shade);
+        windowImages.Add(new WindowEntry { image = image, color = color, themed = true, shade = shade });
+        ApplyWindow(image, color);
+    }
+
     /// <summary>The body colour of the nearest window above 'from' (the one built with <see cref="StyleWindow"/>), or a dark navy if there is none. Used by the scroll fade.</summary>
     public static Color WindowBodyColorAbove(Transform from)
     {
@@ -299,7 +308,9 @@ public static partial class PixelUIKit
         for (int i = windowImages.Count - 1; i >= 0; i--)
         {
             if (windowImages[i].image == null) { windowImages.RemoveAt(i); continue; }
-            ApplyWindow(windowImages[i].image, windowImages[i].color);
+            WindowEntry e = windowImages[i];
+            if (e.themed) { e.color = PixelUITheme.ColorOf(e.shade); windowImages[i] = e; }   // (the theme colour may have changed)
+            ApplyWindow(e.image, e.color);
         }
         foreach (Sprite sp in old) if (sp != null) { if (sp.texture != null) Object.Destroy(sp.texture); Object.Destroy(sp); }
     }

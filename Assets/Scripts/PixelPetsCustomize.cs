@@ -719,7 +719,7 @@ public partial class PixelPets
         PixelUIKit.Stretch(dim.GetComponent<RectTransform>());
 
         // The standard window as a dialog (PixelUIKit.CreateWindow, no X: 'Done' closes it). Title in the pets' title colour.
-        PixelWindowParts parts = PixelUIKit.CreateWindow(font, dim.transform, "Box", customizeTitle, new Vector2(860f, 940f), panelColor,
+        PixelWindowParts parts = PixelUIKit.CreateWindow(font, dim.transform, "Box", customizeTitle, new Vector2(860f, 940f),
                                                          PixelUIKit.WindowKind.Fixed, null, closeButton: false);
         parts.Title.color = titleColor;
         GameObject box = parts.Root;   // (the content below starts at y 104, under the header)

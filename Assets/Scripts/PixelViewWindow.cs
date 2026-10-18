@@ -37,8 +37,7 @@ public class PixelViewWindow : MonoBehaviour
     [Tooltip("Turn the View window (and its key) off.")]
     [SerializeField] private bool disableViewWindow = false;
 
-    [Tooltip("Colour of the window.")]
-    [SerializeField] private Color panelColor = new Color(0.1f, 0.13f, 0.2f, 0.97f);
+    private Color panelColor => PixelUITheme.ToolWindowColor;   // (the theme: PixelUITheme)
 
     [Tooltip("Colour of the rows.")]
     [SerializeField] private Color rowColor = new Color(0.18f, 0.22f, 0.32f, 1f);
@@ -417,7 +416,7 @@ public class PixelViewWindow : MonoBehaviour
         canvasRoot.transform.SetParent(transform, false);
 
         // The standard Tool window (PixelUIKit.CreateWindow): title, X, drag by the header, minimize, dock to a screen edge, position saved.
-        parts = PixelUIKit.CreateWindow(font, canvasRoot.transform, "View Window", "View", new Vector2(Width, 400f), panelColor,
+        parts = PixelUIKit.CreateWindow(font, canvasRoot.transform, "View Window", "View", new Vector2(Width, 400f),
                                         PixelUIKit.WindowKind.Tool, Close, "PixelClicker.ViewWindow.Window");
         window = parts.Root;
         windowRect = parts.Rect;

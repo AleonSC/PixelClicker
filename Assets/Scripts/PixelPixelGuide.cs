@@ -61,11 +61,9 @@ public class PixelPixelGuide : MonoBehaviour
     [Tooltip("Text shown when no pixel is in the rotation.")]
     [SerializeField] private string emptyText = "No pixels yet.";
 
-    [Tooltip("Window background colour.")]
-    [SerializeField] private Color panelColor = new Color(0.1f, 0.1f, 0.13f, 0.97f);
+    private Color panelColor => PixelUITheme.WindowColor;   // (the theme: PixelUITheme)
 
-    [Tooltip("Text colour.")]
-    [SerializeField] private Color textColor = Color.white;
+    private Color textColor => PixelUITheme.TextColor;   // (the theme: PixelUITheme)
 
     [Header("Canvas")]
     [Tooltip("Sorting order of the canvas (just above the Toggles window).")]
@@ -177,7 +175,7 @@ public class PixelPixelGuide : MonoBehaviour
 
         // The window: the standard Fixed window (PixelUIKit.CreateWindow: title, grey X, PixelPop). The builder centres it; this one is put
         // back in the spot the button slides out to, at the middle of the right edge (FitBesideShop moves it next to the open shop).
-        PixelWindowParts parts = PixelUIKit.CreateWindow(Font, canvasRoot.transform, "Pixel Guide Window", windowTitle, windowSize, panelColor,
+        PixelWindowParts parts = PixelUIKit.CreateWindow(Font, canvasRoot.transform, "Pixel Guide Window", windowTitle, windowSize,
                                                          PixelUIKit.WindowKind.Fixed, Close);
         windowObject = parts.Root;
         RectTransform wr = parts.Rect;

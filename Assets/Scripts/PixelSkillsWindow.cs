@@ -48,13 +48,12 @@ public partial class PixelSkills
     [Tooltip("Height of the area the skill tree nodes are laid out in (canvas units).")]
     [SerializeField] private float treeAreaHeight = 400f;
 
-    [Tooltip("Colours.")]
-    [SerializeField] private Color panelColor = new Color(0.1f, 0.1f, 0.13f, 0.97f);
+    private Color panelColor => PixelUITheme.WindowColor;   // (the theme: PixelUITheme)
     [Tooltip("The HUD Skills button's own colour (each HUD corner button has an identity colour of its own).")]
     [SerializeField] private Color tabColor = new Color(0.22f, 0.3f, 0.45f, 1f);
     [Tooltip("Colour of a skill tree node you cannot unlock yet (the skill cards and pack buttons use the Neutral / Selected button roles).")]
     [SerializeField] private Color cardColor = new Color(0.17f, 0.17f, 0.21f, 1f);
-    [SerializeField] private Color textColor = Color.white;
+    private Color textColor => PixelUITheme.TextColor;   // (the theme: PixelUITheme)
     [SerializeField] private Color dimTextColor = new Color(1f, 1f, 1f, 0.55f);
     [SerializeField] private Color perkUnlockedColor = new Color(0.55f, 1f, 0.6f, 1f);
     [SerializeField] private int sortingOrder = 131;
@@ -135,7 +134,7 @@ public partial class PixelSkills
         tabObject.SetActive(false);
 
         // ---- The window: the standard Fixed window (PixelUIKit.CreateWindow: title, X, header slots). ----
-        windowParts = PixelUIKit.CreateWindow(Font, canvasRoot.transform, "Skills Window", windowTitle, windowSize, panelColor,
+        windowParts = PixelUIKit.CreateWindow(Font, canvasRoot.transform, "Skills Window", windowTitle, windowSize,
                                               PixelUIKit.WindowKind.Fixed, () => PixelPop.Hide(windowObject));
         windowObject = windowParts.Root;
         windowRect = windowParts.Rect;
@@ -327,7 +326,7 @@ public partial class PixelSkills
     {
         PixelHud hud = PixelHud.Ensure(gameObject);
         // The standard Fixed window (PixelUIKit.CreateWindow); its title is set per skill in RefreshWindow.
-        treeParts = PixelUIKit.CreateWindow(Font, canvasRoot.transform, "Skill Tree Window", "", windowSize, panelColor,
+        treeParts = PixelUIKit.CreateWindow(Font, canvasRoot.transform, "Skill Tree Window", "", windowSize,
                                             PixelUIKit.WindowKind.Fixed, () => PixelPop.Hide(treeWindow));
         treeWindow = treeParts.Root;
         treeRect = treeParts.Rect;

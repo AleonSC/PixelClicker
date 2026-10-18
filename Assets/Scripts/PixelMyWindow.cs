@@ -67,10 +67,9 @@ public class PixelMyWindow : MonoBehaviour
     [Tooltip("Seconds between value refreshes. 0 = the coded default (0.4).")]
     [SerializeField] private float refreshSeconds = 0f;
 
-    [Tooltip("Colours.")]
-    [SerializeField] private Color panelColor = new Color(0.1f, 0.12f, 0.2f, 0.94f);
+    private Color panelColor => PixelUITheme.ToolWindowColor;   // (the theme: PixelUITheme)
     [SerializeField] private Color rowColor = new Color(0.16f, 0.2f, 0.3f, 0.9f);
-    [SerializeField] private Color textColor = new Color(0.93f, 0.95f, 1f, 1f);
+    private Color textColor => PixelUITheme.TextColor;   // (the theme: PixelUITheme)
     [SerializeField] private Color dimTextColor = new Color(0.7f, 0.76f, 0.88f, 1f);
     [SerializeField] private Color barColor = new Color(0.3f, 0.8f, 0.45f, 1f);
 
@@ -347,7 +346,7 @@ public class PixelMyWindow : MonoBehaviour
 
         // A standard Tool window: centred title, grey X, drag by the header, minimize '-', dock to a screen edge (PixelWindowChrome; its place is saved
         // under PixelClicker.MyWindow.X / Y / Min / Dock / DockY, the keys this window always used).
-        parts = PixelUIKit.CreateWindow(Font, canvasRoot.transform, "My Window", windowTitle == "My Window" ? "Pocket" : windowTitle, size, panelColor,
+        parts = PixelUIKit.CreateWindow(Font, canvasRoot.transform, "My Window", windowTitle == "My Window" ? "Pocket" : windowTitle, size,
                                         PixelUIKit.WindowKind.Tool, () => { open = false; ApplyOpen(); }, "PixelClicker.MyWindow");
         windowObject = parts.Root;
         windowRect = parts.Rect;

@@ -1059,8 +1059,7 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
         const float width = 780f, height = 780f, pad = 24f, rowH = 78f, gap = 10f, footerH = 96f;
 
         // The standard Fixed window (PixelUIKit.CreateWindow): title 48 in capitals, grey X 70.
-        PixelWindowParts parts = PixelUIKit.CreateWindow(font, windowRoot.transform, "Panel", ufoTitle, new Vector2(width, height),
-                                                         new Color(0.09f, 0.1f, 0.14f, 0.97f), PixelUIKit.WindowKind.Fixed, CloseWindow,
+        PixelWindowParts parts = PixelUIKit.CreateWindow(font, windowRoot.transform, "Panel", ufoTitle, new Vector2(width, height), PixelUIKit.WindowKind.Fixed, CloseWindow,
                                                          pop: false);   // (rebuilt on every page switch: it must not grow in again each time)
         GameObject panel = parts.Root;
         windowPanel = parts.Rect;

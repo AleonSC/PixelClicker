@@ -109,7 +109,7 @@ public partial class PixelShop
 
         // The standard Fixed window (PixelUIKit.CreateWindow): title, grey X, open / close animation (PixelPop). Centred, like before.
         // (The search box fits in the standard 90 header, so no headerHeight override.)
-        PixelWindowParts parts = PixelUIKit.CreateWindow(font, parent, "Shop Panel", panelTitle, new Vector2(panelWidth, panelHeight), panelColor,
+        PixelWindowParts parts = PixelUIKit.CreateWindow(font, parent, "Shop Panel", panelTitle, new Vector2(panelWidth, panelHeight),
                                                          PixelUIKit.WindowKind.Fixed, () => PixelPop.Hide(panelObject));
         panelObject = parts.Root;
         panelRect = parts.Rect;
@@ -540,8 +540,7 @@ public partial class PixelShop
         // The standard Fixed window, the shop's size and centred like it; opaque: the shop behind must not show through.
         // It is still opened / closed with SetActive (PixelShopOperation opens it too): the builder's PixelPop grows it in when it opens
         // and fits it on screen like the shop; closing stays instant.
-        PixelWindowParts parts = PixelUIKit.CreateWindow(font, parent, "Upgrades Window", "", new Vector2(panelWidth, panelHeight),
-                                                         new Color(panelColor.r, panelColor.g, panelColor.b, 1f), PixelUIKit.WindowKind.Fixed, CloseUpgradesWindow);
+        PixelWindowParts parts = PixelUIKit.CreateWindow(font, parent, "Upgrades Window", "", new Vector2(panelWidth, panelHeight), PixelUIKit.WindowKind.Fixed, CloseUpgradesWindow);
         subPanelObject = parts.Root;
         ShopButtonExtras(parts.Close);
 

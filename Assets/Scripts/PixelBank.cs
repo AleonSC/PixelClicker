@@ -222,8 +222,7 @@ public class PixelBank : MonoBehaviour, IPixelSaved
     [Tooltip("Text size.")]
     [SerializeField] private float fontSize = 30f;
 
-    [Tooltip("Window background colour.")]
-    [SerializeField] private Color panelColor = new Color(0.1f, 0.1f, 0.13f, 0.97f);
+    private Color panelColor => PixelUITheme.WindowColor;   // (the theme: PixelUITheme)
 
     [Tooltip("Row background colour.")]
     [SerializeField] private Color rowColor = new Color(0.17f, 0.17f, 0.21f, 1f);
@@ -231,8 +230,7 @@ public class PixelBank : MonoBehaviour, IPixelSaved
     [Tooltip("Row colour of the selected pixel (while the hose is equipped).")]
     [SerializeField] private Color rowSelectedColor = new Color(0.25f, 0.5f, 0.55f, 1f);
 
-    [Tooltip("Text colour.")]
-    [SerializeField] private Color textColor = Color.white;
+    private Color textColor => PixelUITheme.TextColor;   // (the theme: PixelUITheme)
 
     [Tooltip("Scroll bar colour.")]
     [SerializeField] private Color scrollbarColor = new Color(1f, 1f, 1f, 0.35f);
@@ -1222,7 +1220,7 @@ public class PixelBank : MonoBehaviour, IPixelSaved
         RefreshHoseButton();
 
         // The window, just right of the tab: the standard Fixed window (PixelUIKit.CreateWindow: title, X, header slots).
-        windowParts = PixelUIKit.CreateWindow(font, canvasRoot.transform, "Bank Window", windowTitle, windowSize, panelColor,
+        windowParts = PixelUIKit.CreateWindow(font, canvasRoot.transform, "Bank Window", windowTitle, windowSize,
                                               PixelUIKit.WindowKind.Fixed, CloseWindow);
         windowObject = windowParts.Root;
         RectTransform wr = windowParts.Rect;

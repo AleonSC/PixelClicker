@@ -28,8 +28,7 @@ public class PixelDatabaseWindow : MonoBehaviour
     [Tooltip("Most references listed for one entry.")]
     [SerializeField] private int maxReferences = 400;
 
-    [Tooltip("Window colour.")]
-    [SerializeField] private Color panelColor = new Color(0.1f, 0.1f, 0.14f, 0.98f);
+    private Color panelColor => PixelUITheme.WindowColor;   // (the theme: PixelUITheme)
 
     private PixelClicker clicker;
     private GameObject canvasRoot, windowObject;
@@ -111,7 +110,7 @@ public class PixelDatabaseWindow : MonoBehaviour
         canvasRoot.transform.SetParent(transform, false);
 
         // The standard Fixed window (PixelUIKit.CreateWindow): title 48 in capitals, grey X 70. The search box sits below the header, not in it.
-        PixelWindowParts parts = PixelUIKit.CreateWindow(Font, canvasRoot.transform, "Database Window", "Game Database", windowSize, panelColor,
+        PixelWindowParts parts = PixelUIKit.CreateWindow(Font, canvasRoot.transform, "Database Window", "Game Database", windowSize,
                                                          PixelUIKit.WindowKind.Fixed, () => PixelPop.Hide(windowObject));
         windowObject = parts.Root;
         float top = parts.HeaderHeight + 14f;   // where the content starts (search box, detail panel)

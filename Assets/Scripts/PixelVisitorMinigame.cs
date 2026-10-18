@@ -1102,7 +1102,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     /// </summary>
     private PixelWindowParts Panel(string name, string title, Vector2 size, float rightOffset)
     {
-        PixelWindowParts w = PixelUIKit.CreateWindow(Font, canvasRoot.transform, name, title, size, new Color(0.08f, 0.1f, 0.16f, 0.97f),
+        PixelWindowParts w = PixelUIKit.CreateWindow(Font, canvasRoot.transform, name, title, size,
                                                      PixelUIKit.WindowKind.Fixed, null, closeButton: false);
         w.Title.color = TitleColor;
         FitName(w.Title);   // (a long name stays on one line)

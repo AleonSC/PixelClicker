@@ -272,8 +272,7 @@ public class PixelCrafting : MonoBehaviour
     [Range(0.1f, 0.9f)]
     [SerializeField] private float potionInnerScale = 0.5f;
 
-    [Tooltip("Window background colour.")]
-    [SerializeField] private Color panelColor = new Color(0.1f, 0.1f, 0.13f, 0.97f);
+    private Color panelColor => PixelUITheme.WindowColor;   // (the theme: PixelUITheme)
 
     [Tooltip("Colour of the two boxes and the search boxes.")]
     [SerializeField] private Color slotColor = new Color(0.2f, 0.2f, 0.26f, 1f);
@@ -289,8 +288,7 @@ public class PixelCrafting : MonoBehaviour
     [Tooltip("Colour of a requirement you are short of.")]
     [SerializeField] private Color shortColor = new Color(1f, 0.45f, 0.4f, 1f);
 
-    [Tooltip("Text colour.")]
-    [SerializeField] private Color textColor = Color.white;
+    private Color textColor => PixelUITheme.TextColor;   // (the theme: PixelUITheme)
 
     [Tooltip("Scroll bar colour.")]
     [SerializeField] private Color scrollbarColor = new Color(1f, 1f, 1f, 0.35f);
@@ -642,7 +640,7 @@ public class PixelCrafting : MonoBehaviour
         PixelMenuKeys.Register(PixelAction.Crafting, open);
 
         // --- Window: the standard Fixed window (PixelUIKit.CreateWindow: title, X, header slots); FitWindow sizes it when it opens.
-        windowParts = PixelUIKit.CreateWindow(font, canvasRoot.transform, "Crafting Window", windowTitle, new Vector2(windowWidth, 700f), panelColor,
+        windowParts = PixelUIKit.CreateWindow(font, canvasRoot.transform, "Crafting Window", windowTitle, new Vector2(windowWidth, 700f),
                                               PixelUIKit.WindowKind.Fixed, Close);
         windowObject = windowParts.Root;
         PixelMenuFx.AddWindowLine(windowObject.transform, windowParts.HeaderHeight);
@@ -790,7 +788,7 @@ public class PixelCrafting : MonoBehaviour
     {
         GameObject panel = new GameObject("Materials Panel", typeof(RectTransform), typeof(Image));
         panel.transform.SetParent(windowObject.transform, false);
-        PixelUIKit.StyleWindow(panel.GetComponent<Image>(), panelColor);
+        PixelUIKit.StyleWindow(panel.GetComponent<Image>(), WindowShade.Window);   // (the theme window colour, live)
         materialsRect = panel.GetComponent<RectTransform>();
         materialsRect.anchorMin = new Vector2(0f, 0f);
         materialsRect.anchorMax = new Vector2(0f, 1f);
@@ -976,7 +974,7 @@ public class PixelCrafting : MonoBehaviour
     {
         bookObject = new GameObject("Recipe Book", typeof(RectTransform), typeof(Image));
         bookObject.transform.SetParent(windowObject.transform, false);
-        PixelUIKit.StyleWindow(bookObject.GetComponent<Image>(), panelColor);
+        PixelUIKit.StyleWindow(bookObject.GetComponent<Image>(), WindowShade.Window);   // (the theme window colour, live)
         RectTransform wr = bookObject.GetComponent<RectTransform>();
         wr.anchorMin = new Vector2(1f, 0f);
         wr.anchorMax = new Vector2(1f, 1f);

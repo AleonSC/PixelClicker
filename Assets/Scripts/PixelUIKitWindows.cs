@@ -109,6 +109,38 @@ public static partial class PixelUIKit
 {
     public enum WindowKind { Fixed, Tool }
 
+    // Titles made by CreateWindow, recoloured live when the theme's title colour changes (a title given its own colour afterwards is left alone).
+    private static readonly System.Collections.Generic.List<TMP_Text> titles = new System.Collections.Generic.List<TMP_Text>();
+    private static Color titleColorShown = Color.white;
+
+    /// <summary>Re-applies PixelUITheme's title colour to every window title still in the theme colour.</summary>
+    public static void RefreshTitles()
+    {
+        Color now = PixelUITheme.TitleColor;
+        for (int i = titles.Count - 1; i >= 0; i--)
+        {
+            TMP_Text t = titles[i];
+            if (t == null) { titles.RemoveAt(i); continue; }
+            Color c = t.color;
+            if (Mathf.Abs(c.r - titleColorShown.r) + Mathf.Abs(c.g - titleColorShown.g) + Mathf.Abs(c.b - titleColorShown.b) < 0.02f) t.color = now;
+        }
+        titleColorShown = now;
+    }
+
+    /// <summary>
+    /// CreateWindow in the THEME's window colour (Fixed windows and dialogs: PixelUITheme's window colour, Tool windows: its tool window colour),
+    /// following the theme live. Prefer this; the overload with a colour is for windows with a look of their own (the leather Collection Log, Cubie's teal).
+    /// </summary>
+    public static PixelWindowParts CreateWindow(TMP_FontAsset font, Transform parent, string objectName, string title, Vector2 size,
+                                                WindowKind kind, System.Action onClose, string prefKey = null, bool closeButton = true,
+                                                float headerHeight = 0f, bool pop = true)
+    {
+        WindowShade shade = kind == WindowKind.Tool ? WindowShade.ToolWindow : WindowShade.Window;
+        PixelWindowParts w = CreateWindow(font, parent, objectName, title, size, PixelUITheme.ColorOf(shade), kind, onClose, prefKey, closeButton, headerHeight, false, pop);
+        StyleWindow(w.Root.GetComponent<Image>(), shade);
+        return w;
+    }
+
     // ---- The standard (docs/systems/WindowInventory.md, chosen 2026-10-18). One place: change a number here and every window follows. ----
     public const float WindowHeaderHeight = 90f, WindowTitleSize = 48f, WindowCloseSize = 70f;
     public static readonly Vector2 WindowCloseOffset = new Vector2(14f, 12f);   // from the top-right corner
@@ -147,7 +179,9 @@ public static partial class PixelUIKit
         float sideRoom = closeButton ? closeSize + closeAt.x + 8f : 16f;
         if (tool) sideRoom += ToolCloseSize + 6f;   // (room for the minimize button too)
 
-        w.Title = CreateText(font, w.Root.transform, "Title", title, tool ? ToolTitleSize : WindowTitleSize, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
+        w.Title = CreateText(font, w.Root.transform, "Title", title, tool ? ToolTitleSize : WindowTitleSize, TextAlignmentOptions.Center, FontStyles.Bold, PixelUITheme.TitleColor);
+        if (titles.Count > 400) titles.RemoveAll(t => t == null);
+        titles.Add(w.Title);
         Caps(w.Title);
         w.Title.raycastTarget = false;
         w.Title.enableAutoSizing = true;

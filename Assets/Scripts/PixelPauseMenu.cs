@@ -533,14 +533,12 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Colour that dims the screen behind the menu (alpha = darkness).")]
     [SerializeField] private Color dimColor = new Color(0f, 0f, 0f, 0.6f);
 
-    [Tooltip("Panel background colour.")]
-    [SerializeField] private Color panelColor = new Color(0.07f, 0.07f, 0.09f, 0.97f);
+    private Color panelColor => PixelUITheme.WindowColor;   // (the theme: PixelUITheme)
 
     [Tooltip("Colour of the main menu's own buttons (Resume, Save / Load, Stats, Settings, Guide - their look on purpose). Every other button takes its colour from its role (PixelUITheme).")]
     [SerializeField] private Color menuButtonColor = new Color(0.2f, 0.45f, 0.9f, 1f);
 
-    [Tooltip("Text colour.")]
-    [SerializeField] private Color textColor = Color.white;
+    private Color textColor => PixelUITheme.TextColor;   // (the theme: PixelUITheme)
 
     [Header("Canvas")]
     [Tooltip("Sorting order of the canvas (above every other panel).")]
@@ -804,7 +802,7 @@ public class PixelPauseMenu : MonoBehaviour
 
         floorPopout = new GameObject("Floor Popout", typeof(RectTransform), typeof(Image));
         floorPopout.transform.SetParent(canvasRoot.transform, false);
-        PixelUIKit.StyleWindow(floorPopout.GetComponent<Image>(), panelColor);
+        PixelUIKit.StyleWindow(floorPopout.GetComponent<Image>(), WindowShade.Window);   // (the theme window colour, live)
         RectTransform box = floorPopout.GetComponent<RectTransform>();
         box.anchorMin = box.anchorMax = box.pivot = new Vector2(0.5f, 0.5f);
         box.sizeDelta = new Vector2(460f, 270f);
@@ -1143,7 +1141,7 @@ public class PixelPauseMenu : MonoBehaviour
         GameObject panel = new GameObject("Panel", typeof(RectTransform), typeof(Image));
         mainPanel = panel;
         panel.transform.SetParent(menuRoot.transform, false);
-        PixelUIKit.StyleWindow(panel.GetComponent<Image>(), panelColor);
+        PixelUIKit.StyleWindow(panel.GetComponent<Image>(), WindowShade.Window);   // (the theme window colour, live)
         RectTransform panelRect = panel.GetComponent<RectTransform>();
         panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = new Vector2(0.5f, 0.5f);
         panelRect.sizeDelta = panelSize;
@@ -1266,7 +1264,7 @@ public class PixelPauseMenu : MonoBehaviour
     {
         GameObject panel = new GameObject(objectName, typeof(RectTransform), typeof(Image));
         panel.transform.SetParent(menuRoot.transform, false);
-        PixelUIKit.StyleWindow(panel.GetComponent<Image>(), panelColor);
+        PixelUIKit.StyleWindow(panel.GetComponent<Image>(), WindowShade.Window);   // (the theme window colour, live)
         RectTransform rect = panel.GetComponent<RectTransform>();
         rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
         rect.sizeDelta = panelSize;
@@ -1732,7 +1730,7 @@ public class PixelPauseMenu : MonoBehaviour
 
         GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image), typeof(PixelPop));
         box.transform.SetParent(overwriteOverlay.transform, false);
-        PixelUIKit.StyleWindow(box.GetComponent<Image>(), panelColor);
+        PixelUIKit.StyleWindow(box.GetComponent<Image>(), WindowShade.Window);   // (the theme window colour, live)
         RectTransform br = box.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(0.5f, 0.5f);
         br.sizeDelta = new Vector2(panelSize.x - 60f, 340f);
@@ -1858,7 +1856,7 @@ public class PixelPauseMenu : MonoBehaviour
 
         GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image), typeof(PixelPop));
         box.transform.SetParent(renameOverlay.transform, false);
-        PixelUIKit.StyleWindow(box.GetComponent<Image>(), panelColor);
+        PixelUIKit.StyleWindow(box.GetComponent<Image>(), WindowShade.Window);   // (the theme window colour, live)
         RectTransform br = box.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(0.5f, 0.5f);
         br.sizeDelta = new Vector2(panelSize.x - 60f, 120f + menuButtonSize.y * 2f + 80f);

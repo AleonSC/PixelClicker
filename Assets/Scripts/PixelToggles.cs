@@ -89,8 +89,7 @@ public class PixelToggles : MonoBehaviour
     [Tooltip("Text size.")]
     [SerializeField] private float fontSize = 30f;
 
-    [Tooltip("Window background colour.")]
-    [SerializeField] private Color panelColor = new Color(0.1f, 0.1f, 0.13f, 0.97f);
+    private Color panelColor => PixelUITheme.WindowColor;   // (the theme: PixelUITheme)
 
     [Tooltip("Row background colour.")]
     [SerializeField] private Color rowColor = new Color(0.17f, 0.17f, 0.21f, 1f);
@@ -104,8 +103,7 @@ public class PixelToggles : MonoBehaviour
     [Tooltip("Tick colour.")]
     [SerializeField] private Color tickColor = new Color(0.4f, 0.9f, 0.5f, 1f);
 
-    [Tooltip("Text colour.")]
-    [SerializeField] private Color textColor = Color.white;
+    private Color textColor => PixelUITheme.TextColor;   // (the theme: PixelUITheme)
 
     [Tooltip("Scroll bar colour.")]
     [SerializeField] private Color scrollbarColor = new Color(1f, 1f, 1f, 0.35f);
@@ -612,7 +610,7 @@ public class PixelToggles : MonoBehaviour
         // --- The window, just left of the button.
         // The standard Fixed window (PixelUIKit.CreateWindow: title, grey X, PixelPop). The builder centres it; this one is put back at the
         // middle of the right edge, taking the spot the button slides out to (FitBesideShop moves it next to the shop while that is open).
-        PixelWindowParts parts = PixelUIKit.CreateWindow(font, canvasRoot.transform, "Toggles Window", windowTitle, windowSize, panelColor,
+        PixelWindowParts parts = PixelUIKit.CreateWindow(font, canvasRoot.transform, "Toggles Window", windowTitle, windowSize,
                                                          PixelUIKit.WindowKind.Fixed, Close);
         windowObject = parts.Root;
         RectTransform wr = parts.Rect;

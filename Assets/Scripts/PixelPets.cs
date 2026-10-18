@@ -214,10 +214,9 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
     [Tooltip("Event log line when a pet is found. {0} = the pet's name.")]
     [SerializeField] private string foundFormat = "Pet found: {0}!";
 
-    [Header("Popup look")]
-    [Tooltip("Colour of the popup box.")]
-    [SerializeField] private Color panelColor = new Color(0.12f, 0.12f, 0.16f, 0.98f);
+    private Color panelColor => PixelUITheme.WindowColor;   // (the theme: PixelUITheme)
 
+    [Header("Popup look")]
     [Tooltip("Colour of the dark screen behind the popup.")]
     [SerializeField] private Color dimColor = new Color(0f, 0f, 0f, 0.7f);
 
@@ -508,7 +507,7 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
         PixelUIKit.Stretch(dim.GetComponent<RectTransform>());
 
         // The standard window as a dialog (PixelUIKit.CreateWindow, no X: OK closes it). Title in the pets' title colour.
-        PixelWindowParts parts = PixelUIKit.CreateWindow(font, dim.transform, "Box", popupTitle, new Vector2(760f, 660f), panelColor,
+        PixelWindowParts parts = PixelUIKit.CreateWindow(font, dim.transform, "Box", popupTitle, new Vector2(760f, 660f),
                                                          PixelUIKit.WindowKind.Fixed, null, closeButton: false);
         parts.Title.color = titleColor;
         GameObject box = parts.Root;   // (the content below starts at y 120, under the header)

@@ -294,8 +294,7 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Text size for auto-created texts.")]
     [SerializeField] private float fontSize = 40f;
 
-    [Tooltip("Text colour (when 'Color Text By Tier' is off).")]
-    [SerializeField] private Color textColor = Color.white;
+    private Color textColor => PixelUITheme.TextColor;   // (the theme: PixelUITheme)
 
     [Tooltip("Outline colour (used for auto-created texts).")]
     [SerializeField] private Color outlineColor = Color.black;

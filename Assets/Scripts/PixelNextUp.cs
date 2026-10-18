@@ -32,8 +32,7 @@ public class PixelNextUp : MonoBehaviour
     [Min(0f)]
     [Tooltip("How fast the cubes slide (bigger = snappier). 0 = the default (13).")]
     [SerializeField] private float slideSpeed = 0f;
-    [Tooltip("Colour of the window.")]
-    [SerializeField] private Color windowColor = new Color(0.1f, 0.12f, 0.18f, 0.92f);
+    private Color windowColor => PixelUITheme.ToolWindowColor;   // (the theme: PixelUITheme)
     [Tooltip("Colour of the small captions (NEXT / NOW / BEFORE).")]
     [SerializeField] private Color captionColor = new Color(0.8f, 0.85f, 0.95f, 0.85f);
     [Tooltip("Sorting order of the window's canvas.")]
@@ -248,8 +247,7 @@ public class PixelNextUp : MonoBehaviour
         canvasRoot = PixelUIKit.CreateCanvas("Next Up", sortingOrder, new Vector2(1920f, 1080f), true);
         // A standard Tool window (PixelUIKit.CreateWindow): drag by the header, minimize with '-', dock against a screen side; no X (it is switched off in Settings).
         // The prefKey is the one it always had, so its saved place carries over.
-        PixelWindowParts parts = PixelUIKit.CreateWindow(font, canvasRoot.transform, "Window", "Next up", new Vector2(Width, HeaderH + Spacing * SlotCount + 8f),
-                                                         windowColor, PixelUIKit.WindowKind.Tool, null, "PixelClicker.NextUp.Window", closeButton: false,
+        PixelWindowParts parts = PixelUIKit.CreateWindow(font, canvasRoot.transform, "Window", "Next up", new Vector2(Width, HeaderH + Spacing * SlotCount + 8f), PixelUIKit.WindowKind.Tool, null, "PixelClicker.NextUp.Window", closeButton: false,
                                                          pop: false);   // (it just shows with its canvas, e.g. after the title screen - no grow-in / sound each time)
         panel = parts.Root;
         RectTransform pr = parts.Rect;

@@ -412,7 +412,7 @@ public partial class PixelPets
         PixelUIKit.Stretch(dim.GetComponent<RectTransform>());
 
         // The standard window as a dialog (PixelUIKit.CreateWindow, no X: 'Done' closes it). Title in the pets' title colour.
-        PixelWindowParts parts = PixelUIKit.CreateWindow(font, dim.transform, "Box", "Outfit Studio", new Vector2(1800f, 980f), panelColor,
+        PixelWindowParts parts = PixelUIKit.CreateWindow(font, dim.transform, "Box", "Outfit Studio", new Vector2(1800f, 980f),
                                                          PixelUIKit.WindowKind.Fixed, null, closeButton: false);
         parts.Title.color = titleColor;
         Transform t = parts.Root.transform;   // (the content below starts at y 100, under the header)

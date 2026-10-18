@@ -97,14 +97,12 @@ public class PixelOfflineProgress : MonoBehaviour
     [Tooltip("Button size.")]
     [SerializeField] private Vector2 buttonSize = new Vector2(320f, 90f);
 
-    [Tooltip("Window background colour.")]
-    [SerializeField] private Color windowColor = new Color(0.07f, 0.07f, 0.09f, 0.97f);
+    private Color windowColor => PixelUITheme.WindowColor;   // (the theme: PixelUITheme)
 
     [Tooltip("Colour that dims the screen behind the window.")]
     [SerializeField] private Color dimColor = new Color(0f, 0f, 0f, 0.55f);
 
-    [Tooltip("Text colour.")]
-    [SerializeField] private Color textColor = Color.white;
+    private Color textColor => PixelUITheme.TextColor;   // (the theme: PixelUITheme)
 
     [Tooltip("Sorting order of the window's canvas (below the pause menu).")]
     [SerializeField] private int sortingOrder = 480;
@@ -318,7 +316,7 @@ public class PixelOfflineProgress : MonoBehaviour
         // The standard window as a dialog (PixelUIKit.CreateWindow, no X: Continue closes it); the lines start under its header.
         float top = PixelUIKit.WindowHeaderHeight + 6f;
         float height = top + awayH + 6f + clicksH + 16f + viewH + 30f + buttonSize.y + 40f;
-        PixelWindowParts parts = PixelUIKit.CreateWindow(font, dim.transform, "Window", title, new Vector2(windowWidth, height), windowColor,
+        PixelWindowParts parts = PixelUIKit.CreateWindow(font, dim.transform, "Window", title, new Vector2(windowWidth, height),
                                                          PixelUIKit.WindowKind.Fixed, null, closeButton: false);
         parts.Title.color = textColor;
         GameObject window = parts.Root;

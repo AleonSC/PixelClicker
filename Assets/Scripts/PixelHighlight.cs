@@ -1,6 +1,6 @@
 // ---- System notes ----
 // PixelHighlight.cs
-//   Shared pulsing gold frame round ANY UI element (the Shop button's highlight, made reusable): PixelHighlight.Set(owner, rect, colour)
+//   Shared pulsing frame (the theme highlight colour, PixelUITheme.HighlightColor: gold) round ANY UI element: PixelHighlight.Set(owner, rect, colour)
 //   frames 'rect' on its own canvas (sorting order 615: above the windows, below the tip boxes at 620), Clear(owner) fades it out (only the
 //   owner that set it can clear it). One frame at a time; it follows the rect every frame (windows popping in / moving) and hides while the
 //   rect is inactive. Used by PixelShopNudge (the Shop button while the shop hold is on) and PixelSkills' perk popups (the skill's card,
@@ -12,8 +12,6 @@ using UnityEngine.UI;
 /// <summary>A soft, slowly pulsing gold frame drawn round one UI element to point the player at it (PixelHighlight.Set / Clear).</summary>
 public class PixelHighlight : MonoBehaviour
 {
-    [Tooltip("The frame's colour when Set is called without one.")]
-    [SerializeField] private Color defaultColor = new Color(1f, 0.82f, 0.25f, 1f);
     [Tooltip("Sorting order of the frame's canvas (above the windows, below the tip boxes at 620).")]
     [SerializeField] private int sortingOrder = 615;
     [Tooltip("How far the frame reaches past the element's edges (canvas units), before the pulse.")]
@@ -38,7 +36,7 @@ public class PixelHighlight : MonoBehaviour
         if (instance == null) instance = new GameObject("Pixel Highlight").AddComponent<PixelHighlight>();
         instance.owner = who;
         instance.target = rect;
-        instance.color = tint ?? instance.defaultColor;
+        instance.color = tint ?? PixelUITheme.HighlightColor;   // (the theme's highlight colour unless the caller asks for its own)
     }
 
     /// <summary>Fades the frame out if 'who' set it.</summary>

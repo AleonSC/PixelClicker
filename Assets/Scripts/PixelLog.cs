@@ -178,8 +178,7 @@ public class PixelLog : MonoBehaviour
     [SerializeField] private float panelPadding = 20f;
 
 
-    [Tooltip("Panel background colour.")]
-    [SerializeField] private Color panelColor = new Color(0.07f, 0.07f, 0.09f, 0.95f);
+    private Color panelColor => PixelUITheme.WindowColor;   // (the theme: PixelUITheme)
 
     [Tooltip("Show a 'Total' line at the bottom adding up every type.")]
     [SerializeField] private bool showOverallTotal = true;
@@ -207,8 +206,7 @@ public class PixelLog : MonoBehaviour
     [Tooltip("Row text size.")]
     [SerializeField] private float rowFontSize = 34f;
 
-    [Tooltip("Text colour.")]
-    [SerializeField] private Color textColor = Color.white;
+    private Color textColor => PixelUITheme.TextColor;   // (the theme: PixelUITheme)
 
     [Tooltip("Colour of the amounts on the right.")]
     [SerializeField] private Color amountColor = new Color(1f, 0.92f, 0.5f, 1f);
@@ -711,7 +709,7 @@ public class PixelLog : MonoBehaviour
         PixelMenuKeys.Register(PixelAction.LogWindow, button);
 
         // --- Panel: the standard Fixed window (title, grey X), kept next to the button, growing away from the screen edge
-        windowParts = PixelUIKit.CreateWindow(font, canvasRoot.transform, "Log Panel", panelTitle, new Vector2(panelWidth, 400f), panelColor,
+        windowParts = PixelUIKit.CreateWindow(font, canvasRoot.transform, "Log Panel", panelTitle, new Vector2(panelWidth, 400f),
                                               PixelUIKit.WindowKind.Fixed, () => PixelPop.Hide(panelObject));
         panelObject = windowParts.Root;
         panelRect = windowParts.Rect;

@@ -15,3 +15,12 @@ Settings > Interface > 'Custom UI button colour' (tick box + eyedropper, PixelUI
 - Roles and their colours live in `PixelUITheme` (a system component, Inspector-editable): Neutral (ordinary, window X / header buttons, inactive tabs), Primary (main action, every '?' help button), Selected (open tab / chosen item), Success (green confirm), Danger (red quit / delete / reject). Neutral, Primary and Selected follow the custom button colour; Success and Danger keep their meaning colour (ticks in the Inspector).
 - A plain colour (`CreateButton(..., Color color, ...)`) = role Custom: only for truly unique colours (a skill's accent, a vendor's theme colour, gold); weakly coloured Custom buttons still follow the custom colour (the old rule).
 - Not a button but should look like one (a colour swatch, a progress trough, a list row): `StyleButtonLook(image)` - the shape only, never recoloured.
+
+## The theme (UI unification step 4)
+`PixelUITheme` (a system component, Inspector) is the ONE place for the UI's colours:
+- Button roles (above).
+- Window backgrounds: `windowColor` (big windows, dialogs, the pause menu screens) and `toolWindowColor` (View, Pocket, Next up). Use `PixelUIKit.CreateWindow(...)` WITHOUT a colour, or `StyleWindow(image, WindowShade.Window / ToolWindow)` - they follow the theme live. A plain colour only for a window with a look of its own (the leather Collection Log, Cubie's teal, the inventory's see-through box, the Dev Hub's dev palette).
+- Text: `titleColor` (every CreateWindow title, live), `textColor` and `dimTextColor` (`PixelUITheme.TextColor` / `DimTextColor`, read when a window is built - a change shows after a restart). Windows read them instead of their own textColor fields.
+- `highlightColor`: PixelHighlight's pulsing frame.
+- Window SIZES (header heights, title / X sizes) stay constants at the top of PixelUIKitWindows.cs (layout is built once).
+- The player's own colours (Settings > Interface > Custom UI colour / Custom UI button colour) still tint on top of the theme.
