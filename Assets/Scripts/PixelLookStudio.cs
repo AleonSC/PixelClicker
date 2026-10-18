@@ -188,16 +188,17 @@ public class PixelLookStudio : MonoBehaviour
 
         // ---- right column: undo / reset / copy from, save / load, use saved, status ----
         const float rx = 222f;
-        PixelDevUI.Button(root, "Undo", rx, 58f, 110f, 40f, ButtonColor, Undo);
-        PixelDevUI.Button(root, "Reset", rx + 116f, 58f, 110f, 40f, ButtonColor, ResetType);
+        PixelUIKit.SetRole(PixelDevUI.Button(root, "Undo", rx, 58f, 110f, 40f, ButtonColor, Undo), ButtonRole.Neutral);
+        PixelUIKit.SetRole(PixelDevUI.Button(root, "Reset", rx + 116f, 58f, 110f, 40f, ButtonColor, ResetType), ButtonRole.Neutral);
         copyDropdown = PixelUIKit.CreateDropdown(font, root, "Copy From", new Vector2(236f, 40f), Box, Box, TextColor, FontSize - 2f);
         PlaceTL(copyDropdown.GetComponent<RectTransform>(), rx + 232f, 58f, 236f, 40f);
         copyDropdown.onValueChanged.AddListener(CopyFromChosen);
         PixelDevTools.Tip(copyDropdown.gameObject, "Start from another pixel's look (or a blank one). Undo takes it back.");
 
         Button save = PixelDevUI.Button(root, "Save + copy code", rx, 106f, 230f, 40f, Green, Save);
+        PixelUIKit.SetRole(save, ButtonRole.Success);
         PixelDevTools.Tip(save.gameObject, "Saves this look to a file and copies it as code. Paste it to Claude (or tell Claude the file name) to make it the official look.");
-        PixelDevUI.Button(root, "Load saved", rx + 238f, 106f, 230f, 40f, ButtonColor, LoadSaved);
+        PixelUIKit.SetRole(PixelDevUI.Button(root, "Load saved", rx + 238f, 106f, 230f, 40f, ButtonColor, LoadSaved), ButtonRole.Neutral);
 
         TMP_Text useLabel = PixelDevUI.Label(root, "Use my saved looks when the game starts", rx, 154f, 420f, 40f, FontSize - 2f, TextColor);
         PixelUIKit.FitOneLine(useLabel);
@@ -285,7 +286,7 @@ public class PixelLookStudio : MonoBehaviour
     private Section AddSection(string name)
     {
         Section s = new Section { name = name, open = PixelPrefs.GetBool(P + "Open." + name, Array.IndexOf(OpenByDefault, name) >= 0) };
-        Button b = PixelUIKit.CreateButton(font, content, name + " Header", "", new Vector2(RowW, HeaderH), HeaderColor, TextColor, FontSize);
+        Button b = PixelUIKit.CreateButton(font, content, name + " Header", "", new Vector2(RowW, HeaderH), ButtonRole.Neutral, FontSize);
         s.header = b.GetComponent<RectTransform>();
         s.label = b.GetComponentInChildren<TMP_Text>();
         s.label.alignment = TextAlignmentOptions.MidlineLeft;
@@ -403,12 +404,13 @@ public class PixelLookStudio : MonoBehaviour
         }
         else if (t == typeof(Color))
         {
+            // (the swatch SHOWS the colour being edited, so it stays a plain colour, not a role)
             Button swatch = PixelUIKit.CreateButton(font, r.rect, "Swatch", "", new Vector2(150f, 32f), Color.white, Color.black, FontSize - 4f);
             PlaceTL(swatch.GetComponent<RectTransform>(), 318f, 4f, 150f, 32f);
             Image swatchImage = swatch.GetComponent<Image>();
             TMP_InputField hex = PixelUIKit.CreateInputField(font, r.rect, "Hex", new Vector2(130f, 32f), Box, TextColor, FontSize - 4f, "#RRGGBBAA");
             PlaceTL(hex.GetComponent<RectTransform>(), 476f, 4f, 130f, 32f);
-            Button dropper = PixelUIKit.CreateButton(font, r.rect, "Eyedropper", "", new Vector2(42f, 32f), ButtonColor, TextColor, FontSize);
+            Button dropper = PixelUIKit.CreateButton(font, r.rect, "Eyedropper", "", new Vector2(42f, 32f), ButtonRole.Neutral, FontSize);
             PlaceTL(dropper.GetComponent<RectTransform>(), RowW - 50f, 4f, 42f, 32f);
             GameObject icon = new GameObject("Icon", typeof(RectTransform), typeof(Image));
             icon.transform.SetParent(dropper.transform, false);

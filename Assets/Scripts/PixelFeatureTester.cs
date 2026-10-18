@@ -243,11 +243,11 @@ public class PixelFeatureTester : MonoBehaviour
             PlaceTL(desc.rectTransform, 16f, 46f, W - 72f, 62f);
             desc.raycastTarget = false;
 
-            Button place = PixelUIKit.CreateButton(font, card.transform, "Place", "Place", new Vector2(200f, 36f), new Color(0.2f, 0.6f, 0.3f, 1f), TextColor, 22f);
+            Button place = PixelUIKit.CreateButton(font, card.transform, "Place", "Place", new Vector2(200f, 36f), ButtonRole.Primary, 22f);
             PlaceTL(place.GetComponent<RectTransform>(), 16f, 108f, 200f, 36f);
             feature.placeLabel = place.GetComponentInChildren<TMP_Text>();
             place.onClick.AddListener(() => { if (placing == feature) StopPlacing(); else StartPlacing(feature); });
-            Button clear = PixelUIKit.CreateButton(font, card.transform, "Clear", "Clear", new Vector2(200f, 36f), new Color(0.55f, 0.22f, 0.2f, 1f), TextColor, 22f);
+            Button clear = PixelUIKit.CreateButton(font, card.transform, "Clear", "Clear", new Vector2(200f, 36f), ButtonRole.Danger, 22f);
             PlaceTL(clear.GetComponent<RectTransform>(), 226f, 108f, 200f, 36f);
             feature.clearLabel = clear.GetComponentInChildren<TMP_Text>();
             clear.onClick.AddListener(() => Clear(feature));
@@ -463,24 +463,24 @@ public class PixelFeatureTester : MonoBehaviour
         PlaceTL(desc.rectTransform, 16f, 46f, W - 72f, 80f);
         desc.raycastTarget = false;
 
-        Button sel = PixelUIKit.CreateButton(font, card.transform, "Select", "Select belts", new Vector2(200f, 36f), new Color(0.2f, 0.45f, 0.65f, 1f), TextColor, 22f);
+        Button sel = PixelUIKit.CreateButton(font, card.transform, "Select", "Select belts", new Vector2(200f, 36f), ButtonRole.Primary, 22f);
         PlaceTL(sel.GetComponent<RectTransform>(), 16f, 128f, 200f, 36f);
         selectLabel = sel.GetComponentInChildren<TMP_Text>();
         sel.onClick.AddListener(() => { if (selecting) StopPlacing(); else StartSelecting(); });
-        Button all = PixelUIKit.CreateButton(font, card.transform, "All", "Select all", new Vector2(200f, 36f), new Color(0.3f, 0.36f, 0.5f, 1f), TextColor, 22f);
+        Button all = PixelUIKit.CreateButton(font, card.transform, "All", "Select all", new Vector2(200f, 36f), ButtonRole.Neutral, 22f);
         PlaceTL(all.GetComponent<RectTransform>(), 226f, 128f, 200f, 36f);
         all.onClick.AddListener(() => { foreach (PixelConveyor b in PixelConveyor.All) if (b != null && !b.IsGhost) AddToSelection(b); RefreshSelection(); });
-        Button none = PixelUIKit.CreateButton(font, card.transform, "None", "Deselect", new Vector2(200f, 36f), new Color(0.3f, 0.36f, 0.5f, 1f), TextColor, 22f);
+        Button none = PixelUIKit.CreateButton(font, card.transform, "None", "Deselect", new Vector2(200f, 36f), ButtonRole.Neutral, 22f);
         PlaceTL(none.GetComponent<RectTransform>(), 436f, 128f, 200f, 36f);
         none.onClick.AddListener(ClearSelection);
 
         speedField = PixelUIKit.CreateInputField(font, card.transform, "Speed", new Vector2(120f, 36f), new Color(0.05f, 0.06f, 0.09f, 1f), Color.white, 22f, "1.6");
         PlaceTL(speedField.GetComponent<RectTransform>(), 16f, 172f, 120f, 36f);
         speedField.contentType = TMP_InputField.ContentType.DecimalNumber;
-        Button set = PixelUIKit.CreateButton(font, card.transform, "Set", "Set speed", new Vector2(150f, 36f), new Color(0.2f, 0.6f, 0.3f, 1f), TextColor, 22f);
+        Button set = PixelUIKit.CreateButton(font, card.transform, "Set", "Set speed", new Vector2(150f, 36f), ButtonRole.Success, 22f);
         PlaceTL(set.GetComponent<RectTransform>(), 146f, 172f, 150f, 36f);
         set.onClick.AddListener(ApplySpeedToSelection);
-        Button rev = PixelUIKit.CreateButton(font, card.transform, "Reverse", "Reverse", new Vector2(130f, 36f), new Color(0.55f, 0.4f, 0.15f, 1f), TextColor, 22f);
+        Button rev = PixelUIKit.CreateButton(font, card.transform, "Reverse", "Reverse", new Vector2(130f, 36f), ButtonRole.Neutral, 22f);
         PlaceTL(rev.GetComponent<RectTransform>(), 306f, 172f, 130f, 36f);
         rev.onClick.AddListener(() => { foreach (PixelConveyor b in selection) if (b != null) b.Flip(); });
         countLabel = PixelUIKit.CreateText(font, card.transform, "Count", "0 selected", 20f, TextAlignmentOptions.MidlineLeft, FontStyles.Italic, new Color(0.75f, 0.85f, 1f, 1f));
