@@ -44,7 +44,7 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelSocketDevice, IPixelHu
 
     private readonly Section[] sections = new Section[Sections];
     private readonly Dictionary<Rigidbody, float> ignoreUntil = new Dictionary<Rigidbody, float>();
-    private float width, depth, wallHeight, cell;
+    private float width, depth, cell;
     private PixelCarryHandles carry;   // the two grip handles (shared with the Recycler)
     private PixelGrab grab;
     private Rigidbody lastHeld;
@@ -55,7 +55,6 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelSocketDevice, IPixelHu
         width = Mathf.Max(1f, settings.bodyDiameter);
         cell = width / Columns;
         depth = cell * Rows;
-        wallHeight = settings.bodyHeight;
         for (int i = 0; i < Sections; i++) sections[i] = new Section();
         carry = gameObject.AddComponent<PixelCarryHandles>();
         carry.Init(() => cam);

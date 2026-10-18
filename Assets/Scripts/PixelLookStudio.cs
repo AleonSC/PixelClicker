@@ -28,7 +28,7 @@ using static PixelDevUI;   // the shared dev colours and PlaceTL
 
 public class PixelLookStudio : MonoBehaviour
 {
-    private const float W = PixelDevHub.ContentW, H = PixelDevHub.ContentH, RowH = 40f, HeaderH = 38f, Gap = 4f, FontSize = 21f;
+    private const float H = PixelDevHub.ContentH, RowH = 40f, HeaderH = 38f, Gap = 4f, FontSize = 21f;
     private const float PreviewSize = 200f, ListTop = 318f, RowW = 664f, RebuildDelay = 0.06f, UndoMergeSeconds = 0.75f;
     private const int MaxUndo = 60;
     private const string P = "PixelClicker.Dev.LookStudio.";

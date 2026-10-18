@@ -17,7 +17,7 @@ using UnityEngine.UI;
 
 public class PixelDevSetups : MonoBehaviour
 {
-    private const float W = PixelDevHub.ContentW, H = PixelDevHub.ContentH, RowH = 46f, ListTop = 214f, ConfirmSeconds = 3f;
+    private const float H = PixelDevHub.ContentH, RowH = 46f, ListTop = 214f, ConfirmSeconds = 3f;
     private const string ResourceFolder = "TestSetups";
 
     private sealed class Entry { public string name, path; public TextAsset builtIn; public DateTime when; }

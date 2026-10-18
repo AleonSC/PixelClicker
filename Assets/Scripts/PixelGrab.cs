@@ -333,16 +333,6 @@ public class PixelGrab : MonoBehaviour, IPixelSaved
         return false;
     }
 
-    private bool HitsCubeFirst(RaycastHit[] sorted, float distance)
-    {
-        foreach (RaycastHit h in sorted)
-        {
-            if (h.distance >= distance) return false;
-            if (clicker.PixelTransform != null && h.transform.IsChildOf(clicker.PixelTransform)) return true;
-        }
-        return false;
-    }
-
     private void Grab(Rigidbody body, OldPixelDespawn despawn, Ray ray)
     {
         PixelStats.Count("old.grabbed");

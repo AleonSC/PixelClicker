@@ -28,8 +28,6 @@ public class PixelDatabaseWindow : MonoBehaviour
     [Tooltip("Most references listed for one entry.")]
     [SerializeField] private int maxReferences = 400;
 
-    private Color panelColor => PixelUITheme.WindowColor;   // (the theme: PixelUITheme)
-
     private PixelClicker clicker;
     private GameObject canvasRoot, windowObject;
     private TMP_InputField search;
@@ -376,7 +374,6 @@ public class PixelDatabaseWindow : MonoBehaviour
         private readonly List<Button> pool = new List<Button>();
         private int count;
         private bool dirty;
-        private List<RowData> data = new List<RowData>();
 
         public RowList(PixelDatabaseWindow window, Transform parent, string name, float rowH, float font)
         {
@@ -388,7 +385,6 @@ public class PixelDatabaseWindow : MonoBehaviour
 
         public void Fill(List<RowData> rows)
         {
-            data = rows;
             count = rows.Count;
             content.anchoredPosition = Vector2.zero;
             for (int i = 0; i < count; i++)

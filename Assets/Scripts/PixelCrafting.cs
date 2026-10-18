@@ -272,7 +272,6 @@ public class PixelCrafting : MonoBehaviour
     [Range(0.1f, 0.9f)]
     [SerializeField] private float potionInnerScale = 0.5f;
 
-    private Color panelColor => PixelUITheme.WindowColor;   // (the theme: PixelUITheme)
 
     [Tooltip("Colour of the two boxes and the search boxes.")]
     [SerializeField] private Color slotColor = new Color(0.2f, 0.2f, 0.26f, 1f);

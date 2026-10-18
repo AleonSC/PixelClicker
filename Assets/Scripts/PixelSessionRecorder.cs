@@ -104,7 +104,6 @@ public class PixelSessionRecorder : MonoBehaviour
     private double lastStandardXp, lastSkillXp;
     private double lastCrushed, lastCrushXp;   // Husk Crush stat totals at the last sample (seeded with the click counters)
     private bool crushedOnce;                   // the first crush this session is on the timeline
-    private int blocksThisSecond;
     private readonly List<Minute> minutes = new List<Minute>();
     private readonly List<string> timeline = new List<string>();
     private readonly Queue<long> lastSeconds = new Queue<long>();
@@ -269,7 +268,7 @@ public class PixelSessionRecorder : MonoBehaviour
         cubieSeconds = 0f; tipSeconds = 0f; windowSeconds = 0f;
         startedAt = DateTime.Now;
         minutes.Clear(); timeline.Clear(); gifts.Clear(); skillRuns.Clear(); lastTrainingId = TrainingIdNow(); lastSeconds.Clear(); totalIncome.Clear(); statsAtStart.Clear(); skillLevel.Clear();
-        bestWindowClicks = 0; totalBlocks = 0; blocksThisSecond = 0; cubieVisits = 0;
+        bestWindowClicks = 0; totalBlocks = 0; cubieVisits = 0;
         shopOpenedOnce = false;
         crushedOnce = false;
         cubieWasVisiting = PixelGuideVendor.Visiting;
@@ -371,7 +370,6 @@ public class PixelSessionRecorder : MonoBehaviour
         if (!recording) return;
         Current.blocks++;
         totalBlocks++;
-        blocksThisSecond++;
         string tid = TrainingIdNow();
         if (tid != null)
         {
@@ -410,7 +408,6 @@ public class PixelSessionRecorder : MonoBehaviour
         double gain = Math.Max(0d, tx - lastSkillXp);
         m.skillXp += gain; lastSkillXp = tx;
         if (tid != null) { SkillRun run = Run(tid); run.xp += gain; run.seconds += 1f; }
-        blocksThisSecond = 0;
         PollMilestones();
     }
 

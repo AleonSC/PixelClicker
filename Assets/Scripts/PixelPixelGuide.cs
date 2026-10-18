@@ -61,7 +61,6 @@ public class PixelPixelGuide : MonoBehaviour
     [Tooltip("Text shown when no pixel is in the rotation.")]
     [SerializeField] private string emptyText = "No pixels yet.";
 
-    private Color panelColor => PixelUITheme.WindowColor;   // (the theme: PixelUITheme)
 
     private Color textColor => PixelUITheme.TextColor;   // (the theme: PixelUITheme)
 
@@ -77,7 +76,6 @@ public class PixelPixelGuide : MonoBehaviour
     private ScrollRect scroll;
     private RectTransform content;
     private GameObject bar, emptyObject;
-    private TMP_Text emptyLabel;
     private PixelShop shopRef;
     private bool built;
     private float refreshTimer;
@@ -204,7 +202,6 @@ public class PixelPixelGuide : MonoBehaviour
                                                new Color(textColor.r, textColor.g, textColor.b, 0.6f));
         PixelUIKit.Stretch(empty.rectTransform);
         emptyObject = empty.gameObject;
-        emptyLabel = empty;
 
         BuildTip();
         windowObject.SetActive(false);

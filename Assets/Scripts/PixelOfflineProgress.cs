@@ -97,7 +97,6 @@ public class PixelOfflineProgress : MonoBehaviour
     [Tooltip("Button size.")]
     [SerializeField] private Vector2 buttonSize = new Vector2(320f, 90f);
 
-    private Color windowColor => PixelUITheme.WindowColor;   // (the theme: PixelUITheme)
 
     [Tooltip("Colour that dims the screen behind the window.")]
     [SerializeField] private Color dimColor = new Color(0f, 0f, 0f, 0.55f);

@@ -810,63 +810,6 @@ public partial class PixelShop
         return row;
     }
 
-    /// <summary>
-    /// Lines a pack row up like the Consumables cards: the orange '!' sits flush in the picture's top-left corner, the name and the
-    /// cost run down the middle, and the Buy button is a wide bar along the bottom (with the upgrades arrow at its right end).
-    /// </summary>
-    private void LayoutPackRowLikeCards(PackRow row, bool hasArrow)
-    {
-        const float side = 14f, bottom = 14f;   // the same margin as the picture on the left
-        float bar = Mathf.Min(buyButtonSize.y, rowHeight * 0.26f);
-
-        RectTransform picture = row.rect.Find("Picture") as RectTransform;
-        RectTransform info = row.rect.Find("Info") as RectTransform;
-        float left = side;
-        if (picture != null)
-        {
-            float size = picture.sizeDelta.x;
-            left = picture.anchoredPosition.x + size + 14f;
-            if (info != null)
-            {
-                info.anchoredPosition = new Vector2(picture.anchoredPosition.x, -(rowHeight - size) * 0.5f);   // flush with the picture's corner
-                info.SetAsLastSibling();                                                                      // and drawn over it
-            }
-        }
-        float nameLeft = left;
-        if (picture == null && info != null)
-        {
-            info.anchoredPosition = new Vector2(side, -(rowHeight * 0.38f * 0.5f - info.sizeDelta.y * 0.5f));   // in front of the name, on the box's left edge
-            nameLeft = side + info.sizeDelta.x + 12f;
-            left = side;                                                                                        // the cost and the bar start at the box's left edge
-        }
-
-        // Name on top, cost under it, both clear of the bar.
-        SetBand(row.nameLabel.rectTransform, 0.62f, 1f, side);
-        row.nameLabel.rectTransform.offsetMin = new Vector2(nameLeft, 0f);
-        SetBand(row.costLabel.rectTransform, 0f, 0.62f, side);
-        row.costLabel.rectTransform.offsetMin = new Vector2(left, bottom + bar + 6f);
-
-        row.buyLabel.enableAutoSizing = true;   // the label always fits inside the bar
-        row.buyLabel.fontSizeMax = Mathf.Min(buyFontSize, bar * 0.6f);
-        row.buyLabel.fontSizeMin = 10f;
-        row.buyLabel.overflowMode = TextOverflowModes.Overflow;
-        RectTransform br = row.buyButton.GetComponent<RectTransform>();
-        br.anchorMin = new Vector2(0f, 0f);
-        br.anchorMax = new Vector2(1f, 0f);
-        br.pivot = new Vector2(0.5f, 0f);
-        float arrowSpace = hasArrow && row.arrowButton != null ? upgradesArrowSize.x + 10f : 0f;
-        br.offsetMin = new Vector2(left, bottom);
-        br.offsetMax = new Vector2(-(side + arrowSpace), bottom + bar);
-
-        if (hasArrow && row.arrowButton != null)
-        {
-            RectTransform ar = row.arrowButton.GetComponent<RectTransform>();
-            ar.anchorMin = ar.anchorMax = ar.pivot = new Vector2(1f, 0f);
-            ar.sizeDelta = new Vector2(upgradesArrowSize.x, bar);
-            ar.anchoredPosition = new Vector2(-side, bottom);
-        }
-    }
-
     /// <summary>A stat row with a title, a count and a progress bar (the Singularity and Ghost trackers).</summary>
     private class TrackerUI
     {

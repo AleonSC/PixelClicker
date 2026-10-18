@@ -114,7 +114,6 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
     private GameObject root;
     private Transform bodyT, lightsPivot, alienHead;
     private Renderer[] lightRenderers;
-    private Renderer domeRenderer;
     private Renderer[] consoleButtons;
     private Color[] consoleColors;
     private Light cabinLamp;
@@ -163,7 +162,6 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
 
     // The window.
     private GameObject windowRoot;
-    private RectTransform windowPanel;
     private int ignoreClickFrame = -1;
 
     /// <summary>Kept for the click-block check: always false now, because the UFO is click-through (left clicks pass straight through it).</summary>
@@ -735,7 +733,6 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
             domeProfile[i] = new Vector2(0.58f * Mathf.Sin(t), CabinFloorY + 0.45f * Mathf.Cos(t));
         }
         domeGo.GetComponent<MeshFilter>().sharedMesh = LatheMesh(domeProfile, 36);
-        domeRenderer = domeGo.GetComponent<Renderer>();
         Color steel = new Color(0.2f, 0.22f, 0.29f, 1f), deepSteel = new Color(0.1f, 0.11f, 0.15f, 1f);
         MeshPrim(b, "Cabin Floor", new[] { new Vector2(WindowRadius, CabinFloorY), new Vector2(0.52f, CabinFloorY) }, new Color(0.15f, 0.17f, 0.21f, 1f));
         MeshPrim(b, "Cabin Floor Ring", new[] { new Vector2(WindowRadius, CabinFloorY + 0.002f), new Vector2(0.31f, CabinFloorY + 0.002f) }, new Color(0.22f, 0.25f, 0.32f, 1f));
@@ -1068,7 +1065,6 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
         PixelWindowParts parts = PixelUIKit.CreateWindow(font, windowRoot.transform, "Panel", ufoTitle, new Vector2(width, height), PixelUIKit.WindowKind.Fixed, CloseWindow,
                                                          pop: false);   // (rebuilt on every page switch: it must not grow in again each time)
         GameObject panel = parts.Root;
-        windowPanel = parts.Rect;
         float headerH = parts.HeaderHeight + 88f;   // the window header + the question under it
 
         bool pixels = windowPage == 1;

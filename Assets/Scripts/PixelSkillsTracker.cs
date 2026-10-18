@@ -35,7 +35,7 @@ public partial class PixelSkills
     private Image trackerPanelImage, trackerPinImage;
     private bool? trackerPinShownOn;   // the pin's last shown state (null = not set yet)
     private Button trackerClose, trackerSize, trackerStick, trackerPrev, trackerNext;
-    private Image trackerSizeImage, trackerStickImage;
+    private Image trackerStickImage;
     private GameObject trackerShackleClosed, trackerShackleOpen;
     private TMP_Text trackerSizeLabel;
     private PixelPopoutDrag trackerDrag;
@@ -172,7 +172,6 @@ public partial class PixelSkills
         trackerClose.onClick.AddListener(() => SetTracker(false));   // does not bring the Skills window back
         trackerSize = PixelUIKit.CreateButton(Font, trackerPanel.transform, "Size", "-", new Vector2(40f, 40f), ButtonRole.Neutral, 26f);
         trackerSizeLabel = trackerSize.GetComponentInChildren<TMP_Text>();
-        trackerSizeImage = trackerSize.GetComponent<Image>();
         trackerSize.onClick.AddListener(() =>
         {
             trackerSmall = !trackerSmall;

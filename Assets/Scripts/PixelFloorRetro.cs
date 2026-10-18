@@ -47,19 +47,7 @@ public partial class PixelFloor
         // ---- 8-bit games ----
     }
 
-    private static Color K(int r, int g, int b) { return new Color(r / 255f, g / 255f, b / 255f, 1f); }
-
     private static int WrapI(int a, int m) { int r = a % m; return r < 0 ? r + m : r; }
-
-    /// <summary>0 -> 1 -> 0 triangle wave with period 1.</summary>
-    private static float Tri(float x) { x = Frac(x); return x < 0.5f ? x * 2f : 2f - x * 2f; }
-
-    /// <summary>The character of a sprite (rows listed top first) at column 'col' and row 'row' counted from the top; '.' outside it.</summary>
-    private static char SpriteAt(string[] sprite, int col, int row)
-    {
-        if (row < 0 || row >= sprite.Length || col < 0 || col >= sprite[row].Length) return '.';
-        return sprite[row][col];
-    }
 
     private static float Glow(float distance, float size) { return Mathf.Exp(-Mathf.Max(0f, distance) / size); }
 

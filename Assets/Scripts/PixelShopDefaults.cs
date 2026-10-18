@@ -112,33 +112,6 @@ public partial class PixelShop
         };
     }
 
-    /// <summary>Default Obsidian pack: a tough pixel that takes several clicks to collect but pays more. Needs the Glass pack first.</summary>
-    private static ShopPack CreateObsidianPack(int requiresGlassIndex)
-    {
-        return new ShopPack
-        {
-            displayName = "Obsidian Pixel",
-            tab = ShopTab.Pixels,
-            description = "Adds the tough Obsidian pixel. It takes {clicks} clicks to collect, but pays more.",
-            requirements = Needs(requiresGlassIndex),
-            costs = new[]
-            {
-                new PackCost { type = PixelClicker.PixelType.Black, amount = 20000 },
-                new PackCost { type = PixelClicker.PixelType.Glass, amount = 5000 },
-            },
-            rewardTiers = new[]
-            {
-                new PixelClicker.PixelTier
-                {
-                    type = PixelClicker.PixelType.Obsidian, displayName = "Obsidian Pixels",
-                    color = new Color(0.22f, 0.1f, 0.35f, 1f),
-                    amountPerClick = 7, clicksToCollect = 5, spawnWeight = 0.4f,
-                    unlockMode = PixelClicker.TierUnlockMode.ShopOnly
-                },
-            }
-        };
-    }
-
     /// <summary>Default Luminescent pack: a glowing pixel that pays more. Needs the Obsidian pack first.</summary>
     private static ShopPack CreateLuminescentPack(int requiresObsidianIndex)
     {
@@ -542,34 +515,6 @@ public partial class PixelShop
                     color = new Color(0.55f, 0.38f, 0.18f, 1f),
                     amountPerClick = 15, clicksToCollect = 8, // 8 clicks crack the shell; only the last pays
                     spawnWeight = 0.3f,
-                    unlockMode = PixelClicker.TierUnlockMode.ShopOnly
-                },
-            }
-        };
-    }
-
-    /// <summary>
-    /// Default Water Pixel pack (Pixels tab): TESTING price (10 White, no requirements) so it is available right away. Old Water pixels splash
-    /// on the ground and are used up; Seed sprouts and the Seed pet near a splash are watered (grow / sow faster): stream them over a field of
-    /// sprouts with a Sorter to make a farm.
-    /// </summary>
-    private static ShopPack CreateWaterPixelPack()
-    {
-        return new ShopPack
-        {
-            displayName = "Water Pixel",
-            tab = ShopTab.Pixels,
-            description = "Adds the Water pixel: a wobbling blue jelly cube. Old Water pixels splash when they hit the ground (and are used up); sprouts and the Seed pet near the splash grow and sow much faster for a while.",
-            requirements = Needs(-1),
-            costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 10 } },
-            rewardTiers = new[]
-            {
-                new PixelClicker.PixelTier
-                {
-                    type = PixelClicker.PixelType.Water, displayName = "Water Pixels",
-                    color = new Color(0.3f, 0.62f, 1f, 1f),
-                    amountPerClick = 3,
-                    spawnWeight = 0.4f,
                     unlockMode = PixelClicker.TierUnlockMode.ShopOnly
                 },
             }

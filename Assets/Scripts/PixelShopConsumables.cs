@@ -17,8 +17,6 @@ using UnityEngine;
 /// </summary>
 public partial class PixelShop
 {
-    private TilePage consumablesPage;
-
     /// <summary>The item category (PixelConsumables.CategoryOf) of each chip, in chip order: Utilities first.</summary>
     private static readonly int[] ConsumableChipCategory = { 1, 0, 2, 3 };
 
@@ -39,7 +37,6 @@ public partial class PixelShop
         page.fillBar = item => FillItemBar(page, item);
         page.purchase = (item, max) => { int n = max ? MaxAffordable(item) : page.count; if (n > 0) TryBuyItems(item, n); };
         page.quickBuy = item => TryBuyItems(item, 1);
-        consumablesPage = page;
     }
 
     /// <summary>How many of an item you could buy right now (room and maxPerPurchase allowing).</summary>

@@ -111,7 +111,6 @@ public class PixelDevShapes : MonoBehaviour
     private TMP_FontAsset font;
 
     // Panel
-    private GameObject canvasRoot, window;
     private TMP_Dropdown kindDropdown, modeDropdown;
     private int[] kindMap, modeMap;   // option -> enum value (the lists are alphabetical)
     private int PickedKind => kindDropdown != null ? PixelUIKit.Original(kindMap, kindDropdown.value) : 0;
@@ -537,10 +536,8 @@ public class PixelDevShapes : MonoBehaviour
         PixelUIKit.EnsureEventSystem();
         // The controls live in the Mock up mode window's first tab (PixelDevMockWindow): a 470-wide column centred in it.
         RectTransform tabRoot = PixelDevMockWindow.TabRoot(0);
-        canvasRoot = tabRoot.gameObject;
         GameObject windowGo = new GameObject("Shapes Content", typeof(RectTransform));
         windowGo.transform.SetParent(tabRoot, false);
-        window = windowGo;
         RectTransform wr = windowGo.GetComponent<RectTransform>();
         wr.anchorMin = wr.anchorMax = wr.pivot = new Vector2(0.5f, 1f);
         wr.anchoredPosition = Vector2.zero;

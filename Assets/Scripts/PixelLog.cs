@@ -180,7 +180,6 @@ public class PixelLog : MonoBehaviour
     [SerializeField] private float panelPadding = 20f;
 
 
-    private Color panelColor => PixelUITheme.WindowColor;   // (the theme: PixelUITheme)
 
     [Tooltip("Show a 'Total' line at the bottom adding up every type.")]
     [SerializeField] private bool showOverallTotal = true;
@@ -1226,9 +1225,6 @@ public class PixelLog : MonoBehaviour
     private readonly List<List<int>> achievementGroups = new List<List<int>>();
     private const string ModePrefKey = "PixelLog.AchievementMode.";
 
-    private static bool IsPixelKind(PixelAchievements.Kind k) =>
-        k == PixelAchievements.Kind.CollectPixelType || k == PixelAchievements.Kind.ClickPixelType;
-
     private bool ShowsClicks(PixelClicker.PixelType type) => PixelPrefs.GetInt(ModePrefKey + (int)type, 0) == 1;
 
     /// <summary>Groups the achievements: one group per pixel type for the two per-pixel kinds, a group of one for the rest.</summary>
@@ -1248,14 +1244,6 @@ public class PixelLog : MonoBehaviour
         foreach (int i in group)
             if (achievements.GetKind(i) == want) return i;
         return group[0];
-    }
-
-    private void ToggleAchievementMode(int groupIndex)
-    {
-        if (groupIndex < 0 || groupIndex >= achievementGroups.Count || achievementGroups[groupIndex].Count < 2) return;
-        PixelClicker.PixelType type = achievements.GetPixelType(achievementGroups[groupIndex][0]);
-        PixelPrefs.SetInt(ModePrefKey + (int)type, ShowsClicks(type) ? 0 : 1);
-        Refresh();
     }
 
     private class GoalRow

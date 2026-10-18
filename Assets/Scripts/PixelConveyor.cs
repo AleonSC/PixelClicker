@@ -794,7 +794,6 @@ public class PixelConveyorSystem : MonoBehaviour
 
     private GameObject editorRoot;
     private TMP_InputField speedInput;
-    private TMP_Text speedTitle;
     private PixelConveyor editing;
     private bool windowRegistered;
 
@@ -839,7 +838,6 @@ public class PixelConveyorSystem : MonoBehaviour
         PixelWindowParts parts = PixelUIKit.CreateWindow(font, editorRoot.transform, "Panel", "Belt speed", new Vector2(520f, 300f),
                                                          PixelUIKit.WindowKind.Fixed, null, closeButton: false, pop: false);
         GameObject panel = parts.Root;
-        speedTitle = parts.Title;
 
         TMP_Text hint = PixelUIKit.CreateText(font, panel.transform, "Hint", "cube widths per second (0 stops the belt)", 20f, TextAlignmentOptions.Center, FontStyles.Italic, new Color(0.75f, 0.82f, 0.95f, 1f));
         RectTransform hr = hint.rectTransform;

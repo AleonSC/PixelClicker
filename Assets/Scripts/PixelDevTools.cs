@@ -552,7 +552,7 @@ public class PixelDevTools : MonoBehaviour
         PixelDevHub.Open();   // (the Dev Hub fills the drop-downs when it opens)
     }
 
-    private GameObject toolsView, todoView, changelogView;
+    private GameObject todoView, changelogView;
     private TMP_Text changelogLabel;
     private ScrollRect changelogScroll;
     private GameObject changelogBar;
@@ -726,7 +726,6 @@ public class PixelDevTools : MonoBehaviour
         GameObject tools = new GameObject("Tools View", typeof(RectTransform));
         tools.transform.SetParent(root, false);
         PixelUIKit.Stretch(tools.GetComponent<RectTransform>());
-        toolsView = tools;
 
         // ONE widget board: every widget (add pixels, spawned pixel, minigames, middle click and the tools below) is a card in the same scrolling list. Drag a card by its header to
         // move it; HOLD the right button on a card to make it a FAVORITE (it snaps to the top and is tinted gold; hold again to let it go back).
@@ -1050,7 +1049,6 @@ public class PixelDevTools : MonoBehaviour
     private TMP_Dropdown selectorDropdown, selectorMinigameDropdown;
     private readonly List<PixelClicker.PixelType[]> selectorChoices = new List<PixelClicker.PixelType[]>();
     private Image spawnPixelButtonImage;
-    private TMP_Text spawnPixelButtonLabel;
 
     /// <summary>Builds the three spawn widgets into the pinned board (each is one row of controls on a card; 'y' is the row position the controls are placed at).</summary>
     private void BuildSpawnWidgets(RectTransform root, PixelWidgetBoard board, float inner, float y)
@@ -1066,7 +1064,6 @@ public class PixelDevTools : MonoBehaviour
         Place(spawn.GetComponent<RectTransform>(), 40f + dropW + gap, y, bw);
         spawn.onClick.AddListener(SpawnPixelClicked);
         spawnPixelButtonImage = spawn.GetComponent<Image>();
-        spawnPixelButtonLabel = spawn.GetComponentInChildren<TMP_Text>();
         Button despawn = PixelUIKit.CreateButton(font, root, "Despawn Pixel Button", despawnText, new Vector2(bw, rowHeight), buttonColor, textColor, fontSize);
         Place(despawn.GetComponent<RectTransform>(), 40f + dropW + gap + bw + gap, y, bw);
         despawn.onClick.AddListener(DespawnPixelClicked);

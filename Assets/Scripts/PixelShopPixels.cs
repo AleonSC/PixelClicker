@@ -15,8 +15,6 @@ using UnityEngine;
 /// <summary>The shop's Pixels tab: pixel packs as tiles on two chips (Toggleables, Skill packs). Part of <see cref="PixelShop"/>.</summary>
 public partial class PixelShop
 {
-    private TilePage pixelsPage;
-
     private void BuildPixelsPage(Transform panel, float top)
     {
         TilePage page = BuildTilePage(panel, top, ShopTab.Pixels, new[] { pixelsToggleablesTitle, pixelsSkillPacksTitle }, false, 0);
@@ -28,7 +26,6 @@ public partial class PixelShop
         page.fillBar = i => FillPackBar(page, i);
         page.purchase = (i, max) => { if (OpensUpgrades(i)) OpenUpgradesWindow(i); else TryBuy(i); };
         page.quickBuy = i => TryBuy(i);
-        pixelsPage = page;
     }
 
     /// <summary>A bought pack that still has upgrades: its Buy button opens the upgrades window.</summary>

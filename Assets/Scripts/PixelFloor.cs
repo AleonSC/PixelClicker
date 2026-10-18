@@ -616,8 +616,6 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         fadedTextureOn = false;
     }
 
-    private bool floorWarned;
-
     private void Update()
     {
         if (!floorReady)

@@ -362,7 +362,7 @@ public abstract class PixelPlacedDevice : MonoBehaviour
         if (!Armed)
         {
             // Waiting for the first click: no countdown, no effect.
-            if (timerText != null && timerText.text != DisarmedText) { timerText.text = DisarmedText; shownSeconds = int.MinValue; }
+            if (timerText != null && timerText.text != DisarmedText) timerText.text = DisarmedText;
             if (timerRing != null) timerRing.Set(-1f, RingColor);
             return;
         }
@@ -371,7 +371,7 @@ public abstract class PixelPlacedDevice : MonoBehaviour
         {
             OnTick();
             if (dying) return;
-            if (timerText != null) { timerText.text = UsesLabel(); shownSeconds = int.MinValue; }
+            if (timerText != null) timerText.text = UsesLabel();
             return;
         }
 
@@ -399,7 +399,6 @@ public abstract class PixelPlacedDevice : MonoBehaviour
         }
     }
 
-    private int shownSeconds = int.MinValue;
     private PixelWorldRing timerRing;
     private float ringFullSeconds = 1f;
     private static readonly Color RingColor = new Color(0.6f, 1f, 0.7f, 1f), LowRingColor = new Color(1f, 0.7f, 0.3f, 1f), PoweredRingColor = new Color(0.5f, 0.83f, 1f, 1f);

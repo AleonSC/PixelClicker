@@ -222,8 +222,6 @@ public class PixelBank : MonoBehaviour, IPixelSaved
     [Tooltip("Text size.")]
     [SerializeField] private float fontSize = 30f;
 
-    private Color panelColor => PixelUITheme.WindowColor;   // (the theme: PixelUITheme)
-
     [Tooltip("Row background colour.")]
     [SerializeField] private Color rowColor = new Color(0.17f, 0.17f, 0.21f, 1f);
 
@@ -274,8 +272,6 @@ public class PixelBank : MonoBehaviour, IPixelSaved
     private LineRenderer aimLine;
     private Transform aimMarker;
     private Material aimMaterial;
-    private readonly System.Collections.Generic.List<Vector3> aimPoints = new System.Collections.Generic.List<Vector3>();
-    private static readonly RaycastHit[] aimHits = new RaycastHit[8];
     private Mesh hoseMesh;
     private Vector3[] hosePoints;
     private Vector3 control;
@@ -301,7 +297,6 @@ public class PixelBank : MonoBehaviour, IPixelSaved
     private Renderer areaRingRenderer;
     private Material areaRingMaterial;
     private int areaRingTier = -2;
-    private int displayTier = -1;
     private PixelConsumables consumables;
 
     // UI
@@ -1126,7 +1121,6 @@ public class PixelBank : MonoBehaviour, IPixelSaved
                 if (glassPixel != null) Destroy(glassPixel);
                 glassPixel = clicker.CreateDisplayPixel(selected, glassCube, 0.52f);
                 glassTier = selected;
-                displayTier = selected;
                 if (glassPixel != null) glassPixel.transform.localPosition = Vector3.zero;
             }
             if (glassPixel != null) glassPixel.transform.localRotation = Quaternion.Euler(20f, Time.unscaledTime * displaySpin, 0f);

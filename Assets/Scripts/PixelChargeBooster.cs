@@ -74,7 +74,6 @@ public class PixelChargeBooster : PixelPlacedDevice
 {
     private Transform fill;
     private Renderer fillRenderer;
-    private Renderer bodyRenderer;
     private Light glow;
     private PixelBoltLayer bolts;
     private TextMeshPro label;
@@ -123,7 +122,6 @@ public class PixelChargeBooster : PixelPlacedDevice
 
     private void BuildVisuals(PixelConsumables.Device d)
     {
-        bodyRenderer = GetComponentInChildren<Renderer>();
         // A tall thin meter beside the body that fills with charge.
         GameObject back = GameObject.CreatePrimitive(PrimitiveType.Cube);
         back.name = "Meter Back";

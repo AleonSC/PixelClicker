@@ -8,8 +8,6 @@ using UnityEngine;
 /// </summary>
 public static class PixelProspector
 {
-    private const string Pref = "PixelClicker.Setting.Prospector";
-
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
@@ -36,19 +34,6 @@ public static class PixelProspector
     /// <summary>The pixels the skill packs replace: the monochrome pack (White, Gray, Black) and RGB. (Glass and Luminescent are extra pixels with their own spawn switches and stay in every rotation.)</summary>
     public static bool IsBase(PixelClicker.PixelType type) =>
         type >= PixelClicker.PixelType.White && type <= PixelClicker.PixelType.Blue;
-
-    /// <summary>Is this type kept out of the random spawns right now? Ores only spawn in Prospector mode; in that mode the basic pixels don't.</summary>
-    public static bool LeftOut(PixelClicker.PixelType type, bool prospecting) =>
-        prospecting ? IsBase(type) : PixelClicker.IsOre(type);
-
-    /// <summary>Has the player unlocked at least one ore?</summary>
-    public static bool AnyOreUnlocked(PixelClicker clicker)
-    {
-        if (clicker == null) return false;
-        for (int i = 0; i < clicker.Tiers.Length; i++)
-            if (PixelClicker.IsOre(clicker.Tiers[i].type) && clicker.Tiers[i].unlocked) return true;
-        return false;
-    }
 
     private static bool richAnnounced;
 

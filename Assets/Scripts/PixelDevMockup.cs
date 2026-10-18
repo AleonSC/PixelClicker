@@ -90,7 +90,7 @@ public class PixelDevMockup : MonoBehaviour
     private bool hideAll;
 
     private TMP_FontAsset font;
-    private GameObject piecesCanvas, panelCanvas;
+    private GameObject piecesCanvas;
     private bool windowOpen;
     private RectTransform piecesRoot;
     private Canvas piecesCanvasComponent;
@@ -523,7 +523,6 @@ public class PixelDevMockup : MonoBehaviour
     {
         // The controls live in the Mock up mode window's second tab (PixelDevMockWindow), 500 wide like the old panel.
         RectTransform tabRoot = PixelDevMockWindow.TabRoot(1);
-        panelCanvas = tabRoot.gameObject;
         Transform t = tabRoot;
 
         Color text = new Color(0.92f, 0.94f, 1f, 1f), grey = new Color(0.35f, 0.4f, 0.5f, 1f), blue = new Color(0.25f, 0.45f, 0.8f, 1f);

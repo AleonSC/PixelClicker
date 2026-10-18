@@ -76,7 +76,6 @@ public class PixelGodFind : MonoBehaviour
     private readonly List<Vector2[]> cracks = new List<Vector2[]>();
     private Vector2 impactPoint;
     private float impactTime = -99f;
-    private System.Random boltRng;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() { instance = null; softSprite = squareSprite = ringSprite = sunSprite = featherSprite = null; }
@@ -175,7 +174,6 @@ public class PixelGodFind : MonoBehaviour
 
         PixelAudio.SetMusicCue("God find", true);   // a music cue (if it has music) takes over for the show
         flash = 0f; shake = 0f; stormAlpha = 0f; fired = new bool[10]; cracks.Clear(); impactTime = -99f;
-        boltRng = new System.Random(Random.Range(0, 100000));
 
         float t = 0f, bump = 0f;
         Vector2 cubePos = start; float cubeScale = cubeSize * 0.12f; Vector3 euler = Vector3.zero;

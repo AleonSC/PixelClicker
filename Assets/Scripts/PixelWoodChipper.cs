@@ -85,8 +85,6 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice
     // Placement helpers (used by PixelFeatureTester)
     // ------------------------------------------------------------------
 
-    private static float ScaleFor(PixelClicker clicker) => clicker != null ? Mathf.Max(0.05f, clicker.PixelBaseSize) * 0.9f : 1f;
-
     private const float ArrowLength = 2.6f;   // machine units: how far the discharge arrow reaches from the outlet (where the chips land)
 
     // ---- Socket (PixelSockets.cs): the CHUTE, an Out socket on the floor in front of the outlet (where the discharge arrow points) ----
@@ -154,7 +152,7 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice
     // ------------------------------------------------------------------
 
     private PixelClicker clicker;
-    private Transform shake, flywheel, rollerA, rollerB, beaconLamp;
+    private Transform shake, flywheel, rollerA, rollerB;
     private Material beaconMat;
     private ParticleSystem chips, smoke;
     private Transform chipFloor;
@@ -500,7 +498,7 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice
         PixelWoodChipper chipper = root.AddComponent<PixelWoodChipper>();
         chipper.clicker = clicker;
         chipper.shake = sh; chipper.shakeHome = sh.localPosition;
-        chipper.rollerA = rA; chipper.rollerB = rB; chipper.flywheel = fly; chipper.beaconLamp = lamp; chipper.beaconMat = beacon;
+        chipper.rollerA = rA; chipper.rollerB = rB; chipper.flywheel = fly; chipper.beaconMat = beacon;
         chipper.scaleFactor = scale;
         chipper.sockets = new[] { new PixelSocket("chute", new Vector3(OutletLocal.x, 0f, OutletLocal.z + 1.1f), Vector3.forward, PixelSocketFlow.Output) };
         PixelCouplings.Register(chipper);

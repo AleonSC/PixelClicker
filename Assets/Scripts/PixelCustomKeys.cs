@@ -29,7 +29,6 @@ public class PixelCustomKeys : MonoBehaviour
     private string status = "";
 
     // view
-    private RectTransform viewRoot;
     private TMP_Dropdown dropdown;
     private TMP_InputField searchField;
     private string search = "";
@@ -148,7 +147,7 @@ public class PixelCustomKeys : MonoBehaviour
     /// <summary>Builds the tab's contents into 'root' (stretched by My Window under its tabs).</summary>
     public void BuildView(RectTransform root, TMP_FontAsset uiFont)
     {
-        viewRoot = root; font = uiFont;
+        font = uiFont;
         TMP_Text hint = PixelUIKit.CreateText(font, root, "Hint", "", 20f, TextAlignmentOptions.TopLeft, FontStyles.Italic, new Color(1f, 1f, 1f, 0.7f));
         statusLabel = hint;
         RectTransform hr = hint.rectTransform;

@@ -361,9 +361,6 @@ public partial class PixelClicker
             if (!UpcomingValid(upcoming[i].x)) { upcoming.RemoveRange(i, upcoming.Count - i); return; }
     }
 
-    /// <summary>The block that comes after this one (see PeekTierAhead).</summary>
-    public int PeekNextTier() => PeekTierAhead(0);
-
     /// <summary>The block 'ahead' places after the one on the cube (0 = next): blocks waiting in line from Block Hold first, then the pre-rolled ones (rolled now if
     /// needed, and RollTier hands out exactly these, so the preview is true). -1 when the cube does not roll random blocks.</summary>
     public int PeekTierAhead(int ahead)
@@ -675,14 +672,6 @@ public partial class PixelClicker
             if (roll <= 0f) return i;
         }
         return GetHighestUnlockedIndex();
-    }
-
-    /// <summary>Rolls the next pixel again now (used when the Prospector mode switch changes).</summary>
-    public void RefreshSpawnTier()
-    {
-        if (!randomizeSpawnTier || pixelTransform == null) return;
-        currentTierIndex = RollTier();
-        Materialize(GetClickTier());
     }
 
     private int GetClickTierIndex()

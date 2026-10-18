@@ -32,7 +32,6 @@ public class PixelNextUp : MonoBehaviour
     [Min(0f)]
     [Tooltip("How fast the cubes slide (bigger = snappier). 0 = the default (13).")]
     [SerializeField] private float slideSpeed = 0f;
-    private Color windowColor => PixelUITheme.ToolWindowColor;   // (the theme: PixelUITheme)
     [Tooltip("Colour of the small captions (NEXT / NOW / BEFORE).")]
     [SerializeField] private Color captionColor = new Color(0.8f, 0.85f, 0.95f, 0.85f);
     [Tooltip("Sorting order of the window's canvas.")]

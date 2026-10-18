@@ -30,7 +30,6 @@ public class PixelTrashCan : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom
     private bool ghost;
     private float unit = 1f;
     private Transform ring;
-    private readonly List<GameObject> vanishing = new List<GameObject>();
 
     private float MouthY => 1.1f * unit;
 

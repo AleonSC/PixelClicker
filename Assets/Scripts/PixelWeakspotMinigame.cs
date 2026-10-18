@@ -198,7 +198,7 @@ public class PixelWeakspotMinigame : PixelMinigame
 
     private readonly System.Collections.Generic.List<Spot> spots = new System.Collections.Generic.List<Spot>();
     private Phase phase = Phase.Idle;
-    private float phaseT, huntLeft, spawnTimer, savedFixed, savedScale = 1f;
+    private float phaseT, huntLeft, spawnTimer, savedFixed;
     private bool won, slowed;
     private Camera mainCam, zoomCam;
     private int savedMask;
@@ -352,7 +352,7 @@ public class PixelWeakspotMinigame : PixelMinigame
     {
         if (on)
         {
-            if (!slowed) { savedScale = Time.timeScale > 0f ? Time.timeScale : 1f; savedFixed = Time.fixedDeltaTime; }
+            if (!slowed) savedFixed = Time.fixedDeltaTime;
             Time.timeScale = slowScale;
             Time.fixedDeltaTime = (savedFixed > 0f ? savedFixed : 0.02f) * slowScale;
         }

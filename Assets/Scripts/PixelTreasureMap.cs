@@ -56,7 +56,7 @@ public class PixelTreasureMap : MonoBehaviour
     private PixelClicker clicker;
     private bool showing;
     private float lastDig;
-    private Material redMat, darkMat, dirtMat;
+    private Material redMat, dirtMat;
 
     private void Awake() { instance = this; }
 

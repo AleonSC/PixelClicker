@@ -150,12 +150,6 @@ public class PixelBombMinigame : PixelMinigame
     [Tooltip("The timer turns red and flashes when this many seconds are left.")]
     [SerializeField] private float warningSeconds = 4f;
 
-    [Tooltip("Normal timer colour.")]
-    [SerializeField] private Color timerColor = new Color(0.4f, 1f, 0.5f, 1f);
-
-    [Tooltip("Timer colour when time is nearly up.")]
-    [SerializeField] private Color timerWarningColor = new Color(1f, 0.25f, 0.2f, 1f);
-
     [Header("Defused / Exploded")]
     [Tooltip("Text that rises when you defuse the bomb. {0} = bomb parts gained.")]
     [SerializeField] private string defusedFormat = "Defused!  +{0} bomb parts";

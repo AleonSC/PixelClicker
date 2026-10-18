@@ -19,7 +19,6 @@ public class SeedSprout : MonoBehaviour
     private PixelClicker clicker;
     private Rigidbody body;
     private Collider hit;
-    private Transform visual;      // the sprout mesh
     private Transform mound;       // the dirt mound it grows out of
     private Light glow;            // the soft light that makes it easy to spot
     private SunRayFx sunRay;       // ray of light shown while sun soaked
@@ -158,7 +157,7 @@ public class SeedSprout : MonoBehaviour
         holdSeconds = Mathf.Max(0f, hold);
         body = GetComponent<Rigidbody>();
         hit = GetComponent<Collider>();
-        visual = PixelLooks.CreateSproutObject(transform, unit * sproutScale).transform;
+        PixelLooks.CreateSproutObject(transform, unit * sproutScale);   // the sprout mesh
 
         GameObject lg = new GameObject("Sprout Glow");
         lg.transform.SetParent(transform, false);

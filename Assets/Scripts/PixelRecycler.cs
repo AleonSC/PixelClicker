@@ -230,9 +230,6 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     /// <summary>How far behind the bin's middle (its own unscaled units, +z) the back wall, pillars and plinth end: a hopper's exit edge goes here.</summary>
     public float BackEdgeLocalZ => Unit(clicker) * (DepthHusks * 0.5f + 0.4f);
 
-    /// <summary>Just outside the back hatch, where a husk leaves a hopper's exit (world).</summary>
-    public Vector3 HatchOutside => transform.TransformPoint(new Vector3(0f, HatchPassY, BackEdgeLocalZ));
-
     /// <summary>Just inside the back wall, behind the hatch: a husk slid in here falls into the bin (world).</summary>
     // ---- IPixelHopperHost (a Sorting Hopper on the back) ----
     public string HostName => "Recycler";
@@ -248,16 +245,6 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     public Vector3 HatchInside => transform.TransformPoint(new Vector3(0f, HatchPassY, innerD * 0.5f - Unit(clicker) * 0.9f));
 
     private float HatchPassY => HatchBottom(Unit(clicker)) + HatchHeight(Unit(clicker)) * 0.45f;
-
-    /// <summary>Is the back hatch fully open?</summary>
-    public bool HatchIsOpen => hatchOpen && !hatchMoving;
-
-    /// <summary>Opens / shuts the back hatch (a Sorting Hopper on the back keeps it open). Nothing happens while the bin works or the hatch moves.</summary>
-    public void SetHatchOpen(bool open)
-    {
-        if (processing || hatchMoving || hatchOpen == open || !isActiveAndEnabled) return;
-        StartCoroutine(MoveHatch(open));
-    }
 
     private static int hotFrame = -10;
 
@@ -320,7 +307,6 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     private double sessionPaid;
     private readonly List<Rigidbody> inside = new List<Rigidbody>();
     private int streakTier = -1, streakCount;
-    private float lastPayAt = -100f;   // (when the last batch was paid)
     private readonly Dictionary<Rigidbody, float> restSeconds = new Dictionary<Rigidbody, float>();   // how long each captured husk has lain still
     private float tick;
     private bool processing;
@@ -1105,7 +1091,6 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
         if (bestRun > 0) PixelStats.Best("recycler.streak", bestRun);
         lastBatchRun = bestRun;
         if (xpTotal > 0d) PixelStats.Count("recycler.xp", xpTotal);
-        lastPayAt = Time.time;
         inside.Clear();
         restSeconds.Clear();
         capturedAt.Clear();

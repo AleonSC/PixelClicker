@@ -48,7 +48,6 @@ public partial class PixelRobotWorker
     private Vector2 walkPos;   // where you stand on the cabin floor (model units from its middle: x = right, y = forward)
     private float lookYaw, lookPitch = -6f, walkBob;
     private bool lookActive, cursorLocked;
-    private int enterFrame;
     private readonly object cockpitKey = new object();
 
     private bool CanPilot()
@@ -87,7 +86,6 @@ public partial class PixelRobotWorker
         if (bubbleCanvas != null) bubbleCanvas.SetActive(false);
         Piloting = true;
         PixelWindows.Register(cockpitKey, 125, () => Piloting, ExitCockpit);   // escape-only: leaves the cockpit
-        enterFrame = Time.frameCount;
         PositionPassenger();
         PixelAudio.Play("ui_click");
     }

@@ -107,7 +107,6 @@ public class PixelWindowChrome : MonoBehaviour
     private Button undockButton;
     private Vector2 lastCanvasSize;
     private readonly List<GameObject> keep = new List<GameObject>(), hidden = new List<GameObject>();
-    private Color buttonColorOff;
 
     /// <summary>Adds the chrome to a top-left anchored window. 'firstButtonRight' = distance from the window's right edge to the right edge of the first (Minimize) button.</summary>
     public static PixelWindowChrome Attach(RectTransform window, TMP_FontAsset font, string prefKey, float headerHeight, float firstButtonRight, float buttonTop,
@@ -134,7 +133,6 @@ public class PixelWindowChrome : MonoBehaviour
         window = win;
         prefKey = key;
         headerHeight = header;
-        buttonColorOff = buttonColor;
         canvas = win.GetComponentInParent<Canvas>();
         canvasRect = canvas != null ? canvas.rootCanvas.GetComponent<RectTransform>() : null;
 

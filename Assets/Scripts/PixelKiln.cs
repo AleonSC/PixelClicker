@@ -42,7 +42,6 @@ public class PixelKiln : MonoBehaviour, IPixelSocketDevice
     private float unit;
     private Light fireLight;
     private ParticleSystem smoke, embers;
-    private Renderer glowRenderer;
     private float roar;   // 0..1, rises when something burns and fades
     private int pendingCharcoal;
     private float nextOutAt;
@@ -125,7 +124,6 @@ public class PixelKiln : MonoBehaviour, IPixelSocketDevice
             new PixelSocket("chute", new Vector3((OutletLocal.x - 0.25f) * u, 0f, 0f), Vector3.left, PixelSocketFlow.Output),
         };
         kiln.fireLight = MakeLight(t, new Vector3(fx + 0.5f * u, 0.7f * u, 0f), u);
-        kiln.glowRenderer = t.Find("Fire Glow") != null ? t.Find("Fire Glow").GetComponent<Renderer>() : null;
         kiln.smoke = MakeSmoke(t, new Vector3(-0.65f * u, 3.9f * u, 0.45f * u), u);
         kiln.embers = MakeEmbers(t, new Vector3(fx + 0.1f * u, 0.7f * u, 0f), u);
         return root;

@@ -22,7 +22,7 @@ public class PixelStatusBox : MonoBehaviour
 
     private TMP_Text label;
     private RectTransform clip, box;
-    private Image boxImage, accent;
+    private Image accent;
     private static readonly System.Collections.Generic.List<PixelStatusBox> all = new System.Collections.Generic.List<PixelStatusBox>();
     private bool wanted = true, stackBelow;
     private float shownBottom;   // how far below the bar this box currently reaches (so a stackBelow box starts under it)
@@ -64,7 +64,7 @@ public class PixelStatusBox : MonoBehaviour
 
         PixelStatusBox sb = clipGo.AddComponent<PixelStatusBox>();
         sb.label = text; sb.clip = clipGo.GetComponent<RectTransform>(); sb.box = boxGo.GetComponent<RectTransform>();
-        sb.boxImage = bg; sb.accent = acc; sb.stackBelow = stackBelow;
+        sb.accent = acc; sb.stackBelow = stackBelow;
         byLabel[text] = sb;
         sb.Layout(0f);
         return text;

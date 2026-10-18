@@ -155,7 +155,6 @@ public class PixelFirstPerson : MonoBehaviour
     [SerializeField] private float wallMarginCubes = 0f;
 
     private PixelFirstPersonWall wall;
-    private Vector3 spawnSpot;
     private PixelFirstPersonHotbar hotbar;
     private bool axeSwingActive;   // true while an axe hit is making its click (so PixelCollected adds the bonus)
 
@@ -265,13 +264,6 @@ public class PixelFirstPerson : MonoBehaviour
         return true;
     }
 
-    private static bool Typing()
-    {
-        if (EventSystem.current == null) return false;
-        GameObject selected = EventSystem.current.currentSelectedGameObject;
-        return selected != null && selected.GetComponent<TMP_InputField>() != null;
-    }
-
     private void Update()
     {
         if (!Active) return;   // (the View window switches first person on and off: TryEnter / Leave)
@@ -359,7 +351,6 @@ public class PixelFirstPerson : MonoBehaviour
         savedMask = mainCamera.cullingMask;
         mainCamera.cullingMask = 0;
 
-        spawnSpot = spot;
         wall = new GameObject("First Person Edge Wall").AddComponent<PixelFirstPersonWall>();
         wall.Setup(clicker, wallColor.a > 0f ? wallColor : new Color(1f, 0.25f, 0.65f, 1f), V(wallVisibleCubes, 10f), V(wallHeightCubes, 12f), V(wallMarginCubes, 1f), spot);
         BuildHud();
@@ -761,7 +752,6 @@ public class PixelFirstPerson : MonoBehaviour
 
     private readonly System.Collections.Generic.List<GameObject> attachGhosts = new System.Collections.Generic.List<GameObject>();
     private Material attachGhostMat;
-    private Vector3 heldHalf = Vector3.one * 0.5f;
     private Quaternion heldRotation = Quaternion.identity;
     private float holdDistance;
     private readonly System.Collections.Generic.List<Vector3> relPos = new System.Collections.Generic.List<Vector3>();
@@ -834,7 +824,6 @@ public class PixelFirstPerson : MonoBehaviour
     // ------------------------------------------------------------------
 
     private readonly System.Collections.Generic.List<Rigidbody> carried = new System.Collections.Generic.List<Rigidbody>();
-    private int CarryMax => 1;   // one cube in hand now (the build controls: scroll = distance, hold right = turn, left = attach / put down)
 
     private static void SetBodyVelocity(Rigidbody rb, Vector3 v)
     {
@@ -903,7 +892,6 @@ public class PixelFirstPerson : MonoBehaviour
             heldHalves.Add(PixelAttachment.HalfExtents(body, clicker.OldPixelWorldSize));
         }
         heldRotation = handle.transform.rotation;
-        heldHalf = heldHalves[0];
         holdDistance = Mathf.Clamp(Vector3.Distance(fpCamera.transform.position, handle.transform.position), clicker.OldPixelWorldSize * 1.1f, height * V(carryReach, 3.5f));
         PixelAudio.Play("grab");
     }
