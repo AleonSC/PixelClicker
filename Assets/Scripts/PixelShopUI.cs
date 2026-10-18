@@ -83,7 +83,7 @@ public partial class PixelShop
             buttonCorner == ButtonCorner.TopRight || buttonCorner == ButtonCorner.BottomRight ? 1f : 0f,
             buttonCorner == ButtonCorner.TopLeft || buttonCorner == ButtonCorner.TopRight ? 1f : 0f);
 
-        Button button = CreateButton(parent, "Shop Button", buttonText, buttonSize, buttonColor,
+        Button button = CreateButton(parent, "Shop Button", buttonText, buttonSize, ButtonRole.Primary,
                                      buttonTextColor, buttonFontSize, out _, out _);
         shopButtonObject = button.gameObject;
 
@@ -129,7 +129,7 @@ public partial class PixelShop
         PixelMenuFx.BuildTitleLine(panelRect, panelPadding, -(headerHeight + tabsDrop * 0.3f), panelWidth - panelPadding * 2f);   // the same sliding white segment as the pause menu
 
         // Help button (blue square with a question mark, in the standard right header slot just left of the X): hold it to replay the shop tutorial.
-        Button help = parts.AddHeaderButton("Help", "?", false, new Color(0.2f, 0.4f, 0.85f, 1f));
+        Button help = parts.AddHeaderButton("Help", "?", false, ButtonRole.Primary);
         ShopButtonExtras(help);
         GameObject fillGo = new GameObject("Hold Fill", typeof(RectTransform), typeof(Image));
         fillGo.transform.SetParent(help.transform, false);
@@ -217,7 +217,7 @@ public partial class PixelShop
         subTabImages = new Image[n];
         for (int i = 0; i < n; i++)
         {
-            Button b = CreateButton(go.transform, "Sub Tab " + names[i], names[i], Vector2.zero, tabInactiveColor, textColor,
+            Button b = CreateButton(go.transform, "Sub Tab " + names[i], names[i], Vector2.zero, ButtonRole.Neutral, textColor,
                                     tabFontSize, out TMP_Text subLabel, out subTabImages[i]);
             PixelUIKit.Caps(b);
             subLabel.enableAutoSizing = true;
@@ -281,7 +281,7 @@ public partial class PixelShop
         row.costLabel.fontSizeMin = Mathf.Min(14f, costFontSize);
         SetBand(row.costLabel.rectTransform, 0.04f, 0.36f, inset);
 
-        row.buyButton = CreateButton(rowGo.transform, "Buy", ultraButtonText, buyButtonSize, buyColor, textColor, buyFontSize,
+        row.buyButton = CreateButton(rowGo.transform, "Buy", ultraButtonText, buyButtonSize, ButtonRole.Success, textColor, buyFontSize,
                                      out row.buyLabel, out row.buyImage);
         RectTransform br = row.buyButton.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0.5f);
@@ -435,7 +435,7 @@ public partial class PixelShop
         for (int i = 0; i < tabs.Length; i++)
         {
             Button tabButton = CreateButton(bar.transform, "Tab " + names[i], names[i], Vector2.zero,
-                                            tabInactiveColor, textColor, tabFontSize, out TMP_Text tabLabel, out tabImages[i]);
+                                            ButtonRole.Neutral, textColor, tabFontSize, out TMP_Text tabLabel, out tabImages[i]);
             PixelUIKit.Caps(tabButton);
             // Four tabs share the width, so long names shrink to fit instead of overflowing.
             tabLabel.enableAutoSizing = true;
@@ -703,7 +703,7 @@ public partial class PixelShop
             else PixelUIKit.SetText(row.costLabel, BuildCostText(cost, true));
             row.buyButton.interactable = canBuy;
             PixelUIKit.SetText(row.buyLabel, locked ? lockedText : full ? potionFullText : string.Format(buyCountFormat, 1));
-            row.buyImage.color = canBuy ? buyColor : disabledColor;
+            SetShopRole(row.buyImage, canBuy ? ButtonRole.Success : ButtonRole.Neutral);
         }
     }
 
@@ -778,7 +778,7 @@ public partial class PixelShop
         row.costLabel.alignment = TextAlignmentOptions.TopLeft;
         SetBand(row.costLabel.rectTransform, 0.04f, 0.36f, textRightInset);
 
-        row.buyButton = CreateButton(rowGo.transform, "Buy", buyText, buyButtonSize, buyColor, textColor,
+        row.buyButton = CreateButton(rowGo.transform, "Buy", buyText, buyButtonSize, ButtonRole.Success, textColor,
                                      buyFontSize, out row.buyLabel, out row.buyImage);
         RectTransform br = row.buyButton.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0.5f);
@@ -798,7 +798,7 @@ public partial class PixelShop
             Vector2 arrowSize = new Vector2(buyButtonSize.x, buyButtonSize.y * 0.8f);
             float dy = Mathf.Max(buyButtonSize.y, arrowSize.y) * 0.55f;
             row.arrowButton = CreateButton(rowGo.transform, "Upgrades Arrow", upgradesArrowText, arrowSize,
-                                           upgradesArrowColor, textColor, buyFontSize, out _, out _);
+                                           upgradesArrowColor, textColor, buyFontSize, out _, out _);   // (role Custom: the orange arrow is its own colour, not a role)
             PixelUIKit.UseRightTriangle(row.arrowButton.gameObject, row.arrowButton.GetComponentInChildren<TMP_Text>(true), textColor, arrowSize);
             RectTransform ar = row.arrowButton.GetComponent<RectTransform>();
             ar.anchorMin = ar.anchorMax = ar.pivot = new Vector2(1f, 0.5f);
@@ -1001,6 +1001,27 @@ public partial class PixelShop
         return button;
     }
 
+    /// <summary>The same shop button in a ROLE (PixelUITheme): Neutral, Primary, Selected, Success, Danger.</summary>
+    private Button CreateButton(Transform parent, string objectName, string label, Vector2 size, ButtonRole role,
+                                Color labelColor, float labelSize, out TMP_Text labelText, out Image image)
+    {
+        Button button = CreateButton(parent, objectName, label, size, PixelUITheme.ColorOf(role), labelColor, labelSize, out labelText, out image);
+        PixelUIKit.SetRole(image, role);
+        shopRoles[image] = role;
+        return button;
+    }
+
+    // The role each shop button was last given, so the row refresh only calls SetRole (a search of every button) when a role changes.
+    private readonly System.Collections.Generic.Dictionary<Image, ButtonRole> shopRoles = new System.Collections.Generic.Dictionary<Image, ButtonRole>();
+
+    /// <summary>Switches a shop button to a role (tab Selected / Neutral, Buy Success / Neutral), only when it changed.</summary>
+    private void SetShopRole(Image image, ButtonRole role)
+    {
+        if (image == null || (shopRoles.TryGetValue(image, out ButtonRole now) && now == role)) return;
+        shopRoles[image] = role;
+        PixelUIKit.SetRole(image, role);
+    }
+
     /// <summary>The shop's extras on a button made elsewhere (the window builder's X and header buttons): the press pulse and the fancy menu shine.</summary>
     private static void ShopButtonExtras(Button button)
     {
@@ -1024,7 +1045,7 @@ public partial class PixelShop
         if (tabImages != null)
         {
             for (int t = 0; t < tabImages.Length; t++)
-                tabImages[t].color = !searching && TabOrder[t] == currentTab ? tabActiveColor : tabInactiveColor;
+                SetShopRole(tabImages[t], !searching && TabOrder[t] == currentTab ? ButtonRole.Selected : ButtonRole.Neutral);
         }
 
         // The upgrades window only makes sense while its pack is owned.
@@ -1052,7 +1073,7 @@ public partial class PixelShop
                 y += subTabHeight + rowSpacing;
                 visibleCount++;
                 for (int s = 0; s < subTabImages.Length; s++)
-                    subTabImages[s].color = s == upgradesSubTab ? tabActiveColor : tabInactiveColor;
+                    SetShopRole(subTabImages[s], s == upgradesSubTab ? ButtonRole.Selected : ButtonRole.Neutral);
             }
         }
         bool showGeneral = !onUpgrades || upgradesSubTab == 0;
@@ -1116,7 +1137,7 @@ public partial class PixelShop
             if (owned) PixelUIKit.SetText(row.buyLabel, leveled ? maxedText : ownedText);
             else if (!requirementMet) PixelUIKit.SetText(row.buyLabel, lockedText);
             else PixelUIKit.SetText(row.buyLabel, leveled ? upgradeText : buyText);
-            row.buyImage.color = canBuy ? buyColor : disabledColor;
+            SetShopRole(row.buyImage, canBuy ? ButtonRole.Success : ButtonRole.Neutral);
 
             // Arrow to the upgrades window: only once the pack is owned.
             if (row.arrowButton != null)
@@ -1165,7 +1186,7 @@ public partial class PixelShop
             bool canBuy = !maxed && !capped && enough;
             row.buyButton.interactable = canBuy;
             row.buyLabel.text = maxed ? maxedText : capped ? valueCappedButtonText : valueButtonText;
-            row.buyImage.color = canBuy ? buyColor : disabledColor;
+            SetShopRole(row.buyImage, canBuy ? ButtonRole.Success : ButtonRole.Neutral);
         }
 
         // Upgrades > Operation: the consumables and their upgrade window.

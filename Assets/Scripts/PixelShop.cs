@@ -314,8 +314,7 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Button text size.")]
     [SerializeField] private float buttonFontSize = 44f;
 
-    [Tooltip("Button background colour.")]
-    [SerializeField] private Color buttonColor = new Color(0.2f, 0.45f, 0.9f, 1f);
+    // (the button's colour is the Primary role in PixelUITheme)
 
     [Tooltip("Button text colour.")]
     [SerializeField] private Color buttonTextColor = Color.white;
@@ -400,10 +399,10 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Tab text size.")]
     [SerializeField] private float tabFontSize = 34f;
 
-    [Tooltip("Colour of the selected tab.")]
+    [Tooltip("Colour of the selected tile on a tile page (Pixels / Consumables) and of its grid's scroll bar. The tab and chip buttons use the Selected / Neutral roles in PixelUITheme.")]
     [SerializeField] private Color tabActiveColor = new Color(0.2f, 0.45f, 0.9f, 1f);
 
-    [Tooltip("Colour of the other tabs.")]
+    [Tooltip("Background of the tile page's count box (between - and +). The buttons use the Neutral role in PixelUITheme.")]
     [SerializeField] private Color tabInactiveColor = new Color(0.22f, 0.22f, 0.28f, 1f);
 
     [Header("Potions (Consumables tab)")]
@@ -437,7 +436,7 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Size of the arrow button on a pack that has upgrades.")]
     [SerializeField] private Vector2 upgradesArrowSize = new Vector2(80f, 80f);
 
-    [Tooltip("Arrow button colour.")]
+    [Tooltip("Arrow button colour (its own orange, not a PixelUITheme role).")]
     [SerializeField] private Color upgradesArrowColor = new Color(0.9f, 0.65f, 0.15f, 1f);
 
     [Tooltip("Title of the upgrades window. {0} = name of the pack the upgrades belong to.")]
@@ -672,10 +671,9 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Buy button text size.")]
     [SerializeField] private float buyFontSize = 38f;
 
-    [Tooltip("Buy button colour.")]
-    [SerializeField] private Color buyColor = new Color(0.2f, 0.7f, 0.35f, 1f);
+    // (Buy buttons use the Success role in PixelUITheme, and Neutral when they can't be bought)
 
-    [Tooltip("Colour of the Buy button when disabled (can't afford / owned).")]
+    [Tooltip("Background of the search box.")]
     [SerializeField] private Color disabledColor = new Color(0.35f, 0.35f, 0.4f, 1f);
 
     // ------------------------------------------------------------------

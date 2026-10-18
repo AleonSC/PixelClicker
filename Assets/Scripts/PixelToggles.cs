@@ -37,7 +37,7 @@ public class PixelToggles : MonoBehaviour
     [Tooltip("Text on the button at the edge of the screen.")]
     [SerializeField] private string buttonText = "Toggles";
 
-    [Tooltip("Button colour.")]
+    [Tooltip("Colour of the Toggles button and the My Window button at the screen edge (the Toggles' own purple, kept as a plain colour rather than a PixelUITheme role).")]
     [SerializeField] private Color buttonColor = new Color(0.45f, 0.35f, 0.75f, 1f);
 
     [Tooltip("Button text colour.")]
@@ -95,11 +95,8 @@ public class PixelToggles : MonoBehaviour
     [Tooltip("Row background colour.")]
     [SerializeField] private Color rowColor = new Color(0.17f, 0.17f, 0.21f, 1f);
 
-    [Tooltip("Group button colour (not selected).")]
+    [Tooltip("Background of the group drop-down and the search box. The group tab buttons use the Selected / Neutral roles in PixelUITheme.")]
     [SerializeField] private Color groupColor = new Color(0.22f, 0.22f, 0.28f, 1f);
-
-    [Tooltip("Group button colour (selected).")]
-    [SerializeField] private Color groupActiveColor = new Color(0.45f, 0.35f, 0.75f, 1f);
 
     [Tooltip("Tick box colour.")]
     [SerializeField] private Color tickBoxColor = new Color(0.25f, 0.25f, 0.3f, 1f);
@@ -170,6 +167,7 @@ public class PixelToggles : MonoBehaviour
     private TMP_Dropdown groupDropdown;
     private GameObject[] groupTabs;
     private Image[] groupImages;
+    private int litGroup = -1;   // the group whose tab was last shown Selected
     private bool besideShop; // true while the window is docked next to the open shop: drop-down instead of tabs
     private ScrollRect scroll;
     private RectTransform content;
@@ -420,9 +418,12 @@ public class PixelToggles : MonoBehaviour
     private void Refresh()
     {
         if (groupDropdown != null && groupDropdown.value != (int)current) groupDropdown.SetValueWithoutNotify((int)current);
-        if (groupImages != null)
+        if (groupImages != null && litGroup != (int)current)
+        {
+            litGroup = (int)current;   // (only when the group changed: SetRole searches every button)
             for (int i = 0; i < groupImages.Length; i++)
-                groupImages[i].color = i == (int)current ? groupActiveColor : groupColor;
+                PixelUIKit.SetRole(groupImages[i], i == litGroup ? ButtonRole.Selected : ButtonRole.Neutral);
+        }
         ApplyGroupControl();
 
         bool searching = searchText.Length > 0;
@@ -653,11 +654,11 @@ public class PixelToggles : MonoBehaviour
 
         // The same choice as tab buttons: used while the window stands alone (the drop-down is for beside the shop).
         groupImages = new Image[GroupCount];
+        litGroup = -1;
         groupTabs = new GameObject[GroupCount];
         for (int i = 0; i < GroupCount; i++)
         {
-            Button b = PixelUIKit.CreateButton(font, windowObject.transform, "Group " + groupLabels[i], "", Vector2.zero, groupColor,
-                                               textColor, fontSize);
+            Button b = PixelUIKit.CreateButton(font, windowObject.transform, "Group " + groupLabels[i], "", Vector2.zero, ButtonRole.Neutral, fontSize);
             groupTabs[i] = b.gameObject;
             groupImages[i] = b.GetComponent<Image>();
 
@@ -746,8 +747,7 @@ public class PixelToggles : MonoBehaviour
         tr2.offsetMin = new Vector2(24f, 90f);
         tr2.offsetMax = new Vector2(-24f, -20f);
 
-        Button ok = PixelUIKit.CreateButton(font, hintObject.transform, "Hint Ok", hintOkText, new Vector2(200f, 60f), groupActiveColor,
-                                            textColor, fontSize);
+        Button ok = PixelUIKit.CreateButton(font, hintObject.transform, "Hint Ok", hintOkText, new Vector2(200f, 60f), ButtonRole.Success, fontSize);
         RectTransform okr = ok.GetComponent<RectTransform>();
         okr.anchorMin = okr.anchorMax = okr.pivot = new Vector2(0.5f, 0f);
         okr.anchoredPosition = new Vector2(0f, 20f);
