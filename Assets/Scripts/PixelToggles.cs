@@ -11,6 +11,7 @@ using UnityEngine.UI;
 ///   Upgrades  - switch the Auto Clicker, Pixel Grabbing and Time Stop on or off
 ///   Minigames - switch each bought minigame on or off
 /// Only things you own are listed. The choices are saved with the game.
+/// It is a standard Fixed window (PixelUIKit.CreateWindow), anchored at the middle of the right edge (or beside the open shop).
 ///
 /// Add this to any GameObject. The pause menu adds one automatically if the scene has none.
 /// </summary>
@@ -87,9 +88,6 @@ public class PixelToggles : MonoBehaviour
 
     [Tooltip("Text size.")]
     [SerializeField] private float fontSize = 30f;
-
-    [Tooltip("Title text size.")]
-    [SerializeField] private float titleFontSize = 44f;
 
     [Tooltip("Window background colour.")]
     [SerializeField] private Color panelColor = new Color(0.1f, 0.1f, 0.13f, 0.97f);
@@ -611,42 +609,24 @@ public class PixelToggles : MonoBehaviour
         buttonGroup = openObject.AddComponent<CanvasGroup>();
 
         // --- The window, just left of the button.
-        windowObject = new GameObject("Toggles Window", typeof(RectTransform), typeof(Image), typeof(PixelPop));
-        windowObject.transform.SetParent(canvasRoot.transform, false);
-        PixelUIKit.StyleWindow(windowObject.GetComponent<Image>(), panelColor);
-        RectTransform wr = windowObject.GetComponent<RectTransform>();
+        // The standard Fixed window (PixelUIKit.CreateWindow: title, grey X, PixelPop). The builder centres it; this one is put back at the
+        // middle of the right edge, taking the spot the button slides out to (FitBesideShop moves it next to the shop while that is open).
+        PixelWindowParts parts = PixelUIKit.CreateWindow(font, canvasRoot.transform, "Toggles Window", windowTitle, windowSize, panelColor,
+                                                         PixelUIKit.WindowKind.Fixed, Close);
+        windowObject = parts.Root;
+        RectTransform wr = parts.Rect;
         wr.anchorMin = wr.anchorMax = wr.pivot = new Vector2(1f, 0.5f);
-        wr.sizeDelta = windowSize;
-        wr.anchoredPosition = new Vector2(-(hud.SideShownInset), 0f); // takes the spot the button slides out to
+        wr.anchoredPosition = new Vector2(-(hud.SideShownInset), 0f);
 
-        // The contents line up with the Shop's: the first element under the header starts at the shop's tab row, is as tall, and the list starts where the shop's list does.
+        // The contents line up with the Shop's (also a standard window): the first element under the header starts at the shop's tab row, is as tall, and the list starts where the shop's list does.
         PixelShop layoutShop = PixelFind.First<PixelShop>();
-        float headerH = layoutShop != null ? layoutShop.HeaderHeightValue : 100f;
+        float headerH = parts.HeaderHeight;
         float tabH = layoutShop != null ? layoutShop.TabHeightValue : 70f;
         float listTop = layoutShop != null ? layoutShop.ListTopValue : headerH + tabH + 10f;
         float sidePad = layoutShop != null ? layoutShop.PanelPaddingValue : 20f;
+        PixelMenuFx.AddWindowLine(windowObject.transform, headerH - 8f);   // between the title and the icon row
 
-        float y = 16f;
-        TMP_Text title = PixelUIKit.CreateText(font, windowObject.transform, "Title", windowTitle, titleFontSize,
-                                               TextAlignmentOptions.Center, FontStyles.Bold, textColor);
-        PixelUIKit.Caps(title);
-        OneLine(title, titleFontSize, 14f);
-        RectTransform tr = title.rectTransform;
-        tr.anchorMin = new Vector2(0f, 1f);
-        tr.anchorMax = new Vector2(1f, 1f);
-        tr.pivot = new Vector2(0.5f, 1f);
-        tr.sizeDelta = new Vector2(-170f, titleFontSize * 1.4f);
-        tr.anchoredPosition = new Vector2(0f, -y);
-
-        Button close = PixelUIKit.CreateButton(font, windowObject.transform, "Close", "X", new Vector2(64f, 64f),
-                                               new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 34f);
-        RectTransform cr = close.GetComponent<RectTransform>();
-        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
-        cr.anchoredPosition = new Vector2(-14f, -12f);
-        close.onClick.AddListener(Close);
-        PixelMenuFx.AddWindowLine(windowObject.transform, Mathf.Min(headerH - 8f, 16f + titleFontSize * 1.4f + 4f));   // between the title and the icon row (the row starts at the shop's tab row)
-
-        y = headerH;   // same y as the shop's tab row
+        float y = headerH;   // same y as the shop's tab row
 
         // --- The group drop-down (Pixels / Upgrades / Minigames / Vendors / Pets).
         List<string> groupLabels = new List<string>();
