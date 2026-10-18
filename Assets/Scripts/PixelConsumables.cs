@@ -2092,6 +2092,13 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         return opShop != null ? opShop.OperationBonus(kind, stat) : 0f;
     }
 
+    /// <summary>The 'radius' of the first device entry of this kind with its Operation upgrades applied (the Recycler's size factor), or -1 if there is none.</summary>
+    public float EffectiveRadiusOf(DeviceKind kind)
+    {
+        if (devices != null) foreach (Device d in devices) if (d != null && d.kind == kind) return EffectiveDevice(d).radius;
+        return -1f;
+    }
+
     /// <summary>The device entry at this index with its Operation upgrades applied (null for a bad index). The device info panel reads run time / reach from it.</summary>
     public Device EffectiveDeviceAt(int index) => devices != null && index >= 0 && index < devices.Length && devices[index] != null ? EffectiveDevice(devices[index]) : null;
 

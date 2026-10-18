@@ -4,7 +4,8 @@
 //   shared PixelHoverMarker, gone when the pointer leaves; the time left is on the shared device card, PixelDeviceCard),
 //   it shrinks away with whatever is inside when time is up). Upgrades > Operation (2026-10-18: one of each): SPEED (-0.08 s of RecycleDelay a level;
 //   3x that off the button cycle's shake) and SIZE (+0.3 to the size factor a level - the whole bin, its catching area and its capacity grow; Place sizeFactor = the device's
-//   radius). (Run Time, Streak Power and Suction rows were removed; their stats still work at their base values.)
+//   radius; a placed bin follows the level IN USE live, FollowSizeUpgrade - the device panel's - / + turns a bought level down). Size is +0.135 a level since
+//   2026-10-18 (max 2.475, 25% smaller than with +0.3). (Run Time, Streak Power and Suction rows were removed; their stats still work at their base values.)
 //   RECYCLER (PixelConsumables DeviceKind.Recycler 19, Utilities card - listed FIRST there - and Cubie's gift on visit 1 via the {recycler} page token): a
 //   permanent open-topped bin (PixelChipperDevice stub for removal / saving its spot; built here by Place / CreateGhost / CreateDisplay with PixelFactoryKit:
 //   plinth + feet, green walls with a dark liner, brushed-metal corner pillars and rim, a glowing band round the body and a status lamp - green idle,
@@ -621,6 +622,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
 
         UpdateButtonFlash();
         if (device == null) device = GetComponent<PixelPlacedDevice>();
+        FollowSizeUpgrade();
         foreach (Rigidbody b in inside)   // a frozen husk you start to grab is let loose at once (Pixel Grabbing steers it with its velocity)
         {
             if (b == null || !b.isKinematic) continue;
@@ -638,6 +640,27 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
         if (tick > 0f || processing) return;
         tick = 0.1f;
         Capture();
+    }
+
+    private float sizeTarget = -1f, nextSizeLook;
+
+    /// <summary>
+    /// A placed bin follows the Size level IN USE (bought, or turned down in the device panel's - / + stepper): it grows / shrinks smoothly to it.
+    /// Not while it works, is carried, is ending or the floor's props fade it.
+    /// </summary>
+    private void FollowSizeUpgrade()
+    {
+        if (Time.unscaledTime >= nextSizeLook)
+        {
+            nextSizeLook = Time.unscaledTime + 0.25f;
+            PixelConsumables c = PixelFind.Cached<PixelConsumables>();
+            sizeTarget = c != null ? c.EffectiveRadiusOf(PixelConsumables.DeviceKind.Recycler) : -1f;
+        }
+        if (sizeTarget <= 0f || processing || Fading || (carry != null && carry.Dragging) || (device != null && device.IsEnding)) return;
+        float now = baseScale.x, next = Mathf.MoveTowards(now, Mathf.Max(0.5f, sizeTarget), Time.deltaTime * 2f);
+        if (Mathf.Abs(next - now) < 0.0001f) return;
+        baseScale = Vector3.one * next;
+        transform.localScale = baseScale;   // (everything inside is parented and frozen: it scales with the bin)
     }
 
     [Tooltip("Colour the button flashes towards while there is a husk in the bin.")]

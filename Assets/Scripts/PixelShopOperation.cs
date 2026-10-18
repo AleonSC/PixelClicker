@@ -34,7 +34,8 @@ public partial class PixelShop
         {
             PixelOperationUpgrade have = operationUpgrades.Find(u => u != null && u.id == def.id);
             if (have != null && have.id == "rec_speed" && have.perLevel < def.perLevel) { have.perLevel = def.perLevel; have.description = def.description; changed = true; }   // (2026-10-18: auto recycling is back - Speed shortens the recycle delay)
-            if (have != null && have.id == "rec_size" && have.perLevel < def.perLevel) { have.perLevel = def.perLevel; have.displayName = def.displayName; have.description = def.description; changed = true; }   // (2026-10-18: Size, +0.3 a level on the new default size 2)
+            if (have != null && have.id == "rec_size" && (have.perLevel < 0.2f || have.perLevel > 0.29f) && !Mathf.Approximately(have.perLevel, def.perLevel)) { have.perLevel = def.perLevel; have.displayName = def.displayName; have.description = def.description; changed = true; }   // (2026-10-18: Size +0.135 a level - the maxed bin 25% smaller than with +0.3)
+            if (have != null && have.id.StartsWith("hop_") && have.description != null && (have.description.Contains("tray") || have.description.Contains("slides"))) { have.description = def.description; changed = true; }   // (the funnel hopper)
             if (have != null) continue;
             operationUpgrades.Add(def);
             changed = true;
@@ -47,12 +48,44 @@ public partial class PixelShop
     /// <summary>The level bought of an upgrade (kept as a saved stat counter).</summary>
     public int OperationLevel(PixelOperationUpgrade u) => u == null ? 0 : Mathf.Clamp((int)PixelStats.Total(OperationKey(u)), 0, u.maxLevel);
 
+    // APPLIED LEVEL (2026-10-18): the player can turn a bought upgrade back down (the device panel's - / + steppers) - e.g. use Size 3 with all 5 bought.
+    // Saved with the stats as 'opuse.<id>' = applied level + 1 (nothing = all bought levels). Buying a level clears it (the new level is used at once).
+    private static string AppliedKey(PixelOperationUpgrade u) => "opuse." + u.id;
+
+    /// <summary>The level of this upgrade in USE: the bought level, or less if the player turned it down in the device panel.</summary>
+    public int AppliedLevel(PixelOperationUpgrade u)
+    {
+        int bought = OperationLevel(u);
+        if (u == null) return 0;
+        int chosen = (int)PixelStats.Total(AppliedKey(u)) - 1;
+        return chosen < 0 ? bought : Mathf.Min(chosen, bought);
+    }
+
+    /// <summary>Sets the level in use (0 .. bought); the bought level itself = 'use all'.</summary>
+    public void SetAppliedLevel(PixelOperationUpgrade u, int level)
+    {
+        if (u == null) return;
+        int bought = OperationLevel(u);
+        level = Mathf.Clamp(level, 0, bought);
+        PixelStats.Clear(AppliedKey(u));
+        if (level < bought) PixelStats.Count(AppliedKey(u), level + 1);
+        PixelAudio.Play("ui_click");
+    }
+
     /// <summary>The device info panel (PixelDeviceCard): adds one 'name  level / max' line per Operation upgrade of this consumable.</summary>
     public void AddOperationLevels(PixelConsumables.DeviceKind kind, PixelDeviceInfo info)
     {
         if (operationUpgrades == null || info == null) return;
         foreach (PixelOperationUpgrade u in operationUpgrades)
-            if (u != null && u.device == kind) info.Add(u.displayName, "Lv " + OperationLevel(u) + " / " + u.maxLevel);
+        {
+            if (u == null || u.device != kind) continue;
+            int bought = OperationLevel(u), used = AppliedLevel(u);
+            if (bought <= 0 || !info.Full) { info.Add(u.displayName, "Lv " + used + " / " + u.maxLevel + (used < bought ? " (of " + bought + ")" : "")); continue; }
+            PixelOperationUpgrade up = u;   // (the panel: - / + to use fewer of the bought levels)
+            info.AddStepper(u.displayName, "Lv " + used + " / " + u.maxLevel + (used < bought ? "  <size=80%>(" + bought + " bought)</size>" : ""),
+                            used > 0 ? () => SetAppliedLevel(up, AppliedLevel(up) - 1) : (System.Action)null,
+                            used < bought ? () => SetAppliedLevel(up, AppliedLevel(up) + 1) : (System.Action)null);
+        }
     }
 
     /// <summary>Is this consumable on the Operation tab (so the device panel's Upgrades button can open it)?</summary>
@@ -74,7 +107,7 @@ public partial class PixelShop
         float total = 0f;
         if (operationUpgrades == null) return 0f;
         foreach (PixelOperationUpgrade u in operationUpgrades)
-            if (u != null && u.device == kind && u.stat == stat) total += OperationLevel(u) * u.perLevel;
+            if (u != null && u.device == kind && u.stat == stat) total += AppliedLevel(u) * u.perLevel;   // (the level in USE: the player may have turned it down)
         return total;
     }
 
@@ -87,6 +120,7 @@ public partial class PixelShop
         if (u == null || consumables == null || OperationLevel(u) >= u.maxLevel) return false;
         if (!clicker.TrySpend(consumables.OperationCostType(u.device), OperationCost(u))) return false;
         PixelStats.Best(OperationKey(u), OperationLevel(u) + 1);
+        PixelStats.Clear(AppliedKey(u));   // (a new level is used at once, even if the upgrade was turned down)
         PixelAudio.Play("purchase");
         PixelHints.Announce(consumables.OperationName(u.device) + ": " + u.displayName + " level " + OperationLevel(u));
         return true;

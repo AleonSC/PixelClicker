@@ -9,6 +9,8 @@
 //     next to a thin device stub: PixelRecycler, PixelSortingHopper, PixelSweeper).
 //   * ACTIONS (2026-10-18): a device can add its own buttons to the right-click panel with info.AddAction(label, onClick, role) when info.Full
 //     (the Sorting Hopper's 'Select filter' / 'Empty out'); the panel shows them two to a row above Remove / Upgrades.
+//   * STEPPERS (2026-10-18): '- value +' rows in the panel (info.AddStepper): the Operation upgrades' level in use (PixelShop.AddOperationLevels),
+//     so a player with every level bought can go back to level 3.
 //   A new device: override AddInfo (a PixelPlacedDevice subclass) or implement IPixelDeviceInfo (a behaviour component); add the 2-3 key stats
 //   always and the rest only when info.Full (run time, what it did this session...).
 // ---------------------------------------------------
@@ -35,7 +37,16 @@ public sealed class PixelDeviceInfo
     /// <summary>True for the right-click panel (all the stats), false for the hover card (the essentials only).</summary>
     public bool Full;
 
-    public void Clear() { Title = ""; Lines.Clear(); Progress = -1f; ProgressLabel = ""; Actions.Clear(); }
+    public void Clear() { Title = ""; Lines.Clear(); Progress = -1f; ProgressLabel = ""; Actions.Clear(); Steppers.Clear(); }
+
+    /// <summary>A '- value +' row in the right-click panel (an Operation upgrade's level in use). A null OnMinus / OnPlus greys that button out.</summary>
+    public struct DeviceStepper { public string Label, Value; public System.Action OnMinus, OnPlus; }
+
+    /// <summary>The panel's stepper rows (shown under the lines).</summary>
+    public readonly List<DeviceStepper> Steppers = new List<DeviceStepper>();
+
+    /// <summary>Adds a '- value +' row to the right-click panel (call it when Full).</summary>
+    public void AddStepper(string label, string value, System.Action onMinus, System.Action onPlus) => Steppers.Add(new DeviceStepper { Label = label, Value = value, OnMinus = onMinus, OnPlus = onPlus });
 
     /// <summary>A button of the device's own in the right-click panel.</summary>
     public struct DeviceAction { public string Label; public ButtonRole Role; public System.Action OnClick; }

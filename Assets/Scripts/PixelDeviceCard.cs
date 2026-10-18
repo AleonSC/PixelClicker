@@ -10,6 +10,8 @@
 //     Upgrades > Operation tab on that device: PixelShop.OpenOperationFor; shown only for devices with an Operation row). A right HOLD still removes
 //     the device (PixelConsumables.UpdateRemoval) - the tap just never fills that ring. Who owns the right click is PixelRightClick's Device owner.
 //     Escape (PixelWindows) / a click anywhere outside the panel / the device going away closes it.
+//   * STEPPERS: '- value +' rows (PixelDeviceInfo.AddStepper) for the Operation upgrades' level in use (PixelShop.AddOperationLevels): turn a bought
+//     upgrade back down (PlaceSteppers).
 //   * DEVICE ACTIONS: buttons a device adds itself (PixelDeviceInfo.AddAction, e.g. the Sorting Hopper's Select filter / Empty out) sit two to a row
 //     above Remove / Upgrades (PlaceActions).
 //   * LEFT-CLICK is untouched (each device's own button, flag, winding...).
@@ -169,6 +171,7 @@ public class PixelDeviceCard : MonoBehaviour
         y = PlaceBar(panelBar, pad, y, w);
         float hh = panelHintText.GetPreferredValues(panelHint, w, 0f).y;
         Place(panelHintText.rectTransform, pad, y, w, hh); y += hh + 12f;
+        y = PlaceSteppers(pad, y, w);
         y = PlaceActions(pad, y, w);
 
         PixelConsumables.DeviceKind? kind = panelDevice.Kind;
@@ -210,6 +213,65 @@ public class PixelDeviceCard : MonoBehaviour
         }
         for (int i = panelActions.Count; i < actionButtons.Count; i++) if (actionButtons[i].gameObject.activeSelf) actionButtons[i].gameObject.SetActive(false);
         return y + (panelActions.Count + 1) / 2 * 66f;
+    }
+
+    private sealed class StepperRow { public RectTransform root; public TMP_Text label, value; public Button minus, plus; }
+    private readonly List<StepperRow> stepperRows = new List<StepperRow>();
+    private readonly List<PixelDeviceInfo.DeviceStepper> panelSteppers = new List<PixelDeviceInfo.DeviceStepper>();
+    private const float StepperH = 50f;
+
+    /// <summary>The '- value +' rows (info.Steppers: the Operation upgrades' level in use), one per row; returns the y under them.</summary>
+    private float PlaceSteppers(float pad, float y, float w)
+    {
+        panelSteppers.Clear();
+        panelSteppers.AddRange(info.Steppers);
+        for (int i = 0; i < panelSteppers.Count; i++)
+        {
+            if (i >= stepperRows.Count) stepperRows.Add(MakeStepperRow(i));
+            StepperRow row = stepperRows[i];
+            PixelDeviceInfo.DeviceStepper st = panelSteppers[i];
+            if (!row.root.gameObject.activeSelf) row.root.gameObject.SetActive(true);
+            Place(row.root, pad, y + i * (StepperH + 6f), w, StepperH);
+            if (row.label.text != st.Label) row.label.text = st.Label;
+            if (row.value.text != st.Value) row.value.text = st.Value;
+            row.minus.interactable = st.OnMinus != null;
+            row.plus.interactable = st.OnPlus != null;
+        }
+        for (int i = panelSteppers.Count; i < stepperRows.Count; i++) if (stepperRows[i].root.gameObject.activeSelf) stepperRows[i].root.gameObject.SetActive(false);
+        return y + panelSteppers.Count * (StepperH + 6f) + (panelSteppers.Count > 0 ? 6f : 0f);
+    }
+
+    private StepperRow MakeStepperRow(int index)
+    {
+        TMP_FontAsset font = clicker.UIFont;
+        StepperRow row = new StepperRow();
+        GameObject go = new GameObject("Stepper " + index, typeof(RectTransform));
+        go.transform.SetParent(panel.Root.transform, false);
+        row.root = go.GetComponent<RectTransform>();
+        float size = titleSize * 0.8f;
+        row.label = PixelUIKit.CreateText(font, go.transform, "Label", "", size, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, PixelUITheme.TextColor);
+        RectTransform lr = row.label.rectTransform;
+        lr.anchorMin = new Vector2(0f, 0f); lr.anchorMax = new Vector2(0.4f, 1f); lr.offsetMin = lr.offsetMax = Vector2.zero;
+        row.minus = PixelUIKit.CreateButton(font, go.transform, "Minus", "-", new Vector2(StepperH, StepperH), ButtonRole.Neutral, 30f);
+        RectTransform mr = row.minus.GetComponent<RectTransform>();
+        mr.anchorMin = mr.anchorMax = mr.pivot = new Vector2(0.4f, 0.5f); mr.anchoredPosition = new Vector2(StepperH * 0.5f, 0f);
+        row.plus = PixelUIKit.CreateButton(font, go.transform, "Plus", "+", new Vector2(StepperH, StepperH), ButtonRole.Neutral, 30f);
+        RectTransform pr = row.plus.GetComponent<RectTransform>();
+        pr.anchorMin = pr.anchorMax = pr.pivot = new Vector2(1f, 0.5f); pr.anchoredPosition = Vector2.zero;
+        row.value = PixelUIKit.CreateText(font, go.transform, "Value", "", size, TextAlignmentOptions.Center, FontStyles.Normal, PixelUITheme.TextColor);
+        RectTransform vr = row.value.rectTransform;
+        vr.anchorMin = new Vector2(0.4f, 0f); vr.anchorMax = new Vector2(1f, 1f); vr.offsetMin = new Vector2(StepperH + 6f, 0f); vr.offsetMax = new Vector2(-StepperH - 6f, 0f);
+        row.minus.onClick.AddListener(() => RunStepper(index, false));
+        row.plus.onClick.AddListener(() => RunStepper(index, true));
+        return row;
+    }
+
+    private void RunStepper(int index, bool plus)
+    {
+        if (panelDevice == null || index >= panelSteppers.Count) return;
+        System.Action act = plus ? panelSteppers[index].OnPlus : panelSteppers[index].OnMinus;
+        act?.Invoke();
+        if (panelDevice != null && panel != null && PixelPop.IsOpen(panel.Root)) RefreshPanel();
     }
 
     private void RunAction(int index)
