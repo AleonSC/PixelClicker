@@ -1,6 +1,8 @@
 // ---- System notes ----
 // PixelViewWindow.cs
 //   FREE CAM (4th tick box, PixelFreeCam.cs): a detached camera flown by hand (WASD, Space / C, Shift, middle drag to look); never saved as the player's view, no zoom slider, no flat view.
+//   SHIFT + the View key (default Shift + V, shiftCycles) steps to the next view in cycleOrder (Orbital, Top down, First person, Free cam; one that
+//   can't start is skipped; saved like a tick; 'View: ...' in the event log) without opening the window.
 //   The View window (component added by PixelClicker.Awake; opens ONLY with its key, PixelAction.ViewWindow, default V; closes with the
 //   key, its X or Escape (PixelWindows 130); a standard Tool window (PixelUIKit.CreateWindow: drag by the header, minimize, dock to a screen edge,
 //   position saved under PixelClicker.ViewWindow.Window.*; first time at the right edge half way down) that does not pause the game; disableViewWindow). It replaces the
@@ -51,6 +53,10 @@ public class PixelViewWindow : MonoBehaviour
     [Header("Start view (used until the player picks one: no saved view setting)")]
     [Tooltip("The view a fresh save starts in (and the one the camera returns to after a takeover minigame) until the player picks another. Orbital = the default camera.")]
     [SerializeField] private PixelViewKind startView = PixelViewKind.Orbital;
+    [Tooltip("Shift + the View key (default Shift + V) switches to the next view in 'Cycle Order' without opening the window.")]
+    [SerializeField] private bool shiftCycles = true;
+    [Tooltip("The views Shift + V steps through, in order (one that can't start right now is skipped).")]
+    [SerializeField] private PixelViewKind[] cycleOrder = { PixelViewKind.Orbital, PixelViewKind.TopDown, PixelViewKind.FirstPerson, PixelViewKind.FreeCam };
     [SerializeField, HideInInspector] private int startViewVersion;   // (1 = Orbital became the default; moves scenes saved with the old Top down default over once)
 
     [Min(0.1f)]
@@ -186,11 +192,33 @@ public class PixelViewWindow : MonoBehaviour
         if (IsOpen && blocked) { Close(); return; }
         if (!blocked && !PixelKeys.Typing && !PixelTutorialDim.Active && PixelKeys.Pressed(PixelAction.ViewWindow))
         {
-            if (IsOpen) Close(); else Open();
+            if (shiftCycles && PixelInput.ShiftHeld()) CycleView();   // Shift + the View key: the next view, no window
+            else if (IsOpen) Close(); else Open();
         }
         if (!IsOpen) return;
         Sync();
     }
+
+    /// <summary>Shift + the View key: the next view in cycleOrder (skipping any that can't start now), named in the event log.</summary>
+    private void CycleView()
+    {
+        if (cycleOrder == null || cycleOrder.Length == 0 || PixelMinigame.TakeoverActive || PixelCameraIntro.Moving) return;   // (a takeover / the intro owns the camera)
+        int at = System.Array.IndexOf(cycleOrder, CurrentView);
+        for (int step = 1; step <= cycleOrder.Length; step++)
+        {
+            PixelViewKind next = cycleOrder[(Mathf.Max(at, -1) + step + cycleOrder.Length) % cycleOrder.Length];
+            if (next == PixelViewKind.Default || next == CurrentView) continue;
+            if (!SetView(next, false)) continue;
+            SaveKind(next);
+            PixelHints.Announce("View: " + ViewName(next));
+            if (IsOpen) Sync();
+            return;
+        }
+        PixelHints.Announce("That view can't start right now");
+    }
+
+    private static string ViewName(PixelViewKind kind) =>
+        kind == PixelViewKind.FirstPerson ? "First person" : kind == PixelViewKind.TopDown ? "Top down" : kind == PixelViewKind.FreeCam ? "Free cam" : "Orbital";
 
     /// <summary>Puts the saved view back: the view itself, then its zoom and the orbit controls.</summary>
     private void ApplySaved()
@@ -505,7 +533,7 @@ public class PixelViewWindow : MonoBehaviour
         orbitSection.GetComponent<RectTransform>().sizeDelta = new Vector2(Width, oy + 110f);
         y += oy + 116f;
 
-        TMP_Text hint = Label(window.transform, "Press " + PixelKeys.Name(PixelAction.ViewWindow) + " again to close", 18f, FontStyles.Italic, new Color(0.7f, 0.75f, 0.85f), TextAlignmentOptions.Center);
+        TMP_Text hint = Label(window.transform, "Press " + PixelKeys.Name(PixelAction.ViewWindow) + " again to close  -  Shift + " + PixelKeys.Name(PixelAction.ViewWindow) + " = next view", 18f, FontStyles.Italic, new Color(0.7f, 0.75f, 0.85f), TextAlignmentOptions.Center);
         parts.SetHeight(y + 52f);
         Place(hint.rectTransform, Pad, y + 12f, Width - Pad * 2f, 28f);
 

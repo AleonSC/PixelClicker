@@ -3135,7 +3135,7 @@ public class PixelPauseMenu : MonoBehaviour
             case PixelAction.Bank: return "Open Pixel Bank";
             case PixelAction.Skills: return "Open Skills";
             case PixelAction.Feedback: return "Give feedback";
-            case PixelAction.ViewWindow: return "Open View window";
+            case PixelAction.ViewWindow: return "Open View window (+ Shift: next view)";
             case PixelAction.DevTools: return "Open Dev Tools";
             case PixelAction.MarkMoment: return "Dev: mark this moment";
             case PixelAction.InspectHover: return "Dev: inspect under mouse";
