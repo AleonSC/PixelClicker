@@ -350,8 +350,9 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Gap between pack rows.")]
     [SerializeField] private float rowSpacing = 14f;
 
-    [Tooltip("Height of the title bar.")]
-    [SerializeField] private float headerHeight = 100f;
+    // Height of the title bar: the standard window header (PixelUIKit.WindowHeaderHeight; the shop is a standard Fixed window).
+    // The currency panel beside the shop (PixelShopCurrency.cs) uses it too, so its header lines up with the shop's.
+    private float headerHeight => PixelUIKit.WindowHeaderHeight;
 
     [Tooltip("How far the tab row and everything under it sits below the neon line under the shop title (canvas units).")]
     [SerializeField] private float tabsDrop = 12f;
@@ -469,7 +470,7 @@ public partial class PixelShop : MonoBehaviour
     [SerializeField] private bool openWhenFirstAvailable = false;
 
     [Header("Text")]
-    [Tooltip("Title text size.")]
+    [Tooltip("Title text size of the currency panel beside the shop (it uses 0.8x this). The shop window's own title is the standard window title.")]
     [SerializeField] private float titleFontSize = 56f;
 
     [Tooltip("Pack name text size.")]

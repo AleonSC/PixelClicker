@@ -19,7 +19,8 @@ using UnityEngine.UI;
 /// <summary>
 /// The Pixel Guide: a docked button on the right edge (under Toggles) that slides out a window like the Toggles window (and docks with the shop the same
 /// way). It lists every pixel in the current rotation - the ones that can come up on the cube right now - each with a turning 3D picture of the real pixel
-/// and an orange '!' box whose tooltip explains exactly what the pixel does.
+/// and an orange '!' box whose tooltip explains exactly what the pixel does. It is a standard Fixed window (PixelUIKit.CreateWindow), anchored at the
+/// middle of the right edge (or beside the open shop); its own orange '!' sits in the left header slot.
 /// </summary>
 public class PixelPixelGuide : MonoBehaviour
 {
@@ -174,43 +175,26 @@ public class PixelPixelGuide : MonoBehaviour
         dock = openObject.GetComponent<PixelDockedButton>();
         buttonGroup = openObject.AddComponent<CanvasGroup>();
 
-        // The window, in the spot the button slides out to.
-        windowObject = new GameObject("Pixel Guide Window", typeof(RectTransform), typeof(Image), typeof(PixelPop));
-        windowObject.transform.SetParent(canvasRoot.transform, false);
-        PixelUIKit.StyleWindow(windowObject.GetComponent<Image>(), panelColor);
-        RectTransform wr = windowObject.GetComponent<RectTransform>();
+        // The window: the standard Fixed window (PixelUIKit.CreateWindow: title, grey X, PixelPop). The builder centres it; this one is put
+        // back in the spot the button slides out to, at the middle of the right edge (FitBesideShop moves it next to the open shop).
+        PixelWindowParts parts = PixelUIKit.CreateWindow(Font, canvasRoot.transform, "Pixel Guide Window", windowTitle, windowSize, panelColor,
+                                                         PixelUIKit.WindowKind.Fixed, Close);
+        windowObject = parts.Root;
+        RectTransform wr = parts.Rect;
         wr.anchorMin = wr.anchorMax = wr.pivot = new Vector2(1f, 0.5f);
-        wr.sizeDelta = windowSize;
         wr.anchoredPosition = new Vector2(-(hud.SideShownInset), 0f);
 
         PixelShop layoutShop = PixelFind.First<PixelShop>();
-        float headerH = layoutShop != null ? layoutShop.HeaderHeightValue : 100f;
+        float headerH = parts.HeaderHeight;
         float sidePad = layoutShop != null ? layoutShop.PanelPaddingValue : 20f;
         float listTop = headerH + 10f;
-
-        TMP_Text title = PixelUIKit.CreateText(Font, windowObject.transform, "Title", windowTitle, 44f, TextAlignmentOptions.Center, FontStyles.Bold, textColor);
-        PixelUIKit.Caps(title);
-        title.enableAutoSizing = true;
-        title.fontSizeMax = 44f;
-        title.fontSizeMin = 14f;
-        RectTransform tr = title.rectTransform;
-        tr.anchorMin = new Vector2(0f, 1f);
-        tr.anchorMax = new Vector2(1f, 1f);
-        tr.pivot = new Vector2(0.5f, 1f);
-        tr.sizeDelta = new Vector2(-170f, 44f * 1.4f);
         PixelMenuFx.AddWindowLine(windowObject.transform, headerH - 2f);
-        tr.anchoredPosition = new Vector2(0f, -16f);
 
-        Button close = PixelUIKit.CreateButton(Font, windowObject.transform, "Close", "X", new Vector2(64f, 64f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 34f);
-        RectTransform cr = close.GetComponent<RectTransform>();
-        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
-        cr.anchoredPosition = new Vector2(-14f, -12f);
-        close.onClick.AddListener(Close);
-
-        // The orange ! at the top left (opposite the X): what this window is for.
-        RectTransform infoRect = CreateInfoBox(windowObject.transform, 64f, () => infoText);
+        // The orange ! (what this window is for) in the standard left header slot, opposite the X: the shared info badge (a hover tip,
+        // not a button, so it is placed by hand at the slot's size and spot instead of with parts.AddHeaderButton).
+        RectTransform infoRect = CreateInfoBox(windowObject.transform, PixelUIKit.WindowCloseSize, () => infoText);
         infoRect.anchorMin = infoRect.anchorMax = infoRect.pivot = new Vector2(0f, 1f);
-        infoRect.anchoredPosition = new Vector2(14f, -12f);
+        infoRect.anchoredPosition = new Vector2(PixelUIKit.WindowCloseOffset.x, -PixelUIKit.WindowCloseOffset.y);
 
         scroll = PixelUIKit.CreateScrollView(windowObject.transform, "Pixel List", new Color(1f, 1f, 1f, 0.35f), 12f, rowHeight, out content, out bar);
         PixelScrollBarFade barFade = bar != null ? bar.GetComponent<PixelScrollBarFade>() : null;
