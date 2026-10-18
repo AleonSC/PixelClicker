@@ -59,7 +59,7 @@
 //   SUCTION RING + SUCK-IN (2026-10-17): a modest ring (suctionRadius 2 husk widths past the rim + the Suction upgrades, suctionStrength) draws LOOSE
 //   husks nearby towards the bin (a little lift by the wall); a husk over the opening or right by the rim (suckReach) is SUCKED IN like the Storage
 //   Crate - it glides into the middle of the bin (SuckOne, suckSeconds) and is caught as usual. Modest on purpose: one bin catches some of a random
-//   scatter, not all of it. Behind the back wall of a bin with a Sorting Hopper (where its side tube drops husks) is left alone (BehindHopper).
+//   scatter, not all of it. Behind the back wall of a bin with a Sorting Hopper (where its bottom spout drops husks) is left alone (BehindHopper).
 //   SOCKET (PixelSockets.cs): the back hatch is an In socket ('hatch'). With no hopper latched (a latched hopper OCCUPIES it), a coupling there takes belts / connectors / hoses:
 //   AcceptHusk counts the husk at once and lets it fall in behind the back wall (HatchInside); refused while working or full (HuskRoom).
 // ---------------------------------------------------
@@ -422,6 +422,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
         // Carrying handles on the short ends, the same as the Storage Crate's (shared PixelCarryHandles): drag one to move the bin, scroll / Q / E turns it.
         PixelCarryHandles.BuildParts((n, p, size, c) => kit.Box(n, tr, p, size, c), w * 0.5f + t * 1.25f, d, h * 0.55f, 0.68f * u);
         // The big button on top of the front wall.
+        if (!colliders) return root;   // (the ghost and the shop picture have no button: it is hidden on the placed bin too unless showButton)
         kit.Cyl("Button Base", tr, new Vector3(w * 0.32f, h + t * 0.4f, -(d + t) * 0.5f), u * 0.34f, t * 0.8f, new Color(0.15f, 0.15f, 0.15f, 1f));
         kit.Cyl("Button", tr, new Vector3(w * 0.32f, h + t * 1.1f, -(d + t) * 0.5f), u * 0.24f, t * 0.9f, ButtonColor, default, 0.1f, 0.6f, colliders);
         return root;
@@ -505,7 +506,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     /// <summary>
     /// The suck-in: a husk over the opening (above the rim) or right by the rim (within suckReach - in the air, or low by the wall where the suction ring
     /// brings it) is taken - kept from anything else (PixelHuskHolder.Reserve) - and glides down into the middle of the bin, where the usual Capture catches
-    /// it. Only husks nobody else owns (Takeable); never behind a latched Sorting Hopper (its side tube's husks).
+    /// it. Only husks nobody else owns (Takeable); never behind a latched Sorting Hopper (its bottom spout's husks).
     /// </summary>
     private void SuckIn()
     {
@@ -522,7 +523,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
             bool overOpening = Mathf.Abs(local.x) <= innerW * 0.5f && Mathf.Abs(local.z) <= innerD * 0.5f;
             if (overOpening && local.y < wallH) continue;   // (already inside the walls: Capture takes it)
             if (!overOpening && local.y < wallH * 0.5f && !suction) continue;   // (lying low beside the bin: only taken with the suction ring on)
-            if (BehindHopper(local)) continue;   // (behind a Sorting Hopper: its side tube's husks)
+            if (BehindHopper(local)) continue;   // (behind a Sorting Hopper: its bottom spout's husks)
             if (local.y > wallH + 4f * u) continue;
             if (Mathf.Abs(local.x) > innerW * 0.5f + suckReach * u || Mathf.Abs(local.z) > innerD * 0.5f + suckReach * u) continue;
             StartCoroutine(SuckOne(b));
@@ -571,7 +572,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     /// <summary>The suction base before any upgrade (the Operation tooltip starts from it).</summary>
     public static float DefaultSuctionRadius => 2f;
 
-    /// <summary>Behind the back wall while a Sorting Hopper is latched there: the hopper's side tube drops husks there, the bin leaves them alone.</summary>
+    /// <summary>Behind the back wall while a Sorting Hopper is latched there: the hopper's bottom spout drops husks there, the bin leaves them alone.</summary>
     private bool BehindHopper(Vector3 local) => local.z > innerD * 0.5f && PixelCouplings.Occupied(this, HatchSocket);
 
     /// <summary>

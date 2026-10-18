@@ -15,18 +15,19 @@
 //   - SORTING: every FeedInterval (0.35 s; Operation 'Speed' shortens it) the oldest held husk that can go somewhere goes:
 //       the FILTER type -> out of the FEED PIPE that reaches over the Recycler's back wall, dropping into the bin (waits while there is no Recycler or
 //       it can't take one);
-//       every OTHER type -> out of the SIDE TUBE (+x side, down to the floor behind the bin, where the Recycler's suction leaves it alone: BehindHopper).
+//       every OTHER type -> straight down out of the BOTTOM SPOUT (2.2 husks off the floor, between the legs; behind the bin, where the Recycler's
+//       suction leaves it alone: BehindHopper). (A side tube until 2026-10-18.)
 //     No filter chosen = it just holds everything.
 //   - THE DEVICE CARD / PANEL (PixelDeviceCard, FillDeviceInfo): hover = filter, feeds a Recycler or not, holding n / room; right-click tap = the panel
 //     with what it holds per type, the feed gap, this session's totals and two buttons of its own (PixelDeviceInfo.AddAction): SELECT FILTER (opens
-//     PixelSortingHopperWindow, a grid of every unlocked husk type + None) and EMPTY OUT (everything out of the side tube).
+//     PixelSortingHopperWindow, a grid of every unlocked husk type + None) and EMPTY OUT (everything out of the bottom spout).
 //   - The filter shows on a little flag on the bowl's back-left corner (tinted its colour, the block spinning on top). A floating down arrow
 //     (PixelHoverMarker) shows on hover.
-//   Removing it lets everything it holds out of the side tube first.
+//   Removing it lets everything it holds out of the bottom spout first.
 //   Unlock: vendorOnly + shopSkillId 'standard' / level 3 = it appears in the shop at Standard level 3 (no vendor sells it); bought for White.
 //   SOCKETS (PixelSockets.cs): its own 'back' socket (In) takes belts / hoses: AcceptHusk takes the husk in (refused when full).
 //   Saved in PlacedState.extra: 'F,Type' (or 'F,-') then ';Type,amount' per held husk.
-//   Stats hopper.husks (into a bin), hopper.rejected (out of the side tube), hopper.ejected (Empty out). Tip device_SortingHopper.
+//   Stats hopper.husks (into a bin), hopper.rejected (out of the bottom spout), hopper.ejected (Empty out). Tip device_SortingHopper.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using System.Globalization;
@@ -36,7 +37,7 @@ using UnityEngine;
 public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, IPixelStrayTarget, IPixelDeviceInfo
 {
     [Header("Sorting Hopper")]
-    [Tooltip("Seconds between two husks leaving the hopper (into the Recycler or out of the side tube).")]
+    [Tooltip("Seconds between two husks leaving the hopper (into the Recycler or out of the bottom spout).")]
     [SerializeField] private float feedInterval = 0.35f;
 
     /// <summary>The feed gap before any upgrade (the Operation tooltip starts from it).</summary>
@@ -68,7 +69,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
     [Min(1)]
     [Tooltip("How many husks the hopper holds. Full = husks just lie in the bowl and fade.")]
     [SerializeField] private int holdRoom = 20;
-    [Tooltip("How fast a husk leaves the side tube (world units per second, sideways).")]
+    [Tooltip("How fast a husk drops out of the bottom spout (world units per second, downwards; Empty out scatters them a little).")]
     [SerializeField] private float rejectPush = 0.9f;
     [Tooltip("How fast a husk leaves the feed pipe into the Recycler (world units per second, downwards).")]
     [SerializeField] private float feedPush = 0.8f;
@@ -106,10 +107,10 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
 
     // In husk widths (u): the bowl's outer width (square), its floor and rim heights (the Recycler's wall is 3.6 high), the feed pipe's height and reach.
     private const float BowlHusks = 4.4f, BowlFloorHusks = 4.4f, BowlTopHusks = 5.8f, WallT = 0.2f;
-    private const float PipeY = 4.05f, PipeRadius = 0.3f, PipeEndZ = -3.6f, TubeX = 2.9f, TubeY = 3.9f, TubeRadius = 0.28f;
+    private const float PipeY = 4.05f, PipeRadius = 0.3f, PipeEndZ = -3.6f, SpoutBottomHusks = 2f;   // (the spout's bottom sits SpoutBottomHusks below the bowl's base: about 2.2 husks off the floor)
     private static readonly Color BodyColor = new Color(0.3f, 0.32f, 0.36f, 1f), Inner = new Color(0.17f, 0.18f, 0.2f, 1f),
                                   Metal = new Color(0.72f, 0.75f, 0.78f, 1f), Dark = new Color(0.1f, 0.11f, 0.12f, 1f),
-                                  Stripe = new Color(0.35f, 1f, 0.55f, 1f), TubeColor = new Color(0.85f, 0.5f, 0.2f, 1f);
+                                  Stripe = new Color(0.35f, 1f, 0.55f, 1f);
 
     private static float Unit(PixelClicker clicker) => clicker != null && clicker.OldPixelWorldSize > 0f ? clicker.OldPixelWorldSize : 0.5f;
 
@@ -181,13 +182,8 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         kit.Cyl("Feed Pipe", tr, new Vector3(0f, py, (pipeStart + pipeEnd) * 0.5f), pr, pipeStart - pipeEnd, Metal, new Vector3(90f, 0f, 0f), 0.85f, 0.6f);
         kit.Cyl("Feed Mouth", tr, new Vector3(0f, py - pr * 0.9f, pipeEnd), pr * 1.1f, pr * 2.6f, Metal, default, 0.85f, 0.6f);
         kit.Cyl("Feed Mouth Ring", tr, new Vector3(0f, py - pr * 2.2f, pipeEnd), pr * 1.3f, pr * 0.4f, Stripe, default, 0f, 0.8f);
-        // THE SIDE TUBE (+x): out of the upper body, then straight down to just above the floor - everything that is not the filter type drops out here.
-        float tx = TubeX * u, ty = TubeY * u, trd = TubeRadius * u, tubeStart = 1.2f * u;
-        kit.Cyl("Side Tube", tr, new Vector3((tubeStart + tx) * 0.5f, ty, 0f), trd, tx - tubeStart, TubeColor, new Vector3(0f, 0f, 90f), 0.3f, 0.6f);
-        kit.Ball("Side Tube Bend", tr, new Vector3(tx, ty, 0f), trd, TubeColor, 0.3f, 0.6f);
-        float tubeBottom = 0.9f * u;
-        kit.Cyl("Side Tube Down", tr, new Vector3(tx, (ty + tubeBottom) * 0.5f, 0f), trd, ty - tubeBottom, TubeColor, default, 0.3f, 0.6f);
-        kit.Cyl("Side Tube Mouth", tr, new Vector3(tx, tubeBottom, 0f), trd * 1.3f, t * 0.6f, Dark, default, 0.5f, 0.6f);
+        // THE BOTTOM SPOUT's mouth: everything that is not the filter type drops out of here, straight down between the legs (the spout stays this high off the floor).
+        kit.Box("Spout Mouth", tr, new Vector3(0f, yB - t - SpoutBottomHusks * u + 0.04f * u, 0f), new Vector3(0.62f * u, 0.1f * u, 0.62f * u), Dark, default, false, 0f, 0.3f);
 
         // The filter flag on a pole at the bowl's back-left corner: tinted the chosen type's colour, with a little block of that type spinning on top.
         float poleH = u * 2f;
@@ -252,7 +248,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         info.Add("Feed gap", FeedInterval.ToString("0.00") + " s");
         info.Heading("This session");
         info.Add("Into the Recycler", sessionFed.ToString());
-        info.Add("Out of the side tube", (sessionRejected + sessionEjected).ToString());
+        info.Add("Out of the bottom spout", (sessionRejected + sessionEjected).ToString());
         info.AddAction("Select filter", () => PixelSortingHopperWindow.Open(this));
         info.AddAction("Empty out", EmptyOut, ButtonRole.Danger);
     }
@@ -405,7 +401,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
 
     // ---- Sorting ----
 
-    /// <summary>Every FeedInterval: the oldest held husk that can go somewhere goes - the filter type into the Recycler, any other out of the side tube.</summary>
+    /// <summary>Every FeedInterval: the oldest held husk that can go somewhere goes - the filter type into the Recycler, any other out of the bottom spout.</summary>
     private void Feed()
     {
         if (held.Count == 0 || filterTier < 0 || Time.time < nextFeed) return;   // (no filter chosen: it just holds)
@@ -417,7 +413,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
             Held h = held[i];
             held.RemoveAt(i);
             if (filtered) { SendIntoBin(h); PixelStats.Count("hopper.husks"); sessionFed++; }
-            else { SendOutSide(h, 1f); PixelStats.Count("hopper.rejected"); sessionRejected++; }
+            else { SendOutBottom(h, 1f); PixelStats.Count("hopper.rejected"); sessionRejected++; }
             nextFeed = Time.time + FeedInterval;
             PixelSortingHopperWindow.Changed(this);
             return;
@@ -431,20 +427,20 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         clicker.SpawnStoredPixel(h.tier, h.amount, at, Vector3.down * feedPush);
     }
 
-    private void SendOutSide(Held h, float spread)
+    private void SendOutBottom(Held h, float spread)
     {
         float u = Unit(clicker);
-        Vector3 at = transform.TransformPoint(new Vector3(TubeX * u, 0.75f * u, 0f));
-        Vector3 v = transform.TransformDirection(new Vector3(1f, 0f, Random.Range(-0.3f, 0.3f) * spread)) * rejectPush * Random.Range(0.8f, 1f + 0.4f * spread);
+        Vector3 at = transform.TransformPoint(new Vector3(0f, (BowlFloorHusks - WallT - SpoutBottomHusks - 0.3f) * u, 0f));   // (just under the bottom spout)
+        Vector3 v = transform.TransformDirection(new Vector3(Random.Range(-1f, 1f), 0f, Random.Range(-1f, 1f))) * rejectPush * 0.35f * spread + Vector3.down * rejectPush;
         clicker.SpawnStoredPixel(h.tier, h.amount, at, v);
     }
 
-    /// <summary>Everything it holds goes out of the side tube at once (the window's 'Empty out', and when the hopper is removed).</summary>
+    /// <summary>Everything it holds goes out of the bottom spout at once (the window's 'Empty out', and when the hopper is removed).</summary>
     public void EmptyOut()
     {
         if (clicker == null || held.Count == 0) return;
         int n = held.Count;
-        foreach (Held h in held) SendOutSide(h, 2.5f);
+        foreach (Held h in held) SendOutBottom(h, 2.5f);
         held.Clear();
         PixelStats.Count("hopper.ejected", n);
         sessionEjected += n;

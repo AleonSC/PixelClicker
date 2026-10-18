@@ -766,7 +766,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         {
             kind = DeviceKind.SortingHopper,
             displayName = "Sorting Hopper",
-            description = "A big funnel that stands behind a Recycler and holds up to 20 husks dropped into it. Right-click it and press Select filter: that type goes into the Recycler, one after another (so the streak builds); every other husk drops out of its side tube. It stays until you remove it.",
+            description = "A big funnel that stands behind a Recycler and holds up to 20 husks dropped into it. Right-click it and press Select filter: that type goes into the Recycler, one after another (so the streak builds); every other husk drops out of its bottom spout. It stays until you remove it.",
             requiredType = PixelClicker.PixelType.White,
             costs = new[]
             {
@@ -1387,7 +1387,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             {
                 if (d != null && d.kind == DeviceKind.Recycler && (d.radius < 1.5f || Mathf.Approximately(d.radius, 2f))) d.radius = PixelRecycler.DefaultSize;   // (2026-10-18: 2 -> 1.8, 10% smaller)   // (2026-10-18: the Recycler is twice as wide and deep by default)
                 if (d != null && d.kind == DeviceKind.Recycler && d.description != null && d.description.StartsWith("A big bin that catches")) d.description = CreateDefaultRecycler().description;   // (2026-10-18: auto recycling back)
-                if (d != null && d.kind == DeviceKind.SortingHopper && d.description != null && d.description.StartsWith("A wide tray")) d.description = CreateDefaultSortingHopper().description;   // (2026-10-18: the funnel hopper)
+                if (d != null && d.kind == DeviceKind.SortingHopper && d.description != null && (d.description.StartsWith("A wide tray") || d.description.Contains("side tube"))) d.description = CreateDefaultSortingHopper().description;   // (2026-10-18: the funnel hopper)
                 if (d != null && d.kind == DeviceKind.Recycler && d.priceGrowthPerOwned <= 0f) { Device fresh = CreateDefaultRecycler(); d.priceGrowthPerOwned = fresh.priceGrowthPerOwned; d.maxHeld = Mathf.Max(d.maxHeld, fresh.maxHeld); d.description = fresh.description; }   // (2026-10-17 rework: currency only, suction, a rising price for more Recyclers)
             }
 

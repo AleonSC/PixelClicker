@@ -78,7 +78,7 @@ public class PixelSortingHopperWindow : MonoBehaviour
     {
         PixelWindowParts parts = PixelUIKit.CreateWindow(font, transform, "Panel", "Select filter", new Vector2(Width, Height), PixelUIKit.WindowKind.Fixed, Close);
         panel = parts.Root;
-        TMP_Text hint = PixelUIKit.CreateText(font, panel.transform, "Hint", "This type goes into the Recycler; every other type drops out of the side tube.",
+        TMP_Text hint = PixelUIKit.CreateText(font, panel.transform, "Hint", "This type goes into the Recycler; every other type drops out of the bottom spout.",
                                               22f, TextAlignmentOptions.Center, FontStyles.Italic, PixelUITheme.DimTextColor);
         Place(hint.rectTransform, new Vector2(Pad, -parts.HeaderHeight - 4f), new Vector2(Width - 2f * Pad, 56f));
         float top = parts.HeaderHeight + 70f;
