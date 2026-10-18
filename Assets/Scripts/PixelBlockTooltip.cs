@@ -9,7 +9,7 @@
 //   PINNED works whatever the tooltip mode: with the floating tooltip Off, the Pocket's Info card still shows what is hovered.
 //   PINNED + My Window MINIMIZED: the small card (3D block + name, like Minimal) hangs under the minimized header (dockedCompact).
 //   PINNED: My Window's Info button (PixelMyWindow.HoverDocked) moves the card into the window (UpdateDocked / Undock): it stops following the mouse, is scaled to the window's width, shows whatever is hovered (it keeps the last block while the mouse is over the window) and the window grows to fit it.
-//   WORLD OBJECTS: ShowFor(tier, note) - called every frame by a placed thing whose part the pointer is on (the Sorting Hopper's filter flag) -
+//   WORLD OBJECTS: ShowFor(tier, note) - called every frame by a placed thing whose part the pointer is on (none right now; the Sorting Hopper's flag used it until 2026-10-18) -
 //   shows a SMALL card for that block type instead (the turning 3D block, its name and the given note; no stats / bar), whatever the tooltip mode,
 //   and never docked in My Window.
 //   The pinned card is always the FULL card (or the small one under a minimized window): the tooltip mode and Alt (tap or hold) only change the floating in-game card.
@@ -94,7 +94,7 @@ public class PixelBlockTooltip : MonoBehaviour
     private string shownNote;
 
     /// <summary>
-    /// Call every frame the pointer is on a world object's part that stands for a block type (the Sorting Hopper's filter flag): a small card shows
+    /// Call every frame the pointer is on a world object's part that stands for a block type: a small card shows
     /// that block (turning 3D model + name) with 'note' under it. Shown whatever the tooltip mode.
     /// </summary>
     public static void ShowFor(int tier, string note)

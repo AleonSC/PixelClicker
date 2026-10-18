@@ -739,7 +739,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         {
             kind = DeviceKind.Recycler,
             displayName = "Recycler",
-            description = "A big bin that catches husks landing in it - its suction ring draws in ones close by. Press its button to recycle them for half their value as currency (same colour in a row = a streak that raises the pay, never above a click); it flashes once a husk is inside. Works for {duration} s; Speed / Size upgrades in the shop's Operation tab. Several can stand at once; each extra one costs more.",
+            description = "A bin that recycles every husk that lands in it - or that its suction ring draws in from close by - for half its value as currency (same colour in a row = a streak that raises the pay, never above a click). Works for {duration} s; Speed / Size upgrades in the shop's Operation tab. Several can stand at once; each extra one costs more.",
             requiredType = PixelClicker.PixelType.White,
             costs = new[]
             {
@@ -749,7 +749,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             maxHeld = 3,
             priceGrowthPerOwned = 2f,   // each Recycler you hold or have standing doubles the next one's price (Cubie's free one makes the 2nd 150 White + 100 Green)
             durationSeconds = 300f,   // 5 minutes (Operation: Run Time)
-            radius = PixelRecycler.DefaultSize,   // the bin's size factor (2 = twice as wide and deep as the first bin; Operation: Size adds to it)
+            radius = PixelRecycler.DefaultSize,   // the bin's size factor (1.8 = nearly twice as wide and deep as the first bin; Operation: Size adds to it)
             color = new Color(0.25f, 0.55f, 0.32f, 1f),
             bodyDiameter = 3f,
             bodyHeight = 2f,
@@ -763,7 +763,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         {
             kind = DeviceKind.SortingHopper,
             displayName = "Sorting Hopper",
-            description = "A wide tray that latches onto a Recycler's back. Pick ONE husk type with its flag: those slide through the back hatch into the bin one after another, so the streak builds. Every other husk just lies in the tray and fades. Without a Recycler its exit stays shut. It stays until you remove it.",
+            description = "A big funnel that stands behind a Recycler and holds up to 20 husks dropped into it. Click it to pick a filter: that type goes into the Recycler, one after another (so the streak builds); every other husk drops out of its side tube. It stays until you remove it.",
             requiredType = PixelClicker.PixelType.White,
             costs = new[]
             {
@@ -1382,8 +1382,9 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         if (devices != null)
             foreach (Device d in devices)
             {
-                if (d != null && d.kind == DeviceKind.Recycler && d.radius < 1.5f) d.radius = PixelRecycler.DefaultSize;   // (2026-10-18: the Recycler is twice as wide and deep by default)
-                if (d != null && d.kind == DeviceKind.Recycler && d.description != null && d.description.StartsWith("A bin that recycles every")) d.description = CreateDefaultRecycler().description;   // (2026-10-18: button only, bigger)
+                if (d != null && d.kind == DeviceKind.Recycler && (d.radius < 1.5f || Mathf.Approximately(d.radius, 2f))) d.radius = PixelRecycler.DefaultSize;   // (2026-10-18: 2 -> 1.8, 10% smaller)   // (2026-10-18: the Recycler is twice as wide and deep by default)
+                if (d != null && d.kind == DeviceKind.Recycler && d.description != null && d.description.StartsWith("A big bin that catches")) d.description = CreateDefaultRecycler().description;   // (2026-10-18: auto recycling back)
+                if (d != null && d.kind == DeviceKind.SortingHopper && d.description != null && d.description.StartsWith("A wide tray")) d.description = CreateDefaultSortingHopper().description;   // (2026-10-18: the funnel hopper)
                 if (d != null && d.kind == DeviceKind.Recycler && d.priceGrowthPerOwned <= 0f) { Device fresh = CreateDefaultRecycler(); d.priceGrowthPerOwned = fresh.priceGrowthPerOwned; d.maxHeld = Mathf.Max(d.maxHeld, fresh.maxHeld); d.description = fresh.description; }   // (2026-10-17 rework: currency only, suction, a rising price for more Recyclers)
             }
 
@@ -2141,7 +2142,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             case PixelOperationStat.Storage: return d.maxHeld;
             case PixelOperationStat.RecyclerStreak: return PixelRecycler.DefaultStreakCap;
             case PixelOperationStat.RecyclerSuction: return PixelRecycler.DefaultSuctionRadius;
-            case PixelOperationStat.Speed: return kind == DeviceKind.Recycler ? PixelRecycler.DefaultProcessSeconds : kind == DeviceKind.SortingHopper ? PixelSortingHopper.DefaultFeedInterval : 0f;
+            case PixelOperationStat.Speed: return kind == DeviceKind.Recycler ? PixelRecycler.DefaultRecycleDelay : kind == DeviceKind.SortingHopper ? PixelSortingHopper.DefaultFeedInterval : 0f;
             case PixelOperationStat.Size: return kind == DeviceKind.SortingHopper ? 1f : 0f;
             case PixelOperationStat.BaitGhosts:
             {

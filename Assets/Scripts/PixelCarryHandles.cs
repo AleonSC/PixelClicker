@@ -148,7 +148,7 @@ public class PixelCarryHandles : MonoBehaviour
     }
 
     /// <summary>Is the clicker cube (its full-size trigger hitbox) on the ray nearer than 'distance'? Then the click is the cube's, not a handle's behind it.</summary>
-    private static bool CubeInFront(Ray ray, float distance)
+    public static bool CubeInFront(Ray ray, float distance)
     {
         PixelClicker clicker = PixelFind.Cached<PixelClicker>();
         Transform cube = clicker != null ? clicker.PixelTransform : null;

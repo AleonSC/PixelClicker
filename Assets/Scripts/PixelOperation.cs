@@ -136,7 +136,7 @@ public class PixelOperationUpgrade
             U("treat_duration", "Treat Length", "How long a Pet Treat keeps your pets hyper.", P, PixelOperationStat.Duration, 5, 15f, 40, " s"),
 
             // One Speed and one Size upgrade per husk machine (2026-10-18).
-            U("rec_speed", "Speed", "The Recycler shakes for less time before it pays out.", Y, PixelOperationStat.Speed, 5, -0.3f, 60, " s"),
+            U("rec_speed", "Speed", "Husks are recycled sooner after they land in the Recycler.", Y, PixelOperationStat.Speed, 5, -0.08f, 60, " s"),
             U("rec_size", "Size", "A bigger bin: it catches more husks, holds more and its suction reaches further round it.", Y, PixelOperationStat.Radius, 5, 0.3f, 80, "x"),
             U("hop_speed", "Speed", "The Sorting Hopper slides its chosen husks into the Recycler faster.", H, PixelOperationStat.Speed, 5, -0.05f, 60, " s"),
             U("hop_size", "Size", "A bigger tray: it catches more husks and holds more before they fade.", H, PixelOperationStat.Size, 5, 0.12f, 80, "x"),

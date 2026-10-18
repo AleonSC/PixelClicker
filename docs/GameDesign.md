@@ -378,6 +378,10 @@ while also paying currency, so Standard levelled ~2x too fast and Husk Crush had
 8. **Changed 2026-10-18 (Devices session):** auto-recycling REMOVED - the player presses the button again (it flashes as soon as one husk is in);
    the suction stays. The streak is now built per button press, in the order the husks went in. Default bin 2x wide and deep (4x footprint).
    Operation rows for the Recycler and Sorting Hopper are now just **Speed** and **Size** each (Run Time, Streak Power and Suction rows removed).
+9. **Changed again 2026-10-18 (same day):** AUTO RECYCLING IS BACK (the button is hidden, not deleted: `showButton`); Speed now shortens the
+   recycle delay. Default bin 10% smaller (1.8). The Sorting Hopper became a Minecraft-style FUNNEL behind the bin that rises above it and HOLDS
+   up to 20 husks; its filter (picked in its new device window) goes through a feed pipe into the bin, every other type drops out of a side tube
+   (no more fading tray as the loss - the loss is now that rejects end up loose on the floor behind the bin).
 
 ### Mid game - skills and machines (Built, growing)
 Gathering skills (Woodcutting, Foraging, Fishing, Mining, Farming, Electrician), each with filler, hazards, specials, perks and a

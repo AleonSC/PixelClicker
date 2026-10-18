@@ -69,7 +69,7 @@ chute (the same "find a belt that starts here" copy) moved onto a built-in bare 
 | Kiln | `mouth` (In, burns it), `chute` (Out, charcoal) |
 | Trash Can | `front`, `back` (In) |
 | Recycler | `hatch` (In, the back hatch; a latched Sorting Hopper OCCUPIES it) |
-| Sorting Hopper | `back` (In, drops husks into the tray; refuses at `trayRoom`) |
+| Sorting Hopper | `back` (In, takes the husk into what it holds; refuses when full, `holdRoom`) |
 | Funnel | `output` (Out, the spout end; the tube waits while its belt is full) |
 | Wood Chipper | `chute` (Out, on the floor in front of the outlet) |
 | Conveyor Elevator | `in`, `out` (fitted) |

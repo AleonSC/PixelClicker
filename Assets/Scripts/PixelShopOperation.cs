@@ -33,6 +33,7 @@ public partial class PixelShop
         foreach (PixelOperationUpgrade def in PixelOperationUpgrade.CreateDefaults())
         {
             PixelOperationUpgrade have = operationUpgrades.Find(u => u != null && u.id == def.id);
+            if (have != null && have.id == "rec_speed" && have.perLevel < def.perLevel) { have.perLevel = def.perLevel; have.description = def.description; changed = true; }   // (2026-10-18: auto recycling is back - Speed shortens the recycle delay)
             if (have != null && have.id == "rec_size" && have.perLevel < def.perLevel) { have.perLevel = def.perLevel; have.displayName = def.displayName; have.description = def.description; changed = true; }   // (2026-10-18: Size, +0.3 a level on the new default size 2)
             if (have != null) continue;
             operationUpgrades.Add(def);
