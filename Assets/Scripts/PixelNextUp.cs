@@ -1,6 +1,6 @@
 // ---- System notes ----
 // PixelNextUp.cs
-//   The window has a header (title + '-' button) and is a PixelWindowChrome window: drag it by the header, minimize it to the header, dock it against the left / right screen side (slides out on hover); remembered in PlayerPrefs PixelClicker.NextUp.Window.*.
+//   The window is a standard Tool window (PixelUIKit.CreateWindow, no X): drag it by the header, minimize it to the header ('-'), dock it against the left / right screen side (slides out on hover); remembered in PlayerPrefs PixelClicker.NextUp.Window.*.
 //   UNLOCK (2026-10-16): the window is the Standard skill tree node 'What's Next' (nextup, needs BOTH Block Hold and Power Click; requireTreeNode off = from the start).
 //   Its extensions 'Look Further' (nextup2) and 'Foresight' (nextup3) each add one more block AHEAD (up to three: LATER / THEN / NEXT above NOW and BEFORE); the window
 //   rebuilds taller when that count changes. The blocks ahead come from PixelClicker.PeekTierAhead (a queue of pre-rolled blocks that RollTier hands out in order).
@@ -70,7 +70,7 @@ public class PixelNextUp : MonoBehaviour
     private GameObject canvasRoot, panel;
     private RectTransform chipHost, body;
     private PixelWindowChrome chrome;
-    private const float HeaderH = 36f;
+    private const float HeaderH = PixelUIKit.ToolHeaderHeight, Width = 260f;   // (the standard Tool header; wide enough for its centred title between the - and the edge)
     private readonly List<Chip> chips = new List<Chip>();
     private const int MaxAhead = 3;
     private Chip[] slot = new Chip[3];   // top to bottom: the blocks ahead (farthest first), now, before
@@ -246,20 +246,13 @@ public class PixelNextUp : MonoBehaviour
         slot = new Chip[SlotCount];
         TMP_FontAsset font = clicker.UIFont;
         canvasRoot = PixelUIKit.CreateCanvas("Next Up", sortingOrder, new Vector2(1920f, 1080f), true);
-        panel = new GameObject("Window", typeof(RectTransform), typeof(Image));
-        panel.transform.SetParent(canvasRoot.transform, false);
-        Image bg = panel.GetComponent<Image>();
-        PixelUIKit.StyleWindow(bg, windowColor);
-        RectTransform pr = panel.GetComponent<RectTransform>();
-        pr.anchorMin = pr.anchorMax = pr.pivot = new Vector2(0f, 1f);   // top left (what PixelWindowChrome wants)
-        pr.sizeDelta = new Vector2(200f, HeaderH + Spacing * SlotCount + 8f);
-
-        TMP_Text title = PixelUIKit.CreateText(font, panel.transform, "Title", "NEXT UP", 22f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, captionColor);
-        title.raycastTarget = false;
-        RectTransform tr = title.rectTransform;
-        tr.anchorMin = new Vector2(0f, 1f); tr.anchorMax = new Vector2(1f, 1f); tr.pivot = new Vector2(0.5f, 1f);
-        tr.sizeDelta = new Vector2(-50f, HeaderH);
-        tr.anchoredPosition = new Vector2(-18f, 0f);
+        // A standard Tool window (PixelUIKit.CreateWindow): drag by the header, minimize with '-', dock against a screen side; no X (it is switched off in Settings).
+        // The prefKey is the one it always had, so its saved place carries over.
+        PixelWindowParts parts = PixelUIKit.CreateWindow(font, canvasRoot.transform, "Window", "Next up", new Vector2(Width, HeaderH + Spacing * SlotCount + 8f),
+                                                         windowColor, PixelUIKit.WindowKind.Tool, null, "PixelClicker.NextUp.Window", closeButton: false);
+        panel = parts.Root;
+        RectTransform pr = parts.Rect;
+        chrome = parts.Chrome;
 
         GameObject bodyGo = new GameObject("Body", typeof(RectTransform), typeof(RectMask2D));   // cubes slide in and out inside the body
         bodyGo.transform.SetParent(panel.transform, false);
@@ -286,10 +279,9 @@ public class PixelNextUp : MonoBehaviour
             r.anchoredPosition = new Vector2(52f, SlotY(i));
         }
 
-        // Drag by the header, minimize with '-', dock against a screen side (PixelWindowChrome; remembered between sessions).
-        chrome = PixelWindowChrome.Attach(pr, font, "PixelClicker.NextUp.Window", HeaderH, 6f, 5f, 26f, new Color(0.3f, 0.36f, 0.5f, 1f), new Color(0.92f, 0.94f, 1f, 1f), 20f);
-        chrome.Keep(title.gameObject);
         chrome.defaultPlacer = cs => new Vector2(position.x, -(cs.y - pr.sizeDelta.y) * 0.5f - position.y);
+        // (A window saved minimized was folded up before its body existed: fold it again so the body hides too.)
+        if (chrome.Minimized) { chrome.SetMinimized(false, false); chrome.SetMinimized(true, false); }
         built = true;
     }
 }
