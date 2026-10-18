@@ -21,6 +21,9 @@ using UnityEngine.InputSystem;
 ///   - right-click sucks up the old pixel under the nozzle (any type) and stores it, if there is room.
 /// Clicks on the cube are ignored while the hose is equipped.
 ///
+/// The window is the standard Fixed window (PixelUIKit.CreateWindow), anchored at the left edge, with the hose toggle in its
+/// left header slot; it opens and closes with PixelPop like its neighbours (Skills, Inventory, Log).
+///
 /// Add this to any GameObject. PixelShop adds it automatically if it is missing.
 /// </summary>
 public class PixelBank : MonoBehaviour, IPixelSaved
@@ -223,9 +226,6 @@ public class PixelBank : MonoBehaviour, IPixelSaved
     [Tooltip("Text size.")]
     [SerializeField] private float fontSize = 30f;
 
-    [Tooltip("Title text size.")]
-    [SerializeField] private float titleFontSize = 44f;
-
     [Tooltip("Window background colour.")]
     [SerializeField] private Color panelColor = new Color(0.1f, 0.1f, 0.13f, 0.97f);
 
@@ -312,6 +312,7 @@ public class PixelBank : MonoBehaviour, IPixelSaved
 
     // UI
     private GameObject canvasRoot, windowObject;
+    private PixelWindowParts windowParts;   // the standard window (PixelUIKit.CreateWindow)
     private Button hoseButton;
     private Image hoseButtonImage;
     private TMP_Text capacityLabel;
@@ -1214,7 +1215,7 @@ public class PixelBank : MonoBehaviour, IPixelSaved
         bankDock = bank.GetComponent<PixelDockedButton>();
         hoseDock = hoseButton.GetComponent<PixelDockedButton>();
         // The tabs only slide out when both left-edge windows (Bank and Skills) are closed.
-        System.Func<bool> otherOpen = () => (PixelSkills.Instance != null && PixelSkills.Instance.WindowOpen) || (windowObject != null && windowObject.activeSelf);
+        System.Func<bool> otherOpen = () => (PixelSkills.Instance != null && PixelSkills.Instance.WindowOpen) || WindowIsOpen;
         bankDock.blockPointer = otherOpen;
         hoseDock.blockPointer = otherOpen;
         bankGroup = bank.gameObject.AddComponent<CanvasGroup>();
@@ -1225,37 +1226,21 @@ public class PixelBank : MonoBehaviour, IPixelSaved
         hoseButton.onClick.AddListener(() => SetHose(!HoseOn));
         RefreshHoseButton();
 
-        // The window, just right of the tab.
-        windowObject = new GameObject("Bank Window", typeof(RectTransform), typeof(Image));
-        windowObject.transform.SetParent(canvasRoot.transform, false);
-        PixelUIKit.StyleWindow(windowObject.GetComponent<Image>(), panelColor);
-        RectTransform wr = windowObject.GetComponent<RectTransform>();
+        // The window, just right of the tab: the standard Fixed window (PixelUIKit.CreateWindow: title, X, header slots).
+        windowParts = PixelUIKit.CreateWindow(font, canvasRoot.transform, "Bank Window", windowTitle, windowSize, panelColor,
+                                              PixelUIKit.WindowKind.Fixed, CloseWindow);
+        windowObject = windowParts.Root;
+        RectTransform wr = windowParts.Rect;
+        // (The builder centres Fixed windows; this one opens from the left edge, taking the place of the tab and hose buttons while it is open.)
         wr.anchorMin = wr.anchorMax = wr.pivot = new Vector2(0f, 0.5f);
-        wr.sizeDelta = windowSize;
-        wr.anchoredPosition = new Vector2(gapToButton + hud.SideShownInset, 0f);   // the window takes the place of the tab and hose buttons while it is open
+        wr.anchoredPosition = new Vector2(gapToButton + hud.SideShownInset, 0f);
 
         BuildWindowHoseButton();
         RefreshHoseButton();
 
-        float y = 16f;
-        TMP_Text title = PixelUIKit.CreateText(font, windowObject.transform, "Title", windowTitle, titleFontSize,
-                                               TextAlignmentOptions.Center, FontStyles.Bold, textColor);
-        PixelUIKit.Caps(title);
-        RectTransform tr = title.rectTransform;
-        tr.anchorMin = new Vector2(0f, 1f);
-        tr.anchorMax = new Vector2(1f, 1f);
-        tr.pivot = new Vector2(0.5f, 1f);
-        tr.sizeDelta = new Vector2(-170f, titleFontSize * 1.4f);
-        tr.anchoredPosition = new Vector2(0f, -y);
-
-        Button close = PixelUIKit.CreateButton(font, windowObject.transform, "Close", "X", new Vector2(64f, 64f),
-                                               new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 34f);
-        RectTransform cr = close.GetComponent<RectTransform>();
-        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
-        cr.anchoredPosition = new Vector2(-14f, -12f);
-        close.onClick.AddListener(CloseWindow);
-        y += titleFontSize * 1.4f + 10f;
-        PixelMenuFx.AddWindowLine(windowObject.transform, y - 6f);
+        float y = windowParts.HeaderHeight;
+        PixelMenuFx.AddWindowLine(windowObject.transform, y);
+        y += 10f;
 
         capacityLabel = PixelUIKit.CreateText(font, windowObject.transform, "Capacity", "", fontSize, TextAlignmentOptions.Center,
                                               FontStyles.Normal, new Color(textColor.r, textColor.g, textColor.b, 0.8f));
@@ -1285,14 +1270,14 @@ public class PixelBank : MonoBehaviour, IPixelSaved
         hr.anchoredPosition = new Vector2(0f, 10f);
 
         windowObject.SetActive(false);
-        PixelWindows.Register(this, 14, () => windowObject != null && windowObject.activeSelf, CloseWindow);
+        PixelWindows.Register(this, 14, () => WindowIsOpen, CloseWindow);
         canvasRoot.SetActive(bankActive);
     }
 
     private CanvasGroup bankGroup, hoseGroup;
     private Image windowHoseImage;
 
-    /// <summary>A hand-drawn hose icon button at the top left of the Bank window: switches the hose on / off (like the B key).</summary>
+    /// <summary>A hand-drawn hose icon button in the Bank window's left header slot: switches the hose on / off (like the B key).</summary>
     private RectTransform tipRect;
     private TMP_Text tipLabel;
 
@@ -1361,22 +1346,18 @@ public class PixelBank : MonoBehaviour, IPixelSaved
 
     private void BuildWindowHoseButton()
     {
-        Button b = PixelUIKit.CreateButton(font, windowObject.transform, "Window Hose Button", "", new Vector2(64f, 64f),
-                                           hoseButtonColor, buttonTextColor, 20f);
+        Button b = windowParts.AddHeaderButton("Window Hose Button", "", true, hoseButtonColor);   // the left header slot
         windowHoseImage = b.GetComponent<Image>();
-        RectTransform r = b.GetComponent<RectTransform>();
-        r.anchorMin = r.anchorMax = r.pivot = new Vector2(0f, 1f);
-        r.anchoredPosition = new Vector2(14f, -12f);
         b.onClick.AddListener(() => SetHose(!HoseOn));
 
-        DrawHoseIcon(b.transform, 1f);
+        DrawHoseIcon(b.transform, b.GetComponent<RectTransform>().sizeDelta.y / 64f);
         AddHoseTip(b.gameObject);
     }
 
     private void LateUpdate()
     {
         if (!built || windowObject == null || bankGroup == null) return;
-        bool open = windowObject.activeSelf;
+        bool open = WindowIsOpen;
         FadeTab(bankDock, bankGroup, open);
         FadeTab(hoseDock, hoseGroup, open);
     }
@@ -1391,11 +1372,11 @@ public class PixelBank : MonoBehaviour, IPixelSaved
     }
 
     /// <summary>Both buttons stay out while the window is open or the mouse is near either of them.</summary>
-    public bool WindowIsOpen => windowObject != null && windowObject.activeSelf;
+    public bool WindowIsOpen => PixelPop.IsOpen(windowObject);
 
     private bool KeepButtonsOut()
     {
-        if (windowObject != null && windowObject.activeSelf) return true;
+        if (WindowIsOpen) return true;
         return (bankDock != null && bankDock.PointerNear()) || (hoseDock != null && hoseDock.PointerNear());
     }
 
@@ -1408,20 +1389,19 @@ public class PixelBank : MonoBehaviour, IPixelSaved
 
     private void ToggleWindow()
     {
-        if (windowObject.activeSelf) CloseWindow();
+        if (WindowIsOpen) CloseWindow();
         else
         {
             PixelUI.SetInventoryOpen(false);   // the Bank window replaces the Inventory and the Log (and they replace it)
             PixelLog.SetLogOpen(false);
             PixelSkills.CloseWindowIfOpen();
-            windowObject.SetActive(true);
-            PixelAudio.Play("menu_open");   // (the Bank window has no PixelPop, so it plays the open sound itself)
+            PixelPop.Show(windowObject);   // (PixelPop plays the open sound)
             refreshTimer = 0f;
             RefreshWindow();
         }
     }
 
-    private void CloseWindow() => windowObject.SetActive(false);
+    private void CloseWindow() => PixelPop.Hide(windowObject);
 
     /// <summary>Closes the Bank window if it is open (the Inventory and the Log call this when they open).</summary>
     /// <summary>Total width of the Bank tab + hose button pair on the left edge (the Skills tab under them matches it).</summary>
@@ -1435,7 +1415,7 @@ public class PixelBank : MonoBehaviour, IPixelSaved
     public static void CloseWindowIfOpen()
     {
         PixelBank bank = PixelFind.First<PixelBank>();
-        if (bank != null && bank.windowObject != null && bank.windowObject.activeSelf) bank.CloseWindow();
+        if (bank != null && bank.WindowIsOpen) bank.CloseWindow();
     }
 
     private void RefreshWindow()
