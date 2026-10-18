@@ -6,7 +6,7 @@
 //   replays it (PixelStudioIntro.Replay) over whatever is on screen.
 //   Everything is built in code when it starts and DESTROYED when it ends (objects, meshes, textures, materials, render textures):
 //   * Its own little world far below the game (worldOffset), filmed by its own two cameras into RenderTextures, shown on its own top canvas, so it never
-//     touches the game scene. The SPACE camera films Earth + the galaxy (+ a camera-space canvas with the blinking 'GAME OVER' and scanlines) into a
+//     touches the game scene. The SPACE camera films Earth + the galaxy into a
 //     16:9 texture that is the ARCADE CABINET's screen; the CABINET camera starts framed exactly on that screen (so it looks like plain space) and
 //     pulls back for the reveal. The canvas shows the cabinet camera's picture.
 //   STORYBOARD (all lengths Inspector values): 1 Earth close-up (a turning sphere with a code-drawn equirect texture: oceans, continents, ice caps,
@@ -15,6 +15,8 @@
 //   4 the cabinet camera pulls back: the galaxy was on the screen of an arcade cabinet (boxes / cylinders via PixelFactoryKit, retro colours) with a
 //   lit marquee reading studioName (studio_hum loop); a little green cube ALIEN (antennae, big eyes) stands at it slumped; 5 he perks up and taps
 //   the coin slot and the buttons; 6 fade to black, then the normal title intro.
+//   'GAME OVER' + scanlines are a world-space canvas just in front of the cabinet's screen (not in the space picture). The cabinet and the alien
+//   float in the dark (no floor).
 //   At launch it first waits on black until frames come smoothly (settleSeconds), and the timeline moves at most maxFrameStep per frame, so loading
 //   hitches slow it down instead of skipping scenes. The space set is built small and scaled up (SpaceScale) to keep float precision far from the origin.
 //   No per-frame allocations (everything is cached when it is built; the timeline runs in one coroutine on unscaled time).
@@ -124,7 +126,6 @@ public class PixelStudioIntro : MonoBehaviour
     private Material earthMat, cloudMat, glowMat, galaxyMat, screenMat;
     private TMP_Text gameOverLabel;
     private RawImage scanlines;
-    private Canvas overlay;
     private Image fade;
     private CanvasGroup group;
     private Vector3 eyeScale;
@@ -210,7 +211,6 @@ public class PixelStudioIntro : MonoBehaviour
         spaceCam.transform.localPosition = look + new Vector3(0f, 0f, -dist);
         spaceCam.nearClipPlane = Mathf.Max(0.004f, dist * 0.05f) * SpaceScale;   // (clip planes are in world units: the space set is scaled up)
         spaceCam.farClipPlane = (dist + 200f) * SpaceScale;
-        overlay.planeDistance = spaceCam.nearClipPlane * 1.5f;   // (GAME OVER stays just past the near clip as it moves out)
 
         // GAME OVER: blinks while it is new, then stays (dimmer) through the reveal; scanlines scroll.
         bool over = t >= overStart;
@@ -477,7 +477,6 @@ public class PixelStudioIntro : MonoBehaviour
         kit.Cyl("Button B", arcade, new Vector3(0.22f, 1.0f, -0.3f), 0.03f, 0.03f, buttonColorB);
         kit.Box("Coin Door", arcade, new Vector3(0f, 0.55f, -0.16f), new Vector3(0.32f, 0.3f, 0.02f), new Color(0.25f, 0.25f, 0.3f, 1f), default, false, 0.7f, 0.6f);
         kit.Box("Coin Slot", arcade, new Vector3(0f, 0.6f, -0.172f), new Vector3(0.06f, 0.012f, 0.01f), new Color(1f, 0.3f, 0.2f, 1f), default, false, 0f, 0.5f, new Color(1f, 0.3f, 0.2f, 1f) * 1.5f);
-        kit.Box("Floor", arcade, new Vector3(0f, -0.01f, 0f), new Vector3(8f, 0.02f, 8f), new Color(0.06f, 0.05f, 0.1f, 1f));
         coinSlotPos = o + new Vector3(0f, 0.6f, -0.2f);
         buttonPos = o + new Vector3(0.1f, 1.02f, -0.34f);
 
@@ -579,16 +578,15 @@ public class PixelStudioIntro : MonoBehaviour
         fade.raycastTarget = false;
         PixelUIKit.Stretch(fade.rectTransform);
 
-        // GAME OVER and the scanlines live on a camera-space canvas of the SPACE camera, so they end up on the arcade screen too.
-        GameObject sc = new GameObject("Screen Overlay", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
-        sc.transform.SetParent(spaceCam.transform, false);
-        overlay = sc.GetComponent<Canvas>();
-        overlay.renderMode = RenderMode.ScreenSpaceCamera;
-        overlay.worldCamera = spaceCam;
-        overlay.planeDistance = 0.006f * SpaceScale;
-        CanvasScaler scaler = sc.GetComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1280f, 720f);
+        // GAME OVER and the scanlines: a world-space canvas laid just in front of the arcade screen (the cabinet camera starts framed on the
+        // screen, so it reads as plain space with text over it, then pulls back with it).
+        GameObject sc = new GameObject("Screen Overlay", typeof(RectTransform), typeof(Canvas));
+        sc.transform.SetParent(screenTransform.parent, false);
+        sc.GetComponent<Canvas>().renderMode = RenderMode.WorldSpace;
+        RectTransform scr = sc.GetComponent<RectTransform>();
+        scr.sizeDelta = new Vector2(1280f, 720f);
+        scr.localScale = Vector3.one * (ScreenW / 1280f);
+        scr.localPosition = screenTransform.localPosition + new Vector3(0f, 0f, -0.003f);
         scanTex = new Texture2D(1, 4, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Repeat, filterMode = FilterMode.Point };
         scanTex.SetPixels(new[] { new Color(0f, 0f, 0f, 0.9f), new Color(0f, 0f, 0f, 0.9f), new Color(0f, 0f, 0f, 0f), new Color(0f, 0f, 0f, 0f) });
         scanTex.Apply();
