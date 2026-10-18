@@ -15,6 +15,8 @@
 //   4 the cabinet camera pulls back: the galaxy was on the screen of an arcade cabinet (boxes / cylinders via PixelFactoryKit, retro colours) with a
 //   lit marquee reading studioName (studio_hum loop); a little green cube ALIEN (antennae, big eyes) stands at it slumped; 5 he perks up and taps
 //   the coin slot and the buttons; 6 fade to black, then the normal title intro.
+//   At launch it first waits on black until frames come smoothly (settleSeconds), and the timeline moves at most maxFrameStep per frame, so loading
+//   hitches slow it down instead of skipping scenes. The space set is built small and scaled up (SpaceScale) to keep float precision far from the origin.
 //   No per-frame allocations (everything is cached when it is built; the timeline runs in one coroutine on unscaled time).
 // ---------------------------------------------------
 using System.Collections;
@@ -39,6 +41,9 @@ public class PixelStudioIntro : MonoBehaviour
     [SerializeField, Min(0.05f), Tooltip("The fade to black at the end.")] private float fadeSeconds = 0.6f;
     [SerializeField, Min(0.05f), Tooltip("The quicker fade to black after a skip.")] private float skipFadeSeconds = 0.25f;
     [SerializeField, Min(1f), Tooltip("Blinks per second of 'GAME OVER'.")] private float blinkRate = 5f;
+    [SerializeField, Min(0f), Tooltip("The fade in from black at the start (after the set has rendered its first frames).")] private float fadeInSeconds = 0.35f;
+    [SerializeField, Range(0.02f, 0.2f), Tooltip("The most the timeline moves on in one frame: a slow frame (the game is still loading at launch) slows it down instead of skipping scenes.")] private float maxFrameStep = 0.05f;
+    [SerializeField, Min(0f), Tooltip("Most seconds it waits (on black) at the start for the game's loading hitches to settle before it begins.")] private float settleSeconds = 2f;
 
     [Header("Space colours")]
     [SerializeField] private Color oceanColor = new Color(0.07f, 0.22f, 0.55f, 1f);
@@ -135,6 +140,19 @@ public class PixelStudioIntro : MonoBehaviour
     {
         Playing = true;
         Build();
+        fade.color = Color.black;
+
+        // Launch is the busiest moment (every system starting, shaders compiling): wait on black until frames come smoothly again,
+        // so the first seconds of the story aren't lost in one long frame.
+        float waited = 0f;
+        int calm = 0;
+        while (calm < 3 && waited < settleSeconds)
+        {
+            yield return null;
+            waited += Time.unscaledDeltaTime;
+            calm = Time.unscaledDeltaTime < 0.1f ? calm + 1 : 0;
+        }
+
         float t = 0f;
         float zoomStart = earthSeconds, overStart = zoomStart + zoomSeconds, revealStart = overStart + gameOverSeconds;
         float alienStart = revealStart + revealSeconds, end = alienStart + alienSeconds;
@@ -147,15 +165,16 @@ public class PixelStudioIntro : MonoBehaviour
             if (!jingle && t >= overStart) { jingle = true; PixelAudio.Play("studio_gameover"); }
             if (!hum && t >= revealStart) { hum = true; PixelAudio.StartLoop("studio_hum"); }
             Pose(t, zoomStart, overStart, revealStart, alienStart);
+            fade.color = new Color(0f, 0f, 0f, fadeInSeconds > 0f ? 1f - Mathf.Clamp01(t / fadeInSeconds) : 0f);
             yield return null;
-            t += Time.unscaledDeltaTime;
+            t += Mathf.Min(Time.unscaledDeltaTime, maxFrameStep);
         }
 
         // Fade to black (quicker after a skip); at launch the title's own black screen takes over from there.
         float f = 0f, fadeDur = skipped ? skipFadeSeconds : fadeSeconds;
         while (f < fadeDur)
         {
-            f += Time.unscaledDeltaTime;
+            f += Mathf.Min(Time.unscaledDeltaTime, maxFrameStep);
             fade.color = new Color(0f, 0f, 0f, Mathf.Clamp01(f / fadeDur));
             if (!skipped) Pose(Mathf.Min(t + f, end), zoomStart, overStart, revealStart, alienStart);
             yield return null;
@@ -189,8 +208,8 @@ public class PixelStudioIntro : MonoBehaviour
         float dist = 0.075f * Mathf.Pow(150f / 0.075f, ez);
         Vector3 look = Vector3.Lerp(earthPos, galaxyCentre, Smooth((t - zoomStart) / zoomSeconds * 1.2f - 0.2f));
         spaceCam.transform.localPosition = look + new Vector3(0f, 0f, -dist);
-        spaceCam.nearClipPlane = Mathf.Max(0.004f, dist * 0.05f);
-        spaceCam.farClipPlane = dist + 200f;
+        spaceCam.nearClipPlane = Mathf.Max(0.004f, dist * 0.05f) * SpaceScale;   // (clip planes are in world units: the space set is scaled up)
+        spaceCam.farClipPlane = (dist + 200f) * SpaceScale;
         overlay.planeDistance = spaceCam.nearClipPlane * 1.5f;   // (GAME OVER stays just past the near clip as it moves out)
 
         // GAME OVER: blinks while it is new, then stays (dimmer) through the reveal; scanlines scroll.
@@ -223,6 +242,8 @@ public class PixelStudioIntro : MonoBehaviour
         armR.localPosition = alien.InverseTransformPoint(world.transform.TransformPoint(hand));
     }
 
+    /// <summary>The space set is built in small numbers and scaled up by this (a 0.02-wide Earth 20000 units from the origin would lose float precision).</summary>
+    private const float SpaceScale = 100f;
     private const float ScreenW = 0.8f, ScreenH = 0.45f, CabinetFov = 50f;
     /// <summary>How far in front of the screen the cabinet camera must be for the screen to fill its frame (16:9 screen, a hair closer so no edge shows).</summary>
     private static float ScreenFillDistance => ScreenH * 0.5f / Mathf.Tan(CabinetFov * 0.5f * Mathf.Deg2Rad) * 0.97f;
@@ -264,6 +285,7 @@ public class PixelStudioIntro : MonoBehaviour
     {
         Transform space = new GameObject("Space").transform;
         space.SetParent(world.transform, false);
+        space.localScale = Vector3.one * SpaceScale;   // (the numbers below are small; scaled up so a tiny Earth this far from the origin keeps its float precision)
         galaxyCentre = Vector3.zero;
         earthPos = new Vector3(22f, -9f, 0f);   // on an outer arm
 
@@ -563,7 +585,7 @@ public class PixelStudioIntro : MonoBehaviour
         overlay = sc.GetComponent<Canvas>();
         overlay.renderMode = RenderMode.ScreenSpaceCamera;
         overlay.worldCamera = spaceCam;
-        overlay.planeDistance = 0.006f;
+        overlay.planeDistance = 0.006f * SpaceScale;
         CanvasScaler scaler = sc.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1280f, 720f);

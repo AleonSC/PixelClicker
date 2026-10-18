@@ -1392,3 +1392,4 @@
 [2026-10-18 13:07 UTC] Fancy pause menu: every so often a small cube in one of your pixel colours drops out from behind a menu window's title plate and falls behind the buttons with a glowing light trail.
 [2026-10-18 13:17 UTC] Added the Galactic Arcade studio intro before the launch intro (Earth, zoom out to a galaxy, GAME OVER, reveal of an arcade cabinet with a cube alien, code-made whoosh / jingle / hum); any key skips, Settings switch 'Studio intro (at launch)', Dev Hub Events > Launch replays it.
 [2026-10-18 13:26 UTC] Removed the blue line under the title plates of the pause menu and its Settings / Stats / Save screens.
+[2026-10-18 13:29 UTC] Fixed the studio intro showing black and then cutting out after GAME OVER: it now waits for the launch hitches to settle, fades in, never jumps more than a short step per frame, and its space scene is scaled up so the tiny Earth renders properly.
