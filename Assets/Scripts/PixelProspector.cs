@@ -3,8 +3,8 @@ using UnityEngine;
 /// <summary>
 /// The Prospector's Pack: six base-metal ore pixels (Copper, Tin, Iron, Lead, Zinc, Nickel). They are tough little rocks that crack as you hit them,
 /// shower chips and, now and then, turn out to be a RICH VEIN that pays big. They have no other integration (no potions, pets, crafting, Value
-/// upgrades or achievements). Ores are NOT in the random spawns by default: a switch in the Toggles window ("Prospector mode", off by default) brings them in and
-/// takes the monochrome pack, RGB, Glass and Luminescent out of what spawns; with it off the ores never appear at all.
+/// upgrades or achievements). Ores only spawn while Mining is the skill pack in play (chosen in the Skills window, PixelSkills), which takes the
+/// monochrome pack and RGB out of what spawns (IsBase); otherwise the ores never appear.
 /// </summary>
 public static class PixelProspector
 {
@@ -16,20 +16,6 @@ public static class PixelProspector
     }
 
     private static void OnSceneUnloaded() { richAnnounced = false; }   // (a Restart is a new session)
-
-    /// <summary>The player's switch: the ores replace the basic pixels while it is on (and at least one ore is unlocked).</summary>
-    public static bool Setting
-    {
-        get => PixelSkills.PackSetting == PixelSkills.MiningId;   // one shared choice of pixel pack (see PixelSkills)
-        set
-        {
-            if (value) PixelSkills.PackSetting = PixelSkills.MiningId;
-            else if (PixelSkills.PackSetting == PixelSkills.MiningId) PixelSkills.PackSetting = PixelSkills.StandardId;
-        }
-    }
-
-    /// <summary>A save file with its own settings was loaded: read the switch again.</summary>
-    public static void ReloadSettingsFromPrefs() { }   // the setting lives in PixelSkills now (reloaded there)
 
     /// <summary>The pixels the skill packs replace: the monochrome pack (White, Gray, Black) and RGB. (Glass and Luminescent are extra pixels with their own spawn switches and stay in every rotation.)</summary>
     public static bool IsBase(PixelClicker.PixelType type) =>

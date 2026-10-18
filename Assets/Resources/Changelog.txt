@@ -1429,3 +1429,4 @@
 [2026-10-18 17:14 UTC] The Recycler has four coupling holes on its front (In sockets for belts and hoses), and the Junction Box now holds 40 husks, sucks harder from higher and wider, and takes any husk resting on its lid so nothing piles up on top.
 [2026-10-18 17:14 UTC] Design + to-do: the Workbench can draw husks from the Pixel Bank late game ('Use Bank husks'), and the HUD Crafting button becomes a Recipe Book that sends recipes to the bench or offers to place one.
 [2026-10-18 17:17 UTC] Shop: search results now show as tiles with the buy bar (packs, consumables, Value upgrades and Operation), and the tiles no longer have a name under the picture - hover a tile or look at the buy bar for it.
+[2026-10-18 17:18 UTC] Code cleanup: removed the last leftovers of the old Prospector mode switch (the Mining skill pack has replaced it).

@@ -175,7 +175,6 @@ public static class PixelSettingsSync
         PixelHud.ReloadGlowFromPrefs();
         PixelUIKit.ReloadColorFromPrefs();
         PixelUIKit.ReloadButtonColorFromPrefs();
-        PixelProspector.ReloadSettingsFromPrefs();
         PixelSkills.ReloadSettingsFromPrefs();
         PixelBasicFx.ReloadFromPrefs();
         PixelMyWindow.ReloadFromPrefs();
