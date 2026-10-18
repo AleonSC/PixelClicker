@@ -9,7 +9,8 @@
 //     near it or you are typing in it; an undock arrow puts it back. Dragging a docked window by its header also undocks it and carries it off.
 //   Optional: defaultPlacer (first-time position). Users: Dev Hub, the Next up window, and every Tool window of PixelUIKit.CreateWindow (View).
 //   SetFullHeight(h): the owner's way to size the window (a minimized one remembers it); PlaceNow(): put a never-placed window at its first spot before showing it.
-//   RESIZE: EnableResize() adds a grip in the bottom-right corner that SCALES the window (0.55x - 1.6x, saved as prefKey + Scale; the Dev Hub uses it).
+//   RESIZE: EnableResize() adds a grip in the bottom-right corner that SCALES the window (0.55x - 1.6x, saved as prefKey + Scale; the Dev Hub uses it),
+//   never bigger than fits between the black bars and the screen sides (MaxFittingScale; re-checked on load and when the game window changes size), so the grip stays reachable.
 //   Saved in PlayerPrefs prefKey + Min / Dock / DockY / X / Y (not part of the game save).
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -49,7 +50,7 @@ public class PixelWindowChrome : MonoBehaviour
         resizeGrip.anchoredPosition = new Vector2(-4f, 4f);
         g.GetComponent<PixelChromeResizeGrip>().chrome = this;
         float saved = PixelPrefs.GetFloat(prefKey + ".Scale", 1f);
-        window.localScale = Vector3.one * Mathf.Clamp(saved, minScale, maxScale);
+        window.localScale = Vector3.one * Mathf.Clamp(saved, minScale, MaxFittingScale());
         if (minimized) { g.SetActive(false); hidden.Add(g); }   // (folded up: the grip comes back with the rest)
     }
 
@@ -61,10 +62,29 @@ public class PixelWindowChrome : MonoBehaviour
         float k = Mathf.Max(0.01f, canvas.rootCanvas.scaleFactor);
         float sx = (pointerScreen.x - c[1].x) / (window.sizeDelta.x * k);
         float sy = (c[1].y - pointerScreen.y) / (window.sizeDelta.y * k);
-        float s = Mathf.Clamp((sx + sy) * 0.5f, minScale, maxScale);
+        float s = Mathf.Clamp((sx + sy) * 0.5f, minScale, MaxFittingScale());   // (never bigger than the playfield: the grip must stay reachable)
         window.localScale = Vector3.one * s;
         Clamp();
         UpdateHint();
+    }
+
+    /// <summary>The biggest scale at which the whole window still fits between the black bars and the screen sides (and never over maxScale).</summary>
+    private float MaxFittingScale()
+    {
+        if (canvasRect == null || window.sizeDelta.x < 1f || window.sizeDelta.y < 1f) return maxScale;
+        Vector2 cs = canvasRect.rect.size;
+        if (cs.x < 100f || cs.y < 100f) return maxScale;
+        float fitW = (cs.x - 2f * EdgeMargin) / window.sizeDelta.x;
+        float fitH = (cs.y - 2f * BarInset()) / (minimized ? restoreHeight : window.sizeDelta.y);
+        return Mathf.Max(minScale, Mathf.Min(maxScale, Mathf.Min(fitW, fitH)));
+    }
+
+    /// <summary>Shrinks a scaled window that no longer fits (smaller game window, taller content) back inside the playfield.</summary>
+    private void KeepScaleFitting()
+    {
+        if (resizeGrip == null) return;
+        float most = MaxFittingScale();
+        if (window.localScale.x > most + 0.001f) { window.localScale = Vector3.one * most; Clamp(); }
     }
 
     internal void ResizeEnded() { PixelPrefs.SetFloat(prefKey + ".Scale", window.localScale.x); Save(); }
@@ -325,7 +345,7 @@ public class PixelWindowChrome : MonoBehaviour
         Vector2 cs = canvasRect.rect.size;
         if (cs.x < 100f || cs.y < 100f) return;
         if (!placed) PlaceNow();   // first time ever: its default spot (centred unless a defaultPlacer says otherwise)
-        else if (cs != lastCanvasSize) Clamp();
+        else if (cs != lastCanvasSize) { KeepScaleFitting(); Clamp(); }
         lastCanvasSize = cs;
 
         if (dockSide == 0) { UpdateHint(); return; }
