@@ -1399,3 +1399,4 @@
 [2026-10-18 14:04 UTC] The menu music no longer plays during the studio intro: all music waits (paused) until the intro ends, then starts / carries on.
 [2026-10-18 14:10 UTC] Fixed: the carry handles (Storage Crate, Recycler, Bait Bucket) could be grabbed through the clicker cube when they sat behind it; the cube now wins when it is in front.
 [2026-10-18 14:11 UTC] Recycler: removed the 'drop husks in' text and the timer from above the bin; hovering the bin now shows a small floating down arrow with the time left beside it, which goes away when the pointer leaves (the streak still shows while it runs).
+[2026-10-18 14:20 UTC] Recycler is now button-only (auto recycling removed, suction kept; the button flashes once a husk is inside), twice as wide and deep by default with Speed / Size as its only upgrades; the Sorting Hopper gets the same hover arrow (shared PixelHoverMarker), sizes itself to its Recycler and has its own Speed / Size upgrades.

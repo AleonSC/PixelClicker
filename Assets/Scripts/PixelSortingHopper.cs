@@ -15,7 +15,9 @@
 //     PixelPointerClaim.ClaimButton (the cube and Pixel Grabbing leave that click alone). Saved in PlacedState.extra ('F,Type').
 //   - EJECT BUTTON (orange, on the right rim): click it and every husk lying in the tray is popped out over the back wall (away from the
 //     Recycler), each thrown just high and far enough to clear it (Eject, ejectClearance). Stat hopper.ejected.
-//   - FEEDING: every feedInterval (0.35 s), while the Recycler can take a husk (HoseCanTake, not working or carried, hatch open), the husk of the
+//   SIZE (2026-10-18): matched to its Recycler (PixelRecycler.SizeFactor; a default bin is 2x) times its own Operation 'Size' upgrades (SizeMul); not on a
+//   Recycler it is sized for a default one (UnlatchedSize). Operation 'Speed' shortens the feed gap. A floating down arrow (PixelHoverMarker) shows on hover.
+//   - FEEDING: every FeedInterval (0.35 s, less with Speed upgrades), while the Recycler can take a husk (HoseCanTake, not working or carried, hatch open), the husk of the
 //     filter type lying in the tray nearest the exit is RESERVED (PixelHuskHolder.Reserve: kinematic, timer held, no other machine takes it) and
 //     slid over the exit lip, through the hatch and let fall into the bin (Slide) - a steady same-type stream, so the Recycler's streak builds.
 //     The bin's own Capture takes it from there.
@@ -35,6 +37,35 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
     [Header("Sorting Hopper")]
     [Tooltip("Seconds between two husks of the chosen type slid into the Recycler (a steady stream).")]
     [SerializeField] private float feedInterval = 0.35f;
+
+    /// <summary>The feed gap before any upgrade (the Operation tooltip starts from it).</summary>
+    public const float DefaultFeedInterval = 0.35f;
+
+    /// <summary>The feed gap with the Operation 'Speed' upgrades.</summary>
+    private float FeedInterval
+    {
+        get
+        {
+            PixelConsumables c = PixelFind.Cached<PixelConsumables>();
+            return Mathf.Max(0.06f, feedInterval + (c != null ? c.OperationBonus(PixelConsumables.DeviceKind.SortingHopper, PixelOperationStat.Speed) : 0f));
+        }
+    }
+
+    /// <summary>The hopper's own size on top of its Recycler's (Operation 'Size': 1 = the same size as the bin it sits on).</summary>
+    private static float SizeMul
+    {
+        get
+        {
+            PixelConsumables c = PixelFind.Cached<PixelConsumables>();
+            return Mathf.Max(0.5f, 1f + (c != null ? c.OperationBonus(PixelConsumables.DeviceKind.SortingHopper, PixelOperationStat.Size) : 0f));
+        }
+    }
+
+    /// <summary>Its size while not on a Recycler (and while placing): matched to a default Recycler (PixelRecycler.DefaultSize), times its own Size upgrades.</summary>
+    public static float UnlatchedSize => PixelRecycler.DefaultSize * SizeMul;
+
+    [Tooltip("Colour of the floating arrow that shows while the pointer is on the hopper.")]
+    [SerializeField] private Color hoverArrowColor = new Color(0.55f, 1f, 0.6f, 1f);
     [Tooltip("Seconds one husk takes to slide from the tray over the exit lip and through the Recycler's back hatch.")]
     [SerializeField] private float slideSeconds = 0.45f;
     [Tooltip("How hard a husk is pushed into the bin when it leaves the hatch (world units per second).")]
@@ -80,6 +111,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
     {
         GameObject root = Build(clicker, false, true);
         root.transform.SetPositionAndRotation(point, Quaternion.Euler(0f, yaw, 0f));
+        root.transform.localScale = Vector3.one * UnlatchedSize;   // (sized for a default Recycler until it latches onto one)
         PixelSortingHopper h = root.AddComponent<PixelSortingHopper>();
         h.Init(clicker, reach);
         return root;
@@ -157,6 +189,14 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         ejectRenderer = ejectButton != null ? ejectButton.GetComponent<Renderer>() : null;
         if (ejectButton != null) ejectScale = ejectButton.localScale;
         SetFilter(-1);   // (nothing chosen: the first husk that lands in the tray sets it)
+        PixelHoverMarker.Attach(transform, new Vector3(0f, (BackFloorHusks + WallHusks) * su + 1.2f * su, 0f), su, hoverArrowColor, PointerOnHopper);   // (the same floating arrow as the Recycler's)
+    }
+
+    /// <summary>Is a pointer ray on the hopper (its parts, as the device's own hover / remove check sees them)?</summary>
+    private bool PointerOnHopper(Ray ray)
+    {
+        if (device == null) device = GetComponent<PixelPlacedDevice>();
+        return device != null && device.HitTest(ray, out _);
     }
 
     private void OnEnable() { if (!all.Contains(this)) all.Add(this); PixelCouplings.Register(this); }
@@ -227,9 +267,11 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
     private static void SpotOn(PixelClicker clicker, PixelRecycler r, out Vector3 point, out Quaternion rotation, out float size)
     {
         float u = Unit(clicker);
-        point = r.transform.TransformPoint(new Vector3(0f, 0f, r.BackEdgeLocalZ + (DepthHusks * u + 0.6f * u) * 0.5f));
+        size = r.SizeFactor * SizeMul;   // (matched to the bin it sits on, times its own Size upgrades)
+        Vector3 back = r.transform.TransformDirection(Vector3.forward); back.y = 0f;
+        point = r.transform.TransformPoint(new Vector3(0f, 0f, r.BackEdgeLocalZ)) + back.normalized * (DepthHusks * u + 0.6f * u) * 0.5f * size;   // (its exit edge at the bin's back, whatever its own size)
+        point.y = r.transform.position.y;
         rotation = r.transform.rotation;
-        size = r.SizeFactor;
     }
 
     /// <summary>
@@ -321,7 +363,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
             if (z < bestZ) { bestZ = z; pick = b; }   // the one nearest the exit
         }
         if (pick == null) return;
-        nextFeed = Time.time + Mathf.Max(0.05f, feedInterval);
+        nextFeed = Time.time + FeedInterval;
         StartCoroutine(Slide(pick, recycler));
     }
 

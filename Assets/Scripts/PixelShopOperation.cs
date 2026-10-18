@@ -19,18 +19,21 @@ public partial class PixelShop
         PixelConsumables.DeviceKind.Vacuum, PixelConsumables.DeviceKind.Fan, PixelConsumables.DeviceKind.Sorter,
         PixelConsumables.DeviceKind.ChargeBooster, PixelConsumables.DeviceKind.LightningRod,
         PixelConsumables.DeviceKind.ComboFuel, PixelConsumables.DeviceKind.GhostBait, PixelConsumables.DeviceKind.PetTreat,
-        PixelConsumables.DeviceKind.Recycler,
+        PixelConsumables.DeviceKind.Recycler, PixelConsumables.DeviceKind.SortingHopper,
     };
+
+    /// <summary>Operation rows that were removed (2026-10-18: one Speed and one Size per husk machine): taken out of the saved list.</summary>
+    private static readonly string[] RemovedOperationUpgrades = { "rec_duration", "rec_streak", "rec_suction" };
 
     /// <summary>Adds any built-in Operation upgrade missing from the list (by id). Returns true if something was added.</summary>
     private bool EnsureDefaultOperationUpgrades()
     {
         if (operationUpgrades == null) operationUpgrades = new List<PixelOperationUpgrade>();
-        bool changed = false;
+        bool changed = operationUpgrades.RemoveAll(u => u != null && System.Array.IndexOf(RemovedOperationUpgrades, u.id) >= 0) > 0;
         foreach (PixelOperationUpgrade def in PixelOperationUpgrade.CreateDefaults())
         {
             PixelOperationUpgrade have = operationUpgrades.Find(u => u != null && u.id == def.id);
-            if (have != null && have.id == "rec_streak" && have.perLevel > 0.5f) { have.perLevel = def.perLevel; have.description = def.description; changed = true; }   // (2026-10-17 rework: the streak now boosts currency, +0.06 a level, not +1 XP)
+            if (have != null && have.id == "rec_size" && have.perLevel < def.perLevel) { have.perLevel = def.perLevel; have.displayName = def.displayName; have.description = def.description; changed = true; }   // (2026-10-18: Size, +0.3 a level on the new default size 2)
             if (have != null) continue;
             operationUpgrades.Add(def);
             changed = true;

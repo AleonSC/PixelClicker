@@ -49,6 +49,10 @@ public enum PixelOperationStat
     RecyclerStreak = 11,
     /// <summary>How far past a Recycler's rim its suction ring reaches (husk widths).</summary>
     RecyclerSuction = 12,
+    /// <summary>How fast a device works (negative per level = seconds taken off: the Recycler's shake, the Sorting Hopper's feed gap).</summary>
+    Speed = 13,
+    /// <summary>A device's size factor (the Sorting Hopper; the Recycler's size uses Radius).</summary>
+    Size = 14,
 }
 
 /// <summary>
@@ -97,7 +101,8 @@ public class PixelOperationUpgrade
     {
         PixelConsumables.DeviceKind V = PixelConsumables.DeviceKind.Vacuum, F = PixelConsumables.DeviceKind.Fan, S = PixelConsumables.DeviceKind.Sorter,
             B = PixelConsumables.DeviceKind.ChargeBooster, R = PixelConsumables.DeviceKind.LightningRod, C = PixelConsumables.DeviceKind.ComboFuel,
-            G = PixelConsumables.DeviceKind.GhostBait, P = PixelConsumables.DeviceKind.PetTreat, Y = PixelConsumables.DeviceKind.Recycler;
+            G = PixelConsumables.DeviceKind.GhostBait, P = PixelConsumables.DeviceKind.PetTreat, Y = PixelConsumables.DeviceKind.Recycler,
+            H = PixelConsumables.DeviceKind.SortingHopper;
         PixelOperationUpgrade U(string id, string name, string desc, PixelConsumables.DeviceKind kind, PixelOperationStat stat, int levels, float per, double cost, string unit = "", float growth = 1.9f)
             => new PixelOperationUpgrade { id = id, displayName = name, description = desc, device = kind, stat = stat, maxLevel = levels, perLevel = per, baseCost = cost, unit = unit, costGrowth = growth };
 
@@ -130,10 +135,11 @@ public class PixelOperationUpgrade
             U("treat_storage", "Storage", "How many Pet Treats you can hold.", P, PixelOperationStat.Storage, 5, 2f, 30),
             U("treat_duration", "Treat Length", "How long a Pet Treat keeps your pets hyper.", P, PixelOperationStat.Duration, 5, 15f, 40, " s"),
 
-            U("rec_duration", "Run Time", "How long a placed Recycler works before it packs up.", Y, PixelOperationStat.Duration, 5, 60f, 60, " s"),
-            U("rec_size", "Bin Size", "A bigger bin: more husks land in it by themselves.", Y, PixelOperationStat.Radius, 5, 0.15f, 80, "x"),
-            U("rec_streak", "Streak Power", "How high the same-colour streak's CURRENCY multiplier can climb (a recycled husk still never pays more than 95% of a click).", Y, PixelOperationStat.RecyclerStreak, 5, 0.06f, 100, "x"),
-            U("rec_suction", "Suction", "How far past the rim the suction ring draws loose husks in.", Y, PixelOperationStat.RecyclerSuction, 5, 0.75f, 70, " husk widths"),
+            // One Speed and one Size upgrade per husk machine (2026-10-18).
+            U("rec_speed", "Speed", "The Recycler shakes for less time before it pays out.", Y, PixelOperationStat.Speed, 5, -0.3f, 60, " s"),
+            U("rec_size", "Size", "A bigger bin: it catches more husks, holds more and its suction reaches further round it.", Y, PixelOperationStat.Radius, 5, 0.3f, 80, "x"),
+            U("hop_speed", "Speed", "The Sorting Hopper slides its chosen husks into the Recycler faster.", H, PixelOperationStat.Speed, 5, -0.05f, 60, " s"),
+            U("hop_size", "Size", "A bigger tray: it catches more husks and holds more before they fade.", H, PixelOperationStat.Size, 5, 0.12f, 80, "x"),
         };
     }
 }

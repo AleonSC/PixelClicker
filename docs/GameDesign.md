@@ -375,6 +375,9 @@ while also paying currency, so Standard levelled ~2x too fast and Husk Crush had
    reach (draws more in from the floor), and Bin Size keeps meaning one thing. Price ladder x1.8 per Recycler held or standing. One owner per husk
    = PixelHuskHolder.Takeable (Recycler, Magnet, Sweeper, hopper). Note for the pace check: Standard's baseXp was raised 380 -> 600 (Skills
    session) partly to absorb the Recycler's XP, which is now gone - the next report says whether to lower it again.
+8. **Changed 2026-10-18 (Devices session):** auto-recycling REMOVED - the player presses the button again (it flashes as soon as one husk is in);
+   the suction stays. The streak is now built per button press, in the order the husks went in. Default bin 2x wide and deep (4x footprint).
+   Operation rows for the Recycler and Sorting Hopper are now just **Speed** and **Size** each (Run Time, Streak Power and Suction rows removed).
 
 ### Mid game - skills and machines (Built, growing)
 Gathering skills (Woodcutting, Foraging, Fishing, Mining, Farming, Electrician), each with filler, hazards, specials, perks and a
