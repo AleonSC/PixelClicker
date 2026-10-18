@@ -172,7 +172,7 @@ public class PixelCrafting : MonoBehaviour
     [Tooltip("Button text size.")]
     [SerializeField] private float buttonFontSize = 34f;
 
-    [Tooltip("Button colour.")]
+    [Tooltip("Button colour (Crafting's own orange, kept as a plain colour rather than a PixelUITheme role).")]
     [SerializeField] private Color buttonColor = new Color(0.85f, 0.55f, 0.2f, 1f);
 
     [Header("Window")]
@@ -275,17 +275,13 @@ public class PixelCrafting : MonoBehaviour
     [Tooltip("Window background colour.")]
     [SerializeField] private Color panelColor = new Color(0.1f, 0.1f, 0.13f, 0.97f);
 
-    [Tooltip("Colour of the two boxes.")]
+    [Tooltip("Colour of the two boxes and the search boxes.")]
     [SerializeField] private Color slotColor = new Color(0.2f, 0.2f, 0.26f, 1f);
 
     [Tooltip("Colour of one item cell.")]
     [SerializeField] private Color cellColor = new Color(0.16f, 0.16f, 0.2f, 1f);
 
-    [Tooltip("Craft button colour while it can be pressed.")]
-    [SerializeField] private Color craftColor = new Color(0.25f, 0.6f, 0.3f, 1f);
-
-    [Tooltip("Craft button colour while it can't be pressed.")]
-    [SerializeField] private Color craftDisabledColor = new Color(0.3f, 0.3f, 0.35f, 1f);
+    // (the Craft button is the Success role in PixelUITheme while it can be pressed, Neutral while not; the chosen x1 / x5 / Max is Selected)
 
     [Tooltip("Colour of a requirement you have enough of.")]
     [SerializeField] private Color enoughColor = new Color(0.5f, 1f, 0.55f, 1f);
@@ -402,6 +398,7 @@ public class PixelCrafting : MonoBehaviour
     private int craftAmount = 1;                 // 1, 5 or 0 = as many as possible
     private readonly Image[] amountImages = new Image[3];
     private Image craftImage;
+    private int craftLit = -1, litAmount = -1;   // the Craft button's role last shown (1 = Success) and the amount last shown Selected
     private GameObject dragGhost;
     private Item dragItem;
     private float refreshTimer, statusTimer;
@@ -742,7 +739,7 @@ public class PixelCrafting : MonoBehaviour
         {
             int value = amountValues[q], index = q;
             Button qb = PixelUIKit.CreateButton(font, body.transform, "Amount " + amountNames[q], amountNames[q], new Vector2(amountWidth, amountHeight),
-                                                slotColor, textColor, fontSize * 0.85f);
+                                                ButtonRole.Neutral, fontSize * 0.85f);
             amountImages[q] = qb.GetComponent<Image>();
             RectTransform qr = qb.GetComponent<RectTransform>();
             qr.anchorMin = qr.anchorMax = qr.pivot = new Vector2(0.5f, 1f);
@@ -752,8 +749,9 @@ public class PixelCrafting : MonoBehaviour
         y += amountHeight + 8f;
 
         craftButton = PixelUIKit.CreateButton(font, body.transform, "Craft Button", craftText, new Vector2(320f, 74f),
-                                              craftColor, textColor, fontSize * 1.2f);
+                                              ButtonRole.Success, fontSize * 1.2f);
         craftImage = craftButton.GetComponent<Image>();
+        craftLit = litAmount = -1;
         craftLabel = craftButton.GetComponentInChildren<TMP_Text>();
         RectTransform cbr = craftButton.GetComponent<RectTransform>();
         cbr.anchorMin = cbr.anchorMax = cbr.pivot = new Vector2(0.5f, 1f);
@@ -1002,7 +1000,7 @@ public class PixelCrafting : MonoBehaviour
 
         // The X in the standard window look (size, place and grey from PixelUIKit's window constants).
         Button close = PixelUIKit.CreateButton(font, bookObject.transform, "Close", "X", new Vector2(closeSize, closeSize),
-                                               PixelUIKit.WindowButtonColor, textColor, closeSize * 0.4f);
+                                               ButtonRole.Neutral, closeSize * 0.4f);
         RectTransform cr = close.GetComponent<RectTransform>();
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
         cr.anchoredPosition = new Vector2(-PixelUIKit.WindowCloseOffset.x, -PixelUIKit.WindowCloseOffset.y);
@@ -1836,12 +1834,20 @@ public class PixelCrafting : MonoBehaviour
         }
 
         craftButton.interactable = canCraft;
-        craftImage.color = canCraft ? craftColor : craftDisabledColor;
+        if (craftLit != (canCraft ? 1 : 0))   // (only on a change: SetRole searches every button)
+        {
+            craftLit = canCraft ? 1 : 0;
+            PixelUIKit.SetRole(craftImage, canCraft ? ButtonRole.Success : ButtonRole.Neutral);
+        }
         int times = craftAmount == 0 ? possibleCrafts : Mathf.Min(craftAmount, possibleCrafts);
         string craftTextNow = canCraft && times > 1 ? craftText + " x" + times : craftText;
         if (craftLabel != null && craftLabel.text != craftTextNow) craftLabel.text = craftTextNow;
-        for (int q = 0; q < amountImages.Length; q++)
-            if (amountImages[q] != null) amountImages[q].color = (q == 0 && craftAmount == 1) || (q == 1 && craftAmount == 5) || (q == 2 && craftAmount == 0) ? craftColor : slotColor;
+        if (litAmount != craftAmount)
+        {
+            litAmount = craftAmount;
+            for (int q = 0; q < amountImages.Length; q++)
+                PixelUIKit.SetRole(amountImages[q], (q == 0 && craftAmount == 1) || (q == 1 && craftAmount == 5) || (q == 2 && craftAmount == 0) ? ButtonRole.Selected : ButtonRole.Neutral);
+        }
     }
 
     /// <summary>How many times this recipe can be crafted right now (what you hold and the room for the result; at most 1000).</summary>
