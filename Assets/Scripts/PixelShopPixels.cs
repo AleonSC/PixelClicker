@@ -63,10 +63,10 @@ public partial class PixelShop
         bool owned = IsPurchased(i);
         bool requirementMet = IsRequirementMet(i);
         bool locked = !owned && !requirementMet;
-        string price = owned ? Coloured(affordableColor, IsLeveled(pack) ? maxedText : ownedText)
-                             : TilePrice(CurrentCosts(pack), locked ? lockedItemColor : CanAfford(i) ? affordableColor : unaffordableColor);
+        if (owned) SetCostMessage(tile.costs, IsLeveled(pack) ? maxedText : ownedText, affordableColor);
+        else SetCosts(tile.costs, CurrentCosts(pack), locked);
         string badge = IsLeveled(pack) ? pack.level + "/" + pack.levels.Length : "";
-        SetTile(tile, price, badge, locked, locked ? lockedItemColor : textColor);
+        SetTile(tile, badge, locked, locked ? lockedItemColor : textColor);
     }
 
     private void FillPackBar(TilePage page, int i)
@@ -76,9 +76,9 @@ public partial class PixelShop
         bool owned = IsPurchased(i);
         bool requirementMet = IsRequirementMet(i);
 
-        if (owned) PixelUIKit.SetText(page.barCost, "");
-        else if (!requirementMet) PixelUIKit.SetText(page.barCost, RequirementText(i));
-        else PixelUIKit.SetText(page.barCost, BuildCostText(CurrentCosts(pack), true));
+        if (owned) SetCostMessage(page.barCosts, "", textColor);
+        else if (!requirementMet) SetCostMessage(page.barCosts, RequirementText(i), unaffordableColor);
+        else SetCosts(page.barCosts, CurrentCosts(pack), false);
 
         if (OpensUpgrades(i)) SetPageBuy(page, true, upgradeText);
         else if (owned) SetPageBuy(page, false, leveled ? maxedText : ownedText);

@@ -3,9 +3,11 @@
 //   Part of partial class PixelShop: the shared "tile page" layout used by the Pixels tab (PixelShopPixels.cs) and the Consumables
 //   tab (PixelShopConsumables.cs). Top to bottom:
 //   - category chips (the open one lit like a tab; each chip remembers its selected tile),
-//   - a scrolling grid of tiles (still 3D picture, one-line name, short price line, a small corner badge, a 'Locked' mark over
+//   - a scrolling grid of tiles, 160 x 200 = 5 to a row (still 3D picture, one-line name, the price as colour swatches + numbers
+//     (CostStrip: SetCosts / SetCostMessage; red number = can't afford), a small corner badge, a 'Locked' mark over
 //     the picture). Click a tile = select it, Shift-click = the page's quick buy, hover = its description as the shop tooltip.
-//   - one buy bar for the selected tile: spinning picture, name, the full description, the cost, - count + (pages with hasCount)
+//   - one buy bar for the selected tile: spinning picture, name, the full description, the cost (swatch + number + currency name,
+//     two columns), - count + (pages with hasCount)
 //     and the Buy button (Shift-click Buy = the page's 'as many as you can').
 //   A page only says WHAT to show through its delegates (collect, tileName, pictureKey, description, fillTile, fillBar, purchase,
 //   quickBuy); building, layout, selection and the shared tooltip live here. Tiles are built once per id and reused.
@@ -31,7 +33,23 @@ public partial class PixelShop
         public Image background;
         public PictureSlot picture;
         public Func<string> key;   // the tile's picture (also shown, spinning, in the buy bar while selected)
-        public TMP_Text name, price, badge, lockMark;
+        public TMP_Text name, badge, lockMark;
+        public CostStrip costs;   // the price: a colour swatch + number per currency
+    }
+
+    /// <summary>
+    /// A price shown as colour swatches with numbers (one per currency: the swatch is the pixel's colour, the number is white, or red
+    /// when you can't afford it, grey while locked), or one line of text instead ('Full', 'Owned', what it still needs...).
+    /// </summary>
+    private class CostStrip
+    {
+        public RectTransform root;
+        public Image[] swatches;
+        public TMP_Text[] numbers;
+        public TMP_Text message;
+        public int maxColumns;    // slots per row (the rest wrap onto more rows)
+        public bool withNames;    // "75 White" instead of "75" (the buy bar has room)
+        public float fontSize;
     }
 
     /// <summary>A tab laid out as chips + tile grid + buy bar. The delegates say what it shows; everything else is shared.</summary>
@@ -52,7 +70,8 @@ public partial class PixelShop
         public readonly List<int> ids = new List<int>();
 
         // The buy bar.
-        public TMP_Text barName, barDescription, barCost, barBuyLabel;
+        public TMP_Text barName, barDescription, barBuyLabel;
+        public CostStrip barCosts;
         public TMP_InputField countField;
         public Button minus, plus, buy;
         public Image buyImage;
@@ -164,13 +183,8 @@ public partial class PixelShop
         float rightX = width - pad - rightW;
         float lineH = (buyBarHeight - pad * 2f - 16f) / 3f;
         float y = pad;
-        page.barCost = CreateText(top, "Cost", "", costFontSize, TextAlignmentOptions.Center, FontStyles.Normal);
-        page.barCost.richText = true;
-        page.barCost.enableAutoSizing = true;
-        page.barCost.fontSizeMax = costFontSize;
-        page.barCost.fontSizeMin = Mathf.Min(12f, costFontSize);
         float costH = page.hasCount ? lineH : lineH * 2f + 8f;   // without the count row the cost gets two lines
-        PlaceTopLeft(page.barCost.rectTransform, rightX, y, rightW, costH);
+        page.barCosts = BuildCostStrip(top, rightX, y, rightW, costH, 6, 2, costFontSize * 0.8f, true);
         y += costH + 8f;
 
         if (page.hasCount)
@@ -251,23 +265,18 @@ public partial class PixelShop
         tile.rect.sizeDelta = new Vector2(tileWidth, tileHeight);
 
         float pic = tileWidth - 32f;
+        float lineH = tileFontSize * 1.35f;
         float y = 8f;
         if (!hidePictures && tile.key != null)
             tile.picture = AddPictureSlot(tile.rect, pic, new Vector2(16f, y), false, tile.key, true, page.scroll.viewport, true);
         y += pic + 4f;
 
-        float lineH = tileFontSize * 1.35f;
         tile.name = CreateText(go.transform, "Name", page.tileName(id), tileFontSize, TextAlignmentOptions.Center, FontStyles.Bold);
         PlaceTopLeft(tile.name.rectTransform, 6f, y, tileWidth - 12f, lineH);
-        PixelUIKit.FitOneLine(tile.name);
+        PixelUIKit.FitOneLine(tile.name, 14f);
         y += lineH;
 
-        tile.price = CreateText(go.transform, "Price", "", tileFontSize * 0.9f, TextAlignmentOptions.Center, FontStyles.Normal);
-        tile.price.richText = true;
-        tile.price.enableAutoSizing = true;
-        tile.price.fontSizeMax = tileFontSize * 0.9f;
-        tile.price.fontSizeMin = 10f;
-        PlaceTopLeft(tile.price.rectTransform, 6f, y, tileWidth - 12f, lineH);
+        tile.costs = BuildCostStrip(go.transform, 6f, y, tileWidth - 12f, Mathf.Max(lineH, tileHeight - y - 6f), 3, 3, tileFontSize, false);
 
         tile.badge = CreateText(go.transform, "Badge", "", tileFontSize * 0.85f, TextAlignmentOptions.TopRight, FontStyles.Bold);
         tile.badge.richText = true;
@@ -320,27 +329,114 @@ public partial class PixelShop
         SetShopRole(page.buyImage, canBuy ? ButtonRole.Success : ButtonRole.Neutral);
     }
 
-    /// <summary>Sets a tile's price line, corner badge and lock mark (called from a page's fillTile).</summary>
-    private static void SetTile(ItemTile tile, string price, string badge, bool locked, Color nameColour)
+    /// <summary>Sets a tile's corner badge, name colour and lock mark (called from a page's fillTile; the price is SetCosts / SetCostMessage on tile.costs).</summary>
+    private static void SetTile(ItemTile tile, string badge, bool locked, Color nameColour)
     {
-        PixelUIKit.SetText(tile.price, price);
         PixelUIKit.SetText(tile.badge, badge);
         tile.name.color = nameColour;
         if (tile.lockMark.gameObject.activeSelf != locked) tile.lockMark.gameObject.SetActive(locked);
         if (tile.picture != null) tile.picture.image.color = locked ? new Color(0.35f, 0.35f, 0.4f, 1f) : Color.white;
     }
 
-    private string Coloured(Color c, string text) => "<color=#" + ColorUtility.ToHtmlStringRGB(c) + ">" + text + "</color>";
+    // ------------------------------------------------------------------
+    // Prices as colour swatches
+    // ------------------------------------------------------------------
 
-    /// <summary>A tile's short price: the first cost ("50 White"), plus "+n" when there are more.</summary>
-    private string TilePrice(PackCost[] costs, Color colour)
+    /// <summary>Builds an empty cost strip in a w x h box at (x, y) from its parent's top left.</summary>
+    private CostStrip BuildCostStrip(Transform parent, float x, float y, float w, float h, int slots, int maxColumns, float fontSize, bool withNames)
     {
-        if (costs == null || costs.Length == 0) return Coloured(colour, "Free");
-        string name = CostName(costs[0]);
-        if (name.EndsWith(" Pixels")) name = name.Substring(0, name.Length - 7);
-        else if (name.EndsWith(" Pixel")) name = name.Substring(0, name.Length - 6);
-        string text = PixelClicker.FormatNumberShort(costs[0].amount) + " " + name + (costs.Length > 1 ? " +" + (costs.Length - 1) : "");
-        return Coloured(colour, text);
+        CostStrip strip = new CostStrip { maxColumns = Mathf.Max(1, maxColumns), withNames = withNames, fontSize = fontSize };
+        strip.root = new GameObject("Costs", typeof(RectTransform)).GetComponent<RectTransform>();
+        strip.root.SetParent(parent, false);
+        PlaceTopLeft(strip.root, x, y, w, h);
+        strip.swatches = new Image[slots];
+        strip.numbers = new TMP_Text[slots];
+        for (int i = 0; i < slots; i++)
+        {
+            GameObject sw = new GameObject("Swatch " + i, typeof(RectTransform), typeof(Image));
+            sw.transform.SetParent(strip.root, false);
+            strip.swatches[i] = sw.GetComponent<Image>();
+            PixelUIKit.StyleBox(strip.swatches[i]);
+            strip.swatches[i].raycastTarget = false;
+            strip.numbers[i] = CreateText(strip.root, "Number " + i, "", fontSize, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
+            PixelUIKit.FitOneLine(strip.numbers[i], 12f);
+            strip.numbers[i].raycastTarget = false;
+            sw.SetActive(false);
+            strip.numbers[i].gameObject.SetActive(false);
+        }
+        strip.message = CreateText(strip.root, "Message", "", fontSize, TextAlignmentOptions.Center, FontStyles.Bold);
+        strip.message.richText = true;
+        strip.message.enableAutoSizing = true;
+        strip.message.fontSizeMax = fontSize;
+        strip.message.fontSizeMin = 14f;
+        strip.message.raycastTarget = false;
+        PixelUIKit.Stretch(strip.message.rectTransform);
+        return strip;
+    }
+
+    /// <summary>Shows a price: one swatch (the currency's colour) + number per cost, laid out in centred rows. 'locked' greys the numbers.</summary>
+    private void SetCosts(CostStrip strip, PackCost[] costs, bool locked)
+    {
+        if (costs == null || costs.Length == 0) { SetCostMessage(strip, "Free", affordableColor); return; }
+        if (strip.message.gameObject.activeSelf) strip.message.gameObject.SetActive(false);
+
+        int slots = strip.swatches.Length;
+        int shown = Mathf.Min(costs.Length, slots);
+        int columns = Mathf.Min(shown, strip.maxColumns);
+        int rows = (shown + columns - 1) / columns;
+        Vector2 size = strip.root.sizeDelta;
+        float cellW = size.x / columns, cellH = size.y / rows;
+        float swatch = Mathf.Min(cellH * 0.7f, strip.fontSize * 0.9f);
+        for (int i = 0; i < slots; i++)
+        {
+            bool on = i < shown;
+            if (strip.swatches[i].gameObject.activeSelf != on) strip.swatches[i].gameObject.SetActive(on);
+            if (strip.numbers[i].gameObject.activeSelf != on) strip.numbers[i].gameObject.SetActive(on);
+            if (!on) continue;
+
+            PackCost cost = costs[i];
+            int t = string.IsNullOrEmpty(cost.minigameCurrency) ? clicker.IndexOf(cost.type) : -1;
+            strip.swatches[i].color = t >= 0 ? clicker.Tiers[t].UIColor : new Color(0.6f, 0.6f, 0.65f, 1f);   // (minigame currencies: grey)
+            string text = PixelClicker.FormatNumberShort(cost.amount);
+            if (strip.withNames) text += " " + ShortCostName(cost);
+            if (i == shown - 1 && costs.Length > shown) text += " +" + (costs.Length - shown);   // (more than fit: '+n')
+            TMP_Text number = strip.numbers[i];
+            PixelUIKit.SetText(number, text);
+            number.color = locked ? lockedItemColor : CanAffordCost(cost) ? textColor : unaffordableColor;
+
+            // Place swatch + number as a centred pair in its cell (the last row is centred on its own).
+            int row = i / columns, col = i % columns;
+            int inRow = row == rows - 1 ? shown - row * columns : columns;
+            float rowLeft = (size.x - inRow * cellW) * 0.5f;
+            float numberW = Mathf.Min(cellW - swatch - 6f, number.GetPreferredValues(text).x + 2f);
+            float pairX = rowLeft + col * cellW + (cellW - (swatch + 4f + numberW)) * 0.5f;
+            float midY = row * cellH + cellH * 0.5f;
+            PlaceTopLeft((RectTransform)strip.swatches[i].transform, pairX, midY - swatch * 0.5f, swatch, swatch);
+            PlaceTopLeft(number.rectTransform, pairX + swatch + 4f, midY - cellH * 0.5f, numberW, cellH);
+        }
+    }
+
+    /// <summary>Shows one line of text instead of a price ('Full', 'Owned', what it still needs...).</summary>
+    private static void SetCostMessage(CostStrip strip, string text, Color colour)
+    {
+        for (int i = 0; i < strip.swatches.Length; i++)
+        {
+            if (strip.swatches[i].gameObject.activeSelf) strip.swatches[i].gameObject.SetActive(false);
+            if (strip.numbers[i].gameObject.activeSelf) strip.numbers[i].gameObject.SetActive(false);
+        }
+        bool on = !string.IsNullOrEmpty(text);
+        if (strip.message.gameObject.activeSelf != on) strip.message.gameObject.SetActive(on);
+        PixelUIKit.SetText(strip.message, text ?? "");
+        strip.message.color = colour;
+    }
+
+    /// <summary>A currency's name without " Pixel(s)" ("White").</summary>
+    private string ShortCostName(PackCost cost)
+    {
+        string name = CostName(cost);
+        if (name.EndsWith(" Pixels")) return name.Substring(0, name.Length - 7);
+        if (name.EndsWith(" Pixel")) return name.Substring(0, name.Length - 6);
+        return name;
     }
 
     // ------------------------------------------------------------------
@@ -411,7 +507,7 @@ public partial class PixelShop
         PixelUIKit.SetText(page.barDescription, has ? page.description(selected) : noItemsText);
         if (!has)
         {
-            PixelUIKit.SetText(page.barCost, "");
+            SetCostMessage(page.barCosts, "", textColor);
             SetPageBuy(page, false, lockedText);
             return;
         }

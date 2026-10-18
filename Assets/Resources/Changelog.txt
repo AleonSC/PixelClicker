@@ -1417,3 +1417,4 @@
 [2026-10-18 15:30 UTC] New Standard perk 'Double floor': from level 10 the floor holds twice as many husks.
 [2026-10-18 15:36 UTC] Double floor changed: Standard level 10 now makes the floor itself twice as big (like the Dev Hub's Double floor area) instead of doubling how many husks it holds.
 [2026-10-18 16:04 UTC] The Quantum Organizer, Funnel, Sprinkler, Vacuum Device, Sorter, Bait Bucket and Conveyor Belt Kit are no longer sold in the shop or by visitors; a new 'Dev items' widget in the Dev Hub gives them, and the How to Play text no longer lists them.
+[2026-10-18 16:46 UTC] Shop: prices on the Pixels and Consumables tiles and buy bar are now colour swatches with numbers (red number = can't afford yet), and the tiles are bigger so 5 fit on a row instead of 6.

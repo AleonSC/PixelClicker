@@ -103,11 +103,10 @@ public partial class PixelShop
         bool locked = ItemLocked(item);
         PackCost[] costs = consumables.ItemCosts(item);
         bool full = !locked && consumables.ItemRoom(item) <= 0;
-        bool affordable = !locked && !full && CanAffordCosts(ScaleCosts(costs, 1));
-        string price = full ? Coloured(unaffordableColor, potionFullText)
-                            : TilePrice(costs, locked ? lockedItemColor : affordable ? affordableColor : unaffordableColor);
+        if (full) SetCostMessage(tile.costs, potionFullText, unaffordableColor);
+        else SetCosts(tile.costs, costs, locked);
         int owned = consumables.ItemOwned(item);
-        SetTile(tile, price, owned > 0 ? "x" + PixelConsumables.OwnedText(owned) : "", locked, locked ? lockedItemColor : textColor);
+        SetTile(tile, owned > 0 ? "x" + PixelConsumables.OwnedText(owned) : "", locked, locked ? lockedItemColor : textColor);
     }
 
     private void FillItemBar(TilePage page, int item)
@@ -117,7 +116,7 @@ public partial class PixelShop
         int room = consumables.ItemRoom(item);
         if (room <= 0 && !locked)
         {
-            PixelUIKit.SetText(page.barCost, Coloured(unaffordableColor, string.Format(NoHave(potionFullFormat), consumables.ItemCapacity(item), PixelConsumables.OwnedText(consumables.ItemOwned(item)))));
+            SetCostMessage(page.barCosts, string.Format(NoHave(potionFullFormat), consumables.ItemCapacity(item), PixelConsumables.OwnedText(consumables.ItemOwned(item))), unaffordableColor);
             SetPageBuy(page, false, potionFullText);
             return;
         }
@@ -127,12 +126,12 @@ public partial class PixelShop
         {
             int t = clicker.IndexOf(consumables.ItemRequiredType(item));
             string need = t >= 0 ? clicker.Tiers[t].displayName : consumables.ItemRequiredType(item).ToString();
-            PixelUIKit.SetText(page.barCost, Coloured(unaffordableColor, string.Format(lockedRequirementFormat, need)));
+            SetCostMessage(page.barCosts, string.Format(lockedRequirementFormat, need), unaffordableColor);
             SetPageBuy(page, false, lockedText);
             return;
         }
         PackCost[] total = ScaleCosts(consumables.ItemCosts(item), page.count);
-        PixelUIKit.SetText(page.barCost, BuildCostText(total, true));
+        SetCosts(page.barCosts, total, false);
         SetPageBuy(page, CanAffordCosts(total), string.Format(buyCountFormat, page.count));
     }
 }

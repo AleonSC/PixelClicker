@@ -516,12 +516,12 @@ public partial class PixelShop : MonoBehaviour
     [SerializeField] private float buyBarHeight = 210f;
 
     [Min(80f)]
-    [Tooltip("Width of one item tile in the Consumables grid. The picture is this minus 32.")]
-    [SerializeField] private float tileWidth = 132f;
+    [Tooltip("Width of one item tile in the Pixels / Consumables grids. The picture is this minus 32. 160 fits 5 to a row in the 900-wide shop.")]
+    [SerializeField] private float tileWidth = 160f;
 
     [Min(100f)]
     [Tooltip("Height of one item tile (picture + name + price lines).")]
-    [SerializeField] private float tileHeight = 170f;
+    [SerializeField] private float tileHeight = 200f;
 
     [Min(0f)]
     [Tooltip("Gap between the item tiles.")]
@@ -864,6 +864,15 @@ public partial class PixelShop : MonoBehaviour
             ResetBuiltInPackPrices();   // (the same as the 'Reset Built-in Pack Prices' context menu)
             foreach (ShopPack p in packs) if (p != null && p.tab == ShopTab.Minigames) p.requirements = new PackRequirement[0];
             shopBalanceVersion = 1;
+            changed = true;
+        }
+
+        if (tileLayoutVersion < 1)
+        {
+            // 2026-10-18: bigger tiles (5 to a row, not 6) so the swatch prices read well.
+            tileWidth = 160f;
+            tileHeight = 200f;
+            tileLayoutVersion = 1;
             changed = true;
         }
 
@@ -1544,6 +1553,7 @@ public partial class PixelShop : MonoBehaviour
         t.clicksToCollect = 33;   // (the average of 15-50, used for estimates)
     }
 
+    [SerializeField, HideInInspector] private int tileLayoutVersion;   // 1 = 160 x 200 tiles (5 to a row)
     [SerializeField, HideInInspector] private int shopBalanceVersion; // 1 = the 2026-10-16 rebalance (new default prices, minigames need only their price)
     [SerializeField, HideInInspector] private int packDataVersion; // 1 = Obsidian pays 7 (was 5); 2 = Singularity spawn weight 0.08 (was 0.2); 3 = Electric pays a random 1-15; 4 = Electric pack gets its real price + Luminescent requirement; 5 = Electric becomes an early unlock (8K RGB, needs the Auto Clicker pack, listed before Vacuum)
 
