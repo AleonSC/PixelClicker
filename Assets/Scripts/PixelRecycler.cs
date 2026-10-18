@@ -226,6 +226,9 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     public Vector3 HatchOutside => transform.TransformPoint(new Vector3(0f, HatchPassY, BackEdgeLocalZ));
 
     /// <summary>Just inside the back wall, behind the hatch: a husk slid in here falls into the bin (world).</summary>
+    /// <summary>Where a Sorting Hopper's feed pipe lets a husk go: at rim height, just inside the back wall (world; follows the bin's size).</summary>
+    public Vector3 FeedDropPoint => transform.TransformPoint(new Vector3(0f, wallH - Unit(clicker) * 0.45f, innerD * 0.5f - Unit(clicker) * 0.9f));   // (a default bin + hopper: the pipe runs level)
+
     public Vector3 HatchInside => transform.TransformPoint(new Vector3(0f, HatchPassY, innerD * 0.5f - Unit(clicker) * 0.9f));
 
     private float HatchPassY => HatchBottom(Unit(clicker)) + HatchHeight(Unit(clicker)) * 0.45f;

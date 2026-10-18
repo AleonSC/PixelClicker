@@ -6,8 +6,10 @@
 //   CreateGhost / CreateDisplay with PixelFactoryKit; the placed device is the permanent PixelChipperDevice stub on the same object - bought, kept,
 //   placed, saved, removed like every device.
 //   - SNAPS ONTO A RECYCLER'S BACK: placed within 'radius' (the Device entry's Reach, 6 world units) of a free Recycler it latches on behind it
-//     (TrySnap, also while placing: the ghost jumps there), turned like the bin, scaled to it (PixelRecycler.SizeFactor x its own Operation 'Size',
-//     SizeMul), its bowl's front edge just behind the bin's back (BackEdgeLocalZ). It follows the bin when the bin is carried. One hopper per Recycler
+//     (TrySnap, also while placing: the ghost jumps there), turned like the bin, its bowl's front edge just behind the bin's back (BackEdgeLocalZ).
+//     SIZE = a default Recycler's (PixelRecycler.DefaultSize) x its OWN Operation 'Size' (SizeMul) - the Recycler's Size upgrades do not grow it
+//     (2026-10-18: a maxed bin made it bigger than the cube); the FEED PIPE re-aims instead (AimPipe) so its mouth always sits over the bin's back
+//     rim (PixelRecycler.FeedDropPoint), sloping up when the bin is taller. It follows the bin when the bin is carried. One hopper per Recycler
 //     (it OCCUPIES the bin's 'hatch' socket). When the Recycler goes, the hopper stays and latches onto the next free one within reach (every half second).
 //     Not on a Recycler it is sized for a default one (UnlatchedSize).
 //   - IT HOLDS HUSKS: a husk that drops into the bowl (or is handed in through its back coupling / by the Sweeper) is taken in as DATA (type + amount,
@@ -53,7 +55,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         }
     }
 
-    /// <summary>The hopper's own size on top of its Recycler's (Operation 'Size': 1 = matched to the bin it sits on).</summary>
+    /// <summary>The hopper's own Size upgrades (Operation 'Size': 1 = a default Recycler's size). The Recycler's own Size upgrades do NOT grow it.</summary>
     private static float SizeMul
     {
         get
@@ -63,7 +65,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         }
     }
 
-    /// <summary>Its size while not on a Recycler (and while placing): matched to a default Recycler (PixelRecycler.DefaultSize), times its own Size upgrades.</summary>
+    /// <summary>Its size, on a Recycler or not: a default Recycler's (PixelRecycler.DefaultSize) times its own Size upgrades.</summary>
     public static float UnlatchedSize => PixelRecycler.DefaultSize * SizeMul;
 
     [Min(1)]
@@ -282,7 +284,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
     private static void SpotOn(PixelClicker clicker, PixelRecycler r, out Vector3 point, out Quaternion rotation, out float size)
     {
         float u = Unit(clicker);
-        size = r.SizeFactor * SizeMul;   // (matched to the bin it sits on, times its own Size upgrades)
+        size = UnlatchedSize;   // (its OWN size: a bigger Recycler moves it back, it does not grow it - the feed pipe re-aims to reach over the bin's wall instead)
         Vector3 back = r.transform.TransformDirection(Vector3.forward); back.y = 0f;
         point = r.transform.TransformPoint(new Vector3(0f, 0f, r.BackEdgeLocalZ)) + back.normalized * (BowlHusks * 0.5f + 0.3f) * u * size;
         point.y = r.transform.position.y;
@@ -346,7 +348,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
     /// <summary>Latches onto a free Recycler within reach (every half second when it has none) and follows it when it is carried.</summary>
     private void KeepLatched()
     {
-        if (recycler != null && (Ending(recycler) || !recycler.isActiveAndEnabled)) { PixelCouplings.Vacate(recycler, PixelRecycler.HatchSocket, this); recycler = null; }
+        if (recycler != null && (Ending(recycler) || !recycler.isActiveAndEnabled)) { PixelCouplings.Vacate(recycler, PixelRecycler.HatchSocket, this); recycler = null; AimPipe(DefaultPipeExit(Unit(clicker))); }
         if (recycler == null)
         {
             if (Time.time < nextLook) return;
@@ -360,6 +362,34 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         SpotOn(clicker, recycler, out Vector3 spot, out Quaternion rot, out float size);
         if ((transform.position - spot).sqrMagnitude > 0.000001f || Quaternion.Angle(transform.rotation, rot) > 0.05f) transform.SetPositionAndRotation(spot, rot);
         if (Mathf.Abs(baseScale.x - size) > 0.0001f) { baseScale = Vector3.one * size; transform.localScale = baseScale; }
+        AimPipe(transform.InverseTransformPoint(recycler.FeedDropPoint));
+    }
+
+    private Transform pipe, mouth, mouthRing;
+    private Vector3 pipeExit = new Vector3(float.NaN, 0f, 0f);   // where a husk leaves the feed pipe (local); NaN = not aimed yet
+
+    /// <summary>Where the feed pipe ends when it is not on a Recycler (as built), in local units.</summary>
+    private Vector3 DefaultPipeExit(float u) => new Vector3(0f, (PipeY - PipeRadius * 3f) * u, PipeEndZ * u);
+
+    /// <summary>
+    /// Re-aims the feed pipe so its mouth lets husks go at 'exit' (local): the pipe runs from the bowl's base to just above it (sloping up when the bin is
+    /// taller than the hopper), the mouth pointing down. Only redrawn when the exit moves.
+    /// </summary>
+    private void AimPipe(Vector3 exit)
+    {
+        if ((exit - pipeExit).sqrMagnitude < 1e-8f) return;
+        pipeExit = exit;
+        if (pipe == null) { pipe = transform.Find("Feed Pipe"); mouth = transform.Find("Feed Mouth"); mouthRing = transform.Find("Feed Mouth Ring"); }
+        if (pipe == null) return;
+        float u = Unit(clicker), pr = PipeRadius * u;
+        Vector3 start = new Vector3(0f, PipeY * u, -1.4f * u), end = exit + Vector3.up * pr * 3f;
+        Vector3 dir = end - start;
+        float len = Mathf.Max(0.01f, dir.magnitude);
+        pipe.localPosition = (start + end) * 0.5f;
+        pipe.localRotation = Quaternion.FromToRotation(Vector3.up, dir / len);
+        pipe.localScale = new Vector3(pr * 2f, len * 0.5f, pr * 2f);
+        if (mouth != null) mouth.localPosition = end - Vector3.up * pr * 0.9f;
+        if (mouthRing != null) mouthRing.localPosition = end - Vector3.up * pr * 2.2f;
     }
 
     // ---- Holding ----
@@ -423,7 +453,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
     private void SendIntoBin(Held h)
     {
         float u = Unit(clicker);
-        Vector3 at = transform.TransformPoint(new Vector3(0f, (PipeY - PipeRadius * 3f) * u, PipeEndZ * u));
+        Vector3 at = transform.TransformPoint(float.IsNaN(pipeExit.x) ? DefaultPipeExit(u) : pipeExit);
         clicker.SpawnStoredPixel(h.tier, h.amount, at, Vector3.down * feedPush);
     }
 
