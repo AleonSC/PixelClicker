@@ -92,9 +92,6 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Pause button text size.")]
     [SerializeField] private float buttonFontSize = 34f;
 
-    [Tooltip("Pause button colour.")]
-    [SerializeField] private Color pauseButtonColor = new Color(0.35f, 0.35f, 0.42f, 1f);
-
     [Header("Menu")]
     [Tooltip("Title of the menu.")]
     [SerializeField] private string menuTitle = "Paused";
@@ -125,9 +122,6 @@ public class PixelPauseMenu : MonoBehaviour
 
     [Tooltip("Text on the Overwrite button (it is a hold button). Empty = the normal confirm text.")]
     [SerializeField] private string overwriteHoldText = "Hold to overwrite";
-
-    [Tooltip("Colour of the confirm button.")]
-    [SerializeField] private Color restartHoldColor = new Color(0.8f, 0.25f, 0.25f, 1f);
 
     [Tooltip("Colour of the fill that grows across the confirm button while it is held.")]
     [SerializeField] private Color restartFillColor = new Color(1f, 0.85f, 0.3f, 0.85f);
@@ -190,13 +184,7 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("How many slot rows show at once; more slots scroll.")]
     [SerializeField] private int visibleSlotRows = 5;
 
-    [Tooltip("Slot row colour.")]
-    [SerializeField] private Color slotColor = new Color(0.22f, 0.22f, 0.28f, 1f);
-
-    [Tooltip("Colour of the selected slot.")]
-    [SerializeField] private Color slotSelectedColor = new Color(0.25f, 0.5f, 0.75f, 1f);
-
-    [Tooltip("Colour of the overwrite warning text and button.")]
+    [Tooltip("Colour of the overwrite warning title (the Overwrite button itself is a Danger button, see PixelUITheme).")]
     [SerializeField] private Color overwriteWarningColor = new Color(0.9f, 0.35f, 0.3f, 1f);
 
     [Header("Save / Load result window")]
@@ -369,9 +357,6 @@ public class PixelPauseMenu : MonoBehaviour
 
     [Tooltip("Shown in the floor style picker when the scene has no floor to restyle.")]
     [SerializeField] private string noFloorText = "No floor found";
-
-    [Tooltip("Colour of the floor / sky pop-out box's arrow buttons.")]
-    [SerializeField] private Color floorArrowColor = new Color(0.25f, 0.25f, 0.3f, 1f);
 
     [Tooltip("Label of the master volume slider.")]
     [SerializeField] private string masterVolumeLabel = "Master volume";
@@ -551,11 +536,8 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Panel background colour.")]
     [SerializeField] private Color panelColor = new Color(0.07f, 0.07f, 0.09f, 0.97f);
 
-    [Tooltip("Normal menu button colour.")]
+    [Tooltip("Colour of the main menu's own buttons (Resume, Save / Load, Stats, Settings, Guide - their look on purpose). Every other button takes its colour from its role (PixelUITheme).")]
     [SerializeField] private Color menuButtonColor = new Color(0.2f, 0.45f, 0.9f, 1f);
-
-    [Tooltip("Colour of the Quit button.")]
-    [SerializeField] private Color quitButtonColor = new Color(0.8f, 0.25f, 0.25f, 1f);
 
     [Tooltip("Text colour.")]
     [SerializeField] private Color textColor = Color.white;
@@ -608,8 +590,10 @@ public class PixelPauseMenu : MonoBehaviour
     private struct MenuEntry
     {
         public string label;
-        public Color color;
+        public Color color;      // used when role is Custom (the main menu's own blue buttons)
+        public ButtonRole role;  // Custom (the default) = 'color'; Give feedback is Success, Quit is Danger
         public UnityEngine.Events.UnityAction action;
+
         public bool fullRow; // spans the whole row (Resume, Quit)
     }
     private ScrollRect statsScroll;
@@ -848,7 +832,7 @@ public class PixelPauseMenu : MonoBehaviour
         title.rectTransform.offsetMax = new Vector2(-70f, 0f);
         title.rectTransform.offsetMin = new Vector2(16f, 0f);
 
-        Button close = MakeButton(box, "Close", "X", new Vector2(52f, 52f), menuButtonColor, rowFontSize);
+        Button close = MakeButton(box, "Close", "X", new Vector2(52f, 52f), ButtonRole.Neutral, rowFontSize);
         RectTransform cr = close.GetComponent<RectTransform>();
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
         cr.anchoredPosition = new Vector2(-14f, -14f);
@@ -868,7 +852,7 @@ public class PixelPauseMenu : MonoBehaviour
         for (int side = -1; side <= 1; side += 2)
         {
             int dir = side;
-            Button arrow = MakeButton(box, side < 0 ? "Previous" : "Next", side < 0 ? "<" : ">", new Vector2(64f, 64f), floorArrowColor, rowFontSize);
+            Button arrow = MakeButton(box, side < 0 ? "Previous" : "Next", side < 0 ? "<" : ">", new Vector2(64f, 64f), ButtonRole.Neutral, rowFontSize);
             RectTransform ar = arrow.GetComponent<RectTransform>();
             ar.anchorMin = ar.anchorMax = ar.pivot = new Vector2(0.5f, 0.5f);
             ar.anchoredPosition = new Vector2(side * 140f, -18f);
@@ -1099,6 +1083,18 @@ public class PixelPauseMenu : MonoBehaviour
     private Button MakeButton(Transform parent, string objectName, string label, Vector2 size, Color color, float labelSize)
         => PixelUIKit.CreateButton(font, parent, objectName, label, size, color, textColor, labelSize);
 
+    /// <summary>A button in a ROLE (its colour comes from PixelUITheme), with the menu's text colour.</summary>
+    private Button MakeButton(Transform parent, string objectName, string label, Vector2 size, ButtonRole role, float labelSize)
+    {
+        Button b = PixelUIKit.CreateButton(font, parent, objectName, label, size, PixelUITheme.ColorOf(role), textColor, labelSize);
+        PixelUIKit.SetRole(b, role);
+        return b;
+    }
+
+    /// <summary>A main-menu entry's button (or a search result): its role, or its own colour when the role is Custom.</summary>
+    private Button MakeButton(Transform parent, string objectName, string label, Vector2 size, ButtonRole role, Color customColor, float labelSize)
+        => role == ButtonRole.Custom ? MakeButton(parent, objectName, label, size, customColor, labelSize) : MakeButton(parent, objectName, label, size, role, labelSize);
+
     /// <summary>Shows / hides the whole pause menu canvas (the feedback window hides it for a frame to take a clean screenshot).</summary>
     public static void SetMenuVisible(bool visible)
     {
@@ -1121,7 +1117,7 @@ public class PixelPauseMenu : MonoBehaviour
         if (showPauseButtonOnScreen)
         {
             Button pause = MakeButton(canvasRoot.transform, "Pause Button", pauseButtonText, buttonSize,
-                                      pauseButtonColor, buttonFontSize);
+                                      ButtonRole.Neutral, buttonFontSize);
             float ax = pauseButtonAnchor == ButtonAnchor.TopLeft || pauseButtonAnchor == ButtonAnchor.BottomLeft ? 0f
                      : pauseButtonAnchor == ButtonAnchor.TopRight || pauseButtonAnchor == ButtonAnchor.BottomRight ? 1f : 0.5f;
             float ay = pauseButtonAnchor == ButtonAnchor.TopLeft || pauseButtonAnchor == ButtonAnchor.TopCenter
@@ -1200,9 +1196,9 @@ public class PixelPauseMenu : MonoBehaviour
         if (controlsScreen != null || howToPlayScreen != null) entries.Add(new MenuEntry { label = guideMenuText, color = menuButtonColor, action = () => ShowView((controlsScreen != null ? controlsScreen : howToPlayScreen).panel) });
         // How to Play | Changelog
         // Give feedback: a long green button right above Quit
-        entries.Add(new MenuEntry { label = string.IsNullOrEmpty(feedbackText) ? "Give feedback" : feedbackText, color = new Color(0.2f, 0.62f, 0.32f, 1f), action = () => PixelFeedback.OpenWindow(), fullRow = true });
+        entries.Add(new MenuEntry { label = string.IsNullOrEmpty(feedbackText) ? "Give feedback" : feedbackText, role = ButtonRole.Success, action = () => PixelFeedback.OpenWindow(), fullRow = true });
         // Quit at the bottom, alone
-        if (showQuit) entries.Add(new MenuEntry { label = quitText, color = quitButtonColor, action = () => ShowView(quitPanel), fullRow = true });
+        if (showQuit) entries.Add(new MenuEntry { label = quitText, role = ButtonRole.Danger, action = () => ShowView(quitPanel), fullRow = true });
 
         int buttonsBefore = panel.transform.childCount;
         LayoutMainButtons(panel.transform, entries, y, panelRect);
@@ -1292,7 +1288,7 @@ public class PixelPauseMenu : MonoBehaviour
     /// <summary>An X at the top right of a section window that goes back (to the main menu, or to 'backTo').</summary>
     private void AddCloseX(GameObject panel, GameObject backTo = null)
     {
-        Button close = MakeButton(panel.transform, "Close Button", "X", new Vector2(60f, 60f), new Color(0.3f, 0.3f, 0.35f, 1f), menuButtonFontSize * 0.8f);
+        Button close = MakeButton(panel.transform, "Close Button", "X", new Vector2(60f, 60f), ButtonRole.Neutral, menuButtonFontSize * 0.8f);
         RectTransform cr = close.GetComponent<RectTransform>();
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
         cr.sizeDelta = new Vector2(60f, 60f);
@@ -1454,7 +1450,7 @@ public class PixelPauseMenu : MonoBehaviour
     private void AddEyedropperButton(Toggle toggle, UnityEngine.Events.UnityAction onClick)
     {
         RectTransform row = toggle.transform.parent as RectTransform;
-        Button b = MakeButton(row, "Eyedropper Button", "", new Vector2(tickBoxSize, tickBoxSize), tickBoxColor, rowFontSize * 0.7f);
+        Button b = MakeButton(row, "Eyedropper Button", "", new Vector2(tickBoxSize, tickBoxSize), ButtonRole.Neutral, rowFontSize * 0.7f);
         RectTransform br = b.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0.5f);
         br.sizeDelta = new Vector2(tickBoxSize, tickBoxSize);
@@ -1481,7 +1477,7 @@ public class PixelPauseMenu : MonoBehaviour
     private void AddCycleButton(Toggle toggle, System.Func<bool> get, System.Action<bool> set)
     {
         RectTransform row = toggle.transform.parent as RectTransform;
-        Button b = MakeButton(row, "Cycle Button", "", new Vector2(tickBoxSize, tickBoxSize), tickBoxColor, rowFontSize * 0.7f);
+        Button b = MakeButton(row, "Cycle Button", "", new Vector2(tickBoxSize, tickBoxSize), ButtonRole.Neutral, rowFontSize * 0.7f);
         RectTransform br = b.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0.5f);
         br.sizeDelta = new Vector2(tickBoxSize, tickBoxSize);
@@ -1607,7 +1603,7 @@ public class PixelPauseMenu : MonoBehaviour
         if (showRestart)
         {
             Vector2 restartSize = new Vector2(menuButtonSize.x * 0.5f, menuButtonSize.y * 0.7f);   // a small button at the bottom
-            Button restart = MakeButton(statsPanel.transform, "Restart Button", restartText, restartSize, quitButtonColor, menuButtonFontSize * 0.7f);
+            Button restart = MakeButton(statsPanel.transform, "Restart Button", restartText, restartSize, ButtonRole.Danger, menuButtonFontSize * 0.7f);
             statsRestartRect = restart.GetComponent<RectTransform>();
             statsRestartRect.anchorMin = statsRestartRect.anchorMax = statsRestartRect.pivot = new Vector2(0.5f, 1f);
             restart.onClick.AddListener(() => ShowView(restartPanel));
@@ -1660,7 +1656,7 @@ public class PixelPauseMenu : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             int slot = i + 1;
-            Button b = MakeButton(content, "Slot " + slot, "", new Vector2(panelSize.x - 80f, rowH), slotColor, rowFontSize);   // exactly as wide as the Save / Load buttons below (the scroll bar sits in the margin)
+            Button b = MakeButton(content, "Slot " + slot, "", new Vector2(panelSize.x - 80f, rowH), ButtonRole.Neutral, rowFontSize);   // exactly as wide as the Save / Load buttons below (the scroll bar sits in the margin)
             RectTransform rt = b.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
             rt.anchoredPosition = new Vector2(0f, -(i * rowStep));
@@ -1681,7 +1677,7 @@ public class PixelPauseMenu : MonoBehaviour
             label.rectTransform.offsetMax = new Vector2(-(renameWidth + 24f), -6f);
 
             // A Rename button at the right end of the row.
-            Button rename = MakeButton(b.transform, "Rename", renameButtonText, new Vector2(renameWidth, rowH - 20f), menuButtonColor, rowFontSize * 0.75f);
+            Button rename = MakeButton(b.transform, "Rename", renameButtonText, new Vector2(renameWidth, rowH - 20f), ButtonRole.Neutral, rowFontSize * 0.75f);
             RectTransform rr = rename.GetComponent<RectTransform>();
             rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(1f, 0.5f);
             rr.anchoredPosition = new Vector2(-10f, 0f);
@@ -1695,8 +1691,8 @@ public class PixelPauseMenu : MonoBehaviour
         // Save | Load for the selected slot.
         float gap = 12f;
         Vector2 half = new Vector2((panelSize.x - 80f - gap) * 0.5f, menuButtonSize.y);
-        slotSaveButton = MakeButton(saveLoadPanel.transform, "Slot Save", saveText, half, menuButtonColor, menuButtonFontSize);
-        slotLoadButton = MakeButton(saveLoadPanel.transform, "Slot Load", loadText, half, menuButtonColor, menuButtonFontSize);
+        slotSaveButton = MakeButton(saveLoadPanel.transform, "Slot Save", saveText, half, ButtonRole.Primary, menuButtonFontSize);
+        slotLoadButton = MakeButton(saveLoadPanel.transform, "Slot Load", loadText, half, ButtonRole.Primary, menuButtonFontSize);
         RectTransform sr = slotSaveButton.GetComponent<RectTransform>(), lr = slotLoadButton.GetComponent<RectTransform>();
         sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0.5f, 1f);
         lr.anchorMin = lr.anchorMax = lr.pivot = new Vector2(0.5f, 1f);
@@ -1707,7 +1703,7 @@ public class PixelPauseMenu : MonoBehaviour
         y += menuButtonSize.y + 14f;
 
         // A small button under Save | Load that opens the list of autosaves (a separate window).
-        Button autosavesButton = MakeButton(saveLoadPanel.transform, "Autosaves Button", autosavesText, new Vector2(Mathf.Min(260f, panelSize.x - 80f), menuButtonSize.y * 0.62f), tickBoxColor, menuButtonFontSize * 0.6f);
+        Button autosavesButton = MakeButton(saveLoadPanel.transform, "Autosaves Button", autosavesText, new Vector2(Mathf.Min(260f, panelSize.x - 80f), menuButtonSize.y * 0.62f), ButtonRole.Neutral, menuButtonFontSize * 0.6f);
         RectTransform ar = autosavesButton.GetComponent<RectTransform>();
         ar.anchorMin = ar.anchorMax = ar.pivot = new Vector2(0.5f, 1f);
         ar.anchoredPosition = new Vector2(0f, -y);
@@ -1765,8 +1761,8 @@ public class PixelPauseMenu : MonoBehaviour
 
         float gap = 12f;
         Vector2 half = new Vector2((br.sizeDelta.x - 60f - gap) * 0.5f, menuButtonSize.y);
-        Button confirm = MakeButton(box.transform, "Overwrite", overwriteConfirmText, half, overwriteWarningColor, menuButtonFontSize);
-        Button cancel = MakeButton(box.transform, "Cancel", overwriteCancelText, half, menuButtonColor, menuButtonFontSize);
+        Button confirm = MakeButton(box.transform, "Overwrite", overwriteConfirmText, half, ButtonRole.Danger, menuButtonFontSize);
+        Button cancel = MakeButton(box.transform, "Cancel", overwriteCancelText, half, ButtonRole.Neutral, menuButtonFontSize);
         RectTransform cr = confirm.GetComponent<RectTransform>(), xr = cancel.GetComponent<RectTransform>();
         foreach (Button b in new[] { confirm, cancel })
         {
@@ -1836,7 +1832,7 @@ public class PixelPauseMenu : MonoBehaviour
         lr.offsetMin = new Vector2(30f, 24f + menuButtonSize.y + 20f);
         lr.offsetMax = new Vector2(-30f, -30f);
 
-        Button ok = MakeButton(card.transform, "Got It", resultButtonText, new Vector2(cr.sizeDelta.x - 80f, menuButtonSize.y), menuButtonColor, menuButtonFontSize);
+        Button ok = MakeButton(card.transform, "Got It", resultButtonText, new Vector2(cr.sizeDelta.x - 80f, menuButtonSize.y), ButtonRole.Success, menuButtonFontSize);
         RectTransform or = ok.GetComponent<RectTransform>();
         or.anchorMin = or.anchorMax = or.pivot = new Vector2(0.5f, 0f);
         or.anchoredPosition = new Vector2(0f, 24f);
@@ -1882,8 +1878,8 @@ public class PixelPauseMenu : MonoBehaviour
 
         float gap = 12f;
         Vector2 half = new Vector2((br.sizeDelta.x - 60f - gap) * 0.5f, menuButtonSize.y);
-        Button ok = MakeButton(box.transform, "Rename OK", "OK", half, menuButtonColor, menuButtonFontSize);
-        Button cancel = MakeButton(box.transform, "Rename Cancel", overwriteCancelText, half, tickBoxColor, menuButtonFontSize);
+        Button ok = MakeButton(box.transform, "Rename OK", "OK", half, ButtonRole.Success, menuButtonFontSize);
+        Button cancel = MakeButton(box.transform, "Rename Cancel", overwriteCancelText, half, ButtonRole.Neutral, menuButtonFontSize);
         RectTransform okr = ok.GetComponent<RectTransform>(), cr = cancel.GetComponent<RectTransform>();
         okr.anchorMin = okr.anchorMax = okr.pivot = new Vector2(0.5f, 0f);
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(0.5f, 0f);
@@ -2040,23 +2036,8 @@ public class PixelPauseMenu : MonoBehaviour
                 ? savedAt + "\n" + string.Format(slotTimeFormat, PixelStats.FormatTime(played)) + "\n" + string.Format(slotPixelsFormat, FormatCount(pixels)) + "\n<color=#ff9a90>Hold right click to delete</color>"
                 : emptySlotText;
             slotLabels[i].text = "<b>" + name + "</b>";
-            // The selected row shows a blue highlight layer (a child behind the label, so it never depends on the button's own colour / tint state).
-            Transform hl = slotButtons[i].transform.Find("Selected Highlight");
-            if (hl == null)
-            {
-                GameObject hg = new GameObject("Selected Highlight", typeof(RectTransform), typeof(Image));
-                hg.transform.SetParent(slotButtons[i].transform, false);
-                hg.transform.SetAsFirstSibling();
-                Image hi = hg.GetComponent<Image>();
-                hi.sprite = slotButtons[i].GetComponent<Image>().sprite;
-                hi.type = Image.Type.Sliced;
-                hi.color = slotSelectedColor;
-                hi.raycastTarget = false;
-                PixelUIKit.Stretch(hg.GetComponent<RectTransform>());
-                hl = hg.transform;
-            }
-            slotButtons[i].GetComponent<Image>().color = slotColor;
-            hl.gameObject.SetActive(slot == selectedSlot);
+            // The selected row is a Selected button, the others Neutral (PixelUITheme; SetRole keeps the colour managed, so it follows the selection).
+            PixelUIKit.SetRole(slotButtons[i], slot == selectedSlot ? ButtonRole.Selected : ButtonRole.Neutral);
         }
         bool hasSave = saveGame.SlotHasSave(selectedSlot);
         bool newGame = openedFromTitle && !hasSave;   // from the main menu an empty slot starts a new game there
@@ -2104,8 +2085,8 @@ public class PixelPauseMenu : MonoBehaviour
     private void BuildQuitPanel()
     {
         quitPanel = BuildSectionPanel("Quit Panel", quitChoiceTitle, out float y);
-        AddMenuButton(quitPanel.transform, quitDesktopText, quitButtonColor, ref y, Quit);
-        AddMenuButton(quitPanel.transform, quitMainMenuText, menuButtonColor, ref y, ToMainMenu);
+        AddMenuButton(quitPanel.transform, quitDesktopText, ButtonRole.Danger, ref y, Quit);
+        AddMenuButton(quitPanel.transform, quitMainMenuText, ButtonRole.Neutral, ref y, ToMainMenu);
         FinishSectionPanel(quitPanel, y);
         PixelQuitFx.Build(quitPanel);   // the screen goes dark and red neon light pours out round the box
     }
@@ -2136,7 +2117,7 @@ public class PixelPauseMenu : MonoBehaviour
         y += height + 20f;
 
         // The hold-to-confirm button: a fill grows across it while the mouse button stays down.
-        Button hold = MakeButton(restartPanel.transform, "Hold To Confirm", "", menuButtonSize, restartHoldColor, menuButtonFontSize);
+        Button hold = MakeButton(restartPanel.transform, "Hold To Confirm", "", menuButtonSize, ButtonRole.Danger, menuButtonFontSize);
         RectTransform hr = hold.GetComponent<RectTransform>();
         hr.anchorMin = hr.anchorMax = hr.pivot = new Vector2(0.5f, 1f);
         hr.anchoredPosition = new Vector2(0f, -y);
@@ -2213,7 +2194,7 @@ public class PixelPauseMenu : MonoBehaviour
             bool controls = tab == 0, database = tab == 2;
             bool active = !database && controls == isControlsTab;
             string label = controls ? controlsText : database ? databaseTabText : howToPlayTabText;
-            Button tabButton = MakeButton(s.panel.transform, label + " Tab", label, new Vector2(tabWidth, rowHeight), active ? menuButtonColor : tickBoxColor, menuButtonFontSize * 0.8f);
+            Button tabButton = MakeButton(s.panel.transform, label + " Tab", label, new Vector2(tabWidth, rowHeight), active ? ButtonRole.Selected : ButtonRole.Neutral, menuButtonFontSize * 0.8f);
             RectTransform tabRect = tabButton.GetComponent<RectTransform>();
             tabRect.anchorMin = tabRect.anchorMax = tabRect.pivot = new Vector2(0.5f, 1f);
             tabRect.anchoredPosition = new Vector2((tab - 1) * (tabWidth + 10f), -y);
@@ -2415,11 +2396,12 @@ public class PixelPauseMenu : MonoBehaviour
 
         // Collect every result first, so the lines can be sized (and the settings list trimmed) to fit inside the panel.
         List<string> labels = new List<string>();
-        List<Color> colors = new List<Color>();
+        List<Color> colors = new List<Color>();   // (used by role Custom results: the main menu's own colours)
+        List<ButtonRole> roles = new List<ButtonRole>();
         List<UnityEngine.Events.UnityAction> actions = new List<UnityEngine.Events.UnityAction>();
         if (mainEntries != null)
             foreach (MenuEntry e in mainEntries)
-                if (e.label.ToLowerInvariant().Contains(menuSearch)) { labels.Add(e.label); colors.Add(e.color); actions.Add(e.action); }
+                if (e.label.ToLowerInvariant().Contains(menuSearch)) { labels.Add(e.label); colors.Add(e.color); roles.Add(e.role); actions.Add(e.action); }
         int entryCount = labels.Count;
 
         // Every floor / sky whose NAME matches: a result that switches to it straight away (it stays highlighted as the one in use).
@@ -2439,7 +2421,7 @@ public class PixelPauseMenu : MonoBehaviour
                 int index = i;
                 IPixelLookSource target = look;
                 labels.Add(kind + ": " + n + (look.Current == i ? "  (in use)" : ""));
-                colors.Add(look.Current == i ? new Color(0.2f, 0.45f, 0.3f, 1f) : tickBoxColor);
+                colors.Add(Color.clear); roles.Add(look.Current == i ? ButtonRole.Selected : ButtonRole.Neutral);
                 actions.Add(() => { target.SetStyle(index); PixelAudio.Play("ui_click"); OnMenuSearchChanged(menuSearch); settingsRefreshersRun(); });
             }
         }
@@ -2460,18 +2442,18 @@ public class PixelPauseMenu : MonoBehaviour
         int shownSettings = settingLabels.Count <= settingsRoom ? settingLabels.Count : Mathf.Max(0, settingsRoom - 1);   // one line is kept for '+ N more'
         for (int k = 0; k < shownSettings; k++)
         {
-            labels.Add(settingsText + " > " + settingLabels[k]); colors.Add(tickBoxColor); actions.Add(OpenFilteredSettings);
+            labels.Add(settingsText + " > " + settingLabels[k]); colors.Add(Color.clear); roles.Add(ButtonRole.Neutral); actions.Add(OpenFilteredSettings);
         }
         if (settingLabels.Count > shownSettings)
         {
-            labels.Add("+ " + (settingLabels.Count - shownSettings) + " more in " + settingsText); colors.Add(tickBoxColor); actions.Add(OpenFilteredSettings);
+            labels.Add("+ " + (settingLabels.Count - shownSettings) + " more in " + settingsText); colors.Add(Color.clear); roles.Add(ButtonRole.Neutral); actions.Add(OpenFilteredSettings);
         }
 
         float height = Mathf.Clamp(avail / Mathf.Max(1, labels.Count) - menuButtonSpacing, minHeight, Mathf.Min(menuButtonSize.y, 64f));
         float y = menuSearchTop;
         for (int k = 0; k < labels.Count; k++)
         {
-            Button b = MakeButton(mainPanel.transform, labels[k] + " Result", labels[k], new Vector2(mainPanelWidth - 80f, height), colors[k], menuButtonFontSize * (height < 50f ? 0.7f : 0.85f));
+            Button b = MakeButton(mainPanel.transform, labels[k] + " Result", labels[k], new Vector2(mainPanelWidth - 80f, height), roles[k], colors[k], menuButtonFontSize * (height < 50f ? 0.7f : 0.85f));
             RectTransform rt = b.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
             rt.anchoredPosition = new Vector2(0f, -y);
@@ -2662,7 +2644,7 @@ public class PixelPauseMenu : MonoBehaviour
         // The two fixed buttons at the very bottom of the window: as wide as the section headers, not tall.
         void FooterButton(string label, UnityEngine.Events.UnityAction onClick, float offset)
         {
-            Button fb = MakeButton(settingsPanel.transform, label + " Button", label, new Vector2(10f, footerH), menuButtonColor, rowFontSize * 0.7f);
+            Button fb = MakeButton(settingsPanel.transform, label + " Button", label, new Vector2(10f, footerH), ButtonRole.Neutral, rowFontSize * 0.7f);
             RectTransform fr = fb.GetComponent<RectTransform>();
             fr.anchorMin = new Vector2(0f, 1f); fr.anchorMax = new Vector2(1f, 1f); fr.pivot = new Vector2(0.5f, 1f);
             fr.sizeDelta = new Vector2(-96f, footerH);
@@ -2696,7 +2678,7 @@ public class PixelPauseMenu : MonoBehaviour
     {
         y += 8f;
         float h = rowHeight * 0.8f;
-        Button b = MakeButton(parent, text + " Header", "", new Vector2(10f, h), tickBoxColor, rowFontSize * 0.9f);
+        Button b = MakeButton(parent, text + " Header", "", new Vector2(10f, h), ButtonRole.Neutral, rowFontSize * 0.9f);
         RectTransform rt = b.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0f, 1f);
         rt.anchorMax = new Vector2(1f, 1f);
@@ -2885,7 +2867,7 @@ public class PixelPauseMenu : MonoBehaviour
     /// <summary>A full-width button row (an action rather than a setting).</summary>
     private void AddWideButtonRow(Transform parent, string label, UnityEngine.Events.UnityAction onClick, ref float y, float inset = SettingsRowInset)
     {
-        Button b = MakeButton(parent, label + " Button", label, new Vector2(10f, rowHeight), menuButtonColor, rowFontSize * 0.7f);
+        Button b = MakeButton(parent, label + " Button", label, new Vector2(10f, rowHeight), ButtonRole.Neutral, rowFontSize * 0.7f);
         RectTransform rt = b.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0f, 1f);
         rt.anchorMax = new Vector2(1f, 1f);
@@ -2903,7 +2885,7 @@ public class PixelPauseMenu : MonoBehaviour
     /// <summary>A full-width button as a row of the settings list (opens a sub-screen).</summary>
     private void AddWideButtonRow(Transform parent, string label, UnityEngine.Events.UnityAction onClick, ref float y)
     {
-        Button b = MakeButton(parent, label + " Button", label, new Vector2(10f, rowHeight), menuButtonColor, rowFontSize * 0.7f);
+        Button b = MakeButton(parent, label + " Button", label, new Vector2(10f, rowHeight), ButtonRole.Neutral, rowFontSize * 0.7f);
         RectTransform r = b.GetComponent<RectTransform>();
         r.anchorMin = new Vector2(0f, 1f); r.anchorMax = new Vector2(1f, 1f); r.pivot = new Vector2(0.5f, 1f);
         r.sizeDelta = new Vector2(-SettingsRowInset, rowHeight);
@@ -2954,7 +2936,7 @@ public class PixelPauseMenu : MonoBehaviour
         }
         PixelUIKit.UpdateScrollView(scroll, bar, y, viewHeight);
 
-        Button all = MakeButton(playlistPanel.transform, "Select All Button", playlistAllText, new Vector2(10f, footerH), menuButtonColor, rowFontSize * 0.7f);
+        Button all = MakeButton(playlistPanel.transform, "Select All Button", playlistAllText, new Vector2(10f, footerH), ButtonRole.Neutral, rowFontSize * 0.7f);
         RectTransform ar = all.GetComponent<RectTransform>();
         ar.anchorMin = new Vector2(0f, 1f); ar.anchorMax = new Vector2(1f, 1f); ar.pivot = new Vector2(0.5f, 1f);
         ar.sizeDelta = new Vector2(-96f, footerH);
@@ -2973,7 +2955,7 @@ public class PixelPauseMenu : MonoBehaviour
     private void AddPreviewButton(Toggle toggle, int track)
     {
         RectTransform row = toggle.transform.parent as RectTransform;
-        Button b = MakeButton(row, "Preview Button", "", new Vector2(tickBoxSize, tickBoxSize), tickBoxColor, rowFontSize * 0.7f);
+        Button b = MakeButton(row, "Preview Button", "", new Vector2(tickBoxSize, tickBoxSize), ButtonRole.Neutral, rowFontSize * 0.7f);
         RectTransform br = b.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0.5f);
         br.sizeDelta = new Vector2(tickBoxSize, tickBoxSize);
@@ -2990,7 +2972,7 @@ public class PixelPauseMenu : MonoBehaviour
     {
         int playing = PixelAudio.Instance != null ? PixelAudio.Instance.PreviewingTrack : -1;
         for (int i = 0; i < previewButtons.Count; i++)
-            if (previewButtons[i] != null) previewButtons[i].color = i == playing ? new Color(0.25f, 0.65f, 0.4f, 1f) : tickBoxColor;
+            if (previewButtons[i] != null) PixelUIKit.SetRole(previewButtons[i], i == playing ? ButtonRole.Selected : ButtonRole.Neutral);
     }
 
     private void Update_PlaylistPreview()
@@ -3035,7 +3017,7 @@ public class PixelPauseMenu : MonoBehaviour
             keyLabel.fontSizeMin = 9f;
             keyLabel.rectTransform.anchorMax = new Vector2(0.62f, 1f);
             keyLabel.rectTransform.offsetMax = new Vector2(-12f, 0f);
-            Button b = MakeButton(row, "Key", "", new Vector2(10f, 10f), tickBoxColor, rowFontSize * 0.85f);
+            Button b = MakeButton(row, "Key", "", new Vector2(10f, 10f), ButtonRole.Neutral, rowFontSize * 0.85f);
             RectTransform br = b.GetComponent<RectTransform>();
             br.anchorMin = new Vector2(0.64f, 0.06f);
             br.anchorMax = new Vector2(1f, 0.94f);
@@ -3050,7 +3032,7 @@ public class PixelPauseMenu : MonoBehaviour
         }
 
         y += 18f;
-        AddMenuButton(keysPanel.transform, resetKeysText, menuButtonColor, ref y, () =>
+        AddMenuButton(keysPanel.transform, resetKeysText, ButtonRole.Danger, ref y, () =>
         {
             PixelKeys.ResetAll();
             capturingAction = -1;
@@ -3175,7 +3157,7 @@ public class PixelPauseMenu : MonoBehaviour
         {
             // A small 'pop-out' button right of the picker: closes the settings and opens a draggable box for this look (floor or sky).
             pr.offsetMax = new Vector2(-(rowHeight * 0.8f + 10f), 0f);   // (room for it)
-            Button pop = MakeButton(row, "Look Popout Button", "", new Vector2(rowHeight * 0.8f, rowHeight * 0.88f), menuButtonColor, rowFontSize * 0.7f);
+            Button pop = MakeButton(row, "Look Popout Button", "", new Vector2(rowHeight * 0.8f, rowHeight * 0.88f), ButtonRole.Neutral, rowFontSize * 0.7f);
             RectTransform pbr = pop.GetComponent<RectTransform>();
             pbr.anchorMin = pbr.anchorMax = pbr.pivot = new Vector2(1f, 0.5f);
             pbr.anchoredPosition = Vector2.zero;
@@ -3240,7 +3222,7 @@ public class PixelPauseMenu : MonoBehaviour
     {
         y += 8f;
         float h = rowHeight * 0.8f;
-        Button b = MakeButton(parent, text + " Header", (collapsed ? "+  " : "-  ") + text, new Vector2(10f, h), tickBoxColor, rowFontSize * 0.7f);
+        Button b = MakeButton(parent, text + " Header", (collapsed ? "+  " : "-  ") + text, new Vector2(10f, h), ButtonRole.Neutral, rowFontSize * 0.7f);
         RectTransform rt = b.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0f, 1f);
         rt.anchorMax = new Vector2(1f, 1f);
@@ -3389,7 +3371,7 @@ public class PixelPauseMenu : MonoBehaviour
             float x = spans[i] ? 0f : -(mainPanelWidth - 80f) * 0.5f + cellWidth * 0.5f + colOf[i] * (cellWidth + columnGap);
 
             Button button = MakeButton(parent, entries[i].label + " Button", entries[i].label, new Vector2(width, buttonHeight),
-                                       entries[i].color, menuButtonFontSize);
+                                       entries[i].role, entries[i].color, menuButtonFontSize);
             RectTransform rt = button.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
             rt.anchoredPosition = new Vector2(x, -(top + rowOf[i] * (buttonHeight + menuButtonSpacing)));
@@ -3397,7 +3379,7 @@ public class PixelPauseMenu : MonoBehaviour
 
             // The fancy pause menu (PixelMenuFx): an animated button with an accent stripe, a shine, an icon for a few entries, and a staggered entrance. It hides itself when the setting is off.
             Texture2D fancyIcon = entries[i].label == saveLoadMenuText ? PixelMenuIcons.Floppy : entries[i].label == settingsText ? PixelMenuIcons.Cog : entries[i].label == quitText ? PixelMenuIcons.Door : null;
-            PixelMenuFx.Decorate(button, Color.Lerp(entries[i].color, Color.white, 0.55f), fancyIcon, i);
+            PixelMenuFx.Decorate(button, Color.Lerp(entries[i].role == ButtonRole.Custom ? entries[i].color : PixelUITheme.ColorOf(entries[i].role), Color.white, 0.55f), fancyIcon, i);
         }
 
         float needed = top + rows * (buttonHeight + menuButtonSpacing) + 10f;
@@ -3429,7 +3411,7 @@ public class PixelPauseMenu : MonoBehaviour
         UnityEngine.Events.UnityAction[] actions = { a, b };
         for (int i = 0; i < 2; i++)
         {
-            Button button = MakeButton(parent, labels[i] + " Button", labels[i], half, menuButtonColor, menuButtonFontSize);
+            Button button = MakeButton(parent, labels[i] + " Button", labels[i], half, ButtonRole.Neutral, menuButtonFontSize);
             RectTransform rt = button.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
             rt.anchoredPosition = new Vector2((i == 0 ? -1f : 1f) * (half.x * 0.5f + gap * 0.5f), -y);
@@ -3438,9 +3420,9 @@ public class PixelPauseMenu : MonoBehaviour
         y += menuButtonSize.y + menuButtonSpacing;
     }
 
-    private void AddMenuButton(Transform parent, string label, Color color, ref float y, UnityEngine.Events.UnityAction onClick)
+    private void AddMenuButton(Transform parent, string label, ButtonRole role, ref float y, UnityEngine.Events.UnityAction onClick)
     {
-        Button button = MakeButton(parent, label + " Button", label, menuButtonSize, color, menuButtonFontSize);
+        Button button = MakeButton(parent, label + " Button", label, menuButtonSize, role, menuButtonFontSize);
         RectTransform rt = button.GetComponent<RectTransform>();
         rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
         rt.anchoredPosition = new Vector2(0f, -y);

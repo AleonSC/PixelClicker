@@ -333,7 +333,7 @@ public class PixelLogoView : MonoBehaviour
 
     private RectTransform MakeArrow(TMP_FontAsset font, string name, bool left, float x, float y, out CanvasGroup g)
     {
-        Button b = PixelUIKit.CreateButton(font, transform, name, left ? "<" : ">", new Vector2(64f, 90f), new Color(0.25f, 0.3f, 0.4f, 0.95f), Color.white, 36f);
+        Button b = PixelUIKit.CreateButton(font, transform, name, left ? "<" : ">", new Vector2(64f, 90f), ButtonRole.Neutral, 36f);
         PixelUIKit.UseArrowGlyph(b, left);
         RectTransform r = b.GetComponent<RectTransform>();
         r.anchorMin = r.anchorMax = new Vector2(0.5f, 1f);

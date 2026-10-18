@@ -114,10 +114,7 @@ public partial class PixelTitleScreen : MonoBehaviour
     [Tooltip("Font size of the Play button.")]
     [SerializeField] private float playFontSize = 64f;
 
-    [Tooltip("Colour of the Play button.")]
-    [SerializeField] private Color buttonColor = new Color(0.2f, 0.65f, 0.35f, 1f);
-
-    [Tooltip("Colour of the Play button's text.")]
+    [Tooltip("Colour of the button text (the buttons' own colours come from their roles, PixelUITheme: Play = Success, Load / Settings = Neutral, Quit = Danger).")]
     [SerializeField] private Color buttonTextColor = Color.white;
 
     [Min(20f)]
@@ -137,9 +134,6 @@ public partial class PixelTitleScreen : MonoBehaviour
     [Tooltip("Text on the Settings button.")]
     [SerializeField] private string settingsText = "Settings";
 
-    [Tooltip("Colour of the Load and Settings buttons.")]
-    [SerializeField] private Color smallButtonColor = new Color(0.25f, 0.3f, 0.4f, 1f);
-
     [Tooltip("Show the tiny Quit button at the very bottom of the screen.")]
     [SerializeField] private bool showQuit = true;
 
@@ -148,9 +142,6 @@ public partial class PixelTitleScreen : MonoBehaviour
 
     [Tooltip("Size of the Quit button.")]
     [SerializeField] private Vector2 quitSize = new Vector2(110f, 34f);
-
-    [Tooltip("Colour of the Quit button.")]
-    [SerializeField] private Color quitColor = new Color(0.45f, 0.18f, 0.18f, 0.9f);
 
     [Header("Floor and Sky Pickers")]
     [Tooltip("Put the pickers in the bottom right corner of the screen (the sky above the floor). Off = either side of the Play button.")]
@@ -505,10 +496,11 @@ public partial class PixelTitleScreen : MonoBehaviour
         return r;
     }
 
-    private Button MakeButton(TMP_FontAsset font, string objectName, string label, Vector2 size, Color color, float fontSize,
+    private Button MakeButton(TMP_FontAsset font, string objectName, string label, Vector2 size, ButtonRole role, float fontSize,
                               Vector2 anchor, Vector2 position, UnityEngine.Events.UnityAction onClick)
     {
-        Button b = PixelUIKit.CreateButton(font, foreground.transform, objectName, label, size, color, buttonTextColor, fontSize);
+        Button b = PixelUIKit.CreateButton(font, foreground.transform, objectName, label, size, PixelUITheme.ColorOf(role), buttonTextColor, fontSize);
+        PixelUIKit.SetRole(b, role);
         RectTransform r = b.GetComponent<RectTransform>();
         r.anchorMin = r.anchorMax = r.pivot = anchor;
         r.anchoredPosition = position;
@@ -588,10 +580,10 @@ public partial class PixelTitleScreen : MonoBehaviour
         float iconStep = iconWidth + buttonGap;
         float firstX = -iconStep * (iconCount - 1) * 0.5f;
 
-        playButton = MakeButton(font, "Play Button", playText, buttonSize, buttonColor, playFontSize, centre, new Vector2(0f, playY), OnPlay);
-        MakeIconButton(font, "Load Button", PixelMenuIcons.Floppy, loadText, iconSize, smallButtonColor, centre, new Vector2(firstX, smallY), OnLoad);
-        MakeIconButton(font, "Settings Button", PixelMenuIcons.Cog, settingsText, iconSize, smallButtonColor, centre, new Vector2(firstX + iconStep, smallY), OnSettings);
-        if (showQuit) MakeIconButton(font, "Quit Button", PixelMenuIcons.Door, quitText, iconSize, quitColor, centre, new Vector2(firstX + iconStep * 2f, smallY), OnQuit);
+        playButton = MakeButton(font, "Play Button", playText, buttonSize, ButtonRole.Success, playFontSize, centre, new Vector2(0f, playY), OnPlay);
+        MakeIconButton(font, "Load Button", PixelMenuIcons.Floppy, loadText, iconSize, ButtonRole.Neutral, centre, new Vector2(firstX, smallY), OnLoad);
+        MakeIconButton(font, "Settings Button", PixelMenuIcons.Cog, settingsText, iconSize, ButtonRole.Neutral, centre, new Vector2(firstX + iconStep, smallY), OnSettings);
+        if (showQuit) MakeIconButton(font, "Quit Button", PixelMenuIcons.Door, quitText, iconSize, ButtonRole.Danger, centre, new Vector2(firstX + iconStep * 2f, smallY), OnQuit);
 
         // The background music selector (shown at the start, gone after a few quiet seconds).
         if (showMusicPicker) PixelTitleMusic.Create(foreground.transform, font, musicPickerHideSeconds);
@@ -629,10 +621,10 @@ public partial class PixelTitleScreen : MonoBehaviour
     private string hoveredText;
 
     /// <summary>A button with a picture instead of a label; its name shows in a small tip while the mouse is over it.</summary>
-    private Button MakeIconButton(TMP_FontAsset font, string objectName, Texture2D icon, string tip, Vector2 size, Color color, Vector2 anchor, Vector2 position,
+    private Button MakeIconButton(TMP_FontAsset font, string objectName, Texture2D icon, string tip, Vector2 size, ButtonRole role, Vector2 anchor, Vector2 position,
                                   UnityEngine.Events.UnityAction onClick)
     {
-        Button b = MakeButton(font, objectName, "", size, color, smallFontSize, anchor, position, onClick);
+        Button b = MakeButton(font, objectName, "", size, role, smallFontSize, anchor, position, onClick);
         GameObject iconGo = new GameObject("Icon", typeof(RectTransform), typeof(RawImage));
         iconGo.transform.SetParent(b.transform, false);
         RawImage raw = iconGo.GetComponent<RawImage>();
@@ -715,7 +707,9 @@ public partial class PixelTitleScreen : MonoBehaviour
         shrinkRects.Add(rr);
         LookPicker fade = new LookPicker { rect = rr, group = root.AddComponent<CanvasGroup>() };
         fade.group.alpha = 0f;
-        Button b = PixelUIKit.CreateButton(font, root.transform, "Button", "", recordButtonSize, smallButtonColor, buttonTextColor, Mathf.Max(16f, lookNameFontSize));
+        Button b = PixelUIKit.CreateButton(font, root.transform, "Button", "", recordButtonSize, PixelUITheme.ColorOf(ButtonRole.Neutral), buttonTextColor, Mathf.Max(16f, lookNameFontSize));
+        PixelUIKit.SetRole(b, ButtonRole.Neutral);
+
         PixelUIKit.Stretch(b.GetComponent<RectTransform>());
         recordLabel = b.GetComponentInChildren<TMP_Text>();
         b.onClick.AddListener(() => { if (PixelSessionRecorder.Recording) PixelSessionRecorder.StopAndSave(); else PixelSessionRecorder.StartRecording(); UpdateRecordLabel(); });
