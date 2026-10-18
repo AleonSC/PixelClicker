@@ -955,9 +955,25 @@ public partial class PixelAudio : MonoBehaviour
         if (i >= 0 && i != CurrentMusicTrack) PlayTrack(i);
     }
 
+    private bool musicHeldByStudio;   // the music is paused for the studio intro (PixelStudioIntro.HoldsMusic)
+
     private void UpdateMusic()
     {
         if (musicSource == null) return;
+        if (PixelStudioIntro.HoldsMusic)
+        {
+            // The studio intro has its own sounds: all music waits (paused, so it carries on where it was) until it ends.
+            if (musicSource.isPlaying) musicSource.Pause();
+            if (cueSource != null && cueSource.isPlaying) cueSource.Pause();
+            musicHeldByStudio = true;
+            return;
+        }
+        if (musicHeldByStudio)
+        {
+            musicHeldByStudio = false;
+            musicSource.UnPause();
+            if (cueSource != null) cueSource.UnPause();
+        }
         UpdateCues();
         ApplyMusicVolume();
         UpdatePreview();

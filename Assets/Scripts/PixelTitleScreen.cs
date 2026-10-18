@@ -329,6 +329,7 @@ public partial class PixelTitleScreen : MonoBehaviour
         {
             ApplyTransition(0f);
             if (playIntro && !PixelSaveGame.AutoStartNewGame) StartCoroutine(IntroRoutine());   // launch: the black screen folds down into the bar (PixelTitleIntro.cs)
+            else PixelStudioIntro.SkipThisLaunch();   // (the studio intro plays from IntroRoutine; without it nothing should wait for it)
         }
     }
 
