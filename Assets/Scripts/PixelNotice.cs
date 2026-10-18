@@ -95,7 +95,7 @@ public class PixelNoticeBox : MonoBehaviour
         lr.offsetMax = new Vector2(-30f, -20f);
 
         Button ok = PixelUIKit.CreateButton(font, box.transform, "Ok", "Got it", new Vector2(200f, 60f),
-                                            new Color(0.25f, 0.5f, 0.7f, 1f), Color.white, 30f);
+                                            ButtonRole.Primary, 30f);
         RectTransform okr = ok.GetComponent<RectTransform>();
         okr.anchorMin = okr.anchorMax = okr.pivot = new Vector2(0.5f, 0f);
         okr.anchoredPosition = new Vector2(0f, 18f);
@@ -104,12 +104,12 @@ public class PixelNoticeBox : MonoBehaviour
         okLabel = ok.GetComponentInChildren<TMP_Text>();
 
         // A small back arrow at the top left: hold it to go back (only shown when the caller gave an onBack).
-        Button back = PixelUIKit.CreateButton(font, box.transform, "Back", "<", new Vector2(46f, 40f), new Color(0.2f, 0.35f, 0.5f, 1f), Color.white, 26f);
+        Button back = PixelUIKit.CreateButton(font, box.transform, "Back", "<", new Vector2(46f, 40f), ButtonRole.Neutral, 26f);
         PixelUIKit.UseArrowGlyph(back, true);
         backRect = back.GetComponent<RectTransform>();
         backRect.anchorMin = backRect.anchorMax = backRect.pivot = new Vector2(0f, 1f);
         backRect.anchoredPosition = new Vector2(10f, -10f);
-        muteRect = PixelTalk.AddMuteButton(font, box.GetComponent<RectTransform>(), new Vector2(40f, 40f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(62f, -10f), new Color(0.2f, 0.35f, 0.5f, 1f)).GetComponent<RectTransform>();   // mutes the talking blips
+        muteRect = PixelTalk.AddMuteButton(font, box.GetComponent<RectTransform>(), new Vector2(40f, 40f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(62f, -10f), ButtonRole.Neutral).GetComponent<RectTransform>();   // mutes the talking blips
         GameObject fillGo = new GameObject("Hold Fill", typeof(RectTransform), typeof(Image));
         fillGo.transform.SetParent(back.transform, false);
         Image fillImage = fillGo.GetComponent<Image>();
@@ -139,7 +139,7 @@ public class PixelNoticeBox : MonoBehaviour
     /// <summary>The Skip button (top right, hold to use): ends the whole tutorial this box belongs to.</summary>
     private void BuildSkip(Transform parent, TMPro.TMP_FontAsset font)
     {
-        Button skip = PixelUIKit.CreateButton(font, parent, "Skip", "Skip", new Vector2(86f, 40f), new Color(0.35f, 0.25f, 0.3f, 1f), Color.white, 22f);
+        Button skip = PixelUIKit.CreateButton(font, parent, "Skip", "Skip", new Vector2(86f, 40f), ButtonRole.Danger, 22f);   // (quits the whole tutorial)
         skipRect = skip.GetComponent<RectTransform>();
         skipRect.anchorMin = skipRect.anchorMax = skipRect.pivot = new Vector2(1f, 1f);
         skipRect.anchoredPosition = new Vector2(-10f, -10f);

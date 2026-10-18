@@ -73,7 +73,6 @@ public class PixelMyWindow : MonoBehaviour
     [SerializeField] private Color textColor = new Color(0.93f, 0.95f, 1f, 1f);
     [SerializeField] private Color dimTextColor = new Color(0.7f, 0.76f, 0.88f, 1f);
     [SerializeField] private Color barColor = new Color(0.3f, 0.8f, 0.45f, 1f);
-    [SerializeField] private Color buttonColor = new Color(0.25f, 0.45f, 0.8f, 1f);
 
     // ------------------------------------------------------------------
     // Data
@@ -131,6 +130,8 @@ public class PixelMyWindow : MonoBehaviour
     private TMP_Text hoverPlaceholder;
     private Button hoverDockButton;
     private Image hoverDockImage;
+    private bool? shownHoverDocked;   // the Info button's last shown state, and the tab last shown as Selected (0 pinned, 1 log, 2 keys; -1 = not yet)
+    private int shownTab = -1;
     private float hoverShownH = -1f, hoverLaidH = -1f;
 
     /// <summary>The place in the window where the pinned hover card goes (null unless the tooltip is pinned and the window is open on its Pinned tab).
@@ -358,13 +359,14 @@ public class PixelMyWindow : MonoBehaviour
         if (chromeMin != null && chromeMin.GetComponent<Button>() != null) chromeMin.GetComponent<Button>().onClick.AddListener(Layout);
 
         // Info (a right header slot): pins the hover tooltip into this window (and unpins it).
-        hoverDockButton = parts.AddHeaderButton("Dock Info", "Info", false, PixelUIKit.WindowButtonColor);
+        hoverDockButton = parts.AddHeaderButton("Dock Info", "Info", false);
         hoverDockImage = hoverDockButton.GetComponent<Image>();
+        shownHoverDocked = null; shownTab = -1;   // (a fresh build: show the states again)
         FitOneLine(hoverDockButton, 18f);
         hoverDockButton.onClick.AddListener(ToggleHoverDock);
 
         // Edit (the next right slot): hidden since the Pinned tab became a board of widgets (no Edit mode), kept for the old list's add bar.
-        Button edit = parts.AddHeaderButton("Edit", "Edit", false, buttonColor);
+        Button edit = parts.AddHeaderButton("Edit", "Edit", false, ButtonRole.Primary);
         FitOneLine(edit, 18f);
         editLabel = edit.GetComponentInChildren<TMP_Text>();
         edit.onClick.AddListener(() => { editing = !editing; RebuildRows(); });
@@ -419,7 +421,7 @@ public class PixelMyWindow : MonoBehaviour
         targetDropdown.GetComponent<RectTransform>().anchorMax = new Vector2(1f, 1f);
         targetDropdown.GetComponent<RectTransform>().offsetMax = new Vector2(-8f, -58f);
         typeDropdown.onValueChanged.AddListener(_ => FillTargets());
-        Button add = PixelUIKit.CreateButton(Font, bar.transform, "Add", "+ Add to my window", new Vector2(300f, 44f), new Color(0.25f, 0.6f, 0.4f, 1f), Color.white, 22f);
+        Button add = PixelUIKit.CreateButton(Font, bar.transform, "Add", "+ Add to my window", new Vector2(300f, 44f), ButtonRole.Success, 22f);
         SetRect(add.GetComponent<RectTransform>(), 8f, 110f, 0f, 44f);
         add.GetComponent<RectTransform>().anchorMax = new Vector2(1f, 1f);
         add.GetComponent<RectTransform>().offsetMax = new Vector2(-8f, -110f);
@@ -435,7 +437,7 @@ public class PixelMyWindow : MonoBehaviour
         PixelScrollBarFade logFade = logScrollBar != null ? logScrollBar.GetComponent<PixelScrollBarFade>() : null;
         if (logFade != null) logFade.hideBar = true;
         logScroll.gameObject.SetActive(false);
-        screenLogButton = PixelUIKit.CreateButton(Font, windowObject.transform, "In-game Log", "", new Vector2(200f, 44f), new Color(0.3f, 0.3f, 0.35f, 1f), Color.white, 22f);
+        screenLogButton = PixelUIKit.CreateButton(Font, windowObject.transform, "In-game Log", "", new Vector2(200f, 44f), ButtonRole.Neutral, 22f);
         screenLogButton.onClick.AddListener(ToggleScreenLog);
         FitOneLine(screenLogButton, 22f);
         screenLogButton.gameObject.SetActive(false);
@@ -505,7 +507,7 @@ public class PixelMyWindow : MonoBehaviour
 
     private Button MakeTab(Transform parent, string label, float x0, float x1, out Image image)
     {
-        Button b = PixelUIKit.CreateButton(Font, parent, "Tab " + label, label, new Vector2(100f, 40f), new Color(0.2f, 0.24f, 0.34f, 1f), Color.white, 22f);
+        Button b = PixelUIKit.CreateButton(Font, parent, "Tab " + label, label, new Vector2(100f, 40f), ButtonRole.Neutral, 22f);
         RectTransform r = b.GetComponent<RectTransform>();
         r.anchorMin = new Vector2(x0, 0f); r.anchorMax = new Vector2(x1, 1f);
         r.offsetMin = new Vector2(x0 > 0f ? 3f : 0f, 0f); r.offsetMax = new Vector2(x1 < 1f ? -3f : 0f, 0f);
@@ -552,7 +554,7 @@ public class PixelMyWindow : MonoBehaviour
         if (screenLogButton == null) return;
         bool on = PixelHints.EventLogEnabled;
         PixelUIKit.SetText(screenLogButton.GetComponentInChildren<TMP_Text>(), "In-game event log: " + (on ? "ON" : "OFF"));
-        screenLogButton.GetComponent<Image>().color = on ? new Color(0.25f, 0.6f, 0.4f, 1f) : new Color(0.3f, 0.3f, 0.35f, 1f);
+        PixelUIKit.SetRole(screenLogButton, on ? ButtonRole.Success : ButtonRole.Neutral);
     }
 
     /// <summary>
@@ -608,7 +610,11 @@ public class PixelMyWindow : MonoBehaviour
             hoverSlot.anchoredPosition = new Vector2(0f, hoverMini ? -(HeaderHeight + 4f) : -(HeaderHeight + 4f + tabs));
             if (hoverPlaceholder != null) hoverPlaceholder.gameObject.SetActive(hoverShownH <= 0f && !hoverMini);
         }
-        if (hoverDockImage != null) hoverDockImage.color = HoverDocked ? new Color(0.25f, 0.6f, 0.4f, 1f) : new Color(0.3f, 0.3f, 0.35f, 1f);
+        if (hoverDockImage != null && shownHoverDocked != HoverDocked)   // (only re-role on a change)
+        {
+            shownHoverDocked = HoverDocked;
+            PixelUIKit.SetRole(hoverDockImage, HoverDocked ? ButtonRole.Success : ButtonRole.Neutral);
+        }
         float top = HeaderHeight + 4f + tabs + hoverH + (editing && !logTab && !keysTab ? 170f : 0f);
         scroll.gameObject.SetActive(!minimized && !logTab && !keysTab);
         if (pickerRoot != null && !scroll.gameObject.activeSelf) pickerRoot.SetActive(false);
@@ -625,10 +631,14 @@ public class PixelMyWindow : MonoBehaviour
             PixelCustomKeys keysView = PixelCustomKeys.Instance;
             if (keysView != null) keysView.SetVisible(!minimized && keysTab);
         }
-        Color tabOff = new Color(0.2f, 0.24f, 0.34f, 1f), tabOn = new Color(0.25f, 0.45f, 0.8f, 1f);
-        if (tabKeysImage != null) tabKeysImage.color = keysTab ? tabOn : tabOff;
-        if (tabPinnedImage != null) tabPinnedImage.color = logTab || keysTab ? new Color(0.2f, 0.24f, 0.34f, 1f) : new Color(0.25f, 0.45f, 0.8f, 1f);
-        if (tabLogImage != null) tabLogImage.color = logTab ? new Color(0.25f, 0.45f, 0.8f, 1f) : new Color(0.2f, 0.24f, 0.34f, 1f);
+        int tabNow = keysTab ? 2 : logTab ? 1 : 0;
+        if (tabNow != shownTab)   // (only re-role on a change)
+        {
+            shownTab = tabNow;
+            PixelUIKit.SetRole(tabPinnedImage, tabNow == 0 ? ButtonRole.Selected : ButtonRole.Neutral);
+            PixelUIKit.SetRole(tabLogImage, tabNow == 1 ? ButtonRole.Selected : ButtonRole.Neutral);
+            PixelUIKit.SetRole(tabKeysImage, tabNow == 2 ? ButtonRole.Selected : ButtonRole.Neutral);
+        }
         if (resizeHandleObject != null) resizeHandleObject.SetActive(!minimized);
         RectTransform vr = scroll.GetComponent<RectTransform>();
         vr.anchorMin = Vector2.zero;
@@ -876,11 +886,11 @@ public class PixelMyWindow : MonoBehaviour
         title.rectTransform.anchorMin = Vector2.zero; title.rectTransform.anchorMax = Vector2.one;
         title.rectTransform.offsetMin = new Vector2(40f, 0f); title.rectTransform.offsetMax = new Vector2(-78f, 0f);
 
-        Button x = PixelUIKit.CreateButton(Font, c.rect, "Remove (hold)", "x", new Vector2(26f, 24f), new Color(0.55f, 0.2f, 0.2f, 0.9f), Color.white, 18f);
+        Button x = PixelUIKit.CreateButton(Font, c.rect, "Remove (hold)", "x", new Vector2(26f, 24f), ButtonRole.Danger, 18f);
         c.xRect = x.GetComponent<RectTransform>();
         c.xRect.anchorMin = c.xRect.anchorMax = c.xRect.pivot = new Vector2(1f, 1f);
         c.xRect.anchoredPosition = new Vector2(-6f, -5f);
-        Button fold = PixelUIKit.CreateButton(Font, c.rect, "Minimize", e.min ? "+" : "-", new Vector2(30f, 24f), new Color(0.3f, 0.36f, 0.5f, 0.9f), Color.white, 20f);
+        Button fold = PixelUIKit.CreateButton(Font, c.rect, "Minimize", e.min ? "+" : "-", new Vector2(30f, 24f), ButtonRole.Neutral, 20f);
         RectTransform fr = fold.GetComponent<RectTransform>();
         fr.anchorMin = fr.anchorMax = fr.pivot = new Vector2(1f, 1f);
         fr.anchoredPosition = new Vector2(-38f, -5f);
@@ -1065,7 +1075,7 @@ public class PixelMyWindow : MonoBehaviour
         sf.offsetMin = new Vector2(8f, -56f); sf.offsetMax = new Vector2(-72f, -10f);
         PixelUIKit.AddSearchIcon(pickerSearch);
         pickerSearch.onValueChanged.AddListener(v => { pickerText = (v ?? "").Trim().ToLowerInvariant(); FillPicker(); });
-        Button close = PixelUIKit.CreateButton(Font, root, "Cancel", "X", new Vector2(54f, 44f), new Color(0.5f, 0.22f, 0.22f, 1f), Color.white, 24f);
+        Button close = PixelUIKit.CreateButton(Font, root, "Cancel", "X", new Vector2(54f, 44f), ButtonRole.Danger, 24f);
         RectTransform cr = close.GetComponent<RectTransform>();
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
         cr.anchoredPosition = new Vector2(-8f, -10f);
@@ -1089,7 +1099,7 @@ public class PixelMyWindow : MonoBehaviour
             shown++;
             bool already = o.type != "note" && blob.entries.Exists(e => e.type == o.type && e.key == o.key);
             Option opt = o;
-            Button b = PixelUIKit.CreateButton(Font, pickerContent, "Option", o.label + (already ? "   (pinned)" : ""), new Vector2(100f, 42f), already ? new Color(0.2f, 0.22f, 0.28f, 1f) : buttonColor, Color.white, 21f);
+            Button b = PixelUIKit.CreateButton(Font, pickerContent, "Option", o.label + (already ? "   (pinned)" : ""), new Vector2(100f, 42f), already ? ButtonRole.Neutral : ButtonRole.Primary, 21f);
             RectTransform r = b.GetComponent<RectTransform>();
             r.anchorMin = new Vector2(0f, 1f); r.anchorMax = new Vector2(1f, 1f); r.pivot = new Vector2(0.5f, 1f);
             r.offsetMin = new Vector2(4f, -(y + 42f)); r.offsetMax = new Vector2(-4f, -y);
@@ -1164,15 +1174,15 @@ public class PixelMyWindow : MonoBehaviour
     {
         // Right end of the row: up, down, remove (and the rate toggle for a currency).
         float x = -6f;
-        Button remove = MiniButton(row.rt, "x", ref x, new Color(0.65f, 0.25f, 0.25f, 1f));
+        Button remove = MiniButton(row.rt, "x", ref x, ButtonRole.Danger);
         remove.onClick.AddListener(() => { blob.entries.Remove(row.entry); SaveEntries(); RebuildRows(); });
-        Button down = MiniButton(row.rt, "v", ref x, new Color(0.3f, 0.35f, 0.5f, 1f));
+        Button down = MiniButton(row.rt, "v", ref x, ButtonRole.Neutral);
         down.onClick.AddListener(() => MoveEntry(row.entry, 1));
-        Button up = MiniButton(row.rt, "^", ref x, new Color(0.3f, 0.35f, 0.5f, 1f));
+        Button up = MiniButton(row.rt, "^", ref x, ButtonRole.Neutral);
         up.onClick.AddListener(() => MoveEntry(row.entry, -1));
         if (row.entry.type == "currency")
         {
-            Button rate = MiniButton(row.rt, "/min", ref x, new Color(0.25f, 0.5f, 0.45f, 1f), 62f);
+            Button rate = MiniButton(row.rt, "/min", ref x, ButtonRole.Neutral, 62f);
             rate.onClick.AddListener(() => { row.entry.flag = !row.entry.flag; SaveEntries(); RefreshValues(); });
         }
         // Make room: the row's own texts stop before the buttons.
@@ -1180,9 +1190,9 @@ public class PixelMyWindow : MonoBehaviour
             if (t.name == "Amount" || t.name == "Detail") t.rectTransform.offsetMax = new Vector2(x - 4f, t.rectTransform.offsetMax.y);
     }
 
-    private Button MiniButton(RectTransform parent, string label, ref float x, Color colour, float width = 34f)
+    private Button MiniButton(RectTransform parent, string label, ref float x, ButtonRole role, float width = 34f)
     {
-        Button b = PixelUIKit.CreateButton(Font, parent, "Edit " + label, label, new Vector2(width, 34f), colour, Color.white, 18f);
+        Button b = PixelUIKit.CreateButton(Font, parent, "Edit " + label, label, new Vector2(width, 34f), role, 18f);
         RectTransform r = b.GetComponent<RectTransform>();
         r.anchorMin = r.anchorMax = r.pivot = new Vector2(1f, 0.5f);
         r.anchoredPosition = new Vector2(x, 0f);
@@ -1392,7 +1402,7 @@ public class PixelMyWindow : MonoBehaviour
     {
         bool tool = e.key.StartsWith("tool:");
         Row row = new Row { height = 54f, rt = NewRow(54f) };
-        Button button = PixelUIKit.CreateButton(Font, row.rt, "Use", "", new Vector2(200f, 40f), buttonColor, Color.white, 22f);
+        Button button = PixelUIKit.CreateButton(Font, row.rt, "Use", "", new Vector2(200f, 40f), ButtonRole.Primary, 22f);
         RectTransform br = button.GetComponent<RectTransform>();
         br.anchorMin = Vector2.zero; br.anchorMax = Vector2.one;
         br.offsetMin = new Vector2(8f, 7f);
@@ -1403,6 +1413,8 @@ public class PixelMyWindow : MonoBehaviour
         label.fontSizeMax = 22f;
         label.fontSizeMin = 11f;
         Image image = button.GetComponent<Image>();
+        ButtonRole shownRole = ButtonRole.Primary;   // (refresh runs every few tenths of a second: only re-role on a change)
+        void ShowRole(ButtonRole role) { if (role != shownRole) { shownRole = role; PixelUIKit.SetRole(image, role); } }
 
         if (tool)
         {
@@ -1420,7 +1432,7 @@ public class PixelMyWindow : MonoBehaviour
                 bool available = hose ? PixelFind.First<PixelBank>() != null : PixelMenuKeys.CanClick(def.action);
                 bool on = hose && PixelBank.HoseOn;
                 PixelUIKit.SetText(label, def.name + (on ? "  (on)" : ""));
-                image.color = on ? new Color(0.25f, 0.65f, 0.4f, 1f) : available ? buttonColor : new Color(0.3f, 0.3f, 0.35f, 1f);
+                ShowRole(on ? ButtonRole.Success : available ? ButtonRole.Primary : ButtonRole.Neutral);
             };
             return row;
         }
@@ -1436,7 +1448,7 @@ public class PixelMyWindow : MonoBehaviour
         {
             int owned = consumables.ItemOwned(item);
             PixelUIKit.SetText(label, itemName + "   x" + PixelConsumables.OwnedText(owned));
-            image.color = owned > 0 ? buttonColor : new Color(0.3f, 0.3f, 0.35f, 1f);
+            ShowRole(owned > 0 ? ButtonRole.Primary : ButtonRole.Neutral);
         };
         return row;
     }

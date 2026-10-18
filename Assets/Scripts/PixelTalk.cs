@@ -92,7 +92,15 @@ public static class PixelTalk
         return speakerOff;
     }
 
-    /// <summary>A small speaker button (mute / unmute the talking blips) placed with the given anchor, pivot and position inside 'parent'.</summary>
+    /// <summary>AddMuteButton in a button ROLE (PixelUITheme) - prefer this over a plain colour.</summary>
+    public static Button AddMuteButton(TMP_FontAsset font, RectTransform parent, Vector2 size, Vector2 anchor, Vector2 pivot, Vector2 position, ButtonRole role)
+    {
+        Button b = AddMuteButton(font, parent, size, anchor, pivot, position, PixelUITheme.ColorOf(role));
+        PixelUIKit.SetRole(b, role);
+        return b;
+    }
+
+    /// <summary>A small speaker button (mute / unmute the talking blips) placed with the given anchor, pivot and position inside 'parent' (its own colour: role Custom).</summary>
     public static Button AddMuteButton(TMP_FontAsset font, RectTransform parent, Vector2 size, Vector2 anchor, Vector2 pivot, Vector2 position, Color color)
     {
         Button b = PixelUIKit.CreateButton(font, parent, "Mute Talk", "", size, color, Color.white, 20f);

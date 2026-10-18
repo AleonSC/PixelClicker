@@ -49,7 +49,7 @@ public partial class PixelSkills
     /// <summary>A small code-drawn book after the skill's name in the detail panel (called once while the window is built).</summary>
     private void BuildGuideBook(Transform detail)
     {
-        guideBookButton = PixelUIKit.CreateButton(Font, detail, "Guide Book", "", new Vector2(48f, 42f), new Color(0.25f, 0.3f, 0.45f, 1f), Color.white, 20f);
+        guideBookButton = PixelUIKit.CreateButton(Font, detail, "Guide Book", "", new Vector2(48f, 42f), ButtonRole.Neutral, 20f);
         GameObject go = guideBookButton.gameObject;
         RectTransform r = go.GetComponent<RectTransform>();
         r.anchorMin = r.anchorMax = new Vector2(0f, 1f);
@@ -138,12 +138,12 @@ public partial class PixelSkills
         mr.anchorMin = Vector2.zero; mr.anchorMax = Vector2.one;
         mr.offsetMin = new Vector2(30f, 100f); mr.offsetMax = new Vector2(-30f, -76f);
 
-        Button yes = PixelUIKit.CreateButton(Font, box.transform, "Yes", "Yes, show me", new Vector2(240f, 64f), new Color(0.2f, 0.55f, 0.3f, 1f), Color.white, 26f);
+        Button yes = PixelUIKit.CreateButton(Font, box.transform, "Yes", "Yes, show me", new Vector2(240f, 64f), ButtonRole.Success, 26f);
         RectTransform yr = yes.GetComponent<RectTransform>();
         yr.anchorMin = yr.anchorMax = yr.pivot = new Vector2(0.5f, 0f);
         yr.anchoredPosition = new Vector2(-135f, 24f);
         yes.onClick.AddListener(() => { CloseGuideAsk(); StartWoodGuide(); });
-        Button no = PixelUIKit.CreateButton(Font, box.transform, "No", "No thanks", new Vector2(240f, 64f), new Color(0.35f, 0.35f, 0.42f, 1f), Color.white, 26f);
+        Button no = PixelUIKit.CreateButton(Font, box.transform, "No", "No thanks", new Vector2(240f, 64f), ButtonRole.Neutral, 26f);
         RectTransform nr = no.GetComponent<RectTransform>();
         nr.anchorMin = nr.anchorMax = nr.pivot = new Vector2(0.5f, 0f);
         nr.anchoredPosition = new Vector2(135f, 24f);

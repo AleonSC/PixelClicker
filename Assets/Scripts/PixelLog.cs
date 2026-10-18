@@ -57,9 +57,6 @@ public class PixelLog : MonoBehaviour
     [Tooltip("Button text size.")]
     [SerializeField] private float buttonFontSize = 40f;
 
-    [Tooltip("Button background colour.")]
-    [SerializeField] private Color buttonColor = new Color(0.35f, 0.35f, 0.42f, 1f);
-
     [Tooltip("Button text colour.")]
     [SerializeField] private Color buttonTextColor = Color.white;
 
@@ -82,12 +79,6 @@ public class PixelLog : MonoBehaviour
 
     [Tooltip("Tab text colour.")]
     [SerializeField] private Color tabTextColor = Color.white;
-
-    [Tooltip("Colour of the selected tab.")]
-    [SerializeField] private Color tabActiveColor = new Color(0.35f, 0.5f, 0.85f, 1f);
-
-    [Tooltip("Colour of the other tab.")]
-    [SerializeField] private Color tabInactiveColor = new Color(0.22f, 0.22f, 0.28f, 1f);
 
     [Tooltip("Label of the third Log tab: progress bars for things like Ghosts Caught, the Singularity count, Stardust and the next pixel unlock.")]
     [SerializeField] private string goalsTabText = "Goals";
@@ -709,7 +700,7 @@ public class PixelLog : MonoBehaviour
         float sy = anchor.y > 0.5f ? -1f : 1f;
 
         // --- Button
-        Button button = CreateButton(canvasRoot.transform, "Log Button", buttonText, buttonSize, buttonColor,
+        Button button = CreateButton(canvasRoot.transform, "Log Button", buttonText, buttonSize, ButtonRole.Neutral,
                                      buttonTextColor, buttonFontSize);
         RectTransform br = button.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = anchor;
@@ -793,7 +784,7 @@ public class PixelLog : MonoBehaviour
         for (int i = 0; i < names.Length; i++)
         {
             Button tab = CreateButton(panelObject.transform, "Tab " + names[i], names[i],
-                                      new Vector2(tabWidth, tabHeight), tabInactiveColor, tabTextColor, tabFontSize);
+                                      new Vector2(tabWidth, tabHeight), ButtonRole.Neutral, tabTextColor, tabFontSize);
             PixelUIKit.Caps(tab);
             tabImages[i + 1] = tab.GetComponent<Image>();
 
@@ -1178,9 +1169,14 @@ public class PixelLog : MonoBehaviour
                         TextAlignmentOptions alignment, FontStyles style, Color color)
         => PixelUIKit.CreateText(font, parent, objectName, text, size, alignment, style, color);
 
-    private Button CreateButton(Transform parent, string objectName, string label, Vector2 size, Color color,
+    /// <summary>A button in a role (PixelUITheme) with its own label colour.</summary>
+    private Button CreateButton(Transform parent, string objectName, string label, Vector2 size, ButtonRole role,
                       Color labelColor, float labelSize)
-        => PixelUIKit.CreateButton(font, parent, objectName, label, size, color, labelColor, labelSize);
+    {
+        Button b = PixelUIKit.CreateButton(font, parent, objectName, label, size, PixelUITheme.ColorOf(role), labelColor, labelSize);
+        PixelUIKit.SetRole(b, role);
+        return b;
+    }
 
     // ------------------------------------------------------------------
     // Refresh
@@ -1190,7 +1186,7 @@ public class PixelLog : MonoBehaviour
     public void Refresh()
     {
         for (int i = 0; i < tabImages.Length; i++)
-            if (tabImages[i] != null) tabImages[i].color = i == currentTab ? tabActiveColor : tabInactiveColor;
+            if (tabImages[i] != null) PixelUIKit.SetRole(tabImages[i], i == currentTab ? ButtonRole.Selected : ButtonRole.Neutral);
 
         bool pixelsTab = currentTab == 0;
         achievementsGroup.SetActive(currentTab == 1);
@@ -1556,7 +1552,7 @@ public class PixelLog : MonoBehaviour
     {
         SectionHeader h = new SectionHeader();
         h.button = CreateButton(achievementsContent, "Section " + index, "", new Vector2(10f, sectionHeaderHeight),
-                                new Color(0.25f, 0.25f, 0.3f, 1f), amountColor, rowFontSize * 0.9f);
+                                ButtonRole.Neutral, amountColor, rowFontSize * 0.9f);
         RectTransform rt = h.button.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0f, 1f);
         rt.anchorMax = new Vector2(1f, 1f);
