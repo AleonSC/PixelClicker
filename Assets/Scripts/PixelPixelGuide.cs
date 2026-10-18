@@ -32,7 +32,7 @@ public class PixelPixelGuide : MonoBehaviour
     [Tooltip("Text on the button under Toggles.")]
     [SerializeField] private string buttonText = "Rotation";
 
-    [Tooltip("Button colour.")]
+    [Tooltip("Button colour (the Pixel Guide's own teal, kept as a plain colour rather than a PixelUITheme role).")]
     [SerializeField] private Color buttonColor = new Color(0.2f, 0.55f, 0.6f, 1f);
 
     [Tooltip("Keep the button hidden until a second pixel type is unlocked.")]
