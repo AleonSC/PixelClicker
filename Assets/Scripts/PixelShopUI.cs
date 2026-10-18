@@ -8,6 +8,7 @@ using UnityEngine.UI;
 /// <summary>
 /// The shop's user interface (button, panel, tabs, scrolling list, upgrades window, trackers, refreshing).
 /// Part of <see cref="PixelShop"/> - the buying logic and all Inspector settings are in PixelShop.cs.
+/// The shop and its Upgrades window are standard Fixed windows (PixelUIKit.CreateWindow): ? in the right header slot, Back in the left one.
 /// </summary>
 public partial class PixelShop
 {
@@ -106,17 +107,17 @@ public partial class PixelShop
     {
         currentTab = startTab == ShopTab.Automatic ? ShopTab.Pixels : startTab;
 
-        panelObject = new GameObject("Shop Panel", typeof(RectTransform), typeof(Image), typeof(PixelPop));
-        panelObject.transform.SetParent(parent, false);
-        panelRect = panelObject.GetComponent<RectTransform>();
-        panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = new Vector2(0.5f, 0.5f);
-        panelRect.sizeDelta = new Vector2(panelWidth, panelHeight);
-        panelRect.anchoredPosition = Vector2.zero;
+        // The standard Fixed window (PixelUIKit.CreateWindow): title, grey X, open / close animation (PixelPop). Centred, like before.
+        // (The search box fits in the standard 90 header, so no headerHeight override.)
+        PixelWindowParts parts = PixelUIKit.CreateWindow(font, parent, "Shop Panel", panelTitle, new Vector2(panelWidth, panelHeight), panelColor,
+                                                         PixelUIKit.WindowKind.Fixed, () => PixelPop.Hide(panelObject));
+        panelObject = parts.Root;
+        panelRect = parts.Rect;
+        ShopButtonExtras(parts.Close);
         PixelNotice.FixedSize = tipBoxMatchesShop ? new Vector2(panelWidth, panelHeight) : Vector2.zero;
         PixelNotice.SideAnchor = tipBoxMatchesShop && !hideCurrencyPanel ? panelRect : null; // tip boxes sit right of the shop
         PixelNotice.SideWidth = CurrencyWidth;
         PixelNotice.SideGap = currencyPanelGap;
-        PixelUIKit.StyleWindow(panelObject.GetComponent<Image>(), panelColor);
 
         // The fancy menu look (Settings > Interface > Fancy pause menu): a colour-cycling glow behind the panel and a light segment sliding under the title.
         GameObject glow = new GameObject("Fancy Panel Glow", typeof(RectTransform), typeof(Image), typeof(PixelMenuPanelGlow));
@@ -127,31 +128,9 @@ public partial class PixelShop
         PixelUIKit.StyleBox(glow.GetComponent<Image>());
         PixelMenuFx.BuildTitleLine(panelRect, panelPadding, -(headerHeight + tabsDrop * 0.3f), panelWidth - panelPadding * 2f);   // the same sliding white segment as the pause menu
 
-        // Title
-        TMP_Text title = CreateText(panelObject.transform, "Title", panelTitle, titleFontSize,
-                                    TextAlignmentOptions.Center, FontStyles.Bold);
-        PixelUIKit.Caps(title);
-        RectTransform tr = title.rectTransform;
-        tr.anchorMin = new Vector2(0f, 1f);
-        tr.anchorMax = new Vector2(1f, 1f);
-        tr.pivot = new Vector2(0.5f, 1f);
-        tr.sizeDelta = new Vector2(-(panelPadding * 2f + 160f), headerHeight);
-        tr.anchoredPosition = Vector2.zero;
-
-        // Close button
-        Button close = CreateButton(panelObject.transform, "Close", "X", new Vector2(80f, 80f),
-                                    disabledColor, textColor, 40f, out _, out _);
-        RectTransform cr = close.GetComponent<RectTransform>();
-        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
-        cr.anchoredPosition = new Vector2(-panelPadding, -panelPadding * 0.5f);
-        close.onClick.AddListener(() => PixelPop.Hide(panelObject));
-
-        // Help button (blue square with a question mark, left of the X): hold it to replay the shop tutorial.
-        Button help = CreateButton(panelObject.transform, "Help", "?", new Vector2(80f, 80f),
-                                   new Color(0.2f, 0.4f, 0.85f, 1f), Color.white, 44f, out _, out _);
-        RectTransform hr = help.GetComponent<RectTransform>();
-        hr.anchorMin = hr.anchorMax = hr.pivot = new Vector2(1f, 1f);
-        hr.anchoredPosition = new Vector2(-panelPadding - 90f, -panelPadding * 0.5f);
+        // Help button (blue square with a question mark, in the standard right header slot just left of the X): hold it to replay the shop tutorial.
+        Button help = parts.AddHeaderButton("Help", "?", false, new Color(0.2f, 0.4f, 0.85f, 1f));
+        ShopButtonExtras(help);
         GameObject fillGo = new GameObject("Hold Fill", typeof(RectTransform), typeof(Image));
         fillGo.transform.SetParent(help.transform, false);
         Image fillImage = fillGo.GetComponent<Image>();
@@ -173,6 +152,12 @@ public partial class PixelShop
         System.Func<string> helpText = () => "Hold to replay the shop tutorial";
         helpTip.onEnter = () => hoverTip = helpText;
         helpTip.onExit = () => { if (hoverTip == helpText) hoverTip = null; };
+
+        // The title keeps clear of the search box (left) and the ? button (right), with the same room on both sides so it stays centred.
+        RectTransform hr = help.GetComponent<RectTransform>();
+        float titleRoom = Mathf.Max(panelPadding + Mathf.Max(120f, searchWidth), -hr.anchoredPosition.x + hr.sizeDelta.x) + 8f;
+        parts.Title.rectTransform.offsetMin = new Vector2(titleRoom, parts.Title.rectTransform.offsetMin.y);
+        parts.Title.rectTransform.offsetMax = new Vector2(-titleRoom, 0f);
 
         // Search box (top left): lists every matching pack from all tabs while it has text.
         searchField = PixelUIKit.CreateInputField(font, panelObject.transform, "Search", new Vector2(Mathf.Max(120f, searchWidth), 70f),
@@ -552,48 +537,27 @@ public partial class PixelShop
     /// <summary>The second window: lists the upgrade packs that belong to the pack whose arrow was pressed.</summary>
     private void BuildUpgradesWindow(Transform parent)
     {
-        subPanelObject = new GameObject("Upgrades Window", typeof(RectTransform), typeof(Image));
-        subPanelObject.transform.SetParent(parent, false);
-        RectTransform pr = subPanelObject.GetComponent<RectTransform>();
-        pr.anchorMin = pr.anchorMax = pr.pivot = new Vector2(0.5f, 0.5f);
-        pr.sizeDelta = new Vector2(panelWidth, panelHeight);
-        pr.anchoredPosition = Vector2.zero;
-        PixelUIKit.StyleWindow(subPanelObject.GetComponent<Image>(), new Color(panelColor.r, panelColor.g, panelColor.b, 1f));   // opaque: the shop behind must not show through
+        // The standard Fixed window, the shop's size and centred like it; opaque: the shop behind must not show through.
+        // It is still opened / closed with SetActive (PixelShopOperation opens it too): the builder's PixelPop grows it in when it opens
+        // and fits it on screen like the shop; closing stays instant.
+        PixelWindowParts parts = PixelUIKit.CreateWindow(font, parent, "Upgrades Window", "", new Vector2(panelWidth, panelHeight),
+                                                         new Color(panelColor.r, panelColor.g, panelColor.b, 1f), PixelUIKit.WindowKind.Fixed, CloseUpgradesWindow);
+        subPanelObject = parts.Root;
+        ShopButtonExtras(parts.Close);
 
-        subTitle = CreateText(subPanelObject.transform, "Title", "", titleFontSize,
-                              TextAlignmentOptions.Center, FontStyles.Bold);
-        PixelUIKit.Caps(subTitle);
-        subTitle.enableAutoSizing = true;            // a long title ("Auto Clicker Upgrades") shrinks to ONE line between the two buttons
-        subTitle.fontSizeMax = titleFontSize;
-        subTitle.fontSizeMin = 14f;
+        subTitle = parts.Title;   // (auto-sized: a long title like "Auto Clicker Upgrades" shrinks to ONE line between the two buttons)
         subTitle.overflowMode = TextOverflowModes.Overflow;
 #if UNITY_2023_1_OR_NEWER
         subTitle.textWrappingMode = TextWrappingModes.NoWrap;
 #else
         subTitle.enableWordWrapping = false;
 #endif
-        RectTransform tr = subTitle.rectTransform;
-        tr.anchorMin = new Vector2(0f, 1f);
-        tr.anchorMax = new Vector2(1f, 1f);
-        tr.pivot = new Vector2(0.5f, 1f);
-        tr.sizeDelta = new Vector2(-(panelPadding * 2f + 200f), headerHeight);
-        tr.anchoredPosition = Vector2.zero;
 
-        // Back arrow (top-left) and close X (top-right) both return to the shop.
-        Button back = CreateButton(subPanelObject.transform, "Back", backText, new Vector2(80f, 80f),
-                                   disabledColor, textColor, 40f, out _, out _);
-        RectTransform br = back.GetComponent<RectTransform>();
-        br.anchorMin = br.anchorMax = br.pivot = new Vector2(0f, 1f);
-        br.anchoredPosition = new Vector2(panelPadding, -panelPadding * 0.5f);
+        // Back arrow in the standard left header slot (the X on the right also returns to the shop).
+        Button back = parts.AddHeaderButton("Back", backText, true, PixelUIKit.WindowButtonColor);
+        ShopButtonExtras(back);
         PixelUIKit.UseArrowGlyph(back, true);   // a drawn backwards triangle instead of the "<" letter
         back.onClick.AddListener(CloseUpgradesWindow);
-
-        Button close = CreateButton(subPanelObject.transform, "Close", "X", new Vector2(80f, 80f),
-                                    disabledColor, textColor, 40f, out _, out _);
-        RectTransform cr = close.GetComponent<RectTransform>();
-        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
-        cr.anchoredPosition = new Vector2(-panelPadding, -panelPadding * 0.5f);
-        close.onClick.AddListener(CloseUpgradesWindow);
 
         BuildScrollArea(subPanelObject.transform, headerHeight + panelPadding * 0.5f,
                         out subContentRect, out subScrollRect, out subEmptyLabel);
@@ -1033,9 +997,16 @@ public partial class PixelShop
         Button button = PixelUIKit.CreateButton(font, parent, objectName, label, size, color, labelColor, labelSize);
         image = button.GetComponent<Image>();
         labelText = button.GetComponentInChildren<TMP_Text>(true);
+        ShopButtonExtras(button);
+        return button;
+    }
+
+    /// <summary>The shop's extras on a button made elsewhere (the window builder's X and header buttons): the press pulse and the fancy menu shine.</summary>
+    private static void ShopButtonExtras(Button button)
+    {
+        if (button == null) return;
         button.gameObject.AddComponent<PixelButtonPulse>();   // a neon rim in the button's colour comes out from under it on every press
         PixelMenuFx.DecorateAll(button.transform);   // the fancy menu's brighten / shine / press (this button only)
-        return button;
     }
 
     // ------------------------------------------------------------------
