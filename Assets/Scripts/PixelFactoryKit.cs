@@ -2,7 +2,7 @@
 // PixelFactoryKit.cs
 //   Small shared helper for building machines out of primitives in code (conveyor belt, kiln): materials copied from the cube's material (PixelClicker.CreateVisualMaterial, emission off
 //   unless asked), boxes / cylinders / balls, see-through ghost versions (alpha) with no colliders. The Wood Chipper still has its own private copy of this (its Kit class): move it onto
-//   this helper when it is next touched.
+//   this helper when it is next touched. DestroyMaterials() frees the materials it made (a temporary build like the studio intro).
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -67,4 +67,11 @@ public sealed class PixelFactoryKit
 
     public GameObject Ball(string name, Transform parent, Vector3 pos, float radius, Color c, float metal = 0.2f, float smooth = 0.5f)
         => Prim(PrimitiveType.Sphere, name, parent, pos, Vector3.one * radius * 2f, c, default, metal, smooth, false);
+
+    /// <summary>Destroys every material this kit made (call when what it built is destroyed for good, e.g. the studio intro's set).</summary>
+    public void DestroyMaterials()
+    {
+        foreach (Material m in mats.Values) if (m != null) Object.Destroy(m);
+        mats.Clear();
+    }
 }

@@ -68,6 +68,8 @@ public partial class PixelTitleScreen
 
         Hidden();
         SetPanel(0f);
+        // The Galactic Arcade studio intro plays first (once per launch, on its own top canvas; nothing when it is off).
+        yield return PixelStudioIntro.PlayAtLaunch();
 
         // 1. Black until the blurred picture exists, then a short hold.
         float wait = 0f;

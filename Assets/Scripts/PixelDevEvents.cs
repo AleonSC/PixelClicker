@@ -105,6 +105,11 @@ public class PixelDevEvents : MonoBehaviour
         achievementDropdown = PixelDevUI.Dropdown(root, "Achievement", 10f, y, DropW, RowH, PixelDevUI.FontSize - 3f, escapeMasks: true);
         PixelDevUI.Button(root, "Achievement", BtnX, y, BtnW, RowH, PixelDevUI.Green, ShowAchievement); y += RowH + 18f;
 
+        PixelDevUI.Heading(root, "Launch", 10f, y, 400f); y += 38f;
+        PixelDevUI.Button(root, "Studio intro", 10f, y, 330f, RowH, PixelDevUI.Green, () =>
+            SetStatus(PixelStudioIntro.Replay() ? "Playing the Galactic Arcade studio intro (any key skips)." : "The studio intro is already playing (or missing)."));
+        y += RowH + 18f;
+
         PixelDevUI.Heading(root, "Your own text", 10f, y, 400f); y += 38f;
         ownText = PixelDevUI.Input(root, "Own Text", 10f, y, 680f, RowH, "Type a text to see how it reads in game");
         y += RowH + 8f;

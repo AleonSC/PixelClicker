@@ -290,6 +290,8 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the slider for the orbit camera's field of view (the default camera; Top down too).")]
     [SerializeField] private string orbitFovLabel = "Orbit field of view";
     [SerializeField] private string cameraIntroLabel = "Camera intro (next start)";
+    [Tooltip("Label of the switch for the Galactic Arcade studio intro at launch.")]
+    [SerializeField] private string studioIntroLabel = "Studio intro (at launch)";
     [SerializeField] private string dayNightLabel = "Day / night cycle";
     [Tooltip("Settings > Gameplay: label of the 'Did you know?' tips switch.")]
     [SerializeField] private string didYouKnowLabel = "Did you know tips";
@@ -2653,6 +2655,7 @@ public class PixelPauseMenu : MonoBehaviour
         settingsRefreshers.Add(() => buttonColorToggle.SetIsOnWithoutNotify(PixelUIKit.ButtonColorOn));
         AddEyedropperButton(buttonColorToggle, () => PixelEyedropper.Begin(c => { PixelUIKit.SetButtonColorFromColor(c); settingsRefreshersRun(); }));   // pick the buttons' colour from anywhere on screen
         AddSettingToggle(list, cameraIntroLabel, () => PixelCameraIntro.Enabled, on => PixelCameraIntro.Enabled = on, ref y);
+        AddSettingToggle(list, studioIntroLabel, () => PixelStudioIntro.Enabled, on => PixelStudioIntro.Enabled = on, ref y);
         AddDropdownRow(list, buttonModeLabel, ButtonModeNames(), () => PixelHud.ButtonMode, v => PixelHud.ButtonMode = v, ref y);
         Toggle glowToggle = AddToggleRow(list, barGlowLabel, PixelHud.BarGlow, on => PixelHud.BarGlow = on, ref y);
         AddDropdownRow(list, barStyleLabel, PixelBarStyle.Names, () => PixelBarStyle.Current, v => PixelBarStyle.Current = v, ref y);

@@ -263,6 +263,9 @@ public partial class PixelAudio : MonoBehaviour
             new Sound { id = "stone_cubelette", cooldown = 0f, pitchMin = 1f, pitchMax = 1f },
             new Sound { id = "pixel_vanish", cooldown = 0.04f, pitchMin = 0.88f, pitchMax = 1.3f, volume = 0.4f },
             new Sound { id = "meteor_rumble", cooldown = 0f, volume = 0.45f },
+            new Sound { id = "studio_whoosh", cooldown = 0f, pitchMin = 1f, pitchMax = 1f },
+            new Sound { id = "studio_gameover", cooldown = 0f, pitchMin = 1f, pitchMax = 1f, volume = 0.6f },
+            new Sound { id = "studio_hum", cooldown = 0f, pitchMin = 1f, pitchMax = 1f, volume = 0.3f },
             Make("blackhole_spawn", 0.2f),
             Make("pad_spawn", 0.2f),
             Make("pad_click", 0.05f, 0.92f, 1.08f),
@@ -368,6 +371,8 @@ public partial class PixelAudio : MonoBehaviour
         if (godSounds != null) return godSounds;
         AudioClip[] meteorSounds = PixelMeteorSynth.For(id);
         if (meteorSounds != null) return meteorSounds;
+        AudioClip[] studio = PixelStudioSynth.For(id);   // (the Galactic Arcade studio intro)
+        if (studio != null) return studio;
         AudioClip[] axe = PixelAxeSynth.For(id);
         if (axe != null) return axe;
         AudioClip[] hazard = PixelHazardSynth.For(id);
