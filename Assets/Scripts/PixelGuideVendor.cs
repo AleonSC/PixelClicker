@@ -234,7 +234,6 @@ public class PixelGuideVendor : MonoBehaviour
 
     private bool narrating;
     private RectTransform armL, pointer;
-    private Coroutine narrateRoutine;
     private const float NarratorScale = 0.85f;
     private float reactTime = -10f;
 
@@ -245,7 +244,7 @@ public class PixelGuideVendor : MonoBehaviour
     {
         if (disableGuide || visiting || narrating) return;
         narrating = true;
-        narrateRoutine = StartCoroutine(NarrateRoutine());
+        StartCoroutine(NarrateRoutine());
     }
 
     /// <summary>Where the stick points: the middle of the shop window as it is on screen (screen pixels = overlay world units).</summary>
@@ -320,7 +319,6 @@ public class PixelGuideVendor : MonoBehaviour
             yield return null;
         }
         if (!visiting && canvasRoot != null) Destroy(canvasRoot);
-        narrateRoutine = null;
     }
 
     /// <summary>True while he is on screen.</summary>
@@ -336,7 +334,6 @@ public class PixelGuideVendor : MonoBehaviour
 
     // ---- shop peek: while ShopHold is on Cubie sticks out from under the Shop button (top right) and points his stick up at it until the shop is opened ----
     private bool peeking;
-    private Coroutine peekRoutine;
     private const float PeekScale = 0.6f, StickLength = 422f;   // (stick length in his own drawing units: arm + stick + tip)
 
     private IEnumerator PeekRoutine()
@@ -395,7 +392,6 @@ public class PixelGuideVendor : MonoBehaviour
         }
         if (!visiting && !narrating && canvasRoot != null) Destroy(canvasRoot);
         peeking = false;
-        peekRoutine = null;
     }
 
     private void UpdateHold()
@@ -516,7 +512,7 @@ public class PixelGuideVendor : MonoBehaviour
         if (disableGuide && clicker != null && !ShopThere && Visit2Ready && shop != null) shop.GrantPackRewarding(PixelClicker.PixelType.Red);
         if (disableGuide && clicker != null && PixelStats.Total(Stage1Key) < 1d && Visit1Ready) { PixelStats.Best(Stage1Key, 1d); GiveRecycler(); }   // (Cubie off: his Recycler still arrives - the 'Recycle 20 husks' goal needs it)
         if (ShopHold) UpdateHold();
-        if (ShopHold && !peeking && !disableGuide && !visiting && !narrating) peekRoutine = StartCoroutine(PeekRoutine());
+        if (ShopHold && !peeking && !disableGuide && !visiting && !narrating) StartCoroutine(PeekRoutine());
         if (disableGuide || clicker == null || visiting) { if (disableGuide && lastBlocker != "disabled") { lastBlocker = "disabled"; PixelDebug.Info("Cubie is off: disableGuide is ticked", this); } return; }
         if (shop == null) shop = PixelFind.First<PixelShop>();
         if (stats == null) stats = PixelFind.First<PixelStats>();

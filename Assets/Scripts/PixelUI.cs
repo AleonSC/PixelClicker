@@ -434,9 +434,8 @@ public class PixelUI : MonoBehaviour
     private readonly System.Collections.Generic.List<GameObject> tabObjects = new System.Collections.Generic.List<GameObject>();
 
     [Header("Compact (pinned) Inventory")]
-    [Tooltip("Width of the simplified Inventory (0 = 62% of the normal width).")]
+    [Tooltip("Width of the simplified Inventory (0 = just wide enough for its widest line).")]
     [SerializeField] private float compactWidth = 0f;
-    private float CompactWidth => compactWidth > 0f ? compactWidth : panelWidth * 0.62f;
 
     private TMP_Text measureLabel;
     private bool marginsCompact;
@@ -705,9 +704,6 @@ public class PixelUI : MonoBehaviour
 
     [Tooltip("Tooltip text colour.")]
     [SerializeField] private Color tooltipTextColor = new Color(1f, 0.88f, 0.4f, 1f);
-
-    [Tooltip("Where the tooltip sits relative to the mouse (canvas units).")]
-    [SerializeField] private Vector2 tooltipOffset = new Vector2(24f, -28f);
 
     private void BuildTooltip()
     {

@@ -35,7 +35,6 @@ public class PixelSaveGame : MonoBehaviour
         public bool unlocked;
         public bool spawnDisabled;
         public long timesCollected;
-        public long ultraCount;
         public int ultraLevel;
         public int valueLevel;
     }
@@ -55,30 +54,24 @@ public class PixelSaveGame : MonoBehaviour
         public double value;
         public bool disabled; // switched off by the player in the shop
         public double extra;  // a second number some minigames keep (the bomb's parts held)
-        public bool hasExtra; // false in older saves, which only stored the one number
     }
 
     [Serializable]
     private class SaveData
     {
         public int version = 1;
-        public int solarOptInDone;   // 1 = written by a build where Solar spawns only when switched on (older saves get Solar switched OFF once on load)
         public string savedAt;
         public string slotName = "";   // the save's own name (Save / Load window > Rename): lives in the file, so it travels with it
         public long savedAtTicks;   // UTC, used for offline progress
         public double playSeconds;  // time played, for the slot list's summary (the stats part keeps the real one)
         public TierSave[] tiers;
-        public long ultraPixels = -1;   // Ultra pixels held (-1 = an older save: the per-pixel counts in the tiers are added up)
+        public long ultraPixels;   // Ultra pixels held
         public PackSave[] packs;
         public MinigameSave[] minigames;
         public PixelSaveRegistry.Part[] parts;   // every system that saves itself (IPixelSaved: inventory, stats, achievements, Bank, pets, toggles...)
         public PixelFeatureTester.TesterSave[] testerObjects;   // the Dev Hub tester machines (Wood Chipper, belts + their riders, Kiln, Solar Panels)
         public PixelClicker.OldPixelState[] oldPixels;   // where the old pixels lie
         public PixelSettingsSync.Entry[] settings;       // the settings / dev tool choices of this save file
-
-        // Older saves (before minigames were saved by id).
-        public double singularityCount;
-        public double ghostsCaught;
     }
 
     // ------------------------------------------------------------------
@@ -371,13 +364,6 @@ public class PixelSaveGame : MonoBehaviour
     /// <summary>Main menu 'New Game': from now on autosave and quit-save write into this slot.</summary>
     public void UseSlotForNewGame(int slot) { CurrentSlot = slot; }
 
-    /// <summary>The first slot with no save (0 = every slot is taken).</summary>
-    public int FirstEmptySlot()
-    {
-        for (int i = 1; i <= SlotCount; i++) if (!SlotHasSave(i)) return i;
-        return 0;
-    }
-
     /// <summary>Set when a New Game is started after the game has already been played this run: the scene reloads fresh and the title screen presses Play by itself.</summary>
     public static bool AutoStartNewGame;
 
@@ -567,7 +553,7 @@ public class PixelSaveGame : MonoBehaviour
 
         try
         {
-            SaveData data = new SaveData { savedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), savedAtTicks = DateTime.UtcNow.Ticks, solarOptInDone = 1 };
+            SaveData data = new SaveData { savedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), savedAtTicks = DateTime.UtcNow.Ticks };
             if (slot > 0) data.slotName = GetSlotName(slot);   // the save keeps its own name (a name waiting from a rename of an empty slot, or the one already in the file)
 
             PixelClicker.PixelTier[] tiers = clicker.Tiers;
@@ -603,7 +589,7 @@ public class PixelSaveGame : MonoBehaviour
             // Every minigame with a goal counter saves its count under its id.
             System.Collections.Generic.List<MinigameSave> minigameSaves = new System.Collections.Generic.List<MinigameSave>();
             foreach (PixelMinigame m in PixelMinigame.All)
-                if (m != null) minigameSaves.Add(new MinigameSave { id = m.Id, value = m.HasTracker ? m.TrackerCount : 0d, disabled = m.UserDisabled, extra = m.ExtraValue, hasExtra = true });
+                if (m != null) minigameSaves.Add(new MinigameSave { id = m.Id, value = m.HasTracker ? m.TrackerCount : 0d, disabled = m.UserDisabled, extra = m.ExtraValue });
             data.minigames = minigameSaves.ToArray();
             PixelStats playStats = PixelFind.Cached<PixelStats>();
             data.playSeconds = playStats != null ? playStats.PlaySeconds : 0d;
@@ -705,8 +691,7 @@ public class PixelSaveGame : MonoBehaviour
             foreach (PixelClicker.PixelTier tier in clicker.Tiers)
                 clicker.LoadTierState(tier.type, 0d, 0d, false);
             foreach (TierSave t in data.tiers)
-                clicker.LoadTierState((PixelClicker.PixelType)t.type, t.count, t.total, t.unlocked,
-                                      t.spawnDisabled || (data.solarOptInDone == 0 && (PixelClicker.PixelType)t.type == PixelClicker.PixelType.Solar), t.timesCollected, t.ultraCount, t.ultraLevel, t.valueLevel);
+                clicker.LoadTierState((PixelClicker.PixelType)t.type, t.count, t.total, t.unlocked, t.spawnDisabled, t.timesCollected, t.ultraLevel, t.valueLevel);
             clicker.RestoreUltra(data.ultraPixels);
 
             // Shop: match packs by name.
@@ -734,13 +719,8 @@ public class PixelSaveGame : MonoBehaviour
                 m.UserDisabled = saved != null && saved.disabled;
                 if (m.UserDisabled) m.Deactivate();
                 if (!m.HasTracker) continue;
-                double value = saved != null ? saved.value
-                             : m.Id == "ghost" ? data.ghostsCaught            // save from before minigames were saved by id
-                             : m.Id == "blackhole" ? data.singularityCount : 0d;
-                m.SetTrackerCount(value);
-
-                // Older saves stored only one number: for the bomb that was the parts held, so it becomes both.
-                if (saved != null) m.SetExtraValue(saved.hasExtra ? saved.extra : saved.value);
+                m.SetTrackerCount(saved != null ? saved.value : 0d);
+                if (saved != null) m.SetExtraValue(saved.extra);
             }
             PixelSaveRegistry.ImportRange(data.parts, PixelSaveRegistry.MinigamesBand, PixelSaveRegistry.WorldBand);   // (achievements, stats)
 

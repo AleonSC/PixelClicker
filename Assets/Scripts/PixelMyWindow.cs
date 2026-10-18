@@ -67,7 +67,6 @@ public class PixelMyWindow : MonoBehaviour
     [Tooltip("Seconds between value refreshes. 0 = the coded default (0.4).")]
     [SerializeField] private float refreshSeconds = 0f;
 
-    private Color panelColor => PixelUITheme.ToolWindowColor;   // (the theme: PixelUITheme)
     [SerializeField] private Color rowColor = new Color(0.16f, 0.2f, 0.3f, 0.9f);
     private Color textColor => PixelUITheme.TextColor;   // (the theme: PixelUITheme)
     [SerializeField] private Color dimTextColor = new Color(0.7f, 0.76f, 0.88f, 1f);
@@ -202,7 +201,7 @@ public class PixelMyWindow : MonoBehaviour
 
     private PixelClicker clicker;
     private TMP_FontAsset Font => clicker != null ? clicker.UIFont : null;
-    private GameObject canvasRoot, windowObject, openButtonObject;
+    private GameObject canvasRoot, windowObject;
     private Canvas canvas;
     private RectTransform canvasRect, windowRect, listContent, addBar;
     private ScrollRect scroll;
@@ -216,7 +215,7 @@ public class PixelMyWindow : MonoBehaviour
     private PixelWindowChrome chrome;
     private bool minimized => chrome != null && chrome.Minimized;
     private float fullHeight = 660f;          // the window's height when not minimized (saved as H; the resize grip changes it)
-    private Button closeButton, tabPinnedButton, tabLogButton, tabKeysButton;
+    private Button tabPinnedButton, tabLogButton, tabKeysButton;
     private Image tabKeysImage;
     private RectTransform keysRoot;
     private bool showKeysTab;         // the Keybinds tab is showing (PixelCustomKeys builds its contents)
@@ -350,7 +349,6 @@ public class PixelMyWindow : MonoBehaviour
         windowObject = parts.Root;
         windowRect = parts.Rect;
         chrome = parts.Chrome;
-        closeButton = parts.Close;
         titleLabel = parts.Title;
         chrome.defaultPlacer = cs => new Vector2(cs.x - windowRect.sizeDelta.x - 22f, -(cs.y - BarInset() - fullHeight));   // first time: right side, just above the bottom bar
         chrome.StateChanged += Layout;   // (minimized / restored, docked / undocked: lay the window out at once)

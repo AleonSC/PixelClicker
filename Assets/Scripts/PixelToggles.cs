@@ -89,8 +89,6 @@ public class PixelToggles : MonoBehaviour
     [Tooltip("Text size.")]
     [SerializeField] private float fontSize = 30f;
 
-    private Color panelColor => PixelUITheme.WindowColor;   // (the theme: PixelUITheme)
-
     [Tooltip("Row background colour.")]
     [SerializeField] private Color rowColor = new Color(0.17f, 0.17f, 0.21f, 1f);
 
@@ -261,7 +259,7 @@ public class PixelToggles : MonoBehaviour
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (clicker == null) return false;
         foreach (PixelClicker.PixelTier t in clicker.Tiers)
-            if (t.unlocked && (t.CanSwitchOff || PixelSkills.IsOptIn(t.type))) return true;
+            if (t.unlocked && t.CanSwitchOff) return true;
         return false;
     }
 
@@ -307,13 +305,6 @@ public class PixelToggles : MonoBehaviour
             PixelSkills skills = PixelSkills.Instance;
             if (skills != null)
             {
-                // The basic shop blocks (Wood, Rock) are not in the base rotation: each is a switch, on by default once unlocked.
-                foreach (PixelClicker.PixelTier t in clicker.Tiers)
-                {
-                    if (!t.unlocked || !PixelSkills.IsOptIn(t.type)) continue;
-                    PixelClicker.PixelType type = t.type;
-                    list.Add(new Entry { label = ShortPixelName(t.displayName), on = PixelSkills.OptInOn(type), setter = on => skills.SetOptIn(type, on) });
-                }
                 // Skill-only blocks unlocked in a skill tree can be switched on for every rotation.
                 foreach (PixelClicker.PixelType guest in skills.UnlockedGuests())
                 {

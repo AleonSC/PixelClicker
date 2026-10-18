@@ -204,7 +204,7 @@ public partial class PixelSkills : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
-        penaltyLevels.Clear(); penaltyEnds.Clear(); Instance = null; packCache = null; guestCache = null; offCache = null;
+        penaltyLevels.Clear(); penaltyEnds.Clear(); Instance = null; packCache = null; guestCache = null;
         PixelStatics.ResetOnRestart(OnSceneUnloaded);
     }
 
@@ -761,16 +761,12 @@ public partial class PixelSkills : MonoBehaviour
     private const string PackPref = "PixelClicker.Setting.SkillPack";
     private static string packCache;
 
-    /// <summary>The pixel pack the player chose (saved per save file; '' / 'standard' = the usual rotation). Older saves with Prospector mode on read as Mining.</summary>
+    /// <summary>The pixel pack the player chose (saved per save file; '' / 'standard' = the usual rotation).</summary>
     public static string PackSetting
     {
         get
         {
-            if (packCache == null)
-            {
-                packCache = PixelPrefs.GetString(PackPref, "");
-                if (string.IsNullOrEmpty(packCache) && PixelPrefs.GetInt("PixelClicker.Setting.Prospector", 0) != 0) packCache = MiningId;
-            }
+            if (packCache == null) packCache = PixelPrefs.GetString(PackPref, "");
             return packCache;
         }
         set { packCache = value ?? ""; PixelPrefs.SetString(PackPref, packCache); }
@@ -976,7 +972,6 @@ public partial class PixelSkills : MonoBehaviour
     {
         PixelSkills s = Instance;
         if (PixelClicker.IsRetiredOre(type)) return true;   // ores tagged RetiredOre never spawn (none at the moment)
-        if (IsOptIn(type)) return !OptInOn(type);   // Wood and Rock: on by default once unlocked, switchable in the Toggles window
         if (s == null) return PixelClicker.IsOre(type) || PixelClicker.IsFarm(type) || PixelClicker.IsWoodBlock(type) || PixelClicker.IsForageBlock(type) || PixelClicker.IsFishBlock(type) || type == PixelClicker.PixelType.Obsidian || type == PixelClicker.PixelType.Jellyfish || type == PixelClicker.PixelType.HornetNest || type == PixelClicker.PixelType.Toadstool || type == PixelClicker.PixelType.Mold;
         SkillPack owner = s.PackOfType(type);
         string active = s.ActiveId;
@@ -1020,36 +1015,6 @@ public partial class PixelSkills : MonoBehaviour
             }
             return guestCache;
         }
-    }
-
-    /// <summary>The basic shop blocks (Wood, Rock) are never part of a rotation by themselves: they spawn only while the player has switched them on (the same switch set as the guests).</summary>
-    public static bool IsOptIn(PixelClicker.PixelType type) => false;   // (Wood used to be an opt-in block; it is part of the Woodcutting pack now)
-
-    /// <summary>Is the opt-in block (Wood, Rock) switched on?</summary>
-    public static bool OptInOn(PixelClicker.PixelType type) => !OffSet.Contains(PixelClicker.TypeName(type));
-
-    private const string OffPref = "PixelClicker.Setting.OptInOff";
-    private static System.Collections.Generic.HashSet<string> offCache;
-
-    private static System.Collections.Generic.HashSet<string> OffSet
-    {
-        get
-        {
-            if (offCache == null)
-            {
-                offCache = new System.Collections.Generic.HashSet<string>();
-                foreach (string part in PixelPrefs.GetString(OffPref, "").Split(',')) if (part.Length > 0) offCache.Add(part);
-            }
-            return offCache;
-        }
-    }
-
-    /// <summary>Switches Wood / Rock on or off (they are on by default).</summary>
-    public void SetOptIn(PixelClicker.PixelType type, bool on)
-    {
-        if (on) OffSet.Remove(type.ToString()); else OffSet.Add(type.ToString());
-        PixelPrefs.SetString(OffPref, string.Join(",", OffSet));
-        Changed?.Invoke();
     }
 
     /// <summary>Has a skill tree node that unlocks this block as a toggle been bought?</summary>
@@ -1103,12 +1068,6 @@ public partial class PixelSkills : MonoBehaviour
 
     // ---- Offline Progression mode: you play with some pack's pixels but only the Offline Progression skill earns XP ----
 
-    /// <summary>
-    /// Offline Progression used to be trainable by clicking; since 2026-10-16 it is PASSIVE (XP only from offline progress, AddOfflineXp), so it is never
-    /// the skill in training. Kept as a property (always false) so the old checks read naturally; an old save's 'offline chosen' switch is ignored.
-    /// </summary>
-    public static bool OfflineMode => false;
-
     private const string OfflineTaskPref = "PixelClicker.Setting.SkillOfflineTask";
 
     /// <summary>
@@ -1150,10 +1109,10 @@ public partial class PixelSkills : MonoBehaviour
     }
 
     /// <summary>A save file with its own settings was loaded: read the switch again.</summary>
-    public static void ReloadSettingsFromPrefs() { packCache = null; guestCache = null; offCache = null; }
+    public static void ReloadSettingsFromPrefs() { packCache = null; guestCache = null; }
 
-    /// <summary>The skill that earns the XP right now: Offline Progression while it is chosen, else the pack in play.</summary>
-    public string TrainingId => OfflineMode && IsAvailable(Find(OfflineId)) ? OfflineId : ActiveId;
+    /// <summary>The skill that earns the XP right now: the pack in play (Offline Progression is passive since 2026-10-16: it only gets XP from offline progress, AddOfflineXp).</summary>
+    public string TrainingId => ActiveId;
 
     /// <summary>Chooses the skill to train. A normal pack also becomes the pixel pack in play (and ends Offline Progression); Offline Progression keeps the pixel pack you have.</summary>
     public void SetActive(string id)
@@ -1175,15 +1134,6 @@ public partial class PixelSkills : MonoBehaviour
             }
         }
         if (changed) Changed?.Invoke();
-    }
-
-    /// <summary>Chooses which pack's pixels spawn WITHOUT changing the skill being trained (used while Offline Progression is chosen).</summary>
-    public void SetPixelPack(string id)
-    {
-        SkillPack pack = Find(id);
-        if (pack == null || pack.id == OfflineId || !IsAvailable(pack) || id == ActiveId) return;
-        PackSetting = id;
-        Changed?.Invoke();
     }
 
     // ---- Skill tree ----

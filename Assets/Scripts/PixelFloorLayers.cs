@@ -184,16 +184,6 @@ public partial class PixelFloor
         fillRoutine = null;
     }
 
-    private static void FillFlat(Texture2D tex, Color c)
-    {
-        int n = tex.width;
-        Color32[] flat = new Color32[n * n];
-        Color32 c32 = c;
-        for (int i = 0; i < flat.Length; i++) flat[i] = c32;
-        tex.SetPixels32(flat);
-        tex.Apply(false);
-    }
-
     /// <summary>Fills the texture at once with a soft, blurred version of the finished picture (the style sampled on a coarse grid and smoothly enlarged), so the floor never shows a flat colour while the sharp picture is drawn.</summary>
     private void FillPreview(Texture2D tex, FloorStyle s)
     {

@@ -37,16 +37,13 @@ public static class PixelBasicFx
     /// <summary>Re-reads the setting after a save with different settings was loaded.</summary>
     public static void ReloadFromPrefs() { levelCache = -1; }
 
-    /// <summary>True for the pixel types this system draws: every one of them now (the early pixels have their own colours and extras, the rest use their tier colour).</summary>
-    public static bool Handles(PixelClicker.PixelType type) => true;
-
     /// <summary>
     /// One pop. 'amountScale' = 1 for the full effect (a break), smaller for a chip of a tough pixel. 'strength' is the Inspector multiplier (0 = 1).
     /// </summary>
     public static void Play(PixelClicker.PixelType type, Color tierColor, Vector3 centre, float size, bool automatic, float amountScale, float strength)
     {
         int level = Level;
-        if (level == 0 || !Handles(type) || PixelFx.Material == null) return;
+        if (level == 0 || PixelFx.Material == null) return;   // (every pixel type: the early pixels have their own colours and extras, the rest use their tier colour)
         using (playMarker.Auto()) PlayInner(type, tierColor, centre, size, automatic, amountScale, strength, level);
     }
 

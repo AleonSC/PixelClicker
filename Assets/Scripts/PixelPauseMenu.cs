@@ -391,30 +391,6 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Scroll bar colour in the Stats screen.")]
     [SerializeField] private Color scrollbarColor = new Color(1f, 1f, 1f, 0.35f);
 
-    [Header("Changelog")]
-    [Tooltip("Text of the Changelog button and the title of its screen.")]
-    [SerializeField] private string changelogText = "Changelog";
-
-    [Tooltip("Name of the text file in a Resources folder that holds the changelog (Assets/Resources/Changelog.txt), one change per line.")]
-    [SerializeField] private string changelogResource = "Changelog";
-
-    [Tooltip("Shown when the changelog is empty.")]
-    [SerializeField] private string emptyChangelogText = "No changes since the last build.";
-
-    [Tooltip("Newest change first.")]
-    [SerializeField] private bool newestFirst = true;
-
-    [Min(300f)]
-    [Tooltip("Width of the changelog screen (canvas units).")]
-    [SerializeField] private float changelogWidth = 980f;
-
-    [Min(100f)]
-    [Tooltip("Height of the scrolling changelog text (canvas units).")]
-    [SerializeField] private float changelogViewHeight = 560f;
-
-    [Tooltip("Size of the changelog text.")]
-    [SerializeField] private float changelogFontSize = 28f;
-
     [Header("How to Play and Controls")]
     [Tooltip("Show the How To Play tab of the Game Guide screen.")]
     [SerializeField] private bool showHowToPlay = true;
@@ -513,7 +489,7 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Gap between buttons in the same row.")]
     [SerializeField] private float columnGap = 20f;
 
-    [Tooltip("Keep the menu (and the Changelog / How to Play / Controls screens) between the black bars at the top and bottom of the screen: if it would be taller, the buttons or scrolling text shrink to fit.")]
+    [Tooltip("Keep the menu (and the How to Play / Controls screens) between the black bars at the top and bottom of the screen: if it would be taller, the buttons or scrolling text shrink to fit.")]
     [SerializeField] private bool fitBetweenBars = true;
 
     [Min(0f)]
@@ -534,8 +510,6 @@ public class PixelPauseMenu : MonoBehaviour
 
     [Tooltip("Colour that dims the screen behind the menu (alpha = darkness).")]
     [SerializeField] private Color dimColor = new Color(0f, 0f, 0f, 0.6f);
-
-    private Color panelColor => PixelUITheme.WindowColor;   // (the theme: PixelUITheme)
 
     [Tooltip("Colour of the main menu's own buttons (Resume, Save / Load, Stats, Settings, Guide - their look on purpose). Every other button takes its colour from its role (PixelUITheme).")]
     [SerializeField] private Color menuButtonColor = new Color(0.2f, 0.45f, 0.9f, 1f);
@@ -566,13 +540,10 @@ public class PixelPauseMenu : MonoBehaviour
 
     private GameObject canvasRoot;
     private GameObject menuRoot;
-    private GameObject mainPanel, statsPanel, settingsPanel, changelogPanel, restartPanel, quitPanel;
+    private GameObject mainPanel, statsPanel, settingsPanel, restartPanel, quitPanel;
     private Slider masterSlider, effectsSlider, musicSlider;
     private Toggle muteToggle;
     private PixelHoldButton restartHold;
-    private ScrollRect changelogScroll;
-    private GameObject changelogBar;
-    private TMP_Text changelogLabel;
 
     /// <summary>One of the scrolling text screens fed from a Resources text file (How to Play, Controls).</summary>
     private class GuideScreen
@@ -585,7 +556,6 @@ public class PixelPauseMenu : MonoBehaviour
     }
 
     private GuideScreen howToPlayScreen, controlsScreen;
-    private float changelogFitHeight;
 
     private struct MenuEntry
     {
@@ -946,7 +916,7 @@ public class PixelPauseMenu : MonoBehaviour
     {
         GameObject[] views =
         {
-            mainPanel, statsPanel, settingsPanel, changelogPanel, howToPlayScreen != null ? howToPlayScreen.panel : null,
+            mainPanel, statsPanel, settingsPanel, howToPlayScreen != null ? howToPlayScreen.panel : null,
             controlsScreen != null ? controlsScreen.panel : null, restartPanel, quitPanel, saveLoadPanel, keysPanel, playlistPanel
         };
         foreach (GameObject v in views) if (v != null && v.activeSelf) return v;
@@ -1200,7 +1170,6 @@ public class PixelPauseMenu : MonoBehaviour
         if (showSettings) entries.Add(new MenuEntry { label = settingsText, color = menuButtonColor, action = () => ShowView(settingsPanel) });
         // How To Play (two tabs: Controls and Game Guide)
         if (controlsScreen != null || howToPlayScreen != null) entries.Add(new MenuEntry { label = guideMenuText, color = menuButtonColor, action = () => ShowView((controlsScreen != null ? controlsScreen : howToPlayScreen).panel) });
-        // How to Play | Changelog
         // Give feedback: a long green button right above Quit
         entries.Add(new MenuEntry { label = string.IsNullOrEmpty(feedbackText) ? "Give feedback" : feedbackText, role = ButtonRole.Success, action = () => PixelFeedback.OpenWindow(), fullRow = true });
         // Quit at the bottom, alone
@@ -1229,7 +1198,6 @@ public class PixelPauseMenu : MonoBehaviour
         if (mainPanel != null) SetView(mainPanel, view == mainPanel);
         if (statsPanel != null) SetView(statsPanel, view == statsPanel);
         if (settingsPanel != null) SetView(settingsPanel, view == settingsPanel);
-        if (changelogPanel != null) SetView(changelogPanel, view == changelogPanel);
         if (howToPlayScreen != null) SetView(howToPlayScreen.panel, view == howToPlayScreen.panel);
         if (controlsScreen != null) SetView(controlsScreen.panel, view == controlsScreen.panel);
         if (howToPlayScreen != null && view == howToPlayScreen.panel) RefreshGuideScreen(howToPlayScreen);
@@ -1243,7 +1211,6 @@ public class PixelPauseMenu : MonoBehaviour
         if (view == keysPanel) { capturingAction = -1; RefreshKeyLabels(); }
         if (view == saveLoadPanel) OpenSaveLoad();
         if (view == restartPanel && restartHold != null) restartHold.ResetProgress();
-        if (view == changelogPanel) RefreshChangelog();
 
         if (view == statsPanel) RefreshStats();
         if (view == settingsPanel && clicker != null)
@@ -2219,35 +2186,6 @@ public class PixelPauseMenu : MonoBehaviour
         p.Setup(panelObject.GetComponent<RectTransform>(), () => IsPaused && panelObject != null && panelObject.activeSelf);
     }
 
-    private void BuildChangelogPanel()
-    {
-        changelogPanel = BuildSectionPanel("Changelog Panel", changelogText, out float y);
-        changelogFitHeight = FitViewHeight(changelogViewHeight, y);
-        RectTransform pr = changelogPanel.GetComponent<RectTransform>();
-        pr.sizeDelta = new Vector2(changelogWidth, pr.sizeDelta.y);
-
-        changelogScroll = PixelUIKit.CreateScrollView(changelogPanel.transform, "Changelog List", scrollbarColor, 12f,
-                                                      changelogFontSize * 1.5f, out RectTransform content, out changelogBar);
-        RectTransform vr = changelogScroll.GetComponent<RectTransform>();
-        vr.anchorMin = new Vector2(0f, 1f);
-        vr.anchorMax = new Vector2(1f, 1f);
-        vr.pivot = new Vector2(0.5f, 1f);
-        vr.sizeDelta = new Vector2(-60f, changelogFitHeight);
-        vr.anchoredPosition = new Vector2(0f, -y);
-
-        changelogLabel = MakeText(content, "Changelog Text", "", changelogFontSize, FontStyles.Normal);
-        changelogLabel.alignment = TextAlignmentOptions.TopLeft;
-        changelogLabel.richText = false; // the text is shown exactly as written
-        RectTransform lr = changelogLabel.rectTransform;
-        lr.anchorMin = new Vector2(0f, 1f);
-        lr.anchorMax = new Vector2(1f, 1f);
-        lr.pivot = new Vector2(0.5f, 1f);
-        lr.offsetMin = new Vector2(10f, -changelogFitHeight);
-        lr.offsetMax = new Vector2(-26f, 0f);
-
-        FinishSectionPanel(changelogPanel, y + changelogFitHeight);
-    }
-
     private GuideScreen BuildGuideScreen(string objectName, string title, string resource, string emptyText, bool isControlsTab)
     {
         GuideScreen s = new GuideScreen { resource = resource, empty = emptyText };
@@ -2366,30 +2304,6 @@ public class PixelPauseMenu : MonoBehaviour
         r.sizeDelta = new Vector2(width, 10f);
         r.anchoredPosition = new Vector2(x, -y);
         return t;
-    }
-
-    /// <summary>Reads the changelog file (one change per line) and shows it, newest first.</summary>
-    private void RefreshChangelog()
-    {
-        TextAsset asset = Resources.Load<TextAsset>(changelogResource);
-        string[] lines = asset != null ? asset.text.Split('\n') : new string[0];
-
-        System.Collections.Generic.List<string> entries = new System.Collections.Generic.List<string>();
-        foreach (string raw in lines)
-        {
-            string line = raw.Trim();
-            if (line.Length > 0) entries.Add(line);
-        }
-        if (newestFirst) entries.Reverse();
-
-        // A blank line between entries keeps wrapped lines readable.
-        string text = entries.Count > 0 ? string.Join("\n\n", entries) : emptyChangelogText;
-        changelogLabel.text = text;
-
-        float width = changelogLabel.rectTransform.rect.width > 1f ? changelogLabel.rectTransform.rect.width : changelogWidth - 100f;
-        float height = Mathf.Ceil(changelogLabel.GetPreferredValues(text, width, 0f).y) + 10f;
-        changelogLabel.rectTransform.offsetMin = new Vector2(10f, -height);
-        PixelUIKit.UpdateScrollView(changelogScroll, changelogBar, height, changelogFitHeight);
     }
 
     // ------------------------------------------------------------------
@@ -2887,22 +2801,6 @@ public class PixelPauseMenu : MonoBehaviour
         return best;
     }
 
-    /// <summary>A coloured section title inside the settings list.</summary>
-    private void AddHeaderRow(Transform parent, string text, ref float y)
-    {
-        y += 8f;
-        TMP_Text t = MakeText(parent, text + " Header", text, rowFontSize * 0.9f, FontStyles.Bold);
-        t.color = statValueColor;
-        t.alignment = TextAlignmentOptions.MidlineLeft;
-        RectTransform rt = t.rectTransform;
-        rt.anchorMin = new Vector2(0f, 1f);
-        rt.anchorMax = new Vector2(1f, 1f);
-        rt.pivot = new Vector2(0.5f, 1f);
-        rt.sizeDelta = new Vector2(-80f, rowHeight * 0.8f);
-        rt.anchoredPosition = new Vector2(0f, -y);
-        y += rowHeight * 0.8f + 4f;
-    }
-
     /// <summary>A tick box that reads / writes a setting; it re-reads the setting whenever the screen is shown.</summary>
     private static string[] ButtonModeNames() => new[] { "Peeking", "Always showing", "Hidden" };
 
@@ -2929,20 +2827,6 @@ public class PixelPauseMenu : MonoBehaviour
         dd.onValueChanged.AddListener(v => set(v));
         refresh();
         settingsRefreshers.Add(refresh);
-        y += rowHeight + 6f;
-    }
-
-    /// <summary>A full-width button row (an action rather than a setting).</summary>
-    private void AddWideButtonRow(Transform parent, string label, UnityEngine.Events.UnityAction onClick, ref float y, float inset = SettingsRowInset)
-    {
-        Button b = MakeButton(parent, label + " Button", label, new Vector2(10f, rowHeight), ButtonRole.Neutral, rowFontSize * 0.7f);
-        RectTransform rt = b.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0f, 1f);
-        rt.anchorMax = new Vector2(1f, 1f);
-        rt.pivot = new Vector2(0.5f, 1f);
-        rt.sizeDelta = new Vector2(-inset, rowHeight);
-        rt.anchoredPosition = new Vector2(0f, -y);
-        b.onClick.AddListener(onClick);
         y += rowHeight + 6f;
     }
 
@@ -3468,24 +3352,6 @@ public class PixelPauseMenu : MonoBehaviour
         if (!fitBetweenBars) return desired;
         float below = 30f; // room under the list (the Back button is now an X at the top)
         return Mathf.Max(120f, Mathf.Min(desired, AvailableHeight() - yTop - below));
-    }
-
-    private void AddButtonPair(Transform parent, string labelA, UnityEngine.Events.UnityAction a,
-                               string labelB, UnityEngine.Events.UnityAction b, ref float y)
-    {
-        float gap = 16f;
-        Vector2 half = new Vector2((menuButtonSize.x - gap) * 0.5f, menuButtonSize.y);
-        string[] labels = { labelA, labelB };
-        UnityEngine.Events.UnityAction[] actions = { a, b };
-        for (int i = 0; i < 2; i++)
-        {
-            Button button = MakeButton(parent, labels[i] + " Button", labels[i], half, ButtonRole.Neutral, menuButtonFontSize);
-            RectTransform rt = button.GetComponent<RectTransform>();
-            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
-            rt.anchoredPosition = new Vector2((i == 0 ? -1f : 1f) * (half.x * 0.5f + gap * 0.5f), -y);
-            button.onClick.AddListener(actions[i]);
-        }
-        y += menuButtonSize.y + menuButtonSpacing;
     }
 
     private void AddMenuButton(Transform parent, string label, ButtonRole role, ref float y, UnityEngine.Events.UnityAction onClick)

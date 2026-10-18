@@ -38,7 +38,6 @@ public partial class PixelSkills
     [SerializeField] private string activeBadgeText = "ACTIVE";
     [SerializeField] private string lockedName = "???";
     [SerializeField] private string treeButtonText = "Skill tree";
-    [SerializeField] private string pixelsBadgeText = "PIXELS";
 
     [SerializeField] private string treeTitleText = "Skill tree";
 
@@ -48,7 +47,6 @@ public partial class PixelSkills
     [Tooltip("Height of the area the skill tree nodes are laid out in (canvas units).")]
     [SerializeField] private float treeAreaHeight = 400f;
 
-    private Color panelColor => PixelUITheme.WindowColor;   // (the theme: PixelUITheme)
     [Tooltip("The HUD Skills button's own colour (each HUD corner button has an identity colour of its own).")]
     [SerializeField] private Color tabColor = new Color(0.22f, 0.3f, 0.45f, 1f);
     [Tooltip("Colour of a skill tree node you cannot unlock yet (the skill cards and pack buttons use the Neutral / Selected button roles).")]
@@ -858,14 +856,13 @@ public partial class PixelSkills
             Card c = cards[i];
             bool open = IsAvailable(c.pack);
             bool isActive = c.pack.id == TrainingId;
-            bool pixelsOnly = !isActive && OfflineMode && c.pack.id == ActiveId;   // Offline Progression is trained, this pack only supplies the pixels
-            PixelUIKit.SetText(c.badge, pixelsOnly ? pixelsBadgeText : activeBadgeText);
+            PixelUIKit.SetText(c.badge, activeBadgeText);
             double ci, cn;
             int cl = LevelOf(c.pack, out ci, out cn);
             PixelUIKit.SetRole(c.background, i == selected ? ButtonRole.Selected : ButtonRole.Neutral);
             PixelUIKit.SetText(c.nameLabel, open ? ShownName(c.pack) : lockedName);
             PixelUIKit.SetText(c.levelLabel, open ? "Lv " + cl : "");
-            c.badge.gameObject.SetActive(isActive || pixelsOnly);
+            c.badge.gameObject.SetActive(isActive);
             c.treeButton.gameObject.SetActive(open && c.pack.nodes != null && c.pack.nodes.Length > 0);
             c.barFill.color = open ? c.pack.accent : new Color(0.3f, 0.3f, 0.35f, 1f);
             RectTransform fr = c.barFill.rectTransform;

@@ -39,8 +39,6 @@ public class PixelViewWindow : MonoBehaviour
     [Tooltip("Turn the View window (and its key) off.")]
     [SerializeField] private bool disableViewWindow = false;
 
-    private Color panelColor => PixelUITheme.ToolWindowColor;   // (the theme: PixelUITheme)
-
     [Tooltip("Colour of the rows.")]
     [SerializeField] private Color rowColor = new Color(0.18f, 0.22f, 0.32f, 1f);
 

@@ -340,9 +340,6 @@ public class PixelGhostMinigame : PixelMinigame
     /// <summary>True once enough ghosts have been caught.</summary>
     public bool ThresholdReached => ghostsCaught >= ghostThreshold;
 
-    /// <summary>Sets the count (used when loading a save).</summary>
-    public void SetGhostsCaught(double value) => ghostsCaught = System.Math.Max(0d, value);
-
     protected override void Awake()
     {
         base.Awake();

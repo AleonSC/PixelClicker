@@ -27,20 +27,15 @@ using static PixelInput;
 /// </summary>
 public class PixelBlockTooltip : MonoBehaviour
 {
-    private const string PrefEnabled = "PixelClicker.Setting.BlockTips";
 
     private const string PrefMode = "PixelClicker.Setting.BlockTipsMode";
     private const int ModeFull = 0, ModeMinimal = 1, ModeOff = 2;
     public static readonly string[] ModeNames = { "Full", "Minimal", "Off" };
 
-    /// <summary>0 = full card, 1 = minimal (3D icon + name), 2 = off. Old saves: the former on / off tick box (BlockTips) maps to Full / Off.</summary>
+    /// <summary>0 = full card, 1 = minimal (3D icon + name), 2 = off.</summary>
     public static int Mode
     {
-        get
-        {
-            if (PixelPrefs.HasKey(PrefMode)) return Mathf.Clamp(PixelPrefs.GetInt(PrefMode, 0), 0, 2);
-            return PixelPrefs.GetInt(PrefEnabled, 1) != 0 ? ModeFull : ModeOff;
-        }
+        get => Mathf.Clamp(PixelPrefs.GetInt(PrefMode, 0), 0, 2);
         set { PixelPrefs.SetInt(PrefMode, Mathf.Clamp(value, 0, 2)); PixelPrefs.Save(); }
     }
 
@@ -122,8 +117,6 @@ public class PixelBlockTooltip : MonoBehaviour
         PixelHuskPool.HuskReleasing -= OnHuskReleasing;
         if (canvasObject != null) Destroy(canvasObject);
     }
-
-    private static Color Dim(Color c, float k) => new Color(c.r * k, c.g * k, c.b * k, c.a);
 
     private void Build()
     {

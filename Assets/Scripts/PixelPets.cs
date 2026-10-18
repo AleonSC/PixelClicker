@@ -214,8 +214,6 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
     [Tooltip("Event log line when a pet is found. {0} = the pet's name.")]
     [SerializeField] private string foundFormat = "Pet found: {0}!";
 
-    private Color panelColor => PixelUITheme.WindowColor;   // (the theme: PixelUITheme)
-
     [Header("Popup look")]
     [Tooltip("Colour of the dark screen behind the popup.")]
     [SerializeField] private Color dimColor = new Color(0f, 0f, 0f, 0.7f);
@@ -1328,7 +1326,7 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
         waiting.Clear();
         if (list == null)
         {
-            PixelDebug.Info("PixelPets: the save has no pet list (older save), so no pets were loaded.", this);
+            PixelDebug.Info("PixelPets: the save has no pet list (a new game), so no pets were loaded.", this);
             return;
         }
         foreach (string entry in list)

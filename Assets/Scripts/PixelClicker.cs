@@ -1579,7 +1579,7 @@ public partial class PixelClicker : MonoBehaviour
     public void SetUltraEarned(long value) => ultraEarned = System.Math.Max(System.Math.Max(0L, value), TotalUltra);
 
     // Ultra pixels are ONE general currency now (not per pixel type): minigames reward them, upgrades will spend them.
-    private long ultraPixels, pendingLegacyUltra;
+    private long ultraPixels;
 
     /// <summary>The shared Ultra roll used by the minigames: a 'chance' (0..1) of giving one Ultra pixel. Returns true if it did.</summary>
     public bool RollUltra(float chance)
@@ -1599,11 +1599,10 @@ public partial class PixelClicker : MonoBehaviour
         UltraGained?.Invoke();
     }
 
-    /// <summary>Restores the Ultra pixels held when loading a save (a negative value = an older save: the old per-pixel counts are added up instead).</summary>
+    /// <summary>Restores the Ultra pixels held when loading a save.</summary>
     public void RestoreUltra(long held)
     {
-        ultraPixels = held >= 0 ? held : pendingLegacyUltra;
-        pendingLegacyUltra = 0;
+        ultraPixels = System.Math.Max(0L, held);
         ultraEarned = System.Math.Max(ultraEarned, ultraPixels);
         NotifyChanged();
     }
@@ -1695,7 +1694,7 @@ public partial class PixelClicker : MonoBehaviour
     }
 
     /// <summary>Replaces one tier's saved numbers (used by PixelSaveGame). Tiers unlocked at start stay unlocked.</summary>
-    public void LoadTierState(PixelType type, double count, double totalCollected, bool unlocked, bool spawnDisabled = false, long timesCollected = 0, long ultraCount = 0, int ultraLevel = 0, int valueLevel = 0)
+    public void LoadTierState(PixelType type, double count, double totalCollected, bool unlocked, bool spawnDisabled = false, long timesCollected = 0, int ultraLevel = 0, int valueLevel = 0)
     {
         int index = IndexOf(type);
         if (index < 0) return;
@@ -1706,7 +1705,6 @@ public partial class PixelClicker : MonoBehaviour
         tier.unlocked = unlocked || tier.unlockedAtStart;
         tier.spawnDisabled = spawnDisabled;
         tier.timesCollected = System.Math.Max(0L, timesCollected);
-        pendingLegacyUltra += System.Math.Max(0L, ultraCount);   // older saves counted Ultra per pixel type: RestoreUltra adds them up
         tier.ultraLevel = System.Math.Max(0, ultraLevel);
         tier.valueLevel = System.Math.Max(0, valueLevel);
     }

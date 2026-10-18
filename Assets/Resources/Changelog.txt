@@ -1425,3 +1425,4 @@
 [2026-10-18 17:06 UTC] Shift + V (Shift + the View key) now switches to the next view (Orbital, Top down, First person, Free cam) without opening the View window.
 [2026-10-18 17:08 UTC] The skill XP and husk crush XP popups stand out more: a dark rounded plate behind them, brighter text, a slightly bigger size, a quick pop as they appear and they stay a little longer.
 [2026-10-18 17:10 UTC] Design + to-do: crafting uses husks, not currency - a single placeable Workbench that keeps its stock when moved, takes only the husks of the chosen recipe and crafts from them (currency buys access, husks build things).
+[2026-10-18 17:12 UTC] Code cleanup: removed leftover code - the retired Wood opt-in switch, the old offline-training checks, code kept only for old save files, an unused pause-menu changelog screen and other unused bits (no change in how the game plays).

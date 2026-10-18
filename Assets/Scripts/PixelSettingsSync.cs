@@ -54,11 +54,11 @@ public static class PixelSettingsSync
         foreach (string k in new[]
         {
             "Rotation", "Pulsing", "RunInBackground", "AbbreviateNumbers", "CameraIntro", "Tips", "EventLog", "EventLogSize",
-            "PauseStopsGame", "AutoSave", "AutoSaveMessage", "HidePurchased", "Popups", "PopupSize", "ColorBlind", "DropGuide", "FlatView", "ViewMode", "ViewAutoOrbit", "ViewScrollInvert", "ButtonMode", "DayNight", "DayNightLength", "Prospector", "SkillOffline", "ClickFx", "BlockTips", "BlockTipsAlt", "BlockTipsMode", "Filter", "NextUp", "TalkMuted", "FancyMenu", "DidYouKnow", 
+            "PauseStopsGame", "AutoSave", "AutoSaveMessage", "HidePurchased", "Popups", "PopupSize", "ColorBlind", "DropGuide", "FlatView", "ViewMode", "ViewAutoOrbit", "ViewScrollInvert", "ButtonMode", "DayNight", "DayNightLength", "SkillOffline", "ClickFx", "BlockTipsAlt", "BlockTipsMode", "Filter", "NextUp", "TalkMuted", "FancyMenu", "DidYouKnow", 
         }) known.Add(new Known("PixelClicker.Setting." + k, 0));
         // Floats and strings (they used to be listed as ints, which stored 0 and wiped the picked glow colour, the hues and the skill pack on every load).
         foreach (string k in new[] { "ViewBaseZoom", "ViewAutoSpeed", "FilterStrength" }) known.Add(new Known("PixelClicker.Setting." + k, 1));
-        foreach (string k in new[] { "SkillPack", "SkillOfflineTask", "SkillGuests", "OptInOff", "MyWindow", "PetOutfits", "CustomKeys" }) known.Add(new Known("PixelClicker.Setting." + k, 2));
+        foreach (string k in new[] { "SkillPack", "SkillOfflineTask", "SkillGuests", "MyWindow", "PetOutfits", "CustomKeys" }) known.Add(new Known("PixelClicker.Setting." + k, 2));
         // Volumes.
         known.Add(new Known("PixelAudio.Master", 1));
         known.Add(new Known("PixelAudio.Effects", 1));

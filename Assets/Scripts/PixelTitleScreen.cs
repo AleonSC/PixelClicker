@@ -140,9 +140,6 @@ public partial class PixelTitleScreen : MonoBehaviour
     [Tooltip("Text on the Quit button.")]
     [SerializeField] private string quitText = "Quit";
 
-    [Tooltip("Size of the Quit button.")]
-    [SerializeField] private Vector2 quitSize = new Vector2(110f, 34f);
-
     [Header("Floor and Sky Pickers")]
     [Tooltip("Put the pickers in the bottom right corner of the screen (the sky above the floor). Off = either side of the Play button.")]
     [SerializeField] private bool pickersBottomRight = true;

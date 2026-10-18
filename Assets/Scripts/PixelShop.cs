@@ -359,8 +359,6 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Inner padding of the panel.")]
     [SerializeField] private float panelPadding = 20f;
 
-    private Color panelColor => PixelUITheme.WindowColor;   // (the theme: PixelUITheme)
-
     [Tooltip("Background colour of each pack row.")]
     [SerializeField] private Color rowColor = new Color(0.16f, 0.16f, 0.2f, 1f);
 
@@ -2426,11 +2424,7 @@ public partial class PixelShop : MonoBehaviour
         // Pixel types with a spawn switch are left switched off too.
         for (int t = 0; t < clicker.Tiers.Length; t++) clicker.SetSpawnEnabled(t, false);
 
-        // So are the opt-in blocks (Wood, Rock) and every minigame / vendor that has no pack of its own (Stardust, the visitors).
-        PixelSkills skills = PixelSkills.Instance;
-        if (skills != null)
-            foreach (PixelClicker.PixelTier tier in clicker.Tiers)
-                if (PixelSkills.IsOptIn(tier.type)) skills.SetOptIn(tier.type, false);
+        // So is every minigame / vendor that has no pack of its own (Stardust, the visitors).
         foreach (PixelMinigame game in PixelMinigame.All)
             if (game != null) game.UserDisabled = true;
         RefreshRows();   // (skills are left alone: the Dev Tools 'Max XP' widget does those)

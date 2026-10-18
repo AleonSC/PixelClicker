@@ -169,9 +169,6 @@ public class PixelPadMinigame : PixelMinigame
     public override double TrackerGoal => ultraGoal;
     public override string RequirementFormat => requirementFormat;
 
-    /// <summary>True when the inventory should show Ultra counts in its tooltips (always on).</summary>
-    public static bool UltraVisible => true;
-
     protected override void Awake()
     {
         base.Awake();
