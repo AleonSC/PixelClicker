@@ -1703,7 +1703,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         PixelPlacedDevice target = null;
         if (RightPressed()) rightDownAt = Time.unscaledTime;
         if (!IsPlacing && !PixelBank.HoseOn && !PixelClicker.GodMode && Time.frameCount != placeEndFrame && RightHeld() && Time.unscaledTime - rightDownAt >= removeStartDelay && !PointerOverUI())
-            target = DeviceUnderPointer();   // (only after removeStartDelay: a quick tap is the device panel's, PixelDeviceCard)
+            target = PixelRightClick.PressOwner == PixelRightClick.Owner.Device ? DeviceUnderPointer() : null;   // (only after removeStartDelay: a quick tap is the device panel's, PixelDeviceCard; a press on a husk is Husk Crush's, never a removal)
 
         // Only a ring fills round the cursor (no text), a buildup sound rises, and the device glows red as it fills.
         bool done = PixelHold.Update(this, target, removeHoldSeconds, "", removeMeterColor, true, "remove_buildup");

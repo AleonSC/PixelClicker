@@ -6,7 +6,8 @@
 //   1b. Charge: a Power Click is charging (PixelPowerClick.Charging) - a right press cancels it (no cooldown); nothing else gets it.
 //   2. Tool: the Bank hose is out, a device is being placed, the Conveyor Belt Kit / a tester piece is placing - they keep the right button.
 //   3. Pet: a pet is under the pointer (or held / its menu is open) - right-click opens its menu (PixelPetsMenu).
-//   3b. Device: a placed device is under the pointer (PixelConsumables.DeviceAtPointer; the cube in front wins) - a right TAP opens the shared
+//   3b. Device: a placed device is under the pointer - unless a crushable husk is at the pointer too (PixelHuskCrush.PickAt): then Husk wins
+//      (crushing comes first, 2026-10-18; the device's removal hold only runs for a press that started as Device) (PixelConsumables.DeviceAtPointer; the cube in front wins) - a right TAP opens the shared
 //      device info panel (PixelDeviceCard), a right HOLD still removes it (PixelConsumables.UpdateRemoval). Device = that device.
 //   4. WorldPart: anything else holding the mouse (PixelClicker.ExternalClickBlock: a device part that claimed the pointer, the UFO Helper,
 //      first person, the new-game intro, dev pickers...).
@@ -74,7 +75,14 @@ public static class PixelRightClick
         if (consumables != null && !PixelFirstPerson.Active && !PixelMinigame.TakeoverActive && !PixelCameraIntro.ClicksLocked)
         {
             PixelPlacedDevice d = consumables.DeviceAtPointer();   // (nearest device whose parts are under the pointer, never with the cube in front)
-            if (d != null) { device = d; return Owner.Device; }
+            if (d != null)
+            {
+                // A crushable husk at the pointer wins over the machine behind / under it (2026-10-18): crushing husks comes first.
+                Rigidbody over = Time.timeScale > 0f || PixelTimeStop.IsStopped ? PixelHuskCrush.PickAt(clicker, PixelInput.PointerPosition()) : null;
+                if (over != null) { husk = over; return Owner.Husk; }
+                device = d;
+                return Owner.Device;
+            }
         }
         if (PixelClicker.ExternalClickBlock || PixelClicker.GodMode) return Owner.WorldPart;
         Vector2 screen = PixelInput.PointerPosition();
