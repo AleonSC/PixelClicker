@@ -33,6 +33,7 @@ public partial class PixelSkills
     private RectTransform trackerRect, trackerBarFill;
     private TMP_Text trackerName, trackerXp, trackerPenalty;
     private Image trackerPanelImage, trackerPinImage;
+    private bool? trackerPinShownOn;   // the pin's last shown state (null = not set yet)
     private Button trackerClose, trackerSize, trackerStick, trackerPrev, trackerNext;
     private Image trackerSizeImage, trackerStickImage;
     private GameObject trackerShackleClosed, trackerShackleOpen;
@@ -62,7 +63,7 @@ public partial class PixelSkills
     /// <summary>The pin button in the Skills window: close the window and pin the tracker (or, if it is already up, take it away again).</summary>
     private void BuildPinButton()
     {
-        Button pin = windowParts.AddHeaderButton("Pin Button", "", true, PixelUIKit.WindowButtonColor);   // the Skills window's left header slot
+        Button pin = windowParts.AddHeaderButton("Pin Button", "", true);   // the Skills window's left header slot
         trackerPinImage = pin.GetComponent<Image>();
         PixelUIKit.AddPinIcon(pin, 40f);   // the shared pushpin icon (the Inventory's pin button uses it too)
         pin.onClick.AddListener(PinTracker);
@@ -167,9 +168,9 @@ public partial class PixelSkills
         trackerXp.raycastTarget = false;
 
         // Buttons: stick (lock), downsize, close.
-        trackerClose = PixelUIKit.CreateButton(Font, trackerPanel.transform, "Close", "X", new Vector2(40f, 40f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 22f);
+        trackerClose = PixelUIKit.CreateButton(Font, trackerPanel.transform, "Close", "X", new Vector2(40f, 40f), ButtonRole.Neutral, 22f);
         trackerClose.onClick.AddListener(() => SetTracker(false));   // does not bring the Skills window back
-        trackerSize = PixelUIKit.CreateButton(Font, trackerPanel.transform, "Size", "-", new Vector2(40f, 40f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 26f);
+        trackerSize = PixelUIKit.CreateButton(Font, trackerPanel.transform, "Size", "-", new Vector2(40f, 40f), ButtonRole.Neutral, 26f);
         trackerSizeLabel = trackerSize.GetComponentInChildren<TMP_Text>();
         trackerSizeImage = trackerSize.GetComponent<Image>();
         trackerSize.onClick.AddListener(() =>
@@ -178,7 +179,7 @@ public partial class PixelSkills
             PixelPrefs.SetInt(TrackerSmallPref, trackerSmall ? 1 : 0);
             LayoutTracker();
         });
-        trackerStick = PixelUIKit.CreateButton(Font, trackerPanel.transform, "Stick", "", new Vector2(40f, 40f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 22f);
+        trackerStick = PixelUIKit.CreateButton(Font, trackerPanel.transform, "Stick", "", new Vector2(40f, 40f), ButtonRole.Neutral, 22f);
         trackerStickImage = trackerStick.GetComponent<Image>();
         trackerShackleClosed = BuildLockPart(trackerStick.transform, false);
         trackerShackleOpen = BuildLockPart(trackerStick.transform, true);
@@ -194,10 +195,10 @@ public partial class PixelSkills
             r.anchorMin = r.anchorMax = r.pivot = new Vector2(1f, 1f);
         }
         // Arrows either side of the skill name: switch the skill in training.
-        trackerPrev = PixelUIKit.CreateButton(Font, trackerPanel.transform, "Previous", "<", new Vector2(40f, 40f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 26f);
+        trackerPrev = PixelUIKit.CreateButton(Font, trackerPanel.transform, "Previous", "<", new Vector2(40f, 40f), ButtonRole.Neutral, 26f);
         PixelUIKit.UseArrowGlyph(trackerPrev, true);
         trackerPrev.onClick.AddListener(() => CycleTrainedSkill(-1));
-        trackerNext = PixelUIKit.CreateButton(Font, trackerPanel.transform, "Next", ">", new Vector2(40f, 40f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 26f);
+        trackerNext = PixelUIKit.CreateButton(Font, trackerPanel.transform, "Next", ">", new Vector2(40f, 40f), ButtonRole.Neutral, 26f);
         PixelUIKit.UseArrowGlyph(trackerNext, false);
         trackerNext.onClick.AddListener(() => CycleTrainedSkill(1));
         AddTrackerTip(trackerPrev, () => "Previous skill");
@@ -295,7 +296,7 @@ public partial class PixelSkills
         xr.offsetMin = trackerBar.offsetMin; xr.offsetMax = trackerBar.offsetMax;
         trackerXp.gameObject.SetActive(!small);
         PixelUIKit.SetText(trackerSizeLabel, small ? "+" : "-");
-        trackerStickImage.color = trackerStuck ? new Color(0.2f, 0.55f, 0.3f, 1f) : new Color(0.3f, 0.3f, 0.35f, 1f);
+        PixelUIKit.SetRole(trackerStickImage, trackerStuck ? ButtonRole.Success : ButtonRole.Neutral);
         trackerShackleClosed.SetActive(trackerStuck);
         trackerShackleOpen.SetActive(!trackerStuck);
         trackerDrag.locked = trackerStuck || trackerIntro;
@@ -358,7 +359,11 @@ public partial class PixelSkills
     {
         bool show = trackerBuilt && !PixelTitleScreen.Showing && (trackerIntro || (trackerOn && SkillsTabUnlocked));   // (from Standard level 2, like the Skills button; before that only the early tracker)
         if (trackerCanvas != null && trackerCanvas.activeSelf != show) trackerCanvas.SetActive(show);
-        if (trackerPinImage != null) trackerPinImage.color = trackerOn ? new Color(0.2f, 0.6f, 0.3f, 1f) : new Color(0.3f, 0.3f, 0.35f, 1f);
+        if (trackerPinImage != null && trackerPinShownOn != trackerOn)   // (runs every frame: only re-role on a change)
+        {
+            trackerPinShownOn = trackerOn;
+            PixelUIKit.SetRole(trackerPinImage, trackerOn ? ButtonRole.Success : ButtonRole.Neutral);
+        }
     }
 
     /// <summary>

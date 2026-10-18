@@ -50,9 +50,10 @@ public partial class PixelSkills
 
     [Tooltip("Colours.")]
     [SerializeField] private Color panelColor = new Color(0.1f, 0.1f, 0.13f, 0.97f);
+    [Tooltip("The HUD Skills button's own colour (each HUD corner button has an identity colour of its own).")]
     [SerializeField] private Color tabColor = new Color(0.22f, 0.3f, 0.45f, 1f);
+    [Tooltip("Colour of a skill tree node you cannot unlock yet (the skill cards and pack buttons use the Neutral / Selected button roles).")]
     [SerializeField] private Color cardColor = new Color(0.17f, 0.17f, 0.21f, 1f);
-    [SerializeField] private Color cardSelectedColor = new Color(0.26f, 0.32f, 0.5f, 1f);
     [SerializeField] private Color textColor = Color.white;
     [SerializeField] private Color dimTextColor = new Color(1f, 1f, 1f, 0.55f);
     [SerializeField] private Color perkUnlockedColor = new Color(0.55f, 1f, 0.6f, 1f);
@@ -121,7 +122,7 @@ public partial class PixelSkills
         canvasRoot = PixelUIKit.CreateCanvas("PixelSkills Canvas", sortingOrder, new Vector2(1920f, 1080f), true);
 
         // ---- The tab: left edge, directly under the Bank + Hose buttons (same width as the pair). ----
-        tabButton = PixelUIKit.CreateButton(Font, canvasRoot.transform, "Skills Button", tabText, hud.ButtonSize, tabColor, textColor, 30f);
+        tabButton = PixelUIKit.CreateButton(Font, canvasRoot.transform, "Skills Button", tabText, hud.ButtonSize, tabColor, textColor, 30f);   // (role Custom: the HUD button's own identity colour)
         tabObject = tabButton.gameObject;
         RectTransform tabRect = tabButton.GetComponent<RectTransform>();
         // Bottom-left corner of the bars: Log (corner), then the Skills tab.
@@ -143,7 +144,7 @@ public partial class PixelSkills
         windowRect.anchoredPosition = new Vector2(gapToButton + hud.SideShownInset, 0f);
         float header = windowParts.HeaderHeight;
         // '?' in the right header slot (next to the X): plays Cubie's skills intro again, for anyone who wants to go into it more.
-        Button help = windowParts.AddHeaderButton("Help", "?", false);
+        Button help = windowParts.AddHeaderButton("Help", "?", false, ButtonRole.Primary);
         help.onClick.AddListener(StartTutorial);
         PixelMenuFx.AddWindowLine(windowObject.transform, header);
         BuildPinButton();   // left header slot: pins the training skill with an XP bar in a small window you can move
@@ -233,7 +234,7 @@ public partial class PixelSkills
         for (int i = 0; i < 8; i++)
         {
             int index = i;
-            Button head = PixelUIKit.CreateButton(Font, perkContent, "Perk Header " + i, "", new Vector2(10f, 44f), new Color(0.2f, 0.22f, 0.3f, 1f), textColor, 24f);
+            Button head = PixelUIKit.CreateButton(Font, perkContent, "Perk Header " + i, "", new Vector2(10f, 44f), ButtonRole.Neutral, 24f);
             TMP_Text hl = head.GetComponentInChildren<TMP_Text>();
             hl.alignment = TextAlignmentOptions.MidlineLeft;
             hl.richText = true;
@@ -257,7 +258,7 @@ public partial class PixelSkills
 
         BuildTreeUi(detail.transform);
 
-        trainButton = PixelUIKit.CreateButton(Font, detail.transform, "Train", trainText, new Vector2(10f, 70f), new Color(0.2f, 0.55f, 0.3f, 1f), textColor, 34f);
+        trainButton = PixelUIKit.CreateButton(Font, detail.transform, "Train", trainText, new Vector2(10f, 70f), ButtonRole.Success, 34f);
         PixelUIKit.Caps(trainButton);
         trainLabel = trainButton.GetComponentInChildren<TMP_Text>();
         RectTransform tr = trainButton.GetComponent<RectTransform>();
@@ -285,7 +286,7 @@ public partial class PixelSkills
     /// <summary>The 'Skill tree' button in the detail panel, the separate skill tree window and the pixel-pack buttons of Offline Progression.</summary>
     private void BuildTreeUi(Transform detail)
     {
-        treeToggle = PixelUIKit.CreateButton(Font, detail, "Tree Toggle", treeButtonText, new Vector2(170f, 48f), new Color(0.25f, 0.3f, 0.45f, 1f), textColor, 24f);
+        treeToggle = PixelUIKit.CreateButton(Font, detail, "Tree Toggle", treeButtonText, new Vector2(170f, 48f), ButtonRole.Neutral, 24f);
         PixelUIKit.Caps(treeToggle);
         treeToggleLabel = treeToggle.GetComponentInChildren<TMP_Text>();
         RectTransform tt = treeToggle.GetComponent<RectTransform>();
@@ -297,7 +298,7 @@ public partial class PixelSkills
         // Offline Progression: which pack's pixels to play with.
         for (int i = 0; i < 4; i++)
         {
-            Button b = PixelUIKit.CreateButton(Font, detail, "Pixel Pack " + i, "", new Vector2(10f, 50f), cardColor, textColor, 26f);
+            Button b = PixelUIKit.CreateButton(Font, detail, "Pixel Pack " + i, "", new Vector2(10f, 50f), ButtonRole.Neutral, 26f);
             RectTransform r = b.GetComponent<RectTransform>();
             r.anchorMin = new Vector2(0f, 1f);
             r.anchorMax = new Vector2(1f, 1f);
@@ -392,7 +393,7 @@ public partial class PixelSkills
         }
         for (int i = 0; i < 20; i++)
         {
-            Button b = PixelUIKit.CreateButton(Font, nodeArea, "Node " + i, "", nodeSize, cardColor, textColor, 26f);
+            Button b = PixelUIKit.CreateButton(Font, nodeArea, "Node " + i, "", nodeSize, cardColor, textColor, 26f);   // (role Custom: owned / can-unlock / locked colours plus a lighter selected node, see RefreshTree)
             b.gameObject.AddComponent<CanvasGroup>();
             RectTransform r = b.GetComponent<RectTransform>();
             r.anchorMin = r.anchorMax = r.pivot = new Vector2(0f, 1f);
@@ -418,7 +419,7 @@ public partial class PixelSkills
         nodeInfoLabel.fontSizeMin = 14f;
         Place(nodeInfoLabel.rectTransform, 0f, 0f, 1f, 0f, new Vector2(34f, 108f), new Vector2(-34f, 236f));
 
-        unlockButton = PixelUIKit.CreateButton(Font, treeWindow.transform, "Unlock", "Unlock", new Vector2(10f, 70f), new Color(0.2f, 0.45f, 0.7f, 1f), textColor, 32f);
+        unlockButton = PixelUIKit.CreateButton(Font, treeWindow.transform, "Unlock", "Unlock", new Vector2(10f, 70f), ButtonRole.Primary, 32f);
         PixelUIKit.Caps(unlockButton);
         unlockLabel = unlockButton.GetComponentInChildren<TMP_Text>();
         RectTransform ur = unlockButton.GetComponent<RectTransform>();
@@ -642,7 +643,7 @@ public partial class PixelSkills
     private Card BuildCard(int index)
     {
         Card c = new Card { pack = packs[index] };
-        c.button = PixelUIKit.CreateButton(Font, listContent, "Card " + index, "", new Vector2(10f, 100f), cardColor, textColor, 30f);
+        c.button = PixelUIKit.CreateButton(Font, listContent, "Card " + index, "", new Vector2(10f, 100f), ButtonRole.Neutral, 30f);
         c.background = c.button.GetComponent<Image>();
         RectTransform rt = c.button.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0f, 1f);
@@ -668,7 +669,7 @@ public partial class PixelSkills
         infoBox.sizeDelta = new Vector2(30f, 30f);
 
         // A green 'skill tree' square under the '!': selects the skill and opens its tree.
-        GameObject treeSquare = PixelUIKit.CreateButton(Font, c.button.transform, "Tree Button", "", new Vector2(30f, 30f), new Color(0.2f, 0.62f, 0.3f, 1f), Color.white, 16f).gameObject;
+        GameObject treeSquare = PixelUIKit.CreateButton(Font, c.button.transform, "Tree Button", "", new Vector2(30f, 30f), new Color(0.2f, 0.62f, 0.3f, 1f), Color.white, 16f).gameObject;   // (role Custom: the tree icon's own green)
         RectTransform tsr = treeSquare.GetComponent<RectTransform>();
         tsr.anchorMin = tsr.anchorMax = tsr.pivot = new Vector2(0f, 1f);
         tsr.sizeDelta = new Vector2(30f, 30f);
@@ -853,7 +854,7 @@ public partial class PixelSkills
             PixelUIKit.SetText(c.badge, pixelsOnly ? pixelsBadgeText : activeBadgeText);
             double ci, cn;
             int cl = LevelOf(c.pack, out ci, out cn);
-            c.background.color = i == selected ? cardSelectedColor : cardColor;
+            PixelUIKit.SetRole(c.background, i == selected ? ButtonRole.Selected : ButtonRole.Neutral);
             PixelUIKit.SetText(c.nameLabel, open ? c.pack.displayName : lockedName);
             PixelUIKit.SetText(c.levelLabel, open ? "Lv " + cl : "");
             c.badge.gameObject.SetActive(isActive || pixelsOnly);
@@ -893,7 +894,7 @@ public partial class PixelSkills
             {
                 bool current = other.id == OfflineTaskPack.id;
                 PixelUIKit.SetText(pixelPackLabels[slot], other.displayName + (current ? "   (offline task)" : ""));
-                pixelPackButtons[slot].GetComponent<Image>().color = current ? new Color(0.2f, 0.5f, 0.3f, 1f) : cardColor;
+                PixelUIKit.SetRole(pixelPackButtons[slot], current ? ButtonRole.Selected : ButtonRole.Neutral);
             }
             slot++;
         }
