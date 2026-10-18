@@ -202,9 +202,9 @@ bunch, build a pile, then get told to crush it.
 | Get a crush streak of 5 | a chunk of Standard XP (the "???" bar jumps; level 2 is close) | bursts and streaks |
 | Earn 100 Black | Cubie's 2nd visit: RGB + the shop | earning still matters |
 
-   Size the goals to keep the pace the developer likes (RGB and the shop at about 6 minutes). Build it as ONE data table of goals (id,
-   title, description, counter, target, when it shows, reward = unlock a tier / start a Cubie visit / XP / currency) with a new tier
-   unlock mode 'by goal' (appended to `TierUnlockMode`), so the early progression lives in one table.
+   Size the goals to keep the pace the developer likes (RGB and the shop at about 6 minutes). Build it on the goal table that now exists
+   (`PixelGoals`, built 2026-10-18): add reward types 'unlock a tier' and 'start a Cubie visit', and a new tier unlock mode 'by goal'
+   (appended to `TierUnlockMode`), so the early progression lives in one table.
 
 3. **The skill reveal: a mystery bar from minute 1, revealed at Standard 2 (~5 min).** Standard's XP bar shows from the first click but
    labelled "???" (hover: "Something is growing..."), XP popups read "+1 ???", and crushing visibly fills it faster. At level 2 it flips

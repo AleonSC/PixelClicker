@@ -1370,10 +1370,7 @@
 [2026-10-18 12:14 UTC] Tutorial runner: the shop, skills and Toggles tutorials now share one tutorial flow (PixelTutorialRunner: dim and pause, Cubie narrating and pointing, Got it boxes with Back / Skip, done flag) instead of three copies; they look and play exactly as before.
 [2026-10-18 12:14 UTC] To-do: shared tutorial runner done; its first-hour plan (fewer pausing boxes, ? tours per window, one-line tips) is now its own item.
 [2026-10-18 12:18 UTC] Husks wait for you: they now last 35 seconds (was 15) and the floor holds 120 (was 50), so you can click for a while and then clear the pile; Standard's Roomy floor perk now adds 10 husks per level (was 5), and Dev Hub has a 'Husk pile' widget that fills the floor for performance tests.
-<<<<<<< HEAD
-[2026-10-18 12:22 UTC] Design + to-do: the early goals become the unlocks - Click 50 brings Cubie's Recycler, Crush 10 husks unlocks Gray, Recycle 20 unlocks Black, a crush streak gives Standard XP and Earn 100 Black brings RGB and the shop, replacing the 'earn 300 White' thresholds.
-=======
 [2026-10-18 12:21 UTC] Mystery skill bar: from the first click Standard's bar shows as '???' ('Something is growing...', popups '+1 ???', crushing fills it too) and nothing else names it until level 2, where it flips to Standard with a fanfare and the level-2 popup now pays off the mystery.
 [2026-10-18 12:21 UTC] Husk goals: a new goal table (PixelGoals) adds goals that alternate with the click / unlock goals in the Log's Goals tab - Click 50 times, Crush 10 husks (once 20 lie about), Recycle 20 husks (after Cubie's Recycler) and a crush streak of 5 (minute 3) - each paying its own small reward (Standard XP or a little White), listed in the Game Database and noted on the session report's timeline.
 [2026-10-18 12:21 UTC] To-do: Early game feel 2 (husk goals) and 3 (mystery skill bar) marked done.
->>>>>>> 4182a052cba5b66d66e1d5480a10d63813198f29
+[2026-10-18 12:22 UTC] Design + to-do: the early goals become the unlocks - Click 50 brings Cubie's Recycler, Crush 10 husks unlocks Gray, Recycle 20 unlocks Black, a crush streak gives Standard XP and Earn 100 Black brings RGB and the shop, replacing the 'earn 300 White' thresholds.
