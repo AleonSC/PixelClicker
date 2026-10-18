@@ -1213,7 +1213,6 @@ public class PixelPauseMenu : MonoBehaviour
         mainEntries = entries;
 
         PixelMenuFx.BuildBackdrop(menuRoot.transform, panelRect);   // the fancy menu's motes, vignette and panel glow (hidden when the setting is off)
-        PixelMenuFx.BuildTitleLine(panelRect, 40f, -(PlateMargin + PlateHeight + 8f), mainPanelWidth - 80f);   // (just under the title plate)
 
         menuRoot.SetActive(false);
     }
@@ -1298,7 +1297,7 @@ public class PixelPauseMenu : MonoBehaviour
     }
 
     /// <summary>
-    /// The title plate across the top of a menu window: a sunken rounded band with a thin glowing accent line along its bottom and a
+    /// The title plate across the top of a menu window: a sunken rounded band with a
     /// three-pixel ornament at its left end (the X or the search box sits in its right end). Small cubes fall from behind it (PixelMenuCubeFall).
     /// </summary>
     private RectTransform BuildTitlePlate(Transform panel)
@@ -1316,18 +1315,6 @@ public class PixelPauseMenu : MonoBehaviour
         plate.pivot = new Vector2(0.5f, 1f);
         plate.offsetMin = new Vector2(PlateMargin, -PlateMargin - plateH);
         plate.offsetMax = new Vector2(-PlateMargin, -PlateMargin);
-
-        GameObject lineGo = new GameObject("Accent Line", typeof(RectTransform), typeof(Image));
-        lineGo.transform.SetParent(plate, false);
-        Image line = lineGo.GetComponent<Image>();
-        line.color = PixelUITheme.ColorOf(ButtonRole.Selected);
-        line.raycastTarget = false;
-        RectTransform lr = line.rectTransform;
-        lr.anchorMin = new Vector2(0.06f, 0f);
-        lr.anchorMax = new Vector2(0.94f, 0f);
-        lr.pivot = new Vector2(0.5f, 0f);
-        lr.sizeDelta = new Vector2(0f, 3f);
-        lr.anchoredPosition = new Vector2(0f, 4f);
 
         // The left ornament: three stepped pixels in the accent colour, the same size box as the X so the two ends match.
         float side = plateH - 2f * PlatePad;

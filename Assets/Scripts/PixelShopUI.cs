@@ -126,7 +126,7 @@ public partial class PixelShop
         glow.GetComponent<Image>().raycastTarget = false;
         glow.GetComponent<PixelMenuPanelGlow>().target = panelRect;
         PixelUIKit.StyleBox(glow.GetComponent<Image>());
-        PixelMenuFx.BuildTitleLine(panelRect, panelPadding, -(headerHeight + tabsDrop * 0.3f), panelWidth - panelPadding * 2f);   // the same sliding white segment as the pause menu
+        PixelMenuFx.BuildTitleLine(panelRect, panelPadding, -(headerHeight + tabsDrop * 0.3f), panelWidth - panelPadding * 2f);   // the sliding white segment under the tabs
 
         // Help button (blue square with a question mark, in the standard right header slot just left of the X): hold it to replay the shop tutorial.
         Button help = parts.AddHeaderButton("Help", "?", false, ButtonRole.Primary);
