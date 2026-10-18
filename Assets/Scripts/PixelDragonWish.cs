@@ -127,6 +127,7 @@ public class PixelDragonWish : MonoBehaviour
         buttonGlow.raycastTarget = false;
         RectTransform gr = glow.GetComponent<RectTransform>();
 
+        // (the dragon's fiery orange / gold is the wish show's theme colour, so it stays a plain colour, not a role)
         Button b = PixelUIKit.CreateButton(Font, buttonCanvas.transform, "Summon Button", buttonText, new Vector2(560f, 92f),
                                            new Color(0.88f, 0.42f, 0.04f, 1f), Color.white, 42f);
         PixelUIKit.Caps(b);
@@ -499,6 +500,7 @@ public class PixelDragonWish : MonoBehaviour
         {
             Wish w = wishes[i];
             int captured = i;
+            // (the wish cards keep the dragon's dark gold - the show's theme colour - as a plain colour, not a role)
             Button card = PixelUIKit.CreateButton(Font, panel.transform, "Wish " + i, "", new Vector2(cardW, 270f), new Color(0.32f, 0.16f, 0.05f, 1f), Color.white, 30f);
             RectTransform cr = card.GetComponent<RectTransform>();
             cr.anchorMin = cr.anchorMax = new Vector2(0.5f, 0f);
