@@ -865,18 +865,18 @@ public class PixelConveyorSystem : MonoBehaviour
             if (editing != null && float.TryParse(text.Replace(',', '.'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float v)) editing.SetSpeedCubes(v);
         });
 
-        Button Make(string name, string label, Vector2 pos, Color color, UnityEngine.Events.UnityAction act)
+        Button Make(string name, string label, Vector2 pos, ButtonRole role, UnityEngine.Events.UnityAction act)
         {
-            Button b = PixelUIKit.CreateButton(font, panel.transform, name, label, new Vector2(150f, 52f), color, Color.white, 24f);
+            Button b = PixelUIKit.CreateButton(font, panel.transform, name, label, new Vector2(150f, 52f), role, 24f);
             RectTransform r = b.GetComponent<RectTransform>();
             r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0f);
             r.anchoredPosition = pos;
             b.onClick.AddListener(act);
             return b;
         }
-        Make("Set", "Set", new Vector2(-170f, 24f), new Color(0.2f, 0.6f, 0.3f, 1f), ApplySpeed);
-        Make("Reverse", "Reverse", new Vector2(0f, 24f), new Color(0.25f, 0.45f, 0.7f, 1f), () => { if (editing != null) editing.FlipPublic(); });
-        Make("Close", "Close", new Vector2(170f, 24f), new Color(0.55f, 0.22f, 0.2f, 1f), CloseEditor);
+        Make("Set", "Set", new Vector2(-170f, 24f), ButtonRole.Success, ApplySpeed);
+        Make("Reverse", "Reverse", new Vector2(0f, 24f), ButtonRole.Neutral, () => { if (editing != null) editing.FlipPublic(); });
+        Make("Close", "Close", new Vector2(170f, 24f), ButtonRole.Neutral, CloseEditor);
         editorRoot.SetActive(false);
     }
 

@@ -154,7 +154,7 @@ public class PixelInfinity : MonoBehaviour
         TMP_Text title = PixelUIKit.CreateText(font, panel, "Title", "Prime Gauntlet", 52f, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 0.85f, 0.35f, 1f));
         title.rectTransform.anchorMin = new Vector2(0f, 1f); title.rectTransform.anchorMax = new Vector2(1f, 1f); title.rectTransform.pivot = new Vector2(0.5f, 1f);
         title.rectTransform.sizeDelta = new Vector2(0f, 80f); title.rectTransform.anchoredPosition = new Vector2(0f, -16f);
-        Button x = PixelUIKit.CreateButton(font, panel, "Close", "X", new Vector2(60f, 60f), new Color(0.5f, 0.22f, 0.22f, 1f), Color.white, 34f);
+        Button x = PixelUIKit.CreateButton(font, panel, "Close", "X", new Vector2(60f, 60f), ButtonRole.Neutral, 34f);
         x.GetComponent<RectTransform>().anchorMin = x.GetComponent<RectTransform>().anchorMax = new Vector2(1f, 1f);
         x.GetComponent<RectTransform>().anchoredPosition = new Vector2(-44f, -44f);
         x.onClick.AddListener(Close);
@@ -212,6 +212,7 @@ public class PixelInfinity : MonoBehaviour
 
         status = PixelUIKit.CreateText(font, panel, "Status", "", 30f, TextAlignmentOptions.Center, FontStyles.Normal, new Color(1f, 0.92f, 0.7f, 1f));
         status.rectTransform.sizeDelta = new Vector2(1100f, 56f); status.rectTransform.anchoredPosition = new Vector2(0f, -262f);
+        // (the Gauntlet's gold is this window's theme colour, so Forge stays a plain colour, not a role)
         forge = PixelUIKit.CreateButton(font, panel, "Forge", "Forge the Cubelette", new Vector2(520f, 84f), new Color(0.85f, 0.62f, 0.12f, 1f), Color.white, 38f);
         forge.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -320f);
         forge.onClick.AddListener(() => { if (!forging) StartCoroutine(Forge()); });

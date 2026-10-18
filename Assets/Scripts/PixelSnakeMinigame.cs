@@ -757,7 +757,7 @@ public class PixelSnakeMinigame : PixelMinigame
     private void MakeArrow(TMP_FontAsset font, string name, string label, int dir, Vector2 position)
     {
         Button b = PixelUIKit.CreateButton(font, uiRoot.transform, name + " Arrow", label, new Vector2(arrowButtonSize, arrowButtonSize),
-                                           new Color(0.18f, 0.2f, 0.26f, 0.9f), Color.white, arrowButtonSize * 0.55f);
+                                           ButtonRole.Neutral, arrowButtonSize * 0.55f);
         RectTransform r = b.GetComponent<RectTransform>();
         r.anchorMin = r.anchorMax = r.pivot = new Vector2(1f, 0f);
         r.anchoredPosition = position;

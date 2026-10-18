@@ -1028,7 +1028,7 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
     {
         TMP_FontAsset font = clicker.UIFont;
         Button b = PixelUIKit.CreateButton(font, content, "Row " + name, "", new Vector2(0f, rowH),
-                                           current ? new Color(0.75f, 0.42f, 0.1f, 1f) : new Color(0.2f, 0.22f, 0.3f, 1f), Color.white, 30f);
+                                           current ? ButtonRole.Selected : ButtonRole.Neutral, 30f);
         RectTransform rt = b.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0f, 1f); rt.anchorMax = new Vector2(1f, 1f); rt.pivot = new Vector2(0.5f, 1f);
         rt.offsetMin = new Vector2(8f, -(y + rowH)); rt.offsetMax = new Vector2(-8f, -y);
@@ -1129,14 +1129,14 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
         if (pixels)
         {
             Button back = PixelUIKit.CreateButton(font, panel.transform, "Back", "Back", new Vector2(anyJob ? half : width - pad * 2f, rowH),
-                                                  new Color(0.25f, 0.3f, 0.45f, 1f), Color.white, 30f);
+                                                  ButtonRole.Neutral, 30f);
             PlaceBottomLeft(back.GetComponent<RectTransform>(), pad, 14f);
             back.onClick.AddListener(() => { windowPage = 0; BuildWindow(); windowRoot.SetActive(true); });
         }
         if (anyJob)
         {
             Button clear = PixelUIKit.CreateButton(font, panel.transform, "Clear", clearJobText, new Vector2(pixels ? half : width - pad * 2f, rowH),
-                                                   new Color(0.45f, 0.18f, 0.18f, 1f), Color.white, 30f);
+                                                   ButtonRole.Danger, 30f);
             PlaceBottomLeft(clear.GetComponent<RectTransform>(), pixels ? pad + half + gap : pad, 14f);
             clear.onClick.AddListener(() => { ClearJob(); CloseWindow(); });
         }

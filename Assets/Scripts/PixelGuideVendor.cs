@@ -868,6 +868,7 @@ public class PixelGuideVendor : MonoBehaviour
         message.fontSizeMin = 18f;
         SetRect(message.rectTransform, 0f, 0f, 1f, 1f, new Vector2(36f, 130f), new Vector2(-36f, -(parts.HeaderHeight + 6f)));
 
+        // (Cubie's buttons keep his own teal - his theme colour - so they stay plain colours, not roles)
         nextButton = PixelUIKit.CreateButton(Font, panel, "Next", nextText, new Vector2(300f, 80f), new Color(0.2f, 0.55f, 0.5f, 1f), Color.white, 38f);
         PixelUIKit.Caps(nextButton);
         nextLabel = nextButton.GetComponentInChildren<TMP_Text>();
