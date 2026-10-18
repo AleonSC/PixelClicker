@@ -9,6 +9,7 @@ using UnityEngine.UI;
 /// consumable DEVICE (vacuum device, fan, sorter, combo fuel, ghost bait, pet treat...) at a big discount. Accept to see the wares
 /// and buy what you like, or reject and they slide away again. Time resumes when they leave (Escape counts as rejecting).
 /// Extends <see cref="PixelMinigame"/>, so it needs no changes to the shop or the save system.
+/// The greeting, wares and aside boxes are the standard window as a dialog (PixelUIKit.CreateWindow, no X), set at the right edge.
 /// </summary>
 public abstract class PixelVisitorMinigame : PixelMinigame
 {
@@ -848,11 +849,8 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         DrawVisitor(art.transform);
 
         // --- Greeting box (left of the visitor).
-        greetingPanel = Panel("Greeting", new Vector2(720f, 470f), visitorRect.sizeDelta.x + 90f);
-        TMP_Text title = PixelUIKit.CreateText(Font, greetingPanel, "Name", Pick(visitorName, DefaultName), 54f, TextAlignmentOptions.Center, FontStyles.Bold, TitleColor);
-        FitName(title);
-        PixelUIKit.Caps(title);
-        Anchor(title.rectTransform, 0f, 1f, 1f, 1f, new Vector2(20f, -78f), new Vector2(-20f, -16f));
+        PixelWindowParts greetBox = Panel("Greeting", Pick(visitorName, DefaultName), new Vector2(720f, 470f), visitorRect.sizeDelta.x + 90f);
+        greetingPanel = greetBox.Rect;
 
         TMP_Text message = PixelUIKit.CreateText(Font, greetingPanel, "Message", string.Format(Pick(greeting, DefaultGreeting), Mathf.RoundToInt(discountFraction * 100f)), 34f,
                                                  TextAlignmentOptions.Center, FontStyles.Normal, Color.white);
@@ -860,7 +858,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         message.fontSizeMax = 34f;
         message.fontSizeMin = 14f;   // (a long greeting shrinks instead of being cut off)
         greetMessage = message;
-        Anchor(message.rectTransform, 0f, 0f, 1f, 1f, new Vector2(36f, 130f), new Vector2(-36f, -92f));
+        Anchor(message.rectTransform, 0f, 0f, 1f, 1f, new Vector2(36f, 130f), new Vector2(-36f, -(greetBox.HeaderHeight + 2f)));
 
         Button accept = PixelUIKit.CreateButton(Font, greetingPanel, "Accept", AcceptLabel, new Vector2(300f, 80f), new Color(0.2f, 0.55f, 0.3f, 1f), Color.white, 36f);
         PixelUIKit.Caps(accept);
@@ -902,15 +900,13 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         float rowH = 104f;
         float tabsH = tabsMode ? 64f : 0f;
         float listH = Mathf.Max(tallest * (rowH + 8f), tabsMode && CustomSellPanel ? SellPanelHeight : 0f);
-        float height = Mathf.Min(1080f - 2f * barH - 30f, 190f + tabsH + listH + 110f);
-        waresPanel = Panel("Wares", new Vector2(900f, Mathf.Max(420f, height)), visitorRect.sizeDelta.x + 90f);
-        TMP_Text wt = PixelUIKit.CreateText(Font, waresPanel, "Title", Pick(waresTitle, DefaultWaresTitle), 50f, TextAlignmentOptions.Center, FontStyles.Bold, TitleColor);
-        PixelUIKit.Caps(wt);
-        Anchor(wt.rectTransform, 0f, 1f, 1f, 1f, new Vector2(20f, -84f), new Vector2(-20f, -16f));
+        float top = PixelUIKit.WindowHeaderHeight;   // the window header: the sale line, tabs and list sit below it
+        float height = Mathf.Min(1080f - 2f * barH - 30f, top + 106f + tabsH + listH + 110f);
+        waresPanel = Panel("Wares", Pick(waresTitle, DefaultWaresTitle), new Vector2(900f, Mathf.Max(420f, height)), visitorRect.sizeDelta.x + 90f).Rect;
 
         TMP_Text sale = PixelUIKit.CreateText(Font, waresPanel, "Sale", string.Format(SaleFormat, Mathf.RoundToInt(discountFraction * 100f)), 26f,
                                               TextAlignmentOptions.Center, FontStyles.Italic, new Color(0.7f, 1f, 0.75f));
-        Anchor(sale.rectTransform, 0f, 1f, 1f, 1f, new Vector2(20f, -122f), new Vector2(-20f, -84f));
+        Anchor(sale.rectTransform, 0f, 1f, 1f, 1f, new Vector2(20f, -(top + 38f)), new Vector2(-20f, -top));
 
         // Buy / Sell tabs (only for a vendor that does both).
         tabButtons = null;
@@ -925,7 +921,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
                 PixelUIKit.Caps(tb);
                 RectTransform tr = tb.GetComponent<RectTransform>();
                 tr.anchorMin = tr.anchorMax = tr.pivot = new Vector2(0.5f, 1f);
-                tr.anchoredPosition = new Vector2(i == 0 ? -118f : 118f, -126f);
+                tr.anchoredPosition = new Vector2(i == 0 ? -118f : 118f, -(top + 42f));
                 tb.onClick.AddListener(() => SetShopTab(captured));
                 tabButtons[i] = tb;
             }
@@ -936,7 +932,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         vr.anchorMin = Vector2.zero;
         vr.anchorMax = Vector2.one;
         vr.offsetMin = new Vector2(24f, 110f);
-        vr.offsetMax = new Vector2(-24f, -132f - tabsH);
+        vr.offsetMax = new Vector2(-24f, -(top + 48f) - tabsH);
 
         // A vendor's own Sell tab (in place of the trade rows), over the same area as the list.
         sellPanelRoot = null;
@@ -1009,7 +1005,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             rows.Add(row);
             y += rowH + 8f;
         }
-        waresViewHeight = vr.rect.height > 1f ? vr.rect.height : (waresPanel.sizeDelta.y - 242f - tabsH);
+        waresViewHeight = vr.rect.height > 1f ? vr.rect.height : (waresPanel.sizeDelta.y - (top + 158f) - tabsH);
         shopTab = 0;
         LayoutRows(rowH);
 
@@ -1023,17 +1019,14 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         asidePanel = null;
         if (!string.IsNullOrEmpty(AsideText))
         {
-            asidePanel = Panel("Aside", new Vector2(720f, 400f), visitorRect.sizeDelta.x + 90f);
-            TMP_Text at = PixelUIKit.CreateText(Font, asidePanel, "Name", Pick(visitorName, DefaultName), 54f, TextAlignmentOptions.Center, FontStyles.Bold, TitleColor);
-        FitName(at);
-            PixelUIKit.Caps(at);
-            Anchor(at.rectTransform, 0f, 1f, 1f, 1f, new Vector2(20f, -78f), new Vector2(-20f, -16f));
+            PixelWindowParts aside = Panel("Aside", Pick(visitorName, DefaultName), new Vector2(720f, 400f), visitorRect.sizeDelta.x + 90f);
+            asidePanel = aside.Rect;
             TMP_Text am = PixelUIKit.CreateText(Font, asidePanel, "Message", AsideText, 34f, TextAlignmentOptions.Center, FontStyles.Normal, Color.white);
             am.enableAutoSizing = true;
             am.fontSizeMax = 34f;
             am.fontSizeMin = 18f;
             asideMessage = am;
-            Anchor(am.rectTransform, 0f, 0f, 1f, 1f, new Vector2(36f, 130f), new Vector2(-36f, -92f));
+            Anchor(am.rectTransform, 0f, 0f, 1f, 1f, new Vector2(36f, 130f), new Vector2(-36f, -(aside.HeaderHeight + 2f)));
             Button next = PixelUIKit.CreateButton(Font, asidePanel, "Next", "Next", new Vector2(300f, 80f), new Color(0.2f, 0.55f, 0.3f, 1f), Color.white, 36f);
             PixelUIKit.Caps(next);
             Corner(next.GetComponent<RectTransform>(), new Vector2(0.5f, 0f), new Vector2(0f, 36f));
@@ -1103,21 +1096,25 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     private string TradeGetText(Trade t) =>
         "Get " + PixelClicker.FormatNumberShort(t.get) + " " + clicker.Tiers[t.getTier].displayName;
 
-    private RectTransform Panel(string name, Vector2 size, float rightOffset)
+    /// <summary>
+    /// A speech / wares box: the standard window as a dialog (PixelUIKit.CreateWindow, no X - its own buttons close it; its PixelPop grows it in
+    /// and shrinks it away), title in the visitor's colour. Moved from the centre to the right edge, just left of the visitor.
+    /// </summary>
+    private PixelWindowParts Panel(string name, string title, Vector2 size, float rightOffset)
     {
-        GameObject g = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(PixelPop));   // grows when it opens, shrinks when it closes
-        g.transform.SetParent(canvasRoot.transform, false);
-        PixelUIKit.StyleWindow(g.GetComponent<Image>(), new Color(0.08f, 0.1f, 0.16f, 0.97f));   // the same rounded glowing frame as every window
-        RectTransform r = g.GetComponent<RectTransform>();
+        PixelWindowParts w = PixelUIKit.CreateWindow(Font, canvasRoot.transform, name, title, size, new Color(0.08f, 0.1f, 0.16f, 0.97f),
+                                                     PixelUIKit.WindowKind.Fixed, null, closeButton: false);
+        w.Title.color = TitleColor;
+        FitName(w.Title);   // (a long name stays on one line)
+        RectTransform r = w.Rect;
         r.anchorMin = r.anchorMax = new Vector2(1f, 0.5f);
         r.pivot = new Vector2(1f, 0.5f);
-        r.sizeDelta = size;
         r.anchoredPosition = new Vector2(-(rightOffset + 40f), 0f);
-        return r;
+        return w;
     }
 
     /// <summary>A visitor's name stays on one line and shrinks to fit the box (long names like 'Big Tim the Lumberjack' used to wrap over the message).</summary>
-    private static void FitName(TMP_Text t) => PixelUIKit.FitOneLine(t, 24f);   // (the name is made at 54: it shrinks to 24 at most)
+    private static void FitName(TMP_Text t) => PixelUIKit.FitOneLine(t, 24f);   // (the title is made at 48: it shrinks to 24 at most)
 
     private static void Anchor(RectTransform r, float minX, float minY, float maxX, float maxY, Vector2 offsetMin, Vector2 offsetMax)
     {
