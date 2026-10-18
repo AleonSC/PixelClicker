@@ -3,9 +3,9 @@
 //   Part of partial class PixelSkills: Standard is a real skill. Every collected block gives it a FLAT standardXpPerBlock (1) XP - manual
 //   or auto, any block, whatever skill / Offline is trained, no multipliers (AddXpFlat); popups only when Standard is the one trained and the Skills tab
 //   exists; level-up log lines only once AnyTrainable). Its perks apply in EVERY rotation: Lingering pixels (StandardLifetimeBonus =
-//   (level-1) x lifetimePerLevel 5 s (old pixels last oldPixelLifetime 15 s by default, so Standard level 2 = 20 s; the field was
+//   (level-1) x lifetimePerLevel 5 s (husks last oldPixelLifetime 35 s by default (15 s before 2026-10-18), so Standard level 2 = 40 s, level 7 = 65 s; the field was
 //   renamed from fallingCopyLifetime so the old saved 6 s is dropped), added in PixelClicker.FallingCopyLifetime, which all old-pixel
-//   despawn timers read) and Roomy floor (StandardCapacityBonus = (level-3) x capacityPerLevel 5 from level 4, added to
+//   despawn timers read) and Roomy floor (StandardCapacityBonus = (level-3) x capacityPerLevel 10 from level 4 (was 5 on a 50 floor; 10 on the 120 floor = 160 at level 7), added to
 //   PixelClicker.OldPixelCap), Steady grip (level 3) and Firm grip (level 5): Block Hold's meter starts at half length and each adds 10% of that
 //   (PixelBlockHold.GripFactor reads the Standard level); 'Sharper clicks' (level 7) is still 'coming soon'. Standard shows level / XP bars in the Skills window
 //   and the tracker like any skill, has no bonus bank, filler or hazard and does not count towards Mastery.
@@ -56,11 +56,11 @@ public partial class PixelSkills
     [SerializeField] private int perkWindowVersion = 0;
 
     [Min(0f)]
-    [Tooltip("Perk 'Lingering pixels': seconds every old pixel lasts longer for each Standard level above 1. 0 = the coded default (5: level 2 = 20 s with the 15 s base).")]
+    [Tooltip("Perk 'Lingering pixels': seconds every old pixel lasts longer for each Standard level above 1. 0 = the coded default (5: level 2 = 40 s, level 7 = 65 s with the 35 s base).")]
     [SerializeField] private float lifetimePerLevel = 0f;
 
     [Min(0)]
-    [Tooltip("Perk 'Roomy floor': extra old pixels allowed on the floor for each Standard level above 3. 0 = the coded default (5).")]
+    [Tooltip("Perk 'Roomy floor': extra husks allowed on the floor for each Standard level above 3. 0 = the coded default (10: level 7 = 160 with the 120 floor).")]
     [SerializeField] private int capacityPerLevel = 0;
 
     private double stdXpCache = -1d;
@@ -97,7 +97,7 @@ public partial class PixelSkills
         {
             PixelSkills s = Instance;
             if (s == null || s.disableSkills) return 0;
-            return Mathf.Max(0, s.StandardLevel - 3) * (s.capacityPerLevel > 0 ? s.capacityPerLevel : 5);
+            return Mathf.Max(0, s.StandardLevel - 3) * (s.capacityPerLevel > 0 ? s.capacityPerLevel : 10);
         }
     }
 
@@ -170,9 +170,9 @@ public partial class PixelSkills
 
     private static Perk[] StandardPerks() => new[]
     {
-        new Perk { level = 2, text = "Lingering pixels: old pixels last 5 seconds longer for every level", implemented = true, noticeText = StandardLevel2Notice },
+        new Perk { level = 2, text = "Lingering pixels: husks last 5 seconds longer for every level", implemented = true, noticeText = StandardLevel2Notice },
         new Perk { level = 3, text = "Steady grip: Block Hold lasts 10% longer", implemented = true, noticeText = StandardLevel3Notice, noticeInWindow = true },
-        new Perk { level = 4, text = "Roomy floor: room for 5 more old pixels for every level", implemented = true },
+        new Perk { level = 4, text = "Roomy floor: room for 10 more husks for every level", implemented = true },
         new Perk { level = 5, text = "Firm grip: Block Hold lasts another 10% longer", implemented = true },
         new Perk { level = 7, text = "Sharper clicks: a small bonus to every pixel" },
     };

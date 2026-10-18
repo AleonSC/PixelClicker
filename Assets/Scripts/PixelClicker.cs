@@ -140,7 +140,7 @@ public partial class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
-    [SerializeField, HideInInspector] private int huskSettleVersion; // 1 = husks settle into heaps: bounce 0.3 -> 0.08, friction 0.5 -> 0.65, sleep threshold 0.03
+    [SerializeField, HideInInspector] private int huskSettleVersion; // 1 = husks settle into heaps: bounce 0.3 -> 0.08, friction 0.5 -> 0.65, sleep threshold 0.03; 2 = husks wait: lifetime 15 -> 35 s, floor limit 50 -> 120
     [SerializeField, HideInInspector] private int tierDataVersion; // 1 = Gray / Black unlock at 250 (was 100); 2 = Gray at 300 White, Black at 200 Gray
     [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission; 22 = Vacuum vortex marks + violet rim; 23 = RGB lost their rim, Gray rim darker; 24 = Black / Gray lost their rim, Obsidian rim darker; 25 = Fire + ore looks added; 26 = Treasure chest look added; 27 = Nuclear look added; 35 = Meteor / Solar looks; 36 = rocky pixels jagged, no outlines; 38 = Vacuum glass container; 39 = Ghost gel blob; 49 = RGB lost their faint emission, Mirror no longer leans on reflections / emission
 
@@ -386,8 +386,8 @@ public partial class PixelClicker : MonoBehaviour
     [SerializeField] private float vacuumContentSize = 0f;
 
     [Header("Old Pixel Physics")]
-    [Tooltip("Seconds before an old pixel is destroyed. 0 = never. (Renamed so the old saved 6 s is dropped: the default is 15 s now.)")]
-    [SerializeField] private float oldPixelLifetime = 15f;
+    [Tooltip("Seconds a husk lies on the floor before it fades away (Standard's Lingering perk adds to it). 0 = never. 35 s (was 15) so husks WAIT: the player clicks a while, builds a pile, then clears it, instead of husks and clicks competing (docs/GameDesign.md 'Early game feel').")]
+    [SerializeField] private float oldPixelLifetime = 35f;
 
     [Header("Click Limit")]
     [Min(0f)]
@@ -482,8 +482,8 @@ public partial class PixelClicker : MonoBehaviour
     [Tooltip("Random angle (degrees) a fly-away pixel's direction may deviate.")]
     [SerializeField] private float flySpreadDegrees = 6f;
 
-    [Tooltip("Max old pixels kept in the scene (before any Old Pixel Capacity upgrade). The oldest is destroyed first. 0 = no cap.")]
-    [SerializeField] private int baseOldPixelCap = 50;
+    [Tooltip("Floor limit: most husks lying about at once (Standard's Roomy floor perk adds to it). When it is full the OLDEST husk goes first. 0 = no cap. 120 (was 50): at ~3.5 blocks a second 50 husks filled the floor in ~14 s, so the longer lifetime was culled away.")]
+    [SerializeField] private int baseOldPixelCap = 120;
 
     private int oldPixelCapOverride; // set by the shop's Old Pixel Capacity upgrade (0 = none bought)
 
@@ -948,6 +948,13 @@ public partial class PixelClicker : MonoBehaviour
             if (Mathf.Approximately(friction, 0.5f)) friction = 0.65f;
             if (huskSleepThreshold <= 0f) huskSleepThreshold = 0.03f;
             huskSettleVersion = 1;
+        }
+        if (huskSettleVersion < 2)
+        {
+            // Husks wait (2026-10-18, 'Early game feel 1'): they last 35 s and the floor holds 120. Only untouched old defaults are changed.
+            if (Mathf.Approximately(oldPixelLifetime, 15f)) oldPixelLifetime = 35f;
+            if (baseOldPixelCap == 50) baseOldPixelCap = 120;
+            huskSettleVersion = 2;
         }
 
         if (pixelRenderer != null)

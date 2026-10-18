@@ -54,6 +54,14 @@ Machines exist to turn husks into something useful; despawning hurts because unu
 | Crafting (planned) | recipe ingredients |
 | Conveyor belts, sorters, hoses | moving husks to the right machine |
 
+## Husks wait for you (Early game feel 1, agreed 2026-10-18 in the Design Discussion chat, built 2026-10-18)
+
+Clicks and husks must not compete: husks wait long enough that the player clicks a while, builds a pile, then clears it (docs/GameDesign.md 'Early game feel: click, pile, crush').
+- **Lifetime 35 s** (`PixelClicker.oldPixelLifetime`, was 15 s). Standard's **Lingering pixels** perk still adds 5 s per level above 1 (level 2 = 40 s, level 7 = 65 s).
+- **Floor limit 120** (`PixelClicker.baseOldPixelCap`, was 50): at ~3.5 blocks a second 50 husks filled the floor in ~14 s and the oldest were culled, so a longer lifetime alone did nothing. When the floor is full the OLDEST husk still goes first. Standard's **Roomy floor** perk now adds 10 per level from level 4 (was 5 on the 50 floor; level 7 = 160).
+- **Big piles stay cheap:** resting husks sleep (see 'Husks settle into small heaps' below) and vanished husks are reused (`PixelHuskPool`). Dev Hub > Widgets > 'Husk pile' > Fill floor drops husks until the limit is reached, for profiling a full floor.
+- Fixed-second husk timings (Husk Crush's last-gasp 2 s, Clean Break's 2 s back, a gentle set-down's +12 s) were left as they are; they matter less against a 35 s life.
+
 ## Husks settle into small heaps (agreed 2026-10-17 in the Design Discussion chat, built 2026-10-17)
 
 A husk lands, maybe rolls or tips once, and stays put - no more bouncing about.
