@@ -160,6 +160,7 @@ public static class PixelSettingsSync
         PixelKeys.ReloadFromPrefs();
         PixelAudio.ReloadFromPrefs();
         PixelLogoView.ReloadFavorite();
+        PixelAchievements.ReloadPopupPin();   // (the popup's pinned spot is per save: a new game puts it back in its default place)
         PixelCustomKeys.ReloadFromPrefs();
         PixelDisplaySettings.ReloadFromPrefs();
         PixelPauseMenu menu = PixelFind.First<PixelPauseMenu>();

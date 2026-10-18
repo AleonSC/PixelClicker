@@ -10,7 +10,7 @@
 //   totalCollected: 10, 100, 1K, 10K, 100K, 1M) and tiered "Click" (PixelTier.timesCollected, saved: 10, 50, 250, 1K, 5K, 25K;
 //   Kind.ClickPixelType). The unlock POPUP sits centred above the combo meter by default (DefaultPopupPosition); hold the left mouse button on it (popupHoldSeconds 0.5, a ring fills round the cursor,
 //   PixelHold with useLeft) to pick it up, click to PIN it anywhere; the thin button on its far right collapses it to the icon box and expands it again with a shorter hold (popupCollapseHoldSeconds 0.3, saved);
-//   Settings > 'Reset achievement popup position' (ResetPopupPin) forgets the pin. The pinned position is the popup's LEFT edge; the pin is saved in (PlayerPrefs PixelClicker.Setting.AchievementPopupX/Y, inside the black margins), right-click to put it back. Saved as "id:tiers". Unlocks quietly/with popup, ids saved by PixelSaveGame. Auto-added by PixelLog.
+//   Settings > 'Reset achievement popup position' (ResetPopupPin) forgets the pin. The pinned position is the popup's LEFT edge; the pin is saved PER SAVE (PlayerPrefs PixelClicker.Setting.AchievementPopupX/Y declared with PixelPrefs.DeclarePerSave, inside the black margins: a new game starts with it in the default place, ReloadPopupPin on a settings load), right-click to put it back. Saved as "id:tiers". Unlocks quietly/with popup, ids saved by PixelSaveGame. Auto-added by PixelLog.
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -906,6 +906,25 @@ public class PixelAchievements : MonoBehaviour, IPixelSaved
     private void PositionPopup()
     {
         if (popupRect != null) popupRect.anchoredPosition = popupPinned ? ClampToCanvas(popupPinnedPos) : DefaultPopupPosition();
+    }
+
+    // The pinned spot is a PER-SAVE setting (it travels with the save file): a new game starts with the popup in its default place,
+    // the game you are playing keeps your spot between sessions, and loading a save brings back that save's spot.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void DeclarePopupPinPerSave()
+    {
+        PixelPrefs.DeclarePerSave(PrefPopupX, PixelPrefs.Kind.Float);
+        PixelPrefs.DeclarePerSave(PrefPopupY, PixelPrefs.Kind.Float);
+    }
+
+    /// <summary>A save's settings were loaded (or a new game reset them): read the popup's pinned spot again.</summary>
+    public static void ReloadPopupPin()
+    {
+        PixelAchievements a = PixelFind.First<PixelAchievements>();
+        if (a == null) return;
+        a.popupPinned = PixelPrefs.HasKey(PrefPopupX) && PixelPrefs.HasKey(PrefPopupY);
+        a.popupPinnedPos = new Vector2(PixelPrefs.GetFloat(PrefPopupX, 0f), PixelPrefs.GetFloat(PrefPopupY, 0f));
+        a.PositionPopup();
     }
 
     /// <summary>Settings > 'Reset achievement popup position': forgets the pin, the popup goes back to the middle above the combo meter.</summary>
