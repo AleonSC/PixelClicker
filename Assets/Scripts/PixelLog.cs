@@ -15,6 +15,8 @@ using UnityEngine.UI;
 ///    (see PixelAchievements).
 ///
 /// Add this to any GameObject (e.g. the cube). The UI builds itself at runtime.
+/// The panel is a standard Fixed window (PixelUIKit.CreateWindow: title, grey X, the Collection Log book in the left header slot),
+/// kept at its HUD corner instead of the centre.
 /// </summary>
 public class PixelLog : MonoBehaviour
 {
@@ -181,9 +183,6 @@ public class PixelLog : MonoBehaviour
     [Tooltip("Height of each row.")]
     [SerializeField] private float rowHeight = 70f;
 
-    [Tooltip("Height of the title bar.")]
-    [SerializeField] private float headerHeight = 90f;
-
     [Tooltip("Inner padding of the panel.")]
     [SerializeField] private float panelPadding = 20f;
 
@@ -213,9 +212,6 @@ public class PixelLog : MonoBehaviour
 
     [Tooltip("Thickness of the swatch border.")]
     [SerializeField] private float swatchBorderSize = 3f;
-
-    [Tooltip("Title text size.")]
-    [SerializeField] private float titleFontSize = 48f;
 
     [Tooltip("Row text size.")]
     [SerializeField] private float rowFontSize = 34f;
@@ -325,6 +321,10 @@ public class PixelLog : MonoBehaviour
     private GameObject canvasRoot;
     private GameObject panelObject;
     private RectTransform panelRect;
+    private PixelWindowParts windowParts;   // the standard window the panel is built on (PixelUIKit.CreateWindow)
+
+    /// <summary>Height of the standard window header (PixelUIKitWindows.cs): the tabs start below it.</summary>
+    private float headerHeight => windowParts != null ? windowParts.HeaderHeight : PixelUIKit.WindowHeaderHeight;
     private Row[] rows;
     private Row totalRow;
     private RectTransform dividerRect;
@@ -719,39 +719,18 @@ public class PixelLog : MonoBehaviour
         button.onClick.AddListener(() => SetLogOpen(!PixelPop.IsOpen(panelObject)));
         PixelMenuKeys.Register(PixelAction.LogWindow, button);
 
-        // --- Panel (sits next to the button, growing away from the screen edge)
-        panelObject = new GameObject("Log Panel", typeof(RectTransform), typeof(Image), typeof(PixelPop));
-        panelObject.transform.SetParent(canvasRoot.transform, false);
-        PixelUIKit.StyleWindow(panelObject.GetComponent<Image>(), panelColor);
-        panelRect = panelObject.GetComponent<RectTransform>();
+        // --- Panel: the standard Fixed window (title, grey X), kept next to the button, growing away from the screen edge
+        windowParts = PixelUIKit.CreateWindow(font, canvasRoot.transform, "Log Panel", panelTitle, new Vector2(panelWidth, 400f), panelColor,
+                                              PixelUIKit.WindowKind.Fixed, () => PixelPop.Hide(panelObject));
+        panelObject = windowParts.Root;
+        panelRect = windowParts.Rect;
+        // Fixed windows are centred by the builder: put it back at its HUD corner.
         panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = anchor;
         panelRect.anchoredPosition = new Vector2(sx * hud.SideShownInset, sy * hud.WindowOffset); // the same gap from the black margin as the docked button keeps
-
-        // Title
-        TMP_Text title = CreateText(panelObject.transform, "Title", panelTitle, titleFontSize,
-                                    TextAlignmentOptions.Center, FontStyles.Bold, textColor);
-        PixelUIKit.Caps(title);
-        RectTransform tr = title.rectTransform;
-        tr.anchorMin = new Vector2(0f, 1f);
-        tr.anchorMax = new Vector2(1f, 1f);
-        tr.pivot = new Vector2(0.5f, 1f);
-        tr.sizeDelta = new Vector2(-(panelPadding * 2f + 160f), headerHeight);
-        tr.anchoredPosition = Vector2.zero;
         PixelMenuFx.AddWindowLine(panelObject.transform, headerHeight - 6f, panelPadding);
 
-        // Close button
-        Button close = CreateButton(panelObject.transform, "Close", "X", new Vector2(70f, 70f),
-                                    new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 36f);
-        RectTransform cr = close.GetComponent<RectTransform>();
-        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
-        cr.anchoredPosition = new Vector2(-panelPadding, -panelPadding * 0.5f);
-        close.onClick.AddListener(() => PixelPop.Hide(panelObject));
-
-        // The Collection Log: a book button at the top left of the window.
-        Button book = CreateButton(panelObject.transform, "Collection Log Button", "", new Vector2(70f, 70f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 30f);
-        RectTransform bkr = book.GetComponent<RectTransform>();
-        bkr.anchorMin = bkr.anchorMax = bkr.pivot = new Vector2(0f, 1f);
-        bkr.anchoredPosition = new Vector2(panelPadding, -panelPadding * 0.5f);
+        // The Collection Log: a book button in the left header slot.
+        Button book = windowParts.AddHeaderButton("Collection Log Button", "", true, PixelUIKit.WindowButtonColor);
         GameObject bookIcon = new GameObject("Icon", typeof(RectTransform), typeof(Image));
         bookIcon.transform.SetParent(book.transform, false);
         Image bookImage = bookIcon.GetComponent<Image>();
