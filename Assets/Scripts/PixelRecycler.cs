@@ -63,6 +63,7 @@
 //   husks nearby towards the bin (a little lift by the wall); a husk over the opening or right by the rim (suckReach) is SUCKED IN like the Storage
 //   Crate - it glides into the middle of the bin (SuckOne, suckSeconds) and is caught as usual. Modest on purpose: one bin catches some of a random
 //   scatter, not all of it. Behind the back wall of a bin with a Sorting Hopper (where its bottom spout drops husks) is left alone (BehindHopper).
+//   FRONT SOCKETS (2026-10-18): four In coupling holes low on the front ('f0'..'f3', FrontPortX): a belt / hose there drops husks in just inside the front wall.
 //   SOCKET (PixelSockets.cs): the back hatch is an In socket ('hatch'). With no hopper latched (a latched hopper OCCUPIES it), a coupling there takes belts / connectors / hoses:
 //   AcceptHusk counts the husk at once and lets it fall in behind the back wall (HatchInside); refused while working or full (HuskRoom).
 // ---------------------------------------------------
@@ -207,8 +208,10 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     {
         if (husk == null || !HoseCanTake || Busy || Fading || !PixelHuskHolder.Capture(clicker, husk)) return false;
         husk.isKinematic = false;
-        husk.position = HatchInside;
-        PixelHuskHolder.SetVelocity(husk, transform.TransformDirection(Vector3.back) * 1.2f + Vector3.down);
+        bool front = socket != null && socket.id != HatchSocket;
+        if (front) husk.position = transform.TransformPoint(new Vector3(socket.localPosition.x, HatchPassY, -innerD * 0.5f + Unit(clicker) * 0.9f));   // (in through a front hole, just inside the front wall)
+        else husk.position = HatchInside;
+        PixelHuskHolder.SetVelocity(husk, transform.TransformDirection(front ? Vector3.forward : Vector3.back) * 1.2f + Vector3.down);
         inside.Add(husk);
         capturedAt[husk] = Time.time;
         RefreshCounter();
@@ -357,6 +360,12 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
         // Floor and walls (inner liner a darker green), with the opening on top.
         kit.Box("Base", tr, new Vector3(0f, t * 1.1f, 0f), new Vector3(w + 2f * t, t * 0.4f, d + 2f * t), liner, default, colliders);
         kit.Box("Wall Front", tr, new Vector3(0f, h * 0.5f, -(d + t) * 0.5f), new Vector3(w + 2f * t, h, t), BodyColor, default, colliders, 0.3f, 0.55f);
+        // Four coupling holes low on the front (the front sockets f0..f3): a dark opening in a metal frame each.
+        foreach (float fx in FrontPortX(u))
+        {
+            kit.Box("Front Port Frame", tr, new Vector3(fx, 0.55f * u, -(d + 2f * t) * 0.5f - t * 0.06f), new Vector3(0.8f * u, 0.8f * u, t * 0.1f), new Color(0.72f, 0.75f, 0.78f, 1f), default, false, 0.85f, 0.7f);
+            kit.Box("Front Port", tr, new Vector3(fx, 0.55f * u, -(d + 2f * t) * 0.5f - t * 0.12f), new Vector3(0.56f * u, 0.56f * u, t * 0.1f), Color.black, default, false, 0f, 0.1f);
+        }
         // The back wall has a small HATCH in it (opened from first person to toss husks in by hand): the wall is four pieces round the hole.
         float zb = (d + t) * 0.5f, hw2 = HatchWidth(u) * 0.5f, hb = HatchBottom(u), ht = hb + HatchHeight(u), fullW = w + 2f * t;
         float sideW = fullW * 0.5f - hw2;
@@ -433,6 +442,12 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
         return root;
     }
 
+    /// <summary>Where the four front coupling holes sit across the front (local x).</summary>
+    private static float[] FrontPortX(float u) => new[] { -1.8f * u, -0.6f * u, 0.6f * u, 1.8f * u };
+
+    /// <summary>The front sockets' ids, left to right.</summary>
+    private static readonly string[] FrontSockets = { "f0", "f1", "f2", "f3" };
+
     // The back hatch's hole, in husk widths (u): its width, how high its bottom edge sits, its height.
     private static float HatchWidth(float u) => 1.7f * u;
     private static float HatchBottom(float u) => 0.9f * u;
@@ -448,7 +463,10 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
         float u = Unit(clicker);
         innerW = WidthHusks * u; innerD = DepthHusks * u; wallH = HeightHusks * u;
         baseScale = transform.localScale;
-        sockets = new[] { new PixelSocket(HatchSocket, new Vector3(0f, 0f, BackEdgeLocalZ), Vector3.forward, PixelSocketFlow.Intake) };
+        List<PixelSocket> socketList = new List<PixelSocket> { new PixelSocket(HatchSocket, new Vector3(0f, 0f, BackEdgeLocalZ), Vector3.forward, PixelSocketFlow.Intake) };
+        float[] fx = FrontPortX(u);
+        for (int i = 0; i < fx.Length; i++) socketList.Add(new PixelSocket(FrontSockets[i], new Vector3(fx[i], 0f, -BackEdgeLocalZ), Vector3.back, PixelSocketFlow.Intake));   // (four In holes on the front)
+        sockets = socketList.ToArray();
         lidPivot = transform.Find("Lid Pivot");
         hatchPivot = transform.Find("Hatch Pivot");
         if (hatchPivot != null) foreach (Collider c in hatchPivot.GetComponentsInChildren<Collider>()) hatchColliders.Add(c);

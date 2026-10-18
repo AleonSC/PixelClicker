@@ -68,7 +68,7 @@ chute (the same "find a belt that starts here" copy) moved onto a built-in bare 
 | Quantum Organizer | `side` (Both, like the crate; In drops husks onto the pad) |
 | Kiln | `mouth` (In, burns it), `chute` (Out, charcoal) |
 | Trash Can | `front`, `back` (In) |
-| Recycler | `hatch` (In, the back hatch; a latched Sorting Hopper OCCUPIES it) |
+| Recycler | `hatch` (In, the back hatch; a latched Sorting Hopper OCCUPIES it), `f0`..`f3` (In, four holes low on the front) |
 | Sorting Hopper | `back` (In, takes the husk into what it holds; refuses when full, `holdRoom`) |
 | Funnel | `output` (Out, the spout end; the tube waits while its belt is full) |
 | Wood Chipper | `chute` (Out, on the floor in front of the outlet) |

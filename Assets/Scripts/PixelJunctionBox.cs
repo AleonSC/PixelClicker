@@ -6,14 +6,14 @@
 //   all flow Both, kind Husk, autoDirection. Placed and saved as a permanent device (the PixelChipperDevice stub next to it; PlacedState.extra = filters + buffer).
 //   - DIRECTION from what is attached (UpdateDirections, every routeSeconds): a belt that ENDS at a coupling's port or a hose that PUSHES into it = In; a belt
 //     that STARTS at it or a hose that PULLS from it = Out; nothing = idle (PixelCoupling.SetAuto; its arrow shows it, idle shows none).
-//   - TOP OPENING (2026-10-18): a square hole in the lid (HoleHusks) takes husks that drop in, and a gentle suction (suckRadiusHusks / suckHeightHusks /
+//   - TOP OPENING (2026-10-18): a square hole in the lid (HoleHusks) takes husks that drop in (and any husk resting on the lid: nothing piles up on top), and a gentle suction (suckRadiusHusks / suckHeightHusks /
 //     suckStrength) draws husks just above the box towards it (FixedUpdate, Swallow).
 //   - IN = DELETED, OUT = NEW (2026-10-18): every husk that goes in (a coupling, the top opening, the Sweeper) is deleted - it shrinks into the box - and its
 //     type + value come out as a NEW husk spawned at an output coupling onto its belt (TakeData / SpawnOut), or wait in the buffer.
 //   - ROUTING a husk that comes in (AcceptHusk, from a belt / hose / the Sweeper / a Sorting Hopper's feed pipe / the top opening):
 //       1) to an OUT coupling whose FILTER is the husk's type (it waits in the buffer while that output is full);
 //       2) otherwise ROUND ROBIN across the unfiltered Out couplings (PixelCouplings.Emit onto the belt starting there, only while it has room);
-//       3) otherwise into the BUFFER (bufferSize, 8): kept as data, retried every routeSeconds; a hose pulling from an Out coupling takes from it
+//       3) otherwise into the BUFFER (bufferSize, 40): kept as data, retried every routeSeconds; a hose pulling from an Out coupling takes from it
 //          (IPixelHuskSource: the filter type there, or any type no filtered output wants). Buffer full = refused (a belt throws it on, as at any full device).
 //   - FILTERS (one per coupling, used while it is an output): drop a husk you were holding onto a coupling (within filterDropReach) to set it to that type;
 //     left-click / scroll a coupling to step through the unlocked types (and none). A small block of the filter type spins over the coupling; hovering the
@@ -35,7 +35,7 @@ public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoo
     [Header("Junction Box")]
     [Min(0)]
     [Tooltip("How many husks it keeps when no output can take them (kept as data; a hose pulling from an Out coupling takes from here). Full = it refuses more.")]
-    [SerializeField] private int bufferSize = 8;
+    [SerializeField] private int bufferSize = 40;
     [Min(0.05f)]
     [Tooltip("Seconds between two checks of the couplings' directions and the buffer's retries.")]
     [SerializeField] private float routeSeconds = 0.25f;
@@ -47,13 +47,13 @@ public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoo
     [SerializeField] private bool topOpening = true;
     [Min(0f)]
     [Tooltip("How far from the opening's middle (husk widths, sideways) the gentle suction reaches, for husks above the lid.")]
-    [SerializeField] private float suckRadiusHusks = 2.5f;
+    [SerializeField] private float suckRadiusHusks = 3.5f;
     [Min(0.5f)]
     [Tooltip("How high above the lid (husk widths) the suction reaches.")]
-    [SerializeField] private float suckHeightHusks = 3f;
+    [SerializeField] private float suckHeightHusks = 5f;
     [Min(0f)]
     [Tooltip("How strong the pull towards the opening is (an acceleration in husk widths per second squared; slight on purpose).")]
-    [SerializeField] private float suckStrength = 3f;
+    [SerializeField] private float suckStrength = 7f;
 
     [Tooltip("Colour of the glowing band (it flashes brighter for a moment when a husk is routed).")]
     [SerializeField] private Color bandColor = new Color(0.3f, 0.95f, 0.95f, 1f);
@@ -353,7 +353,8 @@ public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoo
             Vector3 local = transform.InverseTransformPoint(b.position);
             if (local.y < h - 0.3f * u || local.y > h + suckHeightHusks * u) continue;
             float d = new Vector2(local.x, local.z).magnitude;
-            if (Mathf.Abs(local.x) <= holeHalf && Mathf.Abs(local.z) <= holeHalf && local.y <= h + 0.7f * u)
+            float lidHalf = SideHusks * u * 0.5f + 0.3f * u;   // (anything resting ON the lid is taken too: nothing piles up on top)
+            if ((Mathf.Abs(local.x) <= holeHalf && Mathf.Abs(local.z) <= holeHalf && local.y <= h + 0.7f * u) || (Mathf.Abs(local.x) <= lidHalf && Mathf.Abs(local.z) <= lidHalf && local.y <= h + 0.9f * u))
             {
                 Swallow(b, null, transform.TransformPoint(new Vector3(0f, h * 0.5f, 0f)));   // (in through the opening)
                 continue;
