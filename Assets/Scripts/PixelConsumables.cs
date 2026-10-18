@@ -1350,6 +1350,44 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         return changed;
     }
 
+    /// <summary>The name a built-in device is known by in ShopText.txt: its kind's coded default name (null for seeds and attuned copies).</summary>
+    private static string ShopTextKey(Device d)
+    {
+        if (d == null || d.attuned || d.kind == DeviceKind.Seed) return null;
+        foreach (System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>> maker in DefaultDeviceMakers)
+            if (maker.Key == d.kind) return PixelShopText.DeviceKey(maker.Value().displayName);
+        return null;
+    }
+
+    /// <summary>
+    /// Resources/ShopText.txt (PixelShopText): in the Editor, adds the devices it doesn't list yet with their current text and prices;
+    /// then copies every name, description and price the file gives over the device's own (the file wins over the Inspector at play).
+    /// </summary>
+    private void ApplyShopText()
+    {
+        if (devices == null) return;
+        string[] keys = new string[devices.Length];
+        System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<string, string>> blocks = new System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<string, string>>();
+        for (int i = 0; i < devices.Length; i++)
+        {
+            keys[i] = ShopTextKey(devices[i]);
+            if (keys[i] != null && Application.isEditor)
+                blocks.Add(new System.Collections.Generic.KeyValuePair<string, string>(keys[i], PixelShopText.Block(keys[i], devices[i].displayName, devices[i].description, devices[i].costs, null)));
+        }
+        PixelShopText.AppendMissing(blocks);
+
+        for (int i = 0; i < devices.Length; i++)
+        {
+            PixelShopText.Entry e = keys[i] != null ? PixelShopText.Find(keys[i]) : null;
+            if (e == null) continue;
+            Device d = devices[i];
+            if (e.name != null) d.displayName = e.name;
+            if (e.description != null) d.description = e.description;
+            PixelShop.PackCost[] price = PixelShopText.ParsePrice(e.price, clicker, keys[i]);
+            if (price != null) d.costs = price;
+        }
+    }
+
 #if UNITY_EDITOR
     [ContextMenu("Reset Built-in Device Prices")]
     private void ResetDevicePricesMenu()
@@ -1532,6 +1570,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         }
 
         EnsureDefaultPotions();
+        ApplyShopText();   // names, descriptions and prices from Resources/ShopText.txt (before the attuned copies are made from them)
         AppendComboPotions();
         AppendAttunedDevices();
     }

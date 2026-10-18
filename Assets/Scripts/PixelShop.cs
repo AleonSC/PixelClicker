@@ -828,6 +828,7 @@ public partial class PixelShop : MonoBehaviour
                     PixelDebug.Info("PixelShop: " + reward.displayName + " starts at " + clicker.Tiers[tierIndex].count + ".", this);
             }
         }
+        ApplyShopText();   // names, descriptions and prices from Resources/ShopText.txt (PixelShopDefaults.cs)
     }
 
     private void EnsureMinigame<T>() where T : PixelMinigame

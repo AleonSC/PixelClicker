@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using TMPro;
 using UnityEngine;
@@ -1354,6 +1355,53 @@ public partial class PixelShop
             count++;
         }
         return count;
+    }
+
+    /// <summary>The name a pack is known by in ShopText.txt: a built-in pack's coded default name (so renaming it there keeps it matched), else its own.</summary>
+    private static string ShopTextKey(ShopPack pack)
+    {
+        foreach (DefaultPack builtIn in BuiltInPacks)
+            if (builtIn.isThis(pack)) return PixelShopText.PackKey(builtIn.create(-1).displayName);
+        return PixelShopText.PackKey(pack.displayName);
+    }
+
+    /// <summary>
+    /// Resources/ShopText.txt (PixelShopText): in the Editor, adds the packs it doesn't list yet with their current text and prices; then
+    /// copies every name, description and price the file gives over the pack's own (the file wins over the Inspector at play).
+    /// </summary>
+    private void ApplyShopText()
+    {
+        if (packs == null) return;
+        string[] keys = new string[packs.Length];
+        List<KeyValuePair<string, string>> blocks = new List<KeyValuePair<string, string>>();
+        for (int i = 0; i < packs.Length; i++)
+        {
+            ShopPack p = packs[i];
+            if (p == null) continue;
+            keys[i] = ShopTextKey(p);
+            PackCost[][] levelCosts = null;
+            if (IsLeveled(p)) { levelCosts = new PackCost[p.levels.Length][]; for (int l = 0; l < p.levels.Length; l++) levelCosts[l] = p.levels[l] != null ? p.levels[l].costs : null; }
+            if (Application.isEditor) blocks.Add(new KeyValuePair<string, string>(keys[i], PixelShopText.Block(keys[i], p.displayName, p.description, p.costs, levelCosts)));
+        }
+        PixelShopText.AppendMissing(blocks);
+
+        for (int i = 0; i < packs.Length; i++)
+        {
+            ShopPack p = packs[i];
+            PixelShopText.Entry e = p != null ? PixelShopText.Find(keys[i]) : null;
+            if (e == null) continue;
+            if (e.name != null) p.displayName = e.name;
+            if (e.description != null) p.description = e.description;
+            PackCost[] price = PixelShopText.ParsePrice(e.price, clicker, keys[i]);
+            if (price != null) p.costs = price;
+            if (IsLeveled(p))
+                foreach (KeyValuePair<int, string> lp in e.levelPrices)
+                {
+                    if (lp.Key > p.levels.Length || p.levels[lp.Key - 1] == null) continue;
+                    PackCost[] levelPrice = PixelShopText.ParsePrice(lp.Value, clicker, keys[i] + " level " + lp.Key);
+                    if (levelPrice != null) p.levels[lp.Key - 1].costs = levelPrice;
+                }
+        }
     }
 
 #if UNITY_EDITOR
