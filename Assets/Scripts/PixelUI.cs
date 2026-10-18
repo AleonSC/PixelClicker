@@ -21,6 +21,10 @@ using UnityEngine.InputSystem;
 ///
 /// It only reads PixelClicker.Tiers and refreshes every frame, so there is nothing to wire up
 /// besides the PixelClicker reference (found automatically if left empty).
+///
+/// The Inventory box is a standard Fixed window (PixelUIKit.CreateWindow: title, grey X, pin button in the left header slot), kept at its
+/// HUD corner instead of the centre. The pinned (compact) mode is its own widget: it hides the title / X / tabs and keeps its own drag,
+/// minimise and padlock buttons (PixelPopoutDrag), which are not part of the standard window.
 /// </summary>
 public class PixelUI : MonoBehaviour
 {
@@ -103,29 +107,11 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Title shown at the top of the box.")]
     [SerializeField] private string inventoryTitle = "Inventory";
 
-    [Tooltip("Show the header at the top of the box: the title and a close (X) button, like the Pixel Log. Off = no header, the tabs start at the top.")]
-    [SerializeField] private bool showHeader = true;
-
-    [Tooltip("Height of the header (title bar) above the tab buttons.")]
-    [SerializeField] private float headerBarHeight = 90f;
-
-    [Tooltip("Header title text size.")]
-    [SerializeField] private float headerTitleSize = 48f;
-
-    [Tooltip("Size of the close (X) button in the header. 0 = no close button.")]
-    [SerializeField] private float closeButtonSize = 70f;
-
-    [Tooltip("Colour of the header's title and of the X on the close button.")]
-    [SerializeField] private Color headerTextColor = Color.white;
-
-    [Tooltip("Colour of the close (X) button.")]
-    [SerializeField] private Color closeButtonColor = new Color(0.3f, 0.3f, 0.35f, 1f);
-
     [Tooltip("Show the button text in capital letters (CURRENCY).")]
     [SerializeField] private bool uppercaseButton = true;
 
-    /// <summary>Height of the header above the tabs (0 when the header is off).</summary>
-    private float headerHeight => showHeader ? headerBarHeight : 0f;
+    /// <summary>Height of the standard window header above the tabs (PixelUIKitWindows.cs).</summary>
+    private float headerHeight => windowParts != null ? windowParts.HeaderHeight : PixelUIKit.WindowHeaderHeight;
 
     /// <summary>Vertical distance between lines. Never smaller than the text, so lines can't overlap.</summary>
     private float LinePitch => Mathf.Max(lineHeight, fontSize * 1.3f);
@@ -437,6 +423,7 @@ public class PixelUI : MonoBehaviour
     private GameObject listBarObject;
     private bool autoMode;
     private TMP_Text titleLabel;
+    private PixelWindowParts windowParts;   // the standard window the box is built on (PixelUIKit.CreateWindow)
     private TMP_Text[] deltaLabels;
     private float[] deltaTimers;
     private double[] gainSums;
@@ -498,7 +485,7 @@ public class PixelUI : MonoBehaviour
         foreach (var pair in rowParts)
             if (pair.Key != null) pair.Key.margin = new Vector4(swatchSize + 18f, 0f, compact ? 8f : 110f, 0f);
     }
-    private float CompactToggleSize => closeButtonSize > 0f ? closeButtonSize : 56f;
+    private float CompactToggleSize => PixelUIKit.WindowCloseSize;   // the pin is a standard header button (same size as the X)
     private float CompactTop => CompactToggleSize + panelPadding * 1.5f;
     private readonly System.Collections.Generic.List<TMP_Text> materialLabels = new System.Collections.Generic.List<TMP_Text>();
     private TMP_Text noMaterialsLabel;
@@ -1095,50 +1082,21 @@ public class PixelUI : MonoBehaviour
         button.onClick.AddListener(() => SetInventoryOpen(!PixelPop.IsOpen(boxObject), true));
         PixelMenuKeys.Register(PixelAction.Inventory, button);
 
-        // --- Box (sits next to the button, growing away from the screen edge)
-        boxObject = new GameObject("Inventory Box", typeof(RectTransform), typeof(Image), typeof(PixelPop));
-        boxObject.transform.SetParent(autoRoot.transform, false);
-        Image bg = boxObject.GetComponent<Image>();
-        if (showBackground) PixelUIKit.StyleWindow(bg, new Color(backgroundColor.r, backgroundColor.g, backgroundColor.b, Mathf.Max(backgroundColor.a, 0.95f)));   // nearly solid: the stars must not show through the text
-        else bg.color = new Color(0f, 0f, 0f, 0f);
-        bg.raycastTarget = true; // clicks on the box shouldn't reach the pixel behind it
-
-        boxRect = boxObject.GetComponent<RectTransform>();
+        // --- Box: the standard Fixed window (title, grey X), kept next to the button, growing away from the screen edge
+        Color boxColor = showBackground ? new Color(backgroundColor.r, backgroundColor.g, backgroundColor.b, Mathf.Max(backgroundColor.a, 0.95f))   // nearly solid: the stars must not show through the text
+                                        : new Color(0f, 0f, 0f, 0f);
+        windowParts = PixelUIKit.CreateWindow(font, autoRoot.transform, "Inventory Box", inventoryTitle, new Vector2(panelWidth, 400f), boxColor,
+                                              PixelUIKit.WindowKind.Fixed, () => PixelPop.Hide(boxObject), styled: showBackground);
+        boxObject = windowParts.Root;
+        boxObject.GetComponent<Image>().raycastTarget = true; // clicks on the box shouldn't reach the pixel behind it
+        boxRect = windowParts.Rect;
+        // Fixed windows are centred by the builder: put it back at its HUD corner.
         boxRect.anchorMin = boxRect.anchorMax = boxRect.pivot = anchor;
         boxRect.sizeDelta = new Vector2(panelWidth, headerHeight + panelPadding * 2f + LinePitch * count);
         boxRect.anchoredPosition = new Vector2(sx * hud.SideShownInset, sy * hud.WindowOffset); // the same gap from the black margin as the docked button keeps
-
-        // Header: title and close button (same look as the Pixel Log)
-        if (showHeader)
-        {
-            float closeSpace = closeButtonSize > 0f ? closeButtonSize + panelPadding : 0f;
-            titleLabel = MakeText(boxObject.transform, "Title", inventoryTitle, headerTitleSize,
-                                  TextAlignmentOptions.Center, FontStyles.Bold, headerTextColor);
-            PixelUIKit.Caps(titleLabel);
-            titleLabel.enableAutoSizing = true; // never clipped or wrapped, whatever the box width
-            titleLabel.fontSizeMax = headerTitleSize;
-            titleLabel.fontSizeMin = Mathf.Min(12f, headerTitleSize);
-            titleLabel.overflowMode = TextOverflowModes.Overflow;
-
-            RectTransform tr = titleLabel.rectTransform;
-            tr.anchorMin = new Vector2(0f, 1f);
-            tr.anchorMax = new Vector2(1f, 1f);
-            tr.pivot = new Vector2(0.5f, 1f);
-            tr.sizeDelta = new Vector2(-(panelPadding * 2f + closeSpace * 2f), headerHeight); // centred, with room for the X
-            tr.anchoredPosition = Vector2.zero;
-            PixelMenuFx.AddWindowLine(boxObject.transform, headerHeight - 4f, panelPadding);
-
-            if (closeButtonSize > 0f)
-            {
-                Button close = MakeButton(boxObject.transform, "Close", "X", new Vector2(closeButtonSize, closeButtonSize),
-                                          closeButtonColor, headerTextColor, closeButtonSize * 0.5f);
-                RectTransform cr = close.GetComponent<RectTransform>();
-                cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
-                cr.anchoredPosition = new Vector2(-panelPadding, -panelPadding * 0.5f);
-                close.onClick.AddListener(() => PixelPop.Hide(boxObject));
-                closeButtonObject = close.gameObject;
-            }
-        }
+        titleLabel = windowParts.Title;
+        closeButtonObject = windowParts.Close.gameObject;
+        PixelMenuFx.AddWindowLine(boxObject.transform, headerHeight - 4f, panelPadding);
 
         BuildInventoryTabs(anchor);
         BuildCompactToggle();
@@ -1597,7 +1555,7 @@ public class PixelUI : MonoBehaviour
         }
         if (compactSmallButton != null && compactSmallButton.gameObject.activeSelf != compact) compactSmallButton.gameObject.SetActive(compact);
         if (compactStickButton != null && compactStickButton.gameObject.activeSelf != compact) compactStickButton.gameObject.SetActive(compact);
-        if (compactButton != null) compactButton.GetComponent<Image>().color = compact ? new Color(0.2f, 0.6f, 0.3f, 1f) : closeButtonColor;
+        if (compactButton != null) compactButton.GetComponent<Image>().color = compact ? new Color(0.2f, 0.6f, 0.3f, 1f) : PixelUIKit.WindowButtonColor;
     }
 
     /// <summary>The place the currency lines and potion rows live: the scrolling list in automatic mode, else the box itself.</summary>
@@ -1660,7 +1618,7 @@ public class PixelUI : MonoBehaviour
     }
 
     /// <summary>Where the lines start: below the title bar and (in automatic mode) the two tab buttons.</summary>
-    private float ContentTop => Compact && autoMode ? CompactTop : headerHeight + (showHeader ? 0f : panelPadding * 0.5f) + (autoMode ? subTabHeight + subTabGap : 0f)
+    private float ContentTop => Compact && autoMode ? CompactTop : headerHeight + (autoMode ? subTabHeight + subTabGap : 0f)
                                 + (autoMode && inventoryTab == 1 ? categoryDropdownHeight + subTabGap : 0f); // room for the category drop-down
 
     // ------------------------------------------------------------------
@@ -1674,7 +1632,7 @@ public class PixelUI : MonoBehaviour
 
         float innerWidth = panelWidth - panelPadding * 2f;
         float tabWidth = (innerWidth - 8f * (names.Length - 1)) / names.Length;
-        float tabTop = headerHeight + (showHeader ? 0f : panelPadding * 0.5f);
+        float tabTop = headerHeight;
 
         for (int i = 0; i < names.Length; i++)
         {
@@ -1771,10 +1729,7 @@ public class PixelUI : MonoBehaviour
     {
         if (!autoMode) return;
         float size = CompactToggleSize;
-        compactButton = MakeButton(boxObject.transform, "Compact Toggle", "", new Vector2(size, size), closeButtonColor, headerTextColor, size * 0.5f);
-        RectTransform rt = compactButton.GetComponent<RectTransform>();
-        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
-        rt.anchoredPosition = new Vector2(panelPadding, -panelPadding * 0.5f);
+        compactButton = windowParts.AddHeaderButton("Compact Toggle", "", true, PixelUIKit.WindowButtonColor);   // the standard left header slot
 
         PixelUIKit.AddPinIcon(compactButton, size * 0.57f);   // the same pushpin as the Skills window's pin button
 
@@ -1825,7 +1780,7 @@ public class PixelUI : MonoBehaviour
         compactDrag.onMoved = () => { KeepCompactOnScreen(); compactDesired = boxRect.anchoredPosition; SaveCompactPosition(); };
 
         float small = size * 0.5f;
-        compactSmallButton = MakeButton(boxObject.transform, "Compact Minimise", "", new Vector2(small, small), closeButtonColor, headerTextColor, small * 0.7f);
+        compactSmallButton = MakeButton(boxObject.transform, "Compact Minimise", "", new Vector2(small, small), PixelUIKit.WindowButtonColor, Color.white, small * 0.7f);
         RectTransform a = compactSmallButton.GetComponent<RectTransform>();
         a.anchorMin = a.anchorMax = a.pivot = new Vector2(1f, 1f);
         a.anchoredPosition = new Vector2(-panelPadding, -panelPadding * 0.5f);
@@ -1840,7 +1795,7 @@ public class PixelUI : MonoBehaviour
         t1.onEnter = () => tooltipCustomText = compactSmall ? "Show the whole list" : "Minimise to just the buttons";
         t1.onExit = HideTooltip;
 
-        compactStickButton = MakeButton(boxObject.transform, "Compact Stick", "", new Vector2(small, small), closeButtonColor, headerTextColor, small * 0.7f);
+        compactStickButton = MakeButton(boxObject.transform, "Compact Stick", "", new Vector2(small, small), PixelUIKit.WindowButtonColor, Color.white, small * 0.7f);
         RectTransform b = compactStickButton.GetComponent<RectTransform>();
         b.anchorMin = b.anchorMax = b.pivot = new Vector2(1f, 1f);
         b.anchoredPosition = new Vector2(-panelPadding, -panelPadding * 0.5f - small - 4f);
@@ -1944,7 +1899,7 @@ public class PixelUI : MonoBehaviour
         if (!compact) return;
         boxRect.anchoredPosition = compactDesired;   // always back to the chosen spot (maximising may have pushed it up to fit on screen)
         KeepCompactOnScreen();
-        if (compactStickImage != null) compactStickImage.color = compactStuck ? new Color(0.2f, 0.55f, 0.3f, 1f) : closeButtonColor;
+        if (compactStickImage != null) compactStickImage.color = compactStuck ? new Color(0.2f, 0.55f, 0.3f, 1f) : PixelUIKit.WindowButtonColor;
         if (compactLockClosed != null && compactLockClosed.activeSelf != compactStuck) compactLockClosed.SetActive(compactStuck);
         if (compactLockOpen != null && compactLockOpen.activeSelf == compactStuck) compactLockOpen.SetActive(!compactStuck);
         if (compactSmallLabel != null) PixelUIKit.SetText(compactSmallLabel, compactSmall ? "+" : "-");
@@ -1956,10 +1911,10 @@ public class PixelUI : MonoBehaviour
     /// <summary>A second button beside the toggle, only while the simplified view is on: swaps between the currency list (shows a potion) and the potion list (shows a coin).</summary>
     private void BuildCompactSwitch(float size)
     {
-        compactSwitch = MakeButton(boxObject.transform, "Compact Switch", "", new Vector2(size, size), closeButtonColor, headerTextColor, size * 0.5f);
+        compactSwitch = MakeButton(boxObject.transform, "Compact Switch", "", new Vector2(size, size), PixelUIKit.WindowButtonColor, Color.white, size * 0.5f);
         RectTransform rt = compactSwitch.GetComponent<RectTransform>();
         rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
-        rt.anchoredPosition = new Vector2(panelPadding + size + 8f, -panelPadding * 0.5f);
+        rt.anchoredPosition = compactButton.GetComponent<RectTransform>().anchoredPosition + new Vector2(size + 8f, 0f);   // just right of the pin
 
         // Potion: a cork, a thin neck and a round-ish body, drawn from little rectangles.
         potionIcon = new GameObject("Potion Icon", typeof(RectTransform));
