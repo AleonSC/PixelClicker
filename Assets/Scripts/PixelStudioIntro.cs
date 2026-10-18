@@ -17,6 +17,8 @@
 //   the coin slot and the buttons; 6 fade to black, then the normal title intro.
 //   'GAME OVER' + scanlines are a world-space canvas just in front of the cabinet's screen (not in the space picture). The cabinet and the alien
 //   float in the dark (no floor).
+//   All music waits while it plays (PixelAudio checks HoldsMusic: playing, or still due this launch with an 8 s time-out; the title screen calls
+//   SkipThisLaunch when its launch intro won't run).
 //   At launch it first waits on black until frames come smoothly (maxSettleTime), and the timeline moves at most maxFrameStep per frame, so loading
 //   hitches slow it down instead of skipping scenes. The space set is built small and scaled up (SpaceScale) to keep float precision far from the origin.
 //   No per-frame allocations (everything is cached when it is built; the timeline runs in one coroutine on unscaled time).
@@ -86,6 +88,13 @@ public class PixelStudioIntro : MonoBehaviour
 
     /// <summary>True while it plays.</summary>
     public static bool Playing { get; private set; }
+
+    /// <summary>True while the music should wait: it is playing, or it is still due to play at this launch (with a time-out, so the music can
+    /// never be held for long if the title intro does not run). PixelAudio checks this so the menu music starts after it.</summary>
+    public static bool HoldsMusic => Playing || (instance != null && !playedThisLaunch && Enabled && Time.realtimeSinceStartup < 8f);
+
+    /// <summary>The title screen calls this when its launch intro will not run (so nothing waits for the studio intro).</summary>
+    public static void SkipThisLaunch() { playedThisLaunch = true; }
 
     private static PixelStudioIntro instance;
     private static bool playedThisLaunch;   // (not reset on Restart on purpose: once per launch)
