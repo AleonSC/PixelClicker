@@ -1068,6 +1068,13 @@ public class PixelHints : MonoBehaviour, IPixelSaved
             wasShowing = true;
             return;
         }
+        if (next.id == PixelHuskCrush.TipId)
+        {
+            // The husk crush tip: a small box at the right edge of the screen, half way down (the point sits just past the edge, so the box lands left of it), and time keeps running (you try it while it shows).
+            PixelNotice.Show(next.text, 0f, small: true, nearScreen: () => new Vector2(Screen.width * 1.03f, Screen.height * 0.55f), freezeTime: false);
+            wasShowing = true;
+            return;
+        }
         if (next.id == "potion")
         {
             // The first potion tip stops time (so the potion doesn't run down) and stays until 'Got it'.
