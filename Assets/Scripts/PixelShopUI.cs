@@ -197,6 +197,7 @@ public partial class PixelShop
         float pageTop = headerHeight + tabsDrop + tabHeight + panelPadding * 0.5f;
         BuildPixelsPage(panelObject.transform, pageTop);
         BuildConsumablesArea(panelObject.transform, pageTop);
+        BuildSearchPage(panelObject.transform, pageTop);
 
         panelObject.SetActive(false);
         subPanelObject.SetActive(false);
@@ -649,63 +650,6 @@ public partial class PixelShop
     /// <summary>Does this text match the search (case-insensitive substring)?</summary>
     private bool TextMatches(string text) => shopSearch.Length == 0 || (text ?? "").ToLowerInvariant().Contains(shopSearch);
 
-    private readonly System.Collections.Generic.Dictionary<int, PackRow> searchItemRows = new System.Collections.Generic.Dictionary<int, PackRow>();
-    private static readonly string[] CategoryWords = { "potion", "device utility", "seed", "supply instant" };
-
-    /// <summary>While searching: one row for every matching consumable (potions, devices, seeds, supplies), bought one at a time.</summary>
-    private void RefreshSearchItems(bool searching, ref float y, ref int visibleCount)
-    {
-        foreach (var pair in searchItemRows)
-            if (pair.Value.rect.gameObject.activeSelf && !searching) pair.Value.rect.gameObject.SetActive(false);
-        if (!searching || consumables == null) return;
-
-        for (int i = 0; i < consumables.ItemCount; i++)
-        {
-            bool match = false;
-            if (!consumables.ItemCraftOnly(i) && !consumables.ItemNotSold(i) && !consumables.ItemVendorOnly(i) && !consumables.IsDragonSeed(i))
-            {
-                string name = consumables.ItemName(i);
-                match = TextMatches(name) || TextMatches(consumables.ItemDescription(i)) || TextMatches(CategoryWords[Mathf.Clamp(consumables.CategoryOf(i), 0, 3)]);
-            }
-            PackRow row;
-            if (!searchItemRows.TryGetValue(i, out row))
-            {
-                if (!match) continue;
-                row = BuildPlainRow(contentRect, "Search Item " + i);
-                int captured = i;
-                AddRowPicture(row, () => captured < consumables.ItemCount ? "item:" + consumables.ItemName(captured) : null);
-                StyleBoxedRow(row, buyButtonSize.x + 40f, false);
-                row.buyButton.onClick.AddListener(() => { TryBuyItems(captured, 1); RefreshRows(); });
-                searchItemRows[i] = row;
-            }
-            row.rect.gameObject.SetActive(match);
-            if (!match) continue;
-
-            row.rect.anchoredPosition = new Vector2(0f, -y);
-            y += rowHeight + rowSpacing;
-            visibleCount++;
-
-            bool locked = ItemLocked(i);
-            int room = consumables.ItemRoom(i);
-            bool full = room <= 0 && !locked;
-            PackCost[] cost = ScaleCosts(consumables.ItemCosts(i), 1);
-            bool canBuy = !locked && !full && CanAffordCosts(cost);
-            PixelUIKit.SetText(row.nameLabel, locked ? "<color=#" + ColorUtility.ToHtmlStringRGB(lockedItemColor) + ">" + consumables.ItemName(i) + "</color>" : consumables.ItemName(i));
-            PixelUIKit.SetText(row.descLabel, consumables.ItemDescription(i));
-            if (locked)
-            {
-                int t = clicker.IndexOf(consumables.ItemRequiredType(i));
-                string need = t >= 0 ? clicker.Tiers[t].displayName : consumables.ItemRequiredType(i).ToString();
-                PixelUIKit.SetText(row.costLabel, "<color=#" + ColorUtility.ToHtmlStringRGB(unaffordableColor) + ">" + string.Format(lockedRequirementFormat, need) + "</color>");
-            }
-            else if (full) PixelUIKit.SetText(row.costLabel, "<color=#" + ColorUtility.ToHtmlStringRGB(unaffordableColor) + ">" + string.Format(NoHave(potionFullFormat), consumables.ItemCapacity(i), PixelConsumables.OwnedText(consumables.ItemOwned(i))) + "</color>");
-            else PixelUIKit.SetText(row.costLabel, BuildCostText(cost, true));
-            row.buyButton.interactable = canBuy;
-            PixelUIKit.SetText(row.buyLabel, locked ? lockedText : full ? potionFullText : string.Format(buyCountFormat, 1));
-            SetShopRole(row.buyImage, canBuy ? ButtonRole.Success : ButtonRole.Neutral);
-        }
-    }
-
     public void SelectTab(ShopTab tab)
     {
         if (tab == ShopTab.Automatic) tab = ShopTab.Pixels;
@@ -1044,7 +988,7 @@ public partial class PixelShop
             bool listed = IsPackRequirementMet(i) || showLockedPacks || HasPack(i);
             bool visible = child
                 ? openParent >= 0 && pack.ParentIndex == openParent && listed && !HiddenAsPurchased(i)
-                : (searching ? MatchesSearch(pack) : TabOf(pack) == currentTab && showGeneral) && listed && !HiddenAsPurchased(i);
+                : !searching && TabOf(pack) == currentTab && showGeneral && listed && !HiddenAsPurchased(i);   // (search results are tiles: PixelShopSearch.cs)
 
             if (visible && !searching && !child && currentTab == ShopTab.Pixels) visible = false;   // shown as tiles instead
 
@@ -1098,8 +1042,7 @@ public partial class PixelShop
         {
             PackRow row = valueRows[t];
             PixelClicker.PixelTier tier = clicker.Tiers[t];
-            bool valueMatch = searching && TextMatches(string.Format(valueRowNameFormat, tier.displayName) + " value upgrade");
-            bool visible = (onUpgrades && upgradesSubTab == 1 || valueMatch) && tier.unlocked && !PixelClicker.IsHazard(tier.type) && !(HidePurchased && ValueUpgradeMaxed(t));
+            bool visible = onUpgrades && upgradesSubTab == 1 && tier.unlocked && !PixelClicker.IsHazard(tier.type) && !(HidePurchased && ValueUpgradeMaxed(t));
             row.rect.gameObject.SetActive(visible);
             if (!visible) continue;
 
@@ -1134,8 +1077,6 @@ public partial class PixelShop
         // Upgrades > Operation: the consumables and their upgrade window.
         RefreshOperation(onUpgrades, ref y, ref visibleCount, ref subY, ref subVisibleCount);
 
-        // Searching: every matching consumable gets its own row too.
-        RefreshSearchItems(searching, ref y, ref visibleCount);
 
         // The scroll content is as tall as the visible rows; the panel itself stays a fixed size.
         ApplyContentHeight(contentRect, emptyLabel, y, visibleCount);

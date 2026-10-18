@@ -215,6 +215,7 @@ One line per script / system: what it is and where its details are. Search it (`
 | `PixelShopPictures.cs` | Part of partial class PixelShop: rotating 3D pictures on shop rows/cards (AddRowPicture, AddPackPicture, Consumables tiles / buy bar; | in the header comment of `PixelShopPictures.cs` |
 | `PixelShopConsumables.cs` | Third-and-a-half part of partial class PixelShop: | in the header comment of `PixelShopConsumables.cs` |
 | `PixelShopText.cs` | Resources/ShopText.txt: the editable names, descriptions and prices of every shop pack and built-in device (the file wins over the Inspector at play; created / extended in the Editor on play). | in the header comment of `PixelShopText.cs` |
+| `PixelShopSearch.cs` | Part of partial class PixelShop: the search results as a tile page (packs, consumables, Value upgrades, Operation rows). | in the header comment of `PixelShopSearch.cs` |
 | `PixelShopTilePage.cs` | Part of partial class PixelShop: the shared tile-page layout (category chips, tile grid, one buy bar) used by the Pixels and Consumables tabs. | in the header comment of `PixelShopTilePage.cs` |
 | `PixelShopPixels.cs` | Part of partial class PixelShop: the Pixels tab as a tile page (Toggleables / Skill packs chips). | in the header comment of `PixelShopPixels.cs` |
 | `PixelAutoClicker.cs` | Timer that calls clicker.AutoCollect() (paused while a takeover minigame runs or the cube is shrunk away: | in the header comment of `PixelAutoClicker.cs` |

@@ -3,7 +3,7 @@
 //   Part of partial class PixelShop: the shared "tile page" layout used by the Pixels tab (PixelShopPixels.cs) and the Consumables
 //   tab (PixelShopConsumables.cs). Top to bottom:
 //   - category chips (the open one lit like a tab; each chip remembers its selected tile),
-//   - a scrolling grid of tiles, 160 x 200 = 5 to a row (still 3D picture, one-line name, the price as colour swatches + numbers
+//   - a scrolling grid of tiles, 160 x 176 = 5 to a row (still 3D picture - no name: the hover tooltip and the buy bar show it -, the price as colour swatches + numbers
 //     (CostStrip: SetCosts / SetCostMessage; red number = can't afford), a small corner badge, a 'Locked' mark over
 //     the picture). Click a tile = select it, Shift-click = the page's quick buy, hover = its description as the shop tooltip.
 //   - one buy bar for the selected tile: spinning picture, name, the full description, the cost (swatch + number + currency name,
@@ -33,7 +33,7 @@ public partial class PixelShop
         public Image background;
         public PictureSlot picture;
         public Func<string> key;   // the tile's picture (also shown, spinning, in the buy bar while selected)
-        public TMP_Text name, badge, lockMark;
+        public TMP_Text badge, lockMark;   // (no name under the picture: the buy bar and the hover tooltip show it)
         public CostStrip costs;   // the price: a colour swatch + number per currency
     }
 
@@ -99,8 +99,9 @@ public partial class PixelShop
     /// <summary>Builds an (empty, hidden) page below 'top' units from the panel's top edge. The caller sets its delegates.</summary>
     private TilePage BuildTilePage(Transform panel, float top, ShopTab tab, string[] chipTitles, bool hasCount, int startChip)
     {
-        TilePage page = new TilePage { tab = tab, chipTitles = chipTitles, hasCount = hasCount, chip = Mathf.Clamp(startChip, 0, chipTitles.Length - 1) };
-        page.selected = new int[chipTitles.Length];
+        // (no chip titles = no chip row: the grid starts at the top - the search results page)
+        TilePage page = new TilePage { tab = tab, chipTitles = chipTitles, hasCount = hasCount, chip = Mathf.Clamp(startChip, 0, Mathf.Max(0, chipTitles.Length - 1)) };
+        page.selected = new int[Mathf.Max(1, chipTitles.Length)];
         for (int i = 0; i < page.selected.Length; i++) page.selected[i] = -1;
 
         page.area = new GameObject(tab + " Page", typeof(RectTransform));
@@ -121,7 +122,7 @@ public partial class PixelShop
         gr.anchorMin = Vector2.zero;
         gr.anchorMax = Vector2.one;
         gr.offsetMin = new Vector2(0f, buyBarHeight + cardGap);
-        gr.offsetMax = new Vector2(0f, -(chipHeight + cardGap));
+        gr.offsetMax = new Vector2(0f, chipTitles.Length > 0 ? -(chipHeight + cardGap) : 0f);
 
         page.empty = CreateText(page.scroll.transform, "Empty", noItemsText, costFontSize, TextAlignmentOptions.Center, FontStyles.Italic);
         PixelUIKit.Stretch(page.empty.rectTransform);
@@ -271,11 +272,6 @@ public partial class PixelShop
             tile.picture = AddPictureSlot(tile.rect, pic, new Vector2(16f, y), false, tile.key, true, page.scroll.viewport, true);
         y += pic + 4f;
 
-        tile.name = CreateText(go.transform, "Name", page.tileName(id), tileFontSize, TextAlignmentOptions.Center, FontStyles.Bold);
-        PlaceTopLeft(tile.name.rectTransform, 6f, y, tileWidth - 12f, lineH);
-        PixelUIKit.FitOneLine(tile.name, 14f);
-        y += lineH;
-
         tile.costs = BuildCostStrip(go.transform, 6f, y, tileWidth - 12f, Mathf.Max(lineH, tileHeight - y - 6f), 3, 3, tileFontSize, false);
 
         tile.badge = CreateText(go.transform, "Badge", "", tileFontSize * 0.85f, TextAlignmentOptions.TopRight, FontStyles.Bold);
@@ -288,7 +284,7 @@ public partial class PixelShop
         tile.lockMark.gameObject.SetActive(false);
 
         PixelUIKit.MakeClickable(go, () => ClickTile(page, id), true, false);
-        Func<string> tip = () => page.description(id);
+        Func<string> tip = () => "<b>" + page.tileName(id) + "</b>\n" + page.description(id);   // (the name shows here and in the buy bar, not on the tile)
         PixelHoverTip hover = go.AddComponent<PixelHoverTip>();
         hover.onEnter = () => hoverTip = tip;
         hover.onExit = () => { if (hoverTip == tip) hoverTip = null; };
@@ -301,7 +297,7 @@ public partial class PixelShop
 
     private void SelectPageChip(TilePage page, int chip)
     {
-        page.chip = Mathf.Clamp(chip, 0, page.chipTitles.Length - 1);
+        page.chip = Mathf.Clamp(chip, 0, Mathf.Max(0, page.chipTitles.Length - 1));
         if (page.content != null) page.content.anchoredPosition = Vector2.zero;
         if (page.scroll != null) page.scroll.StopMovement();
         RefreshRows();
@@ -329,11 +325,10 @@ public partial class PixelShop
         SetShopRole(page.buyImage, canBuy ? ButtonRole.Success : ButtonRole.Neutral);
     }
 
-    /// <summary>Sets a tile's corner badge, name colour and lock mark (called from a page's fillTile; the price is SetCosts / SetCostMessage on tile.costs).</summary>
-    private static void SetTile(ItemTile tile, string badge, bool locked, Color nameColour)
+    /// <summary>Sets a tile's corner badge and lock mark (called from a page's fillTile; the price is SetCosts / SetCostMessage on tile.costs).</summary>
+    private static void SetTile(ItemTile tile, string badge, bool locked)
     {
         PixelUIKit.SetText(tile.badge, badge);
-        tile.name.color = nameColour;
         if (tile.lockMark.gameObject.activeSelf != locked) tile.lockMark.gameObject.SetActive(locked);
         if (tile.picture != null) tile.picture.image.color = locked ? new Color(0.35f, 0.35f, 0.4f, 1f) : Color.white;
     }
@@ -449,7 +444,7 @@ public partial class PixelShop
         bool anyOpen = false;
         foreach (TilePage page in tilePages)
         {
-            bool open = !searching && currentTab == page.tab;
+            bool open = page == searchPage ? searching : !searching && currentTab == page.tab;
             if (page.area.activeSelf != open) page.area.SetActive(open);
             if (!open) continue;
             anyOpen = true;

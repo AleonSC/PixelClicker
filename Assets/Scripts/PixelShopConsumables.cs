@@ -103,7 +103,7 @@ public partial class PixelShop
         if (full) SetCostMessage(tile.costs, potionFullText, unaffordableColor);
         else SetCosts(tile.costs, costs, locked);
         int owned = consumables.ItemOwned(item);
-        SetTile(tile, owned > 0 ? "x" + PixelConsumables.OwnedText(owned) : "", locked, locked ? lockedItemColor : textColor);
+        SetTile(tile, owned > 0 ? "x" + PixelConsumables.OwnedText(owned) : "", locked);
     }
 
     private void FillItemBar(TilePage page, int item)

@@ -63,7 +63,7 @@ public partial class PixelShop
         if (owned) SetCostMessage(tile.costs, IsLeveled(pack) ? maxedText : ownedText, affordableColor);
         else SetCosts(tile.costs, CurrentCosts(pack), locked);
         string badge = IsLeveled(pack) ? pack.level + "/" + pack.levels.Length : "";
-        SetTile(tile, badge, locked, locked ? lockedItemColor : textColor);
+        SetTile(tile, badge, locked);
     }
 
     private void FillPackBar(TilePage page, int i)

@@ -518,8 +518,8 @@ public partial class PixelShop : MonoBehaviour
     [SerializeField] private float tileWidth = 160f;
 
     [Min(100f)]
-    [Tooltip("Height of one item tile (picture + name + price lines).")]
-    [SerializeField] private float tileHeight = 200f;
+    [Tooltip("Height of one item tile (picture + price line; the name is in the hover tooltip and the buy bar).")]
+    [SerializeField] private float tileHeight = 176f;
 
     [Min(0f)]
     [Tooltip("Gap between the item tiles.")]
@@ -528,6 +528,9 @@ public partial class PixelShop : MonoBehaviour
     [Min(10f)]
     [Tooltip("Font size of a tile's name; the price and owned count are a little smaller, the buy bar's description a little bigger.")]
     [SerializeField] private float tileFontSize = 20f;
+
+    [Tooltip("Shown in the search results when nothing matches.")]
+    [SerializeField] private string searchNoResultsText = "Nothing in the shop matches that.";
 
     [Tooltip("Shown when hovering the Consumables Buy button.")]
     [SerializeField] private string buyMaxTip = "Shift-click to buy as many as you can.";
@@ -872,6 +875,13 @@ public partial class PixelShop : MonoBehaviour
             tileWidth = 160f;
             tileHeight = 200f;
             tileLayoutVersion = 1;
+            changed = true;
+        }
+        if (tileLayoutVersion < 2)
+        {
+            // 2026-10-18: no name under the tile's picture (the hover tooltip and the buy bar show it), so the tiles are shorter.
+            tileHeight = 176f;
+            tileLayoutVersion = 2;
             changed = true;
         }
 
@@ -1552,7 +1562,7 @@ public partial class PixelShop : MonoBehaviour
         t.clicksToCollect = 33;   // (the average of 15-50, used for estimates)
     }
 
-    [SerializeField, HideInInspector] private int tileLayoutVersion;   // 1 = 160 x 200 tiles (5 to a row)
+    [SerializeField, HideInInspector] private int tileLayoutVersion;   // 1 = 160 x 200 tiles (5 to a row), 2 = 176 tall (no name line)
     [SerializeField, HideInInspector] private int shopBalanceVersion; // 1 = the 2026-10-16 rebalance (new default prices, minigames need only their price)
     [SerializeField, HideInInspector] private int packDataVersion; // 1 = Obsidian pays 7 (was 5); 2 = Singularity spawn weight 0.08 (was 0.2); 3 = Electric pays a random 1-15; 4 = Electric pack gets its real price + Luminescent requirement; 5 = Electric becomes an early unlock (8K RGB, needs the Auto Clicker pack, listed before Vacuum)
 
