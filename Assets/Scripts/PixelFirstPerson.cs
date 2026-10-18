@@ -216,10 +216,27 @@ public class PixelFirstPerson : MonoBehaviour
         clicker = PixelFind.First<PixelClicker>();
         PixelWindows.Register(this, 120, () => Active, Exit); // Escape leaves first person mode before it would open the pause menu
         windowRegistered = true;
+        PixelHuskPool.HuskReleasing += OnHuskReleasing;
+    }
+
+    // (PixelHuskPool: the husk is going away and may be reused - take it out of the hand and out of the build's glue list,
+    //  or the next husk made from its object would be carried / glued back on)
+    private void OnHuskReleasing(Rigidbody body)
+    {
+        if (body == null || (carried.Count == 0 && carriedEdges.Count == 0)) return;
+        carriedEdges.RemoveAll(e => e.a == body || e.b == body);
+        int idx = carried.IndexOf(body);
+        if (idx < 0) return;
+        carried.RemoveAt(idx);
+        if (idx < relPos.Count) relPos.RemoveAt(idx);
+        if (idx < relRot.Count) relRot.RemoveAt(idx);
+        if (idx < heldHalves.Count) heldHalves.RemoveAt(idx);
+        if (idx == 0 && carried.Count > 0) DropCarried();   // (it was the one in hand: the rest of the build is set down normally)
     }
 
     private void OnDestroy()
     {
+        PixelHuskPool.HuskReleasing -= OnHuskReleasing;
         if (windowRegistered) PixelWindows.Unregister(this);
         if (Active) Exit();
     }

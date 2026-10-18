@@ -209,6 +209,7 @@ public class PixelGrab : MonoBehaviour, IPixelSaved
     private void Awake()
     {
         PixelSaveRegistry.Register(this);
+        PixelHuskPool.HuskReleasing += OnHuskReleasing;
         instance = this;
         if (Mathf.Approximately(thrownGrip, 0.6f)) thrownGrip = 0.85f;   // (2026-10-17) above the new resting husk friction 0.65, so a throw still grips harder than a heap
         grabbingActive = true;   // Pixel Grabbing is unlocked from the start now (it still has its switch in the Toggles window)
@@ -222,8 +223,21 @@ public class PixelGrab : MonoBehaviour, IPixelSaved
 
     private void Start() => ApplyToClicker();
 
+    // (PixelHuskPool: the husk is going away and may be reused - let go of it without putting its physics back (the object is cleaned for reuse),
+    //  and forget its saved mass / timers, or they would be put onto the next husk made from its object)
+    private void OnHuskReleasing(Rigidbody body)
+    {
+        if (body == null) return;
+        if (body == held) { held = null; heldDespawn = null; heldGravity = null; heldShatter = null; }
+        normalMass.Remove(body);
+        lightUntil.Remove(body);
+        limitedUntil.Remove(body);
+        thrownGripUntil.Remove(body);
+    }
+
     private void OnDestroy()
     {
+        PixelHuskPool.HuskReleasing -= OnHuskReleasing;
         PixelSaveRegistry.Unregister(this);
         if (instance == this) instance = null;
         Release();

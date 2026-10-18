@@ -880,8 +880,18 @@ public class PixelConveyorSystem : MonoBehaviour
         editorRoot.SetActive(false);
     }
 
+    private void Awake() => PixelHuskPool.HuskReleasing += OnHuskReleasing;
+
+    // (PixelHuskPool: the husk is going away and may be reused - let go of it, or the belt would grab the next husk made from its object)
+    private void OnHuskReleasing(Rigidbody body)
+    {
+        if (body == null || !riding.Remove(body)) return;
+        for (int i = riders.Count - 1; i >= 0; i--) if (riders[i].rb == body) riders.RemoveAt(i);
+    }
+
     private void OnDestroy()
     {
+        PixelHuskPool.HuskReleasing -= OnHuskReleasing;
         foreach (Rider r in riders) if (r.rb != null) { r.rb.isKinematic = false; }
         riders.Clear();
         riding.Clear();

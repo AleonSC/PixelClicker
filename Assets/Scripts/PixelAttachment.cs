@@ -19,7 +19,16 @@ public class PixelAttachment : MonoBehaviour
     private static readonly List<PixelAttachment> all = new List<PixelAttachment>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { all.Clear(); }
+    private static void ResetStatics() { all.Clear(); listening = false; }
+
+    private static bool listening;
+
+    // (PixelHuskPool: the husk is going away and may be reused - pry it loose so no other cube keeps a joint to its object)
+    private static void OnHuskReleasing(Rigidbody body)
+    {
+        if (body == null || all.Count == 0) return;
+        Detach(body);
+    }
 
     private Rigidbody body;
     private OldPixelDespawn despawn;
@@ -40,6 +49,7 @@ public class PixelAttachment : MonoBehaviour
 
     private static PixelAttachment Ensure(Rigidbody b)
     {
+        if (!listening) { listening = true; PixelHuskPool.HuskReleasing += OnHuskReleasing; }
         PixelAttachment a = b.GetComponent<PixelAttachment>();
         if (a == null) a = b.gameObject.AddComponent<PixelAttachment>();
         a.body = b;

@@ -15,7 +15,30 @@ public sealed class PixelPathCarrier
     private static readonly HashSet<Rigidbody> carriedAll = new HashSet<Rigidbody>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { carriedAll.Clear(); }
+    private static void ResetStatics() { carriedAll.Clear(); carriers.Clear(); listening = false; }
+
+    // Every carrier made (weakly held: a machine that is removed just drops its carrier), so one listener can take a husk out of all of them.
+    private static readonly List<WeakReference<PixelPathCarrier>> carriers = new List<WeakReference<PixelPathCarrier>>();
+    private static bool listening;
+
+    public PixelPathCarrier()
+    {
+        carriers.Add(new WeakReference<PixelPathCarrier>(this));
+        if (!listening) { listening = true; PixelHuskPool.HuskReleasing += OnHuskReleasing; }
+    }
+
+    // (PixelHuskPool: the husk is going away and may be reused - every carrier lets go of it, or a tube would carry the next husk made from its object)
+    private static void OnHuskReleasing(Rigidbody body)
+    {
+        if (body == null) return;
+        carriedAll.Remove(body);
+        for (int i = carriers.Count - 1; i >= 0; i--)
+        {
+            if (!carriers[i].TryGetTarget(out PixelPathCarrier c)) { carriers.RemoveAt(i); continue; }
+            if (!c.set.Remove(body)) continue;
+            for (int k = c.items.Count - 1; k >= 0; k--) if (c.items[k].rb == body) c.items.RemoveAt(k);
+        }
+    }
 
     /// <summary>Is this pixel inside any carrier (a Funnel tube, an Elevator shaft, a Splitter, a Container Hose)? Such pixels cannot be grabbed with the mouse.</summary>
     /// <summary>Marks a pixel as held by some machine (it cannot be grabbed with the mouse) without it being on a path (the Funnel's pile). Unmark when it is let go.</summary>
