@@ -4,7 +4,7 @@
 //   attached in PixelLooks.AddExtras), Hit (non-final hit) and Break (per-type burst, gold ring for Golden Fruit) called from
 //   CollectInternal (disableFarmFx); sounds are PixelSynth.Farm(kind, seed) (pixel_dirt/fertilizer/pollen/wheat/weevil/goldenfruit,
 //   farm_hit, farm_gleam); looksVersion 29. Seed / Water are no longer in IsSpecialType (no Toggles spawn switch). PixelSkills.Update
-//   unlocks every Farming type once the first is unlocked.
+//   unlocks every Farming type once the first is unlocked. Hit / Break bursts are pooled (PixelFx.Rent / Burst.Add).
 // ---------------------------------------------------
 using UnityEngine;
 
@@ -89,20 +89,15 @@ public static class PixelFarmFx
         ps.Play();
     }
 
-    private static GameObject Root(string name, Vector3 centre)
-    {
-        GameObject root = new GameObject(name);
-        root.transform.position = centre;
-        Object.Destroy(root, 3.5f);
-        return root;
-    }
+    // (a pooled one-shot burst: PixelFx.Rent; it goes back to the pool by itself after 3.5 s)
+    private static PixelFx.Burst Root(string name, Vector3 centre) => PixelFx.Rent(centre, 3.5f);
 
     /// <summary>A small effect on a non-final hit of a tough farm block (progress 0-1).</summary>
     public static void Hit(PixelClicker.PixelType type, Vector3 centre, float size, Color color, float progress)
     {
         if (PixelFx.Material == null) return;
-        GameObject root = Root("Farm Hit", centre);
-        PixelFx.Make(root.transform, "Bits", new PixelFx.Spec
+        PixelFx.Burst root = Root("Farm Hit", centre);
+        root.Add("Bits", new PixelFx.Spec
         {
             lifetime = new Vector2(0.5f, 0.9f), speed = new Vector2(0.8f, 2.4f) * size, size = new Vector2(0.05f, 0.11f) * size,
             gravity = 2.2f, colorA = color, colorB = Color.Lerp(color, Color.black, 0.4f), burst = Mathf.RoundToInt(Mathf.Lerp(4f, 9f, progress)),
@@ -117,8 +112,7 @@ public static class PixelFarmFx
     {
         if (PixelFx.Material == null) return;
         type = PixelBlockCatalog.FxType(type);   // (a card can borrow another block's break burst: fxAs)
-        GameObject root = Root("Farm Break", centre);
-        Transform t = root.transform;
+        PixelFx.Burst root = Root("Farm Break", centre);
         ParticleSystem Burst(string name, Vector2 life, Vector2 speed, Vector2 psize, float gravity, Color a, Color b, int count, float radius, bool fade, Vector2 sizeLife = default)
         {
             PixelFx.Spec s = new PixelFx.Spec
@@ -127,7 +121,7 @@ public static class PixelFarmFx
                 shape = ParticleSystemShapeType.Sphere, shapeRadius = size * radius, randomDirection = 0.1f, maxParticles = count + 10, sizeOverLife = sizeLife,
             };
             if (fade) s.overLife = PixelFx.FadeGradient(Color.white, Color.white, Color.white, 0.85f);
-            return PixelFx.Make(t, name, s);
+            return root.Add(name, s);
         }
 
         switch (type)
@@ -149,7 +143,7 @@ public static class PixelFarmFx
                         randomDirection = 0.05f, maxParticles = count + 6, sizeOverLife = sizeLife,
                     };
                     if (fade) sp.overLife = PixelFx.FadeGradient(Color.white, Color.white, Color.white, 0.8f);
-                    return PixelFx.Make(t, name, sp);
+                    return root.Add(name, sp);
                 }
                 Splash("Crown", new Vector2(0.55f, 0.95f), new Vector2(1.6f, 3.2f), new Vector2(0.06f, 0.13f), 3.2f, lightWater, deep, 22, 0.4f, 58f, false).Play();
                 Splash("Jet", new Vector2(0.7f, 1.1f), new Vector2(3.2f, 4.6f), new Vector2(0.08f, 0.15f), 3.6f, lightWater, deep, 5, 0.1f, 6f, false).Play();

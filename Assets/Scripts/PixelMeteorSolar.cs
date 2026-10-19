@@ -152,17 +152,16 @@ public static class PixelCometFx
     public static void Hit(Vector3 centre, float size, float progress)
     {
         if (PixelFx.Material == null) return;
-        GameObject root = new GameObject("Meteor Hit");
-        root.transform.position = centre;
+        PixelFx.Burst root = PixelFx.Rent(centre, 2f);   // (pooled: it goes back by itself)
         float k = Mathf.Clamp01(progress);
-        ParticleSystem sparks = PixelFx.Make(root.transform, "Sparks", new PixelFx.Spec
+        ParticleSystem sparks = root.Add("Sparks", new PixelFx.Spec
         {
             lifetime = new Vector2(0.4f, 0.9f), speed = new Vector2(1.4f, 3.8f) * size, size = new Vector2(0.04f, 0.1f) * size,
             gravity = 1.4f, colorA = new Color(1f, 0.85f, 0.35f, 1f), colorB = new Color(1f, 0.4f, 0.08f, 1f),
             burst = Mathf.RoundToInt(Mathf.Lerp(8f, 22f, k)), shape = ParticleSystemShapeType.Sphere, shapeRadius = size * 0.5f,
             randomDirection = 0.15f, sizeOverLife = new Vector2(1f, 0.2f), maxParticles = 50,
         });
-        ParticleSystem chips = PixelFx.Make(root.transform, "Chips", new PixelFx.Spec
+        ParticleSystem chips = root.Add("Chips", new PixelFx.Spec
         {
             lifetime = new Vector2(0.6f, 1.1f), speed = new Vector2(1f, 2.6f) * size, size = new Vector2(0.05f, 0.11f) * size,
             gravity = 2.6f, colorA = new Color(0.16f, 0.14f, 0.13f, 1f), colorB = new Color(0.3f, 0.27f, 0.25f, 1f),
@@ -171,7 +170,6 @@ public static class PixelCometFx
         });
         sparks.Play();
         chips.Play();
-        Object.Destroy(root, 2f);
         PixelAudio.PlayScaled("ore_chip", 0.8f);
     }
 }

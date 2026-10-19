@@ -1,13 +1,102 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>Shared helpers for the small code-built particle bursts (Fire pixel, ore chips). Everything is made of little squares (pixel art).</summary>
+/// <summary>
+/// Shared helpers for the small code-built particle bursts (Fire pixel, ore chips). Everything is made of little squares (pixel art).
+/// One-shot bursts on a hit / break (farm, wood, fish, electric, ore, Obsidian, Fire, chest, meteor) come from a POOL: Rent(centre, seconds) gives a
+/// reused root, burst.Add(name, spec) a reused particle system set up afresh by Configure (callers Play it), and the burst goes back to the pool
+/// by itself after 'seconds' (one runner, no per-burst objects or coroutines). Building a GameObject + 1-4 ParticleSystems on every hit and
+/// destroying them seconds later was the main per-click cost of the gathering skills. FadeGradient results and size-over-life curves are cached.
+/// The plain click pop (PixelBasicFx) uses the same pool.
+/// </summary>
 public static class PixelFx
 {
     private static Material material;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { material = null; }
+    private static void ResetStatics()
+    {
+        material = null;
+        OnRestart();
+        PixelStatics.ResetOnRestart(OnRestart);
+    }
+
+    // (Restart reloads the scene: the pooled bursts and the runner go with it)
+    private static void OnRestart() { pool.Clear(); active.Clear(); runner = null; }
+
+    // ---- the burst pool ----
+
+    /// <summary>A pooled one-shot effect: a root at the effect's centre and its particle systems (reused from earlier bursts).</summary>
+    public sealed class Burst
+    {
+        internal GameObject root;
+        internal readonly List<ParticleSystem> systems = new List<ParticleSystem>();
+        internal int used;
+        internal float returnAt;
+
+        /// <summary>The burst's root (for things that need a parent).</summary>
+        public Transform Root => root.transform;
+
+        /// <summary>The burst's next particle system, set up from 'spec' (a reused one is fully reset by Configure). Not playing yet: call Play on it.</summary>
+        public ParticleSystem Add(string name, Spec spec)
+        {
+            ParticleSystem ps = used < systems.Count ? systems[used] : null;
+            if (ps != null)
+            {
+                Configure(ps, spec);
+                if (ps.name != name) ps.name = name;
+            }
+            else
+            {
+                ps = Make(root.transform, name, spec);
+                if (used < systems.Count) systems[used] = ps; else systems.Add(ps);
+            }
+            used++;
+            return ps;
+        }
+    }
+
+    private const int MaxPooled = 32;   // spare bursts kept for reuse (more are destroyed when they finish)
+    private static readonly Stack<Burst> pool = new Stack<Burst>();
+    private static readonly List<Burst> active = new List<Burst>();
+    private static PixelFxPoolRunner runner;
+
+    /// <summary>A one-shot effect at 'centre' that goes back to the pool by itself after 'seconds' (make 'seconds' cover its longest particle life).</summary>
+    public static Burst Rent(Vector3 centre, float seconds)
+    {
+        if (runner == null) runner = new GameObject("Fx Burst Pool").AddComponent<PixelFxPoolRunner>();
+        Burst b = null;
+        while (pool.Count > 0)
+        {
+            b = pool.Pop();
+            if (b.root != null) break;   // (a scene reload destroyed the old ones)
+            b = null;
+        }
+        if (b == null) b = new Burst { root = new GameObject("Fx Burst") };
+        b.root.transform.position = centre;
+        b.root.SetActive(true);
+        b.used = 0;
+        b.returnAt = Time.time + seconds;
+        active.Add(b);
+        return b;
+    }
+
+    /// <summary>Called every frame by the pool's runner: bursts that have played out go back to the pool.</summary>
+    internal static void Tick()
+    {
+        float now = Time.time;
+        for (int i = active.Count - 1; i >= 0; i--)
+        {
+            Burst b = active[i];
+            if (b.root == null) { active.RemoveAt(i); continue; }
+            if (now < b.returnAt) continue;
+            active.RemoveAt(i);
+            if (pool.Count >= MaxPooled) { Object.Destroy(b.root); continue; }
+            foreach (ParticleSystem ps in b.systems) if (ps != null) ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            b.root.SetActive(false);
+            pool.Push(b);
+        }
+    }
 
     /// <summary>The unlit, alpha-blended sprite material the bursts use (null if the shader can't be found).</summary>
     public static Material Material
@@ -45,13 +134,21 @@ public static class PixelFx
     }
 
     /// <summary>A white-in-the-middle, fading gradient with the given colours: (c0 at 0, c1 at 'mid', c2 at 1) and an alpha that fades out.</summary>
+    /// The result is cached and shared: assign it, never change its keys.
     public static Gradient FadeGradient(Color c0, Color c1, Color c2, float peakAlpha = 1f)
     {
+        var key = (c0, c1, c2, peakAlpha);
+        if (gradients.TryGetValue(key, out Gradient cached)) return cached;
+        if (gradients.Count > 512) gradients.Clear();   // (tier colours are a fixed set; this only guards against something odd)
         Gradient g = new Gradient();
         g.SetKeys(new[] { new GradientColorKey(c0, 0f), new GradientColorKey(c1, 0.45f), new GradientColorKey(c2, 1f) },
                   new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(peakAlpha, 0.08f), new GradientAlphaKey(peakAlpha * 0.7f, 0.55f), new GradientAlphaKey(0f, 1f) });
+        gradients[key] = g;
         return g;
     }
+
+    private static readonly Dictionary<(Color, Color, Color, float), Gradient> gradients = new Dictionary<(Color, Color, Color, float), Gradient>();
+    private static readonly Dictionary<Vector2, AnimationCurve> sizeCurves = new Dictionary<Vector2, AnimationCurve>();
 
     public static ParticleSystem Make(Transform parent, string name, Spec s)
     {
@@ -84,7 +181,7 @@ public static class PixelFx
 
         ParticleSystem.EmissionModule emission = ps.emission;
         emission.rateOverTime = s.rate;
-        if (s.burst > 0) emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)s.burst) });
+        if (s.burst > 0) { emission.burstCount = 1; emission.SetBurst(0, new ParticleSystem.Burst(0f, (short)s.burst)); }
         else emission.burstCount = 0;
 
         ParticleSystem.ShapeModule shape = ps.shape;
@@ -95,6 +192,7 @@ public static class PixelFx
         shape.rotation = s.shapeRotation;
         shape.position = s.shapePosition;
         shape.randomDirectionAmount = s.randomDirection;
+        shape.scale = Vector3.one;   // (a reused system may have had its box stretched)
 
         ParticleSystem.ColorOverLifetimeModule col = ps.colorOverLifetime;
         col.enabled = s.overLife != null;
@@ -102,8 +200,22 @@ public static class PixelFx
         ParticleSystem.SizeOverLifetimeModule sol = ps.sizeOverLifetime;
         sol.enabled = s.sizeOverLife != Vector2.zero;
         if (s.sizeOverLife != Vector2.zero)
-            sol.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(0f, s.sizeOverLife.x), new Keyframe(1f, s.sizeOverLife.y)));
+        {
+            if (!sizeCurves.TryGetValue(s.sizeOverLife, out AnimationCurve curve))
+            {
+                if (sizeCurves.Count > 256) sizeCurves.Clear();
+                curve = new AnimationCurve(new Keyframe(0f, s.sizeOverLife.x), new Keyframe(1f, s.sizeOverLife.y));
+                sizeCurves[s.sizeOverLife] = curve;
+            }
+            sol.size = new ParticleSystem.MinMaxCurve(1f, curve);   // (the system keeps its own copy of the curve)
+        }
     }
+}
+
+/// <summary>Returns finished PixelFx bursts to their pool (one per scene, made on first use).</summary>
+public class PixelFxPoolRunner : MonoBehaviour
+{
+    private void LateUpdate() { PixelFx.Tick(); }
 }
 
 /// <summary>A flat ring that swells and fades (the shock ring of a fire burst) with an optional light flash. Destroys itself.</summary>
@@ -181,11 +293,10 @@ public static class FireBurstFx
     public static void Play(Vector3 centre, float size)
     {
         if (PixelFx.Material == null) return;
-        GameObject root = new GameObject("Fire Burst Fx");
-        root.transform.position = centre;
+        PixelFx.Burst burst = PixelFx.Rent(centre, 2.5f);
 
         // A ring of flames flying out sideways from round the cube, curling upwards.
-        ParticleSystem flames = PixelFx.Make(root.transform, "Flames", new PixelFx.Spec
+        ParticleSystem flames = burst.Add("Flames", new PixelFx.Spec
         {
             lifetime = new Vector2(0.5f, 0.95f), speed = new Vector2(2.2f, 4.2f) * size, size = new Vector2(0.2f, 0.42f) * size,
             gravity = -0.25f, colorA = new Color(1f, 0.9f, 0.3f, 1f), colorB = new Color(1f, 0.45f, 0.08f, 1f),
@@ -195,7 +306,7 @@ public static class FireBurstFx
         });
 
         // Sparks thrown up and out, falling back down.
-        ParticleSystem sparks = PixelFx.Make(root.transform, "Sparks", new PixelFx.Spec
+        ParticleSystem sparks = burst.Add("Sparks", new PixelFx.Spec
         {
             lifetime = new Vector2(0.6f, 1.2f), speed = new Vector2(1.4f, 4.4f) * size, size = new Vector2(0.04f, 0.09f) * size,
             gravity = 1.1f, colorA = new Color(1f, 0.95f, 0.5f, 1f), colorB = new Color(1f, 0.55f, 0.1f, 1f),
@@ -206,7 +317,6 @@ public static class FireBurstFx
         flames.Play();
         sparks.Play();
         PixelFxRing.Spawn(centre + Vector3.down * size * 0.35f, new Color(1f, 0.5f, 0.1f, 0.85f), size * 0.5f, size * 2.6f, 0.45f, 7f);
-        Object.Destroy(root, 2.5f);
         PixelAudio.Play("fire_burst");
     }
 }

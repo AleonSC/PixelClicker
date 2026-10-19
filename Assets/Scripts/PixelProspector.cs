@@ -39,10 +39,9 @@ public static class OreFx
     public static void Hit(Vector3 centre, float size, Color metal, float progress)
     {
         if (PixelFx.Material == null) return;
-        GameObject root = new GameObject("Ore Chips");
-        root.transform.position = centre;
+        PixelFx.Burst root = PixelFx.Rent(centre, 2f);   // (pooled: it goes back by itself)
         Color rock = new Color(0.5f, 0.48f, 0.46f, 1f);
-        ParticleSystem chips = PixelFx.Make(root.transform, "Chips", new PixelFx.Spec
+        ParticleSystem chips = root.Add("Chips", new PixelFx.Spec
         {
             lifetime = new Vector2(0.55f, 1f), speed = new Vector2(1.2f, 3.2f) * size, size = new Vector2(0.05f, 0.12f) * size,
             gravity = 2.6f, colorA = rock, colorB = Color.Lerp(metal, Color.white, 0.2f),
@@ -50,7 +49,6 @@ public static class OreFx
             shapeRadius = size * 0.5f, randomDirection = 0.15f, sizeOverLife = new Vector2(1f, 0.6f), maxParticles = 40,
         });
         chips.Play();
-        Object.Destroy(root, 2f);
         PixelAudio.PlayScaled("ore_chip", 0.8f);
     }
 
@@ -58,24 +56,23 @@ public static class OreFx
     public static void Break(Vector3 centre, float size, Color metal, bool rich)
     {
         if (PixelFx.Material == null) return;
-        GameObject root = new GameObject("Ore Break");
-        root.transform.position = centre;
+        PixelFx.Burst root = PixelFx.Rent(centre, 3f);   // (pooled: it goes back by itself)
         Color rock = new Color(0.46f, 0.44f, 0.42f, 1f);
         Color nugget = Color.Lerp(metal, Color.white, 0.35f);
 
-        ParticleSystem rocks = PixelFx.Make(root.transform, "Rocks", new PixelFx.Spec
+        ParticleSystem rocks = root.Add("Rocks", new PixelFx.Spec
         {
             lifetime = new Vector2(0.7f, 1.3f), speed = new Vector2(1.6f, 4.6f) * size, size = new Vector2(0.07f, 0.16f) * size,
             gravity = 2.8f, colorA = rock, colorB = new Color(0.3f, 0.29f, 0.28f, 1f), burst = 34,
             shape = ParticleSystemShapeType.Sphere, shapeRadius = size * 0.55f, randomDirection = 0.1f, sizeOverLife = new Vector2(1f, 0.7f), maxParticles = 80,
         });
-        ParticleSystem nuggets = PixelFx.Make(root.transform, "Nuggets", new PixelFx.Spec
+        ParticleSystem nuggets = root.Add("Nuggets", new PixelFx.Spec
         {
             lifetime = new Vector2(0.8f, 1.4f), speed = new Vector2(1.8f, 5f) * size, size = new Vector2(0.06f, 0.13f) * size,
             gravity = 2.4f, colorA = metal, colorB = nugget, burst = 16,
             shape = ParticleSystemShapeType.Sphere, shapeRadius = size * 0.5f, randomDirection = 0.1f, maxParticles = 50,
         });
-        ParticleSystem dust = PixelFx.Make(root.transform, "Dust", new PixelFx.Spec
+        ParticleSystem dust = root.Add("Dust", new PixelFx.Spec
         {
             lifetime = new Vector2(0.9f, 1.5f), speed = new Vector2(0.2f, 1f) * size, size = new Vector2(0.25f, 0.5f) * size,
             gravity = -0.05f, colorA = new Color(0.7f, 0.68f, 0.64f, 0.5f), colorB = new Color(0.55f, 0.53f, 0.5f, 0.4f), burst = 8,
@@ -86,7 +83,7 @@ public static class OreFx
 
         if (rich)
         {
-            ParticleSystem glitter = PixelFx.Make(root.transform, "Glitter", new PixelFx.Spec
+            ParticleSystem glitter = root.Add("Glitter", new PixelFx.Spec
             {
                 lifetime = new Vector2(0.8f, 1.5f), speed = new Vector2(1f, 3.4f) * size, size = new Vector2(0.05f, 0.11f) * size,
                 gravity = -0.1f, colorA = new Color(1f, 0.95f, 0.55f, 1f), colorB = new Color(1f, 0.75f, 0.15f, 1f), burst = 46,
@@ -98,7 +95,6 @@ public static class OreFx
             PixelAudio.Play("ore_gleam");
             PixelProspector.AnnounceRich();
         }
-        Object.Destroy(root, 3f);
     }
 
     /// <summary>The slow glitter that hangs round a rich vein while it sits on the cube. Returns the object (destroy it when the ore is gone).</summary>

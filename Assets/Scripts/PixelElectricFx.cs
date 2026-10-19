@@ -5,7 +5,8 @@
 //   blips, Fuse a spark fountain on top, Bulb warm motes), Hit / Break (called from CollectInternal for IsElectricalBlock types,
 //   disableFarmFx) throw sparks plus coloured arcs (FractureFx.Play(..., core, glow); smoke for Resistor / Fuse), and each pixel has
 //   its own synthesized click sound (PixelSynth.Elec(kind, seed): twang, thunk + hum, charge whine + snap, buzz, digital blip, hiss +
-//   pop, glassy ting; used while the pixel_<type> clip list is empty); looksVersion 34.
+//   pop, glassy ting; used while the pixel_<type> clip list is empty); looksVersion 34. Hit / Break bursts are pooled (PixelFx.Rent),
+//   and so are the FractureFx arc flashes.
 // ---------------------------------------------------
 using UnityEngine;
 
@@ -69,13 +70,8 @@ public static class PixelElectricFx
         ps.Play();
     }
 
-    private static GameObject Root(string name, Vector3 centre)
-    {
-        GameObject root = new GameObject(name);
-        root.transform.position = centre;
-        Object.Destroy(root, 3.5f);
-        return root;
-    }
+    // (a pooled one-shot burst: PixelFx.Rent; it goes back to the pool by itself after 3.5 s)
+    private static PixelFx.Burst Root(string name, Vector3 centre) => PixelFx.Rent(centre, 3.5f);
 
     private static void Colours(PixelClicker.PixelType type, out Color a, out Color b, out Color arcCore, out Color arcGlow)
     {
@@ -97,8 +93,8 @@ public static class PixelElectricFx
     {
         if (PixelFx.Material == null) return;
         Colours(type, out Color a, out Color b, out Color core, out Color glow);
-        GameObject root = Root("Electric Hit", centre);
-        PixelFx.Make(root.transform, "Sparks", new PixelFx.Spec
+        PixelFx.Burst root = Root("Electric Hit", centre);
+        root.Add("Sparks", new PixelFx.Spec
         {
             lifetime = new Vector2(0.25f, 0.6f), speed = new Vector2(0.8f, 2.6f) * size, size = new Vector2(0.04f, 0.1f) * size, gravity = 1.2f,
             colorA = a, colorB = b, burst = Mathf.RoundToInt(Mathf.Lerp(5f, 12f, progress)), sizeOverLife = new Vector2(1f, 0f),
@@ -112,8 +108,7 @@ public static class PixelElectricFx
     {
         if (PixelFx.Material == null) return;
         Colours(type, out Color a, out Color b, out Color core, out Color glow);
-        GameObject root = Root("Electric Break", centre);
-        Transform t = root.transform;
+        PixelFx.Burst root = Root("Electric Break", centre);
         int count = 30;
         float gravity = 1.4f, speedScale = 1f;
         int arcs = 7; float reach = 2f, arcSeconds = 0.35f;
@@ -128,14 +123,14 @@ public static class PixelElectricFx
             case PixelClicker.PixelType.Fuse: arcs = 3; count = 44; gravity = 2.2f; speedScale = 1.3f; break;                // a spark fountain
             default: arcs = 9; reach = 1.8f; arcSeconds = 0.3f; gravity = -0.1f; count = 40; break;                         // Bulb: a pop of light
         }
-        PixelFx.Make(t, "Burst", new PixelFx.Spec
+        root.Add("Burst", new PixelFx.Spec
         {
             lifetime = new Vector2(0.5f, 1.1f), speed = new Vector2(1f, 3.6f) * size * speedScale, size = new Vector2(0.05f, 0.14f) * size, gravity = gravity,
             colorA = a, colorB = b, burst = count, sizeOverLife = new Vector2(1f, 0f),
             shape = ParticleSystemShapeType.Sphere, shapeRadius = size * 0.55f, randomDirection = 0.1f, maxParticles = count + 10,
         }).Play();
         if (type == PixelClicker.PixelType.Resistor || type == PixelClicker.PixelType.Fuse)
-            PixelFx.Make(t, "Smoke", new PixelFx.Spec
+            root.Add("Smoke", new PixelFx.Spec
             {
                 lifetime = new Vector2(0.9f, 1.6f), speed = new Vector2(0.2f, 0.8f) * size, size = new Vector2(0.2f, 0.45f) * size, gravity = -0.1f,
                 colorA = new Color(0.3f, 0.3f, 0.32f, 0.5f), colorB = new Color(0.18f, 0.18f, 0.2f, 0.4f), burst = 8, sizeOverLife = new Vector2(0.6f, 1.6f),
