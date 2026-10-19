@@ -234,6 +234,10 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         Sweeper = 25,
         /// <summary>Placed, permanent: a box with eight auto-direction coupling sockets (PixelJunctionBox) that routes husks from its In couplings to its Out ones (filters, round robin, a small buffer). Not on sale yet (Shops session).</summary>
         JunctionBox = 26,
+        /// <summary>Placed: a small Biomass Generator (PixelBiomassGenerator) - burns Woodcutting husks to power every device in its radius (their timers stop). Shop Consumables.</summary>
+        PocketBiomassGenerator = 27,
+        /// <summary>Placed: the big Biomass Generator (PixelBiomassGenerator) - more charge, a wider radius. On sale at Woodcutting level 10.</summary>
+        BiomassGenerator = 28,
     }
 
     /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
@@ -450,6 +454,14 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         [Min(0.2f)]
         [Tooltip("Lightning Rod: seconds between strikes (a strike only happens when there are pixels in range to convert).")]
         public float strikeSeconds = 3f;
+
+        [Min(0f)]
+        [Tooltip("Biomass Generators: seconds of power when full (it comes full; it drains 1 a second).")]
+        public float generatorMaxCharge = 0f;
+
+        [Min(0f)]
+        [Tooltip("Biomass Generators: seconds of power one Woodcutting husk adds.")]
+        public float generatorChargePerHusk = 0f;
 
         [Min(0)]
         [Tooltip("How many of this device you own. You can type a starting amount here for testing.")]
@@ -1079,6 +1091,59 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         };
     }
 
+    private static Device CreateDefaultPocketBiomassGenerator()
+    {
+        return new Device
+        {
+            kind = DeviceKind.PocketBiomassGenerator,
+            displayName = "Pocket Biomass Generator",
+            description = "A little generator that burns Woodcutting husks. Every device inside its blue ring runs on its power, so their timers stop - they all show its blue energy bar. It comes fully charged and slowly runs down: drop wood husks into the firebox on top to top it up. When it runs dry it flashes red for a few seconds and then shuts down for good - unless you feed it in time.",
+            requiredType = PixelClicker.PixelType.Wood,
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Wood, amount = 300 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Gray, amount = 150 },
+            },
+            maxHeld = 3,
+            durationSeconds = 1e9f,
+            radius = 4f,                   // how far its power reaches (world units)
+            generatorMaxCharge = 60f,
+            generatorChargePerHusk = 10f,
+            color = new Color(0.33f, 0.45f, 0.24f, 1f),
+            bodyDiameter = 0.7f,           // the model's size (the big one is 1.2)
+            bodyHeight = 1f,
+            placingMessage = "Click the floor to put the {0} down - every device inside its blue ring runs on its power  (right-click to cancel)",
+        };
+    }
+
+    private static Device CreateDefaultBiomassGenerator()
+    {
+        return new Device
+        {
+            kind = DeviceKind.BiomassGenerator,
+            displayName = "Biomass Generator",
+            description = "A big generator that burns Woodcutting husks. Every device inside its wide blue ring runs on its power, so their timers stop - they all show its blue energy bar. It comes fully charged and holds much more than the pocket one: drop wood husks into the firebox on top (or feed them in through its intake coupling). When it runs dry it flashes red for a few seconds and then shuts down for good - unless you feed it in time.",
+            requiredType = PixelClicker.PixelType.Wood,
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Wood, amount = 2500 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Black, amount = 800 },
+            },
+            maxHeld = 2,
+            durationSeconds = 1e9f,
+            radius = 8f,
+            generatorMaxCharge = 240f,
+            generatorChargePerHusk = 15f,
+            color = new Color(0.33f, 0.45f, 0.24f, 1f),
+            bodyDiameter = 1.2f,
+            bodyHeight = 1f,
+            vendorOnly = true,               // not in the shop until...
+            shopSkillId = "woodcutting",     // ...Woodcutting level 10 puts it on sale
+            shopSkillLevel = 10,
+            placingMessage = "Click the floor to put the {0} down - every device inside its blue ring runs on its power  (right-click to cancel)",
+        };
+    }
+
     private static Device CreateDefaultCoupling()
     {
         return new Device
@@ -1323,6 +1388,8 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ContainerHose, CreateDefaultContainerHose),
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Sweeper, CreateDefaultSweeper),
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.JunctionBox, CreateDefaultJunctionBox),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.PocketBiomassGenerator, CreateDefaultPocketBiomassGenerator),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.BiomassGenerator, CreateDefaultBiomassGenerator),
     };
 
     /// <summary>
@@ -2365,6 +2432,10 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
                 case DeviceKind.JunctionBox:
                     root = PixelJunctionBox.CreateDisplay(clicker);
                     break;
+                case DeviceKind.PocketBiomassGenerator:
+                case DeviceKind.BiomassGenerator:
+                    root = PixelBiomassGenerator.CreateDisplay(clicker, d.bodyDiameter > 0f ? d.bodyDiameter : 1f);
+                    break;
                 default:
                     if (PixelInstantItems.Find(kind) != null) root = BuildItemModel(kind, d);   // instant-use items (PixelInstantItems) have small item models
                     break;
@@ -2688,6 +2759,9 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         return false;
     }
 
+    /// <summary>The two Biomass Generators (one behaviour, PixelBiomassGenerator).</summary>
+    public static bool IsGeneratorKind(DeviceKind kind) => kind == DeviceKind.PocketBiomassGenerator || kind == DeviceKind.BiomassGenerator;
+
     /// <summary>
     /// Places a working device of this kind at once, using nothing up (Dev Hub > Tester buttons for devices not on sale yet: the Junction Box).
     /// It is a normal placed device: saved with the placed devices, removed the usual way. Null if there is no such device entry.
@@ -2870,7 +2944,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         if (hasPoint) preview.transform.position = point;
 
         // A fan can be turned with the mouse wheel or Q / E.
-        if (devices[placingIndex].kind == DeviceKind.Fan || devices[placingIndex].kind == DeviceKind.MagnetSorter || devices[placingIndex].kind == DeviceKind.StorageCrate || devices[placingIndex].kind == DeviceKind.WoodChipper || devices[placingIndex].kind == DeviceKind.Funnel || devices[placingIndex].kind == DeviceKind.Recycler || devices[placingIndex].kind == DeviceKind.SortingHopper || devices[placingIndex].kind == DeviceKind.JunctionBox)
+        if (devices[placingIndex].kind == DeviceKind.Fan || devices[placingIndex].kind == DeviceKind.MagnetSorter || devices[placingIndex].kind == DeviceKind.StorageCrate || devices[placingIndex].kind == DeviceKind.WoodChipper || devices[placingIndex].kind == DeviceKind.Funnel || devices[placingIndex].kind == DeviceKind.Recycler || devices[placingIndex].kind == DeviceKind.SortingHopper || devices[placingIndex].kind == DeviceKind.JunctionBox || IsGeneratorKind(devices[placingIndex].kind))
         {
             rawYaw += TurnInput();
             placingYaw = PixelSnap.Active ? PixelSnap.Yaw(rawYaw) : rawYaw;   // snap the turn to angle steps unless Shift is held (the raw turn keeps counting so Q / E stay smooth)
@@ -3031,7 +3105,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
 
         Device effective = EffectiveDevice(d);
         PixelPlacedDevice placed = SpawnDevice(index, point, placingYaw, UsesKind(d.kind) ? effective.uses : DeviceSeconds(effective), 0f, 0f, -1);
-        if (placed != null && d.kind != DeviceKind.StorageCrate && d.kind != DeviceKind.WoodChipper && d.kind != DeviceKind.Funnel && d.kind != DeviceKind.Recycler && d.kind != DeviceKind.SortingHopper && d.kind != DeviceKind.Sweeper && d.kind != DeviceKind.JunctionBox) placed.Disarm();   // (the crate needs no switching on) starts grey and idle until you left-click it
+        if (placed != null && d.kind != DeviceKind.StorageCrate && d.kind != DeviceKind.WoodChipper && d.kind != DeviceKind.Funnel && d.kind != DeviceKind.Recycler && d.kind != DeviceKind.SortingHopper && d.kind != DeviceKind.Sweeper && d.kind != DeviceKind.JunctionBox && !IsGeneratorKind(d.kind)) placed.Disarm();   // (the crate needs no switching on) starts grey and idle until you left-click it
 
         EndPlacement();
         DevicePlaced?.Invoke(d.kind);
@@ -3123,6 +3197,17 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             PixelChipperDevice sweeperDevice = root.AddComponent<PixelChipperDevice>();   // (the thin permanent-device stub; all the behaviour is in PixelSweeper)
             sweeperDevice.Init(clicker, cam, shrinkSeconds);
             result = sweeperDevice;
+        }
+        else if (IsGeneratorKind(d.kind))
+        {
+            float size = d.bodyDiameter > 0f ? d.bodyDiameter : 1f;
+            GameObject root = PixelBiomassGenerator.Place(clicker, point, yaw, size);
+            PixelChipperDevice generatorDevice = root.AddComponent<PixelChipperDevice>();   // (the thin permanent-device stub; it removes itself when it runs dry)
+            generatorDevice.Init(clicker, cam, shrinkSeconds);
+            PixelBiomassGenerator gen = root.AddComponent<PixelBiomassGenerator>();
+            Device fresh = d.kind == DeviceKind.BiomassGenerator ? CreateDefaultBiomassGenerator() : CreateDefaultPocketBiomassGenerator();
+            gen.Init(clicker, d.radius, d.generatorMaxCharge > 0f ? d.generatorMaxCharge : fresh.generatorMaxCharge, d.generatorChargePerHusk > 0f ? d.generatorChargePerHusk : fresh.generatorChargePerHusk, size);
+            result = generatorDevice;
         }
         else if (d.kind == DeviceKind.JunctionBox)
         {
@@ -3244,6 +3329,8 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             if (hopper != null) state.extra = hopper.ExportState();       // the Sorting Hopper's chosen type
             PixelSweeper sweeper = placed.GetComponent<PixelSweeper>();
             if (sweeper != null) state.extra = sweeper.ExportState();     // the Sweeper's wind left
+            PixelBiomassGenerator generator = placed.GetComponent<PixelBiomassGenerator>();
+            if (generator != null) state.extra = generator.ExportState();   // a Biomass Generator's charge left
             PixelJunctionBox junction = placed.GetComponent<PixelJunctionBox>();
             if (junction != null) state.extra = junction.ExportState();   // the Junction Box's filters and buffer
             if (placed is PixelSorterDevice sorter)
@@ -3282,6 +3369,8 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         if (restoredHopper != null) restoredHopper.ImportState(state.extra);
         PixelSweeper restoredSweeper = restored != null ? restored.GetComponent<PixelSweeper>() : null;
         if (restoredSweeper != null) restoredSweeper.ImportState(state.extra);
+        PixelBiomassGenerator restoredGenerator = restored != null ? restored.GetComponent<PixelBiomassGenerator>() : null;
+        if (restoredGenerator != null) restoredGenerator.ImportState(state.extra);
         PixelJunctionBox restoredJunction = restored != null ? restored.GetComponent<PixelJunctionBox>() : null;
         if (restoredJunction != null) restoredJunction.ImportState(state.extra);
         if (restored is PixelStorageCrate restoredCrate) restoredCrate.ImportState(state.extra);
@@ -3356,6 +3445,12 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
                 return ghost;
             }
             return displayOnly ? PixelRecycler.CreateDisplay(clicker) : PixelRecycler.Place(clicker, Vector3.zero, 0f);
+        }
+        if (IsGeneratorKind(d.kind))
+        {
+            suckPoint = null; timer = null;
+            float size = d.bodyDiameter > 0f ? d.bodyDiameter : 1f;
+            return isPreview ? PixelBiomassGenerator.CreateGhost(clicker, size) : PixelBiomassGenerator.CreateDisplay(clicker, size);
         }
         if (d.kind == DeviceKind.JunctionBox)
         {

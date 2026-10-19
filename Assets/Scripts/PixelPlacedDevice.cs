@@ -2,6 +2,8 @@
 // PixelPlacedDevice.cs
 //   INFO CARD / PANEL: BuildInfo(PixelDeviceInfo) fills the shared hover card / right-click panel (PixelDeviceCard): common lines here, subclasses override
 //   AddInfo, behaviour components next to a stub implement IPixelDeviceInfo (PixelDeviceInfo.cs).
+//   GENERATOR POWER (2026-10-19): HoldPower(fraction, colour) from a Biomass Generator pauses the countdown like the Electric links AND shows the generator's
+//   energy bar (PixelEnergyBar) over the device, tracking its charge (the time ring hides meanwhile).
 //   SetRemoveGlow(0..1): while the right mouse button is held on the device (PixelConsumables.UpdateRemoval + PixelHold ring) it tints red, glows and lights up red as the ring fills.
 //   Abstract base of placed devices: countdown (shown as a small RING, PixelWorldRing, once switched on - the timer text only says 'Click to start'
 //   before that and the uses-mode labels like the Charge Booster's CLICK!), shrink-away (InitCommon, OnTick, IsDying). Armed /
@@ -269,6 +271,47 @@ public abstract class PixelPlacedDevice : MonoBehaviour
     /// <summary>Is the device being powered by Electric pixels right now (its countdown is paused)?</summary>
     public bool Powered => Time.time < powerUntil;
 
+    private float generatorBar = -1f, generatorUntil = -1f;
+    private Color generatorColor;
+    private PixelEnergyBar energyBar;
+
+    /// <summary>
+    /// Called by a Biomass Generator every few frames while this device is in its radius: the countdown pauses (HoldPower) and the generator's ENERGY
+    /// BAR shows over this device, 'fraction' full in 'color' - every device it powers tracks the generator's charge. Generators never power each other.
+    /// </summary>
+    public void HoldPower(float fraction, Color color)
+    {
+        HoldPower();
+        generatorBar = fraction;
+        generatorColor = color;
+        generatorUntil = Time.time + 0.3f;
+    }
+
+    /// <summary>Is a Biomass Generator powering this device right now?</summary>
+    public bool GeneratorPowered => Time.time < generatorUntil;
+
+    /// <summary>The generator's energy bar over the device while it is powered by one (made on first use, over the timer or the top of the model).</summary>
+    private void UpdateEnergyBar()
+    {
+        bool show = GeneratorPowered && generatorBar >= 0f && !dying;
+        if (!show) { if (energyBar != null) energyBar.Set(-1f, generatorColor); return; }
+        if (energyBar == null)
+        {
+            Vector3 at;
+            Transform parent = transform;
+            if (timerText != null) { parent = timerText.transform.parent != null ? timerText.transform.parent : transform; at = timerText.transform.localPosition + Vector3.up * 0.25f; }
+            else
+            {
+                Bounds b = new Bounds(transform.position, Vector3.zero);
+                bool any = false;
+                foreach (Renderer r in GetComponentsInChildren<Renderer>()) { if (!any) { b = r.bounds; any = true; } else b.Encapsulate(r.bounds); }
+                at = transform.InverseTransformPoint(new Vector3(transform.position.x, b.max.y + 0.35f, transform.position.z));
+            }
+            energyBar = PixelEnergyBar.Attach(parent, at, 0.7f, generatorColor);
+        }
+        energyBar.Set(generatorBar, generatorColor);
+    }
+
     /// <summary>Removes the device now (it shrinks away like when its time runs out). No refund.</summary>
     public void RemoveNow()
     {
@@ -358,6 +401,7 @@ public abstract class PixelPlacedDevice : MonoBehaviour
     private void Update()
     {
         if (dying) return;
+        UpdateEnergyBar();
 
         if (!Armed)
         {
@@ -395,7 +439,7 @@ public abstract class PixelPlacedDevice : MonoBehaviour
                 ringFullSeconds = Mathf.Max(remaining, d != null ? d.durationSeconds : 0f, 1f);
             }
             float left = remaining / ringFullSeconds;
-            timerRing.Set(left, Powered ? PoweredRingColor : left < 0.2f ? LowRingColor : RingColor);
+            timerRing.Set(GeneratorPowered ? -1f : left, Powered ? PoweredRingColor : left < 0.2f ? LowRingColor : RingColor);   // (a generator's energy bar shows instead while it powers the device)
         }
     }
 
