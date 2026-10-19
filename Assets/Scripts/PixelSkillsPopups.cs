@@ -3,16 +3,16 @@
 //   Part of partial class PixelSkills: the '+n <Skill> XP' popups (AddXp calls QueueXpPopup). Three places, so they never pile on top of each other
 //   (2026-10-19, the user's layout):
 //   * THE XP DOCK - every skill XP popup (clicks, the auto clicker, the Recycler, rewards...): XP is gathered xpPopupGatherSeconds (0 = 0.6 s) per
-//     skill and shown as whole numbers (fractions carry over) in a small stack at the BOTTOM MIDDLE of the screen, just above the black bar
-//     (xpDockGap); the newest at the bottom, older ones slide up and fade. HOLD the left mouse button on one (xpDockHoldSeconds, the shared ring,
-//     PixelHold) and drag to move the dock; the spot is saved PER SAVE (PixelClicker.Setting.XpDockX / Y, PixelPrefs.DeclarePerSave); right-click
+//     skill and shown as whole numbers (fractions carry over) in a small stack at the BOTTOM RIGHT of the screen (xpDockRightMargin 90 from the edge, popups lined up on
+//     their right edges - the mirror of the early skill tracker at the bottom left), just above the black bar (xpDockGap); the newest at the bottom, older ones slide up and fade. HOLD the left mouse button on one (xpDockHoldSeconds, the shared ring,
+//     PixelHold) and drag to move the dock; the spot is saved PER SAVE (PixelClicker.Setting.XpDock2X / Y, PixelPrefs.DeclarePerSave); right-click
 //     a dock popup to put the dock back in its default spot. The dock popups catch the mouse (so a click on one never reaches the cube).
 //   * HUSK CRUSH SCORES: a crush's '+0.25 Standard XP' (AddHuskXp crushed, 'at' = where the husk broke) shows at once, decimals and all, AT THAT
 //     SPOT in the world (projected every frame, so it stays put when the camera moves), rising a little as it fades.
 //   * CRUSH BONUSES ('Air crush bonus!', 'Last-gasp bonus!', 'Crush streak x1.4!': ShowMouseText) beside the mouse pointer, each in the lowest
 //     free row of a small stack, so two never overlap.
 //   LOOK: a dark rounded plate behind the text (xpPopupPlate, xpPopupPlateColor), the skill colour lightened towards white (xpPopupLighten),
-//   xpPopupSize (0 = 30), a quick pop as each appears, stays xpPopupSeconds (2; fades over the second half). Own canvas 106. hideXpPopups.
+//   xpPopupSize (0 = 24), xpPopupOpacity (0.8: the game shows through a little), a quick pop as each appears, stays xpPopupSeconds (2; fades over the second half). Own canvas 106. hideXpPopups.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using TMPro;
@@ -31,7 +31,7 @@ public partial class PixelSkills
     [SerializeField] private float xpPopupGatherSeconds = 0f;
 
     [Min(0f)]
-    [Tooltip("Text size of the popups. 0 = 30.")]
+    [Tooltip("Text size of the popups. 0 = 24.")]
     [SerializeField] private float xpPopupSize = 0f;
 
     [Tooltip("A dark rounded plate behind each XP popup so it reads over any floor or sky.")]
@@ -41,14 +41,20 @@ public partial class PixelSkills
     [Range(0f, 0.8f)]
     [Tooltip("How far the skill's colour is lightened towards white for the popup text (brighter = easier to read).")]
     [SerializeField] private float xpPopupLighten = 0.3f;
+    [Range(0.2f, 1f)]
+    [Tooltip("How opaque the popups are at their strongest (1 = solid; lower lets the game show through).")]
+    [SerializeField] private float xpPopupOpacity = 0.8f;
     [Min(0.3f)]
     [Tooltip("Seconds an XP popup stays (it fades over the second half).")]
     [SerializeField] private float xpPopupSeconds = 2f;
 
-    [Header("XP Dock (skill XP, bottom of the screen)")]
+    [Header("XP Dock (skill XP, bottom right of the screen)")]
     [Min(0f)]
     [Tooltip("Gap between the bottom black bar and the XP dock's newest popup (canvas units).")]
     [SerializeField] private float xpDockGap = 14f;
+    [Min(0f)]
+    [Tooltip("Gap between the right edge of the screen and the XP dock (its popups line up on their right edges).")]
+    [SerializeField] private float xpDockRightMargin = 90f;
     [Min(0.05f)]
     [Tooltip("Seconds the left button is held on a dock popup (a ring fills) before the dock can be dragged.")]
     [SerializeField] private float xpDockHoldSeconds = 0.4f;
@@ -77,7 +83,7 @@ public partial class PixelSkills
         public int row;
     }
 
-    private const string PrefDockX = "PixelClicker.Setting.XpDockX", PrefDockY = "PixelClicker.Setting.XpDockY";
+    private const string PrefDockX = "PixelClicker.Setting.XpDock2X", PrefDockY = "PixelClicker.Setting.XpDock2Y";   // (2: the bottom-right dock; its saved spot is the right edge)
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void DeclareXpDockPerSave()
@@ -98,7 +104,7 @@ public partial class PixelSkills
     private bool xpPopupDecimals;     // set by AddHuskXp for a crush: its popup shows at once, decimals and all
     private Vector3? xpPopupAt;       // set by AddHuskXp for a crush: where the husk broke (the popup stays there)
 
-    private float PopupSize => xpPopupSize > 1f ? xpPopupSize : 30f;
+    private float PopupSize => xpPopupSize > 1f ? xpPopupSize : 24f;
 
     private void QueueXpPopup(SkillPack pack, double xp)
     {
@@ -221,7 +227,7 @@ public partial class PixelSkills
             if (!(xpDockDragging && p.kind == PopupKind.Dock)) p.age += Time.unscaledDeltaTime;   // (a dock being moved does not fade)
             float k = Mathf.Clamp01(p.age / life);
             if (k >= 1f) { Destroy(p.root); xpPopups.RemoveAt(i); continue; }
-            p.group.alpha = k < 0.5f ? 1f : 1f - (k - 0.5f) / 0.5f;
+            p.group.alpha = (k < 0.5f ? 1f : 1f - (k - 0.5f) / 0.5f) * xpPopupOpacity;
             float pop = p.age < 0.18f ? 1f + 0.3f * Mathf.Sin(p.age / 0.18f * Mathf.PI) : 1f;   // (a quick pop as it appears)
             p.rect.localScale = new Vector3(pop, pop, 1f);
             PlacePopup(p, k);
@@ -234,6 +240,7 @@ public partial class PixelSkills
         switch (p.kind)
         {
             case PopupKind.Dock:
+                p.rect.pivot = new Vector2(1f, 0.5f);   // (the dock's popups line up on their right edges)
                 p.rect.anchoredPosition = DockPosition() + new Vector2(0f, p.dockY + p.height * 0.5f);
                 break;
             case PopupKind.World:
@@ -258,15 +265,16 @@ public partial class PixelSkills
 
     // ---- The dock's spot (bottom middle above the black bar by default; hold + drag to move it, saved per save) ----
 
-    /// <summary>The middle of the dock's bottom edge (canvas units from the middle of the screen).</summary>
+    /// <summary>The dock's bottom RIGHT corner (canvas units from the middle of the screen): by default the bottom right, above the bar, the way the early
+    /// skill tracker sits at the bottom left.</summary>
     private Vector2 DockPosition()
     {
         Rect r = xpCanvasRect.rect;
         float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        Vector2 fallback = new Vector2(0f, -r.height * 0.5f + bar + xpDockGap);
+        Vector2 fallback = new Vector2(r.width * 0.5f - xpDockRightMargin, -r.height * 0.5f + bar + xpDockGap);
         if (!PixelPrefs.HasKey(PrefDockX) || !PixelPrefs.HasKey(PrefDockY)) return fallback;
         Vector2 p = new Vector2(PixelPrefs.GetFloat(PrefDockX, 0f), PixelPrefs.GetFloat(PrefDockY, fallback.y));
-        float hx = r.width * 0.5f - 120f, lo = -r.height * 0.5f + bar + 4f, hi = r.height * 0.5f - bar - 60f;
+        float hx = r.width * 0.5f - 12f, lo = -r.height * 0.5f + bar + 4f, hi = r.height * 0.5f - bar - 60f;
         return new Vector2(Mathf.Clamp(p.x, -hx, hx), Mathf.Clamp(p.y, lo, Mathf.Max(lo, hi)));
     }
 
@@ -284,7 +292,9 @@ public partial class PixelSkills
         {
             if (!PixelInput.LeftHeld()) { xpDockDragging = false; return; }
             RectTransformUtility.ScreenPointToLocalPointInRectangle(xpCanvasRect, PixelInput.PointerPosition(), null, out Vector2 local);
-            PixelPrefs.SetFloat(PrefDockX, local.x);
+            float halfWidth = 0f;
+            for (int i = xpPopups.Count - 1; i >= 0; i--) if (xpPopups[i].kind == PopupKind.Dock) { halfWidth = xpPopups[i].rect.sizeDelta.x * 0.5f; break; }
+            PixelPrefs.SetFloat(PrefDockX, local.x + halfWidth);   // (the pointer holds the newest popup by its middle)
             PixelPrefs.SetFloat(PrefDockY, local.y - PopupSize * 0.7f);   // (the pointer holds the newest popup)
             return;
         }
