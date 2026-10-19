@@ -150,23 +150,14 @@ public partial class PixelShop
         public RawImage icon;
         public Button arrow;
         public PixelConsumables.DeviceKind kind;
-        public int studioIndex;
-    }
-
-    private class OperationStudio
-    {
-        public GameObject root;
-        public Transform pivot;
-        public Camera cam;
-        public RenderTexture rt;
-        public float lastDrawn = -1f;   // (for the shared redraw limit, PixelTierPicture.Due)
     }
 
     private OperationRow[] operationRows;
     private PackRow[] operationUpgradeRows;
-    private OperationStudio[] operationStudios;
+    private bool[] operationNoModel;   // rows whose consumable has no model (not retried every frame)
+    private string[] operationKeys;    // each row's studio key ('shopop:' + index)
     private int openOperation = -1;   // index into OperationKinds of the consumable whose upgrade window is open (-1 = none)
-    private const float OperationStudioHeight = -3700f;
+    private const string OperationKeyPrefix = "shopop:";   // (the Operation rows' studios in PixelModelPicture)
 
     private void EnsureOperationRows()
     {
@@ -174,10 +165,12 @@ public partial class PixelShop
         if (operationRows == null)
         {
             operationRows = new OperationRow[OperationKinds.Length];
-            operationStudios = new OperationStudio[OperationKinds.Length];
+            operationNoModel = new bool[OperationKinds.Length];
+            operationKeys = new string[OperationKinds.Length];
+            for (int k = 0; k < operationKeys.Length; k++) operationKeys[k] = OperationKeyPrefix + k;
             for (int i = 0; i < OperationKinds.Length; i++)
             {
-                OperationRow o = new OperationRow { kind = OperationKinds[i], studioIndex = i };
+                OperationRow o = new OperationRow { kind = OperationKinds[i] };
                 o.row = BuildPlainRow(contentRect, "Operation " + i);
                 o.row.buyButton.gameObject.SetActive(false);
                 float picture = Mathf.Max(60f, rowHeight - 24f);
@@ -313,58 +306,14 @@ public partial class PixelShop
     // The rotating 3D pictures
     // ------------------------------------------------------------------
 
-    private OperationStudio BuildOperationStudio(int index)
+    /// <summary>The model of an Operation row's consumable, its range markings switched off (they don't belong in the picture or its framing).</summary>
+    private GameObject BuildOperationModel(int index)
     {
         GameObject model = consumables.CreateDisplayModel(OperationKinds[index]);
         if (model == null) return null;
-
-        GameObject root = new GameObject("Operation Studio " + index);
-        root.transform.position = new Vector3(index * 90f, OperationStudioHeight, 0f);
-        GameObject pivot = new GameObject("Pivot");
-        pivot.transform.SetParent(root.transform, false);
-        model.transform.SetParent(pivot.transform, false);
-        model.transform.localPosition = Vector3.zero;
-        model.transform.localRotation = Quaternion.identity;
-        foreach (Collider c in model.GetComponentsInChildren<Collider>()) Destroy(c);
-
-        // Centre the model on the pivot and fit the camera to it.
-        Bounds bounds = new Bounds(model.transform.position, Vector3.zero);
-        bool any = false;
         foreach (Renderer r in model.GetComponentsInChildren<Renderer>())
-        {
-            if (r.name == "Range" || r.name == "Blow Area" || r.name == "Bend Cone") { r.enabled = false; continue; }
-            if (r.GetComponent<TMP_Text>() != null) continue;
-            if (!any) { bounds = r.bounds; any = true; } else bounds.Encapsulate(r.bounds);
-        }
-        model.transform.position += root.transform.position - bounds.center;
-        float radius = Mathf.Max(0.3f, bounds.extents.magnitude);
-
-        OperationStudio st = new OperationStudio { root = root, pivot = pivot.transform };
-        st.rt = new RenderTexture(256, 256, 24, RenderTextureFormat.ARGB32) { name = "Operation Picture " + index };
-        GameObject camGo = new GameObject("Camera");
-        camGo.transform.SetParent(root.transform, false);
-        st.cam = camGo.AddComponent<Camera>();
-        st.cam.enabled = false;
-        st.cam.clearFlags = CameraClearFlags.SolidColor;
-        st.cam.backgroundColor = new Color(0f, 0f, 0f, 0f);
-        st.cam.orthographic = true;
-        st.cam.orthographicSize = radius * 1.05f;
-        st.cam.nearClipPlane = 0.1f;
-        st.cam.farClipPlane = 60f;
-        st.cam.allowHDR = false;
-        st.cam.targetTexture = st.rt;
-        camGo.transform.localPosition = new Vector3(0f, radius * 0.55f, -radius * 2.6f - 4f);
-        camGo.transform.LookAt(root.transform.position);
-
-        GameObject lightGo = new GameObject("Light");
-        lightGo.transform.SetParent(root.transform, false);
-        lightGo.transform.localPosition = new Vector3(2f * radius, 3f * radius, -5f * radius);
-        Light light = lightGo.AddComponent<Light>();
-        light.type = LightType.Point;
-        light.range = 40f * radius;
-        light.intensity = 7f;
-        light.shadows = LightShadows.None;
-        return st;
+            if (r.name == "Range" || r.name == "Blow Area" || r.name == "Bend Cone") r.enabled = false;
+        return model;
     }
 
     /// <summary>Turns and re-renders the pictures of the consumable rows that are on screen.</summary>
@@ -375,24 +324,18 @@ public partial class PixelShop
         {
             OperationRow o = operationRows[i];
             if (!o.row.rect.gameObject.activeInHierarchy) continue;
-            if (operationStudios[i] == null) operationStudios[i] = BuildOperationStudio(i);
-            OperationStudio st = operationStudios[i];
-            if (st == null || st.rt == null) continue;
-            if (o.icon.texture != st.rt) o.icon.texture = st.rt;
-            if (!PixelTierPicture.Due(ref st.lastDrawn)) continue;
-            st.pivot.localRotation = Quaternion.Euler(0f, Time.unscaledTime * 45f + i * 40f, 0f);
-            st.cam.Render();
+            if (operationNoModel[i]) continue;
+            Texture tex = PixelModelPicture.Existing(operationKeys[i]);
+            if (tex == null)
+            {
+                int index = i;
+                tex = PixelModelPicture.Get(operationKeys[i], parent => BuildOperationModel(index), 256, PictureTilt);
+            }
+            if (tex == null) { operationNoModel[i] = true; continue; }
+            if (o.icon.texture != tex) o.icon.texture = tex;
+            PixelModelPicture.Render(operationKeys[i], Time.unscaledTime * 45f + i * 40f, PictureTilt);   // (at most 30 redraws a second)
         }
     }
 
-    private void OnDestroyOperation()
-    {
-        if (operationStudios == null) return;
-        foreach (OperationStudio st in operationStudios)
-        {
-            if (st == null) continue;
-            if (st.rt != null) st.rt.Release();
-            if (st.root != null) Destroy(st.root);
-        }
-    }
+    private void OnDestroyOperation() => PixelModelPicture.ReleaseAll(OperationKeyPrefix);
 }

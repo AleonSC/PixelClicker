@@ -5,8 +5,8 @@
 //   (same spot, docks beside the open shop with the Currency panel's width and the shop's height via FitBesideShop; opening one closes
 //   the other: PixelToggles.CloseWindowIfOpen / PixelPixelGuide.CloseWindowIfOpen; Escape closes it, PixelWindows 15). It lists every
 //   pixel IN THE ROTATION (PixelClicker.InRotation(i) = can spawn now and not left out by the skill pack in play; found Dragon Cubes
-//   too; SpawnShare(i) = its share of spawns) as a row: a turning real-look 3D picture (a hidden studio per tier, CreateDisplayPixel,
-//   a camera rendering into a RenderTexture, re-rendered only for rows in view), the name in its colour, a line 'Pays N - clicks - X%
+//   too; SpawnShare(i) = its share of spawns) as a row: a turning real-look 3D picture (the shared PixelTierPicture studio of that type,
+//   re-rendered only for rows in view), the name in its colour, a line 'Pays N - clicks - X%
 //   of pixels' and an orange '!' box whose tooltip is PixelGuideTexts.Describe(type, tier) (the exact mechanics + what its old pixel
 //   does). Special / hold blocks (PixelBlockRules) are tagged in the sub line and get their role sentences from PixelBlockRules.GuideNotes automatically. A new pixel type needs a case in PixelGuideTexts.Mechanics (and OldPixel if its old pixel behaves differently).
 // ---------------------------------------------------
@@ -90,17 +90,6 @@ public class PixelPixelGuide : MonoBehaviour
 
     private readonly List<Row> rows = new List<Row>();
 
-    private class Studio
-    {
-        public GameObject root;
-        public Camera cam;
-        public Transform model;
-        public RenderTexture rt;
-    }
-
-    private readonly Dictionary<int, Studio> studios = new Dictionary<int, Studio>();
-    private const float StudioHeight = -4300f;
-
     // The tooltip shared by every row's '!' box.
     private RectTransform tipRect;
     private TMP_Text tipText;
@@ -135,12 +124,6 @@ public class PixelPixelGuide : MonoBehaviour
     {
         if (instance == this) instance = null;
         PixelWindows.Unregister(this);
-        foreach (Studio st in studios.Values)
-        {
-            if (st.rt != null) { st.rt.Release(); Destroy(st.rt); }
-            if (st.root != null) Destroy(st.root);
-        }
-        studios.Clear();
         if (canvasRoot != null) Destroy(canvasRoot);
     }
 
@@ -403,46 +386,7 @@ public class PixelPixelGuide : MonoBehaviour
     // The 3D pictures
     // ------------------------------------------------------------------
 
-    private Texture StudioTexture(int tier)
-    {
-        if (studios.TryGetValue(tier, out Studio existing) && existing.rt != null) return existing.rt;
-        studios.Remove(tier);
-
-        GameObject studio = new GameObject("Pixel Guide Studio " + tier);
-        studio.transform.position = new Vector3(tier * 60f, StudioHeight, 0f);
-        GameObject model = clicker.CreateDisplayPixel(tier, studio.transform, 1f);
-        if (model == null) { Destroy(studio); return null; }
-        model.transform.localPosition = Vector3.zero;
-
-        Studio st = new Studio { root = studio, model = model.transform };
-        st.rt = new RenderTexture(192, 192, 24, RenderTextureFormat.ARGB32) { name = "Pixel Guide " + tier };
-        GameObject camGo = new GameObject("Guide Camera");
-        camGo.transform.SetParent(studio.transform, false);
-        st.cam = camGo.AddComponent<Camera>();
-        st.cam.enabled = false;
-        st.cam.clearFlags = CameraClearFlags.SolidColor;
-        st.cam.backgroundColor = new Color(0f, 0f, 0f, 0f);
-        st.cam.orthographic = true;
-        st.cam.orthographicSize = 0.85f;
-        st.cam.nearClipPlane = 0.1f;
-        st.cam.farClipPlane = 30f;
-        st.cam.allowHDR = false;
-        st.cam.targetTexture = st.rt;
-        camGo.transform.localPosition = new Vector3(0f, 0f, 4.4f);
-        camGo.transform.LookAt(studio.transform.position);
-
-        GameObject lightGo = new GameObject("Guide Light");
-        lightGo.transform.SetParent(studio.transform, false);
-        lightGo.transform.localPosition = new Vector3(2f, 3f, 5f);
-        Light studioLight = lightGo.AddComponent<Light>();
-        studioLight.type = LightType.Point;
-        studioLight.range = 25f;
-        studioLight.intensity = 6f;
-        studioLight.shadows = LightShadows.None;
-
-        studios[tier] = st;
-        return st.rt;
-    }
+    private Texture StudioTexture(int tier) => PixelTierPicture.Get(clicker, tier, 192);   // (the shared studio of that pixel type)
 
     /// <summary>Turns and re-renders the pictures of the rows that are in view.</summary>
     private void RenderVisible()
@@ -450,7 +394,7 @@ public class PixelPixelGuide : MonoBehaviour
         if (content == null || rows.Count == 0) return;
         RectTransform viewport = content.parent as RectTransform;
         if (viewport == null) return;
-        Vector3[] vc = new Vector3[4], rc = new Vector3[4];
+        Vector3[] vc = viewCorners, rc = rowCorners;
         viewport.GetWorldCorners(vc);
         float spin = 360f / (spinSeconds > 0.5f ? spinSeconds : 8f);
         foreach (Row row in rows)
@@ -458,11 +402,11 @@ public class PixelPixelGuide : MonoBehaviour
             if (row.rect == null) continue;
             row.rect.GetWorldCorners(rc);
             if (rc[2].y < vc[0].y || rc[0].y > vc[2].y) continue;   // scrolled out of view
-            if (!studios.TryGetValue(row.tier, out Studio st) || st.rt == null) continue;
-            st.model.localRotation = Quaternion.Euler(25f, 0f, 0f) * Quaternion.Euler(0f, Time.unscaledTime * spin, 0f);
-            st.cam.Render();
+            PixelTierPicture.Render(row.tier, Time.unscaledTime * spin);
         }
     }
+
+    private static readonly Vector3[] viewCorners = new Vector3[4], rowCorners = new Vector3[4];   // (reused every frame)
 
     // ------------------------------------------------------------------
     // Per frame

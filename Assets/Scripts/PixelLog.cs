@@ -398,70 +398,15 @@ public class PixelLog : MonoBehaviour
         }
     }
 
-    private class SkinStudio
-    {
-        public RenderTexture rt;
-        public Camera cam;
-        public Transform model;
-        public GameObject root;
-        public float lastDrawn = -1f;   // (for the shared redraw limit, PixelTierPicture.Due)
-    }
-
-    private readonly Dictionary<int, SkinStudio> skinStudios = new Dictionary<int, SkinStudio>();
-    private readonly HashSet<int> skinRenderedThisFrame = new HashSet<int>();
-    private const float SkinStudioHeight = -3500f;
     private static readonly Vector3[] skinViewCorners = new Vector3[4], skinRowCorners = new Vector3[4];   // (reused every frame)
 
-    /// <summary>Live picture of a pixel type with its real look (material, glow, extras). Each type has its own far-away studio; null if it can't be made.</summary>
+    /// <summary>Live picture of a pixel type with its real look (material, glow, extras): the shared PixelTierPicture studio of that type; null if it can't be made.</summary>
     private Texture SkinIcon(int tier)
     {
         if (tier < 0 || clicker == null) return null;
-        SkinStudio st;
-        if (skinStudios.TryGetValue(tier, out st) && st.rt != null) return st.rt;
-        skinStudios.Remove(tier);
-
-        GameObject studio = new GameObject("Achievement Icon Studio " + tier);
-        studio.transform.position = new Vector3(tier * 60f, SkinStudioHeight, 0f); // apart from the other types' studios
-        GameObject model = clicker.CreateDisplayPixel(tier, studio.transform, 1f);
-        if (model == null) { Destroy(studio); return null; }
-        model.transform.localPosition = Vector3.zero;
-
-        st = new SkinStudio { root = studio, model = model.transform };
-        st.rt = new RenderTexture(160, 160, 24, RenderTextureFormat.ARGB32) { name = "Achievement Icon " + tier };
-        GameObject camGo = new GameObject("Icon Camera");
-        camGo.transform.SetParent(studio.transform, false);
-        st.cam = camGo.AddComponent<Camera>();
-        st.cam.enabled = false;
-        st.cam.clearFlags = CameraClearFlags.SolidColor;
-        st.cam.backgroundColor = new Color(0f, 0f, 0f, 0f);
-        st.cam.orthographic = true;
-        st.cam.orthographicSize = 0.805f; // a face edge fills ~62% of the picture, like the plain cube icon
-        st.cam.nearClipPlane = 0.1f;
-        st.cam.farClipPlane = 30f;
-        st.cam.allowHDR = false;
-        st.cam.targetTexture = st.rt;
-        camGo.transform.localPosition = new Vector3(0f, 0f, 4.4f);
-        camGo.transform.LookAt(studio.transform.position);
-
-        GameObject lightGo = new GameObject("Icon Light");
-        lightGo.transform.SetParent(studio.transform, false);
-        lightGo.transform.localPosition = new Vector3(2f, 3f, 5f);
-        Light icoLight = lightGo.AddComponent<Light>();
-        icoLight.type = LightType.Point;
-        icoLight.range = 25f;
-        icoLight.intensity = 6f;
-        icoLight.shadows = LightShadows.None;
-
-        skinStudios[tier] = st;
-        RenderSkin(st);
-        return st.rt;
-    }
-
-    private void RenderSkin(SkinStudio st)
-    {
-        if (!PixelTierPicture.Due(ref st.lastDrawn)) return;   // (at most 30 redraws a second)
-        st.model.localRotation = Quaternion.Euler(25f, 0f, 0f) * Quaternion.Euler(0f, Time.unscaledTime * achievementIconSpin, 0f); // same pose as PixelCubeIcon
-        st.cam.Render();
+        Texture tex = PixelTierPicture.Get(clicker, tier, 160);
+        if (tex != null) PixelTierPicture.Render(tier, Time.unscaledTime * achievementIconSpin);
+        return tex;
     }
 
     /// <summary>Re-renders (turning) the pictures on the goal rows that are in view.</summary>
@@ -472,14 +417,12 @@ public class PixelLog : MonoBehaviour
         if (viewport == null) return;
         Vector3[] vc = skinViewCorners, rc = skinRowCorners;
         viewport.GetWorldCorners(vc);
-        skinRenderedThisFrame.Clear();
         foreach (GoalRow row in goalRows)
         {
             if (row.skin == null || !row.skin.gameObject.activeInHierarchy || row.skinTier < 0) continue;
             row.rect.GetWorldCorners(rc);
             if (rc[2].y < vc[0].y || rc[0].y > vc[2].y) continue;
-            if (!skinStudios.TryGetValue(row.skinTier, out SkinStudio st) || st.rt == null) continue;
-            if (skinRenderedThisFrame.Add(row.skinTier)) RenderSkin(st);
+            PixelTierPicture.Render(row.skinTier, Time.unscaledTime * achievementIconSpin);   // (same pose as PixelCubeIcon; a type shown twice draws once)
         }
     }
 
@@ -491,27 +434,18 @@ public class PixelLog : MonoBehaviour
         if (viewport == null) return;
         Vector3[] vc = skinViewCorners, rc = skinRowCorners;
         viewport.GetWorldCorners(vc);
-        skinRenderedThisFrame.Clear();
         for (int i = 0; i < achievementRows.Count; i++)
         {
             AchievementRow row = achievementRows[i];
             if (row.skin == null || !row.skin.gameObject.activeInHierarchy || row.skinTier < 0) continue;
             row.rect.GetWorldCorners(rc);
             if (rc[2].y < vc[0].y || rc[0].y > vc[2].y) continue; // scrolled out of view
-            SkinStudio st;
-            if (!skinStudios.TryGetValue(row.skinTier, out st) || st.rt == null) continue;
-            if (skinRenderedThisFrame.Add(row.skinTier)) RenderSkin(st);
+            PixelTierPicture.Render(row.skinTier, Time.unscaledTime * achievementIconSpin);
         }
     }
 
     private void OnDestroy()
     {
-        foreach (KeyValuePair<int, SkinStudio> kv in skinStudios)
-        {
-            if (kv.Value.rt != null) kv.Value.rt.Release();
-            if (kv.Value.root != null) Destroy(kv.Value.root);
-        }
-        skinStudios.Clear();
         if (logInstance == this) logInstance = null;
         PixelWindows.Unregister(this);
         if (clicker != null)

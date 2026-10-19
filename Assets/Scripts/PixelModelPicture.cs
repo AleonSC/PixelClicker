@@ -4,7 +4,9 @@
 //   builds the model once with 'build' in a hidden studio far below the scene (its own camera + light, the camera FITTED to the model's bounds so
 //   anything from a potion to a Recycler fills the picture) and returns its RenderTexture; Render(key, yaw) turns it and redraws it (at most
 //   PixelTierPicture.MaxFps a second - call it only for pictures on screen); Release(key) / ReleaseAll(prefix) destroy studios that are no longer
-//   needed (a closed window). First user: the 3D consumables window (PixelConsumableGallery). The shop's Operation studios could move onto this.
+//   needed (a closed window). Fitting ignores text labels and disabled renderers (a build can switch off range markings); 'fixedHalfHeight' frames
+//   by a fixed size instead (unit cubes: glow halos must not shrink them). Users: the 3D consumables window (PixelConsumableGallery), the Model Editor,
+//   the shop's row / card pictures (PixelShopPictures, keys 'shop:...') and the shop's Operation rows (PixelShopOperation, 'shopop:...').
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -29,8 +31,11 @@ public static class PixelModelPicture
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() { studios.Clear(); nextSlot = 0; }
 
-    /// <summary>The picture for 'key' (built with 'build' on first use; null when build gives nothing). 'tilt' = how far it leans towards the camera.</summary>
-    public static Texture Get(string key, System.Func<Transform, GameObject> build, int resolution = 256, float tilt = 22f)
+    /// <summary>
+    /// The picture for 'key' (built with 'build' on first use; null when build gives nothing). 'tilt' = how far it leans towards the camera.
+    /// 'fixedHalfHeight' > 0 = the camera shows that many units above and below the centre instead of fitting the model's bounds.
+    /// </summary>
+    public static Texture Get(string key, System.Func<Transform, GameObject> build, int resolution = 256, float tilt = 22f, float fixedHalfHeight = 0f)
     {
         if (studios.TryGetValue(key, out Studio existing))
         {
@@ -54,11 +59,11 @@ public static class PixelModelPicture
         bool any = false;
         foreach (Renderer r in model.GetComponentsInChildren<Renderer>(true))
         {
-            if (r is ParticleSystemRenderer || !r.enabled) continue;
+            if (r is ParticleSystemRenderer || !r.enabled || r.GetComponent<TMPro.TMP_Text>() != null) continue;   // (effects, switched-off parts and text labels don't count for the fit)
             if (!any) { b = r.bounds; any = true; } else b.Encapsulate(r.bounds);
         }
         model.transform.position -= b.center - root.transform.position;
-        float radius = any ? Mathf.Max(0.05f, b.extents.magnitude) : 0.6f;
+        float radius = fixedHalfHeight > 0f ? fixedHalfHeight / 1.02f : any ? Mathf.Max(0.05f, b.extents.magnitude) : 0.6f;
 
         Studio st = new Studio { root = root, model = model.transform };
         st.rt = new RenderTexture(resolution, resolution, 24, RenderTextureFormat.ARGB32) { name = "Model Picture " + key };
@@ -99,6 +104,13 @@ public static class PixelModelPicture
         st.model.localRotation = Quaternion.Euler(tilt, 0f, 0f) * Quaternion.Euler(0f, yawDegrees, 0f);
         st.cam.Render();
     }
+
+    /// <summary>Is there a studio for this key already?</summary>
+    public static bool Has(string key) => studios.ContainsKey(key);
+
+    /// <summary>The picture of an existing, working studio (null if there is none yet or it was lost, e.g. after Restart): call Get only then, so a build callback isn't made every frame.</summary>
+    public static Texture Existing(string key) =>
+        studios.TryGetValue(key, out Studio st) && st.rt != null && st.root != null ? st.rt : null;
 
     /// <summary>The live model in a studio (the Model Editor edits it in place), or null.</summary>
     public static Transform ModelOf(string key) => studios.TryGetValue(key, out Studio st) ? st.model : null;

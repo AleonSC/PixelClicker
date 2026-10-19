@@ -3,8 +3,8 @@
 //   Part of partial class PixelShop: rotating 3D pictures on shop rows/cards (AddRowPicture, AddPackPicture, Consumables tiles / buy bar; pixel
 //   packs cycle through their reward tiers every pictureCycleSeconds, Value rows, Consumables tiles (still, clipped to the grid) and buy bar, minigame
 //   packs use primitive models BuildMinigameModel for ghost/meteor/blackhole/bomb/pad/snake/sort/breakout - a new minigame needs a
-//   case + its id in ModelledMinigames). One hidden studio per distinct picture key (tier:<Type>, item:<name>, game:<id>; y -3900),
-//   drawn only while on screen (UpdatePictures); hidePictures, pictureResolution. Shop cost lines no longer print '(you have n)'
+//   case + its id in ModelledMinigames). One shared PixelModelPicture studio per distinct picture key ('shop:' + tier:<Type> / item:<name> /
+//   game:<id>; pixel cubes framed by pictureCubeFraming, the rest fitted), drawn only while on screen (UpdatePictures); hidePictures, pictureResolution. Shop cost lines no longer print '(you have n)'
 //   (NoHave strips it from old saved format strings).
 // ---------------------------------------------------
 using System;
@@ -15,9 +15,8 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Part of <see cref="PixelShop"/>: small rotating 3D pictures on the shop's rows and cards (pixel packs, Value rows, the
-/// Consumables cards and minigame packs). Each distinct picture is built once in a hidden studio far below the scene (a model, a
-/// light and an orthographic camera that renders into a RenderTexture shown by a RawImage) and only the pictures that are on
-/// screen are redrawn.
+/// Consumables cards and minigame packs). Each distinct picture is built once in a shared PixelModelPicture studio (shown by a
+/// RawImage) and only the pictures that are on screen are redrawn.
 /// </summary>
 public partial class PixelShop
 {
@@ -41,16 +40,6 @@ public partial class PixelShop
     [Tooltip("Size of the picture in the Consumables tab's buy bar.")]
     [SerializeField] private float cardPictureSize = 112f;
 
-    private class ShopPicture
-    {
-        public GameObject root;
-        public Transform pivot;
-        public Camera cam;
-        public RenderTexture rt;
-        public float lastDrawn = -1f;   // (for the shared redraw limit, PixelTierPicture.Due)
-        public bool drawnOnce;          // still slots draw only until this is set
-    }
-
     private class PictureSlot
     {
         public RawImage image;
@@ -62,10 +51,18 @@ public partial class PixelShop
         public bool still;      // drawn once, not spun (the Consumables tiles: dozens of them, only the selected item spins in the buy bar)
     }
 
-    private const float PictureStudioHeight = -3900f;
-    private readonly Dictionary<string, ShopPicture> pictures = new Dictionary<string, ShopPicture>();
+    private const string PictureKeyPrefix = "shop:";   // (the shop's studios in PixelModelPicture)
+    private const float PictureTilt = 6f;               // the shop films its models almost level, a little from above
+    private readonly HashSet<string> pictureNoModel = new HashSet<string>();   // keys with nothing to show (not retried every frame)
+    private readonly HashSet<string> pictureDrawnOnce = new HashSet<string>(); // still slots draw only until their key is in here
+    private readonly Dictionary<string, string> pictureStudioKeys = new Dictionary<string, string>();   // key -> 'shop:' + key (made once, not every frame)
+
+    private string StudioKey(string key)
+    {
+        if (!pictureStudioKeys.TryGetValue(key, out string k)) { k = PictureKeyPrefix + key; pictureStudioKeys[key] = k; }
+        return k;
+    }
     private readonly List<PictureSlot> pictureSlots = new List<PictureSlot>();
-    private int pictureCounter;
 
     // ------------------------------------------------------------------
     // Adding pictures to the UI
@@ -199,49 +196,57 @@ public partial class PixelShop
             }
             string key = s.key();
             if (key == null) { if (s.image.enabled) s.image.enabled = false; continue; }
-            if (!pictures.ContainsKey(key) && ++newStudios > 4) continue;   // a grid full of new items builds its studios a few per frame, not all at once
-            ShopPicture pic = GetPicture(key);
-            if (pic == null || pic.rt == null) { if (s.image.enabled) s.image.enabled = false; continue; }
+            string studioKey = StudioKey(key);
+            if (!PixelModelPicture.Has(studioKey) && !pictureNoModel.Contains(key) && ++newStudios > 4) continue;   // a grid full of new items builds its studios a few per frame, not all at once
+            Texture tex = GetPicture(key);
+            if (tex == null) { if (s.image.enabled) s.image.enabled = false; continue; }
             if (!s.image.enabled) s.image.enabled = true;
-            if (s.image.texture != pic.rt) s.image.texture = pic.rt;
+            if (s.image.texture != tex) s.image.texture = tex;
             if (s.still)
             {
-                if (pic.drawnOnce) continue;   // (a spinning slot showing the same item keeps redrawing it, so the tile turns too while selected)
-                pic.drawnOnce = true;
-                pic.pivot.localRotation = Quaternion.Euler(0f, 35f, 0f);
-                pic.cam.Render();
+                if (pictureDrawnOnce.Contains(key)) continue;   // (a spinning slot showing the same item keeps redrawing it, so the tile turns too while selected)
+                pictureDrawnOnce.Add(key);
+                PixelModelPicture.MarkDirty(studioKey);
+                PixelModelPicture.Render(studioKey, 35f, PictureTilt);
                 continue;
             }
-            if (!PixelTierPicture.Due(ref pic.lastDrawn)) continue;   // (at most 30 redraws a second, and once per frame when two rows show the same picture)
-            pic.pivot.localRotation = Quaternion.Euler(0f, Time.unscaledTime * pictureSpinSpeed, 0f);
-            pic.cam.Render();
-            pic.drawnOnce = true;
+            PixelModelPicture.Render(studioKey, Time.unscaledTime * pictureSpinSpeed, PictureTilt);   // (at most 30 redraws a second, once per frame when two rows show it)
+            pictureDrawnOnce.Add(key);
         }
     }
 
     private void OnDestroyPictures()
     {
-        foreach (ShopPicture p in pictures.Values)
-        {
-            if (p == null) continue;
-            if (p.rt != null) p.rt.Release();
-            if (p.root != null) Destroy(p.root);
-        }
-        pictures.Clear();
+        PixelModelPicture.ReleaseAll(PictureKeyPrefix);
+        pictureNoModel.Clear();
+        pictureDrawnOnce.Clear();
     }
 
     // ------------------------------------------------------------------
     // Studios
     // ------------------------------------------------------------------
 
-    private ShopPicture GetPicture(string key)
+    /// <summary>The picture for a key (built on first use), or null when the key has nothing to show.</summary>
+    private Texture GetPicture(string key)
     {
-        if (pictures.TryGetValue(key, out ShopPicture existing)) return existing;
-        GameObject model = BuildModel(key);
+        if (pictureNoModel.Contains(key)) return null;
+        Texture tex = PixelModelPicture.Existing(StudioKey(key));
+        if (tex != null) return tex;
         // Pixels and potions are unit cubes: frame them by the cube itself (not by glow halos / rims, which made some tiny), as big as fits.
-        ShopPicture pic = model != null ? BuildStudio(key, model, key.StartsWith("tier:") ? pictureCubeFraming : 0f) : null;
-        pictures[key] = pic;   // a null entry remembers "no model" so it isn't retried every frame
-        return pic;
+        tex = PixelModelPicture.Get(StudioKey(key), parent => BuildPictureModel(key), Mathf.Clamp(pictureResolution, 64, 512), PictureTilt,
+                                            key.StartsWith("tier:") ? pictureCubeFraming : 0f);
+        if (tex == null) pictureNoModel.Add(key);   // (remembers "no model" so it isn't retried every frame)
+        return tex;
+    }
+
+    /// <summary>The model for a key with its range markings switched off (they don't belong in a picture or its framing).</summary>
+    private GameObject BuildPictureModel(string key)
+    {
+        GameObject model = BuildModel(key);
+        if (model == null) return null;
+        foreach (Renderer r in model.GetComponentsInChildren<Renderer>())
+            if (r.name == "Range" || r.name == "Blow Area" || r.name == "Bend Cone") r.enabled = false;
+        return model;
     }
 
     private GameObject BuildModel(string key)
@@ -301,65 +306,6 @@ public partial class PixelShop
         }
         Destroy(root);
         return consumables.CreateDisplayModel(consumables.DeviceKindOf(item));
-    }
-
-    private ShopPicture BuildStudio(string key, GameObject model, float fixedFraming = 0f)
-    {
-        GameObject root = new GameObject("Shop Studio " + key);
-        root.transform.position = new Vector3(pictureCounter++ * 40f, PictureStudioHeight, 0f);
-        GameObject pivot = new GameObject("Pivot");
-        pivot.transform.SetParent(root.transform, false);
-        model.transform.SetParent(pivot.transform, false);
-        model.transform.localPosition = Vector3.zero;
-        model.transform.localRotation = Quaternion.identity;
-        foreach (Collider col in model.GetComponentsInChildren<Collider>()) Destroy(col);
-
-        Bounds bounds = new Bounds(model.transform.position, Vector3.zero);
-        bool any = false;
-        foreach (Renderer r in model.GetComponentsInChildren<Renderer>())
-        {
-            if (r.name == "Range" || r.name == "Blow Area" || r.name == "Bend Cone") { r.enabled = false; continue; }
-            if (r.GetComponent<TMP_Text>() != null) continue;
-            if (!any) { bounds = r.bounds; any = true; } else bounds.Encapsulate(r.bounds);
-        }
-        float radius;
-        if (fixedFraming > 0f)
-        {
-            radius = 0.9f;   // a unit cube's half diagonal; the model sits at the studio's centre
-        }
-        else
-        {
-            model.transform.position += root.transform.position - bounds.center;
-            radius = Mathf.Max(0.3f, bounds.extents.magnitude);
-        }
-
-        ShopPicture st = new ShopPicture { root = root, pivot = pivot.transform };
-        int res = Mathf.Clamp(pictureResolution, 64, 512);
-        st.rt = new RenderTexture(res, res, 24, RenderTextureFormat.ARGB32) { name = "Shop Picture " + key };
-        GameObject camGo = new GameObject("Camera");
-        camGo.transform.SetParent(root.transform, false);
-        st.cam = camGo.AddComponent<Camera>();
-        st.cam.enabled = false;
-        st.cam.clearFlags = CameraClearFlags.SolidColor;
-        st.cam.backgroundColor = new Color(0f, 0f, 0f, 0f);
-        st.cam.orthographic = true;
-        st.cam.orthographicSize = fixedFraming > 0f ? fixedFraming : radius * 1.05f;
-        st.cam.nearClipPlane = 0.1f;
-        st.cam.farClipPlane = 60f;
-        st.cam.allowHDR = false;
-        st.cam.targetTexture = st.rt;
-        camGo.transform.localPosition = new Vector3(0f, radius * 0.55f, -radius * 2.6f - 4f);
-        camGo.transform.LookAt(root.transform.position);
-
-        GameObject lightGo = new GameObject("Light");
-        lightGo.transform.SetParent(root.transform, false);
-        lightGo.transform.localPosition = new Vector3(2f * radius, 3f * radius, -5f * radius);
-        Light light = lightGo.AddComponent<Light>();
-        light.type = LightType.Point;
-        light.range = 40f * radius;
-        light.intensity = 7f;
-        light.shadows = LightShadows.None;
-        return st;
     }
 
     // ------------------------------------------------------------------

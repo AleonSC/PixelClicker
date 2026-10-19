@@ -3,11 +3,12 @@
 //   Shared 'real model' pictures of pixel types: PixelTierPicture.Get(clicker, tier) returns a RenderTexture of the block drawn with its REAL look (PixelClicker.CreateDisplayPixel in a
 //   hidden studio far below the scene with its own camera and light), PixelTierPicture.Render(tier, yaw) turns it and re-renders it (call it only for pictures that are on screen).
 //   Rebuild(clicker, tier) builds the model again after its look changed (Look Studio); asking for a bigger resolution resizes the same texture in place.
-//   First user: the Next-up window (PixelNextUp). The Pixel Guide, the shop pictures, the Log skin studio and the shop operation studio each still have their own copy of this studio code:
-//   move them onto this helper when they are next touched (one place, one set of heights).
+//   Users: Next up, the block tooltip, Collection Log, Database, skill level popups, Look Studio, the Log's achievement / goal pictures and the
+//   Pixel Guide. One studio per pixel type is SHARED by all of them (two windows showing the same type at once show the same turn).
+//   Other models (potions, devices, minigame shapes, the shop's pictures) use PixelModelPicture; don't add another private studio.
 //   Redraw limit: Render redraws a picture at most MaxFps times a second (and once per frame when two pictures show the same block). Each Render is a
-//   full camera pass, so redrawing every frame cost one extra pass per picture on screen. The other studios (shop pictures, shop Operation, Log icons)
-//   use the same limit through Due(ref lastDrawn). Rebuild makes the next Render draw at once.
+//   full camera pass, so redrawing every frame cost one extra pass per picture on screen. PixelModelPicture uses the same limit through
+//   Due(ref lastDrawn). Rebuild makes the next Render draw at once.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
