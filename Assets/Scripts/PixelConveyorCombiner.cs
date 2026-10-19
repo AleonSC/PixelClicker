@@ -5,6 +5,7 @@
 //   there: SnapPoints, so the feeding belt comes in square to the main one) hands its husks in (IPixelAutoIntake.CatchNear, via PixelCouplings.HandIn) and they
 //   are MERGED onto the main belt at the box (PixelConveyorSystem.TryMerge) as soon as there is a gap there - the two feeds become one. While there is no gap
 //   they wait at the inlet (up to queueSize; kept alive), then the feeding belt's husks are thrown off its end as at any full device.
+//   SHOP (2026-10-19): also sold in Utilities (PixelConsumables DeviceKind.ConveyorCombiner, a PixelInstantItems tool: right-click starts this placing, one used up per box).
 //   The spot is a distance along the belt (it follows the belt; the box goes when its belt goes). Saved with the tester save (position, turn).
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -37,6 +38,14 @@ public class PixelConveyorCombiner : MonoBehaviour, IPixelAutoIntake
     // ---------------- placing ----------------
 
     public static GameObject CreateGhost(PixelClicker c) => Build(c, true, 1.35f * Mathf.Max(0.05f, c.OldPixelWorldSize));
+
+    /// <summary>A picture-only model for the shop (solid, does nothing: its script is switched off).</summary>
+    public static GameObject CreateDisplay(PixelClicker c)
+    {
+        GameObject root = Build(c, false, 1.35f * Mathf.Max(0.05f, c.OldPixelWorldSize));
+        root.GetComponent<PixelConveyorCombiner>().enabled = false;
+        return root;
+    }
 
     /// <summary>Snaps the ghost to the belt under the mouse, turned the belt's way.</summary>
     public static bool TrySnap(PixelClicker c, Vector3 point, float yaw, GameObject ghostRoot, out Vector3 snappedPoint, out float snappedYaw)

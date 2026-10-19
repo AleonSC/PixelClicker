@@ -99,6 +99,18 @@ public static class PixelInstantItems
         },
         new Entry
         {
+            kind = PixelConsumables.DeviceKind.ConveyorCombiner, usedUp = false, withUtilities = true,   // (one is used up per box placed)
+            use = (PixelConsumables c, int item, out string msg) => PlacePieces(c, PixelConsumables.DeviceKind.ConveyorCombiner, "Conveyor Combiner",
+                "Bring the combiner over a conveyor belt: it snaps on. Click to place it. Right click stops", out msg),
+        },
+        new Entry
+        {
+            kind = PixelConsumables.DeviceKind.BeltJump, usedUp = false, withUtilities = true,   // (one is used up per jump placed)
+            use = (PixelConsumables c, int item, out string msg) => PlacePieces(c, PixelConsumables.DeviceKind.BeltJump, "Belt Jump",
+                "Bring the jump to the end of a belt: it snaps on. Click, scroll to set the gap, click again. Right click stops", out msg),
+        },
+        new Entry
+        {
             kind = PixelConsumables.DeviceKind.FocusPotion, stat = "focus.used",
             use = (PixelConsumables c, int item, out string msg) =>
             {

@@ -238,6 +238,10 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         PocketBiomassGenerator = 27,
         /// <summary>Placed: the big Biomass Generator (PixelBiomassGenerator) - more charge, a wider radius. On sale at Woodcutting level 10.</summary>
         BiomassGenerator = 28,
+        /// <summary>Not consumed: a Conveyor Combiner piece (PixelConveyorCombiner). Right-click starts placing them on belts (PixelFeatureTester 'Conveyor Combiner'); one is used up per box placed.</summary>
+        ConveyorCombiner = 29,
+        /// <summary>Not consumed: a Belt Jump ramp pair (PixelBeltJump). Right-click starts placing them on belt ends (PixelFeatureTester 'Belt Jump'); one is used up per jump placed.</summary>
+        BeltJump = 30,
     }
 
     /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
@@ -1198,6 +1202,42 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         };
     }
 
+    private static Device CreateDefaultConveyorCombiner()
+    {
+        return new Device
+        {
+            kind = DeviceKind.ConveyorCombiner,   // (2026-10-19: in the shop's Utilities next to the belt kit - a machine part, so monochrome)
+            displayName = "Conveyor Combiner",
+            description = "A box that sits on a conveyor belt: husks on that belt pass straight through it. Lay a second belt that ends at one of its side inlets and its husks are merged onto the main belt whenever there is a gap - two feeds (or three) become one. Right-click to place: bring it over a belt and it snaps on. One is used up per box placed.",
+            requiredType = PixelClicker.PixelType.White,
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Gray, amount = 120 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Black, amount = 80 },
+            },
+            maxHeld = 5,
+            color = new Color(0.35f, 1f, 0.55f, 1f),
+        };
+    }
+
+    private static Device CreateDefaultBeltJump()
+    {
+        return new Device
+        {
+            kind = DeviceKind.BeltJump,   // (2026-10-19: in the shop's Utilities next to the belt kit - a machine part, so monochrome)
+            displayName = "Belt Jump",
+            description = "A pair of ramps for a conveyor line. Right-click to place: bring it to the END of a belt and it snaps on, click, then scroll to widen or narrow the gap - the landing ramp always sits straight across. Husks reaching the belt's end are launched over the gap in the same arc every time and slide onto a belt that starts at the landing ramp. One is used up per jump placed.",
+            requiredType = PixelClicker.PixelType.White,
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Gray, amount = 180 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Black, amount = 120 },
+            },
+            maxHeld = 3,
+            color = new Color(1f, 0.62f, 0.15f, 1f),
+        };
+    }
+
     private static Device CreateDefaultPetTreat()
     {
         return new Device
@@ -1386,6 +1426,8 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.JunctionBox, CreateDefaultJunctionBox),
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.PocketBiomassGenerator, CreateDefaultPocketBiomassGenerator),
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.BiomassGenerator, CreateDefaultBiomassGenerator),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ConveyorCombiner, CreateDefaultConveyorCombiner),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.BeltJump, CreateDefaultBeltJump),
     };
 
     /// <summary>
@@ -2459,6 +2501,12 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
                 case DeviceKind.BiomassGenerator:
                     root = PixelBiomassGenerator.CreateDisplay(clicker, d.bodyDiameter > 0f ? d.bodyDiameter : 1f);
                     break;
+                case DeviceKind.ConveyorCombiner:
+                    root = PixelConveyorCombiner.CreateDisplay(clicker);
+                    break;
+                case DeviceKind.BeltJump:
+                    root = PixelBeltJump.CreateDisplay(clicker);
+                    break;
                 default:
                     if (PixelInstantItems.Find(kind) != null) root = BuildItemModel(kind, d);   // instant-use items (PixelInstantItems) have small item models
                     break;
@@ -2468,29 +2516,21 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         return root;
     }
 
+    /// <summary>The shop picture's Charge Booster meter (in the world PixelChargeBooster builds the live one in the same spot): dark glass, 70% full.</summary>
     private void DecorateBoosterModel(GameObject root, Device d)
     {
-        Color bright = Color.Lerp(d.color, Color.white, 0.5f);
-        GameObject meter = MakePrimitive(PrimitiveType.Cube, "Meter", root.transform, new Color(0.1f, 0.1f, 0.14f, 1f), false);
-        meter.transform.localScale = new Vector3(0.14f, d.bodyHeight * 1.1f, 0.14f);
-        meter.transform.localPosition = new Vector3(d.bodyDiameter * 0.75f, d.bodyHeight * 0.55f, 0f);
-        GameObject fill = MakePrimitive(PrimitiveType.Cube, "Fill", root.transform, bright, false);
-        fill.transform.localScale = new Vector3(0.1f, d.bodyHeight * 0.7f, 0.1f);
-        fill.transform.localPosition = new Vector3(d.bodyDiameter * 0.75f, d.bodyHeight * 0.4f, 0f);
-        GameObject spark = MakePrimitive(PrimitiveType.Sphere, "Spark", root.transform, bright, false);
-        spark.transform.localScale = Vector3.one * (d.bodyDiameter * 0.45f);
-        spark.transform.localPosition = new Vector3(0f, d.bodyHeight + d.bodyDiameter * 0.3f, 0f);
+        PixelFactoryKit k = new PixelFactoryKit(clicker, false);
+        float x = d.bodyDiameter * 0.75f, h = d.bodyHeight * 1.1f, fill = h * 0.7f;
+        k.Box("Meter Back", root.transform, new Vector3(x, h * 0.5f, 0f), new Vector3(0.14f, h, 0.14f), new Color(0.05f, 0.05f, 0.08f, 1f), default, false, 0.3f, 0.9f);
+        k.Box("Meter Fill", root.transform, new Vector3(x, fill * 0.5f, 0f), new Vector3(0.1f, fill, 0.15f), d.color, default, false, 0f, 0.6f, d.color);
     }
 
+    /// <summary>The shop picture's Lightning Rod tip (in the world PixelLightningRod adds the glowing ball itself).</summary>
     private void DecorateRodModel(GameObject root, Device d)
     {
-        Color bright = Color.Lerp(d.color, Color.white, 0.6f);
-        GameObject tip = MakePrimitive(PrimitiveType.Sphere, "Tip", root.transform, bright, false);
-        tip.transform.localScale = Vector3.one * Mathf.Max(0.3f, d.bodyDiameter * 2.4f);
-        tip.transform.localPosition = new Vector3(0f, d.bodyHeight, 0f);
-        GameObject foot = MakePrimitive(PrimitiveType.Cylinder, "Foot", root.transform, new Color(d.color.r * 0.4f, d.color.g * 0.4f, d.color.b * 0.4f, 1f), false);
-        foot.transform.localScale = new Vector3(0.5f, 0.05f, 0.5f);
-        foot.transform.localPosition = new Vector3(0f, 0.05f, 0f);
+        PixelFactoryKit k = new PixelFactoryKit(clicker, false);
+        Color tip = new Color(1f, 1f, 0.8f, 1f);
+        k.Prim(PrimitiveType.Sphere, "Tip", root.transform, new Vector3(0f, d.bodyHeight, 0f), Vector3.one * Mathf.Max(0.2f, d.bodyDiameter * 1.8f), tip, default, 0f, 0.8f, false, tip);
     }
 
     /// <summary>Simple models for the consumables that are never placed: a fuel canister, a ghost-bait orb and a pet-treat bone.</summary>
@@ -3517,6 +3557,14 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         {
             BuildMagnetSorterBody(root, d, isPreview);
         }
+        else if (d.kind == DeviceKind.LightningRod)
+        {
+            BuildRodBody(root, d, isPreview);
+        }
+        else if (d.kind == DeviceKind.ChargeBooster)
+        {
+            BuildBoosterBody(root, d, isPreview);
+        }
         else
         {
             // Cylinder body (Unity's cylinder is 2 units tall, hence the halved Y scale).
@@ -3581,6 +3629,136 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     /// The Vacuum Device's look: a turned (lathe) body with a flared base, a slim waist and a funnel mouth at the top, two glowing bands, a glowing
     /// core in the funnel and a small spinning turbine ("Spinner", turned by PixelVacuumDevice) above it.
     /// </summary>
+    /// <summary>A thin cylinder from a to b (a strut, a wire) on the kit.</summary>
+    private static GameObject Strut(PixelFactoryKit k, string name, Transform parent, Vector3 a, Vector3 b, float radius, Color c, float metal = 0.7f, float smooth = 0.6f)
+    {
+        Vector3 dir = b - a;
+        return k.Prim(PrimitiveType.Cylinder, name, parent, (a + b) * 0.5f, new Vector3(radius * 2f, dir.magnitude * 0.5f, radius * 2f), c,
+                      Quaternion.FromToRotation(Vector3.up, dir).eulerAngles, metal, smooth);
+    }
+
+    /// <summary>A flat disc / band round the Y axis (a cylinder 'radius' wide and 'thick' tall), optionally glowing.</summary>
+    private static GameObject Disc(PixelFactoryKit k, string name, Transform parent, float y, float radius, float thick, Color c, float metal = 0.6f, float smooth = 0.6f, Color? glow = null)
+        => k.Prim(PrimitiveType.Cylinder, name, parent, new Vector3(0f, y, 0f), new Vector3(radius * 2f, thick * 0.5f, radius * 2f), c, default, metal, smooth, false, glow);
+
+    /// <summary>
+    /// The Lightning Rod's look (2026-10-19): a two-step stone plinth with a copper ground ring and glowing studs, three steel guy struts, a tapering copper
+    /// mast (steel collars at the joints) with a copper coil low down and a stack of white ceramic insulators in the middle, a glowing band near the top and
+    /// a crown of outward-leaning spikes round the tip. The glowing tip ball itself is added at bodyHeight by PixelLightningRod (DecorateRodModel for the shop).
+    /// </summary>
+    private void BuildRodBody(GameObject root, Device d, bool isPreview)
+    {
+        PixelFactoryKit k = new PixelFactoryKit(clicker, isPreview) { alpha = previewOpacity };
+        Transform t = root.transform;
+        float H = d.bodyHeight, r = Mathf.Max(0.04f, d.bodyDiameter * 0.5f);
+        Color stone = new Color(0.3f, 0.31f, 0.34f, 1f), stoneTop = new Color(0.4f, 0.41f, 0.45f, 1f), copper = new Color(0.86f, 0.5f, 0.27f, 1f),
+              steel = new Color(0.72f, 0.76f, 0.82f, 1f), ceramic = new Color(0.93f, 0.95f, 1f, 1f), glow = Color.Lerp(d.color, Color.white, 0.25f);
+
+        // The plinth: two stone steps, a copper ground ring between them and six glowing studs round the lower step.
+        Disc(k, "Plinth", t, 0.06f, 0.42f, 0.12f, stone, 0.05f, 0.2f);
+        Disc(k, "Ground Ring", t, 0.125f, 0.35f, 0.025f, copper, 0.85f, 0.7f);
+        Disc(k, "Plinth Top", t, 0.17f, 0.28f, 0.08f, stoneTop, 0.05f, 0.25f);
+        for (int i = 0; i < 6; i++)
+        {
+            float a = i * 60f * Mathf.Deg2Rad;
+            k.Prim(PrimitiveType.Sphere, "Stud", t, new Vector3(Mathf.Cos(a) * 0.41f, 0.07f, Mathf.Sin(a) * 0.41f), Vector3.one * 0.05f, glow, default, 0f, 0.8f, false, glow);
+        }
+
+        // The mast: three copper pieces, thinner going up, with steel collars where they meet; a thin spike on top up to the tip.
+        float[] joints = { 0.21f, H * 0.36f, H * 0.68f, H - 0.2f };
+        float[] radii = { r * 1.6f, r * 1.2f, r * 0.85f };
+        for (int i = 0; i < 3; i++)
+        {
+            k.Cyl("Mast " + i, t, new Vector3(0f, (joints[i] + joints[i + 1]) * 0.5f, 0f), radii[i], joints[i + 1] - joints[i], copper, default, 0.85f, 0.65f);
+            Disc(k, "Collar " + i, t, joints[i] + 0.02f, radii[i] * 1.5f, 0.05f, steel, 0.9f, 0.75f);
+        }
+        k.Cyl("Spike", t, new Vector3(0f, H - 0.1f, 0f), r * 0.45f, 0.2f, steel, default, 0.95f, 0.85f);
+
+        // A copper coil wound round the lowest piece (thin rings, every other one tipped a little so it reads as a winding).
+        for (int i = 0; i < 9; i++)
+            k.Prim(PrimitiveType.Cylinder, "Coil", t, new Vector3(0f, 0.26f + i * 0.05f, 0f), new Vector3(r * 4.2f, 0.012f, r * 4.2f), copper,
+                   new Vector3(i % 2 == 0 ? 5f : -5f, 0f, 0f), 0.9f, 0.7f);
+
+        // White ceramic insulators stacked on the middle piece.
+        for (int i = 0; i < 4; i++) Disc(k, "Insulator", t, H * 0.42f + i * 0.09f, r * (3.4f - i * 0.25f), 0.045f, ceramic, 0.1f, 0.9f);
+
+        // Three guy struts from the plinth edge up to the mast, with a steel clamp where they meet it.
+        float clampY = H * 0.3f;
+        Disc(k, "Clamp", t, clampY, r * 2.4f, 0.06f, steel, 0.9f, 0.7f);
+        for (int i = 0; i < 3; i++)
+        {
+            float a = (i * 120f + 30f) * Mathf.Deg2Rad;
+            Vector3 foot = new Vector3(Mathf.Cos(a) * 0.36f, 0.19f, Mathf.Sin(a) * 0.36f);
+            Strut(k, "Guy Strut", t, foot, new Vector3(Mathf.Cos(a) * r * 2.2f, clampY, Mathf.Sin(a) * r * 2.2f), 0.014f, steel);
+            k.Prim(PrimitiveType.Sphere, "Strut Foot", t, foot, Vector3.one * 0.05f, steel, default, 0.9f, 0.7f);
+        }
+
+        // A glowing band near the top and a crown of spikes leaning out round the tip.
+        Disc(k, "Glow Band", t, H * 0.86f, r * 1.4f, 0.07f, glow, 0f, 0.8f, glow);
+        Disc(k, "Crown Ring", t, H - 0.24f, r * 2.2f, 0.035f, steel, 0.9f, 0.8f);
+        for (int i = 0; i < 4; i++)
+        {
+            float a = (i * 90f + 45f) * Mathf.Deg2Rad;
+            Vector3 outward = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+            Vector3 from = new Vector3(0f, H - 0.24f, 0f) + outward * r * 1.9f;
+            Strut(k, "Crown Spike", t, from, from + (outward * 0.35f + Vector3.up).normalized * 0.22f, 0.011f, steel, 0.95f, 0.85f);
+        }
+    }
+
+    /// <summary>
+    /// The Charge Booster's look (2026-10-19): a dark plinth with a yellow hazard band and bolts, a graphite capacitor drum with three glowing coil rings,
+    /// red / black terminals on its front, a stack of ceramic insulators and a polished Tesla dome on top (PixelChargeBooster.DomeAbove: its sparks and
+    /// click spot sit there), and a steel-framed bracket on its right (+X) holding the charge meter (PixelChargeBooster builds the live meter in it).
+    /// </summary>
+    private void BuildBoosterBody(GameObject root, Device d, bool isPreview)
+    {
+        PixelFactoryKit k = new PixelFactoryKit(clicker, isPreview) { alpha = previewOpacity };
+        Transform t = root.transform;
+        float D = d.bodyDiameter, H = d.bodyHeight, drum = D * 0.32f, top = H * 0.78f;
+        Color plinth = new Color(0.13f, 0.13f, 0.15f, 1f), graphite = new Color(0.2f, 0.21f, 0.24f, 1f), steel = new Color(0.74f, 0.77f, 0.83f, 1f),
+              ceramic = new Color(0.93f, 0.95f, 1f, 1f), glow = d.color;
+
+        // Plinth with a hazard band and four bolts.
+        Disc(k, "Plinth", t, 0.05f, D * 0.55f, 0.1f, plinth, 0.4f, 0.4f);
+        Disc(k, "Hazard Band", t, 0.075f, D * 0.56f, 0.03f, d.color, 0.3f, 0.5f);
+        for (int i = 0; i < 4; i++)
+        {
+            float a = (i * 90f + 45f) * Mathf.Deg2Rad;
+            k.Cyl("Bolt", t, new Vector3(Mathf.Cos(a) * D * 0.46f, 0.11f, Mathf.Sin(a) * D * 0.46f), 0.025f, 0.03f, steel, default, 0.9f, 0.7f);
+        }
+
+        // The capacitor drum with three glowing coil rings and a steel lid.
+        k.Cyl("Drum", t, new Vector3(0f, (0.1f + top) * 0.5f, 0f), drum, top - 0.1f, graphite, default, 0.65f, 0.6f);
+        for (int i = 0; i < 3; i++) Disc(k, "Coil Ring", t, 0.1f + (top - 0.1f) * (0.25f + i * 0.25f), drum * 1.08f, 0.035f, glow, 0f, 0.7f, glow * 0.9f);
+        Disc(k, "Lid", t, top, drum * 1.06f, 0.05f, steel, 0.9f, 0.75f);
+
+        // Red and black terminals on the front (-Z).
+        for (int s = -1; s <= 1; s += 2)
+        {
+            Vector3 p = new Vector3(s * drum * 0.45f, top * 0.55f, -drum * 0.95f);
+            k.Cyl("Terminal", t, p + new Vector3(0f, 0f, -0.04f), 0.03f, 0.1f, steel, new Vector3(90f, 0f, 0f), 0.9f, 0.7f);
+            Color cap = s < 0 ? new Color(0.85f, 0.15f, 0.12f, 1f) : new Color(0.08f, 0.08f, 0.09f, 1f);
+            k.Cyl("Terminal Cap", t, p + new Vector3(0f, 0f, -0.1f), 0.045f, 0.04f, cap, new Vector3(90f, 0f, 0f), 0.2f, 0.6f);
+        }
+
+        // Insulators, a neck and the Tesla dome with a ring under it.
+        for (int i = 0; i < 3; i++) Disc(k, "Insulator", t, top + 0.05f + i * 0.055f, D * (0.2f - i * 0.035f), 0.035f, ceramic, 0.1f, 0.9f);
+        float domeY = H + PixelChargeBooster.DomeAbove;
+        k.Cyl("Neck", t, new Vector3(0f, (top + domeY) * 0.5f, 0f), 0.03f, domeY - top, steel, default, 0.9f, 0.8f);
+        Disc(k, "Dome Ring", t, domeY - 0.06f, D * 0.26f, 0.035f, steel, 0.95f, 0.85f);
+        k.Ball("Dome", t, new Vector3(0f, domeY, 0f), D * 0.2f, steel, 0.95f, 0.9f);
+
+        // The meter bracket on the right (+X): a base plate, two arms to the drum, a top cap and a little glowing lamp.
+        float mx = D * 0.75f, mh = H * 1.1f;
+        k.Box("Meter Plate", t, new Vector3(mx, 0.02f, 0f), new Vector3(0.24f, 0.04f, 0.24f), plinth, default, false, 0.4f, 0.4f);
+        k.Box("Meter Cap", t, new Vector3(mx, mh + 0.025f, 0f), new Vector3(0.2f, 0.05f, 0.2f), steel, default, false, 0.9f, 0.75f);
+        foreach (float y in new[] { mh * 0.25f, mh * 0.75f })
+            k.Box("Meter Arm", t, new Vector3((drum + mx) * 0.5f, y, 0f), new Vector3(mx - drum, 0.04f, 0.06f), steel, default, false, 0.9f, 0.7f);
+        for (int s = -1; s <= 1; s += 2)
+            k.Box("Meter Rail", t, new Vector3(mx, mh * 0.5f, s * 0.085f), new Vector3(0.03f, mh, 0.03f), steel, default, false, 0.9f, 0.7f);
+        k.Prim(PrimitiveType.Sphere, "Meter Lamp", t, new Vector3(mx, mh + 0.08f, 0f), Vector3.one * 0.07f, glow, default, 0f, 0.8f, false, glow);
+    }
+
     /// <summary>A flat base, a short post and a spinning head with two nozzles ("Spinner" with "Nozzle 0/1" children, used by <see cref="PixelSprinklerDevice"/>).</summary>
     private void BuildSprinklerBody(GameObject root, Device d, bool isPreview)
     {
@@ -3922,40 +4100,85 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     /// Builds the fan: a post, a round housing, spinning blades, a floor wedge showing the blown area and (for a real
     /// fan) the timer. The fan blows along the object's forward (+Z) direction.
     /// </summary>
+    /// <summary>
+    /// The Fan's look (2026-10-19): a pedestal fan. A weighted round base with a control pod (three buttons) at the front, a two-part post (dark tube,
+    /// chrome upper tube, a collar with a knob), a pivot block and a motor housing with vent rings behind the head, four pitched, round-tipped blades on a
+    /// chrome spinner ("Blades", spun round its forward axis by PixelFanDevice) and a chrome guard: front and back rings, side bars, radial spokes and a
+    /// glowing badge in front. It blows along +Z.
+    /// </summary>
     private GameObject BuildFanObject(Device d, bool isPreview, out Transform blades, out TextMeshPro timer)
     {
         GameObject root = new GameObject(isPreview ? d.displayName + " (Preview)" : d.displayName);
-        float opacity = isPreview ? previewOpacity : 1f;
+        PixelFactoryKit k = new PixelFactoryKit(clicker, isPreview) { alpha = previewOpacity };
+        Transform t = root.transform;
+        float D = d.bodyDiameter, H = d.bodyHeight, R = D * 0.5f;
+        Color body = d.color, dark = new Color(d.color.r * 0.3f, d.color.g * 0.3f, d.color.b * 0.3f, 1f), chrome = new Color(0.82f, 0.85f, 0.9f, 1f),
+              rubber = new Color(0.08f, 0.08f, 0.09f, 1f), badge = Color.Lerp(d.color, Color.white, 0.35f);
 
-        Color bodyColor = d.color;
-        bodyColor.a = opacity;
-        Color darkColor = new Color(d.color.r * 0.45f, d.color.g * 0.45f, d.color.b * 0.45f, opacity);
-
-        // Post.
-        GameObject post = MakePrimitive(PrimitiveType.Cylinder, "Post", root.transform, darkColor, isPreview);
-        post.transform.localScale = new Vector3(0.12f, d.bodyHeight * 0.5f, 0.12f);
-        post.transform.localPosition = new Vector3(0f, d.bodyHeight * 0.5f, 0f);
-
-        // Head: a flat round housing facing forward.
-        GameObject head = new GameObject("Head");
-        head.transform.SetParent(root.transform, false);
-        head.transform.localPosition = new Vector3(0f, d.bodyHeight, 0f);
-
-        GameObject housing = MakePrimitive(PrimitiveType.Cylinder, "Housing", head.transform, darkColor, isPreview);
-        housing.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-        housing.transform.localScale = new Vector3(d.bodyDiameter, 0.05f, d.bodyDiameter);
-
-        // Blades: three bars crossing at the centre = six blade tips, spun around the forward axis.
-        GameObject bladeRoot = new GameObject("Blades");
-        bladeRoot.transform.SetParent(head.transform, false);
-        bladeRoot.transform.localPosition = new Vector3(0f, 0f, 0.08f);
+        // Base: a weighted disc with a coloured bevel, and the control pod at the front.
+        Disc(k, "Base", t, 0.035f, D * 0.38f, 0.07f, dark, 0.5f, 0.55f);
+        Disc(k, "Base Bevel", t, 0.08f, D * 0.31f, 0.03f, body, 0.3f, 0.6f);
+        k.Box("Control Pod", t, new Vector3(0f, 0.09f, D * 0.26f), new Vector3(D * 0.24f, 0.06f, D * 0.12f), dark, new Vector3(-12f, 0f, 0f), false, 0.4f, 0.5f);
+        Color[] buttons = { chrome, body, new Color(0.3f, 1f, 0.45f, 1f) };
         for (int i = 0; i < 3; i++)
+            k.Prim(PrimitiveType.Cylinder, "Button", t, new Vector3((i - 1) * D * 0.065f, 0.125f, D * 0.265f), new Vector3(0.04f, 0.012f, 0.04f), buttons[i],
+                   new Vector3(-12f, 0f, 0f), 0.4f, 0.7f, false, i == 2 ? buttons[i] : (Color?)null);
+
+        // Post: a dark lower tube, a collar with a knob, a chrome upper tube.
+        float collarY = H * 0.5f;
+        k.Cyl("Post", t, new Vector3(0f, (0.09f + collarY) * 0.5f, 0f), 0.045f, collarY - 0.09f, dark, default, 0.5f, 0.6f);
+        Disc(k, "Collar", t, collarY, 0.065f, 0.06f, chrome, 0.9f, 0.8f);
+        k.Ball("Collar Knob", t, new Vector3(0.08f, collarY, 0f), 0.025f, rubber, 0.2f, 0.5f);
+        k.Cyl("Upper Post", t, new Vector3(0f, (collarY + H - 0.1f) * 0.5f, 0f), 0.03f, H - 0.1f - collarY, chrome, default, 0.95f, 0.85f);
+
+        // Head: the motor, the guard and the blades. It faces +Z.
+        GameObject head = new GameObject("Head");
+        head.transform.SetParent(t, false);
+        head.transform.localPosition = new Vector3(0f, H, 0f);
+        Transform h = head.transform;
+        k.Box("Pivot", h, new Vector3(0f, -0.1f, -0.08f), new Vector3(0.08f, 0.1f, 0.16f), dark, default, false, 0.5f, 0.5f);
+        k.Cyl("Motor", h, new Vector3(0f, 0f, -0.12f), D * 0.15f, 0.18f, body, new Vector3(90f, 0f, 0f), 0.35f, 0.65f);
+        k.Prim(PrimitiveType.Sphere, "Motor Back", h, new Vector3(0f, 0f, -0.21f), new Vector3(D * 0.3f, D * 0.3f, 0.12f), body, default, 0.35f, 0.65f);
+        for (int i = 0; i < 2; i++)
+            k.Cyl("Vent Ring", h, new Vector3(0f, 0f, -0.16f + i * 0.06f), D * 0.155f, 0.012f, dark, new Vector3(90f, 0f, 0f), 0.4f, 0.5f);
+
+        // Blades: four pitched blades with round tips round a chrome spinner.
+        GameObject bladeRoot = new GameObject("Blades");
+        bladeRoot.transform.SetParent(h, false);
+        bladeRoot.transform.localPosition = new Vector3(0f, 0f, 0.08f);
+        for (int i = 0; i < 4; i++)
         {
-            GameObject blade = MakePrimitive(PrimitiveType.Cube, "Blade " + i, bladeRoot.transform, bodyColor, isPreview);
-            blade.transform.localRotation = Quaternion.Euler(0f, 0f, i * 60f);
-            blade.transform.localScale = new Vector3(d.bodyDiameter * 0.9f, d.bodyDiameter * 0.16f, 0.015f);
+            GameObject arm = new GameObject("Blade " + i);
+            arm.transform.SetParent(bladeRoot.transform, false);
+            arm.transform.localRotation = Quaternion.Euler(0f, 0f, i * 90f);
+            k.Box("Blade", arm.transform, new Vector3(0f, R * 0.46f, 0f), new Vector3(D * 0.2f, R * 0.62f, 0.012f), body, new Vector3(0f, 24f, 0f), false, 0.2f, 0.7f);
+            k.Prim(PrimitiveType.Sphere, "Blade Tip", arm.transform, new Vector3(0f, R * 0.77f, 0f), new Vector3(D * 0.2f, D * 0.11f, 0.012f), body, new Vector3(0f, 24f, 0f), 0.2f, 0.7f);
         }
+        k.Cyl("Hub", bladeRoot.transform, Vector3.zero, D * 0.07f, 0.05f, chrome, new Vector3(90f, 0f, 0f), 0.95f, 0.85f);
+        k.Prim(PrimitiveType.Sphere, "Spinner", bladeRoot.transform, new Vector3(0f, 0f, 0.03f), new Vector3(D * 0.12f, D * 0.12f, 0.07f), chrome, default, 0.95f, 0.9f);
         blades = bladeRoot.transform;
+
+        // The guard: a back and a front ring, bars joining them round the rim, spokes across the front and a glowing badge in the middle.
+        float gr = R * 0.98f, back = -0.02f, front = 0.17f;
+        const int RingParts = 20;
+        float seg = 2f * Mathf.PI * gr / RingParts * 1.08f;
+        for (int i = 0; i < RingParts; i++)
+        {
+            float a = i * 360f / RingParts;
+            Vector3 dir = Quaternion.Euler(0f, 0f, a) * Vector3.up;
+            foreach (float z in new[] { back, front })
+                k.Box("Guard Ring", h, dir * gr + Vector3.forward * z, new Vector3(seg, 0.016f, 0.016f), chrome, new Vector3(0f, 0f, a), false, 0.9f, 0.8f);
+            if (i % 2 == 0)
+                k.Box("Guard Bar", h, dir * gr + Vector3.forward * ((back + front) * 0.5f), new Vector3(0.01f, 0.01f, front - back), chrome, new Vector3(0f, 0f, a), false, 0.9f, 0.8f);
+        }
+        for (int i = 0; i < 8; i++)
+        {
+            float a = i * 45f + 22.5f;
+            Vector3 dir = Quaternion.Euler(0f, 0f, a) * Vector3.up;
+            k.Box("Guard Spoke", h, dir * gr * 0.5f + Vector3.forward * front, new Vector3(0.008f, gr, 0.008f), chrome, new Vector3(0f, 0f, a), false, 0.9f, 0.8f);
+        }
+        k.Cyl("Badge", h, new Vector3(0f, 0f, front + 0.005f), D * 0.075f, 0.02f, chrome, new Vector3(90f, 0f, 0f), 0.95f, 0.85f);
+        k.Prim(PrimitiveType.Cylinder, "Badge Glow", h, new Vector3(0f, 0f, front + 0.018f), new Vector3(D * 0.1f, 0.006f, D * 0.1f), badge, new Vector3(90f, 0f, 0f), 0f, 0.8f, false, badge);
 
         // The area that gets blown: a flat wedge on the floor.
         if (showRange && !displayOnly)

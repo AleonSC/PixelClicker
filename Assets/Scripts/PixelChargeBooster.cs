@@ -72,6 +72,9 @@ internal class PixelBoltLayer
 /// </summary>
 public class PixelChargeBooster : PixelPlacedDevice
 {
+    /// <summary>How far the centre of the Tesla dome on top sits above the body height (PixelConsumables.BuildBoosterBody): sparks and the click spot are there.</summary>
+    public const float DomeAbove = 0.12f;
+
     private Transform fill;
     private Renderer fillRenderer;
     private Light glow;
@@ -143,7 +146,7 @@ public class PixelChargeBooster : PixelPlacedDevice
 
         GameObject lg = new GameObject("Glow");
         lg.transform.SetParent(transform, false);
-        lg.transform.localPosition = new Vector3(0f, meterHeight * 0.7f, 0f);
+        lg.transform.localPosition = new Vector3(0f, meterHeight + DomeAbove, 0f);
         glow = lg.AddComponent<Light>();
         glow.type = LightType.Point;
         glow.color = color;
@@ -154,7 +157,7 @@ public class PixelChargeBooster : PixelPlacedDevice
         UpdateMeter();
     }
 
-    private Vector3 Anchor() => transform.position + Vector3.up * (meterHeight * 0.6f);
+    private Vector3 Anchor() => transform.position + Vector3.up * (meterHeight + DomeAbove);   // (the Tesla dome on top)
 
     private void OnCollected(int tier, double amount, bool automatic)
     {
@@ -220,7 +223,7 @@ public class PixelChargeBooster : PixelPlacedDevice
         if (fill == null) return;
         float f = Supercharged ? Mathf.Clamp01(superLeft / superSeconds) : ChargeFraction;
         float h = Mathf.Max(0.001f, meterHeight * 1.1f * f);
-        fill.localScale = new Vector3(0.18f, h, 0.18f);
+        fill.localScale = new Vector3(0.1f, h, 0.15f);   // (inside the dark glass back, showing at its front and back)
         PlaceFill(h);
         float pulse = Ready || Supercharged ? 0.6f + 0.4f * Mathf.Sin(Time.time * 14f) : 1f;
         Color c = Supercharged ? Color.white : Color.Lerp(color * 0.7f, color, ChargeFraction);
