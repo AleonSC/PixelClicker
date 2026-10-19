@@ -5,7 +5,7 @@
 //   * The window itself is a standard Tool window (PixelUIKit.CreateWindow + PixelWindowChrome): centred title, grey X, drag by the header (kept between the black bars), minimize,
 //     dock to the left / right screen edge, the corner grip scales it; the search box sits at the left of the header (no PixelPop: the hub opens with its canvas).
 //   * FILING-CABINET TABS along the top: Main (PixelDevTools' widgets), To-Do, Changelog, Inspector (PixelDevInspector), Shapes (PixelDevShapes), UI Mock (PixelDevMockup), Looks (PixelLookStudio),
-//     Setups (PixelDevSetups), Events (PixelDevEvents), Sounds (PixelDevSounds), Console (PixelDevConsole); new tabs build with PixelDevUI. Drag a tab
+//     Setups (PixelDevSetups), Events (PixelDevEvents), Sounds (PixelDevSounds), Console (PixelDevConsole), Models (PixelModelEditor); new tabs build with PixelDevUI. Drag a tab
 //     sideways to REARRANGE the tabs; drag it down out of the strip to POP IT OUT into its own floating window (drag that window by its header, '-' minimizes it); the 'Dock' button or
 //     dropping the floating window on the hub puts it back as a tab. Order, active tab, floating tabs + their places and the hub's open state are saved (PlayerPrefs PixelClicker.Dev.Hub.*).
 //   * Tools get their content root with PixelDevHub.TabRoot(id) (a top-left anchored RectTransform of the tab's design size, 700 x 780 or 500 x 780 for the mockups) and learn when they
@@ -248,7 +248,7 @@ public class PixelDevHub : MonoBehaviour
             { "main", "Main", "700" }, { "docs", "Docs", "700" }, { "tester", "Tester", "700" },
             { "inspector", "Inspector", "700" }, { "shapes", "Shapes", "500" }, { "uimock", "UI Mock", "500" },
             { "looks", "Looks", "700" }, { "setups", "Setups", "700" }, { "events", "Events", "700" },
-            { "sounds", "Sounds", "700" }, { "console", "Console", "700" },
+            { "sounds", "Sounds", "700" }, { "console", "Console", "700" }, { "models", "Models", "700" },
         };
         string saved = PixelPrefs.GetString(P + "Order", "");
         List<string> order = new List<string>(saved.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries));
@@ -291,6 +291,7 @@ public class PixelDevHub : MonoBehaviour
         PixelDevEvents.Boot();
         PixelDevSounds.Boot();
         PixelDevConsole.Boot();
+        PixelModelEditor.Boot();
         windowRect.gameObject.SetActive(true);
         canvasRoot.SetActive(false);
     }
@@ -323,6 +324,8 @@ public class PixelDevHub : MonoBehaviour
                 rows = new[] { "....#....#..", "...##..#..#.", "#####...#.#.", "#####.#.#.#.", "#####.#.#.#.", "#####...#.#.", "...##..#..#.", "....#....#..", "............", "............" }; break;
             case "console":    // a terminal prompt
                 rows = new[] { "############", "#..........#", "#.#........#", "#..#.......#", "#...#......#", "#..#.......#", "#.#..####..#", "#..........#", "############", "............" }; break;
+            case "models":     // a cube in perspective
+                rows = new[] { "...######...", "..#.....##..", ".#.....#.#..", "#######..#..", "#.....#..#..", "#.....#..#..", "#.....#.#...", "#.....##....", "#######.....", "............" }; break;
             case "shapes":     // a square and a circle
                 rows = new[] { "#######.....", "#.....#.....", "#.....#.##..", "#.....####..", "#######.###.", "......#####.", "......#####.", ".......###..", "............", "............" }; break;
             default:           // a window with a title bar (UI mock)

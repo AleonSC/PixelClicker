@@ -18,6 +18,7 @@ public static class PixelModelPicture
         public Camera cam;
         public RenderTexture rt;
         public float lastDrawn = -1f;
+        public float baseSize;
     }
 
     private const float StudioHeight = -6400f;   // apart from the other studios (-3000 .. -5200)
@@ -98,6 +99,21 @@ public static class PixelModelPicture
         st.model.localRotation = Quaternion.Euler(tilt, 0f, 0f) * Quaternion.Euler(0f, yawDegrees, 0f);
         st.cam.Render();
     }
+
+    /// <summary>The live model in a studio (the Model Editor edits it in place), or null.</summary>
+    public static Transform ModelOf(string key) => studios.TryGetValue(key, out Studio st) ? st.model : null;
+
+    /// <summary>Zooms a studio's camera: 1 = the fitted size, bigger = closer.</summary>
+    public static void SetZoom(string key, float zoom)
+    {
+        if (!studios.TryGetValue(key, out Studio st) || st.cam == null) return;
+        if (st.baseSize <= 0f) st.baseSize = st.cam.orthographicSize;
+        st.cam.orthographicSize = st.baseSize / Mathf.Clamp(zoom, 0.2f, 8f);
+        st.lastDrawn = -1f;
+    }
+
+    /// <summary>Draws a studio again at the next Render (after its model changed).</summary>
+    public static void MarkDirty(string key) { if (studios.TryGetValue(key, out Studio st)) st.lastDrawn = -1f; }
 
     /// <summary>Destroys one studio (its model, camera and texture).</summary>
     public static void Release(string key)
