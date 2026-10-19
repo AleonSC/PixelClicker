@@ -113,3 +113,4 @@
 [ ] Robot arm (Devices): picks a husk from one coupling and drops it into a device right next to it - links two side-by-side machines with no belt; leave a hook for Electrician power later
 [ ] Launcher + catcher (Devices, the 'fun' transport): flings husks in an arc from a coupling to a catcher basket across the floor; crosses over other lines; badly aimed husks miss and land loose
 [ ] Coupling settings (Devices; on the coupling's device card, no new window): Filter (one husk type passes), Priority / overflow (used only when the main output is full), Rate limit (at most one husk every N s), Colour tag (tint to tell lines apart), In / Out / Auto (Auto = decided by what's attached, like the Junction Box)
+[ ] Consumables tab: a button that opens a window with turning 3D views of the consumables (potions, devices) - reuse PixelTierPicture / the Operation studios' RenderTexture pictures
