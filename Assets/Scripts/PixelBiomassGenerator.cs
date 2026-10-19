@@ -7,6 +7,8 @@
 //   (seconds one wood husk adds), and the model's size (bodyDiameter).
 //   - FUEL: husks of WOODCUTTING (PixelSkills.HuskSkillId == woodcutting) that land in the open firebox on top (dropped by hand or by physics) - or come
 //     in through its intake coupling socket - are burnt: taken off the floor (FlyIn), + generatorChargePerHusk, up to the max. Other husks are left alone.
+//     The firebox is never narrower than 1.8 husk widths (the pocket model is small) and a husk resting on its rim counts. A SMALL SUCTION (suckRadiusHusks,
+//     suckStrength) draws loose Woodcutting husks nearby up and in towards it while it has room for fuel (FixedUpdate).
 //   - POWER: every placed device within 'radius' (generators excepted) is powered (PixelPlacedDevice.HoldPower(fraction, colour)): its countdown stops
 //     and the generator's BLUE ENERGY BAR (PixelEnergyBar) shows over it, tracking the generator's charge. A faint blue ring on the floor shows the radius.
 //   - CHARGE: it comes FULL and drains 1 a second (drainPerSecond). Empty -> a FLASHING RED state for redSeconds (no power, the bar and the glow flash
@@ -29,6 +31,14 @@ public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHu
     [Min(0.05f)]
     [Tooltip("Seconds between two checks of what is in its radius / in its firebox.")]
     [SerializeField] private float checkSeconds = 0.1f;
+    [Header("Suction (wood husks only)")]
+    [Min(0f)]
+    [Tooltip("How far from the firebox (husk widths, sideways) loose Woodcutting husks are gently drawn in. 0 = off.")]
+    [SerializeField] private float suckRadiusHusks = 3f;
+    [Min(0f)]
+    [Tooltip("How strong that pull is (husk widths per second squared). Small on purpose.")]
+    [SerializeField] private float suckStrength = 7f;
+
     [Tooltip("Colour of the energy bar (and the radius ring).")]
     [SerializeField] private Color energyColor = new Color(0.35f, 0.7f, 1f, 1f);
     [Tooltip("Colour the bar and the glow flash when it is empty.")]
@@ -86,7 +96,7 @@ public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHu
             kit.Ball("Coil Cap", tr, new Vector3(sx * 1.15f * u, 2.05f * u, 0f), 0.24f * u, Metal, 0.8f, 0.6f);
         }
         // The open FIREBOX on top: a square box with a dark floor (husks rest on it and burn) and wooden slats on its rim.
-        float fy = 2.3f * u, fw = 1.5f * u, fh = 0.7f * u, t = 0.12f * u;
+        float fy = 2.3f * u, fw = FireboxWidth(clicker, u), fh = 0.7f * u, t = 0.12f * u;   // (never narrower than a husk fits through: the pocket model is small)
         kit.Box("Firebox Floor", tr, new Vector3(0f, fy, 0f), new Vector3(fw, t, fw), Dark, default, colliders, 0.1f, 0.2f);
         kit.Box("Firebox Front", tr, new Vector3(0f, fy + fh * 0.5f, -fw * 0.5f), new Vector3(fw + t, fh, t), Metal, default, colliders, 0.7f, 0.6f);
         kit.Box("Firebox Back", tr, new Vector3(0f, fy + fh * 0.5f, fw * 0.5f), new Vector3(fw + t, fh, t), Metal, default, colliders, 0.7f, 0.6f);
@@ -99,6 +109,9 @@ public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHu
         kit.Cyl("Chimney", tr, new Vector3(0.55f * u, 2.9f * u, 0.75f * u), 0.16f * u, 1.1f * u, Dark, default, 0.5f, 0.5f);
         return root;
     }
+
+    /// <summary>The firebox's inner width: 1.5 model units, but at least 1.8 husk widths so a husk always drops in (the pocket model is small).</summary>
+    private static float FireboxWidth(PixelClicker clicker, float u) => Mathf.Max(1.5f * u, 1.8f * Unit(clicker));
 
     /// <summary>Sets the numbers from its Device entry (placing and loading).</summary>
     public void Init(PixelClicker owner, float powerRadius, float maxChargeSeconds, float chargePerHusk, float modelSize)
@@ -184,6 +197,34 @@ public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHu
         PixelStats.Count("generator.husks");
     }
 
+    private static readonly List<PixelHuskQuery.Husk> nearScratch = new List<PixelHuskQuery.Husk>();
+
+    /// <summary>A small suction: loose Woodcutting husks near the generator are drawn up and in towards the firebox (only while it has room for fuel).</summary>
+    private void FixedUpdate()
+    {
+        if (clicker == null || suckRadiusHusks <= 0f || suckStrength <= 0f || charge >= maxCharge || PixelCalm.InMenu || (device != null && device.IsEnding)) return;
+        float u = Unit(clicker) * size, hw = Unit(clicker), reach = suckRadiusHusks * hw + FireboxWidth(clicker, u) * 0.5f;
+        Vector3 mouth = transform.TransformPoint(new Vector3(0f, 3.2f * u + 0.6f * hw, 0f));   // (just above the firebox)
+        PixelHuskQuery.Near(clicker, transform.position, reach, nearScratch);
+        float dt = Time.fixedDeltaTime;
+        foreach (PixelHuskQuery.Husk q in nearScratch)
+        {
+            Rigidbody b = q.body;
+            if (b == null || !IsWood(b) || !PixelHuskHolder.Takeable(clicker, b)) continue;
+            Vector3 to = mouth - b.position;
+            Vector3 flat = new Vector3(to.x, 0f, to.z);
+            float d = flat.magnitude;
+            if (d > reach) continue;
+            float k = 1f - d / Mathf.Max(0.01f, reach);
+            Vector3 dv = (flat.normalized * (0.4f + 0.6f * k) + Vector3.up * (to.y > 0f ? 0.9f * k : -0.3f)) * suckStrength * hw * dt;
+#if UNITY_6000_0_OR_NEWER
+            b.linearVelocity += dv;
+#else
+            b.velocity += dv;
+#endif
+        }
+    }
+
     // ---- Every frame ----
 
     private void Update()
@@ -236,7 +277,8 @@ public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHu
     private void CatchFuel()
     {
         if (charge >= maxCharge) return;
-        float u = Unit(clicker) * size;
+        float u = Unit(clicker) * size, hw = Unit(clicker), half = FireboxWidth(clicker, u) * 0.5f + 0.3f * hw;
+        float bottom = 2.1f * u, top = 2.3f * u + 0.7f * u + 1.6f * hw;   // (from the firebox floor to a husk's height over its rim: one resting on the rim counts too)
         IReadOnlyList<Rigidbody> pixels = clicker.OldPixels;
         for (int i = pixels.Count - 1; i >= 0 && charge < maxCharge; i--)
         {
@@ -244,7 +286,7 @@ public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHu
             Rigidbody b = pixels[i];
             if (b == null) continue;
             Vector3 p = transform.InverseTransformPoint(b.position) * transform.lossyScale.x;   // (in world-size units: the root is not scaled)
-            if (Mathf.Abs(p.x) > 0.8f * u || Mathf.Abs(p.z) > 0.8f * u || p.y < 2.2f * u || p.y > 3.6f * u) continue;
+            if (Mathf.Abs(p.x) > half || Mathf.Abs(p.z) > half || p.y < bottom || p.y > top) continue;
             if (!IsWood(b) || !PixelHuskHolder.Takeable(clicker, b)) continue;
             Burn(b);
         }
