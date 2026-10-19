@@ -50,7 +50,7 @@ public static class PixelStudioSynth
             float env = Mathf.Clamp01(t / 0.08f) * (1f - Mathf.Pow(t, 3f));
             data[i] = (lp2 * 2.2f + tone) * env;
         }
-        return Finish("Studio Whoosh", data, 0.8f);
+        return Finish("Studio Whoosh", data, 0.4f);   // (2026-10-19: half as loud)
     }
 
     /// <summary>The 8-bit game over: four falling square-wave notes (G, F#, F, E) and a long low buzz.</summary>
@@ -77,7 +77,7 @@ public static class PixelStudioSynth
             }
             at += len;
         }
-        return Finish("Studio Game Over", data, 0.7f);
+        return Finish("Studio Game Over", data, 0.35f);   // (half as loud)
     }
 
     /// <summary>A seamless loop (its end is crossfaded into its start): a soft mains hum with a faint electric buzz.</summary>
@@ -101,7 +101,7 @@ public static class PixelStudioSynth
             if (i < fade) { float k = i / (float)fade; v = buf[i + fade] * k + buf[i + n] * (1f - k); }
             data[i] = v;
         }
-        return Finish("Studio Hum", data, 0.35f);
+        return Finish("Studio Hum", data, 0.18f);   // (half as loud)
     }
 
     private static float Frac(float f) => f - Mathf.Floor(f);
