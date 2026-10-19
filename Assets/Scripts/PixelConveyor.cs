@@ -277,7 +277,8 @@ public class PixelConveyor : MonoBehaviour
         }
         PixelCouplings.Ports(Try);   // couplings on devices: a belt ends at an In coupling or starts at an Out one
         foreach (PixelElevator e in PixelElevator.All) if (e != null && !e.IsGhost) e.SnapPoints(Try);
-        foreach (PixelBeltJump j in PixelBeltJump.All) if (j != null && !j.IsGhost) j.SnapPoints(Try);   // a Belt Jump's landing ramp end: a belt started there carries on after the jump   // a Conveyor Elevator: just off each side of its base and its top, at their heights
+        foreach (PixelBeltJump j in PixelBeltJump.All) if (j != null && !j.IsGhost) j.SnapPoints(Try);
+        foreach (PixelConveyorCombiner m in PixelConveyorCombiner.All) if (m != null && !m.IsGhost) m.SnapPoints(Try);   // a Conveyor Combiner's two side inlets: a feeding belt ends there   // a Belt Jump's landing ramp end: a belt started there carries on after the jump   // a Conveyor Elevator: just off each side of its base and its top, at their heights
         snapped = found;
         return result;
     }
@@ -796,6 +797,23 @@ public class PixelConveyorSystem : MonoBehaviour
             list.Add(new RiderSave { type = system.clicker.Tiers[info.tierIndex].type.ToString(), amount = info.amount, s = r.s, lane = r.lane });
         }
         return list;
+    }
+
+    /// <summary>
+    /// MERGES a husk onto a belt at distance s (the Conveyor Combiner): locked on in the middle lane if there is room there (no rider within a gap).
+    /// False = no room right now (try again later).
+    /// </summary>
+    public static bool TryMerge(PixelConveyor belt, Rigidbody rb, float s)
+    {
+        if (system == null || belt == null || rb == null || system.riding.Contains(rb)) return false;
+        s = Mathf.Clamp(s, 0f, belt.Length);
+        int lane = belt.Lanes / 2;
+        if (!system.RoomAt(belt, s, lane)) return false;
+        float half = system.clicker != null ? system.clicker.OldPixelWorldSize * 0.5f : belt.Unit * 0.5f;
+        rb.isKinematic = false;
+        rb.position = belt.LanePointAt(lane, s) + Vector3.up * (belt.SurfaceHeight + half);
+        system.Capture(rb, belt, s, lane);
+        return true;
     }
 
     /// <summary>A saved rider goes back on the belt at its place (the pixel is made again and locked on).</summary>

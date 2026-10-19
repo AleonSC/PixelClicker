@@ -209,6 +209,13 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].stageMax = PixelBeltJump.MaxWorld;
         features[features.Count - 1].export = PixelBeltJump.ExportState;
         features[features.Count - 1].import = PixelBeltJump.ImportState;
+        Register("Conveyor Combiner",
+                 "A box that sits on a conveyor belt (bring it over a belt: it snaps on, turned the belt's way). Husks on that belt pass straight through. Each side has an inlet: lay a belt that ENDS at an inlet (belts snap there, square to the main belt) and its husks are merged onto the main belt at the box whenever there is a gap - two feeds become one.",
+                 c => PixelConveyorCombiner.CreateGhost(c), (c, p, yw) => PixelConveyorCombiner.Place(c, p, yw));
+        features[features.Count - 1].placeSnap = PixelConveyorCombiner.TrySnap;
+        features[features.Count - 1].groundPlane = true;
+        features[features.Count - 1].export = PixelConveyorCombiner.ExportState;
+        features[features.Count - 1].import = PixelConveyorCombiner.ImportState;
         Register("Husk Source",
                  "A test box with a coupling socket on each side. LEFT-CLICK it to choose a block type (any type): it makes endless husks of that type out of every Out coupling that something takes them from - a belt starting at the coupling (while it has room), a machine's In coupling right in front of it, or a Container Hose pulling from it. Fit couplings on its sides first. Nothing connected = nothing made.",
                  c => PixelHuskSource.CreateGhost(c), (c, p, yw) => PixelHuskSource.Place(c, p, yw));
