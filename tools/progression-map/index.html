@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pixel Clicker Progression Map</title>
+<!--
+  Pixel Clicker - Progression Map
+  A small offline app: open this file in Edge or Chrome on Windows (or double-click "Open Progression Map.bat").
+  Tiers are columns (gated by Cubie's bill milestones); features are cards you drag between tiers.
+  Your edits save automatically in the browser; "Save file" writes a .json you can keep or share, "Open file" loads one.
+  Starting data: progression-data.js (window.PROGRESSION_SEED). No internet needed.
+-->
+<style>
+  :root {
+    --bg: #eef1f5; --surface: #ffffff; --surface2: #f6f8fb; --ink: #1b2230; --muted: #5b6577; --line: #d3d9e3;
+    --accent: #b5462e; --accent-soft: #f6e1db;
+    --idea: #7d8696; --agreed: #c47a1f; --built: #3f8a4f; --warn: #b5462e;
+    --font: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    --mono: Consolas, "Cascadia Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12161d; --surface: #1b212b; --surface2: #222935; --ink: #e6eaf1; --muted: #9aa4b5; --line: #2d3542;
+      --accent: #e0735a; --accent-soft: #3a231e; --idea: #a3abb9; --agreed: #e6a14b; --built: #6cbf7c; --warn: #e0735a;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--font); display: flex; flex-direction: column; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- toolbar ---------- */
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--line); }
+  .bar h1 { font-size: 16px; margin: 0 8px 0 0; letter-spacing: .02em; }
+  .bar h1 small { display: block; font-size: 11px; font-weight: 400; color: var(--muted); letter-spacing: .04em; }
+  .search { flex: 1 1 200px; min-width: 160px; padding: 6px 10px; border: 1px solid var(--line); background: var(--surface2); border-radius: 4px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+  .seg button { border: 0; background: transparent; padding: 6px 10px; border-right: 1px solid var(--line); }
+  .seg button:last-child { border-right: 0; }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+  .bar select { padding: 6px 8px; border: 1px solid var(--line); background: var(--surface2); border-radius: 4px; }
+  .btn { padding: 6px 12px; border: 1px solid var(--line); background: var(--surface2); border-radius: 4px; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn:hover { border-color: var(--muted); }
+  .saved { font-family: var(--mono); font-size: 12px; color: var(--muted); min-width: 70px; }
+
+  /* ---------- summary ---------- */
+  .summary { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 8px 16px; font-size: 12.5px; color: var(--muted); border-bottom: 1px solid var(--line); background: var(--surface2); }
+  .summary b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+
+  /* ---------- board ---------- */
+  .board { flex: 1; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(260px, 1fr); gap: 14px; padding: 16px; overflow-x: auto; overflow-y: hidden; }
+  .col { display: flex; flex-direction: column; min-height: 0; background: var(--surface); border: 1px solid var(--line); border-top: 5px solid var(--tier); border-radius: 4px; }
+  .colhead { padding: 12px 12px 10px; display: flex; flex-direction: column; gap: 6px; border-bottom: 1px solid var(--line); }
+  .colhead .row1 { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .colhead h2 { margin: 0; font-size: 15px; color: var(--tier); }
+  .colhead .edit { border: 0; background: transparent; color: var(--muted); font-size: 12px; padding: 2px 4px; }
+  .unlock { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+  .meta { font-size: 12px; color: var(--muted); }
+  .shop { font-size: 12.5px; background: var(--accent-soft); border-left: 3px solid var(--accent); padding: 5px 8px; }
+  .progress { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--line); }
+  .progress i { display: block; height: 100%; }
+  .counts { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .lacks { font-size: 12px; color: var(--warn); }
+  .cards { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; min-height: 60px; }
+  .cards.over { background: var(--accent-soft); }
+  .add { margin: 0 10px 10px; padding: 6px; border: 1px dashed var(--line); background: transparent; color: var(--muted); border-radius: 4px; }
+  .add:hover { color: var(--ink); border-color: var(--muted); }
+
+  .card { background: var(--surface2); border: 1px solid var(--line); border-left: 4px solid var(--st); border-radius: 4px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; cursor: grab; }
+  .card:hover { border-color: var(--muted); border-left-color: var(--st); }
+  .card.dragging { opacity: .45; }
+  .card.drop-before { box-shadow: 0 -3px 0 var(--accent); }
+  .card .name { font-weight: 600; font-size: 13.5px; }
+  .card .tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .chip { font-size: 11px; padding: 1px 6px; border-radius: 3px; background: var(--line); color: var(--ink); }
+  .session { font-size: 11px; color: var(--muted); }
+  .status { font-family: var(--mono); font-size: 11px; padding: 1px 6px; border-radius: 3px; border: 1px solid var(--st); color: var(--st); background: transparent; text-transform: uppercase; letter-spacing: .04em; }
+  .card .notes { font-size: 12px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .hidden { display: none !important; }
+
+  /* ---------- dialogs ---------- */
+  dialog { border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); padding: 0; width: min(520px, calc(100vw - 32px)); }
+  dialog::backdrop { background: rgba(10, 14, 20, .45); }
+  .dlg { padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+  .dlg h3 { margin: 0; font-size: 16px; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 12px; color: var(--muted); }
+  .field input, .field select, .field textarea { padding: 7px 9px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface2); }
+  .field textarea { min-height: 90px; resize: vertical; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+  .actions .danger { margin-right: auto; color: var(--warn); border-color: var(--warn); background: transparent; }
+  .help { font-size: 12.5px; color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+  <div class="bar">
+    <h1>Progression Map<small>Pixel Clicker · Cubie's bill tiers</small></h1>
+    <input id="search" class="search" type="search" placeholder="Search features, notes…" aria-label="Search features">
+    <div class="seg" id="statusFilter" role="group" aria-label="Filter by status">
+      <button type="button" data-status="all" aria-pressed="true">All</button>
+      <button type="button" data-status="idea" aria-pressed="false">Idea</button>
+      <button type="button" data-status="agreed" aria-pressed="false">Agreed</button>
+      <button type="button" data-status="built" aria-pressed="false">Built</button>
+    </div>
+    <select id="catFilter" aria-label="Filter by category"></select>
+    <select id="sessFilter" aria-label="Filter by session"></select>
+    <button type="button" class="btn primary" id="newBtn">New feature</button>
+    <button type="button" class="btn" id="openBtn">Open file</button>
+    <button type="button" class="btn" id="saveBtn">Save file</button>
+    <button type="button" class="btn" id="resetBtn">Reset to plan</button>
+    <span class="saved" id="savedNote" aria-live="polite"></span>
+    <input type="file" id="fileInput" accept=".json,application/json" class="hidden">
+  </div>
+  <div class="summary" id="summary"></div>
+  <main class="board" id="board" aria-label="Tiers"></main>
+
+  <dialog id="featureDlg">
+    <form class="dlg" id="featureForm" method="dialog">
+      <h3 id="featureTitle">Edit feature</h3>
+      <div class="field"><label for="fName">Name</label><input id="fName" required></div>
+      <div class="grid2">
+        <div class="field"><label for="fTier">Tier</label><select id="fTier"></select></div>
+        <div class="field"><label for="fStatus">Status</label>
+          <select id="fStatus"><option value="idea">Idea</option><option value="agreed">Agreed</option><option value="built">Built</option></select></div>
+        <div class="field"><label for="fCat">Category</label><select id="fCat"></select></div>
+        <div class="field"><label for="fSess">Session</label><select id="fSess"></select></div>
+      </div>
+      <div class="field"><label for="fNotes">Notes</label><textarea id="fNotes"></textarea></div>
+      <div class="actions">
+        <button type="button" class="btn danger" id="fDelete">Delete</button>
+        <button type="button" class="btn" id="fCancel">Cancel</button>
+        <button type="submit" class="btn primary" id="fSave">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="tierDlg">
+    <form class="dlg" id="tierForm" method="dialog">
+      <h3>Edit tier</h3>
+      <div class="field"><label for="tName">Name</label><input id="tName" required></div>
+      <div class="grid2">
+        <div class="field"><label for="tUnlock">Unlocks at</label><input id="tUnlock"></div>
+        <div class="field"><label for="tWhen">When</label><input id="tWhen"></div>
+        <div class="field"><label for="tTheme">Theme</label><input id="tTheme"></div>
+        <div class="field"><label for="tColor">Colour</label><input id="tColor" type="color"></div>
+      </div>
+      <div class="field"><label for="tShop">Cubie's shop at this tier</label><textarea id="tShop"></textarea></div>
+      <div class="actions">
+        <button type="button" class="btn" id="tCancel">Cancel</button>
+        <button type="submit" class="btn primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+<script src="progression-data.js"></script>
+<script>
+(function () {
+  "use strict";
+  var STORE_KEY = "pixelclicker.progressionMap.v1";
+  var STATUS_ORDER = ["idea", "agreed", "built"];
+  var STATUS_LABEL = { idea: "Idea", agreed: "Agreed", built: "Built" };
+
+  // ---------- data ----------
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  function seed() {
+    if (window.PROGRESSION_SEED) return clone(window.PROGRESSION_SEED);
+    return { version: 1, tiers: [], required: [], categories: [], sessions: [], features: [] };
+  }
+  function valid(d) { return d && Array.isArray(d.tiers) && Array.isArray(d.features); }
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (raw) { var d = JSON.parse(raw); if (valid(d)) return fill(d); }
+    } catch (e) { /* storage blocked or broken: fall back to the plan */ }
+    return fill(seed());
+  }
+  // Older or hand-made files may miss the lists; take them from the seed.
+  function fill(d) {
+    var s = seed();
+    d.required = d.required || s.required;
+    d.categories = d.categories || s.categories;
+    d.sessions = d.sessions || s.sessions;
+    return d;
+  }
+  var data = load();
+
+  var savedTimer = null;
+  function persist(msg) {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); note(msg || "Saved"); }
+    catch (e) { note("Not saved (browser storage blocked) - use Save file"); }
+  }
+  function note(t) {
+    var el = document.getElementById("savedNote");
+    el.textContent = t;
+    clearTimeout(savedTimer);
+    savedTimer = setTimeout(function () { el.textContent = ""; }, 2500);
+  }
+  function nextId() {
+    var max = 0;
+    data.features.forEach(function (f) { var n = parseInt(String(f.id).replace(/\D/g, ""), 10); if (n > max) max = n; });
+    return "f" + (max + 1);
+  }
+  function tierById(id) { for (var i = 0; i < data.tiers.length; i++) if (data.tiers[i].id === id) return data.tiers[i]; return null; }
+  function featById(id) { for (var i = 0; i < data.features.length; i++) if (data.features[i].id === id) return data.features[i]; return null; }
+  function statusColor(s) { return "var(--" + (STATUS_ORDER.indexOf(s) >= 0 ? s : "idea") + ")"; }
+
+  // ---------- filters ----------
+  var filter = { text: "", status: "all", cat: "", sess: "" };
+  function matches(f) {
+    if (filter.status !== "all" && f.status !== filter.status) return false;
+    if (filter.cat && f.category !== filter.cat) return false;
+    if (filter.sess && f.session !== filter.sess) return false;
+    if (filter.text) {
+      var hay = (f.name + " " + (f.notes || "") + " " + f.category + " " + (f.session || "")).toLowerCase();
+      if (hay.indexOf(filter.text) < 0) return false;
+    }
+    return true;
+  }
+  function fillSelect(sel, items, allLabel) {
+    sel.innerHTML = "";
+    if (allLabel) { var a = document.createElement("option"); a.value = ""; a.textContent = allLabel; sel.appendChild(a); }
+    items.forEach(function (it) {
+      var o = document.createElement("option");
+      if (typeof it === "string") { o.value = it; o.textContent = it; } else { o.value = it.id; o.textContent = it.name; }
+      sel.appendChild(o);
+    });
+  }
+
+  // ---------- render ----------
+  var board = document.getElementById("board");
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+  function render() {
+    board.innerHTML = "";
+    data.tiers.forEach(function (t) { board.appendChild(renderColumn(t)); });
+    renderSummary();
+  }
+
+  function renderColumn(t) {
+    var col = el("section", "col");
+    col.style.setProperty("--tier", t.color || "var(--muted)");
+    col.setAttribute("aria-label", t.name);
+
+    var head = el("div", "colhead");
+    var row = el("div", "row1");
+    row.appendChild(el("h2", null, t.name));
+    var edit = el("button", "edit", "Edit");
+    edit.type = "button";
+    edit.title = "Edit this tier";
+    edit.addEventListener("click", function () { openTier(t.id); });
+    row.appendChild(edit);
+    head.appendChild(row);
+    head.appendChild(el("span", "unlock", t.unlock || ""));
+    head.appendChild(el("span", "meta", [t.theme, t.when].filter(Boolean).join(" · ")));
+    if (t.shop) head.appendChild(el("div", "shop", "Cubie's shop: " + t.shop));
+
+    var feats = data.features.filter(function (f) { return f.tier === t.id; });
+    var c = { idea: 0, agreed: 0, built: 0 };
+    feats.forEach(function (f) { if (c[f.status] != null) c[f.status]++; });
+    var total = feats.length || 1;
+    var bar = el("div", "progress");
+    bar.title = c.built + " built, " + c.agreed + " agreed, " + c.idea + " ideas";
+    STATUS_ORDER.slice().reverse().forEach(function (s) {
+      var i = el("i"); i.style.width = (c[s] / total * 100) + "%"; i.style.background = statusColor(s); bar.appendChild(i);
+    });
+    head.appendChild(bar);
+    head.appendChild(el("span", "counts", feats.length + " features · " + c.built + " built · " + c.agreed + " agreed · " + c.idea + " ideas"));
+    var missing = t.checkCoverage === false ? [] : (data.required || []).filter(function (cat) { return !feats.some(function (f) { return f.category === cat; }); });
+    if (missing.length) head.appendChild(el("span", "lacks", "Lacks: " + missing.join(", ")));
+    col.appendChild(head);
+
+    var list = el("div", "cards");
+    list.dataset.tier = t.id;
+    feats.forEach(function (f) { var card = renderCard(f); if (!matches(f)) card.classList.add("hidden"); list.appendChild(card); });
+    wireDrop(list);
+    col.appendChild(list);
+
+    var add = el("button", "add", "+ Add feature");
+    add.type = "button";
+    add.addEventListener("click", function () { openFeature(null, t.id); });
+    col.appendChild(add);
+    return col;
+  }
+
+  function renderCard(f) {
+    var card = el("article", "card");
+    card.style.setProperty("--st", statusColor(f.status));
+    card.draggable = true;
+    card.tabIndex = 0;
+    card.dataset.id = f.id;
+    card.setAttribute("aria-label", f.name + ", " + STATUS_LABEL[f.status] + ". Press Enter to edit.");
+    card.appendChild(el("div", "name", f.name));
+    var tags = el("div", "tags");
+    var st = el("button", "status", STATUS_LABEL[f.status] || f.status);
+    st.type = "button";
+    st.title = "Click to change status";
+    st.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var i = STATUS_ORDER.indexOf(f.status);
+      f.status = STATUS_ORDER[(i + 1) % STATUS_ORDER.length];
+      persist(); render();
+    });
+    tags.appendChild(st);
+    tags.appendChild(el("span", "chip", f.category));
+    if (f.session) tags.appendChild(el("span", "session", f.session));
+    card.appendChild(tags);
+    if (f.notes) card.appendChild(el("div", "notes", f.notes));
+    card.addEventListener("click", function () { openFeature(f.id); });
+    card.addEventListener("keydown", function (e) { if (e.key === "Enter") openFeature(f.id); });
+    card.addEventListener("dragstart", function (e) {
+      e.dataTransfer.setData("text/plain", f.id);
+      e.dataTransfer.effectAllowed = "move";
+      card.classList.add("dragging");
+    });
+    card.addEventListener("dragend", function () { card.classList.remove("dragging"); clearDropMarks(); });
+    return card;
+  }
+
+  function clearDropMarks() {
+    document.querySelectorAll(".drop-before").forEach(function (n) { n.classList.remove("drop-before"); });
+    document.querySelectorAll(".cards.over").forEach(function (n) { n.classList.remove("over"); });
+  }
+  // The visible card the pointer is above (the dragged card is dropped before it), or null for the end.
+  function cardAfter(list, y) {
+    var cards = Array.prototype.filter.call(list.querySelectorAll(".card:not(.dragging):not(.hidden)"), function () { return true; });
+    for (var i = 0; i < cards.length; i++) {
+      var r = cards[i].getBoundingClientRect();
+      if (y < r.top + r.height / 2) return cards[i];
+    }
+    return null;
+  }
+  function wireDrop(list) {
+    list.addEventListener("dragover", function (e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      clearDropMarks();
+      list.classList.add("over");
+      var after = cardAfter(list, e.clientY);
+      if (after) after.classList.add("drop-before");
+    });
+    list.addEventListener("dragleave", function (e) { if (!list.contains(e.relatedTarget)) list.classList.remove("over"); });
+    list.addEventListener("drop", function (e) {
+      e.preventDefault();
+      var id = e.dataTransfer.getData("text/plain");
+      var f = featById(id);
+      if (!f) return;
+      var after = cardAfter(list, e.clientY);
+      var beforeId = after ? after.dataset.id : null;
+      var from = data.features.indexOf(f);
+      data.features.splice(from, 1);
+      f.tier = list.dataset.tier;
+      var to;
+      if (beforeId) { to = data.features.indexOf(featById(beforeId)); }
+      else {
+        // after the last feature of this tier
+        to = -1;
+        for (var i = 0; i < data.features.length; i++) if (data.features[i].tier === f.tier) to = i;
+        to = to + 1;
+        if (to === 0) to = data.features.length;
+      }
+      data.features.splice(to, 0, f);
+      clearDropMarks();
+      persist("Moved to " + (tierById(f.tier) || {}).name);
+      render();
+    });
+  }
+
+  function renderSummary() {
+    var s = document.getElementById("summary");
+    var c = { idea: 0, agreed: 0, built: 0 };
+    data.features.forEach(function (f) { if (c[f.status] != null) c[f.status]++; });
+    var shown = data.features.filter(matches).length;
+    s.innerHTML = "";
+    function item(label, n, color) {
+      var span = el("span");
+      if (color) { var d = el("i", "dot"); d.style.background = color; span.appendChild(d); }
+      span.appendChild(document.createTextNode(label + " "));
+      span.appendChild(el("b", null, String(n)));
+      s.appendChild(span);
+    }
+    item("Features", data.features.length);
+    item("Built", c.built, statusColor("built"));
+    item("Agreed", c.agreed, statusColor("agreed"));
+    item("Ideas", c.idea, statusColor("idea"));
+    if (shown !== data.features.length) item("Showing", shown);
+    var tip = el("span", null, "Drag cards between tiers · click a status to change it · click a card to edit");
+    s.appendChild(tip);
+  }
+
+  // ---------- feature dialog ----------
+  var fDlg = document.getElementById("featureDlg");
+  var editingId = null;
+  function openFeature(id, tierId) {
+    editingId = id;
+    var f = id ? featById(id) : { name: "", tier: tierId || data.tiers[0].id, category: data.categories[0], status: "idea", session: "", notes: "" };
+    document.getElementById("featureTitle").textContent = id ? "Edit feature" : "New feature";
+    fillSelect(document.getElementById("fTier"), data.tiers);
+    fillSelect(document.getElementById("fCat"), data.categories);
+    fillSelect(document.getElementById("fSess"), data.sessions, "(none)");
+    document.getElementById("fName").value = f.name;
+    document.getElementById("fTier").value = f.tier;
+    document.getElementById("fCat").value = f.category;
+    document.getElementById("fStatus").value = f.status;
+    document.getElementById("fSess").value = f.session || "";
+    document.getElementById("fNotes").value = f.notes || "";
+    document.getElementById("fDelete").classList.toggle("hidden", !id);
+    fDlg.showModal();
+    document.getElementById("fName").focus();
+  }
+  document.getElementById("featureForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = document.getElementById("fName").value.trim();
+    if (!name) { document.getElementById("fName").focus(); return; }
+    var vals = {
+      name: name,
+      tier: document.getElementById("fTier").value,
+      category: document.getElementById("fCat").value,
+      status: document.getElementById("fStatus").value,
+      session: document.getElementById("fSess").value,
+      notes: document.getElementById("fNotes").value.trim()
+    };
+    if (editingId) { var f = featById(editingId); Object.keys(vals).forEach(function (k) { f[k] = vals[k]; }); }
+    else { vals.id = nextId(); data.features.push(vals); }
+    fDlg.close();
+    persist(editingId ? "Saved" : "Added");
+    render();
+  });
+  document.getElementById("fCancel").addEventListener("click", function () { fDlg.close(); });
+  document.getElementById("fDelete").addEventListener("click", function () {
+    var f = featById(editingId);
+    if (!f || !window.confirm("Delete \"" + f.name + "\"?")) return;
+    data.features.splice(data.features.indexOf(f), 1);
+    fDlg.close();
+    persist("Deleted");
+    render();
+  });
+
+  // ---------- tier dialog ----------
+  var tDlg = document.getElementById("tierDlg");
+  var editingTier = null;
+  function openTier(id) {
+    editingTier = id;
+    var t = tierById(id);
+    document.getElementById("tName").value = t.name || "";
+    document.getElementById("tUnlock").value = t.unlock || "";
+    document.getElementById("tWhen").value = t.when || "";
+    document.getElementById("tTheme").value = t.theme || "";
+    document.getElementById("tColor").value = /^#[0-9a-f]{6}$/i.test(t.color || "") ? t.color : "#7d8696";
+    document.getElementById("tShop").value = t.shop || "";
+    tDlg.showModal();
+  }
+  document.getElementById("tierForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var t = tierById(editingTier);
+    t.name = document.getElementById("tName").value.trim() || t.name;
+    t.unlock = document.getElementById("tUnlock").value.trim();
+    t.when = document.getElementById("tWhen").value.trim();
+    t.theme = document.getElementById("tTheme").value.trim();
+    t.color = document.getElementById("tColor").value;
+    t.shop = document.getElementById("tShop").value.trim();
+    tDlg.close();
+    persist();
+    render();
+  });
+  document.getElementById("tCancel").addEventListener("click", function () { tDlg.close(); });
+
+  // ---------- toolbar ----------
+  document.getElementById("search").addEventListener("input", function (e) { filter.text = e.target.value.trim().toLowerCase(); render(); });
+  document.querySelectorAll("#statusFilter button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      filter.status = b.dataset.status;
+      document.querySelectorAll("#statusFilter button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      render();
+    });
+  });
+  var catSel = document.getElementById("catFilter"), sessSel = document.getElementById("sessFilter");
+  fillSelect(catSel, data.categories, "All categories");
+  fillSelect(sessSel, data.sessions, "All sessions");
+  catSel.addEventListener("change", function () { filter.cat = catSel.value; render(); });
+  sessSel.addEventListener("change", function () { filter.sess = sessSel.value; render(); });
+  document.getElementById("newBtn").addEventListener("click", function () { openFeature(null); });
+
+  // Save: the system "Save as" dialog where the browser offers it (Edge / Chrome), else a normal download.
+  document.getElementById("saveBtn").addEventListener("click", function () {
+    var text = JSON.stringify(data, null, 2);
+    var name = "pixel-clicker-progression.json";
+    if (window.showSaveFilePicker) {
+      window.showSaveFilePicker({ suggestedName: name, types: [{ description: "Progression map", accept: { "application/json": [".json"] } }] })
+        .then(function (h) { return h.createWritable(); })
+        .then(function (w) { return w.write(text).then(function () { return w.close(); }); })
+        .then(function () { note("File saved"); })
+        .catch(function (err) { if (err && err.name !== "AbortError") download(text, name); });
+    } else download(text, name);
+  });
+  function download(text, name) {
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+    a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    note("Downloaded " + name);
+  }
+  var fileInput = document.getElementById("fileInput");
+  document.getElementById("openBtn").addEventListener("click", function () { fileInput.value = ""; fileInput.click(); });
+  fileInput.addEventListener("change", function () {
+    var file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    var r = new FileReader();
+    r.onload = function () {
+      try {
+        var d = JSON.parse(r.result);
+        if (!valid(d)) throw new Error("not a progression map");
+        data = fill(d);
+        fillSelect(catSel, data.categories, "All categories");
+        fillSelect(sessSel, data.sessions, "All sessions");
+        persist("Opened " + file.name);
+        render();
+      } catch (e) { window.alert("That file isn't a progression map (" + e.message + ")."); }
+    };
+    r.readAsText(file);
+  });
+  document.getElementById("resetBtn").addEventListener("click", function () {
+    if (!window.confirm("Replace the map with the original plan from progression-data.js? Your edits are lost unless you saved a file.")) return;
+    data = seed();
+    persist("Reset to plan");
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

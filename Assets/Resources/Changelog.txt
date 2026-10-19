@@ -1450,3 +1450,4 @@
 [2026-10-19 13:14 UTC] Model Editor: a search box narrows the model list, and parts are now changed with sliders (position, rotation, scale, colour hue / saturation / brightness) instead of number boxes.
 [2026-10-19 13:43 UTC] Less work per hit: the bursts of gathering blocks, electric / Obsidian sparks and arcs, ore chips, the Fire burst, treasure chests and meteor hits reuse a small set of particle effects instead of building new ones every click.
 [2026-10-19 13:45 UTC] Code cleanup: the 3D pictures in the Log, Pixel Guide, shop rows and shop Operation tab now come from the two shared picture helpers instead of their own copies, and the click pop shares the one particle-effect pool.
+[2026-10-19 14:25 UTC] Added the Progression Map (tools/progression-map): a small offline Windows-friendly app where the tiers of Cubie's bill are columns and features are cards you drag between them, with statuses, filters, coverage warnings and save / open files.
