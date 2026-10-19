@@ -152,6 +152,26 @@ public class PixelLook
     [Tooltip("Sideways speed it picks up when it starts to float away.")]
     public float floatDriftSpeed = 2.5f;
 
+    [Header("Falling like a leaf")]
+    [Tooltip("The husk falls like a leaf: it swings back and forth like a pendulum, tilting into each swing, sinking fastest through the middle of a swing and slowing at its ends, until it first touches something (OldPixelFlutter).")]
+    public bool flutter = false;
+
+    [Min(0f)]
+    [Tooltip("How far each swing goes to either side (husk widths).")]
+    public float flutterSwing = 1.6f;
+
+    [Min(0.1f)]
+    [Tooltip("Seconds for one full back-and-forth swing.")]
+    public float flutterPeriod = 1.6f;
+
+    [Range(0f, 80f)]
+    [Tooltip("How far the husk tilts into each swing (degrees).")]
+    public float flutterTilt = 35f;
+
+    [Min(0f)]
+    [Tooltip("Average fall speed while it flutters (husk widths per second).")]
+    public float flutterFallSpeed = 2.2f;
+
     [Header("Colour-blind mark")]
     [Range(0, 32)]
     [Tooltip("Colour-blind support (Settings): draws a flat shape on every face - 3 = triangle, 4 = square, 32 = circle. 0 = none. Only shown while the colour-blind setting is on.")]
@@ -565,7 +585,7 @@ public static class PixelLooks
             new PixelLook { type = PixelClicker.PixelType.Sap, useColor = true, color = new Color(1f, 0.72f, 0.2f, 0.75f), forceTranslucent = true, metallic = 0f, smoothness = 0.95f, emission = 0.25f,
                             customPhysics = true, bounce = 0f, friction = 1.4f, gravityMultiplier = 1f, wobble = true, wobbleAmount = 0.08f, farmFx = PixelLook.FarmAmbient.Sap },
             new PixelLook { type = PixelClicker.PixelType.Leaf, useColor = true, color = Color.white, metallic = 0f, smoothness = 0.05f, blockSurface = PixelLook.BlockSurface.LeafBlock,
-                            customPhysics = true, bounce = 0.3f, friction = 0.6f, gravityMultiplier = 0.25f, farmFx = PixelLook.FarmAmbient.Leaves },
+                            customPhysics = true, bounce = 0.3f, friction = 0.6f, gravityMultiplier = 0.25f, farmFx = PixelLook.FarmAmbient.Leaves, flutter = true },
             new PixelLook { type = PixelClicker.PixelType.Heartwood, customPhysics = true, bounce = 0.05f, friction = 0.9f, gravityMultiplier = 1f, useColor = true, color = new Color(1f, 0.62f, 0.5f, 1f), metallic = 0.15f, smoothness = 0.55f, emission = 0.35f, shine = true,
                             blockSurface = PixelLook.BlockSurface.Wood, blob = true,
                             outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.04f, outlineShadeOfTier = true, outlineShade = -0.4f, outlineStrength = 0.8f,

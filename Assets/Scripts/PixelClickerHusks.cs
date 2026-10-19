@@ -773,6 +773,8 @@ public partial class PixelClicker
                 }
                 if (styled.gravityWell)
                     copy.AddComponent<OldPixelGravityWell>().Setup(this, styled);
+                if (styled.flutter)
+                    copy.AddComponent<OldPixelFlutter>().Setup(OldPixelWorldSize, styled.flutterSwing, styled.flutterPeriod, styled.flutterTilt, styled.flutterFallSpeed);
                 if (styled.floatAway)
                     copy.AddComponent<OldPixelFloat>().Setup(this, styled.floatAfterBounces, styled.floatLift, styled.floatDriftSpeed);
                 if (styled.splash)

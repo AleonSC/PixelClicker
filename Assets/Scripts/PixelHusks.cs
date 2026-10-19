@@ -3,7 +3,8 @@
 //   Small helper components that ride on HUSKS (the pixels that drop off the cube; code calls them old pixels), split out of PixelClicker.cs:
 //   ScaledGravity (gravity scale per body; skips sleeping husks so heaps can sleep - see docs/systems/PixelRules.md 'Husks settle'), OldPixelImpact (landing sound / pulse), OldPixelPopIn (pop-in animation), OldPixelFlight
 //   (fly-away marker), OldPixelDespawn (lifetime, swell-and-shrink despawn, Frozen / HoldAll for black holes and takeovers),
-//   OldPixelInfo (what tier a husk is, its amount, held-by-player tag). PixelClicker adds them in SpawnFallingCopy.
+//   OldPixelInfo (what tier a husk is, its amount, held-by-player tag), OldPixelFlutter (Leaf husks fall like a leaf: pendulum swing + tilt
+//   until the first touch; PixelLook.flutter / flutterSwing / flutterPeriod / flutterTilt / flutterFallSpeed, Leaf on since looksVersion 65). PixelClicker adds them in SpawnFallingCopy.
 //   ScaledGravity, OldPixelImpact, OldPixelPopIn and OldPixelDespawn have no Update / FixedUpdate of their own: they register with PixelHuskTicker
 //   while enabled and it calls their Tick (one loop for every husk instead of one engine call per husk per helper).
 // ---------------------------------------------------
@@ -38,6 +39,95 @@ public class ScaledGravity : MonoBehaviour, IHuskTick
         // Anything that touches it (another husk, a grab, Magnet, Fan, suction, its support taken away) wakes it and gravity resumes.
         if (body != null && !body.isKinematic && !body.IsSleeping())
             body.AddForce(Physics.gravity * scale, ForceMode.Acceleration);
+    }
+}
+
+/// <summary>
+/// A husk that falls like a leaf (PixelLook.flutter, the Leaf husk): it swings back and forth like a pendulum along a random heading,
+/// tilting into each swing, sinking fastest through the middle of a swing and slowing (even lifting a touch) at its ends. The burst's
+/// sideways throw fades out over the first half second. It stops for good the first time it touches anything solid, when it is grabbed,
+/// made kinematic (a machine took it) or after a long time, and from then on it is an ordinary husk. Once per physics step (PixelHuskTicker).
+/// </summary>
+public class OldPixelFlutter : MonoBehaviour, IHuskTick
+{
+    private Rigidbody body;
+    private OldPixelInfo info;
+    private Vector3 heading;              // the swing's direction (flat)
+    private Vector3 throwVelocity;        // the burst's sideways throw, fading out
+    private float swing, omega, tilt, fall, phase, started;
+    private bool done;
+
+    private const float MaxSeconds = 20f;    // safety: never flutter longer than this
+    private const float Steer = 8f;          // how quickly the velocity follows the swing (higher = stiffer)
+
+    public void Setup(float unit, float swingWidths, float period, float tiltDegrees, float fallWidths)
+    {
+        body = GetComponent<Rigidbody>();
+        info = GetComponent<OldPixelInfo>();
+        float a = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
+        heading = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+        swing = Mathf.Max(0f, swingWidths) * unit;
+        omega = Mathf.PI * 2f / Mathf.Max(0.1f, period);
+        tilt = tiltDegrees * Mathf.Deg2Rad;
+        fall = Mathf.Max(0f, fallWidths) * unit;
+        phase = UnityEngine.Random.Range(0f, Mathf.PI * 2f);   // leaves don't all swing in step
+        started = Time.time;
+        if (body != null)
+        {
+            Vector3 v = Vel();
+            throwVelocity = new Vector3(v.x, 0f, v.z);
+        }
+    }
+
+    private void OnEnable() { if (!done) PixelHuskTicker.AddPhysics(this); }
+    private void OnDisable() => PixelHuskTicker.RemovePhysics(this);
+
+    private void OnCollisionEnter(Collision c) { if (!c.collider.isTrigger) Stop(); }
+
+    private void Stop()
+    {
+        if (done) return;
+        done = true;
+        PixelHuskTicker.RemovePhysics(this);
+    }
+
+    public void Tick()
+    {
+        if (done) return;
+        if (body == null || body.isKinematic || (info != null && info.heldByPlayer) || Time.time - started > MaxSeconds) { Stop(); return; }
+        float dt = Time.fixedDeltaTime;
+        float t = (Time.time - started) * omega + phase;
+        float c = Mathf.Cos(t);
+
+        // Pendulum: sideways speed peaks mid-swing (x = swing * sin, v = swing * omega * cos); it sinks fastest there and slows / lifts a touch at the ends.
+        throwVelocity *= Mathf.Exp(-dt * 4f);
+        Vector3 side = heading * (swing * omega * c) + throwVelocity;
+        float down = fall * (1.6f * c * c - 0.15f);
+        Vector3 target = new Vector3(side.x, -down, side.z);
+        Vector3 v = Vel();
+        SetVel(Vector3.Lerp(v, target, 1f - Mathf.Exp(-Steer * dt)));
+
+        // Tilt into the swing: the angle follows -tilt * cos (leading edge dips as it speeds up), so its rate is tilt * omega * sin, about the axis across the swing.
+        Vector3 across = Vector3.Cross(Vector3.up, heading);
+        body.angularVelocity = across * (tilt * omega * Mathf.Sin(t));
+    }
+
+    private Vector3 Vel()
+    {
+#if UNITY_6000_0_OR_NEWER
+        return body.linearVelocity;
+#else
+        return body.velocity;
+#endif
+    }
+
+    private void SetVel(Vector3 v)
+    {
+#if UNITY_6000_0_OR_NEWER
+        body.linearVelocity = v;
+#else
+        body.velocity = v;
+#endif
     }
 }
 

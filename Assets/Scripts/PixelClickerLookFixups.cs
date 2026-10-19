@@ -801,5 +801,13 @@ public partial class PixelClicker
             looks = list64.ToArray();
             looksVersion = 64;
         }
+
+        if (looksVersion < 65)
+        {
+            // Leaf husks float down like leaves (swing back and forth as they fall): switch 'flutter' on in the saved Leaf look.
+            PixelLook leaf65 = PixelLooks.Find(looks ?? new PixelLook[0], PixelType.Leaf);
+            if (leaf65 != null) leaf65.flutter = true;
+            looksVersion = 65;
+        }
     }
 }
