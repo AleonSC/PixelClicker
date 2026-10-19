@@ -50,6 +50,7 @@ public class PixelFeatureTester : MonoBehaviour
         public Func<PixelClicker, Vector3, Vector3, GameObject> placeLine;
         public Action<GameObject, Vector3, Vector3> updatePreview;
         public SnapFunc snap;
+        public Func<Vector3, Vector3, string> lineCheck;   // two-point features: why a piece from a to b can't be placed (null = it can) - the conveyor's turn limit
         // Tall features (the Conveyor Elevator): after the base is clicked the mouse sets the HEIGHT, a second click confirms.
         public bool heightStage;
         public bool groundPlane;      // placed on the flat ground level, not on whatever the mouse ray hits (belts, towers, the Junction Box)
@@ -145,6 +146,7 @@ public class PixelFeatureTester : MonoBehaviour
                      "Click a point, then another: a belt is built between them (the second point starts the next piece, so short pieces make a curve; right click ends the chain, right click again stops). Clicks near a belt's end (or an elevator's top) snap to it, at its height. SCROLL the mouse wheel to raise or lower the point you are placing: the belt's supports grow and the belt slopes, so ramps and bridges are possible. Right click a placed belt to reverse it. Anything standing on a belt is carried along - drop things on it with Pixel Grabbing, or put it under a machine's outlet.",
                      c => PixelConveyor.CreateMarker(c), c => PixelConveyor.CreatePreview(c), (g, a, b) => PixelConveyor.UpdatePreview(g, a, b),
                      (c, a, b) => PixelConveyor.Place(c, a, b), PixelConveyor.Snap);
+        features[features.Count - 1].lineCheck = PixelConveyor.TurnProblem;
         features[features.Count - 1].export = PixelConveyor.ExportState;
         features[features.Count - 1].import = PixelConveyor.ImportState;
         RegisterRoute("Container Hose",
@@ -725,7 +727,8 @@ public class PixelFeatureTester : MonoBehaviour
         Vector3 p = hasPoint ? placing.snap(clicker, elevated, out snapped) : elevated;
         if (placing.route) { UpdateRoute(hasPoint, p, snapped, groundY, unit); return; }
         if (hasStart) p = PixelConveyor.ClampEnd(lineStart, p);
-        string text = "Scroll: raise / lower the belt supports. Height " + (lineElev / unit).ToString("0.0") + " cubes" + (snapped ? "  (snapped to an end)" : "");
+        string problem = hasStart && hasPoint && placing.lineCheck != null ? placing.lineCheck(lineStart, p) : null;
+        string text = problem != null ? problem + " - pick a gentler angle" : "Scroll: raise / lower the belt supports. Height " + (lineElev / unit).ToString("0.0") + " cubes" + (snapped ? "  (snapped to an end)" : "");
         if (statusLabel != null && text != lastElevText) { statusLabel.text = text; lastElevText = text; }
         if (!hasStart)
         {
@@ -733,8 +736,8 @@ public class PixelFeatureTester : MonoBehaviour
         }
         else
         {
-            if (previewGhost != null && hasPoint) placing.updatePreview(previewGhost, lineStart, p);
-            else if (previewGhost != null) previewGhost.SetActive(false);
+            if (previewGhost != null && hasPoint && problem == null) { previewGhost.SetActive(true); placing.updatePreview(previewGhost, lineStart, p); }
+            else if (previewGhost != null) previewGhost.SetActive(false);   // (too sharp a turn: no preview, it can't be placed)
         }
         if (Time.frameCount == placeStartFrame) return;
         if (hasPoint && PixelInput.LeftPressed())
@@ -748,6 +751,7 @@ public class PixelFeatureTester : MonoBehaviour
                 if (previewGhost == null) previewGhost = placing.preview(clicker);
                 Refresh();
             }
+            else if (problem != null) { PixelHints.Announce(problem); PixelAudio.Play("ui_click"); }
             else
             {
                 GameObject go = placing.placeLine(clicker, lineStart, p);
