@@ -18,6 +18,8 @@ public class PixelSortingHopperWindow : MonoBehaviour
     private static void ResetStatics() { instance = null; }
 
     private PixelSortingHopper hopper;
+    private int output;   // which output's filter is being picked (0 = front, into the host; 1..3 = left, right, back)
+    private TMP_Text title;
     private PixelClicker clicker;
     private TMP_FontAsset font;
     private GameObject panel;
@@ -34,7 +36,7 @@ public class PixelSortingHopperWindow : MonoBehaviour
     public static bool IsOpen => instance != null && instance.panel != null && instance.panel.activeSelf;
 
     /// <summary>Opens the picker for this hopper (or switches the open picker to it).</summary>
-    public static void Open(PixelSortingHopper h)
+    public static void Open(PixelSortingHopper h, int output = 0)
     {
         if (h == null) return;
         if (instance == null)
@@ -50,6 +52,8 @@ public class PixelSortingHopperWindow : MonoBehaviour
             PixelWindows.Register(instance, 60, () => IsOpen, Close);
         }
         instance.hopper = h;
+        instance.output = output;
+        if (instance.title != null) instance.title.text = (h.OutputCount > 1 ? PixelSortingHopper.OutputName(output) + " filter" : "Select filter").ToUpperInvariant();
         instance.panel.SetActive(true);
         instance.Refresh();
     }
@@ -78,7 +82,8 @@ public class PixelSortingHopperWindow : MonoBehaviour
     {
         PixelWindowParts parts = PixelUIKit.CreateWindow(font, transform, "Panel", "Select filter", new Vector2(Width, Height), PixelUIKit.WindowKind.Fixed, Close);
         panel = parts.Root;
-        TMP_Text hint = PixelUIKit.CreateText(font, panel.transform, "Hint", "This type goes into the Recycler; every other type drops out of the bottom spout.",
+        title = parts.Title;
+        TMP_Text hint = PixelUIKit.CreateText(font, panel.transform, "Hint", "Husks of this type leave through this output; types no output filters drop out of the bottom spout.",
                                               22f, TextAlignmentOptions.Center, FontStyles.Italic, PixelUITheme.DimTextColor);
         Place(hint.rectTransform, new Vector2(Pad, -parts.HeaderHeight - 4f), new Vector2(Width - 2f * Pad, 56f));
         float top = parts.HeaderHeight + 70f;
@@ -124,7 +129,7 @@ public class PixelSortingHopperWindow : MonoBehaviour
         GameObject go = new GameObject("Tile", typeof(RectTransform), typeof(Image));
         go.transform.SetParent(gridContent, false);
         Image bg = go.GetComponent<Image>();
-        bool selected = tier == hopper.FilterTier;
+        bool selected = tier == hopper.FilterOf(output);
         bg.color = selected ? PixelUITheme.ColorOf(ButtonRole.Selected) : new Color(0f, 0f, 0f, 0.25f);
         PixelUIKit.StyleBox(bg, true);
         Place(go.GetComponent<RectTransform>(), new Vector2((index % Columns) * (TileW + Gap), -(index / Columns) * (TileH + Gap)), new Vector2(TileW, TileH));
@@ -142,6 +147,6 @@ public class PixelSortingHopperWindow : MonoBehaviour
         Place(t.rectTransform, new Vector2(4f, tier >= 0 ? -92f : -(TileH - 34f) * 0.5f), new Vector2(TileW - 8f, 34f));
         PixelUIKit.FitOneLine(t, 11f);
         int pick = tier;
-        PixelUIKit.MakeClickable(go, () => { if (hopper != null) hopper.SetFilter(pick); Close(); }, true, false);
+        PixelUIKit.MakeClickable(go, () => { if (hopper != null) hopper.SetFilter(output, pick); Close(); }, true, false);
     }
 }

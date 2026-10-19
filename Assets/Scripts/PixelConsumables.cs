@@ -772,7 +772,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         {
             kind = DeviceKind.SortingHopper,
             displayName = "Sorting Hopper",
-            description = "A big funnel that stands behind a Recycler and holds up to 20 husks dropped into it. Right-click it and press Select filter: that type goes into the Recycler, one after another (so the streak builds); every other husk drops out of its bottom spout. It stays until you remove it.",
+            description = "A big funnel that stands behind a Recycler and holds up to 20 husks dropped into it. Right-click it and press Select filter: that type goes into the Recycler, one after another (so the streak builds); every other husk drops out of its bottom spout. The Outputs upgrade adds side pipes (left, right, back), each with its own filter. It stays until you remove it.",
             requiredType = PixelClicker.PixelType.White,
             costs = new[]
             {
@@ -2265,6 +2265,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             case PixelOperationStat.RecyclerSuction: return PixelRecycler.DefaultSuctionRadius;
             case PixelOperationStat.Speed: return kind == DeviceKind.Recycler ? PixelRecycler.DefaultRecycleDelay : kind == DeviceKind.SortingHopper ? PixelSortingHopper.DefaultFeedInterval : 0f;
             case PixelOperationStat.Size: return kind == DeviceKind.SortingHopper ? 1f : 0f;
+            case PixelOperationStat.Outputs: return kind == DeviceKind.SortingHopper ? 1f : 0f;   // (the front feed pipe; each level adds a side pipe)
             case PixelOperationStat.BaitGhosts:
             {
                 PixelGhostMinigame ghosts = PixelFind.First<PixelGhostMinigame>();

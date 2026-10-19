@@ -53,6 +53,8 @@ public enum PixelOperationStat
     Speed = 13,
     /// <summary>A device's size factor (the Sorting Hopper; the Recycler's size uses Radius).</summary>
     Size = 14,
+    /// <summary>Extra outputs on a device (the Sorting Hopper's side pipes: +1 a level).</summary>
+    Outputs = 15,
 }
 
 /// <summary>
@@ -140,6 +142,7 @@ public class PixelOperationUpgrade
             U("rec_size", "Size", "A bigger bin: it catches more husks, holds more and its suction reaches further round it.", Y, PixelOperationStat.Radius, 5, 0.135f, 80, "x"),
             U("hop_speed", "Speed", "Husks leave the Sorting Hopper faster (into the Recycler or out of its bottom spout).", H, PixelOperationStat.Speed, 5, -0.05f, 60, " s"),
             U("hop_size", "Size", "A bigger funnel: a wider bowl catches more husks.", H, PixelOperationStat.Size, 5, 0.12f, 80, "x"),
+            U("hop_outputs", "Outputs", "One more output pipe a level (left side, right side, then the back), each with its own filter - up to four outputs.", H, PixelOperationStat.Outputs, 3, 1f, 150, "", 2.2f),
         };
     }
 }

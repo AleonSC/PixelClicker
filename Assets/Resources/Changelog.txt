@@ -1437,3 +1437,4 @@
 [2026-10-19 01:27 UTC] Design + to-do: Build mode with a free cam from the first placement (Cubie's Recycler), a build bar of owned placeables, and a mid-game socket / coupling view when the factory unlocks; first person stays a later reveal.
 [2026-10-19 08:41 UTC] To-do: vendor orders - vendors post delivery orders (e.g. 50 Wood Chips in 10 minutes) filled by belt or tube to a delivery pad for big rewards, a reason to build a factory.
 [2026-10-19 08:44 UTC] Pixel rules + to-do: currency comes from the cube, husks from clicks and products from machines - machine chains make products (a body, no currency), with to-do items for a Product item kind and for moving Wood Chips and Charcoal over.
+[2026-10-19 11:01 UTC] Sorting Hopper: new Operation upgrade 'Outputs' (3 levels) adds a side output pipe per level - left, right, then back - each with its own filter picked from the device panel; husks of a side filter's type drop out of that pipe.
