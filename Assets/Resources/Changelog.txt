@@ -1436,3 +1436,4 @@
 [2026-10-19 01:21 UTC] To-do: a Consumables tab button that opens a window of 3D views of the consumables.
 [2026-10-19 01:27 UTC] Design + to-do: Build mode with a free cam from the first placement (Cubie's Recycler), a build bar of owned placeables, and a mid-game socket / coupling view when the factory unlocks; first person stays a later reveal.
 [2026-10-19 08:41 UTC] To-do: vendor orders - vendors post delivery orders (e.g. 50 Wood Chips in 10 minutes) filled by belt or tube to a delivery pad for big rewards, a reason to build a factory.
+[2026-10-19 08:44 UTC] Pixel rules + to-do: currency comes from the cube, husks from clicks and products from machines - machine chains make products (a body, no currency), with to-do items for a Product item kind and for moving Wood Chips and Charcoal over.
