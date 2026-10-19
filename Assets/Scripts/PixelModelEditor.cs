@@ -6,7 +6,8 @@
 //     another system adds with PixelModelEditor.Register(name, build). It is built in a hidden studio (PixelModelPicture) and shown in the viewport:
 //     DRAG to turn it, mouse WHEEL to zoom.
 //   * The PARTS list (every piece of the model, indented by depth): click one to select it - it blinks in the viewport for a moment.
-//     Edit its Position / Rotation / Scale (local, three number boxes each; Enter or leaving the box applies) and its Colour (hex, e.g. #FF8800).
+//     SLIDERS edit it: Position (X / Y / Z, about the model's size either way from where it was when picked), Rotation (-180..180), Scale (0..3x)
+//     and Colour (hue / saturation / brightness); each shows its value beside it. A SEARCH box narrows the model drop-down.
 //     Buttons: Hide / Show, Delete (Restore brings it back), Duplicate, Add Cube / Sphere / Cylinder (a new piece inside the selected one), Reset
 //     (rebuilds the model as the code makes it).
 //   * SAVE writes the report - only what changed: CHANGED (old -> new values), HIDDEN, DELETED, ADDED (type, parent, values) - to
@@ -58,8 +59,13 @@ public class PixelModelEditor : MonoBehaviour
     private ScrollRect partsScroll;
     private GameObject partsBar;
     private TMP_Text selectedLabel, status;
-    private readonly TMP_InputField[] posBoxes = new TMP_InputField[3], rotBoxes = new TMP_InputField[3], scaleBoxes = new TMP_InputField[3];
-    private TMP_InputField colorBox;
+    // Sliders for the selected part: [0..2] position X/Y/Z, [3..5] rotation, [6..8] scale, [9..11] colour hue / saturation / brightness.
+    private readonly Slider[] sliders = new Slider[12];
+    private readonly TMP_Text[] sliderValues = new TMP_Text[12];
+    private bool settingSliders;
+    private float modelRadius = 1f;
+    private TMP_InputField searchBox;
+    private readonly List<int> shownSources = new List<int>();
     private Button hideButton, deleteButton;
     private bool built, visible;
 
@@ -106,9 +112,16 @@ public class PixelModelEditor : MonoBehaviour
     {
         built = true;
         Label(root, "Model", 10f, 8f, 80f, 40f, FontSize, TextColor);
-        modelDropdown = Dropdown(root, "Model", 90f, 8f, 360f, 40f);
-        Button(root, "Load", 458f, 8f, 110f, 40f, Green, () => Load(PixelUIKit.Original(sourceMap, modelDropdown.value)));
-        Button(root, "Reset", 576f, 8f, 114f, 40f, ButtonColor, () => Load(sourceIndex));
+        searchBox = Input(root, "Search", 90f, 8f, 200f, 40f, "Search...");
+        PixelUIKit.AddSearchIcon(searchBox);
+        searchBox.onValueChanged.AddListener(_ => FillDropdown());
+        PixelDevTools.Tip(searchBox.gameObject, "Type part of a name to narrow the list of models (e.g. 'recyc', 'wood').");
+        modelDropdown = Dropdown(root, "Model", 298f, 8f, 280f, 40f);
+        Button(root, "Load", 586f, 8f, 104f, 40f, Green, () =>
+        {
+            int pick = PixelUIKit.Original(sourceMap, modelDropdown.value);
+            if (pick >= 0 && pick < shownSources.Count) Load(shownSources[pick]);
+        });
 
         // Viewport (drag to turn, wheel to zoom).
         GameObject vp = new GameObject("Viewport", typeof(RectTransform), typeof(RawImage));
@@ -137,24 +150,25 @@ public class PixelModelEditor : MonoBehaviour
         // The selected part.
         selectedLabel = Label(root, "Pick a part in the list", 10f, 398f, 680f, 32f, FontSize, Accent);
         selectedLabel.fontStyle = FontStyles.Bold;
-        string[] rows = { "Position", "Rotation", "Scale" };
-        TMP_InputField[][] boxes = { posBoxes, rotBoxes, scaleBoxes };
-        for (int r = 0; r < 3; r++)
+        string[] rows = { "Position", "Rotation", "Scale", "Colour" };
+        string[][] axes = { new[] { "X", "Y", "Z" }, new[] { "X", "Y", "Z" }, new[] { "X", "Y", "Z" }, new[] { "Hue", "Sat", "Bri" } };
+        for (int r = 0; r < 4; r++)
         {
             float y = 436f + r * 46f;
-            Label(root, rows[r], 10f, y, 120f, 40f, FontSize, TextColor);
+            Label(root, rows[r], 10f, y, 110f, 40f, FontSize, TextColor);
             for (int a = 0; a < 3; a++)
             {
-                TMP_InputField f = Input(root, rows[r] + " " + "XYZ"[a], 140f + a * 140f, y, 130f, 40f, "XYZ"[a].ToString());
-                f.contentType = TMP_InputField.ContentType.Standard;
-                f.onEndEdit.AddListener(_ => ApplyBoxes());
-                boxes[r][a] = f;
+                int index = r * 3 + a;
+                float x = 120f + a * 190f;
+                Label(root, axes[r][a], x, y, 44f, 40f, FontSize - 4f, DimText);
+                Slider sl = PixelUIKit.CreateSlider(root, rows[r] + " " + axes[r][a], Box, Accent, TextColor);
+                PlaceTL(sl.GetComponent<RectTransform>(), x + 40f, y + 4f, 96f, 32f);
+                sl.onValueChanged.AddListener(_ => { if (!settingSliders) ApplySliders(index); });
+                sliders[index] = sl;
+                sliderValues[index] = Label(root, "", x + 138f, y, 52f, 40f, FontSize - 6f, TextColor);
             }
         }
-        Label(root, "Colour", 10f, 574f, 120f, 40f, FontSize, TextColor);
-        colorBox = Input(root, "Colour", 140f, 574f, 270f, 40f, "#RRGGBB");
-        colorBox.onEndEdit.AddListener(_ => ApplyColor());
-        PixelDevTools.Tip(colorBox.gameObject, "The part's colour as a hex code (#FF8800). Parts with no colour of their own (pivots) ignore it.");
+        PixelDevTools.Tip(sliders[0].gameObject, "Position: each slider moves the part along one axis, up to about the model's size either way from where it was when you picked it.");
 
         hideButton = Button(root, "Hide", 10f, 626f, 160f, 42f, ButtonColor, ToggleHide);
         deleteButton = Button(root, "Delete", 180f, 626f, 160f, 42f, Red, ToggleDelete);
@@ -162,9 +176,11 @@ public class PixelModelEditor : MonoBehaviour
         Button(root, "Add cube", 10f, 676f, 160f, 42f, ButtonColor, () => AddPrimitive(PrimitiveType.Cube));
         Button(root, "Add sphere", 180f, 676f, 160f, 42f, ButtonColor, () => AddPrimitive(PrimitiveType.Sphere));
         Button(root, "Add cylinder", 350f, 676f, 170f, 42f, ButtonColor, () => AddPrimitive(PrimitiveType.Cylinder));
-        Button(root, "Save changes", 530f, 626f, 160f, 92f, Green, Save);
+        Button(root, "Reset model", 530f, 626f, 160f, 42f, ButtonColor, () => Load(sourceIndex));
+        Button(root, "Save changes", 530f, 676f, 160f, 42f, Green, Save);
         status = WrapText(root, "Status", 10f, 726f, 680f, 50f, 17f, DimText);
         status.text = "Load a model, pick a part, change it, then Save: the report goes to the ModelEdits folder and the clipboard for Claude.";
+        ShowSelected();   // (nothing picked yet: the sliders start greyed out)
     }
 
     private int[] sourceMap;
@@ -190,10 +206,25 @@ public class PixelModelEditor : MonoBehaviour
                 sources.Add(new KeyValuePair<string, Func<Transform, GameObject>>("Block: " + clicker.Tiers[t].displayName, parent => clicker.CreateDisplayPixel(tier, parent, 1f)));
             }
         sources.AddRange(extraSources);
+        FillDropdown();
+    }
+
+    /// <summary>The drop-down lists the models whose name contains the search text (all of them when it is empty).</summary>
+    private void FillDropdown()
+    {
+        string find = searchBox != null ? (searchBox.text ?? "").Trim().ToLowerInvariant() : "";
+        shownSources.Clear();
         List<string> labels = new List<string>();
-        foreach (var s in sources) labels.Add(s.Key);
+        for (int i = 0; i < sources.Count; i++)
+        {
+            if (find.Length > 0 && !sources[i].Key.ToLowerInvariant().Contains(find)) continue;
+            shownSources.Add(i);
+            labels.Add(sources[i].Key);
+        }
         modelDropdown.ClearOptions();
-        sourceMap = PixelUIKit.AddSortedOptions(modelDropdown, labels);
+        if (labels.Count == 0) { modelDropdown.options.Add(new TMP_Dropdown.OptionData("(no model matches)")); sourceMap = null; }
+        else sourceMap = PixelUIKit.AddSortedOptions(modelDropdown, labels);
+        modelDropdown.SetValueWithoutNotify(0);
         modelDropdown.RefreshShownValue();
     }
 
@@ -215,6 +246,9 @@ public class PixelModelEditor : MonoBehaviour
         zoom = 1f;
         if (model == null) { status.text = "That model could not be built here (it may need the game to be further along)."; RebuildPartList(); return; }
         foreach (Transform t in model.GetComponentsInChildren<Transform>(true)) originals[t] = TakeSnap(t);
+        Bounds bounds = new Bounds(model.position, Vector3.zero);
+        foreach (Renderer rr in model.GetComponentsInChildren<Renderer>(true)) bounds.Encapsulate(rr.bounds);
+        modelRadius = Mathf.Max(0.25f, bounds.extents.magnitude);   // (how far the position sliders reach)
         RebuildPartList();
         ShowSelected();
         status.text = "Loaded " + sources[index].Key + " (" + (originals.Count - 1) + " parts).";
@@ -303,14 +337,22 @@ public class PixelModelEditor : MonoBehaviour
     {
         bool on = selected != null;
         selectedLabel.text = on ? PathOf(selected) : "Pick a part in the list";
+        // Each slider's range is set round the part's values as they are now: position +- about the model's size, rotation -180..180, scale 0..3x.
+        settingSliders = true;
+        Renderer r = on ? selected.GetComponent<Renderer>() : null;
+        bool colored = r != null && r.sharedMaterial != null;
+        float span = Mathf.Max(0.25f, modelRadius);
         for (int a = 0; a < 3; a++)
         {
-            posBoxes[a].SetTextWithoutNotify(on ? F(selected.localPosition[a]) : "");
-            rotBoxes[a].SetTextWithoutNotify(on ? F(selected.localEulerAngles[a]) : "");
-            scaleBoxes[a].SetTextWithoutNotify(on ? F(selected.localScale[a]) : "");
+            SetSlider(a, on, on ? selected.localPosition[a] - span : -1f, on ? selected.localPosition[a] + span : 1f, on ? selected.localPosition[a] : 0f);
+            SetSlider(3 + a, on, -180f, 180f, on ? Mathf.DeltaAngle(0f, selected.localEulerAngles[a]) : 0f);
+            float sc = on ? selected.localScale[a] : 1f;
+            SetSlider(6 + a, on, 0.01f, Mathf.Max(0.1f, Mathf.Abs(sc) * 3f), sc);
         }
-        Renderer r = on ? selected.GetComponent<Renderer>() : null;
-        colorBox.SetTextWithoutNotify(r != null && r.sharedMaterial != null ? "#" + ColorUtility.ToHtmlStringRGB(ColorOf(r.sharedMaterial)) : "");
+        Color.RGBToHSV(colored ? ColorOf(r.sharedMaterial) : Color.white, out float h, out float sat, out float v);
+        SetSlider(9, colored, 0f, 1f, h); SetSlider(10, colored, 0f, 1f, sat); SetSlider(11, colored, 0f, 1f, v);
+        settingSliders = false;
+        RefreshSliderValues();
         if (hideButton != null) hideButton.GetComponentInChildren<TMP_Text>().text = on && !selected.gameObject.activeSelf && !deleted.Contains(selected) ? "Show" : "Hide";
         if (deleteButton != null) deleteButton.GetComponentInChildren<TMP_Text>().text = on && deleted.Contains(selected) ? "Restore" : "Delete";
     }
@@ -319,33 +361,47 @@ public class PixelModelEditor : MonoBehaviour
     // Editing
     // ------------------------------------------------------------------
 
-    private void ApplyBoxes()
+    private void SetSlider(int i, bool on, float min, float max, float value)
+    {
+        Slider sl = sliders[i];
+        sl.interactable = on;
+        sl.minValue = min;
+        sl.maxValue = Mathf.Max(min + 0.0001f, max);
+        sl.SetValueWithoutNotify(Mathf.Clamp(value, sl.minValue, sl.maxValue));
+    }
+
+    /// <summary>A slider moved: its row's values go onto the selected part (position / rotation / scale, or the colour from hue / saturation / brightness).</summary>
+    private void ApplySliders(int index)
     {
         if (selected == null) return;
-        selected.localPosition = ReadBoxes(posBoxes, selected.localPosition);
-        selected.localEulerAngles = ReadBoxes(rotBoxes, selected.localEulerAngles);
-        selected.localScale = ReadBoxes(scaleBoxes, selected.localScale);
+        int row = index / 3;
+        Vector3 v = new Vector3(sliders[row * 3].value, sliders[row * 3 + 1].value, sliders[row * 3 + 2].value);
+        if (row == 0) selected.localPosition = v;
+        else if (row == 1) selected.localEulerAngles = v;
+        else if (row == 2) selected.localScale = v;
+        else
+        {
+            Renderer r = selected.GetComponent<Renderer>();
+            if (r != null)
+            {
+                Color c = Color.HSVToRGB(v.x, v.y, v.z);
+                Material m = r.material;   // (its own copy, so other parts sharing the material keep theirs)
+                if (m.HasProperty("_BaseColor")) { c.a = m.GetColor("_BaseColor").a; m.SetColor("_BaseColor", c); }
+                if (m.HasProperty("_Color")) { c.a = m.GetColor("_Color").a; m.SetColor("_Color", c); }
+            }
+        }
+        RefreshSliderValues();
         PixelModelPicture.MarkDirty(Key);
     }
 
-    private static Vector3 ReadBoxes(TMP_InputField[] boxes, Vector3 current)
+    private void RefreshSliderValues()
     {
-        for (int a = 0; a < 3; a++)
-            if (float.TryParse(boxes[a].text.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out float v)) current[a] = v;
-        return current;
-    }
-
-    private void ApplyColor()
-    {
-        if (selected == null) return;
-        Renderer r = selected.GetComponent<Renderer>();
-        string hex = colorBox.text.Trim();
-        if (!hex.StartsWith("#")) hex = "#" + hex;
-        if (r == null || !ColorUtility.TryParseHtmlString(hex, out Color c)) { status.text = "Colour: write a hex code like #FF8800 (only parts that are drawn have a colour)."; return; }
-        Material m = r.material;   // (its own copy, so other parts sharing the material keep theirs)
-        if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", c);
-        if (m.HasProperty("_Color")) m.SetColor("_Color", c);
-        PixelModelPicture.MarkDirty(Key);
+        for (int i = 0; i < 12; i++)
+        {
+            if (sliderValues[i] == null) continue;
+            if (!sliders[i].interactable) { sliderValues[i].text = ""; continue; }
+            sliderValues[i].text = i >= 9 ? Mathf.RoundToInt(sliders[i].value * 100f) + "%" : i >= 3 && i < 6 ? Mathf.RoundToInt(sliders[i].value) + "°" : F(sliders[i].value);
+        }
     }
 
     private void ToggleHide()
