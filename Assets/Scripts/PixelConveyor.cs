@@ -343,9 +343,105 @@ public class PixelConveyor : MonoBehaviour
             ribs.Add(chev.transform);
         }
         BuildSupports(k, steel);
+        RecordTrimParts();
+        ApplyTrims();
         ApplySelection();
         PlaceRibs();
     }
+
+    // ---------------- corner trims (2026-10-19) ----------------
+    // At a corner the two belts overlap on the INSIDE of the turn: the inner rail / frame / trim of each would run across the other belt. The corner
+    // joint (PixelConveyorJoint) tells each belt how far to cut them back at that end (SetTrim) and the end roller there is hidden; the chevrons stop short.
+
+    private float trimMin, trimMax;          // how far the inner side is cut back at the a end (belt-local -z) / the b end (+z)
+    private int trimMinSide, trimMaxSide;    // which side is the inner one at that end (belt-local x sign; 0 = no trim)
+    private struct TrimPart { public Transform t; public Vector3 pos, scale; public int side, end; public bool stretch; }   // end: -1 a end, +1 b end, 0 along
+    private readonly List<TrimPart> trimParts = new List<TrimPart>();
+
+    /// <summary>The belt this one's exit corner trimmed (cleared again when the corner goes).</summary>
+    public PixelConveyor TrimmedNext { get; set; }
+
+    private void RecordTrimParts()
+    {
+        trimParts.Clear();
+        for (int i = 0; i < transform.childCount; i++)
+        {
+            Transform c = transform.GetChild(i);
+            string n = c.name;
+            bool stretch = n == "Rail L" || n == "Rail R" || n == "Frame" || n == "Trim";
+            bool bolt = n == "Bolt", roller = n == "Roller A" || n == "Roller B" || n == "Roller Cap";
+            if (!stretch && !bolt && !roller) continue;
+            int side = Mathf.Abs(c.localPosition.x) < 0.001f ? 0 : (c.localPosition.x > 0f ? 1 : -1);
+            int end = roller ? (c.localPosition.z > 0f ? 1 : -1) : 0;
+            trimParts.Add(new TrimPart { t = c, pos = c.localPosition, scale = c.localScale, side = side, end = end, stretch = stretch });
+        }
+    }
+
+    /// <summary>Cuts the inner side back at the exit (atExit) or start end: 'innerWorld' = the inside of the turn (world, flat), 'amount' = how far. 0 clears it.</summary>
+    public void SetTrim(bool atExit, Vector3 innerWorld, float amount)
+    {
+        bool maxEnd = atExit != reversed;   // (the exit is the b end unless the belt is reversed)
+        int side = amount <= 0f ? 0 : (Vector3.Dot(innerWorld, transform.right) >= 0f ? 1 : -1);
+        amount = Mathf.Clamp(amount, 0f, length * 0.9f);
+        if (maxEnd) { if (trimMax == amount && trimMaxSide == side) return; trimMax = amount; trimMaxSide = side; }
+        else { if (trimMin == amount && trimMinSide == side) return; trimMin = amount; trimMinSide = side; }
+        ApplyTrims();
+        PlaceRibs();
+    }
+
+    private void ApplyTrims()
+    {
+        foreach (TrimPart p in trimParts)
+        {
+            if (p.t == null) continue;
+            if (p.end != 0)   // a roller (or its caps) at a cut end: hidden, it would sit across the other belt
+            {
+                bool cut = p.end < 0 ? trimMinSide != 0 : trimMaxSide != 0;
+                if (p.t.gameObject.activeSelf == cut) p.t.gameObject.SetActive(!cut);
+                continue;
+            }
+            float lo = -length * 0.5f - 1f, hi = length * 0.5f + 1f;   // (where this side may reach)
+            if (p.side != 0 && trimMinSide == p.side) lo = -length * 0.5f + trimMin;
+            if (p.side != 0 && trimMaxSide == p.side) hi = length * 0.5f - trimMax;
+            if (p.stretch)
+            {
+                float z0 = Mathf.Max(p.pos.z - p.scale.z * 0.5f, lo), z1 = Mathf.Min(p.pos.z + p.scale.z * 0.5f, hi);
+                bool show = z1 - z0 > 0.01f * unit;
+                if (p.t.gameObject.activeSelf != show) p.t.gameObject.SetActive(show);
+                if (!show) continue;
+                p.t.localScale = new Vector3(p.scale.x, p.scale.y, z1 - z0);
+                p.t.localPosition = new Vector3(p.pos.x, p.pos.y, (z0 + z1) * 0.5f);
+            }
+            else
+            {
+                bool show = p.pos.z > lo && p.pos.z < hi;   // (a bolt past the cut is hidden)
+                if (p.t.gameObject.activeSelf != show) p.t.gameObject.SetActive(show);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Placing: why a belt from 'from' to 'to' can't go there (null = it can): it would turn more sharply than MaxTurnDegrees against a belt ending at
+    /// 'from' or a belt starting at 'to'.
+    /// </summary>
+    public static string TurnProblem(Vector3 from, Vector3 to)
+    {
+        Vector3 d = to - from; d.y = 0f;
+        if (d.sqrMagnitude < 1e-6f) return null;
+        d.Normalize();
+        float max = PixelConveyorSystem.MaxTurnDegrees;
+        foreach (PixelConveyor c in all)
+        {
+            if (c == null || c.ghostMode) continue;
+            float r = c.unit * 0.45f;
+            Vector3 e = c.ExitPoint, s = c.StartPoint;
+            if (Flat(e - from) < r && Mathf.Abs(e.y - from.y) < r && Vector3.Angle(c.Direction, d) > max) return "Too sharp a turn (more than " + Mathf.RoundToInt(max) + " degrees)";
+            if (Flat(s - to) < r && Mathf.Abs(s.y - to.y) < r && Vector3.Angle(d, c.Direction) > max) return "Too sharp a turn (more than " + Mathf.RoundToInt(max) + " degrees)";
+        }
+        return null;
+    }
+
+    private static float Flat(Vector3 v) { v.y = 0f; return v.magnitude; }
 
     /// <summary>Posts under a raised belt, from the floor up to the belt's underside: at both ends and every few cube widths between (they stay upright however the belt slopes).</summary>
     private void BuildSupports(PixelFactoryKit k, Color steel)
@@ -379,7 +475,7 @@ public class PixelConveyor : MonoBehaviour
             float t = Mathf.Repeat(ribOffset + i * ribSpacing, ribs.Count * ribSpacing);
             float z = -length * 0.5f + t;
             if (z > length * 0.5f) z -= ribs.Count * ribSpacing;
-            bool visible = z > -length * 0.5f + 0.05f * unit && z < length * 0.5f - 0.05f * unit;
+            bool visible = z > -length * 0.5f + 0.05f * unit + (trimMinSide != 0 ? trimMin : 0f) && z < length * 0.5f - 0.05f * unit - (trimMaxSide != 0 ? trimMax : 0f);   // (not over the next belt at a corner)
             ribs[i].gameObject.SetActive(visible);
             ribs[i].localPosition = new Vector3(0f, 0f, reversed ? -z : z);
         }
@@ -402,6 +498,11 @@ public class PixelConveyor : MonoBehaviour
     {
         reversed = !reversed;
         PixelConveyorSystem.OnFlipped(this);   // riders turn round with it
+        trimMin = trimMax = 0f; trimMinSide = trimMaxSide = 0;   // (its corners are worked out again: the ends swapped)
+        if (TrimmedNext != null) { TrimmedNext.SetTrim(false, Vector3.zero, 0f); TrimmedNext = null; }
+        ApplyTrims();
+        jointKey = null;
+        nextJointCheck = 0f;
         PlaceRibs();
         PixelAudio.Play("device_place", 1.3f);
     }
@@ -511,6 +612,14 @@ public class PixelConveyorSystem : MonoBehaviour
     }
 
     [Header("Player on a belt (first person)")]
+    [Header("Placing")]
+    [Range(30f, 180f)]
+    [Tooltip("The sharpest turn allowed between two chained belts, in degrees (135 = the belts must meet at 45 degrees or more; 90 = square corners at most). A sharper piece can't be placed.")]
+    [SerializeField] private float maxTurnDegrees = 135f;
+
+    /// <summary>The sharpest turn allowed between chained belts (degrees).</summary>
+    public static float MaxTurnDegrees => system != null ? system.maxTurnDegrees : 135f;
+
     [Min(0f)]
     [Tooltip("How strongly a belt carries the player, as a fraction of the belt's speed (1 = the belt's own speed). 0 = the coded default (1).")]
     [SerializeField] private float playerPull = 0f;
