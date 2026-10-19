@@ -1458,3 +1458,4 @@
 [2026-10-19 17:21 UTC] Reversing a single conveyor piece with a right click now keeps its rounded corners (corners follow where belts meet, not which way they run), and a reversed piece's arrows turn light blue instead of yellow.
 [2026-10-19 17:22 UTC] A conveyor belt end on a machine's coupling now gets a solid box round it (roof, sides, framed mouth, dark tunnel back) reaching into the machine's wall and tinted like the machine, with the coupling's flange hidden underneath, so the belt runs seamlessly into the machine.
 [2026-10-19 17:30 UTC] The Conveyor Elevator no longer needs belts lined up with fixed holes: it links itself to belt ends, machines' Out couplings and Belt Sorter chutes near its base and to the nearest belt start or In coupling near its top, builds a short trough to each, and belts snap round its base and top.
+[2026-10-19 17:40 UTC] Shop: the Junction Box is now on sale in Utilities (300 Gray + 200 Black), next to the Conveyor Belt Kit.

@@ -232,7 +232,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         ContainerHose = 24,
         /// <summary>Placed, permanent: a wind-up clockwork cube (PixelSweeper) that fetches husks close to fading into the nearest Storage Crate / Sorting Hopper / Recycler with room. On sale from Standard level 5.</summary>
         Sweeper = 25,
-        /// <summary>Placed, permanent: a box with eight auto-direction coupling sockets (PixelJunctionBox) that routes husks from its In couplings to its Out ones (filters, round robin, a small buffer). Not on sale yet (Shops session).</summary>
+        /// <summary>Placed, permanent: a box with eight auto-direction coupling sockets (PixelJunctionBox) that routes husks from its In couplings to its Out ones (filters, round robin, a small buffer). On sale in the shop's Utilities (2026-10-19).</summary>
         JunctionBox = 26,
         /// <summary>Placed: a small Biomass Generator (PixelBiomassGenerator) - burns Woodcutting husks to power every device in its radius (their timers stop). Shop Consumables.</summary>
         PocketBiomassGenerator = 27,
@@ -503,7 +503,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     [Tooltip("Add the default Vacuum Device if the list has none (e.g. when this component was added before devices existed).")]
     [SerializeField] private bool addDefaultDevices = true;
 
-    [SerializeField, HideInInspector] private int consumablePriceVersion;   // 1 = the 2026-10-17 repricing (2-3 pure colours per item; see ResetDefaultDevicePrices), 2 = the 2026-10-18 dev-only items
+    [SerializeField, HideInInspector] private int consumablePriceVersion;   // 1 = the 2026-10-17 repricing (2-3 pure colours per item; see ResetDefaultDevicePrices), 2 = the 2026-10-18 dev-only items, 3 = Conveyor Belt Kit for everyone, 4 = Junction Box on sale
 
     [Header("Prices")]
     [Tooltip("Potion and device prices paid in a pixel type are multiplied by that pixel's Value upgrade multiplier, so they stay worth the same as its payout grows. Off = the prices typed above, always.")]
@@ -1075,7 +1075,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             displayName = "Junction Box",
             description = "A box with eight coupling sockets, two on each side, and an opening on top that gently draws in husks just above it. Fit couplings and connect belts or hoses: a belt or hose bringing husks in makes that coupling an IN, one taking husks away makes it an OUT. Husks that go in are taken apart and new ones come out: they are shared out in turn between the outputs - or sent to the output whose FILTER is their type (drop a husk on a coupling, or click / scroll it, to set its filter). When no output can take a husk it waits in a small buffer. A Sorting Hopper can latch onto its back. It stays until you remove it.",
             requiredType = PixelClicker.PixelType.White,
-            costs = new[]   // (placeholder: the price and unlock are the Shops session's call - monochrome, as machines are)
+            costs = new[]   // (a machine, so monochrome: ~3.5 min of Gray, 2.5 of Black at early income)
             {
                 new PixelShop.PackCost { type = PixelClicker.PixelType.Gray, amount = 300 },
                 new PixelShop.PackCost { type = PixelClicker.PixelType.Black, amount = 200 },
@@ -1086,7 +1086,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             color = new Color(0.22f, 0.36f, 0.42f, 1f),
             bodyDiameter = 2f,
             bodyHeight = 1.3f,
-            vendorOnly = true,   // not on sale anywhere yet: the Shops session sets its price and unlock (Dev Hub > Tester > Junction Box places one)
+            // (2026-10-19: on sale in the shop's Utilities for everyone; Dev Hub > Tester > Junction Box still places one too)
             placingMessage = "Scroll or Q / E to turn the {0}, click the floor to place it  (right-click to cancel)",
         };
     }
@@ -1560,6 +1560,14 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
                 d.requiredType = fresh.requiredType; d.costs = fresh.costs; d.description = fresh.description;
             }
             consumablePriceVersion = 3;
+            added = true;
+        }
+        if (consumablePriceVersion < 4 && devices != null)
+        {
+            // 2026-10-19: the Junction Box goes on sale (Utilities): saved entries lose the 'vendor only' placeholder.
+            foreach (Device d in devices)
+                if (d != null && d.kind == DeviceKind.JunctionBox) { d.vendorOnly = false; d.devOnly = false; d.costs = CreateDefaultJunctionBox().costs; }
+            consumablePriceVersion = 4;
             added = true;
         }
 
