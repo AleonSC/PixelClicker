@@ -53,6 +53,12 @@ public class PixelFeatureTester : MonoBehaviour
         public Func<Vector3, Vector3, string> lineCheck;   // two-point features: why a piece from a to b can't be placed (null = it can) - the conveyor's turn limit
         // Tall features (the Conveyor Elevator): after the base is clicked the mouse sets the HEIGHT, a second click confirms.
         public bool heightStage;
+        // Scroll stage (the Belt Jump): stage 2 sets a value with the SCROLL WHEEL instead of the mouse height (stageValue / setStageValue, in stageStep steps
+        // between stageMin and stageMax); requireSnap = stage 1 can only be clicked while the ghost is snapped (placeSnap returned true).
+        public bool scrollStage, requireSnap;
+        public Func<GameObject, float> stageValue, stageStep, stageMin, stageMax;
+        public Action<GameObject, float> setStageValue;
+        public string stageLabel = "gap";
         public bool groundPlane;      // placed on the flat ground level, not on whatever the mouse ray hits (belts, towers, the Junction Box)
         public Func<PixelClicker, Vector3, float, float, GameObject> placeTall;
         public readonly List<GameObject> placed = new List<GameObject>();
@@ -187,6 +193,22 @@ public class PixelFeatureTester : MonoBehaviour
                  c => PixelJunctionBox.CreateGhost(c), (c, p, yw) => { PixelConsumables pc = PixelFind.Cached<PixelConsumables>(); return pc != null ? pc.PlaceDeviceNow(PixelConsumables.DeviceKind.JunctionBox, p, yw) : null; });
         features[features.Count - 1].groundPlane = true;
         features[features.Count - 1].live = PixelJunctionBox.Placed;   // (saved and removed as a placed device, not by the tester)
+        Register("Belt Jump",
+                 "A pair of ramps for a conveyor line. Bring it to the END of a belt: it snaps on there (it can only go on a belt end). Click, then SCROLL to widen or narrow the gap - the landing ramp always sits straight across. Click to confirm. Husks reaching the belt's end are launched over the gap in the same arc every time and slide off the landing ramp onto a belt that starts there (belts snap to its end).",
+                 c => PixelBeltJump.CreateGhost(c), (c, p, yw) => PixelBeltJump.PlaceGap(c, p, yw, PixelBeltJump.DefaultGapCubes * Mathf.Max(0.05f, c.OldPixelWorldSize)));
+        features[features.Count - 1].placeSnap = PixelBeltJump.TrySnap;
+        features[features.Count - 1].heightStage = true;
+        features[features.Count - 1].scrollStage = true;
+        features[features.Count - 1].requireSnap = true;
+        features[features.Count - 1].groundPlane = true;
+        features[features.Count - 1].placeTall = PixelBeltJump.PlaceGap;
+        features[features.Count - 1].stageValue = PixelBeltJump.GapOf;
+        features[features.Count - 1].setStageValue = PixelBeltJump.SetGap;
+        features[features.Count - 1].stageStep = PixelBeltJump.StepWorld;
+        features[features.Count - 1].stageMin = PixelBeltJump.MinWorld;
+        features[features.Count - 1].stageMax = PixelBeltJump.MaxWorld;
+        features[features.Count - 1].export = PixelBeltJump.ExportState;
+        features[features.Count - 1].import = PixelBeltJump.ImportState;
         Register("Kiln",
                  "A brick kiln with a glowing mouth on its front. Anything that goes into the mouth from the side burns (lead a conveyor belt into it, or throw things in): each burnt pixel makes a Charcoal old pixel that comes out of the chute at the back. Charcoal despawns like any old pixel, for now.",
                  c => PixelKiln.CreateGhost(c), (c, p, yw) => PixelKiln.Place(c, p, yw));
@@ -838,17 +860,24 @@ public class PixelFeatureTester : MonoBehaviour
     private Vector3 stagePoint;
     private float stageYaw;
 
-    private void UpdateHeightStage(bool hasPoint, Vector3 point, float useYaw)
+    private void UpdateHeightStage(bool hasPoint, Vector3 point, float useYaw, bool snapped)
     {
         if (!stageActive)
         {
             if (PixelKeys.Held(PixelAction.RotateLeft)) yaw -= 120f * Time.unscaledDeltaTime;
             if (PixelKeys.Held(PixelAction.RotateRight)) yaw += 120f * Time.unscaledDeltaTime;
+            if (placing.requireSnap && ghost != null) ghost.SetActive(hasPoint && snapped);   // (only shown where it can go)
+            if (placing.requireSnap && statusLabel != null)
+            {
+                string t = snapped ? "Click to put it on this belt's end." : "Bring it to the END of a conveyor belt - it snaps on there.";
+                if (t != lastElevText) { statusLabel.text = t; lastElevText = t; }
+            }
             if (Time.frameCount == placeStartFrame) return;
-            if (hasPoint && PixelInput.LeftPressed()) { stageActive = true; stagePoint = point; stageYaw = useYaw; Refresh(); }
+            if (hasPoint && PixelInput.LeftPressed() && (!placing.requireSnap || snapped)) { stageActive = true; stagePoint = point; stageYaw = useYaw; Refresh(); }
             else if (PixelInput.RightPressed()) StopPlacing();
             return;
         }
+        if (placing.scrollStage) { UpdateScrollStage(); return; }
         // Stage 2: the base stays; the mouse sets the height (its ray cut with a vertical plane through the base, facing the camera).
         if (ghost != null)
         {
@@ -883,6 +912,37 @@ public class PixelFeatureTester : MonoBehaviour
         else if (PixelInput.RightPressed()) { stageActive = false; Refresh(); }
     }
 
+    /// <summary>Stage 2 of a scroll-stage feature (the Belt Jump): it stays where it snapped; the scroll wheel sets its value (the gap); click confirms.</summary>
+    private void UpdateScrollStage()
+    {
+        if (ghost != null)
+        {
+            ghost.SetActive(true);
+            ghost.transform.SetPositionAndRotation(stagePoint, Quaternion.Euler(0f, stageYaw, 0f));
+            float wheel = PixelInput.ScrollY();
+            if (Mathf.Abs(wheel) > 0.01f && placing.setStageValue != null && placing.stageValue != null)
+            {
+                float step = placing.stageStep != null ? placing.stageStep(ghost) : 0.5f;
+                float v = placing.stageValue(ghost) + Mathf.Sign(wheel) * step;
+                if (placing.stageMin != null) v = Mathf.Max(v, placing.stageMin(ghost));
+                if (placing.stageMax != null) v = Mathf.Min(v, placing.stageMax(ghost));
+                placing.setStageValue(ghost, v);
+            }
+            float shown = placing.stageValue != null ? placing.stageValue(ghost) : 0f;
+            string text = "Scroll to set the " + placing.stageLabel + " (" + (shown / clicker.OldPixelWorldSize).ToString("0.0") + " cubes), click to confirm, right click to go back.";
+            if (statusLabel != null && text != lastElevText) { statusLabel.text = text; lastElevText = text; }
+        }
+        if (Time.frameCount == placeStartFrame) return;
+        if (PixelInput.LeftPressed() && !PixelInput.PointerOverUI() && ghost != null)
+        {
+            GameObject go = placing.placeTall(clicker, stagePoint, stageYaw, placing.stageValue != null ? placing.stageValue(ghost) : 0f);
+            if (go != null) placing.placed.Add(go);
+            stageActive = false;
+            Refresh();
+        }
+        else if (PixelInput.RightPressed()) { stageActive = false; Refresh(); }
+    }
+
     private void Update()
     {
         if (linkPanel != null) { UpdateLink(); return; }
@@ -897,14 +957,15 @@ public class PixelFeatureTester : MonoBehaviour
         bool hasPoint = !overUi && ((placing.line || placing.heightStage || placing.groundPlane) ? TryGroundPoint(out point) : TryFloorPoint(out point));
         if (hasPoint && PixelSnap.Active) point = PixelSnap.Point(point, clicker.OldPixelWorldSize);   // Shift: snap to the grid (a latch onto a belt end still wins)
         float useYaw = PixelSnap.Active ? PixelSnap.Yaw(yaw) : yaw;   // Shift: snap the turn to angle steps
-        if (hasPoint && placing.placeSnap != null && placing.placeSnap(clicker, point, useYaw, ghost, out Vector3 snapP, out float snapYaw)) { point = snapP; useYaw = snapYaw; }
+        bool snappedNow = false;
+        if (hasPoint && placing.placeSnap != null && placing.placeSnap(clicker, point, useYaw, ghost, out Vector3 snapP, out float snapYaw)) { point = snapP; useYaw = snapYaw; snappedNow = true; }
         if (ghost != null && !(placing.line && hasStart) && !(placing.heightStage && stageActive))
         {
             ghost.SetActive(hasPoint);
             if (hasPoint) ghost.transform.SetPositionAndRotation(point, Quaternion.Euler(0f, useYaw, 0f));
         }
         if (placing.line) { UpdateLine(hasPoint, point); return; }
-        if (placing.heightStage) { UpdateHeightStage(hasPoint, point, useYaw); return; }
+        if (placing.heightStage) { UpdateHeightStage(hasPoint, point, useYaw, snappedNow); return; }
         if (PixelKeys.Held(PixelAction.RotateLeft)) yaw -= 120f * Time.unscaledDeltaTime;
         if (PixelKeys.Held(PixelAction.RotateRight)) yaw += 120f * Time.unscaledDeltaTime;
 

@@ -276,7 +276,8 @@ public class PixelConveyor : MonoBehaviour
             Try(belt.a); Try(belt.b);
         }
         PixelCouplings.Ports(Try);   // couplings on devices: a belt ends at an In coupling or starts at an Out one
-        foreach (PixelElevator e in PixelElevator.All) if (e != null && !e.IsGhost) e.SnapPoints(Try);   // a Conveyor Elevator: just off each side of its base and its top, at their heights
+        foreach (PixelElevator e in PixelElevator.All) if (e != null && !e.IsGhost) e.SnapPoints(Try);
+        foreach (PixelBeltJump j in PixelBeltJump.All) if (j != null && !j.IsGhost) j.SnapPoints(Try);   // a Belt Jump's landing ramp end: a belt started there carries on after the jump   // a Conveyor Elevator: just off each side of its base and its top, at their heights
         snapped = found;
         return result;
     }
