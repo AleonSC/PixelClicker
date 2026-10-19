@@ -83,6 +83,16 @@ public interface IPixelSocketDevice
     bool AcceptHusk(PixelSocket socket, Rigidbody husk);
 }
 
+/// <summary>
+/// A device that catches husks handed in NEAR it, with no coupling needed (the Conveyor Elevator: a belt ending near its base, a device's Out coupling or a
+/// Belt Sorter's chute beside it). PixelCouplings.HandIn asks these after the In couplings (RegisterAutoIntake / UnregisterAutoIntake).
+/// </summary>
+public interface IPixelAutoIntake
+{
+    /// <summary>A husk (kinematic, still on the husk list) is handed in at 'at': take it (true) if it is near enough and there is room.</summary>
+    bool CatchNear(Vector3 at, Rigidbody husk);
+}
+
 /// <summary>A device a hose can pull stored husks out of, through an Out coupling (Storage Crate, Quantum Organizer).</summary>
 public interface IPixelHuskSource
 {
@@ -99,10 +109,15 @@ public interface IPixelHuskRoom
 public static class PixelCouplings
 {
     private static readonly List<IPixelSocketDevice> devices = new List<IPixelSocketDevice>();
+    private static readonly List<IPixelAutoIntake> autoIntakes = new List<IPixelAutoIntake>();
+
+    /// <summary>A device that catches husks handed in near it without a coupling (IPixelAutoIntake) came into the world / went.</summary>
+    public static void RegisterAutoIntake(IPixelAutoIntake d) { if (d != null && !autoIntakes.Contains(d)) autoIntakes.Add(d); }
+    public static void UnregisterAutoIntake(IPixelAutoIntake d) { autoIntakes.Remove(d); }
     private static readonly Dictionary<string, Object> occupants = new Dictionary<string, Object>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { devices.Clear(); occupants.Clear(); PixelStatics.ResetOnRestart(() => { devices.Clear(); occupants.Clear(); }); }
+    private static void ResetStatics() { devices.Clear(); occupants.Clear(); autoIntakes.Clear(); PixelStatics.ResetOnRestart(() => { devices.Clear(); occupants.Clear(); autoIntakes.Clear(); }); }
 
     public static IReadOnlyList<IPixelSocketDevice> Devices => devices;
 
@@ -167,7 +182,15 @@ public static class PixelCouplings
     {
         if (husk == null) return false;
         PixelCoupling c = IntakeAt(at, reachHusks * HuskWidth, exclude);
-        return c != null && c.TakeIn(husk);
+        if (c != null && c.TakeIn(husk)) return true;
+        for (int i = autoIntakes.Count - 1; i >= 0; i--)   // no coupling took it: a device that catches husks near it (the Conveyor Elevator)
+        {
+            IPixelAutoIntake d = autoIntakes[i];
+            if (d == null || (d is Object o && o == null)) { autoIntakes.RemoveAt(i); continue; }
+            if (ReferenceEquals(d, exclude)) continue;
+            if (d.CatchNear(at, husk)) return true;
+        }
+        return false;
     }
 
     // ---- husks out ----

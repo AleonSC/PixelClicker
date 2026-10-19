@@ -11,7 +11,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelElevator : MonoBehaviour, IPixelSocketDevice
+public class PixelElevator : MonoBehaviour, IPixelSocketDevice, IPixelAutoIntake
 {
     [Min(0f)]
     [Tooltip("How fast pixels travel up the shaft, in cube widths per second. 0 = the coded default (3).")]
@@ -24,6 +24,10 @@ public class PixelElevator : MonoBehaviour, IPixelSocketDevice
     [Min(0f)]
     [Tooltip("The height changes in steps of this many cube widths while placing. 0 = the coded default (0.5).")]
     [SerializeField] private float heightStepCubes = 0f;
+
+    [Min(0.5f)]
+    [Tooltip("How far from the tower (cube widths, past its sides) a belt end, a machine's Out coupling or a Belt Sorter's chute is linked automatically - at the base it feeds the tower, at the top a belt start or an In coupling takes what comes out.")]
+    [SerializeField] private float linkReachCubes = 2.5f;
 
     private float LiftSpeed => liftSpeedCubes > 0f ? liftSpeedCubes : 3f;
     private float Gap => pixelGapCubes > 0f ? pixelGapCubes : 1.1f;
@@ -104,10 +108,7 @@ public class PixelElevator : MonoBehaviour, IPixelSocketDevice
         Color steel = new Color(0.55f, 0.58f, 0.64f, 1f), dark = new Color(0.22f, 0.24f, 0.28f, 1f), accent = new Color(1f, 0.78f, 0.15f, 1f);
 
         k.Box("Base Plate", transform, new Vector3(0f, plate * 0.5f, 0f), new Vector3(half * 2f, plate, half * 2f), dark, default, false, 0.4f, 0.4f);
-        k.Box("Entry Strip", transform, new Vector3(0f, plate + 0.01f * u, -half + 0.25f * u), new Vector3(1.0f * u, 0.02f * u, 0.3f * u), accent);
         k.Box("Top Plate", transform, new Vector3(0f, h + plate * 0.5f, 0f), new Vector3(half * 2f, plate, half * 2f), dark, default, false, 0.4f, 0.4f);
-        k.Box("Exit Lip", transform, new Vector3(0f, h + plate * 0.5f, half + 0.15f * u), new Vector3(1.35f * u, plate, 0.3f * u), dark, default, false, 0.4f, 0.4f);
-        k.Box("Exit Strip", transform, new Vector3(0f, h + plate + 0.01f * u, half - 0.1f * u), new Vector3(1.0f * u, 0.02f * u, 0.3f * u), accent);
 
         float topY = h + 1.0f * u, postW = 0.14f * u, o = half - postW * 0.5f;
         for (int sx = -1; sx <= 1; sx += 2)
@@ -128,12 +129,9 @@ public class PixelElevator : MonoBehaviour, IPixelSocketDevice
         for (int i = 0; i < count; i++) pads.Add(k.Box("Pad", transform, Vector3.zero, new Vector3(0.9f * u, 0.05f * u, 0.9f * u), accent, default, false, 0.3f, 0.4f).transform);
         PlacePads();
         if (ghost) return;
-        sockets = new[]
-        {
-            new PixelSocket("in", new Vector3(0f, 0f, -half), Vector3.back, PixelSocketFlow.Intake, true),
-            new PixelSocket("out", new Vector3(0f, h, half), Vector3.forward, PixelSocketFlow.Output, true),   // (a new belt starts here, at the top's height)
-        };
-        PixelCoupling.FitBuiltIn(this);
+        sockets = new PixelSocket[0];   // (no fixed holes since 2026-10-19: it links itself to whatever is near - RefreshLinks)
+        linkKey = null;
+        nextLinkCheck = 0f;
     }
 
     private void PlacePads()
@@ -184,8 +182,8 @@ public class PixelElevator : MonoBehaviour, IPixelSocketDevice
 
     // ---------------- behaviour ----------------
 
-    private void OnEnable() { if (clicker == null) clicker = PixelFind.First<PixelClicker>(); PixelCouplings.Register(this); if (!all.Contains(this)) all.Add(this); }
-    private void OnDisable() { PixelCouplings.Unregister(this); all.Remove(this); }
+    private void OnEnable() { if (clicker == null) clicker = PixelFind.First<PixelClicker>(); PixelCouplings.Register(this); PixelCouplings.RegisterAutoIntake(this); if (!all.Contains(this)) all.Add(this); }
+    private void OnDisable() { PixelCouplings.Unregister(this); PixelCouplings.UnregisterAutoIntake(this); all.Remove(this); }
     private void OnDestroy() { carrier.ReleaseAll(); }
 
     /// <summary>A husk comes in through the entry coupling: drawn to the shaft and lifted (refused when the shaft is full).</summary>
@@ -205,6 +203,120 @@ public class PixelElevator : MonoBehaviour, IPixelSocketDevice
         }
         padOffset += Time.deltaTime * LiftSpeed * unit;
         PlacePads();
+        if (Time.time >= nextLinkCheck) { nextLinkCheck = Time.time + 0.5f + Random.value * 0.1f; RefreshLinks(); }
+    }
+
+    // ---------------- auto links (2026-10-19) ----------------
+    // No fixed entry / exit holes: every half second the tower looks round its BASE for belt ends (with no belt or In coupling after them), machines' Out
+    // couplings and Belt Sorter chutes (bare Out couplings) within linkReachCubes, and round its TOP for the nearest belt START or In coupling. Husks handed
+    // in near the base are caught (IPixelAutoIntake.CatchNear, via PixelCouplings.HandIn) and lifted; at the top they go onto that belt / into that coupling.
+    // A short TROUGH (floor + rails) is built from each linked thing to the tower, so the join looks made for it.
+
+    private string linkKey;
+    private float nextLinkCheck;
+    private GameObject linkRoot;
+    private PixelConveyor outBelt;
+    private PixelCoupling outCoupling;
+    private Vector3 outDir = Vector3.forward;
+    private readonly List<Vector3> inPoints = new List<Vector3>();
+
+    private Vector3 BaseCentre => transform.position;
+    private Vector3 TopCentre => transform.position + Vector3.up * height;
+    private float Reach => (HalfCubes + linkReachCubes) * unit;
+
+    private bool NearBase(Vector3 p) => Flat(p - BaseCentre) <= Reach && Mathf.Abs(p.y - BaseCentre.y) <= 1.5f * unit;
+    private bool NearTop(Vector3 p) => Flat(p - TopCentre) <= Reach && Mathf.Abs(p.y - TopCentre.y) <= 1.5f * unit;
+    private static float Flat(Vector3 v) { v.y = 0f; return v.magnitude; }
+
+    /// <summary>Where belts snap round the tower (placing): just off the middle of each side, at the base's height and at the top's.</summary>
+    public void SnapPoints(System.Action<Vector3> visit)
+    {
+        float off = (HalfCubes + 0.9f) * unit;
+        for (int i = 0; i < 4; i++)
+        {
+            Vector3 dir = Quaternion.Euler(0f, i * 90f, 0f) * transform.forward;
+            visit(BaseCentre + dir * off);
+            visit(TopCentre + dir * off);
+        }
+    }
+
+    /// <summary>A husk handed in near the base (a belt end, an Out coupling, a sorter chute beside it): drawn to the shaft and lifted.</summary>
+    public bool CatchNear(Vector3 at, Rigidbody husk)
+    {
+        if (ghost || husk == null || carrier.Count > 14 || !NearBase(at)) return false;
+        carrier.Add(husk);
+        return true;
+    }
+
+    private void RefreshLinks()
+    {
+        inPoints.Clear();
+        foreach (PixelConveyor belt in PixelConveyor.All)
+        {
+            if (belt == null || belt.IsGhost || !NearBase(belt.ExitPoint) || belt.FindNext() != null) continue;
+            if (PixelCouplings.IntakeAt(belt.ExitPoint, unit) != null) continue;   // (it feeds a machine's coupling instead)
+            inPoints.Add(belt.ExitPoint + Vector3.up * belt.SurfaceHeight);
+        }
+        foreach (PixelCoupling c in PixelCoupling.All)
+        {
+            if (c == null || !c.IsOut || ReferenceEquals(c.Device, this) || c.Device == null || (c.Device is Object o && o == null)) continue;
+            Vector3 mouth = c.PortWorld + c.FacingWorld * 0.5f * unit;
+            if (!NearBase(mouth) || PixelCouplings.BeltStartingAt(c.PortWorld) != null) continue;
+            inPoints.Add(mouth + Vector3.up * 0.1f * unit);
+        }
+        // The way out: the nearest belt that starts near the top, else the nearest In coupling there.
+        outBelt = null; outCoupling = null;
+        float best = float.MaxValue;
+        foreach (PixelConveyor belt in PixelConveyor.All)
+        {
+            if (belt == null || belt.IsGhost || !NearTop(belt.StartPoint)) continue;
+            float d = Flat(belt.StartPoint - TopCentre);
+            if (d < best) { best = d; outBelt = belt; }
+        }
+        if (outBelt == null) outCoupling = PixelCouplings.IntakeAt(TopCentre, Reach, this);
+        Vector3 target = outBelt != null ? outBelt.StartPoint + Vector3.up * outBelt.SurfaceHeight : outCoupling != null ? outCoupling.PortWorld + Vector3.up * 0.1f * unit : Vector3.zero;
+        bool hasOut = outBelt != null || outCoupling != null;
+        Vector3 dir = hasOut ? target - TopCentre : transform.forward;
+        dir.y = 0f;
+        Vector3 newDir = dir.sqrMagnitude > 1e-4f ? dir.normalized : transform.forward;
+        if ((newDir - outDir).sqrMagnitude > 1e-4f) { outDir = newDir; path = null; }   // (the shaft's last leg points at the way out)
+
+        System.Text.StringBuilder key = new System.Text.StringBuilder();
+        foreach (Vector3 p in inPoints) key.Append(p.ToString("F2"));
+        key.Append('|').Append(hasOut ? target.ToString("F2") : "-").Append(height.ToString("F2")).Append(transform.position.ToString("F2"));
+        string k = key.ToString();
+        if (k == linkKey && linkRoot != null) return;
+        linkKey = k;
+        if (linkRoot != null) Destroy(linkRoot);
+        linkRoot = new GameObject("Links");
+        linkRoot.transform.SetParent(transform, false);
+        float half = HalfCubes * unit, plateTop = PlateCubes * unit;
+        foreach (Vector3 p in inPoints)
+        {
+            Vector3 toP = p - BaseCentre; toP.y = 0f;
+            Vector3 e = BaseCentre + (toP.sqrMagnitude > 1e-4f ? toP.normalized : -transform.forward) * half + Vector3.up * plateTop;
+            Trough(p, e);
+        }
+        if (hasOut) Trough(TopCentre + outDir * half + Vector3.up * plateTop, target);
+    }
+
+    /// <summary>A short trough (a dark floor with steel rails) between two world points, so a link looks built for it.</summary>
+    private void Trough(Vector3 from, Vector3 to)
+    {
+        Vector3 d = to - from;
+        if (Flat(d) < 0.05f * unit) return;
+        GameObject t = new GameObject("Link Trough");
+        t.transform.SetParent(linkRoot.transform, false);
+        t.transform.SetPositionAndRotation((from + to) * 0.5f, Quaternion.LookRotation(d.normalized, Vector3.up));
+        float len = d.magnitude + 0.2f * unit, w = 1.1f * unit;
+        PixelFactoryKit k = new PixelFactoryKit(clicker, false);
+        Color rubber = new Color(0.16f, 0.17f, 0.2f, 1f), steel = new Color(0.55f, 0.58f, 0.64f, 1f), accent = new Color(1f, 0.78f, 0.15f, 1f);
+        k.Box("Trough Floor", t.transform, new Vector3(0f, -0.05f * unit, 0f), new Vector3(w, 0.1f * unit, len), rubber, default, false, 0.1f, 0.3f);
+        for (int s = -1; s <= 1; s += 2)
+        {
+            k.Box("Trough Rail", t.transform, new Vector3(s * (w * 0.5f + 0.04f * unit), 0.1f * unit, 0f), new Vector3(0.08f * unit, 0.3f * unit, len), steel, default, false, 0.7f, 0.5f);
+            k.Box("Trough Trim", t.transform, new Vector3(s * (w * 0.5f + 0.085f * unit), 0.05f * unit, 0f), new Vector3(0.01f * unit, 0.04f * unit, len * 0.9f), accent, default, false, 0.2f, 0.5f, accent * 0.25f);
+        }
     }
 
     private void FixedUpdate()
@@ -214,22 +326,24 @@ public class PixelElevator : MonoBehaviour, IPixelSocketDevice
         {
             float oldSize = clicker.OldPixelWorldSize;
             float ey = (PlateCubes * unit) + oldSize * 0.5f;
+            Vector3 top = transform.TransformPoint(new Vector3(0f, ey + height, 0f));
             path = new[]
             {
                 transform.TransformPoint(new Vector3(0f, ey, 0f)),
-                transform.TransformPoint(new Vector3(0f, ey + height, 0f)),
-                transform.TransformPoint(new Vector3(0f, ey + height, HalfCubes * unit + 0.1f * unit)),
+                top,
+                top + outDir * (HalfCubes * unit + 0.1f * unit),   // (the last leg points at the linked way out)
             };
             cum = PixelPathCarrier.Cumulative(path);
         }
         carrier.Step(path, cum, LiftSpeed * unit, Gap * unit, Time.fixedDeltaTime, PutOut);
     }
 
-    /// <summary>A pixel reaches the top: out through the top coupling onto the belt there (PixelCouplings.Emit), or flung forward off the lip.</summary>
+    /// <summary>A pixel reaches the top: onto the linked belt, into the linked In coupling, or flung off the top towards the way out.</summary>
     private void PutOut(Rigidbody rb)
     {
-        if (PixelCouplings.Emit(this, "out", rb)) return;
+        if (outBelt != null && !outBelt.IsGhost) { PixelCouplings.PutOnBelt(outBelt, rb); return; }
+        if (outCoupling != null && outCoupling.IsIn) { rb.isKinematic = true; if (outCoupling.TakeIn(rb)) return; rb.isKinematic = false; }
         rb.position = path[path.Length - 1];
-        PixelPathCarrier.SetVelocity(rb, transform.forward * unit * 2f);
+        PixelPathCarrier.SetVelocity(rb, outDir * unit * 2f);
     }
 }
