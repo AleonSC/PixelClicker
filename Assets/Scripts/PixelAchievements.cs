@@ -8,7 +8,8 @@
 //   drunk once, "Gadgeteer" = every device kind placed once; progress from PixelStats PotionsUsed / FansUsed / VacuumDevicesUsed /
 //   SortersUsed). Achievements have tiers (tiers[], earnedTiers); defaults per pixel type: tiered "Collect" (lifetime value,
 //   totalCollected: 10, 100, 1K, 10K, 100K, 1M) and tiered "Click" (PixelTier.timesCollected, saved: 10, 50, 250, 1K, 5K, 25K;
-//   Kind.ClickPixelType). The unlock POPUP sits centred above the combo meter by default (DefaultPopupPosition); hold the left mouse button on it (popupHoldSeconds 0.5, a ring fills round the cursor,
+//   Kind.ClickPixelType). The unlock POPUP sits at the MIDDLE RIGHT of the screen by default (DefaultPopupPosition, popupRightMargin), drawn at popupScale (0.68) open
+//   and collapsed, and starts expanded (pref AchievementPopupCollapsed2); hold the left mouse button on it (popupHoldSeconds 0.5, a ring fills round the cursor,
 //   PixelHold with useLeft) to pick it up, click to PIN it anywhere; the thin button on its far right collapses it to the icon box and expands it again with a shorter hold (popupCollapseHoldSeconds 0.3, saved);
 //   Settings > 'Reset achievement popup position' (ResetPopupPin) forgets the pin. The pinned position is the popup's LEFT edge; the pin is saved PER SAVE (PlayerPrefs PixelClicker.Setting.AchievementPopupX/Y declared with PixelPrefs.DeclarePerSave, inside the black margins: a new game starts with it in the default place, ReloadPopupPin on a settings load), right-click to put it back. Saved as "id:tiers". Unlocks quietly/with popup, ids saved by PixelSaveGame. Auto-added by PixelLog.
 // ---------------------------------------------------
@@ -165,6 +166,14 @@ public class PixelAchievements : MonoBehaviour, IPixelSaved
 
     [Tooltip("Popup size when open (canvas units): an icon box on the left, the heading and the name, and a thin collapse button on the far right.")]
     [SerializeField] private Vector2 popupExpandedSize = new Vector2(790f, 155f);
+
+    [Range(0.4f, 1.5f)]
+    [Tooltip("Size of the whole popup (open and collapsed) - 1 = the sizes above as they are.")]
+    [SerializeField] private float popupScale = 0.68f;
+
+    [Min(0f)]
+    [Tooltip("Gap between the popup and the right edge of the screen in its default spot (middle right).")]
+    [SerializeField] private float popupRightMargin = 24f;
 
     [Min(120f)]
     [Tooltip("Popup width when collapsed (canvas units): just the icon box and the button.")]
@@ -342,7 +351,7 @@ public class PixelAchievements : MonoBehaviour, IPixelSaved
     private float popupWidth;
     private RectTransform popupButtonRect, popupTextRoot;
     private TMP_Text popupArrow;
-    private const string PrefPopupCollapsed = "PixelClicker.Setting.AchievementPopupCollapsed";
+    private const string PrefPopupCollapsed = "PixelClicker.Setting.AchievementPopupCollapsed2";   // (2: everyone starts expanded again, 2026-10-19)
     private Vector2 popupPinnedPos;
     private int popupPlaceFrame;
     private const string PrefPopupX = "PixelClicker.Setting.AchievementPopupX", PrefPopupY = "PixelClicker.Setting.AchievementPopupY";
@@ -788,6 +797,7 @@ public class PixelAchievements : MonoBehaviour, IPixelSaved
         popupCollapsed = PixelPrefs.GetInt(PrefPopupCollapsed, 0) != 0;
         popupWidth = popupCollapsed ? CollapsedWidth : popupExpandedSize.x;
         popupRect.sizeDelta = new Vector2(popupWidth, popupExpandedSize.y);
+        popupRect.localScale = Vector3.one * Scale;   // (the whole popup, open or collapsed, at popupScale)
         popupPinned = PixelPrefs.HasKey(PrefPopupX) && PixelPrefs.HasKey(PrefPopupY);
         popupPinnedPos = new Vector2(PixelPrefs.GetFloat(PrefPopupX, 0f), PixelPrefs.GetFloat(PrefPopupY, 0f));
         PositionPopup();
@@ -883,14 +893,14 @@ public class PixelAchievements : MonoBehaviour, IPixelSaved
         popupTextRoot.gameObject.SetActive(!popupCollapsed);
     }
 
-    /// <summary>The standard spot: centred on the screen, just above the combo meter. Positions are the popup's left edge / middle height, in canvas units from the middle of the screen.</summary>
+    private float Scale => Mathf.Clamp(popupScale, 0.4f, 1.5f);
+
+    /// <summary>The standard spot: the MIDDLE RIGHT of the screen, its right edge popupRightMargin from the edge (it follows the width as it collapses /
+    /// opens, so the right edge stays put). Positions are the popup's left edge / middle height, in canvas units from the middle of the screen.</summary>
     private Vector2 DefaultPopupPosition()
     {
-        float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        PixelCombo combo = PixelFind.Cached<PixelCombo>();
-        float above = combo != null ? combo.MeterTopOffset : bar + 140f;   // from the bottom of the screen to the bottom of the popup
-        float height = popupCanvasRect != null && popupCanvasRect.rect.height > 10f ? popupCanvasRect.rect.height : 1080f;
-        return new Vector2(-popupWidth * 0.5f, -height * 0.5f + above + popupExpandedSize.y * 0.5f);
+        float width = popupCanvasRect != null && popupCanvasRect.rect.width > 10f ? popupCanvasRect.rect.width : 1920f;
+        return new Vector2(width * 0.5f - popupRightMargin - popupWidth * Scale, 0f);
     }
 
     private Vector2 ClampToCanvas(Vector2 p)
@@ -898,8 +908,8 @@ public class PixelAchievements : MonoBehaviour, IPixelSaved
         if (popupCanvasRect == null) return p;
         Rect r = popupCanvasRect.rect;
         float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        float minX = -r.width * 0.5f, maxX = Mathf.Max(minX, r.width * 0.5f - popupWidth);
-        float hy = Mathf.Max(0f, r.height * 0.5f - bar - popupExpandedSize.y * 0.5f);   // (inside the black margins)
+        float minX = -r.width * 0.5f, maxX = Mathf.Max(minX, r.width * 0.5f - popupWidth * Scale);
+        float hy = Mathf.Max(0f, r.height * 0.5f - bar - popupExpandedSize.y * Scale * 0.5f);   // (inside the black margins)
         return new Vector2(Mathf.Clamp(p.x, minX, maxX), Mathf.Clamp(p.y, -hy, hy));
     }
 
@@ -993,7 +1003,7 @@ public class PixelAchievements : MonoBehaviour, IPixelSaved
     private void TickPlacing()
     {
         if (RectTransformUtility.ScreenPointToLocalPointInRectangle(popupCanvasRect, PixelInput.PointerPosition(), null, out Vector2 local))
-            popupRect.anchoredPosition = ClampToCanvas(local - new Vector2(popupWidth * 0.5f, 0f));   // (centred on the mouse)
+            popupRect.anchoredPosition = ClampToCanvas(local - new Vector2(popupWidth * Scale * 0.5f, 0f));   // (centred on the mouse)
         popupImage.color = Color.Lerp(popupColor, new Color(0.35f, 0.3f, 0.1f, 0.98f), 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 6f));
 
         bool place = PixelInput.LeftPressed() && Time.frameCount > popupPlaceFrame + 1;
