@@ -507,7 +507,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     [Tooltip("Add the default Vacuum Device if the list has none (e.g. when this component was added before devices existed).")]
     [SerializeField] private bool addDefaultDevices = true;
 
-    [SerializeField, HideInInspector] private int consumablePriceVersion;   // 1 = the 2026-10-17 repricing (2-3 pure colours per item; see ResetDefaultDevicePrices), 2 = the 2026-10-18 dev-only items, 3 = Conveyor Belt Kit for everyone, 4 = Junction Box on sale
+    [SerializeField, HideInInspector] private int consumablePriceVersion;   // 1 = the 2026-10-17 repricing (2-3 pure colours per item; see ResetDefaultDevicePrices), 2 = the 2026-10-18 dev-only items, 3 = Conveyor Belt Kit for everyone, 4 = Junction Box on sale, 5 = Quantum Organizer reach 24
 
     [Header("Prices")]
     [Tooltip("Potion and device prices paid in a pixel type are multiplied by that pixel's Value upgrade multiplier, so they stay worth the same as its payout grows. Off = the prices typed above, always.")]
@@ -866,7 +866,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             devOnly = true,   // (2026-10-18: out of the shop for now, Dev Hub > Main > Dev items gives it)
             kind = DeviceKind.QuantumOrganizer,
             displayName = "Quantum Organizer",
-            description = "A pad with walls. Switch it on, then drop a pixel onto the pad to bind that pixel type to it (up to three types). Every loose old pixel of a bound type is dematerialized with a glitch and rematerializes inside the box as storage (up to 60 pixels). Click the box to let some out again; everything comes out when its {duration} seconds run out.",
+            description = "A pad with walls. Switch it on, then grab a husk and drop it onto the pad to bind that type to it (up to three types; husks that just fall on it don't count). Every loose husk of a bound type within a wide reach is dematerialized with a glitch and rematerializes inside the box as storage (up to 60 husks). Click the box to let some out again; everything comes out when its {duration} seconds run out.",
             requiredType = PixelClicker.PixelType.Electric,
             costs = new[]
             {
@@ -874,7 +874,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             },
             maxHeld = 3,
             durationSeconds = 600f,
-            radius = 9f,          // how far from the pad it reaches for pixels of its bound types
+            radius = 24f,         // how far from the pad it reaches for pixels of its bound types (2026-10-19: 9 -> 24, about the whole play area)
             boxCapacity = 60,
             color = new Color(0.45f, 0.3f, 0.9f, 1f),
             bodyDiameter = 2.4f,  // the pad's inner side
@@ -1610,6 +1610,14 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             foreach (Device d in devices)
                 if (d != null && d.kind == DeviceKind.JunctionBox) { d.vendorOnly = false; d.devOnly = false; d.costs = CreateDefaultJunctionBox().costs; }
             consumablePriceVersion = 4;
+            added = true;
+        }
+        if (consumablePriceVersion < 5 && devices != null)
+        {
+            // 2026-10-19: the Quantum Organizer reaches much further (9 -> 24): saved entries take the coded reach.
+            foreach (Device d in devices)
+                if (d != null && d.kind == DeviceKind.QuantumOrganizer && !d.attuned) { d.radius = Mathf.Max(d.radius, CreateDefaultQuantumOrganizer().radius); d.description = CreateDefaultQuantumOrganizer().description; }
+            consumablePriceVersion = 5;
             added = true;
         }
 

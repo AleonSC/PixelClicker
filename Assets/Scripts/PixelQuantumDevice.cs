@@ -2,10 +2,10 @@ using Unity.Profiling;
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelQuantumDevice.cs
 //   (extends PixelPlacedDevice) Quantum Organizer (DeviceKind.QuantumOrganizer 12, auto-added like the fan by EnsureDefaultPotions,
-//   Utilities card; needs Electric unlocked, 60 Electric, hold 3, durationSeconds 600, radius 9 = reach, boxCapacity 60 stored pixels,
+//   Utilities card; needs Electric unlocked, 60 Electric, hold 3, durationSeconds 600, radius 24 = reach, boxCapacity 60 stored pixels,
 //   bodyDiameter 2.4 = the pad's inner side, bodyHeight 0.5 = wall height; model PixelConsumables.BuildQuantumBody: a glowing pad
 //   inside four low walls with corner posts). Placed like the Magnet, starts disarmed (click to switch on). While working, every 0.1 s
-//   it scans the old pixels: a loose pixel lying on the pad binds its type (up to 3 types, MaxTypes); every loose old pixel of a bound
+//   it scans the old pixels: a loose pixel the PLAYER put on the pad (OldPixelInfo.RecentlyHeld, BindHeldSeconds) binds its type (up to 3 types, MaxTypes); every loose old pixel of a bound
 //   type within reach (not held / flying / despawning / kinematic, not one it just released) is taken out of the old-pixel list
 //   (ReleaseOldPixel(body, false)) and dematerialized with a glitch (GlitchOut: scripts and colliders off, jittering, stretching
 //   slivers, flickering, then destroyed) while a small display model of that type glitches into the box (GlitchIn, AddModel: up to
@@ -36,6 +36,7 @@ using UnityEngine;
 public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelHuskSource, IPixelHuskRoom
 {
     private const int MaxTypes = 3;          // pixel types one organizer can hold
+    private const float BindHeldSeconds = 6f; // a husk binds its type only if the player held / threw it this recently
     private const int MaxVisible = 18;       // little pixel models shown per type (the stored count can be higher)
     private const int Columns = 6;
     private const int ReleasePerClick = 6;
@@ -183,10 +184,12 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
             Slot slot = SlotOf(info.tierIndex);
             if (slot == null)
             {
-                // A pixel lying on the pad binds its type.
+                // A pixel the PLAYER put on the pad (held / thrown in the last few seconds) binds its type; stray husks that land there, or ones a belt
+                // or hose brings in, never bind a new type (2026-10-19: it used to pick up whatever fell on it).
+                if (slots.Count >= MaxTypes || info == null || !info.RecentlyHeld(BindHeldSeconds)) continue;
                 Vector3 local = transform.InverseTransformPoint(body.position);
                 bool inside = Mathf.Abs(local.x) < half && Mathf.Abs(local.z) < half && local.y < wallHeight + 1f;
-                if (!inside || slots.Count >= MaxTypes || Speed(body) > 2f) continue;
+                if (!inside || Speed(body) > 2f) continue;
                 slot = new Slot { tier = info.tierIndex };
                 slots.Add(slot);
                 labelDirty = true;
@@ -245,7 +248,7 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
         labelDirty = false;
         if (label == null) return;
         // The floating text is only the first-use hint; once a type is bound a small ring shows how full it is (the device card lists the types and counts).
-        label.text = slots.Count == 0 ? "<alpha=#CC>Drop a pixel on the pad\nto bind its type" : "";
+        label.text = slots.Count == 0 ? "<alpha=#CC>Grab a husk and drop it\non the pad to bind its type" : "";
         if (ring != null) ring.Set(slots.Count == 0 ? -1f : stored / (float)Mathf.Max(1, capacity), new Color(0.55f, 0.85f, 1f, 1f));
     }
 
@@ -315,7 +318,7 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
     protected override void AddInfo(PixelDeviceInfo info)
     {
         info.Add("Stored", stored + " / " + capacity);
-        if (slots.Count == 0) info.Note("<color=#9FB0CC>Drop a pixel on the pad to bind its type.</color>");
+        if (slots.Count == 0) info.Note("<color=#9FB0CC>Grab a husk and drop it on the pad to bind its type.</color>");
         foreach (Slot sl in slots)
             info.Note("<color=#" + ColorUtility.ToHtmlStringRGB(clicker.Tiers[sl.tier].color) + ">" + TierName(sl.tier) + "</color>  x" + sl.count);
         if (stored > 0) info.Note("<color=#9FB0CC>Click it to let " + ReleasePerClick + " out.</color>");
