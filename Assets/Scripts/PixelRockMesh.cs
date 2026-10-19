@@ -3,7 +3,8 @@
 //   Jagged rocky pixels: PixelLook.jagged (Obsidian, Meteor, Rock, the six ores; looksVersion 36 replaced their saved looks and
 //   removed the Obsidian bevel rim - rocky pixels have no outline) draws a chipped cube mesh (PixelRockMesh.Get(baseCube, type): 8x8
 //   quads per face, flat shaded, only edge / corner vertices pulled inwards by a position hash so shared vertices match; faces stay
-//   flat, never bigger than the cube, same per-face UVs). PixelClicker.MeshFor(look) / BaseMesh() pick the mesh: the live cube swaps
+//   flat, never bigger than the cube, same per-face UVs; edge vertices move only across the edge and the pull is capped so no triangle folds over -
+//   checked offline for 300 seeds, 2026-10-19). PixelClicker.MeshFor(look) / BaseMesh() pick the mesh: the live cube swaps
 //   its MeshFilter mesh in ApplyTierLook, old pixel copies, display pixels and their extras / glow shells use MeshFor of their own
 //   tier (never srcFilter.sharedMesh, which may be another type's jagged mesh). The hit box is still a cube.
 // ---------------------------------------------------
@@ -45,7 +46,14 @@ public static class PixelRockMesh
         float h = PixelNoise.Hash(qx * 73 + qy * 179, qz * 283 + seed, 17);
         float h2 = PixelNoise.Hash(qx * 31 + qz * 97, qy * 211 + seed, 29);
         float d = edge * (0.04f + 0.15f * h) + corner * 0.12f * h2;
-        return p * (1f - d);
+        // Never fold the mesh over (2026-10-19, Twig husks showed see-through gaps and torn corners): an edge vertex is pushed in only ACROSS
+        // the edge (the coordinates sitting on the cube's surface), not along it, so it can't slide past its neighbour; and the pull is capped
+        // (edges 0.22, corners 0.14) so a vertex never crosses the next grid row (0.375) or sinks behind the line between its edge neighbours.
+        d = Mathf.Min(d, corner > 0f ? 0.14f : 0.22f);
+        Vector3 r = p;
+        for (int k = 0; k < 3; k++)
+            if (Mathf.Abs(p[k]) * 2f > 0.99f) r[k] = p[k] * (1f - d);
+        return r;
     }
 
     private static Mesh Build(Bounds b, int seed)
