@@ -253,7 +253,7 @@ public class PixelConveyor : MonoBehaviour
         Camera cam = c.ViewCamera;
         Vector2 mouse = PixelInput.PointerPosition();
         float best = 70f * 70f;                       // screen pixels
-        float groundReach = c.OldPixelWorldSize * 0.9f;
+        float groundReach = c.OldPixelWorldSize * 1.5f;   // (an end this close on the ground always magnetizes: a piece started near a belt's end chains onto it - a smooth corner, never a loose overlap)
         Vector3 result = p;
         void Try(Vector3 end)
         {
@@ -433,7 +433,7 @@ public class PixelConveyor : MonoBehaviour
         foreach (PixelConveyor c in all)
         {
             if (c == null || c.ghostMode) continue;
-            float r = c.unit * 0.45f;
+            float r = Mathf.Max(c.unit * 0.45f, c.Width);   // (anything starting / ending this near a belt end counts as meeting it)
             Vector3 e = c.ExitPoint, s = c.StartPoint;
             if (Flat(e - from) < r && Mathf.Abs(e.y - from.y) < r && Vector3.Angle(c.Direction, d) > max) return "Too sharp a turn (more than " + Mathf.RoundToInt(max) + " degrees)";
             if (Flat(s - to) < r && Mathf.Abs(s.y - to.y) < r && Vector3.Angle(d, c.Direction) > max) return "Too sharp a turn (more than " + Mathf.RoundToInt(max) + " degrees)";
@@ -614,11 +614,11 @@ public class PixelConveyorSystem : MonoBehaviour
     [Header("Player on a belt (first person)")]
     [Header("Placing")]
     [Range(30f, 180f)]
-    [Tooltip("The sharpest turn allowed between two chained belts, in degrees (135 = the belts must meet at 45 degrees or more; 90 = square corners at most). A sharper piece can't be placed.")]
-    [SerializeField] private float maxTurnDegrees = 135f;
+    [Tooltip("The sharpest turn allowed between two chained belts, in degrees (120 = the belts must meet at 60 degrees or more; 90 = square corners at most). A sharper piece can't be placed. Above 120 the belts no longer chain (FindNext treats it as head-on), so keep it at 120 or less.")]
+    [SerializeField] private float maxTurnDegrees = 120f;
 
     /// <summary>The sharpest turn allowed between chained belts (degrees).</summary>
-    public static float MaxTurnDegrees => system != null ? system.maxTurnDegrees : 135f;
+    public static float MaxTurnDegrees => Mathf.Min(120f, system != null ? system.maxTurnDegrees : 120f);   // (never above 120: sharper belts would not chain into a smooth corner)
 
     [Min(0f)]
     [Tooltip("How strongly a belt carries the player, as a fraction of the belt's speed (1 = the belt's own speed). 0 = the coded default (1).")]
