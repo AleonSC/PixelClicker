@@ -5,6 +5,8 @@
 //   sloped height, RunSpeed / LiftFactor adjust speed and rest height for the slope. Snap() matches belt ends and elevator tops by SCREEN distance, so raised ends can be snapped to; FindNext only chains belts
 //   whose heights match. The Conveyor Elevator (PixelElevator.cs) lifts pixels between heights.
 //   CORNERS: where belts chain at an angle the outside of the turn is filled with a ROUNDED corner (an arc, a curved rail and a turntable plate; PixelConveyorJoint.cs).
+//   COUPLING SHROUDS (2026-10-19): a belt end on a coupling's port gets a solid box round it reaching into the machine (RefreshShrouds), tinted like the machine;
+//   the coupling's flange is hidden under it, so the belt runs seamlessly into the machine.
 //   NO FADING ON A BELT (2026-10-19): a rider's lifetime is paused every physics step (OldPixelDespawn.KeepAlive), so husks on belts never despawn; it runs on once they leave.
 //   LOOK (2026-10-19): rubber belt with moving chevrons and slat seams, steel rails with bolts on a dark frame with a yellow trim line, rollers with end caps.
 //   SHOP: the Conveyor Belt Kit (PixelConsumables DeviceKind.ConveyorBelt) is sold in Utilities for everyone since 2026-10-19 (monochrome price).
@@ -186,7 +188,7 @@ public class PixelConveyor : MonoBehaviour
     }
 
     private void OnEnable() { if (!all.Contains(this)) all.Add(this); }
-    private void OnDisable() { all.Remove(this); }
+    private void OnDisable() { all.Remove(this); ShowCoupling(shroudA, true); ShowCoupling(shroudB, true); }
 
     // ---------------- placing ----------------
 
@@ -353,6 +355,77 @@ public class PixelConveyor : MonoBehaviour
         ApplyTrims();
         ApplySelection();
         PlaceRibs();
+    }
+
+    // ---------------- coupling shrouds (2026-10-19) ----------------
+    // Where a belt end sits on a COUPLING's port, a solid box (roof, two sides, a framed mouth and a dark tunnel back) is built round the belt end and the
+    // coupling, reaching into the machine's wall, tinted like the machine (SocketTint): the belt looks like it runs straight into the machine. The coupling's
+    // own flange / collar are hidden meanwhile (its flow arrow stays, over the roof); they come back when the belt or the shroud goes.
+
+    private struct Shroud { public GameObject root; public PixelCoupling coupling; public string key; }
+    private Shroud shroudA, shroudB;
+
+    private void RefreshShrouds()
+    {
+        if (ghostMode) return;
+        UpdateShroud(ref shroudA, a);
+        UpdateShroud(ref shroudB, b);
+    }
+
+    private void UpdateShroud(ref Shroud sh, Vector3 end)
+    {
+        PixelCoupling found = null;
+        float best = (0.6f * unit) * (0.6f * unit);
+        foreach (PixelCoupling c in PixelCoupling.All)
+        {
+            if (c == null || c.Device == null || (c.Device is Object o && o == null)) continue;
+            Vector3 d = c.PortWorld - end;
+            if (Mathf.Abs(d.y) > 0.6f * unit) continue;
+            d.y = 0f;
+            if (d.sqrMagnitude < best) { best = d.sqrMagnitude; found = c; }
+        }
+        string key = found == null ? null : found.PortWorld.ToString("F2") + found.FacingWorld.ToString("F2") + width.ToString("F2") + lanesBuilt;
+        if (key == sh.key && (found == null || sh.root != null)) return;
+        if (sh.root != null) Destroy(sh.root);
+        ShowCoupling(sh, true);
+        sh = new Shroud { key = key, coupling = found };
+        if (found == null) return;
+        sh.root = BuildShroud(found);
+        ShowCoupling(sh, false);
+    }
+
+    /// <summary>Shows / hides a coupling's flange and collar (not its flow arrow) while a shroud covers it.</summary>
+    private static void ShowCoupling(Shroud sh, bool show)
+    {
+        if (sh.coupling == null) return;
+        foreach (Renderer r in sh.coupling.GetComponentsInChildren<Renderer>(true))
+            if (r != null && !r.name.StartsWith("Coupling Arrow")) r.enabled = show;
+    }
+
+    private GameObject BuildShroud(PixelCoupling c)
+    {
+        Vector3 p = c.PortWorld, f = c.FacingWorld;
+        f.y = 0f; f = f.sqrMagnitude > 1e-6f ? f.normalized : Vector3.forward;
+        Color steel = new Color(0.55f, 0.58f, 0.64f, 1f), dark = new Color(0.06f, 0.06f, 0.07f, 1f);
+        Color body = Color.Lerp(steel, c.Device.SocketTint, 0.6f), trim = Color.Lerp(body, Color.black, 0.35f);
+        float back = 0.45f * unit, front = 0.7f * unit, len = back + front;   // (from inside the machine's wall out over the belt end)
+        float inner = width + 2f * 0.13f * unit + 0.1f * unit, t = 0.12f * unit, hgt = 1.25f * unit;
+        GameObject root = new GameObject("Coupling Shroud");
+        root.transform.SetParent(transform, false);
+        root.transform.SetPositionAndRotation(p + f * ((front - back) * 0.5f), Quaternion.LookRotation(f, Vector3.up));   // (its +z points out of the machine)
+        PixelFactoryKit k = new PixelFactoryKit(clicker, false);
+        Transform r = root.transform;
+        k.Box("Shroud Roof", r, new Vector3(0f, hgt + t * 0.5f, 0f), new Vector3(inner + 2f * t, t, len), body, default, false, 0.4f, 0.5f);
+        for (int s = -1; s <= 1; s += 2)
+            k.Box("Shroud Side", r, new Vector3(s * (inner + t) * 0.5f, hgt * 0.5f, 0f), new Vector3(t, hgt + t, len), body, default, false, 0.4f, 0.5f);
+        // The framed mouth over the belt (a thicker darker rim) and a dark tunnel back where the belt goes into the machine.
+        float z = len * 0.5f;
+        k.Box("Shroud Lip Top", r, new Vector3(0f, hgt + t * 0.5f, z - t), new Vector3(inner + 2.6f * t, t * 1.6f, t * 2f), trim, default, false, 0.6f, 0.5f);
+        for (int s = -1; s <= 1; s += 2)
+            k.Box("Shroud Lip Side", r, new Vector3(s * (inner + t) * 0.5f, hgt * 0.5f, z - t), new Vector3(t * 1.6f, hgt + t * 1.6f, t * 2f), trim, default, false, 0.6f, 0.5f);
+        k.Box("Shroud Tunnel", r, new Vector3(0f, hgt * 0.5f, -len * 0.5f + t * 0.5f), new Vector3(inner, hgt, t), dark, default, false, 0f, 0.1f);
+        k.Box("Shroud Floor", r, new Vector3(0f, 0.02f * unit, -back * 0.5f), new Vector3(inner, 0.04f * unit, len * 0.6f), dark, default, false, 0.1f, 0.2f);
+        return root;
     }
 
     // ---------------- arrow colour (2026-10-19): yellow running the way it was laid, light blue once reversed ----------------
@@ -535,7 +608,7 @@ public class PixelConveyor : MonoBehaviour
         if (ghostMode) return;
         ribOffset += Time.deltaTime * Speed;
         PlaceRibs();
-        if (Time.time >= nextJointCheck) { nextJointCheck = Time.time + 0.5f + Random.value * 0.1f; PixelConveyorJoint.Refresh(this, clicker, ref jointKey, ref joint); }
+        if (Time.time >= nextJointCheck) { nextJointCheck = Time.time + 0.5f + Random.value * 0.1f; PixelConveyorJoint.Refresh(this, clicker, ref jointKey, ref joint); RefreshShrouds(); }
     }
 
     /// <summary>Right click: the belt runs the other way.</summary>
