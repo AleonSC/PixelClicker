@@ -209,6 +209,11 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].stageMax = PixelBeltJump.MaxWorld;
         features[features.Count - 1].export = PixelBeltJump.ExportState;
         features[features.Count - 1].import = PixelBeltJump.ImportState;
+        Register("Husk Source",
+                 "A test box with a coupling socket on each side. LEFT-CLICK it to choose a block type (any type): it makes endless husks of that type out of every Out coupling that something takes them from - a belt starting at the coupling (while it has room), a machine's In coupling right in front of it, or a Container Hose pulling from it. Fit couplings on its sides first. Nothing connected = nothing made.",
+                 c => PixelHuskSource.CreateGhost(c), (c, p, yw) => PixelHuskSource.Place(c, p, yw));
+        features[features.Count - 1].export = PixelHuskSource.ExportState;
+        features[features.Count - 1].import = PixelHuskSource.ImportState;
         Register("Kiln",
                  "A brick kiln with a glowing mouth on its front. Anything that goes into the mouth from the side burns (lead a conveyor belt into it, or throw things in): each burnt pixel makes a Charcoal old pixel that comes out of the chute at the back. Charcoal despawns like any old pixel, for now.",
                  c => PixelKiln.CreateGhost(c), (c, p, yw) => PixelKiln.Place(c, p, yw));

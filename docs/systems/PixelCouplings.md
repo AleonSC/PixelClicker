@@ -73,6 +73,7 @@ chute (the same "find a belt that starts here" copy) moved onto a built-in bare 
 | Funnel | `output` (Out, the spout end; the tube waits while its belt is full) |
 | Wood Chipper | `chute` (Out, on the floor in front of the outlet) |
 | Conveyor Elevator | none since 2026-10-19: it links itself to belt ends, Out couplings and sorter chutes near its base and to a belt start or In coupling near its top (IPixelAutoIntake) |
+| Husk Source (tester) | `front`, `back`, `left`, `right` (Out: endless husks of the picked type while something takes them) |
 | Junction Box | `f0` `f1` (front), `b0` `b1` (back; a latched Sorting Hopper OCCUPIES both), `l0` `l1`, `r0` `r1` - all Both, **auto direction** |
 | Belt Sorter | `chute` (Out, fitted, bare) |
 

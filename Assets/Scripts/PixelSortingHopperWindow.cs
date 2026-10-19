@@ -4,11 +4,30 @@
 //   (PixelDeviceCard: right-click tap a hopper; PixelDeviceInfo.AddAction). A standard Fixed window (PixelUIKit.CreateWindow, its own canvas,
 //   Escape closes it: PixelWindows 60) with a scrolling grid of every UNLOCKED husk type (not fly-aways, each with its PixelTierPicture and name)
 //   plus 'None' (= the hopper just holds); the current filter is highlighted. Clicking one sets it (PixelSortingHopper.SetFilter) and closes the
-//   window. The hopper calls Changed(this) when its filter changes (the highlight redraws) and Forget(this) when it is destroyed (the window closes).
+//   window. SHARED (2026-10-19): it picks for any IPixelTierPickTarget (the hopper's outputs; the Husk Source's block, all types, no None).
+//   The hopper calls Changed(this) when its filter changes (the highlight redraws) and Forget(this) when it is destroyed (the window closes).
 // ---------------------------------------------------
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+
+/// <summary>Something that has a block type picked in the picker window (the Sorting Hopper's output filters, the Husk Source's block). 'slot' = which of its picks.</summary>
+public interface IPixelTierPickTarget
+{
+    PixelClicker Clicker { get; }
+    int PickedTier(int slot);
+    void SetPickedTier(int slot, int tier);
+    /// <summary>The window's title for this pick.</summary>
+    string PickTitle(int slot);
+    /// <summary>The line under the title.</summary>
+    string PickHint(int slot);
+    /// <summary>Offer a 'None' tile?</summary>
+    bool PickAllowsNone { get; }
+    /// <summary>Every block type (true), or only the unlocked ones?</summary>
+    bool PickAllTiers { get; }
+    /// <summary>Is it still there (the window closes when it goes)?</summary>
+    bool PickAlive { get; }
+}
 
 public class PixelSortingHopperWindow : MonoBehaviour
 {
@@ -17,9 +36,9 @@ public class PixelSortingHopperWindow : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() { instance = null; }
 
-    private PixelSortingHopper hopper;
-    private int output;   // which output's filter is being picked (0 = front, into the host; 1..3 = left, right, back)
-    private TMP_Text title;
+    private IPixelTierPickTarget hopper;   // what the pick is for
+    private int output;   // which of its picks (the hopper: 0 = front, into the host; 1..3 = left, right, back)
+    private TMP_Text title, hintText;
     private PixelClicker clicker;
     private TMP_FontAsset font;
     private GameObject panel;
@@ -36,9 +55,9 @@ public class PixelSortingHopperWindow : MonoBehaviour
     public static bool IsOpen => instance != null && instance.panel != null && instance.panel.activeSelf;
 
     /// <summary>Opens the picker for this hopper (or switches the open picker to it).</summary>
-    public static void Open(PixelSortingHopper h, int output = 0)
+    public static void Open(IPixelTierPickTarget h, int output = 0)
     {
-        if (h == null) return;
+        if (h == null || !h.PickAlive) return;
         if (instance == null)
         {
             PixelClicker c = h.Clicker != null ? h.Clicker : PixelFind.Cached<PixelClicker>();
@@ -53,7 +72,8 @@ public class PixelSortingHopperWindow : MonoBehaviour
         }
         instance.hopper = h;
         instance.output = output;
-        if (instance.title != null) instance.title.text = (h.OutputCount > 1 ? PixelSortingHopper.OutputName(output) + " filter" : "Select filter").ToUpperInvariant();
+        if (instance.title != null) instance.title.text = h.PickTitle(output).ToUpperInvariant();
+        if (instance.hintText != null) instance.hintText.text = h.PickHint(output);
         instance.panel.SetActive(true);
         instance.Refresh();
     }
@@ -67,10 +87,10 @@ public class PixelSortingHopperWindow : MonoBehaviour
     }
 
     /// <summary>The hopper's filter changed: redraw the highlight if the picker shows it.</summary>
-    public static void Changed(PixelSortingHopper h) { if (instance != null && h != null && instance.hopper == h) instance.dirty = true; }
+    public static void Changed(IPixelTierPickTarget h) { if (instance != null && h != null && ReferenceEquals(instance.hopper, h)) instance.dirty = true; }
 
     /// <summary>The hopper is going away: close the picker if it shows it.</summary>
-    public static void Forget(PixelSortingHopper h) { if (instance != null && instance.hopper == h) Close(); }
+    public static void Forget(IPixelTierPickTarget h) { if (instance != null && ReferenceEquals(instance.hopper, h)) Close(); }
 
     private void OnDestroy()
     {
@@ -86,6 +106,7 @@ public class PixelSortingHopperWindow : MonoBehaviour
         TMP_Text hint = PixelUIKit.CreateText(font, panel.transform, "Hint", "Husks of this type leave through this output; types no output filters drop out of the bottom spout.",
                                               22f, TextAlignmentOptions.Center, FontStyles.Italic, PixelUITheme.DimTextColor);
         Place(hint.rectTransform, new Vector2(Pad, -parts.HeaderHeight - 4f), new Vector2(Width - 2f * Pad, 56f));
+        hintText = hint;
         float top = parts.HeaderHeight + 70f;
         viewHeight = Height - top - Pad;
         scroll = PixelUIKit.CreateScrollView(panel.transform, "Types", Color.gray, PixelUIKit.ScrollBarWidth, 30f, out gridContent, out scrollBar);
@@ -103,7 +124,7 @@ public class PixelSortingHopperWindow : MonoBehaviour
     private void Update()
     {
         if (!IsOpen) return;
-        if (hopper == null || PixelCalm.InMenu) { Close(); return; }
+        if (hopper == null || !hopper.PickAlive || PixelCalm.InMenu) { Close(); return; }
         if (dirty) Refresh();
     }
 
@@ -113,11 +134,12 @@ public class PixelSortingHopperWindow : MonoBehaviour
         if (hopper == null || clicker == null) return;
         for (int i = gridContent.childCount - 1; i >= 0; i--) Destroy(gridContent.GetChild(i).gameObject);
         int n = 0;
-        Tile(n++, -1, "None");
+        if (hopper.PickAllowsNone) Tile(n++, -1, "None");
+        bool everyType = hopper.PickAllTiers;
         for (int t = 0; t < clicker.Tiers.Length; t++)
         {
             PixelClicker.PixelTier tier = clicker.Tiers[t];
-            if (tier == null || !tier.unlocked || tier.flyAway) continue;
+            if (tier == null || (!tier.unlocked && !everyType) || tier.flyAway) continue;
             Tile(n++, t, tier.displayName.Replace(" Pixels", ""));
         }
         PixelUIKit.UpdateScrollView(scroll, scrollBar, ((n + Columns - 1) / Columns) * (TileH + Gap), viewHeight);
@@ -129,7 +151,7 @@ public class PixelSortingHopperWindow : MonoBehaviour
         GameObject go = new GameObject("Tile", typeof(RectTransform), typeof(Image));
         go.transform.SetParent(gridContent, false);
         Image bg = go.GetComponent<Image>();
-        bool selected = tier == hopper.FilterOf(output);
+        bool selected = tier == hopper.PickedTier(output);
         bg.color = selected ? PixelUITheme.ColorOf(ButtonRole.Selected) : new Color(0f, 0f, 0f, 0.25f);
         PixelUIKit.StyleBox(bg, true);
         Place(go.GetComponent<RectTransform>(), new Vector2((index % Columns) * (TileW + Gap), -(index / Columns) * (TileH + Gap)), new Vector2(TileW, TileH));
@@ -147,6 +169,6 @@ public class PixelSortingHopperWindow : MonoBehaviour
         Place(t.rectTransform, new Vector2(4f, tier >= 0 ? -92f : -(TileH - 34f) * 0.5f), new Vector2(TileW - 8f, 34f));
         PixelUIKit.FitOneLine(t, 11f);
         int pick = tier;
-        PixelUIKit.MakeClickable(go, () => { if (hopper != null) hopper.SetFilter(output, pick); Close(); }, true, false);
+        PixelUIKit.MakeClickable(go, () => { if (hopper != null && hopper.PickAlive) hopper.SetPickedTier(output, pick); Close(); }, true, false);
     }
 }

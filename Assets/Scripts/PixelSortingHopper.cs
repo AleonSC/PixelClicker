@@ -63,7 +63,7 @@ public interface IPixelHopperHost : IPixelSocketDevice
     bool TakeFeed(int tier, double amount, Vector3 at, Vector3 velocity);
 }
 
-public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, IPixelStrayTarget, IPixelDeviceInfo
+public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, IPixelStrayTarget, IPixelDeviceInfo, IPixelTierPickTarget
 {
     [Header("Sorting Hopper")]
     [Tooltip("Seconds between two husks leaving the hopper (into the Recycler or out of the bottom spout).")]
@@ -338,6 +338,15 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
     }
 
     private string Name(int tier) => clicker.Tiers[tier].displayName.Replace(" Pixels", "");
+
+    // ---- The picker window (PixelSortingHopperWindow, IPixelTierPickTarget): slot = output ----
+    public int PickedTier(int slot) => FilterOf(slot);
+    public void SetPickedTier(int slot, int tier) => SetFilter(slot, tier);
+    public string PickTitle(int slot) => OutputCount > 1 ? OutputName(slot) + " filter" : "Select filter";
+    public string PickHint(int slot) => "Husks of this type leave through this output; types no output filters drop out of the bottom spout.";
+    public bool PickAllowsNone => true;
+    public bool PickAllTiers => false;
+    public bool PickAlive => this != null;
 
     private void OnDestroy()
     {
