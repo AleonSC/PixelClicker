@@ -4,7 +4,9 @@
 //   ClampEnd keeps the slope under about 37 degrees); posts (BuildSupports) stand on the floor (FloorY) under a raised belt. Riders measure their place along the GROUND (Length = horizontal length), PointAt gives the
 //   sloped height, RunSpeed / LiftFactor adjust speed and rest height for the slope. Snap() matches belt ends and elevator tops by SCREEN distance, so raised ends can be snapped to; FindNext only chains belts
 //   whose heights match. The Conveyor Elevator (PixelElevator.cs) lifts pixels between heights.
-//   CORNERS: where belts chain at an angle the gap on the outside of the turn is filled automatically (PixelConveyorJoint.cs).
+//   CORNERS: where belts chain at an angle the outside of the turn is filled with a ROUNDED corner (an arc, a curved rail and a turntable plate; PixelConveyorJoint.cs).
+//   LOOK (2026-10-19): rubber belt with moving chevrons and slat seams, steel rails with bolts on a dark frame with a yellow trim line, rollers with end caps.
+//   SHOP: the Conveyor Belt Kit (PixelConsumables DeviceKind.ConveyorBelt) is sold in Utilities for everyone since 2026-10-19 (monochrome price).
 //   WIDTH: PixelConveyor.LaneCount = 1 cube wide, 2 at Electrician level 10, 3 at level 20 (every belt, PixelConveyorSystem.Update rebuilds them when it changes). Each rider travels in a LANE (belt-local x, PixelConveyor.LaneOffset / NearestLane): a pixel is
 //   captured into the lane it landed in, riders keep their gap per lane, and a hand-on to the next belt picks the nearest lane there.
 //   CONVEYOR BELT (a Dev Hub > Tester feature, PixelFeatureTester 'Conveyor Belt'). Placing: click a point, then click another: a belt is built between the two (the second point
@@ -298,9 +300,26 @@ public class PixelConveyor : MonoBehaviour
         float rail = 0.13f * unit, railH = 0.34f * unit;
         k.Box("Rail L", transform, new Vector3(-(width * 0.5f + rail * 0.5f), railH * 0.5f, 0f), new Vector3(rail, railH, length + rail * 2f), steel, default, false, 0.7f, 0.5f);   // (no collider: the player can walk on and off)
         k.Box("Rail R", transform, new Vector3(width * 0.5f + rail * 0.5f, railH * 0.5f, 0f), new Vector3(rail, railH, length + rail * 2f), steel, default, false, 0.7f, 0.5f);
-        // Rollers at both ends.
+        // Rollers at both ends, with round end caps on the frame.
         k.Cyl("Roller A", transform, new Vector3(0f, height * 0.5f, -length * 0.5f), height * 0.6f, width * 1.02f, steel, new Vector3(0f, 0f, 90f), 0.8f, 0.5f);
         k.Cyl("Roller B", transform, new Vector3(0f, height * 0.5f, length * 0.5f), height * 0.6f, width * 1.02f, steel, new Vector3(0f, 0f, 90f), 0.8f, 0.5f);
+        // DETAIL (2026-10-19): a dark steel frame under each rail with a yellow trim line along its outside, round caps where the rollers meet the frame,
+        // and bolts along the rails (every ~1.2 cube widths; few objects per piece).
+        Color frame = new Color(0.26f, 0.28f, 0.32f, 1f), dark = new Color(0.12f, 0.13f, 0.15f, 1f);
+        for (int s = -1; s <= 1; s += 2)
+        {
+            float fx = s * (width * 0.5f + rail * 0.5f);
+            k.Box("Frame", transform, new Vector3(fx, -height * 0.35f, 0f), new Vector3(rail * 1.4f, height * 1.3f, length), frame, default, false, 0.5f, 0.45f);
+            k.Box("Trim", transform, new Vector3(s * (width * 0.5f + rail * 1.22f), railH * 0.35f, 0f), new Vector3(0.012f * unit, 0.05f * unit, length * 0.96f), accent, default, false, 0.2f, 0.5f, accent * 0.25f);
+            for (int e = -1; e <= 1; e += 2)
+                k.Cyl("Roller Cap", transform, new Vector3(s * (width * 0.5f + rail * 1.15f), height * 0.5f, e * length * 0.5f), height * 0.85f, 0.04f * unit, dark, new Vector3(0f, 0f, 90f), 0.6f, 0.5f);
+            int bolts = Mathf.Clamp(Mathf.FloorToInt(length / (1.2f * unit)), 1, 12);
+            for (int i = 0; i < bolts; i++)
+            {
+                float z = -length * 0.5f + length * (i + 0.5f) / bolts;
+                k.Cyl("Bolt", transform, new Vector3(fx, railH + 0.01f * unit, z), 0.035f * unit, 0.03f * unit, new Color(0.75f, 0.78f, 0.82f, 1f), default, 0.9f, 0.7f);
+            }
+        }
 
         // Chevrons that travel along the belt and show the direction.
         GameObject rr = new GameObject("Ribs");
@@ -319,6 +338,8 @@ public class PixelConveyor : MonoBehaviour
                 float bx = s * half * 0.5f;
                 k.Box("Bar", chev.transform, new Vector3(bx, height + 0.004f * unit, -Mathf.Abs(bx) * Mathf.Tan(35f * Mathf.Deg2Rad)), new Vector3(half * 1.05f, 0.012f * unit, 0.07f * unit), accent, new Vector3(0f, s * 35f, 0f), false, 0.1f, 0.3f);
             }
+            // A dark seam across the belt between chevrons: the belt's slats, moving with it.
+            k.Box("Seam", chev.transform, new Vector3(0f, height + 0.003f * unit, -ribSpacing * 0.5f), new Vector3(width * 0.96f, 0.008f * unit, 0.03f * unit), new Color(0.1f, 0.1f, 0.12f, 1f), default, false, 0.1f, 0.2f);
             ribs.Add(chev.transform);
         }
         BuildSupports(k, steel);

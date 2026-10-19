@@ -1184,18 +1184,14 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     {
         return new Device
         {
-            devOnly = true,   // (2026-10-18: out of the shop for now, Dev Hub > Main > Dev items gives it)
-            kind = DeviceKind.ConveyorBelt,
-            vendorOnly = true,
-            shopSkillId = "electrician",   // Electrician level 5 puts it on sale in the shop
-            shopSkillLevel = 5,
+            kind = DeviceKind.ConveyorBelt,   // (2026-10-19: back in the shop, Utilities, for everyone - a machine, so monochrome)
             displayName = "Conveyor Belt Kit",
-            description = "Right-click to lay conveyor belts: click a point, then another, and a belt is built between them (short pieces make curves; scroll raises or lowers the end). Old pixels that land on a belt are carried along it. Right click ends a chain; hold the right button on a belt to remove it. The kit is not used up. You can only hold one.",
-            requiredType = PixelClicker.PixelType.Wire,
+            description = "Right-click to lay conveyor belts: click a point, then another, and a belt is built between them; keep clicking to chain pieces - the turns between them are rounded (scroll raises or lowers the end). Husks that land on a belt are carried along it, and belts snap to couplings on machines. Right click ends a chain; hold the right button on a belt to remove it. The kit is not used up. You can only hold one.",
+            requiredType = PixelClicker.PixelType.White,
             costs = new[]
             {
-                new PixelShop.PackCost { type = PixelClicker.PixelType.Electric, amount = 400 },
-                new PixelShop.PackCost { type = PixelClicker.PixelType.Wire, amount = 150 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Gray, amount = 250 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Black, amount = 150 },
             },
             maxHeld = 1,
             color = new Color(0.95f, 0.8f, 0.2f, 1f),
@@ -1551,6 +1547,19 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
                     if (maker.Key == d.kind) { d.devOnly = maker.Value().devOnly; break; }
             }
             consumablePriceVersion = 2;
+            added = true;
+        }
+        if (consumablePriceVersion < 3 && devices != null)
+        {
+            // 2026-10-19: the Conveyor Belt Kit is in the shop for everyone (monochrome price, no skill gate): saved entries take the coded ones.
+            foreach (Device d in devices)
+            {
+                if (d == null || d.kind != DeviceKind.ConveyorBelt) continue;
+                Device fresh = CreateDefaultConveyorBelt();
+                d.devOnly = false; d.vendorOnly = false; d.shopSkillId = ""; d.shopSkillLevel = 0;
+                d.requiredType = fresh.requiredType; d.costs = fresh.costs; d.description = fresh.description;
+            }
+            consumablePriceVersion = 3;
             added = true;
         }
 
