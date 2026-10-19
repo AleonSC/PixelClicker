@@ -1435,3 +1435,4 @@
 [2026-10-18 17:37 UTC] To-do: four connection items - Chute, Robot arm, Launcher + catcher and coupling settings (filter, overflow priority, rate limit, colour tag, In / Out / Auto); Ideas: later transports (water flume, mag-rail, teleport pads, drone courier).
 [2026-10-19 01:21 UTC] To-do: a Consumables tab button that opens a window of 3D views of the consumables.
 [2026-10-19 01:27 UTC] Design + to-do: Build mode with a free cam from the first placement (Cubie's Recycler), a build bar of owned placeables, and a mid-game socket / coupling view when the factory unlocks; first person stays a later reveal.
+[2026-10-19 08:41 UTC] To-do: vendor orders - vendors post delivery orders (e.g. 50 Wood Chips in 10 minutes) filled by belt or tube to a delivery pad for big rewards, a reason to build a factory.
