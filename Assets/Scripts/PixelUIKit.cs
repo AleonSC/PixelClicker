@@ -781,6 +781,36 @@ public static partial class PixelUIKit
     }
 
     /// <summary>A resize grip for a window's bottom-right corner: three short diagonal lines, transparent elsewhere (white; tint it with the Image colour).</summary>
+    private static Sprite menuSprite;
+
+    /// <summary>A 'menu' icon: three rounded bars (white; tint it with the Image colour).</summary>
+    public static Sprite MenuSprite()
+    {
+        if (menuSprite != null) return menuSprite;
+        const int n = 64;
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Menu Icon", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+        Color[] px = new Color[n * n];
+        float[] rows = { 0.25f, 0.5f, 0.75f };
+        const float halfH = 0.065f, left = 0.16f, right = 0.84f;
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float u = (x + 0.5f) / n, v = (y + 0.5f) / n, a = 0f;
+                foreach (float r in rows)
+                {
+                    float dx = Mathf.Max(0f, Mathf.Max(left - u, u - right)), dy = Mathf.Abs(v - r);
+                    float d = Mathf.Sqrt(dx * dx + dy * dy) - halfH;   // (a capsule: rounded ends)
+                    a = Mathf.Max(a, Mathf.Clamp01(0.5f - d * n));
+                }
+                px[y * n + x] = new Color(1f, 1f, 1f, a);
+            }
+        tex.SetPixels(px);
+        tex.Apply();
+        menuSprite = Sprite.Create(tex, new Rect(0f, 0f, n, n), new Vector2(0.5f, 0.5f), 100f);
+        menuSprite.name = "Menu Icon";
+        return menuSprite;
+    }
+
     public static Sprite GripSprite()
     {
         if (gripSprite != null) return gripSprite;

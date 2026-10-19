@@ -36,6 +36,7 @@ public static class PixelSystems
         new Entry(typeof(PixelUITheme), "UI"),
         new Entry(typeof(PixelTipQueue), "UI"),
         new Entry(typeof(PixelDeviceCard), "UI"),
+        new Entry(typeof(PixelConsumableGallery), "UI"),
         new Entry(typeof(PixelStudioIntro), "UI"),
         new Entry(typeof(PixelCrashLog), "Core"),
         new Entry(typeof(PixelViewBounds), "Core"),

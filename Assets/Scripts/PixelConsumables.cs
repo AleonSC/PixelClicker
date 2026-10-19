@@ -1771,6 +1771,12 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     /// <summary>True for a combo potion (craft-only, never in the shop).</summary>
     public bool ItemCraftOnly(int item) => !IsDevice(item) && potions[item].craftOnly;
 
+    /// <summary>Does the Inventory list this item (held, and not a craft-only potion / attuned copy you have none of)? The Inventory and the 3D consumables window both ask this.</summary>
+    public bool ShownInInventory(int item) => item >= 0 && item < ItemCount && ItemOwned(item) > 0 && (!ItemCraftOnly(item) || Get(item).owned > 0) && (!ItemAttuned(item) || GetDevice(item - Count).owned > 0);
+
+    /// <summary>The kind of a device item (null for a potion).</summary>
+    public DeviceKind? ItemKind(int item) => IsDevice(item) ? devices[item - potions.Length].kind : (DeviceKind?)null;
+
     /// <summary>True for a device that is only made by crafting (never sold in the shop or by a visitor).</summary>
     /// <summary>True for an attuned device (only affects one pixel type; made by crafting).</summary>
     public bool ItemAttuned(int item) => IsDevice(item) && devices[item - potions.Length].attuned;

@@ -1710,8 +1710,9 @@ public class PixelUI : MonoBehaviour
         });
         categoryDropdown.gameObject.SetActive(false);
 
-        // Half-width drop-down on the left, a search box on the right (searches every kind of consumable you hold).
-        float gapBetween = 8f, half = (innerWidth - gapBetween) * 0.5f;
+        // The drop-down on the left, a search box on the right (searches every kind of consumable you hold) and, between them, a square
+        // menu button that opens the 3D consumables window (PixelConsumableGallery).
+        float gapBetween = 8f, square = categoryDropdownHeight, half = (innerWidth - gapBetween * 2f - square) * 0.5f;
         dr.anchorMin = dr.anchorMax = new Vector2(0.5f, 1f);
         dr.pivot = new Vector2(0f, 1f);
         dr.sizeDelta = new Vector2(half, categoryDropdownHeight);
@@ -1731,7 +1732,32 @@ public class PixelUI : MonoBehaviour
             Refresh();
         });
         consumableSearchField.gameObject.SetActive(false);
+
+        galleryButton = PixelUIKit.CreateButton(font, boxObject.transform, "3D View Button", "", new Vector2(square, square), ButtonRole.Neutral, 20f);
+        RectTransform gbr = galleryButton.GetComponent<RectTransform>();
+        gbr.anchorMin = gbr.anchorMax = new Vector2(0.5f, 1f);
+        gbr.pivot = new Vector2(0.5f, 1f);
+        gbr.sizeDelta = new Vector2(square, square);
+        gbr.anchoredPosition = new Vector2(-innerWidth * 0.5f + half + gapBetween + square * 0.5f, -(tabTop + subTabHeight + subTabGap));
+        GameObject icon = new GameObject("Menu Icon", typeof(RectTransform), typeof(Image));
+        icon.transform.SetParent(galleryButton.transform, false);
+        Image iconImage = icon.GetComponent<Image>();
+        iconImage.sprite = PixelUIKit.MenuSprite();
+        iconImage.raycastTarget = false;
+        RectTransform ir = iconImage.rectTransform;
+        ir.anchorMin = ir.anchorMax = ir.pivot = new Vector2(0.5f, 0.5f);
+        ir.sizeDelta = new Vector2(square * 0.62f, square * 0.62f);
+        galleryButton.onClick.AddListener(PixelConsumableGallery.Toggle);
+        PixelHoverTip galleryTip = galleryButton.gameObject.AddComponent<PixelHoverTip>();
+        galleryTip.onEnter = () => tooltipCustomText = galleryButtonTip;
+        galleryTip.onExit = HideTooltip;
+        galleryButton.gameObject.SetActive(false);
     }
+
+    private Button galleryButton;
+
+    [Tooltip("Hover tip of the square menu button between the Consumables drop-down and search box (opens the 3D consumables window).")]
+    [SerializeField] private string galleryButtonTip = "Show your consumables in 3D";
 
     private TMP_InputField consumableSearchField;
     private string consumableSearch = "";
@@ -1741,6 +1767,7 @@ public class PixelUI : MonoBehaviour
     {
         if (categoryDropdown != null && categoryDropdown.gameObject.activeSelf != on) categoryDropdown.gameObject.SetActive(on);
         if (consumableSearchField != null && consumableSearchField.gameObject.activeSelf != on) consumableSearchField.gameObject.SetActive(on);
+        if (galleryButton != null && galleryButton.gameObject.activeSelf != on) galleryButton.gameObject.SetActive(on);
     }
 
     /// <summary>The little button at the window's top left that switches the simplified (pinned) Inventory on and off.</summary>
@@ -2024,7 +2051,7 @@ public class PixelUI : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             int owned = consumables.ItemOwned(i);
-            bool visible = owned > 0 && (!consumables.ItemCraftOnly(i) || consumables.Get(i).owned > 0) && (!consumables.ItemAttuned(i) || consumables.GetDevice(i - consumables.Count).owned > 0);
+            bool visible = consumables.ShownInInventory(i);
             if (potionRowObjects[i] == null)
             {
                 if (!visible) continue;
