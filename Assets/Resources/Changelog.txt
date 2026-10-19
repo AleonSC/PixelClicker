@@ -1442,3 +1442,4 @@
 [2026-10-19 11:52 UTC] The achievement popup is smaller (open and collapsed, Popup Scale 0.68), sits at the middle right of the screen by default and starts expanded.
 [2026-10-19 11:55 UTC] Leaf husks now float down like real leaves: they swing back and forth as they fall, tilting into each swing and slowing at the ends, until they first touch something (swing, speed and tilt can be tuned on the Leaf look).
 [2026-10-19 12:09 UTC] To-do: Cubie's bill as the progression spine (one pure-currency bill with milestones unlocking tiers and prestige at 100%), his shop opening further at each milestone as he trusts you more, and the minute-1 Receipt that becomes the Bill.
+[2026-10-19 12:14 UTC] XP popups no longer overlap and are a bit smaller: skill XP stacks in a dock at the bottom middle above the black bar (hold and drag to move it, right-click to reset), husk crush scores stay where the husk broke, and the crush bonus texts sit by the mouse in their own rows.

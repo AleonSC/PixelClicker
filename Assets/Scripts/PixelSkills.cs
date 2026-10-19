@@ -1276,12 +1276,7 @@ public partial class PixelSkills : MonoBehaviour
         return owner != null && owner.id != StandardId ? owner : null;
     }
 
-    private void OnCollected(int tierIndex, double amount, bool automatic)
-    {
-        xpFromAuto = automatic;   // the XP popups of an auto click appear beside the cube, not at the mouse
-        try { OnCollectedInner(tierIndex, amount, automatic); }
-        finally { xpFromAuto = false; }
-    }
+    private void OnCollected(int tierIndex, double amount, bool automatic) => OnCollectedInner(tierIndex, amount, automatic);   // (XP popups go to the XP dock either way: PixelSkillsPopups)
 
     private void OnCollectedInner(int tierIndex, double amount, bool automatic)
     {
@@ -1301,16 +1296,19 @@ public partial class PixelSkills : MonoBehaviour
     /// (wood husks Woodcutting, ores Mining...), pure husks train Standard. Popups only once the Skills tab exists, like Standard's click XP - except a
     /// crush (crushed = true), which always shows its popup, small amounts with decimals: it is the crush's feedback.
     /// </summary>
-    /// popupText (Husk Crush's bonuses): shown INSTEAD of the '+n XP' popup ('Air crush bonus!'); noPopup = give the XP silently.
-    public void AddHuskXp(int tierIndex, double xp, bool crushed = false, string popupText = null, bool noPopup = false)
+    /// popupText (Husk Crush's bonuses): shown by the mouse ('Air crush bonus!'), the crush's own '+n XP' still shows where the husk broke ('at', world);
+    /// noPopup = give the XP silently.
+    public void AddHuskXp(int tierIndex, double xp, bool crushed = false, string popupText = null, bool noPopup = false, Vector3? at = null)
     {
         if (disableSkills || xp <= 0d) return;
         SkillPack pack = PackForTier(tierIndex) ?? Find(StandardId);
-        bool popup = pack != null && !noPopup && popupText == null && (crushed || pack.id != StandardId || AnyTrainable);
-        xpPopupDecimals = crushed;   // (read by QueueXpPopup: the crush's popup shows decimals)
+        bool popup = pack != null && !noPopup && (crushed || (popupText == null && (pack.id != StandardId || AnyTrainable)));
+        xpPopupDecimals = crushed;   // (read by QueueXpPopup: the crush's popup shows decimals...)
+        xpPopupAt = crushed ? at : null;   // (...and stays where the husk broke)
         AddXp(pack, xp, popup);
         xpPopupDecimals = false;
-        if (pack != null && popupText != null && !hideXpPopups) ShowPopupText(pack, popupText, false);
+        xpPopupAt = null;
+        if (pack != null && popupText != null && !hideXpPopups) ShowMouseText(pack, popupText);   // (a crush bonus: by the mouse, stacked so they never overlap)
     }
 
     /// <summary>A reward's XP (PixelGoals): exactly 'xp' to that skill (no multipliers), with its popup.</summary>

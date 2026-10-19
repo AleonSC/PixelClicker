@@ -14,8 +14,8 @@
 //       CRUSH STREAK +streakStep (10%) for each crush within streakWindow (1 s) of the one before, up to streakCap (x1.5); 1 s without one resets it -
 //         every husk a Chain / Charge Crush breaks counts as one crush;
 //       Hard Hands (below) multiplies in too, under the same cap.
-//     A bonus REPLACES the crush's XP popup with a short text (PixelSkills.AddHuskXp popupText: 'Air crush bonus!', 'Last-gasp bonus!' or
-//     'Crush streak x1.4!' - the biggest one), at most one text every bonusPopupGap (0.35 s; the XP of crushes in between shows no popup). Stats
+//     Every crush's '+n XP' stays where the husk broke; a bonus adds a short text BY THE MOUSE (stacked, never overlapping) (PixelSkills.AddHuskXp popupText: 'Air crush bonus!', 'Last-gasp bonus!' or
+//     'Crush streak x1.4!' - the biggest one), at most one text every bonusPopupGap (0.35 s). Stats
 //     husk.crushed.air, husk.crushed.lastgasp; BestStreak (since ResetBestStreak) for the session recorder.
 //   - PICKING (PickAt, used by PixelRightClick): the husk exactly under the pointer, else the nearest crushable husk whose on-screen edge is
 //     within pickMarginPixels (28 at 1080p) - PixelHuskQuery.NearestOnScreen - so small, far and moving husks are easy to hit; never while the
@@ -689,7 +689,7 @@ public class PixelHuskCrush : MonoBehaviour
             xp = CrushXp(skills, tier, body, out string bonusText, out bool air, out bool gasp);
             bool textNow = bonusText != null && Time.unscaledTime - lastBonusPopup >= bonusPopupGap;
             if (textNow) lastBonusPopup = Time.unscaledTime;
-            skills.AddHuskXp(tier, xp, true, textNow ? bonusText : null, bonusText != null && !textNow);   // (a bonus replaces the popup; too soon after the last text: no popup)
+            skills.AddHuskXp(tier, xp, true, textNow ? bonusText : null, false, at);   // (the score stays where the husk broke; a bonus text shows by the mouse - too soon after the last one: none)
             if (air) PixelStats.Count("husk.crushed.air");
             if (gasp) PixelStats.Count("husk.crushed.lastgasp");
             string skillId = skills.HuskSkillId(tier);
