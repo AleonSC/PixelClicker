@@ -5,6 +5,7 @@
 //   sloped height, RunSpeed / LiftFactor adjust speed and rest height for the slope. Snap() matches belt ends and elevator tops by SCREEN distance, so raised ends can be snapped to; FindNext only chains belts
 //   whose heights match. The Conveyor Elevator (PixelElevator.cs) lifts pixels between heights.
 //   CORNERS: where belts chain at an angle the outside of the turn is filled with a ROUNDED corner (an arc, a curved rail and a turntable plate; PixelConveyorJoint.cs).
+//   NO FADING ON A BELT (2026-10-19): a rider's lifetime is paused every physics step (OldPixelDespawn.KeepAlive), so husks on belts never despawn; it runs on once they leave.
 //   LOOK (2026-10-19): rubber belt with moving chevrons and slat seams, steel rails with bolts on a dark frame with a yellow trim line, rollers with end caps.
 //   SHOP: the Conveyor Belt Kit (PixelConsumables DeviceKind.ConveyorBelt) is sold in Utilities for everyone since 2026-10-19 (monochrome price).
 //   WIDTH: PixelConveyor.LaneCount = 1 cube wide, 2 at Electrician level 10, 3 at level 20 (every belt, PixelConveyorSystem.Update rebuilds them when it changes). Each rider travels in a LANE (belt-local x, PixelConveyor.LaneOffset / NearestLane): a pixel is
@@ -792,7 +793,10 @@ public class PixelConveyorSystem : MonoBehaviour
                 if (!gone && (info == null || !info.heldByPlayer)) Release(r, false);   // (a grabbed pixel is the grab's business now)
                 riding.Remove(r.rb);
                 riders.RemoveAt(i);
+                continue;
             }
+            OldPixelDespawn life = PixelHuskQuery.Get(r.rb).despawn;
+            if (life != null && !life.IsDespawning) life.KeepAlive();   // a husk riding a belt never fades: its lifetime waits until it leaves the belt (2026-10-19)
         }
 
         // 3. Carry them: front rider first, each one keeps a gap behind the one ahead; at the end hand on or eject.
