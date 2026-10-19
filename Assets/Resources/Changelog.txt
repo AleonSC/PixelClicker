@@ -1434,3 +1434,4 @@
 [2026-10-18 17:31 UTC] To-do: split the Workbench item into three - the Workbench with husk crafting, the Recipe Book button, and the bench drawing husks from the Pixel Bank.
 [2026-10-18 17:37 UTC] To-do: four connection items - Chute, Robot arm, Launcher + catcher and coupling settings (filter, overflow priority, rate limit, colour tag, In / Out / Auto); Ideas: later transports (water flume, mag-rail, teleport pads, drone courier).
 [2026-10-19 01:21 UTC] To-do: a Consumables tab button that opens a window of 3D views of the consumables.
+[2026-10-19 01:27 UTC] Design + to-do: Build mode with a free cam from the first placement (Cubie's Recycler), a build bar of owned placeables, and a mid-game socket / coupling view when the factory unlocks; first person stays a later reveal.

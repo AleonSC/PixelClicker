@@ -383,6 +383,23 @@ while also paying currency, so Standard levelled ~2x too fast and Husk Crush had
    up to 20 husks; its filter (picked with a 'Select filter' button in the shared device panel) goes through a feed pipe into the bin, every other type drops out of a side tube (moved to the bottom spout the same day)
    (no more fading tray as the loss - the loss is now that rejects end up loose on the floor behind the bin).
 
+### Build mode and free cam (Agreed 2026-10-19, not built)
+**Build mode with a free cam from the very first placement.** Free cam is simply another way to look at the game and won't overwhelm
+anyone; it is also how you see things like the Sorting Hopper's overflow, which comes out of its BOTTOM. First person stays a later,
+separate reveal.
+
+- **When:** Cubie's Recycler gift (visit 1, ~minute 1) opens Build mode the first time it is placed - one line: "This is Build mode.
+  Press [key] any time to place or move things." After that every placeable goes through it (one way to place things); the Inventory's
+  'Place' button opens Build mode with that item selected.
+- **In Build mode:** the camera eases into the FREE CAM (`PixelFreeCam`, today a View window tick box: WASD, Space / C, Shift, middle-mouse
+  look) and back to the cube view on leaving. A BUILD BAR along the bottom lists only owned PLACEABLES (devices, Workbench, later belts /
+  tubes / couplings) with counts; potions and other consumables stay in the Inventory. Place, move, rotate, remove; the placing preview
+  shows where husks will go (e.g. a line from the hopper to the bin, the overflow point underneath). Left-click never hits the cube while
+  building; the game keeps running (idle game); devices and their cards work as normal outside Build mode.
+- **Mid game - the factory upgrade:** the first transport (belt / tube) or Junction Box turns on the SOCKET / COUPLING VIEW in Build mode
+  (sockets and couplings light up with in / out arrows and line colours, hidden openings shown through the model) - a small 'now you're
+  running an operation' moment. The factory itself stays a mid-game unlock.
+
 ### Mid game - skills and machines (Built, growing)
 Gathering skills (Woodcutting, Foraging, Fishing, Mining, Farming, Electrician), each with filler, hazards, specials, perks and a
 tree; devices to handle husks; minigames bought as packs; visitors and vendors; pets; crafting; the Pixel Bank.
