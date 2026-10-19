@@ -284,6 +284,7 @@ public class PixelConveyor : MonoBehaviour
     {
         for (int i = transform.childCount - 1; i >= 0; i--) { GameObject old = transform.GetChild(i).gameObject; old.SetActive(false); Destroy(old); }
         ribs.Clear();
+        arrowRenderers.Clear();
         jointKey = null; joint = null;   // (the corner filler was a child: gone with the rest)
         a = from; b = to;
         Vector3 d = b - a; d.y = 0f;
@@ -337,17 +338,34 @@ public class PixelConveyor : MonoBehaviour
             {
                 // A V that points the way the belt runs (+Z): two bars swept back from the middle.
                 float bx = s * half * 0.5f;
-                k.Box("Bar", chev.transform, new Vector3(bx, height + 0.004f * unit, -Mathf.Abs(bx) * Mathf.Tan(35f * Mathf.Deg2Rad)), new Vector3(half * 1.05f, 0.012f * unit, 0.07f * unit), accent, new Vector3(0f, s * 35f, 0f), false, 0.1f, 0.3f);
+                GameObject bar = k.Box("Bar", chev.transform, new Vector3(bx, height + 0.004f * unit, -Mathf.Abs(bx) * Mathf.Tan(35f * Mathf.Deg2Rad)), new Vector3(half * 1.05f, 0.012f * unit, 0.07f * unit), accent, new Vector3(0f, s * 35f, 0f), false, 0.1f, 0.3f);
+                arrowRenderers.Add(bar.GetComponent<Renderer>());
             }
             // A dark seam across the belt between chevrons: the belt's slats, moving with it.
             k.Box("Seam", chev.transform, new Vector3(0f, height + 0.003f * unit, -ribSpacing * 0.5f), new Vector3(width * 0.96f, 0.008f * unit, 0.03f * unit), new Color(0.1f, 0.1f, 0.12f, 1f), default, false, 0.1f, 0.2f);
             ribs.Add(chev.transform);
         }
         BuildSupports(k, steel);
+        arrowForward = k.Mat(accent, 0.1f, 0.3f);
+        arrowReversed = k.Mat(ReversedArrowColor, 0.1f, 0.3f, ReversedArrowColor * 0.3f);
+        PaintArrows();
         RecordTrimParts();
         ApplyTrims();
         ApplySelection();
         PlaceRibs();
+    }
+
+    // ---------------- arrow colour (2026-10-19): yellow running the way it was laid, light blue once reversed ----------------
+
+    private static readonly Color ReversedArrowColor = new Color(0.35f, 0.85f, 1f, 1f);
+    private readonly List<Renderer> arrowRenderers = new List<Renderer>();
+    private Material arrowForward, arrowReversed;
+
+    private void PaintArrows()
+    {
+        Material m = reversed ? arrowReversed : arrowForward;
+        if (m == null) return;
+        foreach (Renderer r in arrowRenderers) if (r != null) r.sharedMaterial = m;
     }
 
     // ---------------- corner trims (2026-10-19) ----------------
@@ -359,8 +377,34 @@ public class PixelConveyor : MonoBehaviour
     private struct TrimPart { public Transform t; public Vector3 pos, scale; public int side, end; public bool stretch; }   // end: -1 a end, +1 b end, 0 along
     private readonly List<TrimPart> trimParts = new List<TrimPart>();
 
-    /// <summary>The belt this one's exit corner trimmed (cleared again when the corner goes).</summary>
-    public PixelConveyor TrimmedNext { get; set; }
+    /// <summary>The belt this one's b-end corner trimmed, and whether at its b end (cleared again when the corner goes).</summary>
+    public PixelConveyor TrimmedPartner { get; set; }
+    public bool TrimmedPartnerAtB { get; set; }
+
+    /// <summary>
+    /// The belt this one meets at its b END (geometry, not flow: a reversed piece keeps its corners): another belt with an end at the same point and
+    /// height. The corner belongs to this belt when the partner meets it with its a end (or, two b ends, to the older one). Null = none / not ours.
+    /// </summary>
+    public PixelConveyor CornerPartner(out bool partnerAtB)
+    {
+        partnerAtB = false;
+        if (ghostMode) return null;
+        PixelConveyor best = null;
+        float bestD = (unit * 0.45f) * (unit * 0.45f);
+        foreach (PixelConveyor c in all)
+        {
+            if (c == null || c == this || c.ghostMode) continue;
+            for (int e = 0; e < 2; e++)
+            {
+                Vector3 p = e == 0 ? c.a : c.b;
+                float d = (new Vector3(p.x, b.y, p.z) - b).sqrMagnitude;
+                if (d >= bestD || Mathf.Abs(p.y - b.y) > unit * 0.45f) continue;
+                if (e == 1 && c.GetInstanceID() > GetInstanceID()) continue;   // (two b ends meeting: the corner is the other belt's)
+                bestD = d; best = c; partnerAtB = e == 1;
+            }
+        }
+        return best;
+    }
 
     private void RecordTrimParts()
     {
@@ -378,10 +422,10 @@ public class PixelConveyor : MonoBehaviour
         }
     }
 
-    /// <summary>Cuts the inner side back at the exit (atExit) or start end: 'innerWorld' = the inside of the turn (world, flat), 'amount' = how far. 0 clears it.</summary>
-    public void SetTrim(bool atExit, Vector3 innerWorld, float amount)
+    /// <summary>Cuts the inner side back at the b end (atB) or the a end: 'innerWorld' = the inside of the turn (world, flat), 'amount' = how far. 0 clears it.</summary>
+    public void SetTrim(bool atB, Vector3 innerWorld, float amount)
     {
-        bool maxEnd = atExit != reversed;   // (the exit is the b end unless the belt is reversed)
+        bool maxEnd = atB;   // (the b end is belt-local +z, whichever way the belt runs)
         int side = amount <= 0f ? 0 : (Vector3.Dot(innerWorld, transform.right) >= 0f ? 1 : -1);
         amount = Mathf.Clamp(amount, 0f, length * 0.9f);
         if (maxEnd) { if (trimMax == amount && trimMaxSide == side) return; trimMax = amount; trimMaxSide = side; }
@@ -499,11 +543,7 @@ public class PixelConveyor : MonoBehaviour
     {
         reversed = !reversed;
         PixelConveyorSystem.OnFlipped(this);   // riders turn round with it
-        trimMin = trimMax = 0f; trimMinSide = trimMaxSide = 0;   // (its corners are worked out again: the ends swapped)
-        if (TrimmedNext != null) { TrimmedNext.SetTrim(false, Vector3.zero, 0f); TrimmedNext = null; }
-        ApplyTrims();
-        jointKey = null;
-        nextJointCheck = 0f;
+        PaintArrows();   // (its corners stay: they follow where the belts meet, not which way they run)
         PlaceRibs();
         PixelAudio.Play("device_place", 1.3f);
     }

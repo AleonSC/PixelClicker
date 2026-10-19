@@ -2,6 +2,8 @@
 // PixelConveyorJoint.cs
 //   INSIDE TRIMS (2026-10-19): the two belts' inner rails / frames / trims are cut back to where their inner edges cross (PixelConveyor.SetTrim), the end
 //   rollers there are hidden and the chevrons stop short, so nothing runs across the other belt.
+//   GEOMETRIC (2026-10-19): a corner is where a belt's b END meets another belt's end (PixelConveyor.CornerPartner), whichever way either runs, so a
+//   single reversed piece keeps its rounded corners (pixels are still only handed on along the flow: FindNext).
 //   ROUNDED (2026-10-19): the filler is a round SECTOR about the meeting point (outer edge an arc, a curved rail of short pieces along it) with a round
 //   turntable plate over the meeting point, so chained belts turn in a smooth curve instead of a mitred corner.
 //   CORNER FILLER for chained conveyor belts: where a belt hands on to the belt that starts at its end (PixelConveyor.FindNext) and the two are not in a straight line, the square-ish gap on the OUTSIDE of the turn is filled with a
@@ -17,17 +19,19 @@ public static class PixelConveyorJoint
     /// <summary>Makes sure 'belt' has the right corner filler (or none). 'key' remembers what was built; 'joint' is the built object.</summary>
     public static void Refresh(PixelConveyor belt, PixelClicker clicker, ref string key, ref GameObject joint)
     {
-        PixelConveyor next = belt.IsGhost ? null : belt.FindNext();
-        Vector3 dA = belt.Direction, dB = next != null ? next.Direction : dA;
+        // GEOMETRY, not flow (2026-10-19): the corner is where this belt's b END meets another belt's end - so reversing one piece keeps its corners.
+        bool partnerAtB = false;
+        PixelConveyor next = belt.IsGhost ? null : belt.CornerPartner(out partnerAtB);
+        Vector3 dA = Flat(belt.EndB - belt.EndA), dB = next != null ? (partnerAtB ? Flat(next.EndA - next.EndB) : Flat(next.EndB - next.EndA)) : dA;   // (into the corner / away from it)
         float turn = dA.x * dB.z - dA.z * dB.x;
-        if (next == null || (Mathf.Abs(turn) < 0.05f && Vector3.Dot(dA, dB) > 0f))
+        if (next == null || (Mathf.Abs(turn) < 0.05f && Vector3.Dot(dA, dB) > 0f) || Vector3.Dot(dA, dB) < -0.5f)
         {
             if (joint != null) Object.Destroy(joint);
             joint = null; key = null;
             ClearTrims(belt);
             return;
         }
-        Vector3 eA = belt.ExitPoint, sB = next.StartPoint;
+        Vector3 eA = belt.EndB, sB = partnerAtB ? next.EndB : next.EndA;
         float w = belt.Width, wB = next.Width, h = belt.SurfaceHeight;
         string k = eA.ToString("F2") + sB.ToString("F2") + w.ToString("F2") + wB.ToString("F2") + h.ToString("F2");
         if (joint != null && k == key) return;
@@ -44,10 +48,11 @@ public static class PixelConveyorJoint
             float det = -(dA.x * dB.z - dA.z * dB.x), extra = 0.13f * unit;   // (+ the rail's thickness, so the two rails meet)
             float t = Mathf.Abs(det) > 1e-4f ? (diff.x * (-dB.z) + dB.x * diff.z) / det : 0f;
             float s2 = Mathf.Abs(det) > 1e-4f ? (dA.x * diff.z - dA.z * diff.x) / det : 0f;
-            if (belt.TrimmedNext != null && belt.TrimmedNext != next) belt.TrimmedNext.SetTrim(false, Vector3.zero, 0f);
+            if (belt.TrimmedPartner != null && (belt.TrimmedPartner != next || belt.TrimmedPartnerAtB != partnerAtB)) belt.TrimmedPartner.SetTrim(belt.TrimmedPartnerAtB, Vector3.zero, 0f);
             belt.SetTrim(true, nA, Mathf.Max(0f, -t) + extra);
-            next.SetTrim(false, nB, Mathf.Max(0f, s2) + extra);
-            belt.TrimmedNext = next;
+            next.SetTrim(partnerAtB, nB, Mathf.Max(0f, s2) + extra);
+            belt.TrimmedPartner = next;
+            belt.TrimmedPartnerAtB = partnerAtB;
         }
         // ROUNDED (2026-10-19): the corner is a round sector about the point where the belts meet - its outer edge an ARC from this belt's outer corner
         // round to the next belt's - with a curved rail along it and a round turntable plate over the meeting point, so a chain turns in a smooth curve.
@@ -128,12 +133,14 @@ public static class PixelConveyorJoint
         kit.Cyl("Turntable Hub", joint.transform, hubLocal + up * (h + 0.02f * unit), radius * 0.16f, 0.03f * unit, steel, default, 0.85f, 0.7f);
     }
 
+    private static Vector3 Flat(Vector3 v) { v.y = 0f; return v.sqrMagnitude > 1e-8f ? v.normalized : Vector3.forward; }
+
     /// <summary>No corner at this belt's exit any more: its exit trim and the next belt's start trim go.</summary>
     private static void ClearTrims(PixelConveyor belt)
     {
         belt.SetTrim(true, Vector3.zero, 0f);
-        if (belt.TrimmedNext != null) belt.TrimmedNext.SetTrim(false, Vector3.zero, 0f);
-        belt.TrimmedNext = null;
+        if (belt.TrimmedPartner != null) belt.TrimmedPartner.SetTrim(belt.TrimmedPartnerAtB, Vector3.zero, 0f);
+        belt.TrimmedPartner = null;
     }
 
     private static void Rail(PixelFactoryKit kit, Transform parent, Transform belt, Vector3 p, Vector3 q, Vector3 centreLocal, float unit, Color c)
