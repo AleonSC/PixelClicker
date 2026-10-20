@@ -677,7 +677,6 @@ public class PixelFeatureTester : MonoBehaviour
         return list.ToArray();
     }
 
-    /// <summary>Loading a save: the placed test objects are replaced by the saved ones.</summary>
     /// <summary>Removes EVERY object the tester placed (belts, couplings, hoses, kiln, jumps...): the Dev Hub's 'Clear world' widget. Returns how many went.</summary>
     public static int ClearAllPlaced()
     {
@@ -694,6 +693,7 @@ public class PixelFeatureTester : MonoBehaviour
         return n;
     }
 
+    /// <summary>Loading a save: the placed test objects are replaced by the saved ones.</summary>
     public static void ImportAll(TesterSave[] saved)
     {
         kept = saved;
@@ -706,10 +706,11 @@ public class PixelFeatureTester : MonoBehaviour
             {
                 if (t == null || string.IsNullOrEmpty(t.json)) continue;
                 Feature f = instance.features.Find(x => x.name == t.feature);
-                if (f == null || f.import == null) continue;
+                if (f == null || f.import == null) { Debug.LogWarning("PixelFeatureTester: a saved '" + t.feature + "' was not restored - no tester feature by that name can load it."); continue; }
                 GameObject go = null;
-                try { go = f.import(instance.clicker, t.json); } catch (Exception e) { Debug.LogWarning("PixelFeatureTester: could not restore a " + t.feature + " - " + e.Message); }
+                try { go = f.import(instance.clicker, t.json); } catch (Exception e) { Debug.LogWarning("PixelFeatureTester: could not restore a " + t.feature + " - " + e.Message + "\n" + e.StackTrace); }
                 if (go != null) { f.placed.Add(go); PixelCouplings.Import(go, t.couplings); }
+                else Debug.LogWarning("PixelFeatureTester: a saved " + t.feature + " came back empty and was dropped (" + t.json + ").");
             }
         instance.Refresh();
     }
@@ -966,6 +967,7 @@ public class PixelFeatureTester : MonoBehaviour
             GameObject go = placing.placeTall(clicker, stagePoint, stageYaw, placing.stageValue != null ? placing.stageValue(ghost) : 0f);
             if (go != null) placing.placed.Add(go);
             stageActive = false;
+            if (go != null && AfterPlaced()) return;   // (a Belt Jump bought in the shop: one is used up per jump)
             Refresh();
         }
         else if (PixelInput.RightPressed()) { stageActive = false; Refresh(); }
