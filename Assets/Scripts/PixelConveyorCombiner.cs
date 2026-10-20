@@ -133,11 +133,17 @@ public class PixelConveyorCombiner : MonoBehaviour, IPixelAutoIntake
     private void OnEnable() { PixelCouplings.RegisterAutoIntake(this); if (!all.Contains(this)) all.Add(this); }
     private void OnDisable() { PixelCouplings.UnregisterAutoIntake(this); all.Remove(this); }
 
+    private void Awake() => PixelHuskPool.HuskReleasing += OnHuskReleasing;
+
     private void OnDestroy()
     {
+        PixelHuskPool.HuskReleasing -= OnHuskReleasing;
         foreach (Rigidbody rb in waiting) if (rb != null) rb.isKinematic = false;   // (let them drop)
         waiting.Clear();
     }
+
+    // (PixelHuskPool: the husk is going away and may be reused - take it out of the queue)
+    private void OnHuskReleasing(Rigidbody body) => waiting.Remove(body);
 
     private void FixedUpdate()
     {

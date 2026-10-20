@@ -16,7 +16,8 @@
 //   ONE OWNER PER HUSK (2026-10-17 Recycler rework): every machine that reaches for a husk - the Recycler's suction / suck-in / Capture, the Magnet, the
 //   Sweeper, the Sorting Hopper - asks Takeable first, and the one that takes it marks it (Capture or Reserve: its timer Held, kinematic while carried);
 //   from then on Takeable says no to everyone else, so whoever captures a husk first owns it. No device-to-device special cases.
-//   Users: PixelRecycler, PixelStorageCrate, PixelBaitBucket, PixelSortingHopper, PixelSweeper, PixelMagnetDevice.
+//   Users: PixelRecycler, PixelStorageCrate, PixelBaitBucket, PixelSortingHopper, PixelSweeper, PixelMagnetDevice; Takeable also by every device that takes
+//   or pushes loose husks (Fan, Vacuum Device, Wood Chipper, Magnetized Sorter, Quantum Organizer, Trash Can, Kiln, Funnel, Vacuum Cleaner).
 // ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
@@ -24,14 +25,18 @@ using UnityEngine;
 
 public static class PixelHuskHolder
 {
-    /// <summary>Can a container take this loose husk now? (Not vanishing, not held / reserved by something else, not in the hand, a real pixel type, not a fly-away.)</summary>
-    public static bool Takeable(PixelClicker clicker, Rigidbody body)
+    /// <summary>
+    /// Can a machine take (or push) this loose husk now? Not vanishing, not held / reserved by something else, not in the hand, a real pixel type,
+    /// not flying. 'allowLandedFlyAway': a fly-away type (Meteor) that has LANDED is fine too (the containers keep them out; the Fan, Vacuum Device,
+    /// Wood Chipper, Kiln, Trash Can, Funnel, Magnetized Sorter and Vacuum Cleaner always took them).
+    /// </summary>
+    public static bool Takeable(PixelClicker clicker, Rigidbody body, bool allowLandedFlyAway = false)
     {
         if (clicker == null || body == null || body.isKinematic || clicker.IsFlyingPixel(body)) return false;
         PixelHuskQuery.Husk h = PixelHuskQuery.Get(body);
         if (h.despawn != null && (h.despawn.Held || h.despawn.IsDespawning)) return false;
         if (h.info == null || h.info.heldByPlayer || !clicker.IsValidTierIndex(h.info.tierIndex)) return false;
-        return !clicker.Tiers[h.info.tierIndex].flyAway;
+        return allowLandedFlyAway || !clicker.Tiers[h.info.tierIndex].flyAway;
     }
 
     /// <summary>Takes a husk off the floor's husk list and holds its fade timer; it stays a real body. False if it was not on the list.</summary>

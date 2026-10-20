@@ -265,4 +265,14 @@ public class PixelChargeBooster : PixelPlacedDevice
         if (clicker != null) clicker.PixelCollected -= OnCollected;
         if (bolts != null) bolts.Destroy();
     }
+
+    // ---- the device card (PixelDeviceCard) ----
+    protected override void AddInfo(PixelDeviceInfo info)
+    {
+        if (Supercharged) info.Note("<color=#7FD4FF>Supercharged - clicking for you</color>");
+        else if (Ready) info.Note("<color=#FFE27F>Fully charged - click it to supercharge</color>");
+        info.Add("Charge", Mathf.RoundToInt(ChargeFraction * 100f) + "%");
+        if (!info.Full) return;
+        info.Add("Supercharge", superSeconds.ToString("0.#") + " s at " + superClicksPerSecond.ToString("0.#") + " clicks a second");
+    }
 }

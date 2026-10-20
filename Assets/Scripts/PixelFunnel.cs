@@ -14,7 +14,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelFunnel : MonoBehaviour, IPixelSocketDevice
+public class PixelFunnel : MonoBehaviour, IPixelSocketDevice, IPixelDeviceInfo
 {
     public enum Mode { Real, Ghost, Display }
 
@@ -326,12 +326,8 @@ public class PixelFunnel : MonoBehaviour, IPixelSocketDevice
 
     private bool CanCatch(Rigidbody rb)
     {
-        if (rb == null || rb.isKinematic || carrier.Contains(rb) || PixelAttachment.IsAttached(rb) || clicker.IsFlyingPixel(rb)) return false;
-        OldPixelInfo info = PixelHuskQuery.Get(rb).info;
-        if (info != null && info.heldByPlayer) return false;
-        OldPixelDespawn despawn = PixelHuskQuery.Get(rb).despawn;
-        if (despawn != null && (despawn.IsDespawning || despawn.Held)) return false;
-        return true;
+        if (rb == null || carrier.Contains(rb) || PixelAttachment.IsAttached(rb)) return false;
+        return PixelHuskHolder.Takeable(clicker, rb, true);   // (one owner per husk)
     }
 
     private void FixedUpdate()
@@ -430,5 +426,11 @@ public class PixelFunnel : MonoBehaviour, IPixelSocketDevice
         Vector3 end = path[path.Length - 1], dir = (path[path.Length - 1] - path[path.Length - 2]).normalized;
         rb.position = end;
         PixelPathCarrier.SetVelocity(rb, dir * Speed * unit * 0.4f);
+    }
+
+    // ---- the device card (PixelDeviceCard) ----
+    public void FillDeviceInfo(PixelDeviceInfo info)
+    {
+        info.Add("In the tube", carrier.Count.ToString());
     }
 }

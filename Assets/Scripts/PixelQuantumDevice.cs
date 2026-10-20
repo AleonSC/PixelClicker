@@ -173,12 +173,9 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
         for (int i = pixels.Count - 1; i >= 0 && captured < 4; i--)
         {
             Rigidbody body = pixels[i];
-            if (body == null || body.isKinematic || clicker.IsFlyingPixel(body)) continue;
+            if (!PixelHuskHolder.Takeable(clicker, body)) continue;   // (one owner per husk; it now also leaves the husk in the player's hand alone)
             if (ignoreUntil.TryGetValue(body, out float until) && Time.time < until) continue;
-            OldPixelDespawn despawn = PixelHuskQuery.Get(body).despawn;
-            if (despawn != null && (despawn.Held || despawn.IsDespawning)) continue;
             OldPixelInfo info = PixelHuskQuery.Get(body).info;
-            if (info == null || !clicker.IsValidTierIndex(info.tierIndex) || clicker.Tiers[info.tierIndex].flyAway) continue;
 
             Slot slot = SlotOf(info.tierIndex);
             if (slot == null)

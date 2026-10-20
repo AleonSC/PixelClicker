@@ -62,4 +62,12 @@ public class PixelMagnetDevice : PixelPlacedDevice
             else body.AddForce(to / distance * pull, ForceMode.Acceleration);
         }
     }
+
+    // ---- the device card (PixelDeviceCard) ----
+    protected override void AddInfo(PixelDeviceInfo info)
+    {
+        info.Add("Pulls", "husks within " + radius.ToString("0.#") + " units into a heap");
+        if (!info.Full) return;
+        info.Add("Pull", pull.ToString("0.#"));
+    }
 }

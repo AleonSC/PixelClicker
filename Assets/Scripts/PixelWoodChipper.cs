@@ -20,7 +20,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice
+public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceInfo
 {
     // ------------------------------------------------------------------
     // Where things are, in the machine's own units (before the scale)
@@ -230,11 +230,10 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice
             if (i >= list.Count) continue;
             Rigidbody rb = list[i];
             if (rb == null) continue;
-            OldPixelInfo info = PixelHuskQuery.Get(rb).info;
-            if (info == null || info.heldByPlayer) continue;   // what you are holding is yours
-
             Vector3 p = transform.InverseTransformPoint(rb.position);
             if (!InsideFeed(p)) continue;
+            if (!PixelHuskHolder.Takeable(clicker, rb, true)) continue;   // (one owner per husk: not what you are holding, nor one reserved / kept by another machine)
+            OldPixelInfo info = PixelHuskQuery.Get(rb).info;
 
             // Pull it down the hopper and a little to the rollers.
             Vector3 toThroat = throat - rb.position;
@@ -1008,5 +1007,15 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice
         lampGo.GetComponent<Renderer>().sharedMaterial = own;
         if (!k.ghost) own.EnableKeyword("_EMISSION");   // the beacon is the one thing that glows
         return k.ghost ? null : own;
+    }
+
+    // ---- the device card (PixelDeviceCard) ----
+    public void FillDeviceInfo(PixelDeviceInfo info)
+    {
+        if (broken) { info.Note("<color=#FF8A7A>Broken for good - only wood goes in a chipper</color>"); info.Progress = 0f; info.ProgressLabel = "broken"; }
+        else { info.Progress = Mathf.Clamp01(health / Mathf.Max(1f, maxHealth)); info.ProgressLabel = Mathf.CeilToInt(health) + " / " + Mathf.CeilToInt(maxHealth) + " health"; }
+        info.Add("Next Wood Chips", chipProgress + " / " + Mathf.Max(1, woodPerChips) + " wood");
+        if (!info.Full) return;
+        info.Add("Wood chipped", woodConsumed.ToString());
     }
 }

@@ -59,9 +59,18 @@ public class PixelVacuumDevice : PixelPlacedDevice
             Vector3 to = target - body.position;
             float distance = to.magnitude;
             if (distance > radius) continue;
+            if (!PixelHuskHolder.Takeable(clicker, body, true)) continue;   // (one owner per husk: never one in the hand, reserved or kept by another machine, or fading)
 
             if (distance <= absorbDistance) clicker.AbsorbOldPixel(body, suckPoint);
             else body.AddForce(to / distance * pullAcceleration, ForceMode.Acceleration);
         }
+    }
+
+    // ---- the device card (PixelDeviceCard) ----
+    protected override void AddInfo(PixelDeviceInfo info)
+    {
+        info.Add("Sucks in", "husks within " + radius.ToString("0.#") + " units");
+        if (!info.Full) return;
+        info.Add("Pull", pullAcceleration.ToString("0.#"));
     }
 }

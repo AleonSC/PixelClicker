@@ -356,12 +356,11 @@ public class PixelVacuumCleaner : MonoBehaviour
         for (int i = pixels.Count - 1; i >= 0 && tank.Count < capacity; i--)
         {
             Rigidbody rb = pixels[i];
-            if (rb == null || rb.isKinematic || clicker.IsFlyingPixel(rb) || PixelAttachment.IsAttached(rb) || PixelPathCarrier.IsCarried(rb)) continue;
+            if (!PixelHuskHolder.Takeable(clicker, rb, true) || PixelAttachment.IsAttached(rb) || PixelPathCarrier.IsCarried(rb)) continue;   // (one owner per husk)
             if (ignoreUntil.TryGetValue(rb, out float until) && Time.time < until) continue;
-            OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
-            if (info == null || info.heldByPlayer || !clicker.IsValidTierIndex(info.tierIndex)) continue;
-            OldPixelDespawn despawn = rb.GetComponent<OldPixelDespawn>();
-            if (despawn != null && (despawn.IsDespawning || despawn.Held)) continue;
+            PixelHuskQuery.Husk husk = PixelHuskQuery.Get(rb);
+            OldPixelInfo info = husk.info;
+            OldPixelDespawn despawn = husk.despawn;
             Vector3 to = mouth - rb.position;
             float d = to.magnitude;
             if (d > r) continue;

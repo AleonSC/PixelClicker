@@ -669,4 +669,11 @@ public class PixelSorterDevice : PixelPlacedDevice
         bend = Mathf.Clamp(delta, -halfCone, halfCone);
         return Mathf.Abs(delta) <= halfCone;
     }
+
+    // ---- the device card (PixelDeviceCard) ----
+    protected override void AddInfo(PixelDeviceInfo info)
+    {
+        info.Add("Aim", Mathf.RoundToInt(aimDegrees) + "\u00b0" + (Mathf.Abs(bendDegrees) > 0.5f ? ", bend " + Mathf.RoundToInt(bendDegrees) + "\u00b0" : ""));
+        info.Add("Force", "x" + forceValue.ToString("0.0#"));
+    }
 }

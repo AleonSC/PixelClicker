@@ -72,4 +72,10 @@ public class PixelSprinklerDevice : PixelPlacedDevice
             PixelAudio.PlayScaled("water_splash", 0.18f);
         }
     }
+
+    // ---- the device card (PixelDeviceCard) ----
+    protected override void AddInfo(PixelDeviceInfo info)
+    {
+        info.Add("Waters", "within " + radius.ToString("0.#") + " units, every " + interval.ToString("0.#") + " s");
+    }
 }

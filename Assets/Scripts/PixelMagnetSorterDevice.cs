@@ -5,7 +5,7 @@
 //   Sorter + Magnet: ItemKind.Device ingredients (Ingredient.device, Item.device, listed among the materials only for device kinds
 //   some recipe uses, gold-rimmed cube icon), default recipe added by EnsureDefaultRecipes; settings arcDegrees 110, radius (arc
 //   length), boxCapacity 60, shootInterval, pipeReach, sorterExitSpeed, durationSeconds 180). Placed like the fan (turn with scroll /
-//   Q / E, starts disarmed). A grey box with a red horseshoe magnet on a short tube at the front (+Z): loose old pixels inside the
+//   Q / E, starts disarmed). A grey box with a red horseshoe magnet on a short tube at the front (+Z): loose husks inside the
 //   floor arc in front (BuildMagnetSorterBody, translucent fan named 'Range') are pulled to the magnet mouth and, within
 //   absorbDistance, swallowed (ReleaseOldPixel(body,false), fly-in) and stored per type with their payout (Stock: count + total
 //   amount; shot pixels carry the average). Three exit pipes (cubic-Bezier PixelTube from ports on the box's back to a nozzle on the
@@ -13,7 +13,7 @@
 //   to pipeReach, never inside the box), left-click puts it down, right-click puts it back; the mouse wheel over a pipe cycles which
 //   stored type it carries (floating model + 'xN'); every shootInterval a pipe with stock fires one pixel of its type from the nozzle
 //   (PixelClicker.SpawnStreamedPixel = SpawnStoredPixel with the Sorter's no-collision OldPixelStream); shot pixels are ignored by the
-//   magnet for 6 s. PixelPointerClaim (hovering / grabbing a pipe) blocks cube clicks via ExternalClickBlock. Saved in PlacedState.extra
+//   magnet for 6 s. When it ends (time up or removed) the stored stock comes back out onto the floor (ReleaseStock). PixelPointerClaim (hovering / grabbing a pipe) blocks cube clicks via ExternalClickBlock. Saved in PlacedState.extra
 //   (ExportState/ImportState). NOTE: it must not define its own Update / LateUpdate (they would hide the base's); per-frame work runs
 //   in OnTick.
 // ---------------------------------------------------
@@ -65,7 +65,36 @@ public class PixelMagnetSorterDevice : PixelPlacedDevice
     private readonly Pipe[] pipes = new Pipe[3];
     private readonly Dictionary<Rigidbody, float> ignoreUntil = new Dictionary<Rigidbody, float>();
 
-    private void Awake() => PixelHuskPool.HuskReleasing += OnHuskReleasing;
+    private void Awake()
+    {
+        PixelHuskPool.HuskReleasing += OnHuskReleasing;
+        Ended += _ => ReleaseStock();   // when its time is up (or it is removed) the box's stock comes out again, like the Crate / Quantum Organizer
+    }
+
+    /// <summary>Every stored husk back onto the floor around the box (at most MaxReleased bodies; the value of any beyond that is shared out over them).</summary>
+    private void ReleaseStock()
+    {
+        if (clicker == null) return;
+        const int MaxReleased = 80;
+        int all = 0;
+        foreach (Stock s in stock) all += Mathf.Max(0, s.count);
+        if (all <= 0) return;
+        float share = all > MaxReleased ? (float)MaxReleased / all : 1f;
+        Vector3 centre = transform.position + Vector3.up * 0.8f;
+        foreach (Stock s in stock)
+        {
+            if (s.count <= 0) continue;
+            int bodies = Mathf.Max(1, Mathf.RoundToInt(s.count * share));
+            double each = s.total / bodies;
+            for (int i = 0; i < bodies; i++)
+            {
+                Vector3 v = new Vector3(Random.Range(-1.2f, 1.2f), Random.Range(1.5f, 3f), Random.Range(-1.2f, 1.2f));
+                clicker.SpawnStoredPixel(s.tier, each, centre + Random.insideUnitSphere * 0.3f, v);
+            }
+            s.count = 0; s.total = 0d;
+        }
+        total = 0;
+    }
     private void OnDestroy() => PixelHuskPool.HuskReleasing -= OnHuskReleasing;
     // (PixelHuskPool: the husk is going away and may be reused - let go of it)
     private void OnHuskReleasing(Rigidbody body) => ignoreUntil.Remove(body);
@@ -282,12 +311,9 @@ public class PixelMagnetSorterDevice : PixelPlacedDevice
             for (int i = pixels.Count - 1; i >= 0; i--)
             {
                 Rigidbody body = pixels[i];
-                if (body == null || body.isKinematic || clicker.IsFlyingPixel(body)) continue;
+                if (!PixelHuskHolder.Takeable(clicker, body, true)) continue;   // (one owner per husk; it now also leaves the husk in the player's hand alone)
                 if (ignoreUntil.TryGetValue(body, out float until) && Time.time < until) continue;
-                OldPixelDespawn d = PixelHuskQuery.Get(body).despawn;
-                if (d != null && (d.Held || d.IsDespawning)) continue;
                 OldPixelInfo info = PixelHuskQuery.Get(body).info;
-                if (info == null) continue;
 
                 Vector3 to = target - body.position;
                 Vector3 flat = new Vector3(to.x, 0f, to.z);
@@ -439,5 +465,17 @@ public class PixelMagnetSorterDevice : PixelPlacedDevice
                 Rebuild(p);
             }
         }
+    }
+
+    // ---- the device card (PixelDeviceCard) ----
+    protected override void AddInfo(PixelDeviceInfo info)
+    {
+        info.Add("Stored", total.ToString());
+        if (!info.Full || clicker == null) return;
+        foreach (Stock s in stock)
+            if (s.count > 0 && clicker.IsValidTierIndex(s.tier)) info.Add(clicker.Tiers[s.tier].displayName, s.count.ToString());
+        int aimed = 0;
+        foreach (Pipe p in pipes) if (p != null && p.tier >= 0) aimed++;
+        info.Add("Pipes set", aimed + " / " + pipes.Length);
     }
 }

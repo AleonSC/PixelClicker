@@ -198,7 +198,10 @@ public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoo
 
     private void OnEnable() { if (!all.Contains(this)) all.Add(this); PixelCouplings.Register(this); }
     private void OnDisable() { all.Remove(this); PixelCouplings.Unregister(this); }
-    private void OnDestroy() { PixelCouplings.Unregister(this); foreach (GameObject m in filterModels.Values) if (m != null) Destroy(m); }
+    private void Awake() => PixelHuskPool.HuskReleasing += OnHuskReleasing;
+    private void OnDestroy() { PixelHuskPool.HuskReleasing -= OnHuskReleasing; PixelCouplings.Unregister(this); foreach (GameObject m in filterModels.Values) if (m != null) Destroy(m); }
+    // (PixelHuskPool: the husk is going away and may be reused - forget it, or a reused husk would be skipped as 'already seen')
+    private void OnHuskReleasing(Rigidbody body) => dropsSeen.Remove(body);
 
     // ---- Sockets (PixelSockets.cs) ----
     public Transform SocketRoot => transform;

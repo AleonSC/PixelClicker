@@ -107,11 +107,7 @@ public class PixelTrashCan : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom
         for (int i = pixels.Count - 1; i >= 0; i--)
         {
             Rigidbody rb = pixels[i];
-            if (rb == null || rb.isKinematic || clicker.IsFlyingPixel(rb) || PixelAttachment.IsAttached(rb)) continue;
-            OldPixelInfo info = PixelHuskQuery.Get(rb).info;
-            if (info == null || info.heldByPlayer) continue;
-            OldPixelDespawn despawn = PixelHuskQuery.Get(rb).despawn;
-            if (despawn != null && (despawn.IsDespawning || despawn.Held)) continue;
+            if (!PixelHuskHolder.Takeable(clicker, rb, true) || PixelAttachment.IsAttached(rb)) continue;   // (one owner per husk)
             Vector3 to = mouth - rb.position;
             Vector3 flat = new Vector3(to.x, 0f, to.z);
             if (flat.magnitude > r || rb.position.y > mouth.y + 3f * unit) continue;

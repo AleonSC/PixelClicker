@@ -292,7 +292,7 @@ public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHu
         }
     }
 
-    /// <summary>Every placed device within the radius (not other generators) runs on this generator's power: its countdown stops and it shows this bar.</summary>
+    /// <summary>Every timed, switched-on placed device within the radius (not other generators) runs on this generator's power: its countdown stops and it shows this bar.</summary>
     private void PowerAround(float fraction)
     {
         powering = 0;
@@ -300,6 +300,7 @@ public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHu
         foreach (PixelPlacedDevice d in PixelPlacedDevice.All)
         {
             if (d == null || d == device || d.IsEnding || IsGenerator(d)) continue;
+            if (d.Permanent || !d.Armed) continue;   // (no countdown to stop: a permanent device, or one not switched on yet - no energy bar, not counted)
             Vector3 dv = d.transform.position - me; dv.y = 0f;
             if (dv.sqrMagnitude > radius * radius) continue;
             d.HoldPower(fraction, energyColor);
