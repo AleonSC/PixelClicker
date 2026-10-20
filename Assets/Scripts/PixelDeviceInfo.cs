@@ -53,7 +53,16 @@ public sealed class PixelDeviceInfo
     /// <summary>True for the right-click panel (all the stats), false for the hover card (the essentials only).</summary>
     public bool Full;
 
-    public void Clear() { Title = ""; Lines.Clear(); Progress = -1f; ProgressLabel = ""; Actions.Clear(); Steppers.Clear(); }
+    public void Clear() { Title = ""; Lines.Clear(); Progress = -1f; ProgressLabel = ""; Actions.Clear(); Steppers.Clear(); Toggles.Clear(); }
+
+    /// <summary>A tick box row in the right-click panel (e.g. a Sorting Hopper output on / off). Label may be rich text.</summary>
+    public struct DeviceToggle { public string Label; public bool On; public System.Action<bool> OnChange; }
+
+    /// <summary>The panel's tick box rows (shown under the steppers).</summary>
+    public readonly List<DeviceToggle> Toggles = new List<DeviceToggle>();
+
+    /// <summary>Adds a tick box row to the right-click panel (call it when Full).</summary>
+    public void AddToggle(string label, bool on, System.Action<bool> onChange) => Toggles.Add(new DeviceToggle { Label = label, On = on, OnChange = onChange });
 
     /// <summary>A '- value +' row in the right-click panel (an Operation upgrade's level in use). A null OnMinus / OnPlus greys that button out.</summary>
     public struct DeviceStepper { public string Label, Value; public System.Action OnMinus, OnPlus; }

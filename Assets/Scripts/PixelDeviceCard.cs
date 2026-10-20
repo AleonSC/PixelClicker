@@ -12,6 +12,7 @@
 //     Escape (PixelWindows) / a click anywhere outside the panel / the device going away closes it.
 //   * STEPPERS: '- value +' rows (PixelDeviceInfo.AddStepper) for the Operation upgrades' level in use (PixelShop.AddOperationLevels): turn a bought
 //     upgrade back down (PlaceSteppers).
+//   * TICK BOXES (2026-10-20): 'on / off' rows (PixelDeviceInfo.AddToggle, PlaceToggles), e.g. the Sorting Hopper's outputs.
 //   * DEVICE ACTIONS: buttons a device adds itself (PixelDeviceInfo.AddAction, e.g. the Sorting Hopper's Select filter / Empty out) sit two to a row
 //     above Remove / Upgrades (PlaceActions).
 //   * NOT ONLY DEVICES (2026-10-20): OpenSubject(IPixelPanelSubject) shows the same panel for something that is not a placed device - a conveyor belt
@@ -192,6 +193,7 @@ public class PixelDeviceCard : MonoBehaviour
         float hh = panelHintText.GetPreferredValues(panelHint, w, 0f).y;
         Place(panelHintText.rectTransform, pad, y, w, hh); y += hh + 12f;
         y = PlaceSteppers(pad, y, w);
+        y = PlaceToggles(pad, y, w);
         y = PlaceActions(pad, y, w);
 
         PixelConsumables.DeviceKind? kind = panelDevice != null ? panelDevice.Kind : null;
@@ -284,6 +286,55 @@ public class PixelDeviceCard : MonoBehaviour
         row.minus.onClick.AddListener(() => RunStepper(index, false));
         row.plus.onClick.AddListener(() => RunStepper(index, true));
         return row;
+    }
+
+    private sealed class ToggleRow { public RectTransform root; public Toggle box; public TMP_Text label; }
+    private readonly List<ToggleRow> toggleRows = new List<ToggleRow>();
+    private readonly List<PixelDeviceInfo.DeviceToggle> panelToggles = new List<PixelDeviceInfo.DeviceToggle>();
+    private const float ToggleH = 44f;
+
+    /// <summary>The tick box rows (info.Toggles), one per row; returns the y under them.</summary>
+    private float PlaceToggles(float pad, float y, float w)
+    {
+        panelToggles.Clear();
+        panelToggles.AddRange(info.Toggles);
+        for (int i = 0; i < panelToggles.Count; i++)
+        {
+            if (i >= toggleRows.Count) toggleRows.Add(MakeToggleRow(i));
+            ToggleRow row = toggleRows[i];
+            if (!row.root.gameObject.activeSelf) row.root.gameObject.SetActive(true);
+            Place(row.root, pad, y + i * (ToggleH + 4f), w, ToggleH);
+            if (row.label.text != panelToggles[i].Label) row.label.text = panelToggles[i].Label;
+            if (row.box.isOn != panelToggles[i].On) row.box.SetIsOnWithoutNotify(panelToggles[i].On);
+        }
+        for (int i = panelToggles.Count; i < toggleRows.Count; i++) if (toggleRows[i].root.gameObject.activeSelf) toggleRows[i].root.gameObject.SetActive(false);
+        return y + panelToggles.Count * (ToggleH + 4f) + (panelToggles.Count > 0 ? 8f : 0f);
+    }
+
+    private ToggleRow MakeToggleRow(int index)
+    {
+        ToggleRow row = new ToggleRow();
+        GameObject go = new GameObject("Toggle " + index, typeof(RectTransform));
+        go.transform.SetParent(panel.Root.transform, false);
+        row.root = go.GetComponent<RectTransform>();
+        float box = ToggleH * 0.8f;
+        row.box = PixelUIKit.CreateTickBox(go.transform, box, new Color(0f, 0f, 0f, 0.45f), PixelUITheme.HighlightColor);
+        RectTransform br = row.box.GetComponent<RectTransform>();
+        br.anchorMin = br.anchorMax = br.pivot = new Vector2(0f, 0.5f);
+        br.anchoredPosition = new Vector2(2f, 0f);
+        row.label = PixelUIKit.CreateText(clicker.UIFont, go.transform, "Label", "", titleSize * 0.8f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, PixelUITheme.TextColor);
+        row.label.richText = true;
+        RectTransform lr = row.label.rectTransform;
+        lr.anchorMin = new Vector2(0f, 0f); lr.anchorMax = new Vector2(1f, 1f); lr.offsetMin = new Vector2(box + 14f, 0f); lr.offsetMax = Vector2.zero;
+        row.box.onValueChanged.AddListener(on => RunToggle(index, on));
+        return row;
+    }
+
+    private void RunToggle(int index, bool on)
+    {
+        if (!PanelTargetAlive || index >= panelToggles.Count) return;
+        panelToggles[index].OnChange?.Invoke(on);
+        if (PanelTargetAlive && panel != null && PixelPop.IsOpen(panel.Root)) RefreshPanel();
     }
 
     private void RunStepper(int index, bool plus)

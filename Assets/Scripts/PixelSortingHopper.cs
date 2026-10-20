@@ -8,8 +8,8 @@
 //   - SNAPS ONTO A RECYCLER'S BACK: placed within 'radius' (the Device entry's Reach, 6 world units) of a free Recycler it latches on behind it
 //     (TrySnap, also while placing: the ghost jumps there), turned like the bin, its bowl's front edge just behind the bin's back (BackEdgeLocalZ).
 //     SIZE = a default Recycler's (PixelRecycler.DefaultSize) x its OWN Operation 'Size' (SizeMul) - the Recycler's Size upgrades do not grow it
-//     (2026-10-18: a maxed bin made it bigger than the cube); the FEED PIPE re-aims instead (AimPipe) so its mouth always sits over the bin's back
-//     rim (PixelRecycler.FeedDropPoint), sloping up when the bin is taller. It follows the bin when the bin is carried. One hopper per Recycler
+//     (2026-10-18: a maxed bin made it bigger than the cube). The FEED PIPE keeps its own straight shape (2026-10-20: it used to re-aim at the host's
+//     drop point, which bent it down onto a Junction Box's top); its mouth reaches over the bin's back wall and the husk is handed to the host there. It follows the bin when the bin is carried. One hopper per Recycler
 //     (it OCCUPIES the bin's 'hatch' socket). When the Recycler goes, the hopper stays and latches onto the next free one within reach (every half second).
 //     Not on a Recycler it is sized for a default one (UnlatchedSize).
 //   - IT HOLDS HUSKS: a husk that drops into the bowl (or is handed in through its back coupling / by the Sweeper) is taken in as DATA (type + amount,
@@ -26,6 +26,9 @@
 //   - The filter shows on a little flag on the bowl's back-left corner (tinted its colour, the block spinning on top). A floating down arrow
 //     (PixelHoverMarker) shows on hover.
 //   Removing it lets everything it holds out of the bottom spout first.
+//   OUTPUT NAMES + ON / OFF (2026-10-20): outputs are named by their mouth ring's colour (Green = the feed pipe, Orange / Blue / Pink = the side pipes;
+//   OutputName / OutputLabel). Each has a tick box in the device panel (PixelDeviceInfo.AddToggle): OFF hides its pipe and nothing goes out of it
+//   (its filter type goes on to the other outputs or the bottom spout); saved as ';O<n>,off'.
 //   OUTPUTS (2026-10-19, Operation 'Outputs' +1 a level, 3 levels): side pipes like the feed pipe on the LEFT, RIGHT and then BACK, each with its own filter
 //   (a block of that type spins over its mouth); a held husk of a side filter's type drops out of that pipe's mouth (SendOutSide). Order: the front filter
 //   (into the host) first, then the side filters, else the bottom spout; no filter on any output = it holds. The device panel has one filter button per output.
@@ -141,6 +144,28 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
     /// <summary>'Front', 'Left', 'Right', 'Back'.</summary>
     public static string OutputName(int output) => output >= 0 && output < OutputNames.Length ? OutputNames[output] : "?";
 
+    /// <summary>The output's colour (its mouth ring): 0 = the green feed pipe, 1..3 = the side pipes.</summary>
+    public static Color OutputColor(int output) => output <= 0 ? Stripe : output - 1 < OutputColors.Length ? OutputColors[output - 1] : Color.white;
+
+    /// <summary>The output's name in its own colour (rich text) for the device panel.</summary>
+    public static string OutputLabel(int output) => "<color=#" + ColorUtility.ToHtmlStringRGB(OutputColor(output)) + ">" + OutputName(output) + "</color>";
+
+    // Outputs switched OFF in the device panel (index = output: 0 the feed pipe, 1..3 the side pipes): its pipe is hidden and nothing goes out of it.
+    private readonly bool[] outputOff = new bool[4];
+
+    /// <summary>Is this output switched on (the device panel's tick box)?</summary>
+    public bool OutputOn(int output) => output >= 0 && output < outputOff.Length && !outputOff[output];
+
+    /// <summary>Switches an output on / off: its pipe shows / hides and husks of its filter go out of it / stay or fall through to the others.</summary>
+    public void SetOutputOn(int output, bool on)
+    {
+        if (output < 0 || output >= outputOff.Length || outputOff[output] == !on) return;
+        outputOff[output] = !on;
+        sidesShown = -1;   // (ShowSides lays the pipes out again)
+        ShowSides();
+        PixelAudio.Play("ui_click", on ? 1.2f : 0.85f);
+    }
+
     /// <summary>The filter of output 0 (front, into the host) .. 3 (back); -1 = none.</summary>
     public int FilterOf(int output) => output <= 0 ? filterTier : output - 1 < SideCount ? sideFilters[output - 1] : -1;
     private Transform flagTop;
@@ -164,7 +189,8 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
     private const int SideCount = 3;
     private const float SideStart = 1.4f, SideEnd = 3.3f;
     private static Vector3 SideDir(int k) => k == 0 ? Vector3.left : k == 1 ? Vector3.right : Vector3.forward;
-    private static readonly string[] OutputNames = { "Front", "Left", "Right", "Back" };
+    // Outputs are named by the colour of their mouth ring (2026-10-20): the front feed pipe's ring is the green Stripe, the side pipes' rings are OutputColors.
+    private static readonly string[] OutputNames = { "Green", "Orange", "Blue", "Pink" };
     private static readonly Color[] OutputColors = { new Color(1f, 0.75f, 0.3f, 1f), new Color(0.45f, 0.75f, 1f, 1f), new Color(1f, 0.5f, 0.85f, 1f) };
     private const float PipeY = 4.05f, PipeRadius = 0.3f, PipeEndZ = -3.6f, SpoutBottomHusks = 2f;   // (the spout's bottom sits SpoutBottomHusks below the bowl's base: about 2.2 husks off the floor)
     private static readonly Color BodyColor = new Color(0.3f, 0.32f, 0.36f, 1f), Inner = new Color(0.17f, 0.18f, 0.2f, 1f),
@@ -317,7 +343,8 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         for (int o = 0; o < outputs; o++)
         {
             int f = FilterOf(o);
-            info.Add(outputs > 1 ? OutputName(o) + " filter" : "Filter", clicker != null && clicker.IsValidTierIndex(f) ? Name(f) : o == 0 && outputs == 1 ? "none (it just holds)" : "none");
+            string what = clicker != null && clicker.IsValidTierIndex(f) ? Name(f) : o == 0 && outputs == 1 ? "none (it just holds)" : "none";
+            info.Add(outputs > 1 ? OutputLabel(o) + " output" : "Filter", OutputOn(o) ? what : what + " <color=#FF8A7A>(off)</color>");
         }
         info.Add("Feeds", recycler != null ? "the " + recycler.HostName + " in front of it" : "<color=#FFD27F>nothing - the filter type waits</color>");
         info.Add("Holding", held.Count + " / " + Room);
@@ -332,8 +359,14 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         info.Add("Fed through the pipe", sessionFed.ToString());
         if (outputs > 1) info.Add("Out of the side pipes", sessionSided.ToString());
         info.Add("Out of the bottom spout", (sessionRejected + sessionEjected).ToString());
+        for (int o = 0; o < outputs; o++)
+        {
+            int output = o, f = FilterOf(o);
+            string what = clicker.IsValidTierIndex(f) ? Name(f) : "no filter";
+            info.AddToggle(OutputLabel(o) + " output  <size=80%><color=#9FB0CC>" + what + "</color></size>", OutputOn(o), on => SetOutputOn(output, on));
+        }
         if (outputs == 1) info.AddAction("Select filter", () => PixelSortingHopperWindow.Open(this, 0));
-        else for (int o = 0; o < outputs; o++) { int output = o; info.AddAction(OutputName(o) + " filter", () => PixelSortingHopperWindow.Open(this, output)); }
+        else for (int o = 0; o < outputs; o++) { int output = o; info.AddAction(OutputLabel(o) + " filter", () => PixelSortingHopperWindow.Open(this, output)); }
         info.AddAction("Empty out", EmptyOut, ButtonRole.Danger);
     }
 
@@ -465,7 +498,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         SpotOn(clicker, recycler, out Vector3 spot, out Quaternion rot, out float size);
         if ((transform.position - spot).sqrMagnitude > 0.000001f || Quaternion.Angle(transform.rotation, rot) > 0.05f) transform.SetPositionAndRotation(spot, rot);
         if (Mathf.Abs(baseScale.x - size) > 0.0001f) { baseScale = Vector3.one * size; transform.localScale = baseScale; }
-        AimPipe(transform.InverseTransformPoint(recycler.FeedDropPoint));
+        AimPipe(DefaultPipeExit(Unit(clicker)));   // (2026-10-20: the pipes keep their own shape - they no longer bend towards the host's drop point)
     }
 
     private Transform pipe, mouth, mouthRing;
@@ -539,16 +572,16 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
     {
         if (held.Count == 0 || Time.time < nextFeed) return;
         int sides = SideOutputs;
-        bool anyFilter = filterTier >= 0;
-        for (int k = 0; k < sides; k++) if (sideFilters[k] >= 0) anyFilter = true;
+        bool anyFilter = filterTier >= 0 && OutputOn(0);
+        for (int k = 0; k < sides; k++) if (sideFilters[k] >= 0 && OutputOn(k + 1)) anyFilter = true;
         if (!anyFilter) return;   // (no filter chosen on any output: it just holds)
         bool binReady = Alive(recycler) && !recycler.Fading && recycler.CanTakeFeed;
         for (int i = 0; i < held.Count; i++)
         {
             Held h = held[i];
-            bool filtered = h.tier == filterTier;
+            bool filtered = h.tier == filterTier && OutputOn(0);
             int side = -1;
-            if (!filtered) for (int k = 0; k < sides; k++) if (sideFilters[k] == h.tier) { side = k; break; }
+            if (!filtered) for (int k = 0; k < sides; k++) if (sideFilters[k] == h.tier && OutputOn(k + 1)) { side = k; break; }
             if (filtered && !binReady) continue;   // (it waits for the bin)
             if (filtered)
             {
@@ -586,7 +619,12 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         int n = SideOutputs;
         if (n == sidesShown) return;
         sidesShown = n;
-        for (int k = 0; k < SideCount; k++) if (sideHolders[k] != null) sideHolders[k].SetActive(k < n);
+        for (int k = 0; k < SideCount; k++) if (sideHolders[k] != null) sideHolders[k].SetActive(k < n && OutputOn(k + 1));
+        foreach (string part in new[] { "Feed Pipe", "Feed Mouth", "Feed Mouth Ring" })
+        {
+            Transform p = transform.Find(part);
+            if (p != null && p.gameObject.activeSelf != OutputOn(0)) p.gameObject.SetActive(OutputOn(0));
+        }
     }
 
     private void SendOutBottom(Held h, float spread)
@@ -653,6 +691,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         sb.Append(filterTier >= 0 ? clicker.Tiers[filterTier].type.ToString() : "-");
         for (int k = 0; k < SideCount; k++)
             if (clicker.IsValidTierIndex(sideFilters[k])) sb.Append(";S").Append(k).Append(',').Append(clicker.Tiers[sideFilters[k]].type);
+        for (int o = 0; o < outputOff.Length; o++) if (outputOff[o]) sb.Append(";O").Append(o).Append(",off");
         foreach (Held h in held)
             if (clicker.IsValidTierIndex(h.tier)) sb.Append(';').Append(clicker.Tiers[h.tier].type).Append(',').Append(h.amount.ToString("R", CultureInfo.InvariantCulture));
         return sb.ToString();
@@ -669,6 +708,11 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
             if (f[0] == "F")
             {
                 if (System.Enum.TryParse(f[1], out PixelClicker.PixelType ft)) SetFilter(clicker.IndexOf(ft));
+                continue;
+            }
+            if (f[0].Length == 2 && f[0][0] == 'O' && int.TryParse(f[0].Substring(1), out int offOutput))
+            {
+                SetOutputOn(offOutput, false);
                 continue;
             }
             if (f[0].Length == 2 && f[0][0] == 'S' && int.TryParse(f[0].Substring(1), out int side))
