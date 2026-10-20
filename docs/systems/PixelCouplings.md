@@ -14,8 +14,7 @@ hooks, the registry) and `PixelCoupling.cs` (the snap-on coupling piece). Placed
 ## The design
 - **Sockets (data).** Every device declares its SOCKETS: a few lines each - `id`, local position (the PORT, where a belt end / hose end meets
   it, at belt-underside height), outward facing, `flow` = Intake / Output / Both, and a `kind`. Free sockets always show a small PORT PLATE (`PixelSocketPlates`: a chevron, green In / orange Out / teal Both). Sockets sit on openings the device already has:
-  Kiln mouth, Storage Crate front, Trash Can side, Recycler back hatch, Sorting
-  Hopper back wall, Quantum Organizer side, Wood Chipper chute, Funnel output, Elevator entry / top, Junction Box (eight, auto direction), Belt Sorter chute.
+  Kiln mouth, Storage Crate front, Trash Can side, Recycler back hatch, Quantum Organizer side, Wood Chipper chute, Funnel output, Elevator entry / top, Junction Box (eight, auto direction), Belt Sorter chute.
 - **Couplings (one shared piece).** ONE model (PixelFactoryKit) and ONE component. Placing it near a free socket snaps it on; it is parented to
   the device so it moves with it (carry handles, turning); removing the device removes its couplings. It is tinted a little with the device's
   colour (`SocketTint`) so it reads as a flange, not a bolt-on.
@@ -64,12 +63,11 @@ chute (the same "find a belt that starts here" copy) moved onto a built-in bare 
 ## Where each device's sockets are
 | Device | Sockets |
 |---|---|
-| Storage Crate | `in` (In, front left: belts / hoses in) and `out` (Out, front right: a hose pulls stored husks) |
+| Storage Crate | `in` (In, front left: belts / hoses in) and `out` (Out, front right: a hose pulls stored husks; a belt starting there is fed one stored husk at a time while it has room) |
 | Quantum Organizer | `side` (Both, like the crate; In drops husks onto the pad) |
 | Kiln | `mouth` (In, burns it), `chute` (Out, charcoal) |
 | Trash Can | `front`, `back` (In) |
 | Recycler | `hatch` (In, the back hatch), `f0`..`f3` (In, four holes low on the front) |
-| Sorting Hopper | `back` (In, takes the husk into what it holds; refuses when full, `holdRoom`) |
 | Funnel | `output` (Out, the spout end; the tube waits while its belt is full) |
 | Wood Chipper | `chute` (Out, on the floor in front of the outlet) |
 | Conveyor Elevator | none since 2026-10-19: it links itself to belt ends, Out couplings and sorter chutes near its base and to a belt start or In coupling near its top (IPixelAutoIntake) |
@@ -103,3 +101,5 @@ Implement `IPixelSocketDevice` (SocketRoot, Sockets, SocketTint, AcceptHusk), bu
 `PixelCouplings.Register` / `Unregister` in OnEnable / OnDisable, and put husks out with `PixelCouplings.Emit(this, id, husk)` (false = do your own thing).
 A piece that is a belt fitting itself marks its sockets `fitted` (and `bare` if its own shape shows the way) and calls `PixelCoupling.FitBuiltIn(this)`
 after building (and `PixelCoupling.RemoveAll(this)` before a rebuild). Nothing else: the tester, saving, snapping and the belt system pick it up.
+
+**Link rules (2026-10-20, conveyor audit).** One reach for every link check: `PixelCouplings.LinkReach` (1.3 husk widths, flat): a belt end hands in to a coupling (`HandIn`) and a coupling finds the belt ending / starting at it (`BeltEndingAt` / `BeltStartingAt`, nearest wins) at the same distance, so a belt that shows as joined really is. `Emit` never puts a husk on a FULL belt (it returns false); devices that must not drop it ask `OutputHasRoom` first and hold it (Kiln, Wood Chipper, Belt Jump landing queue, Funnel, Junction Box, Husk Source, Storage Crate). The Belt Sorter lets a husk ride on when the belt off its chute is full.

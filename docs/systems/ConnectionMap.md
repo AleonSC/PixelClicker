@@ -70,7 +70,7 @@ Keep this map current: when a system gets a new link (or loses one), change its 
 
 | Machine | Takes in | Gives out | Pressure | Skill home | State |
 |---|---|---|---|---|---|
-| Conveyor Belt (+ corner joints) | husks | moves them | space | Electrician (level 5) | Built (a real item at Electrician 5) |
+| Conveyor Belt (+ corner joints) | husks | moves them | space | Shop (Utilities, for everyone; wider lanes from Electrician) | Built (a shop item, the Belt Kit) |
 | Junction Box | husks from belts / hoses / a Sorting Hopper | routes them to its Out couplings (filters, round robin, buffer) | space | Electrician? | Built (device, on sale in Utilities since 2026-10-19; replaced the Splitter) |
 | Conveyor Elevator | a belt's husks | lifts them to a higher belt | space | Electrician? | Built (tester) |
 | Container Hose | husks stored in a crate / organizer (Out coupling) | into any In coupling, routed through bend points | space | Electrician? | Built (tester) |

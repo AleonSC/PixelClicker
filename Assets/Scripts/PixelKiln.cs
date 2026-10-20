@@ -287,7 +287,7 @@ public class PixelKiln : MonoBehaviour, IPixelSocketDevice
         }
 
         // Charcoal leaves the chute one at a time.
-        if (pendingCharcoal > 0 && readyTimes.Count > 0 && Time.time >= readyTimes[0] && Time.time >= nextOutAt)
+        if (pendingCharcoal > 0 && readyTimes.Count > 0 && Time.time >= readyTimes[0] && Time.time >= nextOutAt && PixelCouplings.OutputHasRoom(this, "chute"))   // (a full belt on the chute: the charcoal waits inside)
         {
             readyTimes.RemoveAt(0);
             pendingCharcoal--;

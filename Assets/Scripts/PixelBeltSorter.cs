@@ -10,7 +10,11 @@
 //   elevator's base (Connected, checked twice a second, RefreshChute); the sorter turns round to face it. Nothing beside it = no chute, kicked husks fall
 //   to the floor. JOINT (2026-10-20): placed in the middle of a belt, it SPLITS the belt there (PixelConveyor.SplitAt) and sits at the start of the second
 //   piece; its joint cuts the line into sections for the Control Levers once a line has two or more sorters (JointsOn, PixelConveyor.CollectSection).
-//   A sorter whose belt was split (another sorter's joint) carries on on the piece under it. The spot is stored as a distance along the belt (it follows the belt); saved with the tester save (spot, yaw, slot type + amount).
+//   A sorter whose belt was split (another sorter's joint) carries on on the piece under it. Its spot is measured along the belt from where the belt
+//   starts NOW (Spot, like the Combiner), so reversing the belt leaves it where it stands; saved with the tester save (spot, yaw, slot type + amount).
+//   A removed belt takes the sorter with it: the sorter goes back into the backpack (refunded) and its filter block is handed back (LoseBelt).
+//   It catches a rider anywhere on the stretch the rider crosses this physics step, so fast belts can't skip it (TryDivert). When the belt fed by its
+//   chute is full, a husk of its type rides on along the main belt instead of being thrown on the floor.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -32,6 +36,9 @@ public class PixelBeltSorter : MonoBehaviour, IPixelSocketDevice
     private float unit = 1f, beltWidth;
     private PixelConveyor belt;
     private float along;
+
+    /// <summary>Where the sorter stands along its belt, measured from the belt's start NOW (so a reversed belt doesn't move it).</summary>
+    private float Spot => belt != null ? Mathf.Clamp(belt.Along(transform.position), 0f, belt.Length) : along;
     private Vector3 sideDir = Vector3.right;
     private bool hasFilter;
     private PixelClicker.PixelType filter;
@@ -211,11 +218,12 @@ public class PixelBeltSorter : MonoBehaviour, IPixelSocketDevice
         {
             // Its belt was split at another sorter's joint: carry on on the piece under it; a removed belt takes the sorter with it.
             if (PixelConveyor.NearestOn(clicker, transform.position, out PixelConveyor again, out float s2, 0.3f)) { belt = again; along = s2; }
-            else { Destroy(gameObject); return; }
+            else { LoseBelt(); return; }
         }
         if (!Mathf.Approximately(beltWidth, belt.Width)) { Rebuild(belt.Width); if (sockets.Length > 0) sockets[0].localPosition = new Vector3(belt.Width * 0.5f + 1.0f * unit, 0f, 0f); RefreshChute(true); }   // (its belt was made wider / narrower: the gantry follows)
         RefreshChute();
-        Vector3 p = belt.PointAt(Mathf.Clamp(along, 0f, belt.Length));
+        along = Spot;   // (from where it stands: a reversed belt doesn't move it, a raised / sloped belt still carries it up)
+        Vector3 p = belt.PointAt(along);
         transform.position = new Vector3(p.x, p.y + belt.SurfaceHeight, p.z);
         if (slotModel != null) slotModel.Rotate(0f, 35f * Time.deltaTime, 0f, Space.Self);
         if (paddle != null)
@@ -238,6 +246,20 @@ public class PixelBeltSorter : MonoBehaviour, IPixelSocketDevice
     }
 
     private float nextCapture;
+
+    /// <summary>Its belt was removed: the sorter goes back into the backpack and its filter block is handed back (nothing is lost).</summary>
+    private void LoseBelt()
+    {
+        if (hasFilter)
+        {
+            int tier = clicker.IndexOf(filter);
+            if (tier >= 0) clicker.SpawnStoredPixel(tier, slotAmount, transform.position + Vector3.up * (beamTopY + 0.5f * unit), Vector3.up * unit);
+            hasFilter = false;
+        }
+        PixelConsumables inv = PixelFind.Cached<PixelConsumables>();
+        if (inv != null && inv.GiveDevice(PixelConsumables.DeviceKind.BeltSorter)) PixelHints.Announce("Its belt was removed: the Belt Sorter went back into your backpack.");
+        PixelFeatureTester.RemovePlaced(gameObject);
+    }
 
     private Ray PointerRay(out bool ok)
     {
@@ -342,23 +364,30 @@ public class PixelBeltSorter : MonoBehaviour, IPixelSocketDevice
         foreach (PixelBeltSorter b in all)
         {
             if (b == null || b.ghost || b.belt == null || !belts.Contains(b.belt)) continue;
-            float reach = 1.2f * b.unit;
-            if (b.along <= reach) joints.Add(b.belt.StartPoint);
-            else if (b.along >= b.belt.Length - reach) joints.Add(b.belt.ExitPoint);
+            float reach = 1.2f * b.unit, spot = b.Spot;
+            if (spot <= reach) joints.Add(b.belt.StartPoint);
+            else if (spot >= b.belt.Length - reach) joints.Add(b.belt.ExitPoint);
         }
     }
 
-    /// <summary>Called by the belt system for every riding pixel: true when a sorter took it off the belt (the system then forgets it).</summary>
+    /// <summary>
+    /// Called by the belt system for every riding pixel BEFORE it moves this physics step ('s' = where it is now): true when a sorter took it off the
+    /// belt (the system then forgets it). A sorter anywhere on the stretch the pixel is about to cross catches it, so a fast belt can't skip one.
+    /// </summary>
     public static bool TryDivert(PixelClicker c, PixelConveyor belt, float s, Rigidbody rb)
     {
+        float step = belt != null ? belt.RunSpeed * Time.fixedDeltaTime : 0f;
         for (int i = all.Count - 1; i >= 0; i--)
         {
             PixelBeltSorter b = all[i];
-            if (b == null || b.ghost || b.belt != belt || Mathf.Abs(s - b.along) > 0.2f * b.unit) continue;
+            if (b == null || b.ghost || b.belt != belt) continue;
+            float spot = b.Spot;
+            if (spot < s - 0.2f * b.unit || spot > s + step + 0.05f * b.unit) continue;
             OldPixelInfo info = PixelHuskQuery.Get(rb).info;
             if (info == null || !c.IsValidTierIndex(info.tierIndex)) continue;
             PixelClicker.PixelType type = c.Tiers[info.tierIndex].type;
             if (!b.hasFilter || type != b.filter) continue;   // (an empty slot lets everything pass)
+            if (PixelCouplings.OutputConnected(b, "chute") && !PixelCouplings.OutputHasRoom(b, "chute")) continue;   // (the belt off the chute is full: it rides on rather than being thrown on the floor)
             b.Eject(rb);
             return true;
         }

@@ -10,7 +10,7 @@
 //   'Select belts' mode toggles belts by click or box-drag (teal glow, PixelConveyor.SetSelected) and sets speed / reverses them together. Placing snaps to a grid by default; SHIFT = free placement. (It used to be: SHIFT while placing snaps to a grid and angle steps (PixelSnap).
 //   SAVING: every placed object is saved with the save file (PixelFeatureTester.ExportAll / ImportAll, TesterSave = feature name + JSON from the feature's ExportState / ImportState; hooked into
 //   PixelSaveGame after the placed devices are restored). LINKING (Solar Panel): after placing, linkPanel mode - click a device inside the ring; a right click on a placed panel starts it again.
-//   The Conveyor Belt is also a real game item (PixelConsumables DeviceKind.ConveyorBelt, on sale at Electrician level 5): its right click calls PixelFeatureTester.StartFeature("Conveyor Belt"), which places without the Dev Hub.
+//   The Conveyor Belt is also a real game item (PixelConsumables DeviceKind.ConveyorBelt, the Belt Kit, on sale in the shop's Utilities for everyone): its right click calls PixelFeatureTester.StartFeature("Conveyor Belt"), which places without the Dev Hub.
 //   SHOP ITEMS (2026-10-20): Coupling, Wood Chipper, Conveyor Belt, Container Hose, Belt Sorter, Conveyor Elevator, Junction Box, Belt Jump, Conveyor Combiner and Solar Panel
 //   are sold in the shop, so they get no card here (SoldInShop) but stay registered: the shop item's right click places them through StartFeature.
 //   Features now: Vacuum Cleaner (PixelVacuumCleaner.cs: drive with W A S D / arrows, the front intake sucks husks up and the hose spits them out where the mouse aims), Container Hose (PixelContainerHose.cs: a single line from a crate / organizer to a Recycler / crate / organizer / trash can), Wood Chipper (PixelWoodChipper.cs), Conveyor Belt (PixelConveyor.cs, PixelFactoryKit.cs), Kiln (PixelKiln.cs; makes Charcoal old pixels), Solar Panel (PixelSolarPanel.cs).
@@ -324,11 +324,21 @@ public class PixelFeatureTester : MonoBehaviour
             if (f.placeLabel != null) f.placeLabel.text = placing == f ? "Stop placing" : "Place";
             if (f.clearLabel != null) f.clearLabel.text = "Clear (" + f.placed.Count + ")";
         }
-        if (statusLabel != null)
-            statusLabel.text = linkPanel != null ? "Click a device inside the blue ring to link the solar panel to it (right click skips)."
+        SetStatus(linkPanel != null ? "Click a device inside the blue ring to link the solar panel to it (right click skips)."
                 : placing == null ? "Pick 'Place' on a card to try it."
                 : placing.line ? "Placing " + placing.name + (hasStart ? ": left click the end point (it starts the next piece), right click ends the chain." : ": left click the first point.") + " Right click stops / Esc stops."
-                : "Placing " + placing.name + ": left click puts one down, Q / E turn it, right click or Esc stops.";
+                : "Placing " + placing.name + ": left click puts one down, Q / E turn it, right click or Esc stops.");
+    }
+
+    // The live placing line ("Scroll: raise / lower...", "snapped to an end"): shown in the Tester tab, and - when placing a bought piece from the shop,
+    // with the Dev Hub closed - as a line in the top status box (PixelStatusLines), so players see it too. Cleared when placing stops.
+    private const string HudLineKey = "tester.placing";
+    private static readonly Color HudLineColor = new Color(0.75f, 0.85f, 1f, 1f);
+
+    private void SetStatus(string text)
+    {
+        if (statusLabel != null) statusLabel.text = text;
+        if (gameplayPlacing && placing != null && !string.IsNullOrEmpty(text)) PixelStatusLines.Set(HudLineKey, text, HudLineColor);
     }
 
     private void StartPlacing(Feature f)
@@ -361,6 +371,8 @@ public class PixelFeatureTester : MonoBehaviour
         instance.StartPlacing(f);
         instance.gameplayPlacing = true;
         instance.spendOne = spendOne;
+        instance.lastElevText = null;
+        instance.Refresh();   // (shows the first hint on the HUD now that it is a shop placing)
         return true;
     }
 
@@ -375,6 +387,7 @@ public class PixelFeatureTester : MonoBehaviour
 
     private void StopPlacing()
     {
+        PixelStatusLines.Clear(HudLineKey);
         gameplayPlacing = false;
         spendOne = null;
         if (ghost != null) Destroy(ghost);
@@ -548,7 +561,7 @@ public class PixelFeatureTester : MonoBehaviour
         pressing = false; rectShown = false;
         placeStartFrame = Time.frameCount;
         if (selectLabel != null) selectLabel.text = "Stop selecting";
-        if (statusLabel != null) statusLabel.text = "Click belts to toggle them, or drag a box round several. Right click or Esc stops.";
+        SetStatus("Click belts to toggle them, or drag a box round several. Right click or Esc stops.");
     }
 
     private void EndSelecting()
@@ -821,7 +834,7 @@ public class PixelFeatureTester : MonoBehaviour
         if (hasStart) p = PixelConveyor.ClampEnd(lineStart, p);
         string problem = hasStart && hasPoint && placing.lineCheck != null ? placing.lineCheck(lineStart, p) : null;
         string text = problem != null ? problem + " - pick a gentler angle" : "Scroll: raise / lower the belt supports. Height " + (lineElev / unit).ToString("0.0") + " cubes" + (snapped ? "  (snapped to an end)" : "");
-        if (statusLabel != null && text != lastElevText) { statusLabel.text = text; lastElevText = text; }
+        if (text != lastElevText) { SetStatus(text); lastElevText = text; }
         if (!hasStart)
         {
             if (ghost != null) { ghost.SetActive(hasPoint); if (hasPoint) ghost.transform.position = p; }
@@ -877,7 +890,7 @@ public class PixelFeatureTester : MonoBehaviour
     {
         string text = (routePoints.Count == 0 ? "Click the start (an Out coupling)." : "Click bend points, then an In coupling to finish. Right click: take the last point back.")
                       + "  Scroll: height " + (lineElev / unit).ToString("0.0") + " cubes" + (snapped ? "  (on a coupling)" : "");
-        if (statusLabel != null && text != lastElevText) { statusLabel.text = text; lastElevText = text; }
+        if (text != lastElevText) { SetStatus(text); lastElevText = text; }
         if (routePoints.Count == 0)
         {
             if (ghost != null) { ghost.SetActive(hasPoint); if (hasPoint) ghost.transform.position = p; }
@@ -937,10 +950,10 @@ public class PixelFeatureTester : MonoBehaviour
             if (PixelKeys.Held(PixelAction.RotateLeft)) yaw -= 120f * Time.unscaledDeltaTime;
             if (PixelKeys.Held(PixelAction.RotateRight)) yaw += 120f * Time.unscaledDeltaTime;
             if (placing.requireSnap && ghost != null) ghost.SetActive(hasPoint && snapped);   // (only shown where it can go)
-            if (placing.requireSnap && statusLabel != null)
+            if (placing.requireSnap)
             {
                 string t = snapped ? "Click to put it on this belt's end." : "Bring it to the END of a conveyor belt - it snaps on there.";
-                if (t != lastElevText) { statusLabel.text = t; lastElevText = t; }
+                if (t != lastElevText) { SetStatus(t); lastElevText = t; }
             }
             if (Time.frameCount == placeStartFrame) return;
             if (hasPoint && PixelInput.LeftPressed() && (!placing.requireSnap || snapped)) { stageActive = true; stagePoint = point; stageYaw = useYaw; Refresh(); }
@@ -968,7 +981,7 @@ public class PixelFeatureTester : MonoBehaviour
                 h = Mathf.Clamp(h, PixelElevator.MinWorld(ghost), PixelElevator.MaxWorld(ghost));
                 PixelElevator.SetHeight(ghost, h);
                 string text = "Move the mouse up / down to set the height (" + (h / clicker.OldPixelWorldSize).ToString("0.0") + " cubes), click to confirm, right click to go back.";
-                if (statusLabel != null && text != lastElevText) { statusLabel.text = text; lastElevText = text; }
+                if (text != lastElevText) { SetStatus(text); lastElevText = text; }
             }
         }
         if (Time.frameCount == placeStartFrame) return;
@@ -1000,7 +1013,7 @@ public class PixelFeatureTester : MonoBehaviour
             }
             float shown = placing.stageValue != null ? placing.stageValue(ghost) : 0f;
             string text = "Scroll to set the " + placing.stageLabel + " (" + (shown / clicker.OldPixelWorldSize).ToString("0.0") + " cubes), click to confirm, right click to go back.";
-            if (statusLabel != null && text != lastElevText) { statusLabel.text = text; lastElevText = text; }
+            if (text != lastElevText) { SetStatus(text); lastElevText = text; }
         }
         if (Time.frameCount == placeStartFrame) return;
         if (PixelInput.LeftPressed() && !PixelInput.PointerOverUI() && ghost != null)

@@ -6,7 +6,7 @@
 //   are MERGED onto the main belt at the box (PixelConveyorSystem.TryMerge) as soon as there is a gap there - the two feeds become one. While there is no gap
 //   they wait at the inlet (up to queueSize; kept alive), then the feeding belt's husks are thrown off its end as at any full device.
 //   SHOP (2026-10-20): sold in Utilities (PixelConsumables DeviceKind.ConveyorCombiner, a PixelInstantItems tool: right-click starts this placing, one used up per box).
-//   The spot is a distance along the belt (it follows the belt; the box goes when its belt goes). Saved with the tester save (position, turn).
+//   The spot is a distance along the belt (it follows the belt). When its belt is removed the box goes back into the backpack (refunded, LoseBelt). Saved with the tester save (position, turn).
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -155,7 +155,7 @@ public class PixelConveyorCombiner : MonoBehaviour, IPixelAutoIntake
         {
             // Its belt was split at a Belt Sorter's joint: carry on on the piece under it; a removed belt takes the box with it.
             if (PixelConveyor.NearestOn(clicker, transform.position, out PixelConveyor again, out float s2, 0.3f)) { belt = again; along = s2; }
-            else { Destroy(gameObject); return; }
+            else { LoseBelt(); return; }
         }
         if (!Mathf.Approximately(beltWidth, belt.Width)) Rebuild(belt.Width);   // (its belt was made wider / narrower: the hood follows)
         for (int i = waiting.Count - 1; i >= 0; i--)
@@ -167,6 +167,14 @@ public class PixelConveyorCombiner : MonoBehaviour, IPixelAutoIntake
             if (life != null && !life.IsDespawning) life.KeepAlive();   // (waiting at the inlet never fades)
         }
         if (waiting.Count > 0 && waiting[0] != null && PixelConveyorSystem.TryMerge(belt, waiting[0], Spot)) waiting.RemoveAt(0);
+    }
+
+    /// <summary>Its belt was removed: the box goes back into the backpack (nothing is lost); husks waiting at its inlet drop where they are (OnDestroy).</summary>
+    private void LoseBelt()
+    {
+        PixelConsumables inv = PixelFind.Cached<PixelConsumables>();   // (OnDestroy lets the waiting husks drop)
+        if (inv != null && inv.GiveDevice(PixelConsumables.DeviceKind.ConveyorCombiner)) PixelHints.Announce("Its belt was removed: the Conveyor Combiner went back into your backpack.");
+        PixelFeatureTester.RemovePlaced(gameObject);
     }
 
     // ---------------- saving (PixelFeatureTester) ----------------

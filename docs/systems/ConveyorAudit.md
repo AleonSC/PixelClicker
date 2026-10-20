@@ -2,6 +2,8 @@
 
 Two read-only passes: one on the code (belts, riders, couplings, the tester factory and every piece that feeds or takes from a belt), one on the player and designer side (placing, feedback, purpose, feel). The two strongest bug claims (B1, B3) were checked again by hand. Builds on `DeviceConsumableAudit.md` and doesn't repeat it. Nothing changed yet. Effort: S < 1 h, M = a few hours, L = a day.
 
+**Done 2026-10-20 (pieces + joins):** B1 (sorter spot from the belt's current start), B2 (sorter / combiner refunded when their belt goes, the sorter's filter block handed back, tester list tidied), B5 (sorter catches the whole stretch crossed per step), B6 (one `LinkReach` 1.3 widths, nearest belt wins), B7 (`Emit` never fills a full belt; Kiln / Wood Chipper hold their output, Belt Jump queues on its landing lip, the Belt Sorter lets the husk ride on when its chute belt is full), B8 (Belt Jump locks the husk before `HandIn`), B11 (the Storage Crate feeds a belt on its `out` coupling), polish 1 (placing hints shown in the HUD status box when placing from the shop), polish 5 (stale docs). B3, B4, B9, B10 and polish 2-4 are the belt-core half.
+
 **Already good:**
 - **Riders never fade.** Husks on a belt never despawn.
 - **Corners and joins:** corners and shrouds close the gaps, and snapping is generous.

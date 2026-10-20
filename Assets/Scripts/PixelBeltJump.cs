@@ -4,7 +4,8 @@
 //   a LAUNCH ramp that clips onto the END of a belt and a LANDING ramp straight across a gap. A husk that reaches the belt's end is caught by the launch ramp
 //   (IPixelAutoIntake.CatchNear, via PixelCouplings.HandIn), sped up and thrown in a fixed ARC (a sampled parabola carried by PixelPathCarrier: the same arc
 //   every time) onto the landing ramp, slides down it and is put onto the belt that STARTS at the landing ramp's end (belts snap there: SnapPoints), or set
-//   down on the floor if there is none.
+//   down on the floor if there is none. A FULL belt there: the husk waits on the landing lip (held, never fades) until the belt has room (landing queue).
+//   A machine's In coupling at the landing end gets the husk locked (kinematic), as the Elevator and Hose hand them in.
 //   PLACING (two stages, PixelFeatureTester 'scrollStage'): 1. the ghost SNAPS to a belt end near the mouse (TrySnap, turned the belt's way) - it can only be
 //   placed snapped; click to fix it. 2. the SCROLL WHEEL widens / narrows the gap (gapStepCubes steps, minGapCubes..maxGapCubes); the landing ramp always
 //   sits DIRECTLY ACROSS, in line with the belt, so the arc always lands. Click to confirm, right click goes back.
@@ -173,7 +174,21 @@ public class PixelBeltJump : MonoBehaviour, IPixelAutoIntake
 
     private void OnEnable() { if (clicker == null) clicker = PixelFind.Cached<PixelClicker>(); PixelCouplings.RegisterAutoIntake(this); if (!all.Contains(this)) all.Add(this); }
     private void OnDisable() { PixelCouplings.UnregisterAutoIntake(this); all.Remove(this); }
-    private void OnDestroy() { carrier.ReleaseAll(); }
+    private void Awake() => PixelHuskPool.HuskReleasing += OnHuskReleasing;
+
+    private void OnDestroy()
+    {
+        PixelHuskPool.HuskReleasing -= OnHuskReleasing;
+        carrier.ReleaseAll();
+        foreach (Rigidbody rb in landing) if (rb != null) rb.isKinematic = false;   // (husks waiting on the lip drop)
+        landing.Clear();
+    }
+
+    // (PixelHuskPool: the husk is going away and may be reused - take it out of the landing queue)
+    private void OnHuskReleasing(Rigidbody body) => landing.Remove(body);
+
+    // Husks that reached the landing end while the belt there was full: they wait on the lip (in order) until it has room.
+    private readonly List<Rigidbody> landing = new List<Rigidbody>();
 
     /// <summary>A husk handed in at the belt's end (where the launch ramp sits): it is launched.</summary>
     public bool CatchNear(Vector3 at, Rigidbody husk)
@@ -197,7 +212,9 @@ public class PixelBeltJump : MonoBehaviour, IPixelAutoIntake
 
     private void FixedUpdate()
     {
-        if (ghost || clicker == null || carrier.Count == 0) return;
+        if (ghost || clicker == null) return;
+        if (landing.Count > 0) UpdateLanding();
+        if (carrier.Count == 0) return;
         if (path == null) BuildPath();
         carrier.Step(path, cum, flySpeedCubes * unit, flyGapCubes * unit, Time.fixedDeltaTime, Land);
     }
@@ -223,10 +240,51 @@ public class PixelBeltJump : MonoBehaviour, IPixelAutoIntake
     /// <summary>A husk reaches the end of the landing ramp: onto the belt that starts there, or set down on the floor.</summary>
     private void Land(Rigidbody rb)
     {
+        if (rb == null) return;
         PixelConveyor next = PixelCouplings.BeltStartingAt(LandingEnd);
-        if (next != null && !next.IsGhost) { PixelCouplings.PutOnBelt(next, rb); return; }
+        if (next != null && !next.IsGhost)
+        {
+            if (landing.Count == 0 && PixelConveyorSystem.StartHasRoom(next)) { PixelCouplings.PutOnBelt(next, rb); return; }
+            Hold(rb);   // (the belt is full, or others are already waiting: it queues on the lip)
+            return;
+        }
+        rb.isKinematic = true;   // (HandIn takes a locked husk, as the Elevator and Hose hand them in)
         if (PixelCouplings.HandIn(LandingEnd, rb)) return;   // (a machine's In coupling right there)
         rb.isKinematic = false;
         PixelPathCarrier.SetVelocity(rb, transform.forward * unit * 1.5f);
+    }
+
+    /// <summary>Parks a husk on the landing lip until the belt there has room.</summary>
+    private void Hold(Rigidbody rb)
+    {
+        rb.isKinematic = true;
+        rb.position = LandingEnd + Vector3.up * (0.16f * unit + clicker.OldPixelWorldSize * 0.5f) - transform.forward * (unit * (0.5f + 0.35f * Mathf.Min(landing.Count, 3)));   // (back up the ramp, clear of the drop spot)
+        if (!landing.Contains(rb)) landing.Add(rb);
+    }
+
+    /// <summary>The waiting husks: kept alive, let go when grabbed, and put on the belt one at a time when it has room (or dropped when the belt is gone).</summary>
+    private void UpdateLanding()
+    {
+        for (int i = landing.Count - 1; i >= 0; i--)
+        {
+            Rigidbody rb = landing[i];
+            OldPixelInfo info = rb != null ? PixelHuskQuery.Get(rb).info : null;
+            if (rb == null || (info != null && info.heldByPlayer)) { landing.RemoveAt(i); continue; }   // (gone, or grabbed by the player)
+            OldPixelDespawn life = PixelHuskQuery.Get(rb).despawn;
+            if (life != null && !life.IsDespawning) life.KeepAlive();   // (waiting on the lip never fades)
+        }
+        if (landing.Count == 0) return;
+        PixelConveyor next = PixelCouplings.BeltStartingAt(LandingEnd);
+        if (next == null || next.IsGhost)
+        {
+            // The belt was taken away: set them down like a landing with no belt.
+            foreach (Rigidbody rb in landing) if (rb != null) { rb.isKinematic = false; PixelPathCarrier.SetVelocity(rb, transform.forward * unit * 1.5f); }
+            landing.Clear();
+            return;
+        }
+        if (!PixelConveyorSystem.StartHasRoom(next)) return;
+        Rigidbody first = landing[0];
+        landing.RemoveAt(0);
+        PixelCouplings.PutOnBelt(next, first);
     }
 }

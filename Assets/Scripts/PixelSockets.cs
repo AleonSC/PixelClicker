@@ -8,7 +8,10 @@
 //   - a belt END / hose end at an In coupling hands its husk in: PixelCouplings.HandIn(at, husk) -> the device's AcceptHusk;
 //   - a device putting a husk out calls PixelCouplings.Emit(device, socketId, husk): an Out coupling on that socket puts it on the belt that starts at
 //     its port (PixelConveyorSystem.StartHasRoom), or hands it to an In coupling there (device to device); false = nothing attached, the device does
-//     its own thing (fling / drop). OutputHasRoom = may the device let one out now (the Funnel waits when a belt there is full).
+//     its own thing (fling / drop). OutputHasRoom = may the device let one out now (the Funnel waits when a belt there is full). Emit never puts a husk
+//     on a FULL belt (false, like nothing attached): a device that must not drop it asks OutputHasRoom first and holds it until there is room.
+//   - ONE reach for every link check (LinkReach, in husk widths): a belt end hands in to a coupling, and a coupling finds the belt ending / starting at
+//     it, at the same distance - so a belt that shows as joined really is (the nearest one wins).
 //   - placing belts / hoses snaps to coupling ports (Ports).
 //   Optional extras: IPixelHuskSource (a hose may pull stored husks out of an Out coupling: Storage Crate, Quantum Organizer), IPixelHuskRoom (how many
 //   more husks an In coupling's device takes now: a hose only pumps what fits). A socket can be OCCUPIED by something that is not a coupling (the
@@ -159,6 +162,9 @@ public static class PixelCouplings
     /// <summary>Is the socket free for a coupling (none on it, nothing else sitting there)?</summary>
     public static bool IsFree(IPixelSocketDevice d, PixelSocket s) => Alive(d) && s != null && PixelCoupling.On(d, s) == null && !Occupied(d, s.id);
 
+    /// <summary>How far (in husk widths, flat) a belt end may be from a coupling's port and still count as joined to it. One value for every link check.</summary>
+    public const float LinkReach = 1.3f;
+
     // ---- husks in ----
 
     /// <summary>The In coupling whose port is at this point (within 'reach' sideways, 1.2 husk widths up / down); null if none. 'exclude' = the asking device.</summary>
@@ -178,7 +184,7 @@ public static class PixelCouplings
     }
 
     /// <summary>Hands a husk (kinematic, still on the husk list) to the In coupling at this point. False = none there, or the device refused it.</summary>
-    public static bool HandIn(Vector3 at, Rigidbody husk, IPixelSocketDevice exclude = null, float reachHusks = 1f)
+    public static bool HandIn(Vector3 at, Rigidbody husk, IPixelSocketDevice exclude = null, float reachHusks = LinkReach)
     {
         if (husk == null) return false;
         PixelCoupling c = IntakeAt(at, reachHusks * HuskWidth, exclude);
@@ -195,31 +201,29 @@ public static class PixelCouplings
 
     // ---- husks out ----
 
-    /// <summary>The belt that ENDS at this point (its exit within 1.3 cube widths sideways and 1.2 up / down), or null.</summary>
-    public static PixelConveyor BeltEndingAt(Vector3 port)
+    /// <summary>The belt that ENDS nearest this point (its exit within LinkReach widths sideways and 1.2 up / down), or null.</summary>
+    public static PixelConveyor BeltEndingAt(Vector3 port) => NearestBeltEnd(port, true);
+
+    /// <summary>The belt that STARTS nearest this point (within LinkReach widths sideways and 1.2 up / down), or null.</summary>
+    public static PixelConveyor BeltStartingAt(Vector3 port) => NearestBeltEnd(port, false);
+
+    private static PixelConveyor NearestBeltEnd(Vector3 port, bool exit)
     {
+        PixelConveyor best = null;
+        float bestD = float.MaxValue;
         foreach (PixelConveyor belt in PixelConveyor.All)
         {
             if (belt == null || belt.IsGhost) continue;
-            Vector3 d = belt.ExitPoint - port;
-            if (new Vector3(d.x, 0f, d.z).magnitude <= 1.3f * belt.Unit && Mathf.Abs(d.y) <= 1.2f * belt.Unit) return belt;
+            Vector3 d = (exit ? belt.ExitPoint : belt.StartPoint) - port;
+            if (Mathf.Abs(d.y) > 1.2f * belt.Unit) continue;
+            float flat = new Vector3(d.x, 0f, d.z).magnitude;
+            if (flat <= LinkReach * belt.Unit && flat < bestD) { bestD = flat; best = belt; }
         }
-        return null;
+        return best;
     }
 
-    /// <summary>The belt that STARTS at this point (within 1.3 cube widths sideways and 1.2 up / down), or null.</summary>
-    public static PixelConveyor BeltStartingAt(Vector3 port)
-    {
-        foreach (PixelConveyor belt in PixelConveyor.All)
-        {
-            if (belt == null || belt.IsGhost) continue;
-            Vector3 d = belt.StartPoint - port;
-            if (new Vector3(d.x, 0f, d.z).magnitude <= 1.3f * belt.Unit && Mathf.Abs(d.y) <= 1.2f * belt.Unit) return belt;
-        }
-        return null;
-    }
-
-    /// <summary>Puts a husk on the start of a belt (just above its first stretch, moving its way); the belt system locks it on.</summary>
+    /// <summary>Puts a husk on the start of a belt (just above its first stretch, moving its way); the belt system locks it on. Low level: it does not check
+    /// for room - callers go through Emit, or check PixelConveyorSystem.StartHasRoom first.</summary>
     public static void PutOnBelt(PixelConveyor belt, Rigidbody husk)
     {
         float size = HuskWidth;
@@ -231,14 +235,20 @@ public static class PixelCouplings
 
     /// <summary>
     /// A device puts a husk out of a socket: with an Out coupling there, onto the belt that starts at its port, or into an In coupling right there (device to
-    /// device). False = nothing attached (no coupling, no belt): the device does its own thing with it.
+    /// device). False = nothing attached (no coupling, no belt) OR the belt there is full: the device does its own thing with it. Never puts a husk on
+    /// a full belt - a device that must not drop it checks OutputHasRoom first and holds it until there is room.
     /// </summary>
     public static bool Emit(IPixelSocketDevice d, string socketId, Rigidbody husk)
     {
         PixelCoupling c = PixelCoupling.On(d, socketId);
         if (c == null || !c.IsOut || husk == null) return false;
         PixelConveyor belt = BeltStartingAt(c.PortWorld);
-        if (belt != null) { PutOnBelt(belt, husk); return true; }
+        if (belt != null)
+        {
+            if (!PixelConveyorSystem.StartHasRoom(belt)) return false;   // (full: the one room check for every device putting husks out)
+            PutOnBelt(belt, husk);
+            return true;
+        }
         husk.isKinematic = true;
         if (HandIn(c.PortWorld + c.FacingWorld * 0.5f * HuskWidth, husk, d)) return true;
         husk.isKinematic = false;

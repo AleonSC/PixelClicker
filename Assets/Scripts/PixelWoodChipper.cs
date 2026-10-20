@@ -165,6 +165,7 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
     private float health;
     private bool broken;
     private int woodConsumed, chipProgress;   // wood pixels shredded in total / since the last Wood Chips block
+    private int chipsWaiting;   // Wood Chips blocks made while the belt on the chute was full (they come out when there is room)
     private Transform chipBarFill;
     private readonly List<Renderer> paintRenderers = new List<Renderer>();
     private readonly List<Color> paintColors = new List<Color>();
@@ -223,7 +224,9 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
 
     private void FixedUpdate()
     {
-        if (clicker == null || broken) return;
+        if (clicker == null) return;
+        if (chipsWaiting > 0 && PixelCouplings.OutputHasRoom(this, "chute")) { chipsWaiting--; SpitChipsBlock(); }   // (held blocks come out once the belt has room, even when broken)
+        if (broken) return;
         IReadOnlyList<Rigidbody> list = clicker.OldPixels;
         if (list == null || list.Count == 0) return;
         Vector3 throat = transform.TransformPoint(ThroatLocal);
@@ -329,7 +332,8 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
         if (chipProgress >= Mathf.Max(1, woodPerChips))
         {
             chipProgress = 0;
-            SpitChipsBlock();
+            if (PixelCouplings.OutputHasRoom(this, "chute")) SpitChipsBlock();
+            else chipsWaiting++;   // (a full belt on the chute: the block waits inside until there is room)
         }
         RefreshCondition();
     }
