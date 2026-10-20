@@ -44,14 +44,14 @@ public static class PixelHuskQuery
     /// <summary>Drops a husk from the cache (it is going away: PixelHuskPool reuses the same object for a new husk, which must be looked up afresh).</summary>
     public static void Forget(Rigidbody body)
     {
-        if (body != null) cache.Remove(body.GetInstanceID());
+        if (body != null) cache.Remove(PixelObjectId.Of(body));
     }
 
     /// <summary>The husk's components (cached after the first look).</summary>
     public static Husk Get(Rigidbody body)
     {
         if (body == null) return default;
-        int id = body.GetInstanceID();
+        int id = PixelObjectId.Of(body);
         if (cache.TryGetValue(id, out Husk h) && h.body == body)
         {
             // A husk gets its cards while it is being made: a card that was missing at the first look is looked for again (found ones are kept).

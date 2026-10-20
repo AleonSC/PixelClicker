@@ -538,7 +538,7 @@ public class PixelDevInspector : MonoBehaviour
         if (filterField != null) filterField.SetTextWithoutNotify("");
         Select(c.gameObject);
         openState.Clear();
-        openState[c.GetInstanceID()] = true;
+        openState[PixelObjectId.Of(c)] = true;
         SetTab(1);
     }
 
@@ -599,7 +599,7 @@ public class PixelDevInspector : MonoBehaviour
             foreach (Component c in comps)
             {
                 if (c == null) continue;
-                y = AddObjectBlock(c, c.GetType().Name, c.GetInstanceID(), y);
+                y = AddObjectBlock(c, c.GetType().Name, PixelObjectId.Of(c), y);
             }
             OldPixelInfo info = selected.GetComponent<OldPixelInfo>();
             PixelClicker clicker = info != null ? PixelFind.First<PixelClicker>() : null;

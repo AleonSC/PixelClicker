@@ -83,7 +83,7 @@ public class PixelDevTextEdit : MonoBehaviour
 
     private string PathOf(TMP_Text label)
     {
-        int id = label.GetInstanceID();
+        int id = PixelObjectId.Of(label);
         if (pathCache.TryGetValue(id, out string cached)) return cached;
         List<string> names = new List<string>();
         for (Transform t = label.transform; t != null && t != canvasRoot; t = t.parent) names.Add(t.name);

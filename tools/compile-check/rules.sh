@@ -27,4 +27,12 @@ for f in $(grep -rl --include='*.cs' 'PixelWindows\.Register(' .); do
   done
 done
 
+# Rule: object id numbers come from PixelObjectId.Of - GetInstanceID() is an error on newer Unity (6.3+: GetEntityId) and the offline check
+# compiles against older Unity, so it would not notice; the version switch lives only in PixelObjectId.cs.
+HITS=$(grep -rnE --include='*.cs' 'GetInstanceID\(|GetEntityId\(' . | grep -v '^\./PixelObjectId\.cs:' | grep -vE '^[^:]+:[0-9]+:\s*//' | sed 's#^\./##')
+if [ -n "$HITS" ]; then
+  echo "$HITS" | sed -E 's#^([^:]+:[0-9]+):.*#\1: rule: GetInstanceID / GetEntityId called directly - use PixelObjectId.Of(obj) (works on old and new Unity)#'
+  FAIL=1
+fi
+
 exit $FAIL

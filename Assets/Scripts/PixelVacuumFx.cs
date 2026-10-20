@@ -39,7 +39,7 @@ public static class PixelVacuumMesh
     public static Mesh Get(Mesh cube)
     {
         if (cube == null) return null;
-        int key = cube.GetInstanceID();
+        int key = PixelObjectId.Of(cube);
         if (cache.TryGetValue(key, out Mesh cached) && cached != null) return cached;
         Mesh m = Build(cube.bounds);
         cache[key] = m;

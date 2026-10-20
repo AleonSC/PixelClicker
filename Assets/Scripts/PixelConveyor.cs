@@ -607,7 +607,7 @@ public class PixelConveyor : MonoBehaviour
                 Vector3 p = e == 0 ? c.a : c.b;
                 float d = (new Vector3(p.x, b.y, p.z) - b).sqrMagnitude;
                 if (d >= bestD || Mathf.Abs(p.y - b.y) > unit * 0.45f) continue;
-                if (e == 1 && c.GetInstanceID() > GetInstanceID()) continue;   // (two b ends meeting: the corner is the other belt's)
+                if (e == 1 && PixelObjectId.Of(c) > PixelObjectId.Of(this)) continue;   // (two b ends meeting: the corner is the other belt's)
                 bestD = d; best = c; partnerAtB = e == 1;
             }
         }
