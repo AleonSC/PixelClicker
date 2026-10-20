@@ -140,9 +140,8 @@ public partial class PixelAudio : MonoBehaviour
     private const string PrefEffects = "PixelAudio.Effects";
     private const string PrefMusic = "PixelAudio.Music";
     private const string PrefMuted = "PixelAudio.Muted";
-    // Per save (PixelSettingsSync): music mute, the playlist and the chosen song. (Named PixelClicker.Setting.* so a new game resets them; PixelAudio.* keys are the player's own and stay.)
+    // Per save (PixelSettingsSync): music mute and the playlist. (Named PixelClicker.Setting.* so a new game resets them; PixelAudio.* keys are the player's own and stay.)
     private const string PrefMusicMuted = "PixelClicker.Setting.MusicMuted";
-    private const string PrefSong = "PixelClicker.Setting.Song";
     private const string PrefMusicShuffle = "PixelClicker.Setting.MusicShuffle";   // 1 = shuffle, 0 = in order; missing = the Inspector's 'Shuffle Music'
     private bool musicMuted;
     private bool shuffleOn = true;
@@ -173,7 +172,6 @@ public partial class PixelAudio : MonoBehaviour
         instance.shuffleOn = PixelPrefs.GetInt(PrefMusicShuffle, instance.shuffleMusic ? 1 : 0) != 0;
         instance.playlistOff = null;   // read again (per save)
         instance.ApplyMusicVolume();
-        instance.ApplySavedSong();
     }
 
     private static PixelAudio instance;
@@ -908,11 +906,10 @@ public partial class PixelAudio : MonoBehaviour
     /// <summary>The index of the track playing now (-1 = none yet).</summary>
     public int CurrentMusicTrack => TrackIndexOf(PlayingClip);
 
-    /// <summary>Starts this track now from the beginning and remembers it as the chosen song of this save file; the normal shuffle / order carries on after it.</summary>
+    /// <summary>Starts this track now from the beginning; the normal shuffle / order carries on after it. (Not remembered: the next launch starts on a random song.)</summary>
     public void SelectMusicTrack(int i)
     {
         if (i < 0 || musicTracks == null || i >= musicTracks.Length || musicTracks[i] == null) return;
-        PixelPrefs.SetString(PrefSong, TrackKey(i));
         if (cueActive >= 0) { cueSpent = cueActive; cueTarget = -1; }   // picking a song overrides the cue that is playing (until its trigger has ended once)
         PlayTrack(i);
     }
@@ -977,22 +974,6 @@ public partial class PixelAudio : MonoBehaviour
         musicSource.Play();
     }
 
-    /// <summary>The index of this save file's chosen song (-1 = none chosen, or it is not in the list any more).</summary>
-    private int SavedSongIndex()
-    {
-        string name = PixelPrefs.GetString(PrefSong, "");
-        if (name.Length == 0 || musicTracks == null) return -1;
-        for (int i = 0; i < musicTracks.Length; i++) if (musicTracks[i] != null && musicTracks[i].name == name) return i;
-        return -1;
-    }
-
-    /// <summary>A save file was loaded: its chosen song starts playing (nothing changes when it has none or it is already playing).</summary>
-    private void ApplySavedSong()
-    {
-        int i = SavedSongIndex();
-        if (i >= 0 && i != CurrentMusicTrack) PlayTrack(i);
-    }
-
     private bool musicHeldByStudio;   // the music is paused for the studio intro (PixelStudioIntro.HoldsMusic)
 
     private void UpdateMusic()
@@ -1047,9 +1028,7 @@ public partial class PixelAudio : MonoBehaviour
         if (pool.Count == 0) for (int i = 0; i < musicTracks.Length; i++) if (musicTracks[i] != null) pool.Add(i);
         if (pool.Count == 0) return;
         int next;
-        int saved = lastTrack < 0 ? SavedSongIndex() : -1;
-        if (saved >= 0) next = saved;   // the song this save file was left on
-        else if ((shuffleOn || lastTrack < 0) && pool.Count > 1)
+        if ((shuffleOn || lastTrack < 0) && pool.Count > 1)
         {
             do next = pool[UnityEngine.Random.Range(0, pool.Count)]; while (next == lastTrack);
         }

@@ -7,7 +7,7 @@
 //   the spot. SHARED by the pause menu (PixelPauseMenu.BuildUI: same bottom-centre spot, no caption, hidden after pauseMusicHideSeconds 0 = 1.5 s and fading out
 //   in 0.15 s instead of 0.8 s; open = paused and not on the title screen): Create(parent, font, hideSeconds, showCaption, fadeOutSeconds, isOpen) - it shows when its
 //   screen opens (isOpen turns true) and while hovered. A SHUFFLE button right of the speaker toggles PixelAudio.MusicShuffle (per save file; lit = on, dim = in order).
-//   A speaker button at its right end mutes / unmutes the music (right click opens Settings > Audio directly: PixelPauseMenu.OpenAudioSettingsFromTitle) (PixelAudio.MusicMuted, per save file, also a Settings > Audio tick box); the chosen song and the playlist are per save too. Starts the chosen track at once; the usual shuffle / order carries on after it. Hidden entirely when there are no tracks.
+//   A speaker button at its right end mutes / unmutes the music (right click opens Settings > Audio directly: PixelPauseMenu.OpenAudioSettingsFromTitle) (PixelAudio.MusicMuted, per save file, also a Settings > Audio tick box); the playlist is per save too. Starts the chosen track at once (not remembered: every launch starts on a random song); the usual shuffle / order carries on after it. Hidden entirely when there are no tracks.
 // ----------------------
 using System.Collections.Generic;
 using TMPro;
