@@ -33,7 +33,14 @@ public class PixelTrashCan : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom
 
     private float MouthY => 1.1f * unit;
 
-    public static GameObject CreateGhost(PixelClicker c) { return Build(c, true, "Trash Can (Ghost)"); }
+    public static GameObject CreateGhost(PixelClicker c) { return PixelAimLaser.Attach(Build(c, true, "Trash Can (Ghost)"), Ports(Mathf.Max(0.05f, c.OldPixelWorldSize))); }
+
+    /// <summary>Its sockets (the real can and its placing ghost's aim beams): front and back, In.</summary>
+    private static PixelSocket[] Ports(float u) => new[]
+    {
+        new PixelSocket("front", new Vector3(0f, 0f, -0.72f * u), Vector3.back, PixelSocketFlow.Intake),
+        new PixelSocket("back", new Vector3(0f, 0f, 0.72f * u), Vector3.forward, PixelSocketFlow.Intake),
+    };
 
     public static GameObject Place(PixelClicker c, Vector3 point, float yaw)
     {
@@ -51,11 +58,7 @@ public class PixelTrashCan : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom
         t.clicker = c; t.ghost = ghostMode; t.unit = Mathf.Max(0.05f, c.OldPixelWorldSize);
         // Sockets (PixelSockets.cs): two sides (front / back) where a belt, connector or hose can end at an In coupling. A ghost has none.
         if (!ghostMode)
-            t.sockets = new[]
-            {
-                new PixelSocket("front", new Vector3(0f, 0f, -0.72f * t.unit), Vector3.back, PixelSocketFlow.Intake),
-                new PixelSocket("back", new Vector3(0f, 0f, 0.72f * t.unit), Vector3.forward, PixelSocketFlow.Intake),
-            };
+            t.sockets = Ports(t.unit);
         t.BuildModel();
         return root;
     }

@@ -103,7 +103,15 @@ public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoo
     }
 
     /// <summary>A see-through copy that follows the mouse while placing.</summary>
-    public static GameObject CreateGhost(PixelClicker clicker) => Build(clicker, true, false);
+    public static GameObject CreateGhost(PixelClicker clicker) => PixelAimLaser.Attach(Build(clicker, true, false), Ports(Unit(clicker)));
+
+    /// <summary>Its eight sockets (the real box and its placing ghost's aim beams).</summary>
+    private static PixelSocket[] Ports(float u)
+    {
+        List<PixelSocket> list = new List<PixelSocket>();
+        foreach (SocketSpec s in Specs(u)) list.Add(new PixelSocket(s.id, s.port, s.facing, PixelSocketFlow.Both) { autoDirection = true });
+        return list.ToArray();
+    }
 
     /// <summary>A model for the shop / inventory pictures (no colliders, no behaviour).</summary>
     public static GameObject CreateDisplay(PixelClicker clicker) => Build(clicker, false, false);
@@ -184,9 +192,7 @@ public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoo
     {
         clicker = owner;
         float u = Unit(clicker);
-        List<PixelSocket> list = new List<PixelSocket>();
-        foreach (SocketSpec s in Specs(u)) list.Add(new PixelSocket(s.id, s.port, s.facing, PixelSocketFlow.Both) { autoDirection = true });
-        sockets = list.ToArray();
+        sockets = Ports(u);
         baseScale = transform.localScale;
         foreach (string band in new[] { "Band Front", "Band Back", "Band Left", "Band Right" })
         {

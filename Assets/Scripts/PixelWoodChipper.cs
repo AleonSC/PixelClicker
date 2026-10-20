@@ -122,12 +122,15 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
         return root;
     }
 
+    /// <summary>Its socket (the real chipper and its placing ghost's aim beam): the chute's mouth (Out).</summary>
+    private static PixelSocket[] Ports() => new[] { new PixelSocket("chute", new Vector3(OutletLocal.x, 0f, OutletLocal.z + 1.1f), Vector3.forward, PixelSocketFlow.Output) };
+
     /// <summary>The see-through ghost that follows the mouse while placing.</summary>
     public static GameObject CreateGhost(PixelClicker clicker)
     {
         GameObject root = Build(clicker, true);
         root.name = "Wood Chipper (Ghost)";
-        return root;
+        return PixelAimLaser.Attach(root, Ports());
     }
 
     /// <summary>A solid, inert model for pictures (inventory / vendor items): no behaviour, no colliders, no arrow.</summary>
@@ -499,7 +502,7 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
         chipper.shake = sh; chipper.shakeHome = sh.localPosition;
         chipper.rollerA = rA; chipper.rollerB = rB; chipper.flywheel = fly; chipper.beaconMat = beacon;
         chipper.scaleFactor = scale;
-        chipper.sockets = new[] { new PixelSocket("chute", new Vector3(OutletLocal.x, 0f, OutletLocal.z + 1.1f), Vector3.forward, PixelSocketFlow.Output) };
+        chipper.sockets = Ports();
         PixelCouplings.Register(chipper);
         chipper.MakeParticles(exhaustTop);
         chipper.health = chipper.maxHealth;

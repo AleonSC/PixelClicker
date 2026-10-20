@@ -59,7 +59,20 @@ public class PixelCraftingCube : MonoBehaviour, IPixelSocketDevice
 
     private static float U(PixelClicker c) => Mathf.Max(0.05f, c != null ? c.OldPixelWorldSize : 0.5f);
 
-    public static GameObject CreateGhost(PixelClicker c) => Build(c, true);
+    public static GameObject CreateGhost(PixelClicker c) => PixelAimLaser.Attach(Build(c, true), Ports(U(c)));
+
+    /// <summary>Its four sockets (the real cube and its placing ghost's aim beams), one on each side, In.</summary>
+    private static PixelSocket[] Ports(float u)
+    {
+        float port = SideCubes * u * 0.5f + 0.35f * u, py = 0.45f * u;
+        return new[]
+        {
+            new PixelSocket("front", new Vector3(0f, py, -port), Vector3.back, PixelSocketFlow.Intake),
+            new PixelSocket("back", new Vector3(0f, py, port), Vector3.forward, PixelSocketFlow.Intake),
+            new PixelSocket("left", new Vector3(-port, py, 0f), Vector3.left, PixelSocketFlow.Intake),
+            new PixelSocket("right", new Vector3(port, py, 0f), Vector3.right, PixelSocketFlow.Intake),
+        };
+    }
 
     public static GameObject Place(PixelClicker c, Vector3 point, float yaw)
     {
@@ -127,14 +140,7 @@ public class PixelCraftingCube : MonoBehaviour, IPixelSocketDevice
 
         if (!ghostMode)
         {
-            float port = w * 0.5f + 0.35f * u, py = 0.45f * u;
-            cube.sockets = new[]
-            {
-                new PixelSocket("front", new Vector3(0f, py, -port), Vector3.back, PixelSocketFlow.Intake),
-                new PixelSocket("back", new Vector3(0f, py, port), Vector3.forward, PixelSocketFlow.Intake),
-                new PixelSocket("left", new Vector3(-port, py, 0f), Vector3.left, PixelSocketFlow.Intake),
-                new PixelSocket("right", new Vector3(port, py, 0f), Vector3.right, PixelSocketFlow.Intake),
-            };
+            cube.sockets = Ports(u);
             foreach (Collider c2 in root.GetComponentsInChildren<Collider>()) cube.body.Add(c2);
             // The book can be pointed at too (hover / right click).
             BoxCollider bookHit = root.AddComponent<BoxCollider>();

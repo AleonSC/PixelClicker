@@ -324,7 +324,17 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     }
 
     /// <summary>A see-through copy that follows the mouse while placing.</summary>
-    public static GameObject CreateGhost(PixelClicker clicker) => Build(clicker, true, false);
+    public static GameObject CreateGhost(PixelClicker clicker) => PixelAimLaser.Attach(Build(clicker, true, false), Ports(Unit(clicker)));
+
+    /// <summary>Its sockets (the real bin and its placing ghost's aim beams): the back hatch and the four front holes, all In.</summary>
+    private static PixelSocket[] Ports(float u)
+    {
+        float back = u * (DepthHusks * 0.5f + 0.4f);   // (= BackEdgeLocalZ)
+        List<PixelSocket> list = new List<PixelSocket> { new PixelSocket(HatchSocket, new Vector3(0f, 0f, back), Vector3.forward, PixelSocketFlow.Intake) };
+        float[] fx = FrontPortX(u);
+        for (int i = 0; i < fx.Length; i++) list.Add(new PixelSocket(FrontSockets[i], new Vector3(fx[i], 0f, -back), Vector3.back, PixelSocketFlow.Intake));
+        return list.ToArray();
+    }
 
     /// <summary>A model for the shop / inventory pictures (no colliders, no behaviour).</summary>
     public static GameObject CreateDisplay(PixelClicker clicker) => Build(clicker, false, false);
@@ -452,10 +462,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
         float u = Unit(clicker);
         innerW = WidthHusks * u; innerD = DepthHusks * u; wallH = HeightHusks * u;
         baseScale = transform.localScale;
-        List<PixelSocket> socketList = new List<PixelSocket> { new PixelSocket(HatchSocket, new Vector3(0f, 0f, BackEdgeLocalZ), Vector3.forward, PixelSocketFlow.Intake) };
-        float[] fx = FrontPortX(u);
-        for (int i = 0; i < fx.Length; i++) socketList.Add(new PixelSocket(FrontSockets[i], new Vector3(fx[i], 0f, -BackEdgeLocalZ), Vector3.back, PixelSocketFlow.Intake));   // (four In holes on the front)
-        sockets = socketList.ToArray();
+        sockets = Ports(u);   // (the back hatch + four In holes on the front)
         lidPivot = transform.Find("Lid Pivot");
         hatchPivot = transform.Find("Hatch Pivot");
         if (hatchPivot != null) foreach (Collider c in hatchPivot.GetComponentsInChildren<Collider>()) hatchColliders.Add(c);

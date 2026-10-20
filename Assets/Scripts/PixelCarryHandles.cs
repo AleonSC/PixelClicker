@@ -7,6 +7,7 @@
 //     (PixelHandCursor), left-drag moves the root over the floor plane (kept on screen) with the fist cursor, scroll / Q / E turn it while dragging
 //     (PixelConsumables.TurnInput). Over(ray) / Dragging tell the owner the pointer is the handles'; static Hot (hovering or dragging any handles)
 //     is part of PixelClicker.ExternalClickBlock and PixelGrab's guard. 'Blocked' (a Func the owner sets) pauses it, e.g. while the Recycler works.
+//   While carried, the device's coupling holes shine red AIM BEAMS (PixelAimLaser.Ports) so it lines up exactly.
 //   The clicker cube wins: a handle hidden behind the cube (the cube nearer along the mouse ray, CubeInFront) is not hovered or grabbed.
 //   Moves go through a kinematic Rigidbody on the root (MovePosition / MoveRotation in FixedUpdate) so loose husks are pushed, not passed through; it follows the mouse tightly (followSharpness 25 = closes the gap fast, capped at carrySpeedLimit 60 u/s; the old 7 u/s cap made it crawl and keep sliding after the drag) and husks it shoves are slowed to pushedSpeedCap (2.5 u/s) so they slide aside instead of flying. The position / yaw are the root's own, so the saved PlacedState picks up where it was carried to.
 // ---------------------------------------------------
@@ -160,6 +161,8 @@ public class PixelCarryHandles : MonoBehaviour
 
     private Camera Cam => cameraSource != null && cameraSource() != null ? cameraSource() : Camera.main;
 
+    private IPixelSocketDevice socketDevice;   // (the carried device's sockets: its aim beams)
+
     private void Update()
     {
         if (handles.Count == 0) return;
@@ -171,6 +174,9 @@ public class PixelCarryHandles : MonoBehaviour
         {
             if (!PixelInput.LeftHeld()) { StopDrag(); return; }
             hotFrame = PixelPointerClaim.Claim();
+            // Red aim beams out of the device's coupling holes while it is carried (PixelAimLaser), so it lines up exactly.
+            if (socketDevice == null) socketDevice = GetComponent<IPixelSocketDevice>();
+            if (socketDevice != null) PixelAimLaser.Ports(socketDevice.SocketRoot, socketDevice.Sockets);
             PixelHandCursor.Request(PixelHandCursor.Shape.Closed);
             if (consumables == null) consumables = PixelFind.First<PixelConsumables>();
             float turn = consumables != null ? consumables.TurnInput() : 0f;

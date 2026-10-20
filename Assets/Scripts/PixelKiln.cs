@@ -53,13 +53,20 @@ public class PixelKiln : MonoBehaviour, IPixelSocketDevice
     private float Gap => charcoalGapSeconds > 0f ? charcoalGapSeconds : 0.35f;
     private int MaxQueued => maxQueued > 0 ? maxQueued : 30;
 
+    /// <summary>Its sockets (the real kiln and its placing ghost's aim beams): the MOUTH (In, at the front edge of the stone apron, so a belt ending there does not run into it) and the back CHUTE (Out).</summary>
+    private static PixelSocket[] Ports(float u) => new[]
+    {
+        new PixelSocket("mouth", new Vector3(2.65f * u, 0f, 0f), Vector3.right, PixelSocketFlow.Intake),
+        new PixelSocket("chute", new Vector3((OutletLocal.x - 0.25f) * u, 0f, 0f), Vector3.left, PixelSocketFlow.Output),
+    };
+
     // ---------------- placement (PixelFeatureTester) ----------------
 
     public static GameObject CreateGhost(PixelClicker c)
     {
         GameObject root = Build(c, true);
         root.name = "Kiln (Ghost)";
-        return root;
+        return PixelAimLaser.Attach(root, Ports(c.OldPixelWorldSize));   // (red aim beams out of its coupling holes while placing)
     }
 
     public static GameObject Place(PixelClicker c, Vector3 point, float yaw)
@@ -118,11 +125,7 @@ public class PixelKiln : MonoBehaviour, IPixelSocketDevice
         kiln.clicker = c;
         kiln.unit = u;
         // Sockets (PixelSockets.cs): the MOUTH takes husks in (a belt / connector / hose ends at an In coupling there), the back CHUTE puts charcoal out.
-        kiln.sockets = new[]
-        {
-            new PixelSocket("mouth", new Vector3(2.65f * u, 0f, 0f), Vector3.right, PixelSocketFlow.Intake),   // (at the front edge of the stone apron, so a belt ending there does not run into it)
-            new PixelSocket("chute", new Vector3((OutletLocal.x - 0.25f) * u, 0f, 0f), Vector3.left, PixelSocketFlow.Output),
-        };
+        kiln.sockets = Ports(u);
         kiln.fireLight = MakeLight(t, new Vector3(fx + 0.5f * u, 0.7f * u, 0f), u);
         kiln.smoke = MakeSmoke(t, new Vector3(-0.65f * u, 3.9f * u, 0.45f * u), u);
         kiln.embers = MakeEmbers(t, new Vector3(fx + 0.1f * u, 0.7f * u, 0f), u);

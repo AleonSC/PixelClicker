@@ -101,7 +101,10 @@ public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHu
         return root;
     }
 
-    public static GameObject CreateGhost(PixelClicker clicker, float size) => Build(clicker, true, false, size);
+    public static GameObject CreateGhost(PixelClicker clicker, float size) => PixelAimLaser.Attach(Build(clicker, true, false, size), Ports(Unit(clicker) * Mathf.Max(0.3f, size)));
+
+    /// <summary>Its socket (the real generator and its placing ghost's aim beam): the intake, In.</summary>
+    private static PixelSocket[] Ports(float u) => new[] { new PixelSocket("intake", new Vector3(0f, 0f, -1.65f * u), Vector3.back, PixelSocketFlow.Intake) };
     public static GameObject CreateDisplay(PixelClicker clicker, float size) => Build(clicker, false, false, size);
 
     private static GameObject Build(PixelClicker clicker, bool ghost, bool colliders, float size)
@@ -148,7 +151,7 @@ public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHu
         size = Mathf.Max(0.3f, modelSize);
         charge = maxCharge;   // (it comes full)
         float u = Unit(clicker) * size;
-        sockets = new[] { new PixelSocket("intake", new Vector3(0f, 0f, -1.65f * u), Vector3.back, PixelSocketFlow.Intake) };
+        sockets = Ports(u);
         foreach (string n in new[] { "Glow Band" })
         {
             Transform g = transform.Find(n);

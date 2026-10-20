@@ -100,7 +100,10 @@ public class PixelFunnel : MonoBehaviour, IPixelSocketDevice, IPixelDeviceInfo
 
     // ---------------- building ----------------
 
-    public static GameObject CreateGhost(PixelClicker c) { return Build(c, Mode.Ghost, "Funnel (Ghost)"); }
+    public static GameObject CreateGhost(PixelClicker c) { return PixelAimLaser.Attach(Build(c, Mode.Ghost, "Funnel (Ghost)"), Ports(Mathf.Max(0.05f, c != null ? c.PixelBaseSize : 1f))); }
+
+    /// <summary>Its socket (the real funnel and its placing ghost's aim beam): the OUTPUT at the spout's end, on the floor.</summary>
+    private static PixelSocket[] Ports(float unit) => new[] { new PixelSocket("output", new Vector3(0f, 0f, SpoutLen * unit), Vector3.forward, PixelSocketFlow.Output) };
 
     /// <summary>A solid, inert model for pictures (inventory / shop): the cone, its legs, the tube and the spout, no behaviour.</summary>
     public static GameObject CreateDisplay(PixelClicker c) { return Build(c, Mode.Display, "Funnel (Display)"); }
@@ -130,7 +133,7 @@ public class PixelFunnel : MonoBehaviour, IPixelSocketDevice, IPixelDeviceInfo
         {
             real.Add(f);
             // Socket (PixelSockets.cs): the OUTPUT at the spout's end, on the floor. An Out coupling there puts what comes down the tube on the belt that starts at it.
-            f.sockets = new[] { new PixelSocket("output", new Vector3(0f, 0f, SpoutLen * f.unit), Vector3.forward, PixelSocketFlow.Output) };
+            f.sockets = Ports(f.unit);
             PixelCouplings.Register(f);
         }
         return root;

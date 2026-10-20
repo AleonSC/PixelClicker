@@ -60,11 +60,7 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelSocketDevice, IPixelHu
         carry.Init(() => cam);
         carry.Blocked = () => IsEnding;
         // Two sockets on the front: 'in' (left) takes belts / hoses in, 'out' (right) lets a hose pull stored husks.
-        sockets = new[]
-        {
-            new PixelSocket("in", new Vector3(-width * 0.25f, 0.1f, -depth * 0.5f), Vector3.back, PixelSocketFlow.Intake),
-            new PixelSocket("out", new Vector3(width * 0.25f, 0.1f, -depth * 0.5f), Vector3.back, PixelSocketFlow.Output),
-        };
+        sockets = Ports(settings);
         Ended += _ => { ReleaseAll(); PixelCouplings.Unregister(this); };
         PixelCouplings.Register(this);
     }
@@ -81,6 +77,17 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelSocketDevice, IPixelHu
 
     // ---- Sockets (PixelSockets.cs): 'in' and 'out' on the front ----
     private PixelSocket[] sockets = new PixelSocket[0];
+
+    /// <summary>Its two front sockets (the real crate and its placing ghost's aim beams): 'in' (left) and 'out' (right).</summary>
+    public static PixelSocket[] Ports(PixelConsumables.Device d)
+    {
+        float width = Mathf.Max(1f, d.bodyDiameter), depth = width / Columns * Rows;
+        return new[]
+        {
+            new PixelSocket("in", new Vector3(-width * 0.25f, 0.1f, -depth * 0.5f), Vector3.back, PixelSocketFlow.Intake),
+            new PixelSocket("out", new Vector3(width * 0.25f, 0.1f, -depth * 0.5f), Vector3.back, PixelSocketFlow.Output),
+        };
+    }
     public Transform SocketRoot => transform;
     public IReadOnlyList<PixelSocket> Sockets => sockets;
     public Color SocketTint => new Color(0.62f, 0.45f, 0.28f, 1f);

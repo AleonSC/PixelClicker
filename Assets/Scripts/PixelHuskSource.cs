@@ -29,7 +29,20 @@ public class PixelHuskSource : MonoBehaviour, IPixelSocketDevice, IPixelHuskSour
 
     // ---------------- building ----------------
 
-    public static GameObject CreateGhost(PixelClicker c) => Build(c, true);
+    public static GameObject CreateGhost(PixelClicker c) => PixelAimLaser.Attach(Build(c, true), Ports(Mathf.Max(0.05f, c != null ? c.OldPixelWorldSize : 0.5f)));
+
+    /// <summary>Its four sockets (the real box and its placing ghost's aim beams), one on each side, Out.</summary>
+    private static PixelSocket[] Ports(float u)
+    {
+        float port = SideCubes * u * 0.5f + 0.35f * u;
+        return new[]
+        {
+            new PixelSocket("front", new Vector3(0f, 0f, -port), Vector3.back, PixelSocketFlow.Output),
+            new PixelSocket("back", new Vector3(0f, 0f, port), Vector3.forward, PixelSocketFlow.Output),
+            new PixelSocket("left", new Vector3(-port, 0f, 0f), Vector3.left, PixelSocketFlow.Output),
+            new PixelSocket("right", new Vector3(port, 0f, 0f), Vector3.right, PixelSocketFlow.Output),
+        };
+    }
 
     public static GameObject Place(PixelClicker c, Vector3 point, float yaw)
     {
@@ -64,14 +77,7 @@ public class PixelHuskSource : MonoBehaviour, IPixelSocketDevice, IPixelHuskSour
         s.display = top.transform;
         if (!ghostMode)
         {
-            float port = w * 0.5f + 0.35f * u;
-            s.sockets = new[]
-            {
-                new PixelSocket("front", new Vector3(0f, 0f, -port), Vector3.back, PixelSocketFlow.Output),
-                new PixelSocket("back", new Vector3(0f, 0f, port), Vector3.forward, PixelSocketFlow.Output),
-                new PixelSocket("left", new Vector3(-port, 0f, 0f), Vector3.left, PixelSocketFlow.Output),
-                new PixelSocket("right", new Vector3(port, 0f, 0f), Vector3.right, PixelSocketFlow.Output),
-            };
+            s.sockets = Ports(u);
             foreach (Collider col in root.GetComponentsInChildren<Collider>()) s.body.Add(col);
             PixelCouplings.Register(s);
         }

@@ -3494,10 +3494,12 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         else if (d.kind == DeviceKind.QuantumOrganizer)
         {
             BuildQuantumBody(root, d, isPreview);
+            if (isPreview) PixelAimLaser.Attach(root, PixelQuantumDevice.Ports(d));
         }
         else if (d.kind == DeviceKind.StorageCrate)
         {
             BuildCrateBody(root, d, isPreview);
+            if (isPreview) PixelAimLaser.Attach(root, PixelStorageCrate.Ports(d));   // (red aim beams out of its coupling holes while placing)
         }
         else if (d.kind == DeviceKind.LightningRod)
         {

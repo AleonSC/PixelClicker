@@ -88,7 +88,7 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
         RefreshLabel();
         Ended += _ => { ReleaseSome(1000); PixelCouplings.Unregister(this); };   // when its time is up (or it is removed) everything stored comes out again
         tint = settings.color;
-        sockets = new[] { new PixelSocket("side", new Vector3(0f, 0f, -(half + 0.2f)), Vector3.back, PixelSocketFlow.Both) };
+        sockets = Ports(settings);
         PixelCouplings.Register(this);   // its SIDE socket: In = hoses / belts drop husks onto the pad, Out = a hose pulls stored husks
     }
 
@@ -99,6 +99,9 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
 
     // ---- Socket (PixelSockets.cs): one 'side' socket, In or Out ----
     private PixelSocket[] sockets = new PixelSocket[0];
+
+    /// <summary>Its side socket (the real organizer and its placing ghost's aim beam).</summary>
+    public static PixelSocket[] Ports(PixelConsumables.Device d) => new[] { new PixelSocket("side", new Vector3(0f, 0f, -(Mathf.Max(0.3f, d.bodyDiameter * 0.5f) + 0.2f)), Vector3.back, PixelSocketFlow.Both) };
     private Color tint = Color.cyan;
     public Transform SocketRoot => transform;
     public IReadOnlyList<PixelSocket> Sockets => sockets;
