@@ -1048,20 +1048,22 @@ public class PixelHints : MonoBehaviour, IPixelSaved
         if (waitTimer > 0f) waitTimer -= Time.unscaledDeltaTime;   // (PixelTipQueue shows the next tip once it is 0: ShowNextTip)
     }
 
+    /// <summary>The spot for the small top-right tip boxes (potion, minigames): just past the right edge, under the top bar (PixelNotice puts the box left of it).</summary>
+    private static Vector2? TopRightTip() => new Vector2(Screen.width * 1.03f, Screen.height * 0.8f);
+
     /// <summary>Shows the next queued first-time tip (called by PixelTipQueue when it is this source's turn).</summary>
     private void ShowNextTip()
     {
         if (queue.Count == 0) return;
         Hint next = queue.Dequeue();
         // The tips for something that just happened in a minigame are small; the rest are shop-sized.
-        // The first ghost tip appears beside the ghost and stops time until it is closed.
-        PixelGhostMinigame ghostGame = next.id == "minigame_ghost" ? PixelMinigame.Find("ghost") as PixelGhostMinigame : null;
+        // The minigame and potion tips sit at the top right (TopRightTip); minigame ones still stop time.
         if (next.id != null && next.id.StartsWith("minigame_"))
         {
-            // Every first-time minigame tip stops time and darkens the screen until 'Got it' (the first ghost tip sits beside the ghost).
+            // Every first-time minigame tip: a small box at the TOP RIGHT of the screen (like the potion tip), and it still stops time and darkens the
+            // screen until 'Got it' - a minigame needs a moment to read before it runs.
             PixelTutorialDim.Begin(null);
-            System.Func<Vector2?> near = ghostGame != null && ghostGame.GhostScreenPosition().HasValue ? ghostGame.GhostScreenPosition : null;
-            PixelNotice.Show(next.text, 0f, small: true, nearScreen: near, freezeTime: true, onClosed: PixelTutorialDim.End);
+            PixelNotice.Show(next.text, 0f, small: true, nearScreen: TopRightTip, freezeTime: true, onClosed: PixelTutorialDim.End);
             wasShowing = true;
             return;
         }
@@ -1082,7 +1084,7 @@ public class PixelHints : MonoBehaviour, IPixelSaved
         if (next.id == "potion")
         {
             // The first potion tip: a small box at the TOP RIGHT of the screen (just under the top bar), and time keeps running - it should not get in the way.
-            PixelNotice.Show(next.text, 0f, small: true, nearScreen: () => new Vector2(Screen.width * 1.03f, Screen.height * 0.8f), freezeTime: false);
+            PixelNotice.Show(next.text, 0f, small: true, nearScreen: TopRightTip, freezeTime: false);
             wasShowing = true;
             return;
         }
