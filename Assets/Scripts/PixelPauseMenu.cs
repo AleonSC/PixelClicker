@@ -312,7 +312,7 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string pressAKeyText = "Press a key...";
 
     [Tooltip("Names of the rebindable actions, in the order of PixelAction (Time Stop, Hose, Turn left, Turn right, Event log, Time slow).")]
-    [SerializeField] private string[] keyActionLabels = { "Time Stop", "Pixel Bank hose", "Turn left (fan / sorter)", "Turn right (fan / sorter)", "Event log", "Time slow" };
+    [SerializeField] private string[] keyActionLabels = { "Time Stop", "Pixel Bank hose", "Turn left (placing)", "Turn right (placing)", "Event log", "Time slow" };
 
     [Tooltip("Label of the cube rotation tick box (accessibility).")]
     [SerializeField] private string rotationLabel = "Cube rotation";
@@ -2964,7 +2964,7 @@ public class PixelPauseMenu : MonoBehaviour
             int index = i;
             string label = keyActionLabels != null && i < keyActionLabels.Length ? keyActionLabels[i] : (PixelAction)i == PixelAction.TimeSlow ? "Time slow" : (PixelAction)i == PixelAction.FirstPerson ? "Switch view (first person / orbit)" : MenuKeyLabel((PixelAction)i);
             TMP_Text keyLabel = AddRowLabel(keysPanel.transform, label, y, out RectTransform row);
-            keyLabel.enableAutoSizing = true;           // long names ("Turn left (fan / sorter)") shrink to fit, they are not cut off
+            keyLabel.enableAutoSizing = true;           // long names ("Pixel Bank hose") shrink to fit, they are not cut off
             keyLabel.fontSizeMax = rowFontSize * 0.85f;
             keyLabel.fontSizeMin = 9f;
             keyLabel.rectTransform.anchorMax = new Vector2(0.62f, 1f);

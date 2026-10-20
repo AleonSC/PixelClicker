@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Base class of the "visitor" minigames (Tinkerer, Wizard). Every few minutes a little code-drawn visitor slides in from the right side of the screen, time stops and they greet you with an offer: every
-/// consumable DEVICE (vacuum device, fan, sorter, combo fuel, ghost bait, pet treat...) at a big discount. Accept to see the wares
+/// consumable DEVICE (vacuum device, fan, combo fuel, ghost bait, pet treat...) at a big discount. Accept to see the wares
 /// and buy what you like, or reject and they slide away again. Time resumes when they leave (Escape counts as rejecting).
 /// Extends <see cref="PixelMinigame"/>, so it needs no changes to the shop or the save system.
 /// The greeting, wares and aside boxes are the standard window as a dialog (PixelUIKit.CreateWindow, no X), set at the right edge.

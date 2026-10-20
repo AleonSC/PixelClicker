@@ -655,7 +655,7 @@ public partial class PixelClicker : MonoBehaviour
     [SerializeField] private float seedWaterGrowSeconds = 1.5f;
 
     [Min(0f)]
-    [Tooltip("Each sprout / Seed pet accepts water at most this often (seconds), so a Sorter or auto clicker streaming Water pixels can't make growth instant. 1.5 s of growth per 0.75 s = about double speed at most.")]
+    [Tooltip("Each sprout / Seed pet accepts water at most this often (seconds), so an auto clicker streaming Water pixels can't make growth instant. 1.5 s of growth per 0.75 s = about double speed at most.")]
     [SerializeField] private float seedWaterCooldown = 0.75f;
 
     [Min(0f)]

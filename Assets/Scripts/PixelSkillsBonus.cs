@@ -7,7 +7,7 @@
 //   'packId:Type,Type') adds goodBonusXp (0 = 3) x a rarity factor (1..4, from 1/sqrt(spawn weight)); every other pixel (junk AND
 //   neutral) takes badBonusXp (0 = 1) off. In AddXp, DrawBonus DOUBLES each gain while the bank holds anything - the extra comes out
 //   of the bank (after the hazard penalty). Shown as a gold 'Bonus N' after the XP on the skill tracker; disableBonusXp. Not on the
-//   Skills window yet; other consumers (magnet sorter, quantum organizer, bank, UFO) don't count.
+//   Skills window yet; other consumers (quantum organizer, bank, UFO) don't count.
 // ---------------------------------------------------
 using UnityEngine;
 

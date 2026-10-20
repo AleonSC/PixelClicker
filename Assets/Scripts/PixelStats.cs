@@ -1,7 +1,7 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelStats.cs
 //   Play stats. Typed fields (manual/auto clicks, play time, pixels spent, ghosts/meteors clicked, meteors/black holes spawned,
-//   fans/vacuum devices/sorters placed, singularities fed, potions used per name, highest combo) plus generic counters: any script
+//   fans/vacuum devices placed, singularities fed, potions used per name, highest combo) plus generic counters: any script
 //   calls static PixelStats.Count("key", n) / Best("key", v) (keeps the max) / Fastest("key", v) (keeps the min); they are saved in
 //   ExtraData.counterKeys/counterValues and need no other wiring. Counters in use: shop.purchases/items, snake/sort/breakout.win/loss,
 //   snake.length, sort.fastest, bomb.defused/exploded, ultra.<minigame id> (PixelMinigame.UltraRoll + the Pad), ghost.kept,
@@ -75,8 +75,6 @@ public class PixelStats : MonoBehaviour, IPixelSaved
     [Tooltip("Vacuum devices you placed.")]
     [SerializeField] private long vacuumDevicesUsed;
 
-    [Tooltip("Sorters you placed.")]
-    [SerializeField] private long sortersUsed;
 
     [Tooltip("Singularity pixels you fed to a black hole.")]
     [SerializeField] private long singularitiesFed;
@@ -99,7 +97,6 @@ public class PixelStats : MonoBehaviour, IPixelSaved
     public long BlackHolesSpawned => blackHolesSpawned;
     public long FansUsed => fansUsed;
     public long VacuumDevicesUsed => vacuumDevicesUsed;
-    public long SortersUsed => sortersUsed;
     public long SingularitiesFed => singularitiesFed;
     public int HighestCombo => highestCombo;
 
@@ -176,7 +173,7 @@ public class PixelStats : MonoBehaviour, IPixelSaved
     [Serializable]
     public class ExtraData
     {
-        public long ghostsClicked, meteorsClicked, meteorsSpawned, blackHolesSpawned, fansUsed, vacuumDevicesUsed, sortersUsed, singularitiesFed;
+        public long ghostsClicked, meteorsClicked, meteorsSpawned, blackHolesSpawned, fansUsed, vacuumDevicesUsed, singularitiesFed;
         public int highestCombo;
         public string[] potionNames;
         public long[] potionCounts;
@@ -328,7 +325,6 @@ public class PixelStats : MonoBehaviour, IPixelSaved
     {
         if (kind == PixelConsumables.DeviceKind.Fan) fansUsed++;
         else if (kind == PixelConsumables.DeviceKind.Vacuum) vacuumDevicesUsed++;
-        else if (kind == PixelConsumables.DeviceKind.Sorter) sortersUsed++;
         else Count("device.placed." + kind);   // every other kind (Charge Booster, Lightning Rod, Sprinkler) is counted generically
     }
 
@@ -343,7 +339,7 @@ public class PixelStats : MonoBehaviour, IPixelSaved
         ExtraData d = new ExtraData
         {
             ghostsClicked = ghostsClicked, meteorsClicked = meteorsClicked, meteorsSpawned = meteorsSpawned,
-            blackHolesSpawned = blackHolesSpawned, fansUsed = fansUsed, vacuumDevicesUsed = vacuumDevicesUsed, sortersUsed = sortersUsed, singularitiesFed = singularitiesFed,
+            blackHolesSpawned = blackHolesSpawned, fansUsed = fansUsed, vacuumDevicesUsed = vacuumDevicesUsed, singularitiesFed = singularitiesFed,
             highestCombo = highestCombo,
             potionNames = new string[potionsUsed.Count],
             potionCounts = new long[potionsUsed.Count],
@@ -371,7 +367,7 @@ public class PixelStats : MonoBehaviour, IPixelSaved
         if (!sessionCounted) { Count("sessions"); sessionCounted = true; } // this launch is one more session
         if (d == null)
         {
-            ghostsClicked = meteorsClicked = meteorsSpawned = blackHolesSpawned = fansUsed = vacuumDevicesUsed = sortersUsed = singularitiesFed = 0;
+            ghostsClicked = meteorsClicked = meteorsSpawned = blackHolesSpawned = fansUsed = vacuumDevicesUsed = singularitiesFed = 0;
             highestCombo = 0;
             return;
         }
@@ -381,7 +377,6 @@ public class PixelStats : MonoBehaviour, IPixelSaved
         blackHolesSpawned = Math.Max(0L, d.blackHolesSpawned);
         fansUsed = Math.Max(0L, d.fansUsed);
         vacuumDevicesUsed = Math.Max(0L, d.vacuumDevicesUsed);
-        sortersUsed = Math.Max(0L, d.sortersUsed);
         singularitiesFed = Math.Max(0L, d.singularitiesFed);
         highestCombo = Math.Max(0, d.highestCombo);
         if (d.potionNames == null || d.potionCounts == null) return;
@@ -560,14 +555,14 @@ public class PixelStats : MonoBehaviour, IPixelSaved
         if (Counter("bait.used") > 0d) Cnt("Ghost Bait used", "bait.used");
         if (Counter("treat.used") > 0d) Cnt("Pet Treats used", "treat.used");
 
-        // Every device kind that has been placed at least once (the fan / vacuum device / sorter keep their old typed counters).
+        // Every device kind that has been placed at least once (the fan / vacuum device keep their old typed counters; retired kinds are skipped).
         Head("Devices placed");
         bool anyDevice = false;
         foreach (PixelConsumables.DeviceKind kind in (PixelConsumables.DeviceKind[])Enum.GetValues(typeof(PixelConsumables.DeviceKind)))
         {
+            if (PixelConsumables.IsRetiredKind(kind)) continue;
             double placed = kind == PixelConsumables.DeviceKind.Fan ? fansUsed
                           : kind == PixelConsumables.DeviceKind.Vacuum ? vacuumDevicesUsed
-                          : kind == PixelConsumables.DeviceKind.Sorter ? sortersUsed
                           : Counter("device.placed." + kind);
             if (placed <= 0d) continue;
             anyDevice = true;

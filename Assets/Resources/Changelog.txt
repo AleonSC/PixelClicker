@@ -1466,3 +1466,5 @@
 [2026-10-19 18:29 UTC] The Conveyor Combiner and Belt Jump are sold in the shop's Utilities (next to the Conveyor Belt Kit): right-click one to start placing, one is used up per piece placed.
 [2026-10-19 18:29 UTC] New fancy models for the Lightning Rod (stone plinth, guy struts, copper mast with coil, insulators and a spiked crown), the Charge Booster (capacitor drum with glowing coils, terminals, Tesla dome where its sparks start, framed meter) and the Fan (pedestal fan with a control pod, chrome guard, pitched blades and a motor housing).
 [2026-10-19 19:54 UTC] Quantum Organizer: only a husk you grab and drop on its pad binds a type now (stray husks landing on it no longer do), and its reach went from 9 to 24 units.
+[2026-10-20 05:39 UTC] Removed the ring Sorter and the Magnetized Sorter (Magnet kept): their scripts (PixelSorterDevice, PixelMagnetSorterDevice, PixelStream), shop entries, crafting recipe, Operation upgrades, placing steps, save fields, Robot Worker jobs, stats, tips, controls and docs; the shared ring mesh moved to PixelRingMesh.
+[2026-10-20 05:39 UTC] To-do: the Standard shop-unlock plan no longer lists the Sorter / Magnetized Sorter.

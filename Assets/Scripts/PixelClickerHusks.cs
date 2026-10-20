@@ -1,7 +1,7 @@
 // ---- System notes ----
 // PixelClickerHusks.cs
 //   Part of partial class PixelClicker: everything about HUSKS (the pixels that drop off the cube; code calls them old pixels) - spawning
-//   the falling copy after a click (SpawnFallingCopy / SpawnFallingCopyInner, SpawnStoredPixel, SpawnStreamedPixel), how long they last
+//   the falling copy after a click (SpawnFallingCopy / SpawnFallingCopyInner, SpawnStoredPixel), how long they last
 //   (LifetimeFactor, AddDespawn), their amount (RollOldPixelAmount), the cap (CopyCap), the Vacuum pixel sucking them up (Vacuum,
 //   SuckRoutine), husk XP, saving / restoring them (OldPixelState), claiming / absorbing / releasing them for devices, their physics
 //   materials, trails and fly-away landing, and display copies (CreateDisplayPixel). The components ON a husk are in PixelHusks.cs.
@@ -565,42 +565,26 @@ public partial class PixelClicker
         return true;
     }
 
-    /// <summary>Like <see cref="SpawnStoredPixel"/> but the pixel is 'magnetized' (a Sorter's stream: no collisions while it flies, solid once it lands). Returns its body, or null.</summary>
-    public Rigidbody SpawnStreamedPixel(int tierIndex, double amount, Vector3 position, Vector3 velocity)
-    {
-        if (!IsValidTier(tierIndex) || tiers[tierIndex].flyAway || pixelTransform == null) return null;
-        SpawnFallingCopy(tierIndex, amount, true, position, velocity, true);
-        return oldPixels.Count > 0 ? oldPixels[oldPixels.Count - 1] : null;
-    }
-
     private static readonly ProfilerMarker spawnCopyMarker = new ProfilerMarker("Pixel.SpawnFallingCopy");
     private static readonly ProfilerMarker materializeMarker = new ProfilerMarker("Pixel.Materialize");
     private static MaterialPropertyBlock spawnBlock;
     private Collider[] liveColliders;
 
     private void SpawnFallingCopy(int tierIndex, double amount, bool stored = false, Vector3 storedPosition = default,
-                                  Vector3 storedVelocity = default, bool streamed = false)
+                                  Vector3 storedVelocity = default)
     {
-        using (spawnCopyMarker.Auto()) SpawnFallingCopyInner(tierIndex, amount, stored, storedPosition, storedVelocity, streamed);
+        using (spawnCopyMarker.Auto()) SpawnFallingCopyInner(tierIndex, amount, stored, storedPosition, storedVelocity);
     }
 
-    private void SpawnFallingCopyInner(int tierIndex, double amount, bool stored, Vector3 storedPosition, Vector3 storedVelocity, bool streamed)
+    private void SpawnFallingCopyInner(int tierIndex, double amount, bool stored, Vector3 storedPosition, Vector3 storedVelocity)
     {
         // Skip if the pixel is mid-materialize and basically invisible.
         if (!stored && pixelTransform.localScale.sqrMagnitude < 0.0001f) return;
 
-        // A working sorter spits the pixel out of its pipe instead of popping it out at random (not for fly-away pixels).
-        bool routed = false;
-        Vector3 routedPosition = pixelTransform.position, routedVelocity = Vector3.zero;
+        // A stored pixel (the pixel bank, a device letting one out) is put where the caller says, moving as it says; a clicked one pops out of the cube.
+        bool routed = stored;
         bool flyType = tierIndex >= 0 && tierIndex < tiers.Length && tiers[tierIndex].flyAway;
-        if (stored)
-        {
-            routed = true; // the pixel bank decides where it goes and how fast
-            routedPosition = storedPosition;
-            routedVelocity = storedVelocity;
-        }
-        else if (!flyType && PixelSorterDevice.Current != null)
-            routed = PixelSorterDevice.Current.TryRoute(out routedPosition, out routedVelocity);
+        Vector3 routedPosition = stored ? storedPosition : pixelTransform.position, routedVelocity = stored ? storedVelocity : Vector3.zero;
 
         MeshFilter srcFilterCheck = pixelRenderer != null ? pixelRenderer.GetComponent<MeshFilter>() : null;
         GameObject copy = srcFilterCheck != null ? PixelHuskPool.Take() : null;   // a vanished husk's object, cleaned (PixelHuskPool), or a new one
@@ -826,12 +810,6 @@ public partial class PixelClicker
         routedInfo.bornTime = Time.unscaledTime;
             routedInfo.tierIndex = tierIndex;
             routedInfo.amount = amount;
-            if (!stored || streamed)
-            {
-                // A Sorter's stream: no collisions while the pixel is in the air, solid again once it has landed (see OldPixelStream).
-                OldPixelStream stream = copy.AddComponent<OldPixelStream>();
-                stream.Setup(this, box);
-            }
             oldPixels.Add(rb);
             while (CopyCap > 0 && oldPixels.Count > CopyCap)
             {

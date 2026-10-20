@@ -1,7 +1,7 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelOperation.cs / PixelShopOperation.cs
 //   Upgrades > Operation (the third sub-tab of the shop's Upgrades tab, operationSubTabText; upgradesSubTab 2): one row per consumable
-//   (Vacuum Device, Fan, Sorter, Charge Booster, Lightning Rod, Combo Fuel, Ghost Bait, Pet Treat, Recycler - listed once the pixel type it
+//   (Vacuum Device, Fan, Charge Booster, Lightning Rod, Combo Fuel, Ghost Bait, Pet Treat, Recycler - listed once the pixel type it
 //   needs is unlocked or you hold one, PixelConsumables.OperationListed) with a rotating 3D picture on the left (a PixelModelPicture studio per
 //   consumable, key 'shopop:' + index, redrawn only for visible rows at the shared 30/s limit, UpdateOperationPictures; the model comes from PixelConsumables.CreateDisplayModel = the real
 //   device builders with displayOnly (no timer / range) or simple item models), an orange '!' box with the consumable's description
@@ -11,7 +11,7 @@
 //   entries (PixelOperation.cs: id, name, description, device, stat (PixelOperationStat), maxLevel, perLevel, baseCost x
 //   costGrowth^level paid in the pixel the consumable itself needs, unit) in PixelShop.operationUpgrades (the built-ins are added by
 //   id, EnsureDefaultOperationUpgrades); the level is the stat counter op.<id> (PixelStats.Best, saved generically). Effects:
-//   PixelConsumables.EffectiveDevice(d) (a clone with Duration / Radius / Pull / Blow / Sorter max force / Uses / Charge needed /
+//   PixelConsumables.EffectiveDevice(d) (a clone with Duration / Radius / Pull / Blow / Uses / Charge needed /
 //   Super charge / Strike interval applied, used for placing, previewing and descriptions), Storage in ItemCapacity, Pet Treat length
 //   (PixelPets.TryUseTreat) and extra Ghost Bait ghosts (PixelGhostMinigame.UseBait).
 // ---------------------------------------------------
@@ -22,7 +22,7 @@ using UnityEngine;
 /// <summary>What an Operation upgrade changes about a consumable.</summary>
 public enum PixelOperationStat
 {
-    /// <summary>Seconds a placed device works (Vacuum, Fan, Sorter) or a Pet Treat lasts.</summary>
+    /// <summary>Seconds a placed device works (Vacuum, Fan, Recycler) or a Pet Treat lasts.</summary>
     Duration = 0,
     /// <summary>Reach in world units (Vacuum pull range, Fan length, Lightning Rod strike reach).</summary>
     Radius = 1,
@@ -30,7 +30,7 @@ public enum PixelOperationStat
     Pull = 2,
     /// <summary>Fan wind strength (acceleration).</summary>
     Blow = 3,
-    /// <summary>The top of the Sorter's force slider.</summary>
+    /// <summary>RETIRED 2026-10-20 (it was the removed ring Sorter's force slider top): the number stays reserved. Never used.</summary>
     ForceMax = 4,
     /// <summary>Uses a Charge Booster (clicks) or Lightning Rod (strikes) lasts.</summary>
     Uses = 5,
@@ -100,7 +100,7 @@ public class PixelOperationUpgrade
     /// <summary>The built-in upgrades.</summary>
     public static List<PixelOperationUpgrade> CreateDefaults()
     {
-        PixelConsumables.DeviceKind V = PixelConsumables.DeviceKind.Vacuum, F = PixelConsumables.DeviceKind.Fan, S = PixelConsumables.DeviceKind.Sorter,
+        PixelConsumables.DeviceKind V = PixelConsumables.DeviceKind.Vacuum, F = PixelConsumables.DeviceKind.Fan,
             B = PixelConsumables.DeviceKind.ChargeBooster, R = PixelConsumables.DeviceKind.LightningRod, C = PixelConsumables.DeviceKind.ComboFuel,
             G = PixelConsumables.DeviceKind.GhostBait, P = PixelConsumables.DeviceKind.PetTreat, Y = PixelConsumables.DeviceKind.Recycler,
             H = PixelConsumables.DeviceKind.SortingHopper;
@@ -116,9 +116,6 @@ public class PixelOperationUpgrade
             U("fan_duration", "Run Time", "How long a placed Fan blows.", F, PixelOperationStat.Duration, 6, 4f, 30, " s"),
             U("fan_radius", "Reach", "How long the blown cone is.", F, PixelOperationStat.Radius, 5, 0.8f, 40),
             U("fan_blow", "Wind Power", "How hard the Fan pushes old pixels.", F, PixelOperationStat.Blow, 5, 3f, 40),
-
-            U("sort_duration", "Run Time", "How long a placed Sorter works.", S, PixelOperationStat.Duration, 6, 6f, 40, " s"),
-            U("sort_force", "Max Force", "Raises the top of the force slider on the Sorter's pipe.", S, PixelOperationStat.ForceMax, 6, 0.5f, 40, "x"),
 
             U("boost_uses", "Click Capacity", "How many auto-clicker clicks a Charge Booster lasts.", B, PixelOperationStat.Uses, 6, 25f, 40),
             U("boost_charge", "Charge Needed", "Less Electric charge is needed before the super charge (lower is better).", B, PixelOperationStat.ChargeNeeded, 5, -1f, 50),

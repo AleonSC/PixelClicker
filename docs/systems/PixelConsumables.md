@@ -18,5 +18,5 @@ Potions (one per pixel type, editable list: name, type, costs, duration, owned) 
 
 ## Dev Tools-only devices (2026-10-18)
 - `Device.devOnly`: never sold by the shop or a visitor (`ItemNotSold` covers it, so the shop tabs, search, TryBuyItems and visitors' wares all skip it); Dev Hub > Main > **Dev items** widget gives one (`PixelConsumables.ItemDevOnly`). Saved scenes took the flag through `consumablePriceVersion` 2.
-- Dev-only now: Quantum Organizer, Funnel, Sprinkler, Vacuum Device, Sorter, Bait Bucket, Conveyor Belt Kit (the kit is also placed from Dev Hub > Tester > Conveyor Belt). Attuned Vacuum Devices still exist in Crafting but need a Vacuum Device from the Dev Tools.
+- Dev-only now: Quantum Organizer, Funnel, Sprinkler, Vacuum Device, Bait Bucket, Conveyor Belt Kit (the kit is also placed from Dev Hub > Tester > Conveyor Belt). Attuned Vacuum Devices still exist in Crafting but need a Vacuum Device from the Dev Tools.
 

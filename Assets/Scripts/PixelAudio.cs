@@ -301,7 +301,6 @@ public partial class PixelAudio : MonoBehaviour
             Make("tree_creak", 0.4f, 0.95f, 1.05f),   // a tree's last blocks: the trunk creaks (PixelTreeMode.LiveBlocksLeft)
             Make("nest_catch", 0.1f, 0.97f, 1.05f),
             Make("remove_buildup", 0.05f, 1f, 1f),   // the rising whine while the right mouse button is held on a placed device (PixelHold)
-            Make("sorter_button", 0.2f, 1f, 1f),
             Make("hose_toggle", 0.2f, 1f, 1f),
             Make("bank_suck", 0.1f, 1f, 1f),
             Make("bank_spit", 0.05f, 1f, 1f),

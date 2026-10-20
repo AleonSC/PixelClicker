@@ -184,7 +184,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         Vacuum = 0,
         /// <summary>Gently blows old pixels along a cone in front of it.</summary>
         Fan = 1,
-        /// <summary>A ring around the cube with a pipe that spits out every collected pixel in a stream.</summary>
+        /// <summary>RETIRED 2026-10-20 (the ring Sorter was removed): the number stays reserved so the later kinds keep theirs. Never used.</summary>
         Sorter = 2,
         /// <summary>Not placed: used automatically when the combo bar would run out (it keeps the combo and refills the bar).</summary>
         ComboFuel = 3,
@@ -202,7 +202,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         Sprinkler = 9,
         /// <summary>Placed: like the Vacuum Device it pulls old pixels in, but it never consumes them: it holds them in a heap.</summary>
         Magnet = 10,
-        /// <summary>Placed, craft-only (Sorter + Magnet): sucks pixels from an arc in front into a box and shoots chosen types out of three movable pipes.</summary>
+        /// <summary>RETIRED 2026-10-20 (the Magnetized Sorter was removed): the number stays reserved so the later kinds keep theirs. Never used.</summary>
         MagnetSorter = 11,
         /// <summary>Placed: a walled pad. Pixels dropped on it bind their type; loose old pixels of a bound type are dematerialized (glitch) and rematerialize in the box as storage.</summary>
         QuantumOrganizer = 12,
@@ -315,67 +315,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         [Tooltip("Fan: how fast the blades spin (degrees per second).")]
         public float bladeSpinDegrees = 900f;
 
-        [Header("Sorter only")]
-        [Min(0f)]
-        [Tooltip("Sorter: how much bigger than the cube the ring is (world units added to the cube's half-diagonal).")]
-        public float sorterRingPadding = 0.2f;
-
-        [Min(0.02f)]
-        [Tooltip("Sorter: thickness of the ring (world units, across its band).")]
-        public float sorterRingThickness = 0.18f;
-
-        [Min(0.2f)]
-        [Tooltip("Sorter: length of the output pipe (world units).")]
-        public float sorterPipeLength = 0.55f;
-
-        [Min(0.05f)]
-        [Tooltip("Sorter: width of the output pipe (world units).")]
-        public float sorterPipeDiameter = 0.12f;
-
-        [Min(0.3f)]
-        [Tooltip("Sorter: how far the bend cone reaches from the pipe's base (world units).")]
-        public float sorterConeLength = 1.6f;
-
-        [Min(0f)]
-        [Tooltip("Sorter: how fast pixels leave the end of the pipe (world units per second).")]
-        public float sorterExitSpeed = 7f;
-
-        [Range(0f, 30f)]
-        [Tooltip("Sorter: random wobble (degrees) of the stream so it isn't a perfectly straight line.")]
-        public float sorterSpreadDegrees = 4f;
-
-        [Range(5f, 90f)]
-        [Tooltip("Sorter: half-angle (degrees) of the cone you click inside to bend the pipe. The pipe's end can turn this far either way.")]
-        public float sorterBendConeDegrees = 45f;
-
-        [Tooltip("Sorter: speed multipliers of the three force buttons on the ring (left to right: 1, 2, 3).")]
-        public float[] sorterForceMultipliers = { 0.5f, 1f, 1.8f };
-
-        [Min(0)]
-        [Tooltip("Sorter: which force button is selected when the sorter is placed (0 = the first).")]
-        public int sorterDefaultForce = 1;
-
-        [Min(0f)]
-        [Tooltip("Sorter: the lowest force the force slider can be set to (a multiplier of the exit speed). 0 = the coded default (0.2).")]
-        public float sorterSliderMin = 0f;
-
-        [Min(0f)]
-        [Tooltip("Sorter: the highest force the force slider can be set to (a multiplier of the exit speed). 0 = the coded default (3).")]
-        public float sorterSliderMax = 0f;
-
-        [Min(0.1f)]
-        [Tooltip("Sorter: size of the round force buttons on the ring (world units).")]
-        public float sorterButtonSize = 0.3f;
-
-        [Range(5f, 60f)]
-        [Tooltip("Sorter: angle (degrees) between neighbouring force buttons around the ring.")]
-        public float sorterButtonSpacing = 24f;
-
-        [TextArea(1, 2)]
-        [Tooltip("Sorter: message while bending the pipe (second placing step). {0} = device name.")]
-        public string sorterBendMessage = "Click inside the cone to bend the {0}'s pipe  (right-click to go back)";
-
-        [Header("Magnetized Sorter only")]
+        [Header("Where it is sold")]
         [Tooltip("Craft-only: never sold in the shop or by visitors (you make it in the Crafting window).")]
         public bool craftOnly = false;
 
@@ -391,21 +331,9 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         [Tooltip("The level of that skill that puts the item on sale in the shop.")]
         public int shopSkillLevel = 0;
 
-        [Range(20f, 170f)]
-        [Tooltip("Magnetized Sorter: opening angle (degrees) of the arc in front of the magnet that pulls pixels in. Its length is 'Radius'.")]
-        public float arcDegrees = 110f;
-
         [Min(1)]
-        [Tooltip("Magnetized Sorter: how many pixels the box holds in total.")]
+        [Tooltip("Quantum Organizer: how many pixels the box holds in total.")]
         public int boxCapacity = 60;
-
-        [Min(0.05f)]
-        [Tooltip("Magnetized Sorter: seconds between two pixels shot from one exit pipe.")]
-        public float shootInterval = 0.45f;
-
-        [Min(2f)]
-        [Tooltip("Magnetized Sorter: how far from the box an exit pipe's end can be put down (world units).")]
-        public float pipeReach = 7f;
 
         [Header("Attuned (made by crafting a device with a potion)")]
         [Tooltip("Runtime: this is an attuned copy of a Vacuum / Fan / Magnet that only affects old pixels of 'Attune Type'.")]
@@ -883,29 +811,6 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         };
     }
 
-    private static Device CreateDefaultMagnetSorter()
-    {
-        return new Device
-        {
-            kind = DeviceKind.MagnetSorter,
-            displayName = "Magnetized Sorter",
-            description = "Craft it from a Sorter and a Magnet. Its magnet pulls loose old pixels from an arc in front of it into a box. Click an exit pipe to grab it and click again to put it down anywhere; scroll over a pipe to choose which stored pixel type it shoots out.",
-            requiredType = PixelClicker.PixelType.Electric,
-            costs = new PixelShop.PackCost[0],
-            craftOnly = true,
-            maxHeld = 3,
-            durationSeconds = 180f,
-            radius = 5.5f,
-            pullAcceleration = 26f,
-            absorbDistance = 0.9f,
-            sorterExitSpeed = 6f,
-            color = new Color(0.55f, 0.35f, 0.85f, 1f),
-            bodyDiameter = 1.2f,
-            bodyHeight = 0.9f,
-            placingMessage = "Scroll or Q / E to turn the {0}, click the floor to place it  (right-click to cancel)",
-        };
-    }
-
     private static Device CreateDefaultMagicBeans()
     {
         return new Device
@@ -944,27 +849,6 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             bodyDiameter = 0.5f,
             bodyHeight = 0.7f,
             placingMessage = "Click the floor near your seeds to place the {0}  (right-click to cancel)",
-        };
-    }
-
-    private static Device CreateDefaultSorter()
-    {
-        return new Device
-        {
-            devOnly = true,   // (2026-10-18: out of the shop for now, Dev Hub > Main > Dev items gives it)
-            kind = DeviceKind.Sorter,
-            displayName = "Sorter",
-            description = "Wraps around the cube. For {duration} seconds every pixel you collect is spat out of its pipe in a stream. Scroll to aim the pipe.",
-            requiredType = PixelClicker.PixelType.Glass,
-            costs = new[]
-            {
-                new PixelShop.PackCost { type = PixelClicker.PixelType.Glass, amount = 200 },
-                new PixelShop.PackCost { type = PixelClicker.PixelType.Black, amount = 160 },
-                new PixelShop.PackCost { type = PixelClicker.PixelType.White, amount = 200 },
-            },
-            durationSeconds = 45f,
-            color = new Color(1f, 0.7f, 0.25f, 1f),
-            placingMessage = "Scroll or Q / E to aim the {0}'s pipe, click to confirm  (right-click to cancel)",
         };
     }
 
@@ -1379,7 +1263,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
 
     private static Device[] CreateDefaultDevices() => new[]
     {
-        CreateDefaultDevice(), CreateDefaultFan(), CreateDefaultSorter(),
+        CreateDefaultDevice(), CreateDefaultFan(),
         CreateDefaultComboFuel(), CreateDefaultGhostBait(), CreateDefaultPetTreat(), CreateDefaultBaitBucket(),
         CreateDefaultChargeBooster(), CreateDefaultLightningRod(),
     };
@@ -1400,7 +1284,6 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     {
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Vacuum, CreateDefaultDevice),
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Fan, CreateDefaultFan),
-        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Sorter, CreateDefaultSorter),
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ComboFuel, CreateDefaultComboFuel),
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.GhostBait, CreateDefaultGhostBait),
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.PetTreat, CreateDefaultPetTreat),
@@ -1408,7 +1291,6 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.LightningRod, CreateDefaultLightningRod),
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Sprinkler, CreateDefaultSprinkler),
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Magnet, CreateDefaultMagnet),
-        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.MagnetSorter, CreateDefaultMagnetSorter),
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.QuantumOrganizer, CreateDefaultQuantumOrganizer),
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.StorageCrate, CreateDefaultStorageCrate),
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.BaitBucket, CreateDefaultBaitBucket),
@@ -1502,6 +1384,9 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     }
 #endif
 
+    /// <summary>Device kinds taken out of the game (their numbers stay reserved in the enum): the ring Sorter and the Magnetized Sorter.</summary>
+    public static bool IsRetiredKind(DeviceKind kind) => kind == DeviceKind.Sorter || kind == DeviceKind.MagnetSorter;
+
     /// <summary>Adds a potion for every pixel type that doesn't have one. Returns true if anything was added.</summary>
     private bool EnsureDefaultPotions()
     {
@@ -1509,16 +1394,12 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
 
         if (addDefaultDevices)
         {
-            // The sorter's pipe used to be 3x bigger; move untouched old values to the new size.
-            if (devices != null)
-                foreach (Device d in devices)
-                    if (d != null && d.kind == DeviceKind.Sorter && Mathf.Approximately(d.sorterPipeLength, 1.6f) &&
-                        Mathf.Approximately(d.sorterPipeDiameter, 0.35f))
-                    {
-                        d.sorterPipeLength = 0.55f;
-                        d.sorterPipeDiameter = 0.12f;
-                        added = true;
-                    }
+            // 2026-10-20: the ring Sorter and the Magnetized Sorter were removed from the game: drop their entries from a saved list.
+            if (devices != null && Array.Exists(devices, d => d != null && IsRetiredKind(d.kind)))
+            {
+                devices = Array.FindAll(devices, d => d == null || !IsRetiredKind(d.kind));
+                added = true;
+            }
 
             if (devices == null || devices.Length == 0)
             {
@@ -1531,12 +1412,6 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
                 {
                     Array.Resize(ref devices, devices.Length + 1);
                     devices[devices.Length - 1] = CreateDefaultFan();
-                    added = true;
-                }
-                if (!Array.Exists(devices, d => d != null && d.kind == DeviceKind.Sorter))
-                {
-                    Array.Resize(ref devices, devices.Length + 1);
-                    devices[devices.Length - 1] = CreateDefaultSorter();
                     added = true;
                 }
                 foreach (System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>> extra in DefaultDeviceMakers)
@@ -2352,10 +2227,6 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
                 e.radius += B(PixelOperationStat.Radius);
                 e.blowAcceleration += B(PixelOperationStat.Blow);
                 break;
-            case DeviceKind.Sorter:
-                e.durationSeconds += B(PixelOperationStat.Duration);
-                e.sorterSliderMax = (d.sorterSliderMax > 0f ? d.sorterSliderMax : 3f) + B(PixelOperationStat.ForceMax);
-                break;
             case DeviceKind.ChargeBooster:
                 e.uses += Mathf.RoundToInt(B(PixelOperationStat.Uses));
                 e.chargeCapacity = Mathf.Max(2f, e.chargeCapacity + B(PixelOperationStat.ChargeNeeded));
@@ -2395,7 +2266,6 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             case PixelOperationStat.Radius: return d.radius;
             case PixelOperationStat.Pull: return d.pullAcceleration;
             case PixelOperationStat.Blow: return d.blowAcceleration;
-            case PixelOperationStat.ForceMax: return d.sorterSliderMax > 0f ? d.sorterSliderMax : 3f;
             case PixelOperationStat.Uses: return d.uses;
             case PixelOperationStat.ChargeNeeded: return d.chargeCapacity;
             case PixelOperationStat.SuperSeconds: return d.superChargeSeconds;
@@ -2464,17 +2334,9 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
                 case DeviceKind.Fan:
                     root = BuildFanObject(d, false, out _, out _);
                     break;
-                case DeviceKind.Sorter:
-                {
-                    PixelSorterDevice.Parts parts = PixelSorterDevice.Parts.Create(clicker, d, cam, false, 1f);
-                    parts.Apply(0f, 25f, false, 1, 0.55f, "x1.00");
-                    root = parts.Root;
-                    break;
-                }
                 case DeviceKind.Vacuum:
                 case DeviceKind.Sprinkler:
                 case DeviceKind.Magnet:
-                case DeviceKind.MagnetSorter:
                 case DeviceKind.QuantumOrganizer:
                 case DeviceKind.StorageCrate:
                     root = BuildDeviceObject(d, false, out _, out _);
@@ -2842,7 +2704,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         int index = Array.FindIndex(devices, x => x != null && x.kind == kind);
         if (index < 0) return null;
         Device effective = EffectiveDevice(devices[index]);
-        PixelPlacedDevice placed = SpawnDevice(index, point, yaw, UsesKind(kind) ? effective.uses : DeviceSeconds(effective), 0f, 0f, -1);
+        PixelPlacedDevice placed = SpawnDevice(index, point, yaw, UsesKind(kind) ? effective.uses : DeviceSeconds(effective), 0f);
         if (placed == null) return null;
         PixelAudio.Play("device_place");
         DevicePlaced?.Invoke(kind);
@@ -2859,7 +2721,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     // ------------------------------------------------------------------
 
     private int placingIndex = -1;
-    private Action<int, Vector3, float, float> robotPicked;   // set while the Robot Worker's owner is choosing a spot (nothing is used up)
+    private Action<int, Vector3, float> robotPicked;   // set while the Robot Worker's owner is choosing a spot (nothing is used up)
     private int placeStartFrame;
     private GameObject preview;
 
@@ -2872,29 +2734,25 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     /// <summary>The device's own placing message (empty = use the default one).</summary>
     public string PlacingMessage => !IsPlacing ? ""
         : devices[placingIndex].kind == DeviceKind.StorageCrate ? PixelKeys.Replace("Scroll or Q / E to turn the {0}, click the floor to place it  (right-click to cancel)")
-        : PixelKeys.Replace(devices[placingIndex].kind == DeviceKind.Sorter && sorterPhase == 1 ? devices[placingIndex].sorterBendMessage
-        : devices[placingIndex].placingMessage);
+        : PixelKeys.Replace(devices[placingIndex].placingMessage);
 
     private float placingYaw, rawYaw;   // rawYaw = the turn before Shift snapping
     private bool chipperLatched;
     private Vector3 chipperLatchPoint;
     private float chipperLatchYaw;
-    private PixelSorterDevice.Parts previewSorter;
-    private int sorterPhase;      // 0 = turning the pipe, 1 = bending it
-    private float sorterBend;
 
     // --- Robot Worker support ---
 
     /// <summary>The placeable kinds (the ones that stand in the world): the Robot Worker can keep any of these going.</summary>
     public static bool IsPlaceableKind(DeviceKind kind) =>
-        kind == DeviceKind.Vacuum || kind == DeviceKind.Fan || kind == DeviceKind.Sorter ||
-        kind == DeviceKind.ChargeBooster || kind == DeviceKind.LightningRod || kind == DeviceKind.Sprinkler || kind == DeviceKind.Magnet; // (the craft-only Magnetized Sorter is not robot-placed)
+        kind == DeviceKind.Vacuum || kind == DeviceKind.Fan ||
+        kind == DeviceKind.ChargeBooster || kind == DeviceKind.LightningRod || kind == DeviceKind.Sprinkler || kind == DeviceKind.Magnet;
 
     /// <summary>How many of a device you hold (huge with infinite resources).</summary>
     public int DeviceOwned(int deviceIndex) => Inf ? 99999 : devices[deviceIndex].owned;
 
-    /// <summary>Starts choosing a spot for the Robot Worker: a ghost follows the mouse like when placing, but nothing is used up. 'picked' gets (device, point, yaw, bend).</summary>
-    public bool BeginRobotPlacement(int deviceIndex, Action<int, Vector3, float, float> picked)
+    /// <summary>Starts choosing a spot for the Robot Worker: a ghost follows the mouse like when placing, but nothing is used up. 'picked' gets (device, point, yaw).</summary>
+    public bool BeginRobotPlacement(int deviceIndex, Action<int, Vector3, float> picked)
     {
         if (picked == null || deviceIndex < 0 || deviceIndex >= devices.Length || !IsPlaceableKind(devices[deviceIndex].kind)) return false;
         if (!BeginPlacement(deviceIndex, true)) return false;
@@ -2903,31 +2761,23 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     }
 
     /// <summary>A see-through ghost of a device at a spot (the Robot Worker's job marker). The caller owns it.</summary>
-    public GameObject CreateGhost(int deviceIndex, Vector3 point, float yaw, float bend)
+    public GameObject CreateGhost(int deviceIndex, Vector3 point, float yaw)
     {
         Device d = EffectiveDevice(devices[deviceIndex]);
         Camera cam = clicker.ViewCamera;
-        if (d.kind == DeviceKind.Sorter)
-        {
-            PixelSorterDevice.Parts parts = PixelSorterDevice.Parts.Create(clicker, d, cam, true, previewOpacity);
-            parts.Apply(yaw, bend, true, devices[deviceIndex].sorterDefaultForce);
-            return parts.Root;
-        }
         GameObject ghost = d.kind == DeviceKind.Fan ? BuildFanObject(d, true, out _, out _) : BuildDeviceObject(d, true, out _, out _);
         ghost.transform.SetPositionAndRotation(point, Quaternion.Euler(0f, yaw, 0f));
         return ghost;
     }
 
     /// <summary>Puts a working device in the world for the Robot Worker (uses one up). Null if you have none.</summary>
-    public PixelPlacedDevice RobotPlace(int deviceIndex, Vector3 point, float yaw, float bend)
+    public PixelPlacedDevice RobotPlace(int deviceIndex, Vector3 point, float yaw)
     {
         if (deviceIndex < 0 || deviceIndex >= devices.Length) return null;
         Device d = devices[deviceIndex];
         if (!Inf && d.owned <= 0) return null;
         Device effective = EffectiveDevice(d);
-        PixelPlacedDevice placed = d.kind == DeviceKind.Sorter
-            ? SpawnDevice(deviceIndex, Vector3.zero, 0f, effective.durationSeconds, yaw, bend, -1)
-            : SpawnDevice(deviceIndex, point, yaw, UsesKind(d.kind) ? effective.uses : DeviceSeconds(effective), 0f, 0f, -1);
+        PixelPlacedDevice placed = SpawnDevice(deviceIndex, point, yaw, UsesKind(d.kind) ? effective.uses : DeviceSeconds(effective), 0f);
         if (placed == null) return null;
         if (!Inf) d.owned = Mathf.Max(0, d.owned - 1);
         PixelAudio.Play("device_place");
@@ -2948,17 +2798,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         placingYaw = cam != null ? cam.transform.eulerAngles.y : 0f; // a fan starts out blowing away from the camera
         if (devices[deviceIndex].kind == DeviceKind.Funnel) placingYaw = 0f;   // (the funnel's turn is only a nudge on top of "away from the cube")
         rawYaw = placingYaw;
-        previewSorter = null;
-        if (devices[deviceIndex].kind == DeviceKind.Sorter)
-        {
-            placingYaw = 0f; // for the sorter this is the pipe's angle around the ring (0 = pointing right on screen)
-            sorterPhase = 0;
-            sorterBend = 0f;
-            previewSorter = PixelSorterDevice.Parts.Create(clicker, EffectiveDevice(devices[deviceIndex]), cam, true, previewOpacity);
-            previewSorter.Apply(placingYaw, 0f, false, devices[deviceIndex].sorterDefaultForce);
-            preview = previewSorter.Root;
-        }
-        else if (devices[deviceIndex].kind == DeviceKind.Seed)
+        if (devices[deviceIndex].kind == DeviceKind.Seed)
         {
             preview = new GameObject("Seed Preview");
             PixelLooks.CreateSproutObject(preview.transform, clicker.SeedSproutWorldSize);
@@ -3002,12 +2842,6 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         if (Time.timeScale <= 0f) return;
         if (Time.frameCount == placeStartFrame) return; // ignore the right-click that started this
 
-        if (devices[placingIndex].kind == DeviceKind.Sorter)
-        {
-            UpdateSorterPlacement();
-            return;
-        }
-
         PixelSnap.Configure(shiftSnapGridCubes, shiftSnapAngleDegrees);
         bool hasPoint = TryGetPlacePoint(out Vector3 point);
         if (hasPoint && PixelSnap.Active) point = PixelSnap.Point(point, clicker.OldPixelWorldSize);   // snap to the grid (hold Shift for free placement)
@@ -3015,7 +2849,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         if (hasPoint) preview.transform.position = point;
 
         // A fan can be turned with the mouse wheel or Q / E.
-        if (devices[placingIndex].kind == DeviceKind.Fan || devices[placingIndex].kind == DeviceKind.MagnetSorter || devices[placingIndex].kind == DeviceKind.StorageCrate || devices[placingIndex].kind == DeviceKind.WoodChipper || devices[placingIndex].kind == DeviceKind.Funnel || devices[placingIndex].kind == DeviceKind.Recycler || devices[placingIndex].kind == DeviceKind.SortingHopper || devices[placingIndex].kind == DeviceKind.JunctionBox || IsGeneratorKind(devices[placingIndex].kind))
+        if (devices[placingIndex].kind == DeviceKind.Fan || devices[placingIndex].kind == DeviceKind.StorageCrate || devices[placingIndex].kind == DeviceKind.WoodChipper || devices[placingIndex].kind == DeviceKind.Funnel || devices[placingIndex].kind == DeviceKind.Recycler || devices[placingIndex].kind == DeviceKind.SortingHopper || devices[placingIndex].kind == DeviceKind.JunctionBox || IsGeneratorKind(devices[placingIndex].kind))
         {
             rawYaw += TurnInput();
             placingYaw = PixelSnap.Active ? PixelSnap.Yaw(rawYaw) : rawYaw;   // snap the turn to angle steps unless Shift is held (the raw turn keeps counting so Q / E stay smooth)
@@ -3108,56 +2942,6 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         if (!Inf && d.owned <= 0) EndPlacement();
     }
 
-    /// <summary>
-    /// The sorter is fixed around the cube. Step 1: turn the pipe (scroll / Q / E), click to confirm. Step 2: the pipe
-    /// follows the mouse inside a cone; click inside the cone to place it (right-click goes back to step 1).
-    /// </summary>
-    private void UpdateSorterPlacement()
-    {
-        Device d = devices[placingIndex];
-        Camera cam = clicker.ViewCamera;
-
-        if (sorterPhase == 0)
-        {
-            placingYaw += TurnInput();
-            sorterBend = 0f;
-            previewSorter.Apply(placingYaw, 0f, false, d.sorterDefaultForce);
-
-            if (LeftPressed() && !PointerOverUI()) sorterPhase = 1;
-            else if (RightPressed()) CancelPlacement();
-            return;
-        }
-
-        bool inCone = PixelSorterDevice.TryGetBend(previewSorter, cam, placingYaw, d.sorterBendConeDegrees, out float bend);
-        if (!PointerOverUI()) sorterBend = bend;
-        previewSorter.Apply(placingYaw, sorterBend, true, d.sorterDefaultForce);
-
-        if (LeftPressed() && inCone && !PointerOverUI()) PlaceSorter();
-        else if (RightPressed()) { sorterPhase = 0; sorterBend = 0f; }
-    }
-
-    private void PlaceSorter()
-    {
-        int index = placingIndex;
-        Device d = devices[index];
-        if (robotPicked != null)
-        {
-            Action<int, Vector3, float, float> picked = robotPicked;
-            float yaw = placingYaw, bend = sorterBend;
-            EndPlacement();
-            picked(index, Vector3.zero, yaw, bend);
-            return;
-        }
-        if (!Inf) d.owned = Mathf.Max(0, d.owned - 1);
-
-        PixelPlacedDevice placedSorter = SpawnDevice(index, Vector3.zero, 0f, EffectiveDevice(d).durationSeconds, placingYaw, sorterBend, -1);
-        if (placedSorter != null) placedSorter.Disarm();
-
-        EndPlacement();
-        DevicePlaced?.Invoke(d.kind);
-        onDevicePlaced?.Invoke(index);
-    }
-
     private void PlaceDevice(Vector3 point)
     {
         int index = placingIndex;
@@ -3165,17 +2949,17 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         if (chipperLatched && (d.kind == DeviceKind.Funnel || d.kind == DeviceKind.SortingHopper)) { point = chipperLatchPoint; placingYaw = chipperLatchYaw; }
         if (robotPicked != null)
         {
-            Action<int, Vector3, float, float> picked = robotPicked;
+            Action<int, Vector3, float> picked = robotPicked;
             float yaw = placingYaw;
             EndPlacement();
-            picked(index, point, yaw, 0f);
+            picked(index, point, yaw);
             return;
         }
         bool movingFunnel = d.kind == DeviceKind.Funnel && PixelFunnel.Exists;   // placing the funnel again just moves it
         if (!Inf && !movingFunnel) d.owned = Mathf.Max(0, d.owned - 1);
 
         Device effective = EffectiveDevice(d);
-        PixelPlacedDevice placed = SpawnDevice(index, point, placingYaw, UsesKind(d.kind) ? effective.uses : DeviceSeconds(effective), 0f, 0f, -1);
+        PixelPlacedDevice placed = SpawnDevice(index, point, placingYaw, UsesKind(d.kind) ? effective.uses : DeviceSeconds(effective), 0f);
         if (placed != null && d.kind != DeviceKind.StorageCrate && d.kind != DeviceKind.WoodChipper && d.kind != DeviceKind.Funnel && d.kind != DeviceKind.Recycler && d.kind != DeviceKind.SortingHopper && d.kind != DeviceKind.Sweeper && d.kind != DeviceKind.JunctionBox && !IsGeneratorKind(d.kind)) placed.Disarm();   // (the crate needs no switching on) starts grey and idle until you left-click it
 
         EndPlacement();
@@ -3184,7 +2968,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     }
 
     /// <summary>Builds a working device in the world (placing it, or restoring it from a save).</summary>
-    private PixelPlacedDevice SpawnDevice(int index, Vector3 point, float yaw, float duration, float aim, float bend, int force)
+    private PixelPlacedDevice SpawnDevice(int index, Vector3 point, float yaw, float duration, float aim)
     {
         Device d = EffectiveDevice(devices[index]);
         Camera cam = clicker.ViewCamera;
@@ -3201,25 +2985,6 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             fanDevice.Init(clicker, cam, blades, fanTimer, timerFormat, duration, d.radius, d.coneAngle,
                            d.coneHeight, d.blowAcceleration, d.liftAcceleration, d.bladeSpinDegrees, shrinkSeconds);
             result = fanDevice;
-        }
-        else if (d.kind == DeviceKind.Sorter)
-        {
-            PixelSorterDevice.Parts parts = PixelSorterDevice.Parts.Create(clicker, d, cam, false, 1f);
-
-            GameObject tg = new GameObject("Timer");
-            tg.transform.SetParent(parts.Root.transform, false);
-            tg.transform.localPosition = new Vector3(0f, parts.Outer + timerHeightAbove, 0f);
-            TextMeshPro timer = tg.AddComponent<TextMeshPro>();
-            timer.text = string.Format(timerFormat, Mathf.CeilToInt(duration));
-            timer.fontSize = timerFontSize;
-            timer.fontStyle = FontStyles.Bold;
-            timer.alignment = TextAlignmentOptions.Center;
-            timer.color = timerColor;
-            if (clicker.UIFont != null) timer.font = clicker.UIFont;
-
-            PixelSorterDevice sorter = parts.Root.AddComponent<PixelSorterDevice>();
-            sorter.Init(clicker, cam, parts, d, timer, timerFormat, duration, aim, bend, force, shrinkSeconds);
-            result = sorter;
         }
         else if (UsesKind(d.kind))
         {
@@ -3239,14 +3004,6 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
                 rod.Init(clicker, cam, timer, timerFormat, uses, shrinkSeconds, d, d.bodyHeight, 0f);
                 result = rod;
             }
-        }
-        else if (d.kind == DeviceKind.MagnetSorter)
-        {
-            GameObject root = BuildDeviceObject(d, false, out _, out TextMeshPro timer);
-            root.transform.SetPositionAndRotation(point, Quaternion.Euler(0f, yaw, 0f));
-            PixelMagnetSorterDevice sorter = root.AddComponent<PixelMagnetSorterDevice>();
-            sorter.Init(clicker, cam, d, timer, timerFormat, duration, shrinkSeconds, root.transform.Find("Mouth"), d.bodyDiameter, d.bodyHeight);
-            result = sorter;
         }
         else if (d.kind == DeviceKind.WoodChipper)
         {
@@ -3365,12 +3122,9 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         public Vector3 position;
         public float yaw;
         public float remaining;
-        public float aim;
-        public float bend;
-        public int force;
-        public float forceValue;   // the exact force set with the slider (0 = use the force button index)
+        public float aim;   // the Charge Booster's charge
         public bool disarmed;   // placed but never switched on yet
-        public string extra;    // device-specific text (the Magnetized Sorter's box contents and pipes)
+        public string extra;    // device-specific text (an organizer's or crate's contents, a machine's settings)
         public string couplings;   // the couplings fitted on the device's sockets (PixelCouplings.Export)
     }
 
@@ -3391,7 +3145,6 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             };
             state.couplings = PixelCouplings.Export(placed.gameObject);
             if (placed is PixelChargeBooster booster) state.aim = booster.Charge;
-            if (placed is PixelMagnetSorterDevice magSorter) state.extra = magSorter.ExportState();
             if (placed is PixelQuantumDevice organizer) state.extra = organizer.ExportState();
             if (placed is PixelStorageCrate storageCrate) state.extra = storageCrate.ExportState();
             PixelRecycler recycler = placed.GetComponent<PixelRecycler>();
@@ -3404,13 +3157,6 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             if (generator != null) state.extra = generator.ExportState();   // a Biomass Generator's charge left
             PixelJunctionBox junction = placed.GetComponent<PixelJunctionBox>();
             if (junction != null) state.extra = junction.ExportState();   // the Junction Box's filters and buffer
-            if (placed is PixelSorterDevice sorter)
-            {
-                state.aim = sorter.AimDegrees;
-                state.bend = sorter.BendDegrees;
-                state.force = sorter.Force;
-                state.forceValue = sorter.ForceValue;
-            }
             list.Add(state);
         }
         return list;
@@ -3429,10 +3175,8 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         if (state == null || state.remaining <= 0f) return;
         int index = Array.FindIndex(devices, x => x != null && x.displayName == state.device);
         if (index < 0) return;
-        PixelPlacedDevice restored = SpawnDevice(index, state.position, state.yaw, state.remaining, state.aim, state.bend, state.force);
+        PixelPlacedDevice restored = SpawnDevice(index, state.position, state.yaw, state.remaining, state.aim);
         if (restored != null && state.disarmed && !(restored is PixelStorageCrate) && !(restored is PixelChipperDevice) && !(restored is PixelRecyclerDevice)) restored.Disarm();
-        if (restored is PixelSorterDevice restoredSorter && state.forceValue > 0f) restoredSorter.SetForceValue(state.forceValue);
-        if (restored is PixelMagnetSorterDevice restoredMag) restoredMag.ImportState(state.extra);
         if (restored is PixelQuantumDevice restoredOrganizer) restoredOrganizer.ImportState(state.extra);
         PixelRecycler restoredRecycler = restored != null ? restored.GetComponent<PixelRecycler>() : null;
         if (restoredRecycler != null) restoredRecycler.ImportState(state.extra);
@@ -3561,10 +3305,6 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         {
             BuildCrateBody(root, d, isPreview);
         }
-        else if (d.kind == DeviceKind.MagnetSorter)
-        {
-            BuildMagnetSorterBody(root, d, isPreview);
-        }
         else if (d.kind == DeviceKind.LightningRod)
         {
             BuildRodBody(root, d, isPreview);
@@ -3591,7 +3331,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         }
 
         // Flat disc showing the reach.
-        if (showRange && !displayOnly && d.kind != DeviceKind.MagnetSorter && d.kind != DeviceKind.QuantumOrganizer && d.kind != DeviceKind.StorageCrate)
+        if (showRange && !displayOnly && d.kind != DeviceKind.QuantumOrganizer && d.kind != DeviceKind.StorageCrate)
         {
             GameObject disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             disc.name = "Range";
@@ -3836,7 +3576,6 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         Part(PrimitiveType.Cube, "Arch Cap", new Vector3(0f, H + leg * 0.02f, 0f), new Vector3(D * 0.8f + leg * 0.6f, leg * 0.25f, leg * 0.7f), silver);
     }
 
-    /// <summary>A grey box, a short tube and a red horseshoe magnet head at the front (+Z, with an empty 'Mouth' child at its gap) and, unless it is only a picture, the translucent arc it pulls from.</summary>
     /// <summary>The Quantum Organizer: a glowing pad inside four low walls with taller corner posts ('D' = the pad's inner side, 'H' = the wall height).</summary>
     private void BuildQuantumBody(GameObject root, Device d, bool isPreview)
     {
@@ -3917,82 +3656,6 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         Part("Rim S", new Vector3(0f, H + 0.012f, -oz), new Vector3(W + t * 2f, 0.025f, t * 1.4f), trim);
         Part("Rim E", new Vector3(ox, H + 0.012f, 0f), new Vector3(t * 1.4f, 0.025f, Dp), trim);
         Part("Rim W", new Vector3(-ox, H + 0.012f, 0f), new Vector3(t * 1.4f, 0.025f, Dp), trim);
-    }
-
-    private void BuildMagnetSorterBody(GameObject root, Device d, bool isPreview)
-    {
-        float opacity = isPreview ? previewOpacity : 1f;
-        Color boxColor = d.color; boxColor.a = opacity;
-        Color metal = new Color(0.6f, 0.63f, 0.7f, opacity);
-        Color red = new Color(0.85f, 0.2f, 0.2f, opacity);
-        Color silver = new Color(0.82f, 0.84f, 0.9f, opacity);
-        float D = d.bodyDiameter, H = d.bodyHeight;
-
-        GameObject Part(PrimitiveType type, string name, Vector3 pos, Vector3 scale, Color color)
-        {
-            GameObject g = GameObject.CreatePrimitive(type);
-            g.name = name;
-            Destroy(g.GetComponent<Collider>());
-            g.transform.SetParent(root.transform, false);
-            g.transform.localPosition = pos;
-            g.transform.localScale = scale;
-            Material m = clicker.CreateVisualMaterial(color, isPreview);
-            if (m != null) g.GetComponent<Renderer>().sharedMaterial = m;
-            g.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            return g;
-        }
-
-        Part(PrimitiveType.Cube, "Box", new Vector3(0f, H * 0.5f, 0f), new Vector3(D, H, D), boxColor);
-        Part(PrimitiveType.Cube, "Lid", new Vector3(0f, H + 0.03f, 0f), new Vector3(D * 1.06f, 0.07f, D * 1.06f), metal);
-        for (int i = 0; i < 3; i++)   // the three exit ports on the back
-            Part(PrimitiveType.Cylinder, "Port", new Vector3((i - 1) * D * 0.3f, H * 0.55f, -D * 0.5f), new Vector3(0.2f, 0.04f, 0.2f), metal).transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-
-        // Tube from the box to the magnet head.
-        float tubeLen = D * 0.55f;
-        Part(PrimitiveType.Cylinder, "Intake Tube", new Vector3(0f, H * 0.45f, D * 0.5f + tubeLen * 0.5f), new Vector3(0.24f, tubeLen * 0.5f, 0.24f), metal).transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-
-        // Horseshoe head (lying on its side, opening forward): two legs reaching forward with silver tips, an arch behind them.
-        float z = D * 0.5f + tubeLen;
-        float y = H * 0.45f, gap = 0.34f, leg = 0.2f;
-        for (int s = -1; s <= 1; s += 2)
-        {
-            Part(PrimitiveType.Cube, "Magnet Leg", new Vector3(s * gap, y, z + 0.2f), new Vector3(leg, leg, 0.55f), red);
-            Part(PrimitiveType.Cube, "Magnet Tip", new Vector3(s * gap, y, z + 0.52f), new Vector3(leg * 1.05f, leg * 1.05f, 0.14f), silver);
-        }
-        Part(PrimitiveType.Cube, "Magnet Arch", new Vector3(0f, y, z - 0.1f), new Vector3(gap * 2f + leg, leg, leg), red);
-
-        GameObject mouth = new GameObject("Mouth");
-        mouth.transform.SetParent(root.transform, false);
-        mouth.transform.localPosition = new Vector3(0f, y, z + 0.55f);
-
-        if (displayOnly) return;
-
-        // The pull arc on the floor: a flat fan in front of the magnet.
-        GameObject arc = new GameObject("Range", typeof(MeshFilter), typeof(MeshRenderer));
-        arc.transform.SetParent(root.transform, false);
-        arc.transform.localPosition = new Vector3(0f, 0.03f, z + 0.55f);
-        Mesh mesh = new Mesh { name = "Pull Arc" };
-        int steps = 24;
-        float half = Mathf.Clamp(d.arcDegrees, 20f, 170f) * 0.5f * Mathf.Deg2Rad;
-        Vector3[] v = new Vector3[steps + 2];
-        int[] t = new int[steps * 3];
-        v[0] = Vector3.zero;
-        for (int i = 0; i <= steps; i++)
-        {
-            float a = Mathf.Lerp(-half, half, i / (float)steps);
-            v[i + 1] = new Vector3(Mathf.Sin(a), 0f, Mathf.Cos(a)) * d.radius;
-        }
-        for (int i = 0; i < steps; i++) { t[i * 3] = 0; t[i * 3 + 1] = i + 2; t[i * 3 + 2] = i + 1; }
-        mesh.vertices = v;
-        mesh.triangles = t;
-        mesh.RecalculateNormals();
-        arc.GetComponent<MeshFilter>().sharedMesh = mesh;
-        Color fan = d.color; fan.a = rangeOpacity;
-        Renderer ar = arc.GetComponent<Renderer>();
-        Material fanMat = clicker.CreateVisualMaterial(fan, true);
-        if (fanMat != null) ar.sharedMaterial = fanMat;
-        ar.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        ar.receiveShadows = false;
     }
 
     private void BuildVacuumBody(GameObject root, Device d, bool isPreview)

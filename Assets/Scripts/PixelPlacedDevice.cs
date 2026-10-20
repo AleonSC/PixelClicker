@@ -10,9 +10,8 @@
 //   disarmed: every device you place starts DISARMED (Disarm() right after SpawnDevice; grey via per-renderer property blocks -
 //   ApplyTint / ClearTint, a desaturated dull version of each material's colour, emission off; the countdown does not run, OnTick is
 //   not called, the timer text shows DisarmedText 'Click to start'; subclasses must check Armed in FixedUpdate / event handlers: fan,
-//   vacuum, sorter TryRoute, booster OnCollected / AddCharge, PixelElectricLinks ignores disarmed devices) until you LEFT-CLICK it
-//   once (PixelConsumables.UpdateArming: DeviceUnderPointer(true) using the virtual HitTest(ray, out distance) - the sorter overrides
-//   it with its ring + pipe so clicking the cube inside doesn't arm it; while the mouse is over a disarmed device
+//   vacuum, booster OnCollected / AddCharge, PixelElectricLinks ignores disarmed devices) until you LEFT-CLICK it
+//   once (PixelConsumables.UpdateArming: DeviceUnderPointer(true) using the virtual HitTest(ray, out distance); while the mouse is over a disarmed device
 //   PixelConsumables.HoveringDisarmed makes PixelClicker.ExternalClickBlock true) -> Arm() fades the colour in over ArmFadeSeconds
 //   (armFadeSeconds 0 = 0.7) and starts the countdown (sound device_arm). Saved as PlacedState.disarmed.
 // ---------------------------------------------------

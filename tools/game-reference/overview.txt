@@ -37,7 +37,7 @@ ECONOMY / SHOP (PixelShop, PixelShopUI, PixelShopDefaults)
 
 CONSUMABLES (PixelConsumables)
 - POTIONS: one single potion per pixel type (all non-rare types): for N seconds only that type spawns. COMBO potions (crafted): 2-type for every pair of types; 3-type only among non-standalone types (pre-built at start). Potions can be auto-priced from expected return.
-- DEVICES (DeviceKind): placed in the world by right-clicking them in the Inventory: Fan, Vacuum Device, Sorter, Magnet, Magnetized Sorter, Quantum Organizer, Storage Crate (10 slots), Sprinkler, Funnel, Wood Chipper, Recycler, Charge Booster, Lightning Rod, Bait Bucket, seeds, Prime Gauntlet... Some timed (countdown, shrink away), some permanent. Attuned devices (crafted with a potion) only affect husks of one type. Placed devices are saved (PlacedState: position, yaw, remaining, extra data).
+- DEVICES (DeviceKind): placed in the world by right-clicking them in the Inventory: Fan, Vacuum Device, Magnet, Quantum Organizer, Storage Crate (10 slots), Sprinkler, Funnel, Wood Chipper, Recycler, Charge Booster, Lightning Rod, Bait Bucket, seeds, Prime Gauntlet... Some timed (countdown, shrink away), some permanent. Attuned devices (crafted with a potion) only affect husks of one type. Placed devices are saved (PlacedState: position, yaw, remaining, extra data).
 - CARRY HANDLES (PixelCarryHandles): Storage Crate, Recycler and the Bait Bucket can be dragged by their handles (scroll / Q / E turns).
 - CRAFTING (PixelCrafting): recipes, potion + pixel -> combo potion, device + potion -> attuned device.
 - TESTER MACHINES (factory, not final): conveyor belts, kiln, splitter, elevator, belt sorter, trash can, tiny robot, connector.

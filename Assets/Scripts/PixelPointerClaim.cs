@@ -1,7 +1,7 @@
 // ---- System notes ----
 // PixelPointerClaim.cs
 //   One shared "this click belongs to something in the world, not the cube" flag. A device / visitor that has the pointer over a part
-//   it reacts to calls PixelPointerClaim.Claim() every frame it has it (sorter handles, Magnetized Sorter pipes, Quantum Organizer, Storage
+//   it reacts to calls PixelPointerClaim.Claim() every frame it has it (Quantum Organizer, Storage
 //   Crate, Recycler button, carry handles, Bait Bucket, the Egg, the Beanstalk's fruit, a Treasure Map spot); PixelClicker.ExternalClickBlock
 //   reads Claimed (this frame or the last, so script order does not matter). Replaces the separate HandleHot / Hot flag each of them used to
 //   have (and the matching list in ExternalClickBlock): a new device only calls Claim(). PixelRecycler.ButtonHot and PixelCarryHandles.Hot stay

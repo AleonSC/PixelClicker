@@ -297,7 +297,6 @@ minute. **Base crush is FREE** (not a tree node): RIGHT-CLICK a husk lying on th
 | 5 | Magnet, Fan (moving husks) |
 | 5-6 | Sweeper (rescues stray husks, below) |
 | 6-7 | Funnel (catching husks automatically) |
-| 8-10 | Sorter, then Magnetized Sorter |
 | 12+ | Quantum Organizer; later the factory pieces as real items |
 
 Build it as ONE shared rule (a small "needs skill X at level N" table on shop items) read by the Shop, Toggles and Game Database,

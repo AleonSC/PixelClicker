@@ -185,10 +185,8 @@ public class PixelHints : MonoBehaviour, IPixelSaved
             case "potion": return "You drank a potion!";
             case "device_Vacuum": return "You placed a Vacuum Device!";
             case "device_Fan": return "You placed a Fan!";
-            case "device_Sorter": return "You placed a Sorter!";
             case "device_Sprinkler": return "You placed a Sprinkler!";
             case "device_Magnet": return "You placed a Magnet!";
-            case "device_MagnetSorter": return "You placed a Magnetized Sorter!";
             case "device_QuantumOrganizer": return "You placed a Quantum Organizer!";
             case "device_StorageCrate": return "You placed a Storage Crate!";
             case "device_SortingHopper": return "You placed a Sorting Hopper!";
@@ -269,7 +267,6 @@ public class PixelHints : MonoBehaviour, IPixelSaved
         H("device_Vacuum", "Vacuum Device placed! It is grey and asleep: left-click it to switch it on. Then it pulls in old pixels and collects them again for a few seconds. Hold right-click on a placed device to remove it."),
         H("device_Fan", "Fan placed! It is grey and asleep: left-click it to switch it on. Then it blows old pixels along the floor in front of it until its timer runs out."),
         H("device_Sprinkler", "Sprinkler placed! It is grey and asleep: left-click it to switch it on. Then it waters every growing seed and Seed pet within its reach about once a second, so they grow much faster."),
-        H("device_MagnetSorter", "Magnetized Sorter placed! Left-click it to switch it on. It sucks loose old pixels from the arc in front of its magnet into the box. Click an exit pipe to grab it, click again to put it down; scroll over a pipe to choose which stored pixel type it shoots out."),
         H("device_QuantumOrganizer", "Quantum Organizer placed! Left-click it to switch it on, then grab a husk and drop it onto the pad to bind its type. Every loose husk of that type is dematerialized and stored in the box. Click the box to let some out again."),
         H("device_StorageCrate", "Storage Crate placed! It needs no switching on. Let go of a pixel you are holding (Pixel Grabbing) above the crate and it drops into the next free section; clicking the crate also stores loose pixels lying on it. Click a stored pixel to pick it up again. Drag the handles on its short ends to move it."),
         H("device_SortingHopper", "Sorting Hopper placed! Put it near a Recycler and it latches onto the back. Husks dropped into its bowl are held (up to 20). Right-click the hopper and press Select filter: that type goes into the Recycler, every other type drops out of its bottom spout."),
@@ -279,7 +276,6 @@ public class PixelHints : MonoBehaviour, IPixelSaved
         H("device_PocketBiomassGenerator", "Pocket Biomass Generator placed! Every device inside its blue ring runs on its power - their timers stop and show its blue energy bar. Keep it going by dropping Woodcutting husks into the firebox on top; when it runs dry it flashes red, then shuts down for good unless you feed it."),
         H("device_BiomassGenerator", "Biomass Generator placed! A bigger ring and much more charge: every device inside runs on its power while you feed it Woodcutting husks (the firebox on top, or its intake coupling). Empty, it flashes red and then shuts down unless you feed it."),
         H("device_Magnet", "Magnet placed! It is grey and asleep: left-click it to switch it on. Then it pulls loose old pixels in around it and holds them in a heap without collecting them."),
-        H("device_Sorter", "Sorter placed! It is grey and asleep: left-click its ring or pipe to switch it on. Then click its buttons to change how hard old pixels are pushed out of the pipe."),
         H("craft", "Crafted! The new item is in your Inventory under Consumables."),
         H("combo", "Combo! Keep clicking quickly to raise the combo bonus. It breaks if you stop for a moment."),
         H("upgrade_interval", "The auto clicker now clicks faster. Each level shortens the time between its clicks."),
@@ -306,7 +302,7 @@ public class PixelHints : MonoBehaviour, IPixelSaved
         H("pixel_Wood", "Lumberjack's Pack unlocked! The Woodcutting skill: wood blocks (Wood, Bark, Sap, Leaf, Heartwood) and three fillers (Twig, Pinecone, Moss) plus a Termite Hive to avoid: break it and termites go for your old pixels, so click them to save them. Open the Skills window to train it: its blocks replace the basic pixels while it is in play. The fillers are useless and get rarer as you level."),
         H("pixel_Rock", "Rock Pixels unlocked! Rock is Mining's filler block: plain and almost worthless, and most of what appears at first. As your mining level rises it gets rarer."),
         H("pixel_Copper", "Prospector's ores unlocked! Copper, Tin, Iron, Silver, Gold, Obsidian and Bedrock are tough rocks: hit them to crack them open (obsidian and bedrock take 15-20 clicks but pay a lot). A glittering one is a rich vein and pays 5x. The ores only spawn while Mining is the skill you are training: pick it in the Skills window."),
-        H("pixel_Water", "Water Pixels unlocked! When an old Water pixel splashes on the ground near Seed sprouts or the Seed pet, they grow and sow much faster for a while. The water is used up either way. Stream them over your sprouts with a Sorter!"),
+        H("pixel_Water", "Water Pixels unlocked! When an old Water pixel splashes on the ground near Seed sprouts or the Seed pet, they grow and sow much faster for a while. The water is used up either way."),
         H("pixel_Seed", "Seed Pixels unlocked! Old Seed pixels slowly grow bigger and worth more. Vacuum them, hose them up or click a ripe one to harvest."),
         H("pixel_Mirror", "Mirror Pixels unlocked! Clicking one also counts as a click on the last other pixel you collected, so it pays that pixel's amount again."),
         H("stone_first", "A PRIME CUBE! There are six (Space, Mind, Reality, Power, Time and Soul), each rarer than a Dragon Cube, and only ONE of each can be held. Gather all six and the Wizard may know what to do with them."),
@@ -1062,13 +1058,6 @@ public class PixelHints : MonoBehaviour, IPixelSaved
             PixelTutorialDim.Begin(null);
             System.Func<Vector2?> near = ghostGame != null && ghostGame.GhostScreenPosition().HasValue ? ghostGame.GhostScreenPosition : null;
             PixelNotice.Show(next.text, 0f, small: true, nearScreen: near, freezeTime: true, onClosed: PixelTutorialDim.End);
-            wasShowing = true;
-            return;
-        }
-        if (next.id == "device_Sorter")
-        {
-            // The Sorter tip is a small box and stops time until it is closed.
-            PixelNotice.Show(next.text, 0f, small: true, freezeTime: true);
             wasShowing = true;
             return;
         }

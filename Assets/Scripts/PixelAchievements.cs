@@ -5,8 +5,7 @@
 //   (RegisterPetAchievements, ids pet_<Type>, single-tier custom, earned when PixelPets.IsOwned; addPetAchievements). Three more code-
 //   registered achievements (RegisterUsageAchievements / RegisterFeedAchievements: "Event Horizon" = feed a Singularity pixel to a
 //   black hole (PixelBlackholeMinigame.PixelSwallowed event -> PixelStats.SingularitiesFed); "Potion Taster" = every buyable potion
-//   drunk once, "Gadgeteer" = every device kind placed once; progress from PixelStats PotionsUsed / FansUsed / VacuumDevicesUsed /
-//   SortersUsed). Achievements have tiers (tiers[], earnedTiers); defaults per pixel type: tiered "Collect" (lifetime value,
+//   drunk once, "Gadgeteer" = every device kind placed once; progress from PixelStats PotionsUsed / FansUsed / VacuumDevicesUsed). Achievements have tiers (tiers[], earnedTiers); defaults per pixel type: tiered "Collect" (lifetime value,
 //   totalCollected: 10, 100, 1K, 10K, 100K, 1M) and tiered "Click" (PixelTier.timesCollected, saved: 10, 50, 250, 1K, 5K, 25K;
 //   Kind.ClickPixelType). The unlock POPUP sits at the MIDDLE RIGHT of the screen by default (DefaultPopupPosition, popupRightMargin), drawn at popupScale (0.68) open
 //   and collapsed, and starts expanded (pref AchievementPopupCollapsed2); hold the left mouse button on it (popupHoldSeconds 0.5, a ring fills round the cursor,
@@ -611,8 +610,7 @@ public class PixelAchievements : MonoBehaviour, IPixelSaved
             foreach (PixelConsumables.DeviceKind kind in kinds)
             {
                 long placed = kind == PixelConsumables.DeviceKind.Fan ? stats.FansUsed
-                            : kind == PixelConsumables.DeviceKind.Vacuum ? stats.VacuumDevicesUsed
-                            : kind == PixelConsumables.DeviceKind.Sorter ? stats.SortersUsed : (long)PixelStats.Total("device.placed." + kind);
+                            : kind == PixelConsumables.DeviceKind.Vacuum ? stats.VacuumDevicesUsed : (long)PixelStats.Total("device.placed." + kind);
                 if (placed > 0) used++;
             }
             return used;

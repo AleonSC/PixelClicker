@@ -48,9 +48,7 @@ Keep this map current: when a system gets a new link (or loses one), change its 
 |---|---|---|---|---|---|
 | Vacuum Device | loose old pixels | husk XP (pixel rules); later maybe husks to a Recycler / storage | despawn | ? | Built |
 | Fan | - | moves old pixels | space | ? | Built |
-| Sorter (ring) | collected pixels | streams them out of a pipe | space | ? | Built |
 | Magnet | loose old pixels | holds them in a heap | despawn, space | ? | Built |
-| Magnetized Sorter (crafted) | old pixels | chosen types out of three pipes | space | Crafting | Built |
 | Quantum Organizer | bound types | stores them in its box | despawn, space | ? | Built |
 | Storage Crate | old pixels | stores them, click to take out | despawn | ? | Built |
 | Funnel | falling old pixels | a queue down a tube to a belt (with backpressure) | space, despawn | Electrician? | Built |
@@ -99,7 +97,7 @@ Machines can **break** from the wrong input (main cause) or gentle wear (optiona
 |---|---|
 | **Despawn** (husks vanish) | first person by hand (the first answer), Wood Chipper, Storage Crate, Magnet, Quantum Organizer, Funnel, Recycler (Designed), Kiln |
 | **Machine breakdowns** (wrong input, wear) | sorting before the machine (Belt Sorter, Junction Box), repairs in first person (Designed) |
-| **Space** (the floor circle is small) | belts, Junction Box, Elevator, hoses, Fan, Sorter, Trash Can, free cam; a bigger floor as a reward (Idea, the dev toggle exists) |
+| **Space** (the floor circle is small) | belts, Junction Box, Elevator, hoses, Fan, Trash Can, free cam; a bigger floor as a reward (Idea, the dev toggle exists) |
 | **Hazards** | right-click clearing, Pesticide charges / Sprayer (Designed), Focus potions, Infestation dial (open), sap bait (Designed), Belt Sorter |
 | **One skill at a time** | auto clicker + machines working while you focus elsewhere; Offline Progression |
 | **The rotation** (cannot choose the next block) | Block Hold, Shuffle, potions, lookahead perks (Designed) |
@@ -145,7 +143,7 @@ Machines can **break** from the wrong input (main cause) or gentle wear (optiona
 |---|---|---|
 | Dragon Cubes (wish), God Cubes, Prime Cubes + Gauntlet | Collection Log, gallery, Wizard | Built |
 | Pets | pixel types (a pet per type), Pet Treats | Built |
-| Crafting | potions, attuned devices, Magnetized Sorter | Built |
+| Crafting | potions, attuned devices | Built |
 | Pixel Bank | husk storage for later use (e.g. Electric husks before Electrician), one shared capacity; stored husks carry no payout (Designed) | Built; storage-only rework Designed |
 | Achievements, Collection Log | everything (goals) | Built |
 | Combo meter | clicking | Built |

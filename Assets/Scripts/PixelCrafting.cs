@@ -41,8 +41,8 @@ public class PixelCrafting : MonoBehaviour
         [Tooltip("The pixel type (for a potion: the pixel type the potion is for).")]
         public PixelClicker.PixelType type = PixelClicker.PixelType.White;
 
-        [Tooltip("For a Device ingredient: which device (a Sorter, a Magnet...).")]
-        public PixelConsumables.DeviceKind device = PixelConsumables.DeviceKind.Sorter;
+        [Tooltip("For a Device ingredient: which device (a Magnet, a Fan...).")]
+        public PixelConsumables.DeviceKind device = PixelConsumables.DeviceKind.Magnet;
 
         [Min(1)]
         [Tooltip("How many it costs.")]
@@ -437,6 +437,8 @@ public class PixelCrafting : MonoBehaviour
         return list;
     }
 
+    private static bool UsesRetired(Ingredient i) => i != null && i.kind == ItemKind.Device && PixelConsumables.IsRetiredKind(i.device);
+
     private bool EnsureDefaultRecipes()
     {
         if (!addDefaultRecipes) return false;
@@ -456,18 +458,9 @@ public class PixelCrafting : MonoBehaviour
             });
             changed = true;
         }
-        if (!recipes.Exists(r => r != null && r.resultKind == ResultKind.Device && r.resultDevice == PixelConsumables.DeviceKind.MagnetSorter))
-        {
-            recipes.Add(new Recipe
-            {
-                label = "Magnetized Sorter",
-                a = new Ingredient(PixelConsumables.DeviceKind.Sorter, 1),
-                b = new Ingredient(PixelConsumables.DeviceKind.Magnet, 1),
-                resultKind = ResultKind.Device,
-                resultDevice = PixelConsumables.DeviceKind.MagnetSorter,
-            });
-            changed = true;
-        }
+        // 2026-10-20: the Magnetized Sorter (Sorter + Magnet) was removed with the ring Sorter: drop any recipe that makes or uses a retired device.
+        if (recipes.RemoveAll(r => r != null && ((r.resultKind == ResultKind.Device && PixelConsumables.IsRetiredKind(r.resultDevice))
+                                                 || UsesRetired(r.a) || UsesRetired(r.b))) > 0) changed = true;
         return changed;
     }
 

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Electric old pixels link up. Every Electric pixel lying around arcs to the nearest placed device (vacuum device, fan, sorter...)
+/// Electric old pixels link up. Every Electric pixel lying around arcs to the nearest placed device (vacuum device, fan, magnet...)
 /// or to a nearer already-linked Electric pixel, so they form chains, within <see cref="linkRange"/>. Electric pixels that
 /// are not near a device still arc to each other (just for looks).
 /// Pixels linked to a timed device POWER it: the device runs on batteries, so its countdown pauses while any are linked. Every linked

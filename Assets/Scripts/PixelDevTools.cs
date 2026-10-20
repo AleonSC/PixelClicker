@@ -1175,7 +1175,7 @@ public class PixelDevTools : MonoBehaviour
         Button giveItem = PixelUIKit.CreateButton(font, root, "Give Dev Item Button", giveDevItemText, new Vector2(bw, rowHeight), buttonColor, textColor, fontSize);
         Place(giveItem.GetComponent<RectTransform>(), 40f + dropW + gap, y, bw);
         giveItem.onClick.AddListener(GiveDevItem);
-        AddTip(giveItem.gameObject, "Put one of the picked item in your inventory. These devices are not on sale anywhere for now (Quantum Organizer, Funnel, Sprinkler, Vacuum Device, Sorter, Bait Bucket, Conveyor Belt Kit).");
+        AddTip(giveItem.gameObject, "Put one of the picked item in your inventory. These devices are not on sale anywhere for now (Quantum Organizer, Funnel, Sprinkler, Vacuum Device, Bait Bucket, Conveyor Belt Kit).");
         Widget(root, board, "devitems", start, y);
         FillDevItemDropdown();
     }

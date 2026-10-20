@@ -22,5 +22,5 @@ One shared info card and panel for every PLACED device (design agreed in the Des
 The card now carries the numbers, so the floating text over devices became a small camera-facing ring (`PixelWorldRing`, two LineRenderers, redrawn only when the fill changes):
 - **Recycler:** the 'n / 25' counter, its 'full - press the button' line and the after-payout 'Type streak x1.3 pay' text -> a ring that fills with the contents (amber when full). The hover arrow's 'm:ss left' -> arrow only.
 - **Quantum Organizer:** the list of bound types with counts and 'n / 60' -> a ring for how full it is (the 'Drop a pixel on the pad' hint stays until a type is bound).
-- **Every timed device** (Vacuum, Fan, Sorter, Magnet, Sprinkler, Magnetized Sorter, Quantum Organizer...): the '30s' countdown (and its POWERED line) -> a ring that empties with the time (amber under 20%, blue while powered).
+- **Every timed device** (Vacuum, Fan, Magnet, Sprinkler, Quantum Organizer...): the '30s' countdown (and its POWERED line) -> a ring that empties with the time (amber under 20%, blue while powered).
 - Kept as text on purpose: 'Click to start' on a device not yet switched on, the Sweeper's 'click to wind', the uses-mode labels (Charge Booster CLICK! / SUPER!, Lightning Rod 'n x'): they tell the player what to do.

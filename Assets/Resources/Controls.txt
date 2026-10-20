@@ -82,11 +82,6 @@ Click near the cube's edge | With Aimed Clicks (Standard tree): its husk flies o
 Recycler | Husks that land in it are recycled by themselves (the red button empties anything left inside)
 Click the Storage Crate | Store the husks lying on it
 Click a stored pixel | Take it back out
-Sorter: left-click (step 1) | Confirm the pipe's direction
-Sorter: left-click in the cone | Place it with that bend
-Sorter buttons 1-3 | Change how hard it spits
-Magnetized Sorter: click a pipe, then a spot | Move that exit pipe
-Magnetized Sorter: wheel over a pipe | Choose what that pipe shoots
 Conveyor Belt Kit: click, click | Lay a belt between two points
 Conveyor Belt Kit: mouse wheel | Raise or lower the belt's end
 Conveyor Belt Kit: right-click | End the chain

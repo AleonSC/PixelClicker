@@ -9,7 +9,7 @@ using static PixelInput;
 /// <summary>
 /// UFO Helper (shop upgrade <c>unlocksRobot</c>, Upgrades tab; the class keeps its old name so saves and the shop keep working): a small
 /// flying saucer idly hovers about the map, never straight above the cube, with a speech bubble over it (an alien face) so you can always
-/// find it. Click it and it asks which consumable to use; pick one (Vacuum, Fan, Sorter, Charge Booster, Lightning Rod, Sprinkler) and
+/// find it. Click it and it asks which consumable to use; pick one (Vacuum, Fan, Charge Booster, Lightning Rod, Sprinkler) and
 /// place its "ghost" where you want it (nothing is used up yet). From then on, every time that device runs out, the UFO flies over the
 /// ghost and its beam drops a fresh one down, already switched on, as long as you have one to spare. With the "bank a pixel" job it flies
 /// over the nearest loose pixel of the chosen type and abducts it into your Pixel Bank with its beam.
@@ -52,9 +52,6 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
 
     [Tooltip("Seconds between picking a new spot to drift to while idling (max).")]
     [SerializeField] private float wanderMaxSeconds = 5.5f;
-
-    [Tooltip("How far to the side of the cube it hovers when it has to work on the Sorter (which sits round the cube), in main-pixel widths.")]
-    [SerializeField] private float sorterStandOff = 3f;
 
     [Tooltip("Size of the speech bubble with its face (canvas units).")]
     [SerializeField] private float bubbleSize = 96f;
@@ -105,7 +102,7 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
     // The job.
     private int jobDevice = -1;
     private Vector3 jobPos;
-    private float jobYaw, jobBend;
+    private float jobYaw;
     private GameObject ghost;
     private bool occupied;
     private float nextCheck, waitT;
@@ -320,25 +317,8 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
         if (wanderTarget == Vector3.zero) wanderTarget = Hover(c + cam.transform.right * 3f * pb, hoverHeight);
     }
 
-    /// <summary>The flat direction to the right on screen (for hovering beside the cube).</summary>
-    private Vector3 ScreenRight()
-    {
-        Camera cam = Cam;
-        Vector3 r = cam != null ? cam.transform.right : Vector3.right;
-        r.y = 0f;
-        return r.sqrMagnitude > 0.0001f ? r.normalized : Vector3.right;
-    }
-
-    /// <summary>Where the beam should end for the current job: the spot on the floor (for the Sorter, the foot of the cube).</summary>
-    private Vector3 JobFloorPoint()
-    {
-        if (consumables.GetDevice(jobDevice).kind == PixelConsumables.DeviceKind.Sorter && clicker.PixelTransform != null)
-        {
-            Vector3 c = clicker.PixelTransform.position;
-            return new Vector3(c.x, floorY, c.z);
-        }
-        return new Vector3(jobPos.x, floorY, jobPos.z);
-    }
+    /// <summary>Where the beam should end for the current job: the spot on the floor.</summary>
+    private Vector3 JobFloorPoint() => new Vector3(jobPos.x, floorY, jobPos.z);
 
     /// <summary>Where it wants to be: over its work, else drifting about.</summary>
     private Vector3 WantedSpot()
@@ -353,10 +333,7 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
         }
         else if (HasJob && !occupied && consumables.DeviceOwned(jobDevice) > 0)
         {
-            Vector3 f = JobFloorPoint();
-            bool sorter = consumables.GetDevice(jobDevice).kind == PixelConsumables.DeviceKind.Sorter;
-            if (sorter) f += ScreenRight() * sorterStandOff * clicker.PixelBaseSize;   // not right above the cube
-            return Hover(f, workHeight);
+            return Hover(JobFloorPoint(), workHeight);
         }
         return wanderTarget;
     }
@@ -504,7 +481,7 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
         if (waitT >= placeDelay)
         {
             waitT = 0f;
-            PixelPlacedDevice placed = consumables.RobotPlace(jobDevice, jobPos, jobYaw, jobBend);
+            PixelPlacedDevice placed = consumables.RobotPlace(jobDevice, jobPos, jobYaw);
             if (placed != null)
             {
                 occupied = true;
@@ -512,7 +489,7 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
                 PixelStats.Count("robot.placed");
                 if (ghost != null) ghost.SetActive(false);
                 beamHold = 0.9f;
-                if (d.kind != PixelConsumables.DeviceKind.Sorter) StartCoroutine(DropDevice(placed.transform, placed.transform.position, UnderSide()));
+                StartCoroutine(DropDevice(placed.transform, placed.transform.position, UnderSide()));
             }
         }
     }
@@ -599,15 +576,13 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
         beamHold = 0.5f;
     }
 
-    /// <summary>Is a device of the job's kind already standing there (or, for the sorter, anywhere)?</summary>
+    /// <summary>Is a device of the job's kind already standing there?</summary>
     private bool IsOccupied()
     {
-        bool sorter = consumables.GetDevice(jobDevice).kind == PixelConsumables.DeviceKind.Sorter;
         float reach = clicker.PixelBaseSize * 1.5f;
         foreach (PixelPlacedDevice p in PixelPlacedDevice.All)
         {
             if (p == null || p.DeviceIndex != jobDevice || p.IsEnding) continue;
-            if (sorter) return true;
             Vector3 a = p.transform.position - jobPos; a.y = 0f;
             if (a.magnitude <= reach) return true;
         }
@@ -1163,10 +1138,10 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
             PixelHints.Announce("Choose where the UFO should drop it: click the floor");
     }
 
-    private void OnSpotChosen(int device, Vector3 point, float yaw, float bend)
+    private void OnSpotChosen(int device, Vector3 point, float yaw)
     {
         ignoreClickFrame = Time.frameCount;
-        SetJob(device, point, yaw, bend);
+        SetJob(device, point, yaw);
         PixelHints.Announce(string.Format(ufoJobSetFormat, consumables.GetDevice(device).displayName));
     }
 
@@ -1174,20 +1149,20 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
     // Job + saving
     // ------------------------------------------------------------------
 
-    private void SetJob(int device, Vector3 point, float yaw, float bend)
+    private void SetJob(int device, Vector3 point, float yaw)
     {
         bankJob = false;
         bankTarget = null;
-        jobDevice = device; jobPos = point; jobYaw = yaw; jobBend = bend;
+        jobDevice = device; jobPos = point; jobYaw = yaw;
         waitT = 0f;
         occupied = false;
         nextCheck = 0f;
         if (ghost != null) Destroy(ghost);
-        ghost = device >= 0 ? consumables.CreateGhost(device, point, yaw, bend) : null;
+        ghost = device >= 0 ? consumables.CreateGhost(device, point, yaw) : null;
         if (ghost != null) ghost.SetActive(false);   // shown by UpdateJob while the spot is empty
     }
 
-    private void ClearJob() { SetJob(-1, Vector3.zero, 0f, 0f); }
+    private void ClearJob() { SetJob(-1, Vector3.zero, 0f); }
 
     /// <summary>The job as text for the save file ("" = none).</summary>
     public string Export()
@@ -1196,7 +1171,7 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
         if (jobDevice < 0 || consumables == null) return "";
         CultureInfo c = CultureInfo.InvariantCulture;
         return consumables.GetDevice(jobDevice).displayName + "|" + jobPos.x.ToString("R", c) + "|" + jobPos.y.ToString("R", c) + "|" +
-               jobPos.z.ToString("R", c) + "|" + jobYaw.ToString("R", c) + "|" + jobBend.ToString("R", c);
+               jobPos.z.ToString("R", c) + "|" + jobYaw.ToString("R", c);
     }
 
     /// <summary>Restores a saved job (an empty or unknown text clears it).</summary>
@@ -1212,20 +1187,19 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
             if (System.Enum.TryParse(p[1], out PixelClicker.PixelType saved)) SetBankJob(saved);
             return;
         }
-        if (p.Length < 6) return;
+        if (p.Length < 5) return;
         CultureInfo c = CultureInfo.InvariantCulture;
         int index = -1;
         for (int i = 0; i < consumables.DeviceCount; i++) if (consumables.GetDevice(i).displayName == p[0]) { index = i; break; }
         if (index < 0 || !PixelConsumables.IsPlaceableKind(consumables.GetDevice(index).kind)) return;
         if (!float.TryParse(p[1], NumberStyles.Float, c, out float x) || !float.TryParse(p[2], NumberStyles.Float, c, out float y) ||
-            !float.TryParse(p[3], NumberStyles.Float, c, out float z) || !float.TryParse(p[4], NumberStyles.Float, c, out float yaw) ||
-            !float.TryParse(p[5], NumberStyles.Float, c, out float bend)) return;
-        SetJob(index, new Vector3(x, y, z), yaw, bend);
+            !float.TryParse(p[3], NumberStyles.Float, c, out float z) || !float.TryParse(p[4], NumberStyles.Float, c, out float yaw)) return;
+        SetJob(index, new Vector3(x, y, z), yaw);
     }
 
     private void SetBankJob(PixelClicker.PixelType type)
     {
-        SetJob(-1, Vector3.zero, 0f, 0f);
+        SetJob(-1, Vector3.zero, 0f);
         bankJob = true;
         bankType = type;
         bankRetarget = 0f;

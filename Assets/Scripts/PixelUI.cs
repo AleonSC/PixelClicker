@@ -157,7 +157,7 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Shown when you own no potions.")]
     [SerializeField] private string noConsumablesText = "No potions yet.";
 
-    [Tooltip("The kinds of consumable in the drop-down at the top of the Consumables tab. The first is potions, the second devices (fan, sorter, vacuum device...). Add names here when new kinds exist.")]
+    [Tooltip("The kinds of consumable in the drop-down at the top of the Consumables tab. The first is potions, the second devices (fan, magnet, vacuum device...). Add names here when new kinds exist.")]
     [SerializeField] private string[] consumableCategories = { "Potions", "Devices" };
 
     [Min(20f)]

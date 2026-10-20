@@ -237,7 +237,7 @@ public class PixelFxRing : MonoBehaviour
         GameObject go = new GameObject("Fx Ring", typeof(MeshFilter), typeof(MeshRenderer));
         go.transform.position = centre;
         go.transform.rotation = Quaternion.Euler(90f, 0f, 0f);   // lies flat
-        if (ringMesh == null) ringMesh = PixelSorterDevice.BuildRingMesh(0.86f, 1f, 0.02f, 40);
+        if (ringMesh == null) ringMesh = PixelRingMesh.Build(0.86f, 1f, 0.02f, 40);
         go.GetComponent<MeshFilter>().sharedMesh = ringMesh;
         MeshRenderer mr = go.GetComponent<MeshRenderer>();
         mr.sharedMaterial = PixelLooks.OverlayMaterial();

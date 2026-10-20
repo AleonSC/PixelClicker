@@ -16,14 +16,14 @@ public partial class PixelShop
 
     private static readonly PixelConsumables.DeviceKind[] OperationKinds =
     {
-        PixelConsumables.DeviceKind.Vacuum, PixelConsumables.DeviceKind.Fan, PixelConsumables.DeviceKind.Sorter,
+        PixelConsumables.DeviceKind.Vacuum, PixelConsumables.DeviceKind.Fan,
         PixelConsumables.DeviceKind.ChargeBooster, PixelConsumables.DeviceKind.LightningRod,
         PixelConsumables.DeviceKind.ComboFuel, PixelConsumables.DeviceKind.GhostBait, PixelConsumables.DeviceKind.PetTreat,
         PixelConsumables.DeviceKind.Recycler, PixelConsumables.DeviceKind.SortingHopper,
     };
 
     /// <summary>Operation rows that were removed (2026-10-18: one Speed and one Size per husk machine): taken out of the saved list.</summary>
-    private static readonly string[] RemovedOperationUpgrades = { "rec_duration", "rec_streak", "rec_suction" };
+    private static readonly string[] RemovedOperationUpgrades = { "rec_duration", "rec_streak", "rec_suction", "sort_duration", "sort_force" };
 
     /// <summary>Adds any built-in Operation upgrade missing from the list (by id). Returns true if something was added.</summary>
     private bool EnsureDefaultOperationUpgrades()

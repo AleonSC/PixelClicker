@@ -1,7 +1,7 @@
 // ---- System notes ----
 // PixelSolarPanel.cs
 //   The SOLAR PANEL (a Dev Hub > Tester feature, PixelFeatureTester 'Solar Panel'): a flat panel of blue cells on the ground with an indicator post. It is POWERED while Solar old pixels
-//   (PixelType.Solar) lie on it (its pad, a little bigger than the panel). It links to ONE placed device (PixelPlacedDevice: vacuum device, fan, sorter...): right after placing, the
+//   (PixelType.Solar) lie on it (its pad, a little bigger than the panel). It links to ONE placed device (PixelPlacedDevice: vacuum device, fan, magnet...): right after placing, the
 //   tester shows a ring of linkRadiusCubes (0 = 8) cube widths round the panel and you click a device inside it to connect; a right click on a placed panel (not while placing) starts the
 //   linking again. A straight BLUE LINE (with a bead running along it while powered) joins the panel to the device; while the panel is powered it calls the device's HoldPower() every frame,
 //   so the device's countdown stops. SOLAR USE: a Solar pixel on the pad that is NOT part of a complete group (5+ touching, the clicker's UpdateSolarClusters keeps those alive:

@@ -10,7 +10,7 @@
 //   - NearestOnScreen(clicker, screen, marginPx, accept): the husk whose EDGE on the screen is nearest the pointer, within marginPx screen pixels
 //     (its own on-screen size counts, so a far, small or moving husk is as easy to hit as a near one). Husk Crush uses it when the exact ray misses.
 //   Used by the zone-style systems (Sap fields, Mold, the Great Oak boost, the Magnet, Nuclear radiation) and - since the 2026-10-17 device pass - every
-//   device / container script (Recycler, Storage Crate, Bank hose, belts, sorters, the Sweeper, electric links, Quantum Organizer, Funnel, hoses...).
+//   device / container script (Recycler, Storage Crate, Bank hose, belts, belt sorters, the Sweeper, electric links, Quantum Organizer, Funnel, hoses...).
 //   A card missing at the first look (a husk still being made) is looked for again. A NEW zone effect should use Near instead of its own loop.
 // ---------------------------------------------------
 using System.Collections.Generic;

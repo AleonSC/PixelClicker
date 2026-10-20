@@ -558,7 +558,7 @@ public class PixelBank : MonoBehaviour, IPixelSaved
         // The ring that shows the area (a unit-radius ring, scaled to the area's radius).
         GameObject ring = new GameObject("Area Ring", typeof(MeshFilter), typeof(MeshRenderer));
         ring.transform.SetParent(hoseRoot.transform, false);
-        ring.GetComponent<MeshFilter>().sharedMesh = PixelSorterDevice.BuildRingMesh(1f - areaRingThickness, 1f, 0.02f, 56);
+        ring.GetComponent<MeshFilter>().sharedMesh = PixelRingMesh.Build(1f - areaRingThickness, 1f, 0.02f, 56);
         areaRing = ring.transform;
         areaRingRenderer = ring.GetComponent<Renderer>();
         areaRingRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
