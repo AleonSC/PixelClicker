@@ -216,6 +216,13 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].groundPlane = true;
         features[features.Count - 1].export = PixelConveyorCombiner.ExportState;
         features[features.Count - 1].import = PixelConveyorCombiner.ImportState;
+        Register("Control Lever",
+                 "A floor lever that stands BESIDE a conveyor belt, on either side, anywhere along it (bring it next to a belt: it snaps there on the side the mouse is on). LEFT-CLICK it to flip it: OFF (red lamp) stops every belt joined to that belt's line - end to end, either way round, corners included; ON (green) lets them run again.",
+                 c => PixelControlLever.CreateGhost(c), (c, p, yw) => PixelControlLever.Place(c, p, yw));
+        features[features.Count - 1].placeSnap = PixelControlLever.TrySnap;
+        features[features.Count - 1].groundPlane = true;
+        features[features.Count - 1].export = PixelControlLever.ExportState;
+        features[features.Count - 1].import = PixelControlLever.ImportState;
         Register("Husk Source",
                  "A test box with a coupling socket on each side. LEFT-CLICK it to choose a block type (any type): it makes endless husks of that type out of every Out coupling that something takes them from - a belt starting at the coupling (while it has room), a machine's In coupling right in front of it, or a Container Hose pulling from it. Fit couplings on its sides first. Nothing connected = nothing made.",
                  c => PixelHuskSource.CreateGhost(c), (c, p, yw) => PixelHuskSource.Place(c, p, yw));

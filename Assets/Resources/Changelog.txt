@@ -1472,3 +1472,4 @@
 [2026-10-20 05:54 UTC] Recycler: each '+N' popup over a recycled husk now shows the same-type streak as a small '(x1.3)' after the amount (nothing at x1.0).
 [2026-10-20 05:57 UTC] Dev Hub > Widgets: new 'Clear world' widget - one button (click twice to confirm) removes every placed device and every tester object (belts, couplings, hoses...); husks and seeds stay.
 [2026-10-20 06:23 UTC] Belt Jumps bought in the shop are now used up one per jump placed (they were never spent); loading a save now writes a console warning for any tester object (belt, jump, kiln...) it could not restore, to track down jumps going missing after a load.
+[2026-10-20 06:25 UTC] Added the Control Lever (Dev Hub > Tester): a floor lever placed beside a conveyor belt on either side; clicking it OFF stops every belt joined to that belt's line (riders wait, chevrons stop), clicking it ON starts them again; saved with its on/off state.

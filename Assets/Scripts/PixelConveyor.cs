@@ -7,6 +7,8 @@
 //   CORNERS: where belts chain at an angle the outside of the turn is filled with a ROUNDED corner (an arc, a curved rail and a turntable plate; PixelConveyorJoint.cs).
 //   COUPLING SHROUDS (2026-10-19): a belt end on a coupling's port gets a solid box round it reaching into the machine (RefreshShrouds), tinted like the machine;
 //   the coupling's flange is hidden under it, so the belt runs seamlessly into the machine.
+//   CONTROL LEVER (2026-10-20, PixelControlLever): a lever switched OFF beside a belt halts its whole LINE (CollectLine: every belt joined end to end) by
+//   calling HoldHalt every few frames; Speed is 0 while Halted, so riders wait, the chevrons stop and nothing is carried.
 //   NO FADING ON A BELT (2026-10-19): a rider's lifetime is paused every physics step (OldPixelDespawn.KeepAlive), so husks on belts never despawn; it runs on once they leave.
 //   LOOK (2026-10-19): rubber belt with moving chevrons and slat seams, steel rails with bolts on a dark frame with a yellow trim line, rollers with end caps.
 //   SHOP: the Conveyor Belt Kit (PixelConsumables DeviceKind.ConveyorBelt) is sold in Utilities for everyone since 2026-10-19 (monochrome price).
@@ -172,7 +174,35 @@ public class PixelConveyor : MonoBehaviour
     private float customSpeedCubes = -1f;   // set by the player (first person right click); negative = the default
     /// <summary>The belt's speed in cube widths per second.</summary>
     public float SpeedCubes => customSpeedCubes >= 0f ? customSpeedCubes : (beltSpeedCubes > 0f ? beltSpeedCubes : 1.6f);
-    public float Speed => unit * SpeedCubes;
+    public float Speed => Halted ? 0f : unit * SpeedCubes;
+
+    private float haltedUntil = -1f;
+    /// <summary>A Control Lever switched OFF on this belt's line keeps calling this: the belt stands still (riders wait, the chevrons stop) until the calls stop.</summary>
+    public void HoldHalt() { haltedUntil = Time.time + 0.4f; }
+    /// <summary>Stopped by a Control Lever (PixelControlLever) right now?</summary>
+    public bool Halted => Time.time < haltedUntil;
+
+    /// <summary>
+    /// Every belt joined to this one end to end, in either direction and round corners (ends within half a cube at the same height): the whole LINE
+    /// (a Control Lever switches it off). Filled into 'line' (this belt included).
+    /// </summary>
+    public void CollectLine(List<PixelConveyor> line)
+    {
+        line.Clear();
+        line.Add(this);
+        float reach = unit * 0.6f;
+        for (int i = 0; i < line.Count; i++)
+        {
+            PixelConveyor b = line[i];
+            foreach (PixelConveyor c in all)
+            {
+                if (c == null || c.ghostMode || line.Contains(c)) continue;
+                if (Touch(b.a, c.a, reach) || Touch(b.a, c.b, reach) || Touch(b.b, c.a, reach) || Touch(b.b, c.b, reach)) line.Add(c);
+            }
+        }
+    }
+
+    private static bool Touch(Vector3 p, Vector3 q, float reach) => new Vector2(p.x - q.x, p.z - q.z).sqrMagnitude <= reach * reach && Mathf.Abs(p.y - q.y) <= reach;
     public void SetSpeedCubes(float cubesPerSecond) { customSpeedCubes = Mathf.Clamp(cubesPerSecond, 0f, 30f); }
     public void FlipPublic() { Flip(); }
 
@@ -943,7 +973,7 @@ public class PixelConveyorSystem : MonoBehaviour
             foreach (Rider o in riders) if (o != r && o.belt == belt && o.lane == r.lane && o.s > r.s) limit = Mathf.Min(limit, o.s - gap);
             float want = r.s + belt.RunSpeed * dt;
             if (PixelBeltSorter.TryDivert(clicker, belt, r.s, r.rb)) { riding.Remove(r.rb); riders.RemoveAt(i); continue; }   // a Belt Sorter kicked it off the side
-            bool atEnd = want >= belt.Length - 0.001f && limit >= belt.Length - 0.001f;
+            bool atEnd = !belt.Halted && want >= belt.Length - 0.001f && limit >= belt.Length - 0.001f;   // (a belt stopped by a Control Lever hands nothing on)
             r.s = Mathf.Clamp(Mathf.Min(want, limit), 0f, belt.Length);
             if (atEnd)
             {
