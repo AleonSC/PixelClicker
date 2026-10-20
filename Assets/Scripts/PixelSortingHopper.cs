@@ -26,6 +26,8 @@
 //   - The filter shows on a little flag on the bowl's back-left corner (tinted its colour, the block spinning on top). A floating down arrow
 //     (PixelHoverMarker) shows on hover.
 //   Removing it lets everything it holds out of the bottom spout first.
+//   MOVE HANDLES (2026-10-20): carrying handles on the bowl's sides (shared PixelCarryHandles) - drag to move it, scroll / Q / E to turn it - but ONLY
+//   while nothing is connected to it (Connected: latched onto a host, or a coupling on its back socket). Put down within reach of a free host, it latches on.
 //   OUTPUT NAMES + ON / OFF (2026-10-20): outputs are named by their mouth ring's colour (Green = the feed pipe, Orange / Blue / Pink = the side pipes;
 //   OutputName / OutputLabel). Each has a tick box in the device panel (PixelDeviceInfo.AddToggle): OFF hides its pipe and nothing goes out of it
 //   (its filter type goes on to the other outputs or the bottom spout); saved as ';O<n>,off'.
@@ -207,6 +209,10 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         root.transform.localScale = Vector3.one * UnlatchedSize;   // (sized for a default Recycler until it latches onto one)
         PixelSortingHopper h = root.AddComponent<PixelSortingHopper>();
         h.Init(clicker, reach);
+        // MOVE HANDLES: drag it about by them - only while nothing is connected (not latched onto a Recycler / Junction Box, no coupling on its back).
+        h.carry = root.AddComponent<PixelCarryHandles>();
+        h.carry.Init(() => clicker != null ? clicker.TargetCamera : null);
+        h.carry.Blocked = () => h.Connected;
         return root;
     }
 
@@ -231,6 +237,8 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         kit.Box("Bowl Wall Back", tr, new Vector3(0f, wy, half - t * 0.5f), new Vector3(bw, wallH, t), BodyColor, default, colliders, 0.5f, 0.5f);
         kit.Box("Bowl Wall Left", tr, new Vector3(-(half - t * 0.5f), wy, 0f), new Vector3(t, wallH, bw), BodyColor, default, colliders, 0.5f, 0.5f);
         kit.Box("Bowl Wall Right", tr, new Vector3(half - t * 0.5f, wy, 0f), new Vector3(t, wallH, bw), BodyColor, default, colliders, 0.5f, 0.5f);
+        // Carrying handles on the bowl's left / right sides (shared PixelCarryHandles, as on the Recycler): they only work while nothing is connected.
+        PixelCarryHandles.BuildParts((n, p, size, c) => kit.Box(n, tr, p, size, c), half + t, bw * 0.55f, wy, 0.7f * u);
         kit.Box("Rim Front", tr, new Vector3(0f, yT + t * 0.2f, -(half - t * 0.5f)), new Vector3(bw + t * 0.4f, t * 0.4f, t * 1.4f), Metal, default, false, 0.85f, 0.7f);
         kit.Box("Rim Back", tr, new Vector3(0f, yT + t * 0.2f, half - t * 0.5f), new Vector3(bw + t * 0.4f, t * 0.4f, t * 1.4f), Metal, default, false, 0.85f, 0.7f);
         kit.Box("Rim Left", tr, new Vector3(-(half - t * 0.5f), yT + t * 0.2f, 0f), new Vector3(t * 1.4f, t * 0.4f, bw), Metal, default, false, 0.85f, 0.7f);
@@ -481,9 +489,15 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         Catch();
     }
 
+    private PixelCarryHandles carry;
+
+    /// <summary>Is anything connected to it (a host it latched onto, a coupling on its back)? Its move handles only work while not.</summary>
+    public bool Connected => recycler != null || PixelCoupling.On(this, "back") != null;
+
     /// <summary>Latches onto a free Recycler within reach (every half second when it has none) and follows it when it is carried.</summary>
     private void KeepLatched()
     {
+        if (recycler == null && carry != null && carry.Dragging) return;   // (being carried by its handles: it latches where it is put down)
         if (recycler != null && (!Alive(recycler) || Ending(recycler) || !((Behaviour)recycler).isActiveAndEnabled)) { Vacate(); recycler = null; AimPipe(DefaultPipeExit(Unit(clicker))); }
         if (recycler == null)
         {
