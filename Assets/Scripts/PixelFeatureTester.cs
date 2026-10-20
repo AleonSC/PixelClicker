@@ -695,6 +695,14 @@ public class PixelFeatureTester : MonoBehaviour
         return list.ToArray();
     }
 
+    /// <summary>Removes one placed object (the belt panel's Remove): out of its feature's list, then destroyed.</summary>
+    public static void RemovePlaced(GameObject go)
+    {
+        if (go == null) return;
+        if (instance != null) { foreach (Feature f in instance.features) f.placed.Remove(go); instance.Refresh(); }
+        Destroy(go);
+    }
+
     /// <summary>A placed object was replaced by others (a belt split in two at a Belt Sorter's joint): they take its place in its feature's list, so they are saved.</summary>
     public static void ReplacePlaced(GameObject old, params GameObject[] added)
     {

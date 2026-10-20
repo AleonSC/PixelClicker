@@ -23,7 +23,7 @@
 //   first that frame; PixelHuskCrush asks on every press frame, so it is always caught. Released = PressOwner None again. A press that cancelled a
 //   Power Click charge (Charge) is kept the same way, so Block Hold's deferred start never picks it up after the cancel.
 //   Users: PixelBlockHold.CanStart (Cube), PixelClicker's hazard / bottle right-click (Cube), PixelHuskCrush (Husk). Systems that still check the
-//   right button on their own (belt flip, device / tester-object removal holds, the pet menu itself) are covered by the order above; a NEW right-click
+//   right button on their own (the belt panel tap, device / tester-object removal holds, the pet menu itself) are covered by the order above; a NEW right-click
 //   use adds its owner here instead of its own check.
 // ---------------------------------------------------
 using UnityEngine;

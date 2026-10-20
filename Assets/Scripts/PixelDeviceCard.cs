@@ -14,6 +14,8 @@
 //     upgrade back down (PlaceSteppers).
 //   * DEVICE ACTIONS: buttons a device adds itself (PixelDeviceInfo.AddAction, e.g. the Sorting Hopper's Select filter / Empty out) sit two to a row
 //     above Remove / Upgrades (PlaceActions).
+//   * NOT ONLY DEVICES (2026-10-20): OpenSubject(IPixelPanelSubject) shows the same panel for something that is not a placed device - a conveyor belt
+//     SECTION (PixelConveyorPanel: a right tap on a belt; the section glows while the panel is open). The subject fills the sheet and says what Remove does.
 //   * LEFT-CLICK is untouched (each device's own button, flag, winding...).
 //   The lines come from the device itself: PixelPlacedDevice.BuildInfo (common lines + AddInfo + IPixelDeviceInfo components; PixelDeviceInfo.cs).
 //   Refreshed every refreshSeconds while shown (no per-frame text building).
@@ -72,7 +74,11 @@ public class PixelDeviceCard : MonoBehaviour
     private Button removeButton, upgradesButton;
     private TMP_Text removeText;
     private PixelPlacedDevice panelDevice;
+    private IPixelPanelSubject panelSubject;   // (or something that is not a placed device: a conveyor belt section)
     private float nextPanelRefresh, removeArmedUntil;
+
+    /// <summary>Is the panel showing a target that still exists?</summary>
+    private bool PanelTargetAlive => panelSubject != null ? panelSubject.PanelAlive : panelDevice != null && !panelDevice.IsEnding;
 
     // Right tap
     private PixelPlacedDevice pressDevice;
@@ -84,7 +90,7 @@ public class PixelDeviceCard : MonoBehaviour
     private void Awake()
     {
         clicker = PixelFind.Cached<PixelClicker>();
-        PixelWindows.Register(this, 45, () => panelDevice != null && panel != null && PixelPop.IsOpen(panel.Root), ClosePanel);
+        PixelWindows.Register(this, 45, () => (panelDevice != null || panelSubject != null) && panel != null && PixelPop.IsOpen(panel.Root), ClosePanel);
     }
 
     private void OnDestroy()
@@ -123,11 +129,22 @@ public class PixelDeviceCard : MonoBehaviour
         rightWasHeld = held;
     }
 
-    private void OpenPanel(PixelPlacedDevice device)
+    /// <summary>Opens the shared panel on something that is not a placed device (a conveyor belt section: PixelConveyorPanel).</summary>
+    public static void OpenSubject(IPixelPanelSubject subject)
+    {
+        PixelDeviceCard card = PixelFind.Cached<PixelDeviceCard>();
+        if (card == null || subject == null || card.clicker == null) return;
+        card.OpenPanel(null, subject);
+    }
+
+    private void OpenPanel(PixelPlacedDevice device, IPixelPanelSubject subject = null)
     {
         EnsureCanvas();
         if (panel == null) BuildPanel();
-        panelDevice = device;
+        if (panelSubject != null && panelSubject != subject) panelSubject.PanelClosed();
+        panelDevice = subject != null ? null : device;
+        panelSubject = subject;
+        if (subject != null) subject.PanelOpened();
         removeArmedUntil = 0f;
         nextPanelRefresh = 0f;
         if (!PixelPop.IsOpen(panel.Root) && panel.Chrome != null) panel.Chrome.PlaceNow();
@@ -140,13 +157,14 @@ public class PixelDeviceCard : MonoBehaviour
     private void ClosePanel()
     {
         panelDevice = null;
+        if (panelSubject != null) { IPixelPanelSubject was = panelSubject; panelSubject = null; was.PanelClosed(); }
         if (panel != null) PixelPop.Hide(panel.Root);
     }
 
     private void UpdatePanel(bool calm)
     {
-        if (panel == null || !PixelPop.IsOpen(panel.Root)) { panelDevice = null; return; }
-        if (panelDevice == null || !calm || panelDevice.IsEnding) { ClosePanel(); return; }   // (null = the device was destroyed)
+        if (panel == null || !PixelPop.IsOpen(panel.Root)) { if (panelDevice != null || panelSubject != null) ClosePanel(); return; }
+        if (!PanelTargetAlive || !calm) { ClosePanel(); return; }   // (the device / belt was destroyed)
         // A click anywhere outside the panel closes it (a right tap on another device reopens it on release).
         if ((PixelInput.LeftPressed() || PixelInput.RightPressed()) && !RectTransformUtility.RectangleContainsScreenPoint(panel.Rect, PixelInput.PointerPosition(), null))
         {
@@ -163,7 +181,8 @@ public class PixelDeviceCard : MonoBehaviour
         if (panel.Chrome != null && panel.Chrome.Minimized) return;   // (minimized: only the header shows; the rows are laid out again when it opens up)
         info.Clear();
         info.Full = true;
-        panelDevice.BuildInfo(info);
+        if (panelSubject != null) panelSubject.BuildPanelInfo(info);
+        else panelDevice.BuildInfo(info);
         panel.Title.text = info.Title.ToUpperInvariant();
         float pad = 18f, w = panelWidth - pad * 2f, y = panel.HeaderHeight + 10f;
         panelLines.text = string.Join("\n", info.Lines);
@@ -175,7 +194,7 @@ public class PixelDeviceCard : MonoBehaviour
         y = PlaceSteppers(pad, y, w);
         y = PlaceActions(pad, y, w);
 
-        PixelConsumables.DeviceKind? kind = panelDevice.Kind;
+        PixelConsumables.DeviceKind? kind = panelDevice != null ? panelDevice.Kind : null;
         PixelShop shop = PixelFind.Cached<PixelShop>();
         bool upgrades = kind.HasValue && shop != null && shop.HasOperationRow(kind.Value);
         upgradesButton.gameObject.SetActive(upgrades);
@@ -269,17 +288,18 @@ public class PixelDeviceCard : MonoBehaviour
 
     private void RunStepper(int index, bool plus)
     {
-        if (panelDevice == null || index >= panelSteppers.Count) return;
+        if (!PanelTargetAlive || index >= panelSteppers.Count) return;
         System.Action act = plus ? panelSteppers[index].OnPlus : panelSteppers[index].OnMinus;
         act?.Invoke();
-        if (panelDevice != null && panel != null && PixelPop.IsOpen(panel.Root)) RefreshPanel();
+        if (PanelTargetAlive && panel != null && PixelPop.IsOpen(panel.Root)) RefreshPanel();
     }
 
     private void RunAction(int index)
     {
-        if (panelDevice == null || index >= panelActions.Count) return;
+        if (!PanelTargetAlive || index >= panelActions.Count) return;
         panelActions[index].OnClick?.Invoke();
-        if (panelDevice != null && panel != null && PixelPop.IsOpen(panel.Root)) RefreshPanel();
+        if (PanelTargetAlive && panel != null && PixelPop.IsOpen(panel.Root)) RefreshPanel();
+        else if (panel != null && PixelPop.IsOpen(panel.Root)) ClosePanel();
     }
 
     private void BuildPanel()
@@ -306,9 +326,10 @@ public class PixelDeviceCard : MonoBehaviour
 
     private void OnRemove()
     {
-        if (panelDevice == null) return;
+        if (!PanelTargetAlive) return;
         if (removeArmedUntil <= 0f) { removeArmedUntil = Time.unscaledTime + 2.5f; removeText.text = removeConfirmLabel; return; }
-        if (consumables != null) consumables.RemoveDevice(panelDevice); else panelDevice.RemoveNow();
+        if (panelSubject != null) panelSubject.PanelRemove();
+        else if (consumables != null) consumables.RemoveDevice(panelDevice); else panelDevice.RemoveNow();
         ClosePanel();
     }
 

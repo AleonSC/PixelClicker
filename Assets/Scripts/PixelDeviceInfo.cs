@@ -17,6 +17,22 @@
 using System.Collections.Generic;
 
 /// <summary>A component on a placed device that adds its lines to the shared device card / panel.</summary>
+/// <summary>
+/// Something that is NOT a placed device but uses the same right-click panel (PixelDeviceCard.OpenSubject): conveyor belts (PixelConveyorPanel).
+/// It fills the sheet itself (title, lines, steppers, actions) and says what Remove does; Opened / Closed let it highlight what the panel edits.
+/// </summary>
+public interface IPixelPanelSubject
+{
+    /// <summary>Still there (the panel closes when it goes)?</summary>
+    bool PanelAlive { get; }
+    /// <summary>Fill the panel's sheet (info.Full is true).</summary>
+    void BuildPanelInfo(PixelDeviceInfo info);
+    /// <summary>The panel's Remove button (after its 'Sure?').</summary>
+    void PanelRemove();
+    void PanelOpened();
+    void PanelClosed();
+}
+
 public interface IPixelDeviceInfo
 {
     /// <summary>Add lines (info.Add / info.Note); info.Full = the right-click panel (everything), else the hover card (the essentials).</summary>

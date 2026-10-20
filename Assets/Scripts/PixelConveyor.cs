@@ -24,7 +24,8 @@
 //   to, the end is detected: an In COUPLING whose port is there (PixelSockets.cs / PixelCoupling.cs, docs/systems/PixelCouplings.md) hands the pixel to its device, otherwise it is EJECTED: physics back on, thrown on a little along the belt's direction (so it can fly into a Kiln mouth or onto the floor). Riders queue
 //   when the one ahead is stopped. Flipping a belt flips its riders; grabbing a rider with Pixel Grabbing frees it. Things spat out of a machine or dropped by the player simply land on a
 //   belt and get captured. Belts are saved with the tester save (shape incl. heights, riders). Built with PixelFactoryKit. SPEED: each belt can have its own speed - in FIRST PERSON a right click on a belt opens a small window (PixelConveyorSystem
-//   speed editor: a number box in cube widths per second, Set / Reverse / Close; the mouse is freed while it is open); in the normal view a right click still reverses the belt.
+//   speed editor: a number box in cube widths per second, Set / Reverse / Close; the mouse is freed while it is open). In the normal view a right CLICK opens the
+//   shared device panel on the belt's SECTION (2026-10-20, PixelConveyorPanel: speed stepper, Reverse, remove the piece or the section; the section glows).
 // ---------------------------------------------------
 using System.Collections.Generic;
 using TMPro;
@@ -787,6 +788,24 @@ public class PixelConveyor : MonoBehaviour
         ApplySelection();
     }
 
+    private bool highlighted;
+
+    /// <summary>Shows or hides the warm glow round the belt: the section the belt panel is editing (PixelConveyorPanel).</summary>
+    public void SetHighlight(bool on)
+    {
+        if (on == highlighted) return;
+        highlighted = on;
+        for (int i = transform.childCount - 1; i >= 0; i--)
+        {
+            Transform child = transform.GetChild(i);
+            if (child.name == "Panel Highlight") { child.gameObject.SetActive(false); Destroy(child.gameObject); }
+        }
+        if (!on || ghostMode) return;
+        PixelFactoryKit k = new PixelFactoryKit(clicker, true);
+        k.alpha = 0.45f;
+        k.Box("Panel Highlight", transform, new Vector3(0f, height * 0.5f + 0.1f * unit, 0f), new Vector3(width + 0.6f * unit, height + 0.55f * unit, length + 0.2f * unit), new Color(1f, 0.8f, 0.25f, 1f));
+    }
+
     private void ApplySelection()
     {
         for (int i = transform.childCount - 1; i >= 0; i--)
@@ -850,6 +869,15 @@ public class PixelConveyorSystem : MonoBehaviour
     private PixelClicker clicker;
     private static PixelConveyorSystem system;
     private readonly List<Rider> riders = new List<Rider>();
+
+    /// <summary>How many husks ride this belt right now (the belt panel).</summary>
+    public static int RidersOn(PixelConveyor belt)
+    {
+        if (system == null || belt == null) return 0;
+        int n = 0;
+        foreach (Rider r in system.riders) if (r.belt == belt) n++;
+        return n;
+    }
     private readonly HashSet<Rigidbody> riding = new HashSet<Rigidbody>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -1091,11 +1119,12 @@ public class PixelConveyorSystem : MonoBehaviour
             if (fpBelt != null) OpenEditor(fpBelt);    // first person: type a custom speed
             return;
         }
-        // Normal view: a quick right CLICK turns the belt round (holding the button deletes a tester object instead, see PixelFeatureTester).
+        // Normal view: a quick right CLICK opens the belt panel on its section (speed, reverse, remove; PixelConveyorPanel) - holding the button deletes
+        // the belt piece instead (a tester object, see PixelFeatureTester).
         if (!(PixelInput.RightPressed() || PixelInput.RightHeld() || flipTap.Pending)) return;
         Camera cam = clicker.ViewCamera;
         PixelConveyor belt = cam != null && !PixelInput.PointerOverUI() ? BeltUnder(cam.ScreenPointToRay(PixelInput.PointerPosition()), 1000f) : null;
-        if (flipTap.Update(belt) && belt != null) belt.Flip();
+        if (flipTap.Update(belt) && belt != null) PixelConveyorPanel.Open(belt);
     }
 
     private float laneCheckTimer;
