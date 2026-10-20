@@ -1468,3 +1468,4 @@
 [2026-10-19 19:54 UTC] Quantum Organizer: only a husk you grab and drop on its pad binds a type now (stray husks landing on it no longer do), and its reach went from 9 to 24 units.
 [2026-10-20 05:39 UTC] Removed the ring Sorter and the Magnetized Sorter (Magnet kept): their scripts (PixelSorterDevice, PixelMagnetSorterDevice, PixelStream), shop entries, crafting recipe, Operation upgrades, placing steps, save fields, Robot Worker jobs, stats, tips, controls and docs; the shared ring mesh moved to PixelRingMesh.
 [2026-10-20 05:39 UTC] To-do: the Standard shop-unlock plan no longer lists the Sorter / Magnetized Sorter.
+[2026-10-20 05:50 UTC] Added the Power Bank: a big battery (on sale at Woodcutting 10 with the big generator) that draws spare charge from Biomass Generators in its large ring (blue arcs, generators keep 35%) and powers every device in that ring while it holds charge.

@@ -194,6 +194,7 @@ public class PixelHints : MonoBehaviour, IPixelSaved
             case "device_JunctionBox": return "You placed a Junction Box!";
             case "device_PocketBiomassGenerator": return "You placed a Pocket Biomass Generator!";
             case "device_BiomassGenerator": return "You placed a Biomass Generator!";
+            case "device_PowerBank": return "You placed a Power Bank!";
             case "device_Funnel": return "You placed a Funnel!";
             case "husk_crush": return "Right-click a husk to crush it for XP";
             case "node_standard_aimed": return "Aimed Clicks: click near the cube's edge to aim husks";
@@ -275,6 +276,7 @@ public class PixelHints : MonoBehaviour, IPixelSaved
         H("device_JunctionBox", "Junction Box placed! Fit couplings on its sides and connect belts or hoses: whatever brings husks in makes that coupling IN, whatever takes them away makes it OUT. Husks are shared out in turn between the outputs, or sent to the one whose filter is their type - drop a husk on a coupling (or click / scroll it) to set its filter."),
         H("device_PocketBiomassGenerator", "Pocket Biomass Generator placed! Every device inside its blue ring runs on its power - their timers stop and show its blue energy bar. Keep it going by dropping Woodcutting husks into the firebox on top; when it runs dry it flashes red, then shuts down for good unless you feed it."),
         H("device_BiomassGenerator", "Biomass Generator placed! A bigger ring and much more charge: every device inside runs on its power while you feed it Woodcutting husks (the firebox on top, or its intake coupling). Empty, it flashes red and then shuts down unless you feed it."),
+        H("device_PowerBank", "Power Bank placed! Biomass Generators inside its big ring charge it with their spare power (the arcs show it flowing), and while it holds charge every device in the ring runs on it - their timers stop. It comes empty: put a running generator near it."),
         H("device_Magnet", "Magnet placed! It is grey and asleep: left-click it to switch it on. Then it pulls loose old pixels in around it and holds them in a heap without collecting them."),
         H("craft", "Crafted! The new item is in your Inventory under Consumables."),
         H("combo", "Combo! Keep clicking quickly to raise the combo bonus. It breaks if you stop for a moment."),

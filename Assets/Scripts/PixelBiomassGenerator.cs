@@ -9,10 +9,11 @@
 //     in through its intake coupling socket - are burnt: taken off the floor (FlyIn), + generatorChargePerHusk, up to the max. Other husks are left alone.
 //     The firebox is never narrower than 1.8 husk widths (the pocket model is small) and a husk resting on its rim counts. A SMALL SUCTION (suckRadiusHusks,
 //     suckStrength) draws loose Woodcutting husks nearby up and in towards it while it has room for fuel (FixedUpdate).
-//   - POWER: every placed device within 'radius' (generators excepted) is powered (PixelPlacedDevice.HoldPower(fraction, colour)): its countdown stops
+//   - POWER: every placed device within 'radius' (generators and Power Banks excepted: IsPowerSource) is powered (PixelPlacedDevice.HoldPower(fraction, colour)): its countdown stops
 //     and the generator's BLUE ENERGY BAR (PixelEnergyBar) shows over it, tracking the generator's charge. A faint blue ring on the floor shows the radius.
 //   - CHARGE: it comes FULL and drains 1 a second (drainPerSecond). Empty -> a FLASHING RED state for redSeconds (no power, the bar and the glow flash
 //     red), then it shuts down and disappears (RemoveNow). Feeding a wood husk in the red state cancels it and adds the charge.
+//   POWER BANK (2026-10-20): a PixelPowerBank in range draws its SPARE charge (GiveCharge: only above a kept fraction), with a blue arc from TopPoint.
 //   Saved: PlacedState.extra = the charge left. Device card: charge, radius, devices powered.
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -49,8 +50,32 @@ public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHu
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() { all.Clear(); }
 
+    /// <summary>Every generator standing in the world (the Power Bank draws from those in its radius).</summary>
+    public static IReadOnlyList<PixelBiomassGenerator> All => all;
+
     /// <summary>Is this placed device a generator (generators are never powered by each other)?</summary>
     public static bool IsGenerator(PixelPlacedDevice d) => d != null && d.GetComponent<PixelBiomassGenerator>() != null;
+
+    /// <summary>Does this placed device GIVE power (a generator or a Power Bank)? Power sources are never powered themselves.</summary>
+    public static bool IsPowerSource(PixelPlacedDevice d) => IsGenerator(d) || PixelPowerBank.IsBank(d);
+
+    /// <summary>Has fuel and is not shutting down (a Power Bank only draws from running generators).</summary>
+    public bool Running => clicker != null && charge > 0f && (device == null || !device.IsEnding);
+
+    /// <summary>The top of the chimney (world): where a Power Bank's charging arc starts.</summary>
+    public Vector3 TopPoint => transform.TransformPoint(new Vector3(0.55f * Unit(clicker) * size, 3.45f * Unit(clicker) * size, 0.75f * Unit(clicker) * size));
+
+    /// <summary>
+    /// A Power Bank asks for up to 'want' charge: it gets only what this generator holds ABOVE 'keepFraction' of its max (so it keeps running).
+    /// Returns what was given (taken off this generator's charge).
+    /// </summary>
+    public float GiveCharge(float want, float keepFraction)
+    {
+        float spare = charge - Mathf.Clamp01(keepFraction) * maxCharge;
+        float give = Mathf.Max(0f, Mathf.Min(want, spare));
+        charge -= give;
+        return give;
+    }
 
     private PixelClicker clicker;
     private PixelPlacedDevice device;
@@ -299,7 +324,7 @@ public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHu
         Vector3 me = transform.position;
         foreach (PixelPlacedDevice d in PixelPlacedDevice.All)
         {
-            if (d == null || d == device || d.IsEnding || IsGenerator(d)) continue;
+            if (d == null || d == device || d.IsEnding || IsPowerSource(d)) continue;
             Vector3 dv = d.transform.position - me; dv.y = 0f;
             if (dv.sqrMagnitude > radius * radius) continue;
             d.HoldPower(fraction, energyColor);

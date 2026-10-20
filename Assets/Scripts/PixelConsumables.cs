@@ -242,6 +242,8 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         ConveyorCombiner = 29,
         /// <summary>Not consumed: a Belt Jump ramp pair (PixelBeltJump). Right-click starts placing them on belt ends (PixelFeatureTester 'Belt Jump'); one is used up per jump placed.</summary>
         BeltJump = 30,
+        /// <summary>Placed, permanent: the Power Bank (PixelPowerBank) - stores charge drawn from Biomass Generators in its large radius and powers every device there.</summary>
+        PowerBank = 31,
     }
 
     /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
@@ -388,7 +390,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         public float strikeSeconds = 3f;
 
         [Min(0f)]
-        [Tooltip("Biomass Generators: seconds of power when full (it comes full; it drains 1 a second).")]
+        [Tooltip("Biomass Generators: seconds of power when full (it comes full; it drains 1 a second). Power Bank: how much charge it holds (it comes empty).")]
         public float generatorMaxCharge = 0f;
 
         [Min(0f)]
@@ -1032,6 +1034,34 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         };
     }
 
+    private static Device CreateDefaultPowerBank()
+    {
+        return new Device
+        {
+            kind = DeviceKind.PowerBank,
+            displayName = "Power Bank",
+            description = "A big battery. Biomass Generators standing inside its wide ring charge it with their spare power (they always keep some for themselves), and while it holds charge every device in the ring runs on it - their timers stop and show its energy bar. It comes empty and stays until you remove it; an idle bank keeps its charge.",
+            requiredType = PixelClicker.PixelType.Wood,
+            costs = new[]   // (2026-10-20: a first price - the Shops session owns it)
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Wood, amount = 4000 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Gray, amount = 1500 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Black, amount = 1500 },
+            },
+            maxHeld = 1,
+            durationSeconds = 1e9f,
+            radius = 16f,                    // how far its power reaches, and how far it draws from generators
+            generatorMaxCharge = 1800f,      // how much it holds (seconds of power for one device)
+            color = new Color(0.45f, 0.85f, 1f, 1f),
+            bodyDiameter = 2.4f,
+            bodyHeight = 2.5f,
+            vendorOnly = true,               // not in the shop until...
+            shopSkillId = "woodcutting",     // ...Woodcutting level 10 puts it on sale, with the big generator
+            shopSkillLevel = 10,
+            placingMessage = "Click the floor to put the {0} down - generators inside its ring charge it, devices inside run on it  (right-click to cancel)",
+        };
+    }
+
     private static Device CreateDefaultCoupling()
     {
         return new Device
@@ -1310,6 +1340,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.BiomassGenerator, CreateDefaultBiomassGenerator),
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ConveyorCombiner, CreateDefaultConveyorCombiner),
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.BeltJump, CreateDefaultBeltJump),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.PowerBank, CreateDefaultPowerBank),
     };
 
     /// <summary>
@@ -2371,6 +2402,9 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
                 case DeviceKind.BiomassGenerator:
                     root = PixelBiomassGenerator.CreateDisplay(clicker, d.bodyDiameter > 0f ? d.bodyDiameter : 1f);
                     break;
+                case DeviceKind.PowerBank:
+                    root = PixelPowerBank.CreateDisplay(clicker);
+                    break;
                 case DeviceKind.ConveyorCombiner:
                     root = PixelConveyorCombiner.CreateDisplay(clicker);
                     break;
@@ -2960,7 +2994,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
 
         Device effective = EffectiveDevice(d);
         PixelPlacedDevice placed = SpawnDevice(index, point, placingYaw, UsesKind(d.kind) ? effective.uses : DeviceSeconds(effective), 0f);
-        if (placed != null && d.kind != DeviceKind.StorageCrate && d.kind != DeviceKind.WoodChipper && d.kind != DeviceKind.Funnel && d.kind != DeviceKind.Recycler && d.kind != DeviceKind.SortingHopper && d.kind != DeviceKind.Sweeper && d.kind != DeviceKind.JunctionBox && !IsGeneratorKind(d.kind)) placed.Disarm();   // (the crate needs no switching on) starts grey and idle until you left-click it
+        if (placed != null && d.kind != DeviceKind.StorageCrate && d.kind != DeviceKind.WoodChipper && d.kind != DeviceKind.Funnel && d.kind != DeviceKind.Recycler && d.kind != DeviceKind.SortingHopper && d.kind != DeviceKind.Sweeper && d.kind != DeviceKind.JunctionBox && d.kind != DeviceKind.PowerBank && !IsGeneratorKind(d.kind)) placed.Disarm();   // (the crate needs no switching on) starts grey and idle until you left-click it
 
         EndPlacement();
         DevicePlaced?.Invoke(d.kind);
@@ -3036,6 +3070,15 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             Device fresh = d.kind == DeviceKind.BiomassGenerator ? CreateDefaultBiomassGenerator() : CreateDefaultPocketBiomassGenerator();
             gen.Init(clicker, d.radius, d.generatorMaxCharge > 0f ? d.generatorMaxCharge : fresh.generatorMaxCharge, d.generatorChargePerHusk > 0f ? d.generatorChargePerHusk : fresh.generatorChargePerHusk, size);
             result = generatorDevice;
+        }
+        else if (d.kind == DeviceKind.PowerBank)
+        {
+            GameObject root = PixelPowerBank.Place(clicker, point, yaw);
+            PixelChipperDevice bankDevice = root.AddComponent<PixelChipperDevice>();   // (the thin permanent-device stub; all the behaviour is in PixelPowerBank)
+            bankDevice.Init(clicker, cam, shrinkSeconds);
+            PixelPowerBank bank = root.AddComponent<PixelPowerBank>();
+            bank.Init(clicker, d.radius, d.generatorMaxCharge > 0f ? d.generatorMaxCharge : CreateDefaultPowerBank().generatorMaxCharge);
+            result = bankDevice;
         }
         else if (d.kind == DeviceKind.JunctionBox)
         {
@@ -3155,6 +3198,8 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             if (sweeper != null) state.extra = sweeper.ExportState();     // the Sweeper's wind left
             PixelBiomassGenerator generator = placed.GetComponent<PixelBiomassGenerator>();
             if (generator != null) state.extra = generator.ExportState();   // a Biomass Generator's charge left
+            PixelPowerBank bankState = placed.GetComponent<PixelPowerBank>();
+            if (bankState != null) state.extra = bankState.ExportState();   // a Power Bank's charge
             PixelJunctionBox junction = placed.GetComponent<PixelJunctionBox>();
             if (junction != null) state.extra = junction.ExportState();   // the Junction Box's filters and buffer
             list.Add(state);
@@ -3186,6 +3231,8 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         if (restoredSweeper != null) restoredSweeper.ImportState(state.extra);
         PixelBiomassGenerator restoredGenerator = restored != null ? restored.GetComponent<PixelBiomassGenerator>() : null;
         if (restoredGenerator != null) restoredGenerator.ImportState(state.extra);
+        PixelPowerBank restoredBank = restored != null ? restored.GetComponent<PixelPowerBank>() : null;
+        if (restoredBank != null) restoredBank.ImportState(state.extra);
         PixelJunctionBox restoredJunction = restored != null ? restored.GetComponent<PixelJunctionBox>() : null;
         if (restoredJunction != null) restoredJunction.ImportState(state.extra);
         if (restored is PixelStorageCrate restoredCrate) restoredCrate.ImportState(state.extra);
@@ -3266,6 +3313,11 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             suckPoint = null; timer = null;
             float size = d.bodyDiameter > 0f ? d.bodyDiameter : 1f;
             return isPreview ? PixelBiomassGenerator.CreateGhost(clicker, size) : PixelBiomassGenerator.CreateDisplay(clicker, size);
+        }
+        if (d.kind == DeviceKind.PowerBank)
+        {
+            suckPoint = null; timer = null;
+            return isPreview ? PixelPowerBank.CreateGhost(clicker) : PixelPowerBank.CreateDisplay(clicker);
         }
         if (d.kind == DeviceKind.JunctionBox)
         {
