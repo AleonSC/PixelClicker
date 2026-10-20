@@ -27,7 +27,7 @@ public static class PixelRockMesh
     public static Mesh Get(Mesh cube, int seed)
     {
         if (cube == null) return null;
-        int key = seed * 7919 + cube.GetInstanceID();
+        int key = seed * 7919 + PixelObjectId.Of(cube);
         if (cache.TryGetValue(key, out Mesh cached) && cached != null) return cached;
         Mesh m = Build(cube.bounds, seed);
         cache[key] = m;

@@ -55,7 +55,7 @@ public class OldPixelRadiation : MonoBehaviour
     private void Update()
     {
         if (clicker == null) { Destroy(this); return; }
-        float flicker = 0.85f + 0.15f * Mathf.Sin(Time.time * 7f + GetInstanceID());
+        float flicker = 0.85f + 0.15f * Mathf.Sin(Time.time * 7f + PixelObjectId.Of(this));
         if (glow != null) glow.intensity = 1.4f * flicker;
 
         ringTimer -= Time.deltaTime;

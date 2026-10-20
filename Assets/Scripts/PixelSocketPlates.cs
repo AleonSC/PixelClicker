@@ -47,7 +47,7 @@ public class PixelSocketPlates : MonoBehaviour
             foreach (IPixelSocketDevice d in PixelCouplings.Devices)
                 foreach (PixelSocket s in PixelCouplings.FreeSockets(d))
                 {
-                    string key = ((Object)d).GetInstanceID() + "/" + s.id;
+                    string key = PixelObjectId.Of((Object)d) + "/" + s.id;
                     seen.Add(key);
                     if (plates.TryGetValue(key, out GameObject g) && g != null) { PixelCouplings.KeepSize(g.transform); continue; }
                     plates[key] = Build(d, s);

@@ -29,7 +29,7 @@ public static class PixelGelFx
     public static Mesh BlobMesh(Mesh cube)
     {
         if (cube == null) return null;
-        int key = cube.GetInstanceID();
+        int key = PixelObjectId.Of(cube);
         if (blobs.TryGetValue(key, out Mesh cached) && cached != null) return cached;
         Mesh m = Object.Instantiate(PixelEgg.RoundedCubeMesh(0.32f, 12));
         m.name = "Gel Blob";
