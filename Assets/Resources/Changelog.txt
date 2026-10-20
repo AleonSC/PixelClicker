@@ -1492,3 +1492,4 @@
 [2026-10-20 07:15 UTC] Conveyor belts: a quick right click now opens the device panel (like other devices) on the belt's section - the section glows while it is open; it shows pieces, length, speed, lanes and riders, with a Speed stepper, Reverse, Remove this piece and Remove (the whole section). Holding right still removes one piece.
 [2026-10-20 07:26 UTC] Notes: the Devices session now commits straight to the default branch.
 [2026-10-20 07:30 UTC] Belt panel: a Size stepper sets the section's width in lanes (1 up to what the Electrician level allows; saved per belt); sorters and combiners on it follow the new width.
+[2026-10-20 07:40 UTC] Device card: a device is only hovered / right-clicked on its body, not on its radius ring or charge arcs (the Power Bank's card no longer shows anywhere in its big ring); the card's bar label shrinks to fit on one line (the Power Bank's 'empty' text no longer spills over the bar).

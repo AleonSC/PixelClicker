@@ -145,7 +145,7 @@ public abstract class PixelPlacedDevice : MonoBehaviour
     }
 
     /// <summary>Does this part count as 'on the device' for HitTest? (Default: every visible part except the range markings.) Read once per part, when the list is made.</summary>
-    protected virtual bool CountsForHit(Renderer r) => !IsMarking(r) && !r.name.StartsWith("Coupling");
+    protected virtual bool CountsForHit(Renderer r) => !IsMarking(r) && !r.name.StartsWith("Coupling") && !(r is LineRenderer);   // (lines - a generator's / Power Bank's radius ring, charge arcs, the world rings - are not the device's body)
 
     // The names of a device's MARKINGS (its reach disc / arc, the Fan's blow wedge, the Sorter's bend cone): they are not part of the
     // device's body (no clicks on them, hidden in shop / Operation pictures). Name a new marking with one of these and use IsMarking to test.

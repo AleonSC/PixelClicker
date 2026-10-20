@@ -442,6 +442,7 @@ public class PixelDeviceCard : MonoBehaviour
         b.label = PixelUIKit.CreateText(clicker.UIFont, go.transform, "Label", "", 20f, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
         b.label.raycastTarget = false;
         PixelUIKit.Stretch(b.label.rectTransform);
+        PixelUIKit.FitOneLine(b.label, 11f);   // (a long label shrinks to one line inside the bar instead of spilling over it)
         return b;
     }
 

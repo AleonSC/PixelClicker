@@ -301,9 +301,10 @@ public class PixelPowerBank : MonoBehaviour, IPixelDeviceInfo
     {
         info.Add("Charge", Mathf.FloorToInt(charge) + " / " + Mathf.CeilToInt(capacity) + " s");
         info.Progress = charge / capacity;
-        info.ProgressLabel = charge <= 0f ? "EMPTY - place a generator in its ring" : "";
+        info.ProgressLabel = charge <= 0f ? "EMPTY" : "";
         info.Add("Powering", powering + " device" + (powering == 1 ? "" : "s"));
         info.Add("Charging from", feeding + " generator" + (feeding == 1 ? "" : "s"));
+        if (charge <= 0f && feeding == 0) info.Note("<color=#FF8A7A>Empty: put a running Biomass Generator inside its ring.</color>");
         if (!info.Full) return;
         info.Add("Reach", radius.ToString("0.#") + " units");
         info.Add("Use", (drainPerDevice * Mathf.Max(1, powering)).ToString("0.##") + " s of charge a second");
