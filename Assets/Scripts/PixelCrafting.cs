@@ -18,6 +18,8 @@ using UnityEngine.UI;
 /// the Materials and Recipe Book side panels hang off it and are built here.
 ///
 /// Recipes are an Inspector list (two ingredients -> a potion or device), so new ones need no code.
+/// The CRAFTING CUBE button (under Craft) closes the window and places a Crafting Cube (PixelCraftingCube): a machine that crafts the same
+/// recipes, paying the pixel ingredients with husks (MachineRecipes / PricedRecipe / MachineCraft below).
 /// Add this to any GameObject. PixelShop adds it automatically if it is missing.
 /// </summary>
 public class PixelCrafting : MonoBehaviour
@@ -127,6 +129,9 @@ public class PixelCrafting : MonoBehaviour
     [Header("State")]
     [Tooltip("Is crafting available? (The shop turns this on when the Crafting upgrade is bought. Tick it to test.)")]
     [SerializeField] private bool craftingActive = false;
+
+    [Tooltip("Label of the window's button that places a Crafting Cube (a crafting machine fed with husks).")]
+    [SerializeField] private string craftingCubeText = "Crafting Cube";
 
     [Header("Recipes")]
     [Tooltip("Every recipe. Add your own: pick two ingredients and what they make.")]
@@ -765,6 +770,18 @@ public class PixelCrafting : MonoBehaviour
         sr.sizeDelta = new Vector2(-80f, fontSize * 1.3f);
         sr.anchoredPosition = new Vector2(0f, -y);
         y += fontSize * 1.3f + 8f;
+
+        // The Crafting Cube: closes this window and starts placing one (a crafting machine fed with husks, PixelCraftingCube).
+        Button cubeButton = PixelUIKit.CreateButton(font, body.transform, "Crafting Cube Button", craftingCubeText, new Vector2(320f, 54f), ButtonRole.Neutral, fontSize * 0.85f);
+        RectTransform cubr = cubeButton.GetComponent<RectTransform>();
+        cubr.anchorMin = cubr.anchorMax = cubr.pivot = new Vector2(0.5f, 1f);
+        cubr.anchoredPosition = new Vector2(0f, -y);
+        cubeButton.onClick.AddListener(() =>
+        {
+            Close();
+            if (PixelFeatureTester.StartFeature("Crafting Cube")) PixelHints.Announce("Click the floor to place the Crafting Cube. Right click stops");
+        });
+        y += 54f + 8f;
 
         bodyHeight = y;
 
@@ -2023,6 +2040,60 @@ public class PixelCrafting : MonoBehaviour
         int p = PotionIndexOf(ItemOf(ing));
         return p >= 0 && consumables.TryRemoveItem(p, (int)ing.Amount);
     }
+
+    // ------------------------------------------------------------------
+    // The Crafting Cube (PixelCraftingCube): it crafts the same recipes, paying the PIXEL ingredients with husks fed in through its couplings
+    // ------------------------------------------------------------------
+
+    /// <summary>The recipes a Crafting Cube can be set to: the defined (Inspector) recipes whose result exists in the game.</summary>
+    public void MachineRecipes(List<Recipe> into)
+    {
+        into.Clear();
+        foreach (Recipe r in recipes)
+            if (r != null && ResultIndex(r) >= 0 && !UsesRetiredDevice(r)) into.Add(r);
+    }
+
+    private static bool UsesRetiredDevice(Recipe r) => UsesRetired(r.a) || UsesRetired(r.b);
+
+    /// <summary>The recipe with today's prices (the same scaling the crafting window shows).</summary>
+    public Recipe PricedRecipe(Recipe r) => ScaleRecipe(r);
+
+    /// <summary>What a recipe makes, for labels ("Glass Potion", "Magnet x2").</summary>
+    public string MachineResultName(Recipe r) => r == null ? "?" : ResultName(r);
+
+    /// <summary>An ingredient's name for labels ("Glass", "Glass Potion", "Magnet").</summary>
+    public string IngredientName(Ingredient ing) => ing == null ? "?" : ItemName(ItemOf(ing));
+
+    /// <summary>
+    /// A Crafting Cube crafts one batch of a PRICED recipe (PricedRecipe): its pixel ingredients were already paid in husks by the cube; potion / device
+    /// ingredients come out of the inventory here. False (nothing taken) when those are missing or the result has no room. Counts like a craft in the window
+    /// (recipe book, crafting XP, the Crafted event).
+    /// </summary>
+    public bool MachineCraft(Recipe priced, Recipe defined)
+    {
+        if (priced == null || consumables == null) return false;
+        int result = ResultIndex(priced);
+        if (result < 0 || consumables.ItemRoom(result) < priced.resultAmount) return false;
+        bool same = SameIngredient(priced.a, priced.b);
+        foreach (Ingredient ing in new[] { priced.a, priced.b })
+        {
+            if (ing.kind == ItemKind.Pixel) continue;
+            double need = same ? priced.a.Amount + priced.b.Amount : ing.Amount;
+            if (Have(ItemOf(ing)) < need) return false;
+            if (same) break;
+        }
+        foreach (Ingredient ing in new[] { priced.a, priced.b }) if (ing.kind != ItemKind.Pixel && !Spend(ing)) return false;
+        consumables.AddItem(result, priced.resultAmount);
+        Recipe key = defined ?? priced;
+        bool firstTime = PixelStats.Total(RecipeKey(key)) <= 0d && PixelStats.Total(LegacyRecipeKey(key)) <= 0d;
+        PixelStats.Count(RecipeKey(key));
+        AddCraftingXp(XpPerCraft(key) + (firstTime ? (xpDiscovery > 0 ? xpDiscovery : 20) : 0));
+        Crafted?.Invoke();
+        return true;
+    }
+
+    /// <summary>Is the crafting window open (the Crafting Cube button closes it before placing starts)?</summary>
+    public void CloseWindow() => Close();
 
     private void PlaySound()
     {

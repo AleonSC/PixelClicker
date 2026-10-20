@@ -223,6 +223,11 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].groundPlane = true;
         features[features.Count - 1].export = PixelControlLever.ExportState;
         features[features.Count - 1].import = PixelControlLever.ImportState;
+        Register("Crafting Cube",
+                 "A crafting machine (also placed from the Crafting window's 'Crafting Cube' button). Hover it and its book opens; RIGHT-CLICK it to choose a recipe. Feed it husks of the recipe's pixel types through its four couplings or drop them on top (by value); other ingredients come from your inventory and what it makes goes into your inventory.",
+                 c => PixelCraftingCube.CreateGhost(c), (c, p, yw) => PixelCraftingCube.Place(c, p, yw));
+        features[features.Count - 1].export = PixelCraftingCube.ExportState;
+        features[features.Count - 1].import = PixelCraftingCube.ImportState;
         Register("Husk Source",
                  "A test box with a coupling socket on each side. LEFT-CLICK it to choose a block type (any type): it makes endless husks of that type out of every Out coupling that something takes them from - a belt starting at the coupling (while it has room), a machine's In coupling right in front of it, or a Container Hose pulling from it. Fit couplings on its sides first. Nothing connected = nothing made.",
                  c => PixelHuskSource.CreateGhost(c), (c, p, yw) => PixelHuskSource.Place(c, p, yw));

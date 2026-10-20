@@ -65,6 +65,8 @@ One line per script / system: what it is and where its details are. Search it (`
 | `PixelPadMinigame.cs` | Ultra Holes (the reworked Ultra Pad; id pad, pack unlocksMinigame = "pad", Minigames tab; | `docs/systems/PixelPadMinigame.md` |
 | `PixelCombo.cs` | Combo meter (shop upgrade "Combo Meter", UpgradeEffect.ComboMeter, 5 levels; | in the header comment of `PixelCombo.cs` |
 | `PixelCrafting.cs` | Crafting (shop pack with unlocksCrafting, Upgrades tab): | `docs/systems/PixelCrafting.md` |
+| `PixelCraftingCube.cs` | Crafting Cube: a placed crafting machine (from the Crafting window's button / Tester) with a coupling on each side and a floating book; crafts the picked recipe from husks fed in | in the header comment of `PixelCraftingCube.cs` |
+| `PixelCraftingCubeWindow.cs` | The Crafting Cube's recipe picker window (right-click tap on a cube) | in the header comment of `PixelCraftingCubeWindow.cs` |
 | `PixelPets.cs` | Pets (added by PixelClicker.Awake, singleton PixelPets.Instance): | `docs/systems/PixelPets.md` |
 | `PixelPetsCustomize.cs` | Part of partial class PixelPets: names and outfits. | `docs/systems/PixelPetsCustomize.md` |
 | `PixelPetsMenu.cs` | Part of partial class PixelPets: right-click a pet for a small menu (its name + 'Pet away' = switch it off like its Toggles > Pets switch). | in the header comment of `PixelPetsMenu.cs` |
