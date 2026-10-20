@@ -1474,3 +1474,4 @@
 [2026-10-20 06:12 UTC] Dev Hub: the Infinite resources, God mode, Husk despawn, Husk pile, Clear key, Husk limit, Spawned pixel, Middle click, Add pixels, Focus potions and Click count widgets are now one 'Resource Tools' widget.
 [2026-10-20 06:12 UTC] The Dev Hub Tester no longer lists Coupling, Wood Chipper, Conveyor Belt, Container Hose, Belt Sorter, Conveyor Elevator, Junction Box, Belt Jump, Conveyor Combiner and Solar Panel (they are shop items now).
 [2026-10-20 06:12 UTC] Added Belt Sorter, Conveyor Elevator, Belt Jump, Conveyor Combiner and Solar Panel to the shop's Utilities: right-click one to place it like the Coupling, one is used up per piece.
+[2026-10-20 06:16 UTC] Dev Hub: new 'Time control' widget - pause, play, slow motion, fast forward and rewind (husks only), with the mouse wheel changing the speed by 0.1x up to 5x.

@@ -207,6 +207,8 @@ public class PixelDevTools : MonoBehaviour
 
     [Tooltip("Height of each row.")]
     [SerializeField] private float rowHeight = 64f;
+    [Tooltip("Hover text of the Time control widget's buttons.")]
+    [SerializeField] private string timeControlTipText = "Rewind / Pause / Play / Slow / Fast. Press Slow, Fast or Rewind again for the next speed; while one is on, the mouse wheel changes the speed by 0.1x (0.1x - 5x). Rewind only moves husks back - currency, timers and devices stay as they are.";
 
     [Tooltip("Text size of rows and buttons.")]
     [SerializeField] private float fontSize = 30f;
@@ -403,6 +405,7 @@ public class PixelDevTools : MonoBehaviour
     {
         PixelDevHub.OpenChanged -= OnHubOpenChanged;
         PixelDevDocs.Shown -= OnDocsShown;
+        PixelTimeControl.Changed -= RefreshTimeStatus;
         if (instance == this)
         {
             instance = null;
@@ -903,6 +906,32 @@ public class PixelDevTools : MonoBehaviour
         Place(clickCountField.GetComponent<RectTransform>(), 40f + inner * 0.6f, y, inner * 0.4f);
         Widget(content, board, "clicks", ws, y);
         y += rowHeight + 24f;
+        ws = content.childCount;
+
+        // Time control: Pause / Play / Slow / Fast / Rewind (PixelTimeControl), and a status line under them
+        {
+            string[] names = { "Rewind", "Pause", "Play", "Slow", "Fast" };
+            System.Action[] acts =
+            {
+                () => PixelTimeControl.Instance?.Rewind(), () => PixelTimeControl.Instance?.Pause(), () => PixelTimeControl.Instance?.Play(),
+                () => PixelTimeControl.Instance?.Slow(), () => PixelTimeControl.Instance?.Fast(),
+            };
+            float bw = (inner - 4 * 8f) / names.Length;
+            for (int i = 0; i < names.Length; i++)
+            {
+                System.Action act = acts[i];
+                Button b = PixelUIKit.CreateButton(font, content, "Time " + names[i] + " Button", names[i], new Vector2(bw, rowHeight), buttonColor, textColor, fontSize * 0.8f);
+                Place(b.GetComponent<RectTransform>(), 40f + i * (bw + 8f), y, bw);
+                b.onClick.AddListener(() => act());
+                AddTip(b.gameObject, timeControlTipText);
+            }
+            timeStatus = PixelUIKit.CreateText(font, content, "Time Status", "", fontSize * 0.8f, TextAlignmentOptions.MidlineLeft, FontStyles.Normal, textColor);
+            Place(timeStatus.rectTransform, 40f, y + rowHeight + WidgetRowGap, inner);
+            RefreshTimeStatus();
+            PixelTimeControl.Changed += RefreshTimeStatus;
+            Widget(content, board, "timecontrol", ws, y, 2);
+            y += 2f * rowHeight + WidgetRowGap + 24f;
+        }
 
         BuildResourceToolsCard(content, board);
         board.Finish();   // the saved order, the layout and the scroll size
@@ -928,6 +957,13 @@ public class PixelDevTools : MonoBehaviour
         if (PixelDevHub.IsOpen) FillDropdowns();
     }
 
+    private void RefreshTimeStatus()
+    {
+        if (timeStatus == null) return;
+        PixelTimeControl tc = PixelTimeControl.Instance;
+        timeStatus.text = tc == null ? "Time control is off in this build" : tc.StatusText() + "   -   " + tc.RecordedSeconds.ToString("0") + " s to rewind";
+    }
+
     private void OnDocsShown(int sub)
     {
         if (sub == 0) RebuildTodo();
@@ -937,6 +973,7 @@ public class PixelDevTools : MonoBehaviour
     private void OnHubOpenChanged(bool open)
     {
         if (open && pixelDropdown != null) { FillDropdowns(); FillSelector(); }
+        if (open) RefreshTimeStatus();
     }
 
     /// <summary>Turns the controls built since child number 'start' of 'content' (one row) into a draggable widget card at row position y.</summary>
@@ -945,6 +982,7 @@ public class PixelDevTools : MonoBehaviour
         switch (id)
         {
             case "resources": return "Resource Tools";
+            case "timecontrol": return "Time control";
             case "addpixel": return "Add pixels";
             case "spawnpixel": return "Spawned pixel";
             case "spawnminigame": return "Minigames";
@@ -1072,6 +1110,7 @@ public class PixelDevTools : MonoBehaviour
 
     private Button resetButton;
     private TMP_Text resetLabel;
+    private TMP_Text timeStatus;   // the Time control widget's status line
     private float resetConfirmUntil;
 
     private void ResetCountsClicked()

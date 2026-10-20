@@ -74,3 +74,6 @@ Main tab widget **Dev reports** (`devreports`, 3 rows of two buttons) replaced t
 
 ## Resource Tools widget (2026-10-20)
 One Main-tab card 'Resource Tools' (`BuildResourceToolsCard`) holds what used to be 11 separate widgets: Infinite resources, God mode, Husk despawn, Husk pile, Clear key, Husk limit, Spawned pixel, Middle click, Add pixels, Focus potions, Click count (`ResourceToolIds`). `Widget()` keeps their controls aside instead of making a card; the combined card stacks them in that order, with a small sub-title above the tools that have no label of their own. The Tester tab no longer shows the 10 conveyor / device features that are now shop items (`PixelFeatureTester.SoldInShop`; still registered for StartFeature).
+
+## Time control widget (2026-10-20)
+Main-tab card 'Time control' (id `timecontrol`): buttons Rewind / Pause / Play / Slow / Fast plus a status line (mode, speed, seconds of history). The work is done by `PixelTimeControl` (PixelSystems, Core): see its header comment. Pressing Slow / Fast / Rewind again steps through its presets; while one is on, the plain mouse wheel changes the speed by 0.1x (0.1x - 5x). Rewind only moves the husks back through recorded snapshots (30 s by default).
