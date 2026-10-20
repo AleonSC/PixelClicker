@@ -56,7 +56,7 @@ public partial class PixelSkills
     [SerializeField] private int perkWindowVersion = 0;
 
     [Min(0f)]
-    [Tooltip("Perk 'Lingering pixels': seconds every old pixel lasts longer for each Standard level above 1. 0 = the coded default (5: level 2 = 40 s, level 7 = 65 s with the 35 s base).")]
+    [Tooltip("Perk 'Lingering pixels': seconds every husk lasts longer for each Standard level above 1. 0 = the coded default (5: level 2 = 40 s, level 7 = 65 s with the 35 s base).")]
     [SerializeField] private float lifetimePerLevel = 0f;
 
     [Min(0)]

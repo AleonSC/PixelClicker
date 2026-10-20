@@ -24,7 +24,7 @@ public partial class PixelClicker
     /// <summary>Frame time for the cube's click animations: they keep running while Time Stop has frozen the game clock.</summary>
     private int CopyCap => DevNoOldPixelLimit ? 0 : PixelTimeStop.IsStopped ? (timeStopStockpileMax <= 0 ? 0 : Mathf.Max(timeStopStockpileMax, OldPixelCap)) : OldPixelCap;
 
-    [Tooltip("Old Solar pixels last this many times as long as other old pixels, so it is easier to gather a group of them. 0 = 1.6.")]
+    [Tooltip("Old Solar pixels last this many times as long as other husks, so it is easier to gather a group of them. 0 = 1.6.")]
     [SerializeField] private float solarLifetimeFactor = 0f;
 
     private float LifetimeFactor(int tierIndex)
@@ -94,7 +94,7 @@ public partial class PixelClicker
 
         if (logVacuum && count > 0)
         {
-            System.Text.StringBuilder sb = new System.Text.StringBuilder("Vacuum: re-collected " + count + " old pixels worth " + total + " (");
+            System.Text.StringBuilder sb = new System.Text.StringBuilder("Vacuum: re-collected " + count + " husks worth " + total + " (");
             for (int i = 0; i < tiers.Length; i++)
                 if (perTier[i] > 0d) sb.Append(tiers[i].displayName).Append(" +").Append(perTier[i]).Append("  ");
             Debug.Log(sb.Append(")").ToString(), this);

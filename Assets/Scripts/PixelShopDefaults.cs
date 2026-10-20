@@ -91,7 +91,7 @@ public partial class PixelShop
         {
             displayName = "Vacuum Pixel",
             tab = ShopTab.Pixels,
-            description = "Adds the rare Vacuum pixel. Clicking it sucks up every old pixel and collects them again.",
+            description = "Adds the rare Vacuum pixel. Clicking it sucks up every husk and collects them again.",
             requirements = Needs(requiresGlassIndex),
             costs = new[]
             {
@@ -191,7 +191,7 @@ public partial class PixelShop
         {
             displayName = "Bomb Defusal",
             tab = ShopTab.Minigames,
-            description = "A bomb with red, green and blue wires appears now and then. Cut the wire of the colour you hold the most of before the timer runs out, or it blows up your old pixels. Defusing earns bomb parts.",
+            description = "A bomb with red, green and blue wires appears now and then. Cut the wire of the colour you hold the most of before the timer runs out, or it blows up your husks. Defusing earns bomb parts.",
             costs = new[]
             {
                 new PackCost { type = PixelClicker.PixelType.Red,   amount = 2500 },
@@ -288,7 +288,7 @@ public partial class PixelShop
         {
             displayName = "Sorting Race",
             tab = ShopTab.Minigames,
-            description = "Now and then some old pixels freeze in a jumbled grid. Click two pixels to swap them and group each type together before the timer runs out for a bonus payout.",
+            description = "Now and then some husks freeze in a jumbled grid. Click two pixels to swap them and group each type together before the timer runs out for a bonus payout.",
             costs = AllSix(5000),
             rewardTiers = new PixelClicker.PixelTier[0],
             unlocksMinigame = "sort",
@@ -358,7 +358,7 @@ public partial class PixelShop
         {
             displayName = "Breakout",
             tab = ShopTab.Minigames,
-            description = "Now and then (with 30+ old pixels on screen) the old pixels become a wall of bricks. Bounce the ball with your paddle and break them: each one pays 10x its worth.",
+            description = "Now and then (with 30+ husks on screen) the husks become a wall of bricks. Bounce the ball with your paddle and break them: each one pays 10x its worth.",
             costs = AllSix(12000),
             rewardTiers = new PixelClicker.PixelTier[0],
             unlocksMinigame = "breakout",
@@ -372,7 +372,7 @@ public partial class PixelShop
         {
             displayName = "Snake",
             tab = ShopTab.Minigames,
-            description = "Now and then every old pixel stops despawning and freezes. Steer a snake with the arrow keys and eat them all without biting yourself for 10x their worth.",
+            description = "Now and then every husk stops despawning and freezes. Steer a snake with the arrow keys and eat them all without biting yourself for 10x their worth.",
             costs = AllSix(1200),
             rewardTiers = new PixelClicker.PixelTier[0],
             unlocksMinigame = "snake",
@@ -499,7 +499,7 @@ public partial class PixelShop
         {
             displayName = "Seed Pixel",
             tab = ShopTab.Pixels,
-            description = "Adds the Seed pixel: a brown shell you dig at with many clicks to crack. A sprout comes out, plants itself and grows a random old pixel that pops off.",
+            description = "Adds the Seed pixel: a brown shell you dig at with many clicks to crack. A sprout comes out, plants itself and grows a random husk that pops off.",
             requirements = Needs(requiresRgbIndex),
             costs = new[]
             {
@@ -595,7 +595,7 @@ public partial class PixelShop
             displayName = "Nuclear Pixel",
             hideInShop = true,   // testing pack: Dev Tools 'Shop unlocks' only
             tab = ShopTab.Pixels,
-            description = "TEST: Adds the Nuclear pixel, a radioactive cube. Its old pixel is so radioactive that every old pixel lying near it despawns almost at once.",
+            description = "TEST: Adds the Nuclear pixel, a radioactive cube. Its husk is so radioactive that every husk lying near it despawns almost at once.",
             requirements = Needs(-1),
             costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 10 } },
             rewardTiers = new[]
@@ -886,7 +886,7 @@ public partial class PixelShop
         {
             displayName = "Black Hole",
             tab = ShopTab.Minigames,
-            description = "A black hole sometimes opens on the floor and swallows old pixels, feeding the singularity.",
+            description = "A black hole sometimes opens on the floor and swallows husks, feeding the singularity.",
             costs = new[]
             {
                 new PackCost { type = PixelClicker.PixelType.Black, amount = 60000 },
@@ -974,7 +974,7 @@ public partial class PixelShop
         {
             displayName = "Pixel Bank",
             tab = ShopTab.Upgrades,
-            description = "Store old pixels in a bank. Press B for a hose: right-click sucks a pixel up, left-click spits the selected one out, scroll to choose.",
+            description = "Store husks in a bank. Press B for a hose: right-click sucks a pixel up, left-click spits the selected one out, scroll to choose.",
             costs = AllSix(5000),
             rewardTiers = new PixelClicker.PixelTier[0],
             unlocksBank = true,
@@ -1052,9 +1052,9 @@ public partial class PixelShop
     {
         return new ShopPack
         {
-            displayName = "Old Pixel Capacity",
+            displayName = "Husk Capacity",
             tab = ShopTab.Upgrades,
-            description = "How many old pixels can lie around at once: {current}  →  {next}",
+            description = "How many husks can lie around at once: {current}  →  {next}",
             upgradeEffect = UpgradeEffect.OldPixelCap,
             levels = new[]
             {

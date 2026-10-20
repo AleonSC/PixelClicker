@@ -198,7 +198,7 @@ public static class PixelDevProbe
                 if (clicker != null && clicker.PixelTransform != null && t.IsChildOf(clicker.PixelTransform)) sb.Append(" (the cube)");
                 OldPixelInfo info = t.GetComponentInParent<OldPixelInfo>();
                 if (info != null && clicker != null && info.tierIndex >= 0 && info.tierIndex < clicker.Tiers.Length)
-                    sb.Append(" OLD PIXEL tier=").Append(clicker.Tiers[info.tierIndex].displayName).Append(" amount=").Append(info.amount.ToString("0.##"));
+                    sb.Append(" HUSK tier=").Append(clicker.Tiers[info.tierIndex].displayName).Append(" amount=").Append(info.amount.ToString("0.##"));
                 sb.Append(" scripts=");
                 foreach (MonoBehaviour mb in t.GetComponents<MonoBehaviour>()) if (mb != null) sb.Append(mb.GetType().Name).Append(' ');
                 sb.AppendLine();

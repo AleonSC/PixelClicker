@@ -46,7 +46,7 @@ public class PixelBank : MonoBehaviour, IPixelSaved
     // ------------------------------------------------------------------
 
     [Header("References")]
-    [Tooltip("The PixelClicker whose old pixels are stored. Found automatically if left empty.")]
+    [Tooltip("The PixelClicker whose husks are stored. Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
 
     [Tooltip("Fallback font, used only when the PixelClicker's 'UI Font' is empty.")]
@@ -125,7 +125,7 @@ public class PixelBank : MonoBehaviour, IPixelSaved
 
     [Header("Sucking and Spitting")]
     [Min(0.05f)]
-    [Tooltip("The laser beam is this wide (half of it, as a radius) when it looks for an old pixel to suck up, so a pixel just beside the red dot still counts.")]
+    [Tooltip("The laser beam is this wide (half of it, as a radius) when it looks for a husk to suck up, so a pixel just beside the red dot still counts.")]
     [SerializeField] private float suckRadius = 0.7f;
 
     [Min(0.05f)]
@@ -142,7 +142,7 @@ public class PixelBank : MonoBehaviour, IPixelSaved
     [SerializeField] private float areaHoldSeconds = 0.4f;
 
     [Min(0.1f)]
-    [Tooltip("Radius of the area (world units, measured across the screen around the nozzle). Only old pixels of the selected type inside it are pulled in.")]
+    [Tooltip("Radius of the area (world units, measured across the screen around the nozzle). Only husks of the selected type inside it are pulled in.")]
     [SerializeField] private float areaRadius = 2f;
 
     [Min(0.5f)]
@@ -157,7 +157,7 @@ public class PixelBank : MonoBehaviour, IPixelSaved
     [Tooltip("Thickness of the area ring, as a fraction of its radius.")]
     [SerializeField] private float areaRingThickness = 0.08f;
 
-    [Tooltip("Text near the nozzle when you hold for area suction but there is no pixel type to match (nothing selected and no old pixel under the nozzle).")]
+    [Tooltip("Text near the nozzle when you hold for area suction but there is no pixel type to match (nothing selected and no husk under the nozzle).")]
     [SerializeField] private string areaNoTypeText = "No pixel type to match";
 
     [Header("Selected Pixel Display")]

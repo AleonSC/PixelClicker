@@ -374,7 +374,7 @@ public class PixelCrashLog : MonoBehaviour
                 foreach (PixelClicker.PixelTier t in clicker.Tiers)
                     if (t.unlocked) sb.Append(" ").Append(t.displayName).Append("=").Append(PixelClicker.FormatNumber(t.count));
                 sb.AppendLine();
-                sb.AppendLine("  Old pixels on the floor: " + clicker.OldPixels.Count + "   Ultra held: " + clicker.TotalUltra);
+                sb.AppendLine("  Husks on the floor: " + clicker.OldPixels.Count + "   Ultra held: " + clicker.TotalUltra);
             }
 
             PixelShop shop = PixelFind.Cached<PixelShop>();

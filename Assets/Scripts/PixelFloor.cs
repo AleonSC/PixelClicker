@@ -236,7 +236,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     [SerializeField] private float ownFloorSize = 0f;
 
     [Min(0f)]
-    [Tooltip("How far (world units) the game-made floor lies under the cube's resting spot - the falling distance of the old pixels. 0 = the default (10).")]
+    [Tooltip("How far (world units) the game-made floor lies under the cube's resting spot - the falling distance of the husks. 0 = the default (10).")]
     [SerializeField] private float groundFallDistance = 0f;
 
     [Header("Styles")]

@@ -375,10 +375,10 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Tough pixels: the last click first shows the full counter (e.g. 5/5), then the payout (+7) pops up after this many seconds. 0 = both at once.")]
     [SerializeField] private float toughPayoutDelay = 0.3f;
 
-    [Tooltip("Show a '+X' popup over the cube when a Vacuum pixel sucks up old pixels.")]
+    [Tooltip("Show a '+X' popup over the cube when a Vacuum pixel sucks up husks.")]
     [SerializeField] private bool showVacuumPopup = true;
 
-    [Tooltip("Vacuum popup text. {0} = total amount collected from the old pixels.")]
+    [Tooltip("Vacuum popup text. {0} = total amount collected from the husks.")]
     [SerializeField] private string vacuumPopupFormat = "+{0}";
 
     [Tooltip("Vacuum popup size relative to a normal popup.")]

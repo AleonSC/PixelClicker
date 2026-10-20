@@ -5,7 +5,7 @@ One data-driven place for two kinds of skill block. A component (added by PixelC
 ## Special blocks - rare replacements
 `SpecialRule`: `tier` (the block's PixelTier: name, colour, clicks, pay), `skillId` (empty = any skill in play), `replaces` (block types it can take the place of), `chance`.
 `PixelClicker.PickSpawnTier` ends with `PixelBlockRules.TryReplace(clicker, pick)`; the tier is created on first use by `PixelClicker.EnsureSpecialTier` (no spawn weight, unlocked so the cube shows it).
-Default: **Great Oak** (Woodcutting, replaces Wood / Bark / Sap / Leaf / Heartwood / Twig, 1% rising to 25% as Acorn old pixels lie on the field (`hasBoost`, `boostBlock`, `boostFullCount` 12, `maxChance`), 50-100 clicks, pays 150; nests: PixelGreatOak.cs).
+Default: **Great Oak** (Woodcutting, replaces Wood / Bark / Sap / Leaf / Heartwood / Twig, 1% rising to 25% as Acorn husks lie on the field (`hasBoost`, `boostBlock`, `boostFullCount` 12, `maxChance`), 50-100 clicks, pays 150; nests: PixelGreatOak.cs).
 Not migrated yet: Fishing's Whale / Bottle / Pearl (PixelFishingSpawns, their chances feed the Pixel Guide's SpawnShare) - move them here when next touched.
 
 ## Hold blocks - bonus while held

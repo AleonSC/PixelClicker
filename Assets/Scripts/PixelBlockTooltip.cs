@@ -464,7 +464,7 @@ public class PixelBlockTooltip : MonoBehaviour
         nameText.text = pretty;
         nameText.color = Color.Lerp(c, Color.white, 0.25f);
 
-        string where = shownLive ? "ON THE CUBE" : "OLD PIXEL";
+        string where = shownLive ? "ON THE CUBE" : "HUSK";
         tagText.text = "<color=#" + Hex(rarityColor) + ">" + rarity + "</color>  <color=#8f9bb5>-  " + where + "</color>";
 
         double amount;

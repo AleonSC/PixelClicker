@@ -77,7 +77,7 @@ public partial class PixelAudio : MonoBehaviour
     [SerializeField] private bool muted = false;
 
     [Header("Sound Effects")]
-    [Tooltip("Every sound effect, by id. Built-in ids: click, auto_click, pixel_land (an old pixel hits the floor), hit, vacuum, combo, purchase, craft, drink, " +
+    [Tooltip("Every sound effect, by id. Built-in ids: click, auto_click, pixel_land (a husk hits the floor), hit, vacuum, combo, purchase, craft, drink, " +
              "device_place, achievement, ui_click, ui_scroll, grab, drop, ghost_spawn, ghost_click, meteor_spawn, meteor_click, blackhole_spawn, pad_spawn, pad_click, pad_wrong, pad_ultra, bomb_spawn, bomb_click, bomb_tick, bomb_explode, " +
              "and pixel_<type> (e.g. pixel_vacuum, pixel_meteor) which plays when that pixel type is collected. " +
              "Leave 'Clips' empty for silence.")]

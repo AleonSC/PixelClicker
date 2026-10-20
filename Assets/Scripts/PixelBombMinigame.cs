@@ -158,7 +158,7 @@ public class PixelBombMinigame : PixelMinigame
     [SerializeField] private Color defusedColor = new Color(0.5f, 1f, 0.6f, 1f);
 
     [Tooltip("Text shown when the bomb goes off.")]
-    [SerializeField] private string explodedText = "BOOM!  Old pixels destroyed";
+    [SerializeField] private string explodedText = "BOOM!  Husks destroyed";
 
     [Tooltip("Colour of that text.")]
     [SerializeField] private Color explodedColor = new Color(1f, 0.45f, 0.25f, 1f);

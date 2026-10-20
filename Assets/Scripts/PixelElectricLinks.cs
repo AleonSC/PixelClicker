@@ -19,7 +19,7 @@ using UnityEngine;
 public class PixelElectricLinks : MonoBehaviour
 {
     [Header("References")]
-    [Tooltip("The PixelClicker whose old pixels are scanned. Found automatically if left empty.")]
+    [Tooltip("The PixelClicker whose husks are scanned. Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
 
     [Header("Linking")]

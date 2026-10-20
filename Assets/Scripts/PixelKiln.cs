@@ -19,7 +19,7 @@ public class PixelKiln : MonoBehaviour, IPixelSocketDevice
     [SerializeField] private float burnSeconds = 0f;
 
     [Min(0)]
-    [Tooltip("Charcoal old pixels one burnt pixel makes. 0 = the coded default (1).")]
+    [Tooltip("Charcoal husks one burnt pixel makes. 0 = the coded default (1).")]
     [SerializeField] private int charcoalPerPixel = 0;
 
     [Min(0f)]

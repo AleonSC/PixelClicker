@@ -91,18 +91,18 @@ Pesticide used to be pure luck (a random block you could only use if it showed u
 | **Automation** | A **Pesticide Sprayer** placed near the cube sprays any Hive that appears, using Pesticide husks fed in by hand or by belt. | The builder: a machine to set up and keep supplied. |
 | **Avoidance** | A Focus potion, or the Infestation dial on Calm (below). | Anyone who wants a quiet stretch. |
 
-**Pesticide charges (hold to harvest).** Pesticide stays a block in the rotation, but **holding it with Block Hold converts it into Pesticide charges** instead of paying currency (the game-wide "hold a utility block for its use" rule, see `PixelRules.md`). Its old pixel (husk) still drops, so it can be fed to a Pesticide Sprayer or used again. Charges are banked: every time Pesticide comes by you can hold it, so when a warned Hive arrives you already have answers stocked. When an infested tree is warned, the tree bar shows your charge count. (Later, Farming can produce charges too - the planned cross-skill link.)
+**Pesticide charges (hold to harvest).** Pesticide stays a block in the rotation, but **holding it with Block Hold converts it into Pesticide charges** instead of paying currency (the game-wide "hold a utility block for its use" rule, see `PixelRules.md`). Its husk (husk) still drops, so it can be fed to a Pesticide Sprayer or used again. Charges are banked: every time Pesticide comes by you can hold it, so when a warned Hive arrives you already have answers stocked. When an infested tree is warned, the tree bar shows your charge count. (Later, Farming can produce charges too - the planned cross-skill link.)
 
 **When a Hive goes off anyway (the termites):**
-- Click threatened old pixels to save them (as now).
-- **Sap as bait:** termites go for Sap old pixels first and get stuck in them, so sap left on the floor near valuable husks is a cheap defence (and gives Sap a real job).
+- Click threatened husks to save them (as now).
+- **Sap as bait:** termites go for Sap husks first and get stuck in them, so sap left on the floor near valuable husks is a cheap defence (and gives Sap a real job).
 - Husks riding a belt or stored in a Storage Crate are safe from termites: building already protects you.
 
 So a Hive has a full arc: **prevent** it (Focus, Calm), **prepare** (charges), **automate** (Sprayer), **respond** (right clicks) and **recover** (sap bait, saving pixels).
 
 ### Hives are a resource: Focus potions
 
-- Clearing a Hive **safely** (10 right clicks, or one click with a held Pesticide) collects it as currency (this already works: right-click clearing collects hazards and drops them as an old pixel). Breaking it with left clicks gives nothing and lets the termites loose.
+- Clearing a Hive **safely** (10 right clicks, or one click with a held Pesticide) collects it as currency (this already works: right-click clearing collects hazards and drops them as a husk). Breaking it with left clicks gives nothing and lets the termites loose.
 - **Termite Hives are the ingredient for Lumberjack's Focus.** The Lumberjack sells it for hives (and a little currency), or it is crafted from them. A Focus potion gives a stretch of trees with no Hives (proposed: the next 10 trees, or 60 seconds as today).
 - So a hive costs you something in the moment but pays off later: dealing with it well matters, and avoiding every hive would mean having no Focus potions.
 
@@ -157,9 +157,9 @@ How far ahead you can see is itself a reward: early on you react, later you plan
 | Leaf | filler, tree tops | 1 | Basic filler and the start of most trees; floats down. |
 | Wood | filler, tree trunks | 2 | Plain wood in the filler rotation; the log runs of every tree. |
 | Moss | filler | 1 | Joins the filler later (level 2+). |
-| Sap | filler (2+), oak / maple slots | 1 | Sticky old pixel, pays a bit more. |
+| Sap | filler (2+), oak / maple slots | 1 | Sticky husk, pays a bit more. |
 | Pinecone | pine trees | 1 | Part of the Pine's shape. |
-| Acorn | oak trees (3+) | 1 | Its old pixel on the floor raises the Great Oak chance. |
+| Acorn | oak trees (3+) | 1 | Its husk on the floor raises the Great Oak chance. |
 | Bark | birch, oak, Great Oak | 1 | Cheap trunk block. |
 | Heartwood | cores (6+) | 4 | Rare payoff. |
 | Termite Hive | last slot of an infested tree | 4 left / 10 right | The hazard. |
@@ -193,7 +193,7 @@ When a tree falls:
 
 - A felling show: the cube "falls over" (a quick tilt and drop), chips burst out, a deep `timber` sound.
 - **Bonus XP** of about 20% of the tree's own XP.
-- A chance of an **Acorn** old pixel dropping (feeds the Great Oak chance).
+- A chance of an **Acorn** husk dropping (feeds the Great Oak chance).
 - Counted in stats (`woodcutting.trees_felled`), which later achievements and the Lumberjack can use ("Fell 100 trees").
 
 ## XP and pacing
@@ -257,7 +257,7 @@ Woodcutting stays the simple intro; other skills make it better:
 
 ## Value, body and use (the game-wide rule)
 
-Woodcutting follows `PixelRules.md`: a click extracts a block's **value** (currency) and drops its drained **husk** (the old pixel = material, never currency by itself); **holding** a utility block (Pesticide) gives its **charges** instead of currency. Wood husks are material for the Wood Chipper (XP), the Kiln (Charcoal), crates, crafting and the Pesticide Sprayer.
+Woodcutting follows `PixelRules.md`: a click extracts a block's **value** (currency) and drops its drained **husk** (the husk = material, never currency by itself); **holding** a utility block (Pesticide) gives its **charges** instead of currency. Wood husks are material for the Wood Chipper (XP), the Kiln (Charcoal), crates, crafting and the Pesticide Sprayer.
 
 ## Economy and sinks
 
@@ -274,7 +274,7 @@ Wood goods today only sell to the Lumberjack. Proposed sinks, to decide later: M
 1. **Tree mode (shared system).** Data per skill pack: a filler pool, the tree-arrival settings (`minFiller` / `maxFiller`) and a list of species (unlock level, weight, slot list with Fixed / Run / Wildcard / Optional / Hazard slots, infested chance). `PixelClicker.RollTier` serves the filler rotation or the current tree's next slot. Built generic so Mining (veins), Foraging (bushes) and Fishing (spots) can use it later.
 2. **Tree bar + Timber + infested warning + lookahead.** The tree bar (`Oak 7 / 12`, Hive icon, near the Next Up window), the felling show, sound, Timber reward and stats; the infested look and sound; the Next Up window learns to show 1-3 blocks ahead (`PixelClicker.PeekNextTier` becomes a peek of N).
 3. **Woodcutting species + gating.** Oak, Pine, Birch, Maple, Great Oak and the filler pool; remove the per-block filler / hazard shares for Woodcutting.
-4. **Hook the existing mechanics in.** Block Hold keeps the tree's order; Shuffle only on filler; Great Oak becomes a species; Focus potion stops infestation; Focus made from collected hives (Lumberjack trade / recipe); holding Pesticide gives charges (and a left click on a Hive with charges clears it); Sap old pixels bait termites.
+4. **Hook the existing mechanics in.** Block Hold keeps the tree's order; Shuffle only on filler; Great Oak becomes a species; Focus potion stops infestation; Focus made from collected hives (Lumberjack trade / recipe); holding Pesticide gives charges (and a left click on a Hive with charges clears it); Sap husks bait termites.
 5. **XP curve bands + XP per hit.** Then retune with the Balance report (which will need a "per tree" view).
 6. **Perks and skill tree nodes**, including the Infestation dial.
 7. **Cross-skill moves.** Whetstone to Mining (migration); Farming-made Pesticide charges.

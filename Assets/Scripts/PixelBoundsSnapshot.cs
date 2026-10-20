@@ -73,7 +73,7 @@ public static class PixelBoundsSnapshot
         }
         sb.AppendLine();
         var pixels = clicker.OldPixels;
-        sb.AppendLine("== Old pixels (" + pixels.Count + ") ==");
+        sb.AppendLine("== Husks (" + pixels.Count + ") ==");
         Bounds all = new Bounds(basePos, Vector3.zero);
         int n = 0;
         for (int i = 0; i < pixels.Count; i++)
@@ -82,7 +82,7 @@ public static class PixelBoundsSnapshot
             all.Encapsulate(pixels[i].position);
             if (n++ < 300) sb.AppendLine("  " + pixels[i].position.ToString("F2") + (pixels[i].isKinematic ? " kinematic" : ""));
         }
-        sb.AppendLine("extent of all old pixels: min=" + all.min.ToString("F2") + " max=" + all.max.ToString("F2"));
+        sb.AppendLine("extent of all husks: min=" + all.min.ToString("F2") + " max=" + all.max.ToString("F2"));
 
         return PixelDevProbe.Save("bounds", sb.ToString(), true);
     }

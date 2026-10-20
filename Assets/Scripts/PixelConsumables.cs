@@ -293,7 +293,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         public float durationSeconds = 30f;
 
         [Min(0.1f)]
-        [Tooltip("Reach (world units). Vacuum: how far old pixels are pulled in from. Fan: how long the cone is.")]
+        [Tooltip("Reach (world units). Vacuum: how far husks are pulled in from. Fan: how long the cone is.")]
         public float radius = 4f;
 
         [Min(0f)]
@@ -345,7 +345,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         public int boxCapacity = 60;
 
         [Header("Attuned (made by crafting a device with a potion)")]
-        [Tooltip("Runtime: this is an attuned copy of a Vacuum / Fan / Magnet that only affects old pixels of 'Attune Type'.")]
+        [Tooltip("Runtime: this is an attuned copy of a Vacuum / Fan / Magnet that only affects husks of 'Attune Type'.")]
         public bool attuned = false;
 
         [Tooltip("Runtime: the pixel type an attuned device works on.")]
@@ -502,7 +502,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
 
     [Header("Shift snapping")]
     [Min(0f)]
-    [Tooltip("Placing snaps the spot to a grid of this many old-pixel widths (also used by the Dev Hub tester); hold Shift for free placement. 0 = the coded default (1).")]
+    [Tooltip("Placing snaps the spot to a grid of this many husk widths (also used by the Dev Hub tester); hold Shift for free placement. 0 = the coded default (1).")]
     [SerializeField] private float shiftSnapGridCubes = 0f;
 
     [Min(0f)]
@@ -1660,7 +1660,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     }
 
     /// <summary>
-    /// Device texts saved in the scene still carry the numbers they were written with ("Hold up to 5", "Adds 3 Pesticide charges", "old pixels"):
+    /// Device texts saved in the scene still carry the numbers they were written with ("Hold up to 5", "Adds 3 Pesticide charges", "husks"):
     /// swap those for the placeholders ItemDescription fills in from the real settings, and 'old pixel' for 'husk'. A text without them is left alone.
     /// </summary>
     private void UseDescriptionPlaceholders()
@@ -1674,9 +1674,9 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
                 if (d.maxHeld > 0) t = System.Text.RegularExpressions.Regex.Replace(t, @"Hold up to \d+", "Hold up to {held}");
                 if (d.kind == DeviceKind.PesticideSpray) t = System.Text.RegularExpressions.Regex.Replace(t, @"Adds \d+ Pesticide charges", "Adds {charges} Pesticide charges");
                 if (d.kind == DeviceKind.LightningRod) t = System.Text.RegularExpressions.Regex.Replace(t, @"after \d+ strikes", "after {uses} strikes");
-                d.description = t.Replace("old pixels", "husks").Replace("old pixel", "husk");
+                d.description = PixelClicker.HuskWording(t);
             }
-            if (!string.IsNullOrEmpty(d.placingMessage)) d.placingMessage = d.placingMessage.Replace("old pixels", "husks").Replace("old pixel", "husk");
+            if (!string.IsNullOrEmpty(d.placingMessage)) d.placingMessage = PixelClicker.HuskWording(d.placingMessage);
             // (belts join machines through couplings now, not by latching onto an opening)
             if (d.description != null) d.description = d.description.Replace("(a conveyor belt opening in front of the chute latches on)", "(fit a coupling on the chute's socket to send them down a belt)");
             if (d.placingMessage != null) d.placingMessage = d.placingMessage

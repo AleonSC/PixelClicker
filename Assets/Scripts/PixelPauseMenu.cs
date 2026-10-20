@@ -273,7 +273,7 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string resetPopupPinText = "Reset achievement popup position";
     [Tooltip("Settings > Accessibility (under the achievement popup reset): the button that puts the Did you know tips box back at its default spot (docked at the right edge, near the top).")]
     [SerializeField] private string resetTipsLocationText = "Reset tips location";
-    [Tooltip("Label of the Settings tick box for the drop guide: a line and ring that show where a held old pixel would land.")]
+    [Tooltip("Label of the Settings tick box for the drop guide: a line and ring that show where a held husk would land.")]
     [SerializeField] private string dropGuideLabel = "Drop guide for held pixels";
     [Tooltip("Label of the custom UI button colour tick box in Settings (the eyedropper beside it picks the colour).")]
     [SerializeField] private string buttonColorLabel = "Custom UI button colour";

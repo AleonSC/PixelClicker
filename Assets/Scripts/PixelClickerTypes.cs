@@ -154,6 +154,25 @@ public partial class PixelClicker
         return i >= 0 && !string.IsNullOrEmpty(tiers[i].displayName) ? tiers[i].displayName : TypeName(type);
     }
 
+    private static readonly System.Text.RegularExpressions.Regex oldPixelWords =
+        new System.Text.RegularExpressions.Regex(@"\b(?:([Aa])n )?(old|Old|OLD)[ -](pixel|Pixel|PIXEL)(s|S)?\b");
+
+    /// <summary>
+    /// Player text with the old wording 'old pixel(s)' turned into 'husk(s)' (the player-facing name since 2026-10; 'an old pixel' -> 'a husk', case kept).
+    /// For texts saved in the scene / Inspector before the rename (pack, device and hint texts): the code defaults already say 'husk'.
+    /// </summary>
+    public static string HuskWording(string text)
+    {
+        if (string.IsNullOrEmpty(text) || text.IndexOf("ld", System.StringComparison.Ordinal) < 0) return text;
+        return oldPixelWords.Replace(text, m =>
+        {
+            string old = m.Groups[2].Value;
+            string word = old == "OLD" ? "HUSK" : old == "Old" ? "Husk" : "husk";
+            if (m.Groups[4].Success) word += old == "OLD" ? "S" : "s";
+            return m.Groups[1].Success ? m.Groups[1].Value + " " + word : word;
+        });
+    }
+
     /// <summary>Ores taken out of Mining (none at the moment: Lead, Zinc and Nickel are back). Tag a block RetiredOre to keep it out of the spawns.</summary>
     public static bool IsRetiredOre(PixelType type) => PixelBlockTags.Has(type, PixelTag.RetiredOre);   // (the tag table in PixelBlockTags.cs)
 
@@ -274,7 +293,7 @@ public partial class PixelClicker
         [Tooltip("STALL blocks also REFILL the Block Hold meter: every click on this block adds this fraction of the whole meter (0.05 = 5%). 0 = the coded default (0.04).")]
         public float stallRefill = 0f;
 
-        [Tooltip("Clicking this tier sucks up every old pixel currently in the scene and collects them again (a '+X' popup shows the total).")]
+        [Tooltip("Clicking this tier sucks up every husk currently in the scene and collects them again (a '+X' popup shows the total).")]
         public bool vacuum = false;
 
         [Tooltip("Render the pixel as see-through while this tier is active. A transparent copy of the pixel's material is made automatically " +
@@ -301,7 +320,7 @@ public partial class PixelClicker
         [Tooltip("Relative chance this tier is picked when a new pixel spawns (only used while Randomize Spawn Tier is on). 0 = never spawns.")]
         [Min(0f)] public float spawnWeight = 1f;
 
-        [Tooltip("Instead of dropping and bouncing, the old pixel of this tier flies away in a straight line like a meteor.")]
+        [Tooltip("Instead of dropping and bouncing, the husk of this tier flies away in a straight line like a meteor.")]
         public bool flyAway = false;
 
         [Tooltip("Screen direction a fly-away pixel leaves in (x = right, y = up). Used when 'Fly Random Direction' is off.")]

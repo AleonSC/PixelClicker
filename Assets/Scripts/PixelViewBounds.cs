@@ -26,14 +26,14 @@ using UnityEngine;
 public class PixelViewBounds : MonoBehaviour
 {
     [Header("References")]
-    [Tooltip("The PixelClicker whose old pixels are kept in view. Found automatically if left empty.")]
+    [Tooltip("The PixelClicker whose husks are kept in view. Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
 
     [Header("Bounds")]
     [Tooltip("Turn the screen-edge limit on or off.")]
     [SerializeField] private bool boundsActive = true;
 
-    [Tooltip("Keep old pixels inside a CIRCLE round the edge of the floor (where the floor fades out) instead of the four screen edges. Falls back to the screen edges while there is no floor.")]
+    [Tooltip("Keep husks inside a CIRCLE round the edge of the floor (where the floor fades out) instead of the four screen edges. Falls back to the screen edges while there is no floor.")]
     [SerializeField] private bool circleAroundFloor = true;
 
     [Tooltip("Keep the left and right edges.")]

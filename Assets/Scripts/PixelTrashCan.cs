@@ -10,7 +10,7 @@ using UnityEngine;
 public class PixelTrashCan : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom
 {
     [Min(0f)]
-    [Tooltip("How far from the can (in cube widths) loose old pixels are pulled in. 0 = the coded default (2.5).")]
+    [Tooltip("How far from the can (in cube widths) loose husks are pulled in. 0 = the coded default (2.5).")]
     [SerializeField] private float suctionRadiusCubes = 0f;
 
     [Min(0f)]

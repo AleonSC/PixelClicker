@@ -46,16 +46,16 @@ Keep this map current: when a system gets a new link (or loses one), change its 
 
 | Item | Takes in | Gives out | Pressure it answers | Skill home | State |
 |---|---|---|---|---|---|
-| Vacuum Device | loose old pixels | husk XP (pixel rules); later maybe husks to a Recycler / storage | despawn | ? | Built |
-| Fan | - | moves old pixels | space | ? | Built |
-| Magnet | loose old pixels | holds them in a heap | despawn, space | ? | Built |
+| Vacuum Device | loose husks | husk XP (pixel rules); later maybe husks to a Recycler / storage | despawn | ? | Built |
+| Fan | - | moves husks | space | ? | Built |
+| Magnet | loose husks | holds them in a heap | despawn, space | ? | Built |
 | Quantum Organizer | bound types | stores them in its box | despawn, space | ? | Built |
-| Storage Crate | old pixels | stores them, click to take out | despawn | ? | Built |
-| Funnel | falling old pixels | a queue down a tube to a belt (with backpressure) | space, despawn | Electrician? | Built |
+| Storage Crate | husks | stores them, click to take out | despawn | ? | Built |
+| Funnel | falling husks | a queue down a tube to a belt (with backpressure) | space, despawn | Electrician? | Built |
 | Wood Chipper | wood husks | Woodcutting XP + Wood Chips (Biomass fuel x4, sold to the Lumberjack) | despawn | Woodcutting | Built |
 | Sprinkler | - | waters sprouts | - | Farming | Built |
 | Charge Booster | Electric pixels | a super charge | - | Electrician | Built |
-| Lightning Rod | old pixels around it | turns them into Electric pixels | - | Electrician | Built |
+| Lightning Rod | husks around it | turns them into Electric pixels | - | Electrician | Built |
 | Bait Bucket | Fish / Water husks | more fish spawn | - | Fishing | Built |
 | Seeds | - | grow a pixel type | - | Farming | Built |
 | Potions (per pixel type) | Glass + pixels (crafting) | that type's effect for a while | the rotation | Crafting | Built |
@@ -125,17 +125,17 @@ Machines can **break** from the wrong input (main cause) or gentle wear (optiona
 |---|---|---|---|
 | Glass | potion and Pixel Bank material | Crafting, Bank | Built |
 | Luminescent | glowing trail | ? | Built |
-| Vacuum | sucks up old pixels for husk XP | husks, skills (XP) | Built |
+| Vacuum | sucks up husks for husk XP | husks, skills (XP) | Built |
 | Obsidian | a tough Mining ore | Mining | Built |
-| Singularity | gravity well holding old pixels | despawn, space | Built |
-| Ghost | drifting old pixel, Ghost minigame | Ghost minigame | Built |
-| Meteor | flying old pixel, Stardust | Stardust minigame | Built |
+| Singularity | gravity well holding husks | despawn, space | Built |
+| Ghost | drifting husk, Ghost minigame | Ghost minigame | Built |
+| Meteor | flying husk, Stardust | Stardust minigame | Built |
 | Solar | daylight that speeds growth; a hovering Solar husk keeps daylight up | Farming (growth) | Built |
 | Electric | Overcharge, device power | Electrician, auto clicker | Built |
 | Mirror | repeats the last payout | the rotation | Built |
 | Fire | ring of flames | ? (Kiln fuel? Idea) | Built |
 | Treasure | random-hit chest, pours out pixels | ? | Built |
-| Nuclear | ages nearby old pixels fast | a hazard-like pressure | Built |
+| Nuclear | ages nearby husks fast | a hazard-like pressure | Built |
 
 ## 7. Collectibles and meta systems
 

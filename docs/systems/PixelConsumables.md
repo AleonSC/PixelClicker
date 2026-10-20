@@ -4,7 +4,7 @@ Moved from CLAUDE.md. The script header comments and `CLAUDE.md` index point her
 
 ## Attuned devices (PixelConsumables.AppendAttunedDevices, PixelCrafting.FindAttuneRecipe)
 
-**Crafting a Vacuum Device, Fan or Magnet with a plain (single-type) potion** (`ResultKind.Attuned`, any box order, uses up one of each) makes an **attuned** copy that only affects old pixels of the potion's pixel type. For every potion type a craft-only `Device` clone (`attuned`, `attuneType`, name 'Attuned <device> (<Type>)', colour tinted by the pixel) is appended at runtime AFTER all normal devices (so indexes never shift; `FindDeviceOfKind` skips them; `ItemAttuned`, `FindAttunedDevice`); the saves keep only the ones you hold. `PixelPlacedDevice.AttuneTier` / `Accepts(body)` (set in `SpawnDevice`) is checked by the Vacuum / Fan / Magnet FixedUpdate. The crafting materials list always shows those three device kinds (when held).
+**Crafting a Vacuum Device, Fan or Magnet with a plain (single-type) potion** (`ResultKind.Attuned`, any box order, uses up one of each) makes an **attuned** copy that only affects husks of the potion's pixel type. For every potion type a craft-only `Device` clone (`attuned`, `attuneType`, name 'Attuned <device> (<Type>)', colour tinted by the pixel) is appended at runtime AFTER all normal devices (so indexes never shift; `FindDeviceOfKind` skips them; `ItemAttuned`, `FindAttunedDevice`); the saves keep only the ones you hold. `PixelPlacedDevice.AttuneTier` / `Accepts(body)` (set in `SpawnDevice`) is checked by the Vacuum / Fan / Magnet FixedUpdate. The crafting materials list always shows those three device kinds (when held).
 
 ## PixelConsumables.cs
 

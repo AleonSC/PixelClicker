@@ -43,7 +43,7 @@ public partial class PixelClicker
     [SerializeField] private int pestBugsMin = 0;
 
     [Min(0f)]
-    [Tooltip("How fast the pest bugs run, in old-pixel widths per second. 0 = the coded default (3.5).")]
+    [Tooltip("How fast the pest bugs run, in husk widths per second. 0 = the coded default (3.5).")]
     [SerializeField] private float pestBugSpeed = 0f;
 
     [Min(0f)]
@@ -62,10 +62,10 @@ public partial class PixelClicker
     [Tooltip("How fast a termite runs, in cube widths per second. 0 = the coded default (3.8).")]
     [SerializeField] private float termiteSpeed = 0f;
     [Min(0f)]
-    [Tooltip("Seconds a termite needs to eat an old pixel; the bar over the pixel counts this down. Click the pixel before it ends to save it. 0 = the coded default (5).")]
+    [Tooltip("Seconds a termite needs to eat a husk; the bar over the pixel counts this down. Click the pixel before it ends to save it. 0 = the coded default (5).")]
     [SerializeField] private float termiteEatSeconds = 0f;
     [Min(0)]
-    [Tooltip("The most termites (= old pixels attacked) one hive releases. 0 = the coded default (60).")]
+    [Tooltip("The most termites (= husks attacked) one hive releases. 0 = the coded default (60).")]
     [SerializeField] private int termiteMax = 0;
 
     [Min(0)]
@@ -73,14 +73,14 @@ public partial class PixelClicker
     [SerializeField] private int termiteRightClicks = 0;
 
     [Min(0)]
-    [Tooltip("What clearing a hazard with RIGHT clicks pays, in that hazard's own currency (it also drops as an old pixel). Breaking one with left clicks pays nothing. 0 = the coded default (1).")]
+    [Tooltip("What clearing a hazard with RIGHT clicks pays, in that hazard's own currency (it also drops as a husk). Breaking one with left clicks pays nothing. 0 = the coded default (1).")]
     [SerializeField] private int hazardClearReward = 0;
     public float TermiteSpeed => termiteSpeed > 0f ? termiteSpeed : 3.8f;
     public float TermiteEatSeconds => termiteEatSeconds > 0f ? termiteEatSeconds : 5f;
     public int TermiteMax => termiteMax > 0 ? termiteMax : 60;
 
     [Min(0f)]
-    [Tooltip("Gas Pocket blast: old pixels within this many old-pixel widths of the cube are blown away (no payout). 0 = the coded default (4).")]
+    [Tooltip("Gas Pocket blast: husks within this many husk widths of the cube are blown away (no payout). 0 = the coded default (4).")]
     [SerializeField] private float gasBlastWidths = 0f;
 
     /// <summary>A hazard block that sat on the cube too long leaves by itself (the cube rolls a new pixel).</summary>
@@ -268,7 +268,7 @@ public partial class PixelClicker
         else if (tier.type == PixelType.HornetNest)   // (the Termite Hive: the enum value kept its old name so saves stay valid)
         {
             int targeted = disableTermites ? 0 : PixelTermiteSwarm.Release(this, pos);
-            what = targeted > 0 ? "Termites poured out of the hive and are going for " + targeted + " old pixel" + (targeted == 1 ? "" : "s") + " - click them to save them!" : "The termites poured out but found nothing to eat.";
+            what = targeted > 0 ? "Termites poured out of the hive and are going for " + targeted + " husk" + (targeted == 1 ? "" : "s") + " - click them to save them!" : "The termites poured out but found nothing to eat.";
             if (!disableFarmFx) PixelFarmFx.Break(PixelType.HornetNest, pos, PixelBaseSize, tier.color);
         }
         else

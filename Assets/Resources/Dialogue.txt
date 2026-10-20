@@ -30,15 +30,15 @@ text: Cube Dash! The cube is dashing around the screen and the auto clicker is s
 overlay line: Cube Dash!
 
 [Tip: minigame_breakout]
-text: Breakout! The old pixels on screen turned into a wall of bricks (the rest shrank away) and the cube stepped aside. Move the paddle along the bottom with the mouse or the Left / Right arrows to bounce the ball into them. Every brick you break pays 10x that pixel's worth; run out of balls and the rest simply drop.
+text: Breakout! The husks on screen turned into a wall of bricks (the rest shrank away) and the cube stepped aside. Move the paddle along the bottom with the mouse or the Left / Right arrows to bounce the ball into them. Every brick you break pays 10x that pixel's worth; run out of balls and the rest simply drop.
 overlay line: Breakout!
 
 [Tip: minigame_sort]
-text: Sorting race! Some old pixels froze in a jumbled grid. Click one pixel, then another, to swap them. Get every colour together in one unbroken group before the timer runs out - finishing early pays extra.
+text: Sorting race! Some husks froze in a jumbled grid. Click one pixel, then another, to swap them. Get every colour together in one unbroken group before the timer runs out - finishing early pays extra.
 overlay line: Sorting race!
 
 [Tip: minigame_snake]
-text: Snake! Every old pixel froze and stopped despawning. Steer the snake with the arrow keys (or the on-screen arrows) and eat every pixel without biting yourself - you are paid 10x their worth. Run out of time or bite yourself and they just drop.
+text: Snake! Every husk froze and stopped despawning. Steer the snake with the arrow keys (or the on-screen arrows) and eat every pixel without biting yourself - you are paid 10x their worth. Run out of time or bite yourself and they just drop.
 overlay line: Snake time!
 
 [Tip: minigame_stardust]
@@ -54,15 +54,15 @@ text: Crafting unlocked! Open the Crafting button at the bottom right, drag two 
 overlay line: You unlocked Crafting!
 
 [Tip: grab]
-text: Pixel Grabbing unlocked! Hold the left mouse button on an old pixel to pick it up, then let go to throw it.
+text: Pixel Grabbing unlocked! Hold the left mouse button on a husk to pick it up, then let go to throw it.
 overlay line: You unlocked Pixel Grabbing!
 
 [Tip: timestop]
-text: Time Stop unlocked! Press T to freeze time and T again to resume. It drains an energy meter, but you can still click the cube - the old pixels pile up and burst out when time resumes.
+text: Time Stop unlocked! Press T to freeze time and T again to resume. It drains an energy meter, but you can still click the cube - the husks pile up and burst out when time resumes.
 overlay line: You unlocked Time Stop! (press T)
 
 [Tip: bank]
-text: Pixel Bank unlocked! Right-click an old pixel to store it. Open the Bank tab on the left edge, or press B for the hose: left-click spits a pixel out, hold right-click sucks up an area.
+text: Pixel Bank unlocked! Right-click a husk to store it. Open the Bank tab on the left edge, or press B for the hose: left-click spits a pixel out, hold right-click sucks up an area.
 overlay line: You unlocked the Pixel Bank!
 
 [Tip: minigame_ghost]
@@ -74,11 +74,11 @@ text: A meteor! Click it as often as you like to chip off meteor chunks.
 overlay line: A meteor appeared!
 
 [Tip: minigame_bomb]
-text: A bomb! Cut the wire that matches the colour you have the MOST of before time runs out. A wrong wire (or timeout) clears your old pixels.
+text: A bomb! Cut the wire that matches the colour you have the MOST of before time runs out. A wrong wire (or timeout) clears your husks.
 overlay line: A bomb appeared!
 
 [Tip: minigame_pad]
-text: An Ultra Pad! Drop old pixels of the colour it asks for onto it to earn Ultra pixels. Other colours cost you pixels.
+text: An Ultra Pad! Drop husks of the colour it asks for onto it to earn Ultra pixels. Other colours cost you pixels.
 overlay line: An Ultra Pad appeared!
 
 [Tip: potion]
@@ -86,11 +86,11 @@ text: Potion drunk! For a while only that pixel type spawns. Right-click the act
 overlay line: You drank a potion!
 
 [Tip: device_Vacuum]
-text: Vacuum Device placed! It is grey and asleep: left-click it to switch it on. Then it pulls in old pixels and collects them again for a few seconds. Hold right-click on a placed device to remove it.
+text: Vacuum Device placed! It is grey and asleep: left-click it to switch it on. Then it pulls in husks and collects them again for a few seconds. Hold right-click on a placed device to remove it.
 overlay line: You placed a Vacuum Device!
 
 [Tip: device_Fan]
-text: Fan placed! It is grey and asleep: left-click it to switch it on. Then it blows old pixels along the floor in front of it until its timer runs out.
+text: Fan placed! It is grey and asleep: left-click it to switch it on. Then it blows husks along the floor in front of it until its timer runs out.
 overlay line: You placed a Fan!
 
 [Tip: device_Sprinkler]
@@ -98,11 +98,11 @@ text: Sprinkler placed! It is grey and asleep: left-click it to switch it on. Th
 overlay line: You placed a Sprinkler!
 
 [Tip: device_MagnetSorter]
-text: Magnetized Sorter placed! Left-click it to switch it on. It sucks loose old pixels from the arc in front of its magnet into the box. Click an exit pipe to grab it, click again to put it down; scroll over a pipe to choose which stored pixel type it shoots out.
+text: Magnetized Sorter placed! Left-click it to switch it on. It sucks loose husks from the arc in front of its magnet into the box. Click an exit pipe to grab it, click again to put it down; scroll over a pipe to choose which stored pixel type it shoots out.
 overlay line: You placed a Magnetized Sorter!
 
 [Tip: device_QuantumOrganizer]
-text: Quantum Organizer placed! Left-click it to switch it on, then drop a pixel onto the pad to bind its type. Every loose old pixel of that type is dematerialized and stored in the box. Click the box to let some out again.
+text: Quantum Organizer placed! Left-click it to switch it on, then drop a pixel onto the pad to bind its type. Every loose husk of that type is dematerialized and stored in the box. Click the box to let some out again.
 overlay line: You placed a Quantum Organizer!
 
 [Tip: device_StorageCrate]
@@ -134,11 +134,11 @@ text: Biomass Generator placed! A bigger ring and much more charge: every device
 overlay line: You placed a Biomass Generator!
 
 [Tip: device_Magnet]
-text: Magnet placed! It is grey and asleep: left-click it to switch it on. Then it pulls loose old pixels in around it and holds them in a heap without collecting them.
+text: Magnet placed! It is grey and asleep: left-click it to switch it on. Then it pulls loose husks in around it and holds them in a heap without collecting them.
 overlay line: You placed a Magnet!
 
 [Tip: device_Sorter]
-text: Sorter placed! It is grey and asleep: left-click its ring or pipe to switch it on. Then click its buttons to change how hard old pixels are pushed out of the pipe.
+text: Sorter placed! It is grey and asleep: left-click its ring or pipe to switch it on. Then click its buttons to change how hard husks are pushed out of the pipe.
 overlay line: You placed a Sorter!
 
 [Tip: craft]
@@ -162,8 +162,8 @@ text: Combo Meter upgraded! Quick manual clicks build a combo; reaching a combo 
 overlay line: Combo Meter upgraded!
 
 [Tip: upgrade_cap]
-text: Old Pixel Capacity upgraded! More old pixels can lie around at once before the oldest ones are cleared away.
-overlay line: Old Pixel Capacity upgraded!
+text: Husk Capacity upgraded! More husks can lie around at once before the oldest ones are cleared away.
+overlay line: Husk Capacity upgraded!
 
 [Tip: upgrade_bank]
 text: Bank Storage upgraded! The Pixel Bank can now hold more stored pixels.
@@ -178,7 +178,7 @@ text: Glass Pixels unlocked! They are see-through, and you can combine one with 
 overlay line: You unlocked Glass Pixels!
 
 [Tip: pixel_Vacuum]
-text: Vacuum Pixels unlocked! Clicking one sucks nearby old pixels in and collects them.
+text: Vacuum Pixels unlocked! Clicking one sucks nearby husks in and collects them.
 overlay line: You unlocked Vacuum Pixels!
 
 [Tip: pixel_Obsidian]
@@ -206,11 +206,11 @@ text: Treasure Pixels unlocked! A chest takes a random 1 to 20 clicks to open, a
 overlay line: You unlocked Treasure Pixels!
 
 [Tip: pixel_Nuclear]
-text: Nuclear Pixels unlocked! (A testing pixel.) Its old pixel is radioactive: every old pixel lying near it despawns almost at once.
+text: Nuclear Pixels unlocked! (A testing pixel.) Its husk is radioactive: every husk lying near it despawns almost at once.
 overlay line: You unlocked Nuclear Pixels!
 
 [Tip: pixel_Fire]
-text: Fire Pixels unlocked! (A testing pixel.) Click one and a ring of flames bursts out of the cube; the old pixel burns away as it falls.
+text: Fire Pixels unlocked! (A testing pixel.) Click one and a ring of flames bursts out of the cube; the husk burns away as it falls.
 overlay line: You unlocked Fire Pixels!
 
 [Tip: pixel_Dirt]
@@ -234,7 +234,7 @@ text: Forager's Pack unlocked! The Foraging skill: Berry, Mushroom, Herb and rar
 overlay line: You unlocked the Forager's Pack!
 
 [Tip: pixel_Wood]
-text: Lumberjack's Pack unlocked! The Woodcutting skill: wood blocks (Wood, Bark, Sap, Leaf, Heartwood) and three fillers (Twig, Pinecone, Moss) plus a Termite Hive to avoid: break it and termites go for your old pixels, so click them to save them. Open the Skills window to train it: its blocks replace the basic pixels while it is in play. The fillers are useless and get rarer as you level.
+text: Lumberjack's Pack unlocked! The Woodcutting skill: wood blocks (Wood, Bark, Sap, Leaf, Heartwood) and three fillers (Twig, Pinecone, Moss) plus a Termite Hive to avoid: break it and termites go for your husks, so click them to save them. Open the Skills window to train it: its blocks replace the basic pixels while it is in play. The fillers are useless and get rarer as you level.
 overlay line: You unlocked the Lumberjack's Pack!
 
 [Tip: pixel_Rock]
@@ -278,7 +278,7 @@ text: Cubie unlocked Red, Green and Blue pixels! They pay the same as the black,
 overlay line: You unlocked Red, Green and Blue Pixels!
 
 [Tip: bank_hose]
-text: The hose is out! Scroll the mouse wheel to pick a stored pixel type. Left-click spits one out, right-click sucks up the nearest old pixel, and holding right-click sucks up everything of that type around the nozzle.
+text: The hose is out! Scroll the mouse wheel to pick a stored pixel type. Left-click spits one out, right-click sucks up the nearest husk, and holding right-click sucks up everything of that type around the nozzle.
 overlay line: Hose equipped!
 
 [Tip: bank_suck]
@@ -336,7 +336,7 @@ overlay line: You earned an Ultra pixel!
 [Intro tips]
 log: This is your Log. It tracks your achievements and your goals - what to work towards next. (Your click counts per pixel are in Settings > Stats.) Open it any time with the Log button at the bottom left.
 inventory: This is your Inventory. Currency shows how many of each pixel you hold - you spend them in the shop. Consumables holds your potions and devices. Open it any time with the Inventory button at the top left.
-earn: Clicking the pixel is the main way to earn currency. As you play, upgrades, minigames and managing the old pixels that fall to the floor will open up other ways to earn.
+earn: Clicking the pixel is the main way to earn currency. As you play, upgrades, minigames and managing the husks that fall to the floor will open up other ways to earn.
 right click: Try the right mouse button too: HOLD it on the block on the cube. It's each block's second action. On the pure pixels (black, gray, white, red, green and blue) it puts a stake on the block - the longer you hold (watch the meter by your cursor), the more it is worth when it comes round again, but the stake can also go bad and pay nothing. Skill blocks you meet later do their own thing when held.
 
 [Tutorial: Shop]
@@ -359,9 +359,9 @@ step 1: Welcome to Skills! Every pixel you collect now trains a skill. Standard 
 step 2: The bar along the top shows the skill you are training, its level and its XP. Fill it and the skill levels up.
 step 3: Pick a skill on the left. Standard is always there, every pack you unlock adds a card, and locked ones show ???. The orange ! on a card says what it swaps out and what it spawns.
 step 4: Press Train to put a skill in play. A pack swaps the basic cubes in your rotation for its own pixels, and only that skill earns XP. XP is kept per skill, so you can switch back and forth whenever you like.
-step 5: Each level unlocks a perk, listed on the right. Standard's perks work in every rotation, like longer-lasting old pixels and a roomier floor.
+step 5: Each level unlocks a perk, listed on the right. Standard's perks work in every rotation, like longer-lasting husks and a roomier floor.
 step 6: Every level above 1 also gives a skill point. Spend it in the Skill tree: open it with the Skill tree button on a skill's page.
-step 7: Careful: skill packs bring bad blocks too. Right-click a hazard to defuse it safely, or it goes off and costs you XP. What you do with old pixels matters as well: clearing out the useful ones earns bonus XP, junk costs it.
+step 7: Careful: skill packs bring bad blocks too. Right-click a hazard to defuse it safely, or it goes off and costs you XP. What you do with husks matters as well: clearing out the useful ones earns bonus XP, junk costs it.
 step 8: The Mastery bar along the bottom adds up all your skills. It only fills completely when every skill is maxed out.
 step 9: The pin button turns your current skill into a small window with an XP bar you can move around. Open Skills any time with the tab on the left edge of the screen.
 
@@ -529,4 +529,4 @@ farewell: Find a nice open spot and plant them. Then stand back, dear. Don't wai
 gift farewell: Mrrow! Fresh from the garden. I'll bring more if I find any.
 
 [Minigame: Black Hole]
-first hole: A black hole has opened!\nIt is hungry for old pixels. Find a way to feed it - {0} pixels will unlock something new.
+first hole: A black hole has opened!\nIt is hungry for husks. Find a way to feed it - {0} pixels will unlock something new.

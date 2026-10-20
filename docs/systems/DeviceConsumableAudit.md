@@ -25,7 +25,7 @@ Three read-only passes: device code, consumable code, and game design. The desig
 - **One name for the category:** "Devices" (Inventory, gallery) vs "Utilities" (shop).
 - **Swap warning:** drinking a potion while one runs replaces it silently; warn or say so.
 - **Description placeholders:** descriptions hard-code numbers ("3 Pesticide charges", "Hold up to 5/10", "For a minute"). Add `{held}` / `{charges}` / `{uses}` placeholders.
-- **Stale text:** "a conveyor belt opening latches on" (Wood Chipper, Funnel, enum comments) dates from before couplings, and 6 device texts still say "old pixels".
+- **Stale text:** "a conveyor belt opening latches on" (Wood Chipper, Funnel, enum comments) dates from before couplings, and 6 device texts still said "old pixels" (done 2026-10-20: every player text says husks).
 - **Database:** `PixelDatabase` adds an entry for every combo and attuned item (thousands); filter with `ItemListable` and drop its try/catch.
 - **Pointer check:** cache `DeviceUnderPointer` once per frame (it runs 2-3 times per frame).
 - **Naming:**

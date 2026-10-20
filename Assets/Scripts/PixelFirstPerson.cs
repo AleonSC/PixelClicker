@@ -21,11 +21,11 @@ public class PixelFirstPerson : MonoBehaviour
     [SerializeField] private bool disableFirstPerson = false;
 
     [Min(0f)]
-    [Tooltip("The player's height as a fraction of an old pixel's edge. 0 = the coded default (1.5: one and a half old pixels tall, three times the old size).")]
+    [Tooltip("The player's height as a fraction of a husk's edge. 0 = the coded default (1.5: one and a half husks tall, three times the old size).")]
     [SerializeField] private float heightFraction = 0f;
 
     [Min(0f)]
-    [Tooltip("Walking speed in old-pixel widths per second. 0 = the coded default (5).")]
+    [Tooltip("Walking speed in husk widths per second. 0 = the coded default (5).")]
     [SerializeField] private float walkSpeed = 0f;
 
     [Min(0f)]
@@ -33,7 +33,7 @@ public class PixelFirstPerson : MonoBehaviour
     [SerializeField] private float runFactor = 0f;
 
     [Min(0f)]
-    [Tooltip("How high a jump goes, in old-pixel widths. 0 = the coded default (0.45).")]
+    [Tooltip("How high a jump goes, in husk widths. 0 = the coded default (0.45).")]
     [SerializeField] private float jumpHeight = 0f;
 
     [Min(0f)]
@@ -49,7 +49,7 @@ public class PixelFirstPerson : MonoBehaviour
     [SerializeField] private float aimAssistDegrees = 0f;
 
     [Min(0f)]
-    [Tooltip("The fastest an old pixel is shoved when you run into it, in old-pixel widths per second (it is pushed along gently and never sent flying). 0 = the coded default (3).")]
+    [Tooltip("The fastest a husk is shoved when you run into it, in husk widths per second (it is pushed along gently and never sent flying). 0 = the coded default (3).")]
     [SerializeField] private float pushSpeed = 0f;
 
     /// <summary>True while first person mode is on (other scripts step aside: cube clicks, grabbing, the hose, Time Slow's S key).</summary>
@@ -59,7 +59,7 @@ public class PixelFirstPerson : MonoBehaviour
     [SerializeField] private float carryReach = 0f;
 
     [Min(0f)]
-    [Tooltip("Speed of a full-power throw, in old-pixel widths per second. 0 = the coded default (14).")]
+    [Tooltip("Speed of a full-power throw, in husk widths per second. 0 = the coded default (14).")]
     [SerializeField] private float throwSpeed = 0f;
 
     [Min(0f)]
@@ -68,7 +68,7 @@ public class PixelFirstPerson : MonoBehaviour
 
     [Header("Build controls (holding a cube)")]
     [Min(0f)]
-    [Tooltip("How far one wheel notch moves the held cube, in old-pixel widths. 0 = the coded default (0.35).")]
+    [Tooltip("How far one wheel notch moves the held cube, in husk widths. 0 = the coded default (0.35).")]
     [SerializeField] private float wheelStep = 0f;
 
     [Min(0f)]
@@ -80,7 +80,7 @@ public class PixelFirstPerson : MonoBehaviour
     [SerializeField] private float attachAngle = 28f;
 
     [Min(0f)]
-    [Tooltip("How close (in old-pixel widths) the held cube must be to a spot on another cube's face for the attach ghost to show. 0 = the coded default (0.9).")]
+    [Tooltip("How close (in husk widths) the held cube must be to a spot on another cube's face for the attach ghost to show. 0 = the coded default (0.9).")]
     [SerializeField] private float attachDistance = 0f;
 
     [Min(0f)]
@@ -126,7 +126,7 @@ public class PixelFirstPerson : MonoBehaviour
     [SerializeField] private float gridPlayerRadiusCubes = 0f;
 
     [Min(0f)]
-    [Tooltip("How far the grid shows round each old pixel lying on the ground, in cube widths. 0 = the coded default (2.5).")]
+    [Tooltip("How far the grid shows round each husk lying on the ground, in cube widths. 0 = the coded default (2.5).")]
     [SerializeField] private float gridPixelRadiusCubes = 0f;
 
     [Min(0f)]
@@ -143,15 +143,15 @@ public class PixelFirstPerson : MonoBehaviour
     [SerializeField] private Color wallColor = new Color(0f, 0f, 0f, 0f);
 
     [Min(0f)]
-    [Tooltip("How close to the edge (in old-pixel widths) the wall starts to appear. 0 = the coded default (10).")]
+    [Tooltip("How close to the edge (in husk widths) the wall starts to appear. 0 = the coded default (10).")]
     [SerializeField] private float wallVisibleCubes = 0f;
 
     [Min(0f)]
-    [Tooltip("Height of the wall in old-pixel widths. 0 = the coded default (12).")]
+    [Tooltip("Height of the wall in husk widths. 0 = the coded default (12).")]
     [SerializeField] private float wallHeightCubes = 0f;
 
     [Min(0f)]
-    [Tooltip("How far inside the floor's fade-out circle the wall stands (old-pixel widths). 0 = the coded default (1).")]
+    [Tooltip("How far inside the floor's fade-out circle the wall stands (husk widths). 0 = the coded default (1).")]
     [SerializeField] private float wallMarginCubes = 0f;
 
     private PixelFirstPersonWall wall;

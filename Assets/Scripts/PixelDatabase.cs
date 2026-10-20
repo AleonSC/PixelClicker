@@ -262,7 +262,7 @@ public static class PixelDatabase
                 re.discovered = px != null && px.discovered;
                 Link(re, "Special block", px, "Has a special-block rule");
                 if (r.replaces != null) foreach (PixelClicker.PixelType t in r.replaces) Link(re, "Replaces", PixelOf(t), "Can be replaced by a special block");
-                if (r.hasBoost) Link(re, "Raised by old pixels of", PixelOf(r.boostBlock), "Raises a special block's chance");
+                if (r.hasBoost) Link(re, "Raised by husks of", PixelOf(r.boostBlock), "Raises a special block's chance");
                 if (!string.IsNullOrEmpty(r.skillId) && skillEntries.TryGetValue(r.skillId, out Entry sk)) Link(re, "Skill", sk, "Special block of skill");
             }
             foreach (PixelBlockRules.HoldRule r in blockRules.HoldRules)
@@ -356,11 +356,11 @@ public static class PixelDatabase
                     case "Seed": special = "\nThis pet plants itself in the ground and sows seeds."; break;
                     case "Ghost": special = "\nThis pet only hovers."; break;
                     case "Glass": special = "\nThis pet shatters now and then and pulls itself back together."; break;
-                    case "Vacuum": special = "\nThis pet sucks up nearby old pixels and counts them."; break;
+                    case "Vacuum": special = "\nThis pet sucks up nearby husks and counts them."; break;
                 }
                 Entry pet = Add("Pet", pixelName + " Pet",
                     "A companion of the " + pixelName + " pixel. Every click has a small chance (" + (petSystem.FindChancePerClick * 100f).ToString("0.###") + "%) of finding it; automatic clicks count less, a Pet Treat helps. " +
-                    "While it is out, " + pixelName + " comes up " + petSystem.SpawnWeightFactor.ToString("0.#") + "x as often and its old pixels last " + petSystem.DespawnSlowDown.ToString("0.#") + "x longer." + special);
+                    "While it is out, " + pixelName + " comes up " + petSystem.SpawnWeightFactor.ToString("0.#") + "x as often and its husks last " + petSystem.DespawnSlowDown.ToString("0.#") + "x longer." + special);
                 pet.discovered = petSystem.IsOwned(t.type);
                 Link(pet, "Pet of pixel", PixelOf(t.type), "Has a pet");
             }

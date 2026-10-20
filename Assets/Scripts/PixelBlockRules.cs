@@ -33,15 +33,15 @@ public class PixelBlockRules : MonoBehaviour
         [Range(0f, 1f)]
         [Tooltip("Chance a rolled block of those types becomes this special block.")]
         public float chance = 0.05f;
-        [Tooltip("The chance rises while old pixels of the 'Boost Block' lie on the field (they just have to exist; no gathering).")]
+        [Tooltip("The chance rises while husks of the 'Boost Block' lie on the field (they just have to exist; no gathering).")]
         public bool hasBoost = false;
-        [Tooltip("The block whose old pixels lying on the field raise the chance (e.g. Acorn).")]
+        [Tooltip("The block whose husks lying on the field raise the chance (e.g. Acorn).")]
         public PixelClicker.PixelType boostBlock = PixelClicker.PixelType.White;
         [Min(1)]
-        [Tooltip("How many of those old pixels on the field give the full 'Max Chance'. Fewer give a proportional part.")]
+        [Tooltip("How many of those husks on the field give the full 'Max Chance'. Fewer give a proportional part.")]
         public int boostFullCount = 12;
         [Range(0f, 1f)]
-        [Tooltip("The chance with the full number of boost old pixels on the field.")]
+        [Tooltip("The chance with the full number of boost husks on the field.")]
         public float maxChance = 0.25f;
     }
 
@@ -362,7 +362,7 @@ public class PixelBlockRules : MonoBehaviour
             for (int i = 0; i < s.replaces.Length; i++) sb.Append(i > 0 ? (i == s.replaces.Length - 1 ? " or " : ", ") : "").Append(s.replaces[i].ToString().ToLowerInvariant());
             sb.Append(" block that comes up has a ").Append(Pct(s.chance)).Append(" chance of being this one instead.");
             if (s.hasBoost)
-                sb.Append(" Every ").Append(s.boostBlock.ToString().ToLowerInvariant()).Append(" old pixel lying on the field raises it (they only have to be there): with ").Append(s.boostFullCount).Append(" of them out it is ").Append(Pct(s.maxChance)).Append(".");
+                sb.Append(" Every ").Append(s.boostBlock.ToString().ToLowerInvariant()).Append(" husk lying on the field raises it (they only have to be there): with ").Append(s.boostFullCount).Append(" of them out it is ").Append(Pct(s.maxChance)).Append(".");
         }
         if (TryGetHold(type, out HoldRule h))
         {

@@ -33,10 +33,10 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Remember the tick boxes, the amount and the drop-down choices between play sessions (PlayerPrefs). The values set in the Inspector are the first-time defaults.")]
     [SerializeField] private bool rememberSettings = true;
 
-    [Tooltip("Start with 'Disable old pixel despawns' ticked: old pixels never expire on their own.")]
+    [Tooltip("Start with 'Disable husk despawns' ticked: husks never expire on their own.")]
     [SerializeField] private bool disableDespawn = false;
 
-    [Tooltip("Start with 'Disable old pixel limit' ticked: any number of old pixels can lie around (the Old Pixel Capacity cap is ignored).")]
+    [Tooltip("Start with 'Disable husk limit' ticked: any number of husks can lie around (the Husk Capacity cap is ignored).")]
     [SerializeField] private bool disableOldPixelLimit = false;
 
     [Tooltip("Start with 'God pixel mode' ticked: the mouse spawns pixels (left click) and destroys them (right click); scroll to choose the pixel.")]
@@ -47,7 +47,7 @@ public class PixelDevTools : MonoBehaviour
     [SerializeField] private float godSpawnRate = 14f;
 
     [Min(5f)]
-    [Tooltip("God pixel mode: how close (screen pixels) an old pixel must be to the cursor to be destroyed by a right click.")]
+    [Tooltip("God pixel mode: how close (screen pixels) a husk must be to the cursor to be destroyed by a right click.")]
     [SerializeField] private float godEraseRadius = 70f;
 
     [Tooltip("God pixel mode: where the small display sits relative to the cursor (canvas units).")]
@@ -65,7 +65,7 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Amount filled into the text field when the panel is first built.")]
     [SerializeField] private string defaultAmount = "100";
 
-    [Tooltip("Start with the 'Press Q to clear old pixels' box ticked.")]
+    [Tooltip("Start with the 'Press Q to clear husks' box ticked.")]
     [SerializeField] private bool clearKeyEnabled = false;
 
     [Tooltip("Start with 'Infinite resources' ticked: everything in the shop and crafting costs nothing.")]
@@ -104,10 +104,10 @@ public class PixelDevTools : MonoBehaviour
     [SerializeField] private string allPixelsText = "All pixels";
 
     [Tooltip("Label of the disable-despawns tick box.")]
-    [SerializeField] private string noDespawnToggleText = "Disable old pixel despawns";
+    [SerializeField] private string noDespawnToggleText = "Disable husk despawns";
 
-    [Tooltip("Label of the tick box that removes the limit on old pixels.")]
-    [SerializeField] private string noLimitToggleText = "Disable old pixel limit";
+    [Tooltip("Label of the tick box that removes the limit on husks.")]
+    [SerializeField] private string noLimitToggleText = "Disable husk limit";
 
     [Tooltip("Label of the tick box that makes the Farmer bring a Dragon Seed on every visit.")]
     [SerializeField] private string farmerSeedsToggleText = "Farmer always has dragon seeds";
@@ -124,7 +124,7 @@ public class PixelDevTools : MonoBehaviour
     [SerializeField] private string godModeLabel = "God Pixel Mode";
 
     [Tooltip("Tooltip of the god-pixel-mode row (shown while the mouse is over it).")]
-    [SerializeField] private string godTipText = "Scroll = pick a pixel, left click = spawn it, right click = destroy old pixels near the cursor";
+    [SerializeField] private string godTipText = "Scroll = pick a pixel, left click = spawn it, right click = destroy husks near the cursor";
 
     [Tooltip("Label of the minigame spawn button.")]
     [SerializeField] private string spawnText = "Spawn";
@@ -138,8 +138,8 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Text the reset button shows after the first click (click again within a few seconds to confirm).")]
     [SerializeField] private string resetConfirmText = "Click again to erase all counts";
 
-    [Tooltip("Label of the clear-old-pixels tick box.")]
-    [SerializeField] private string clearToggleText = "Press Q to clear old pixels";
+    [Tooltip("Label of the clear-husks tick box.")]
+    [SerializeField] private string clearToggleText = "Press Q to clear husks";
 
     [Tooltip("Label of the infinite-resources tick box.")]
     [SerializeField] private string infiniteToggleText = "Infinite resources";
@@ -1003,8 +1003,8 @@ public class PixelDevTools : MonoBehaviour
             case "reset": return "Reset counts";
             case "clear": return "Clear key";
             case "infinite": return "Infinite resources";
-            case "nodespawn": return "Old pixel despawns";
-            case "nolimit": return "Old pixel limit";
+            case "nodespawn": return "Husk despawns";
+            case "nolimit": return "Husk limit";
             case "god": return "God mode";
             case "clicks": return "Click count";
             default: return id;

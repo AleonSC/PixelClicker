@@ -110,12 +110,12 @@ public class PixelOperationUpgrade
         return new List<PixelOperationUpgrade>
         {
             U("vac_duration", "Run Time", "How long a placed Vacuum Device works.", V, PixelOperationStat.Duration, 6, 1.5f, 30, " s"),
-            U("vac_radius", "Suction Range", "How far from the device old pixels are pulled in.", V, PixelOperationStat.Radius, 5, 0.5f, 40),
-            U("vac_pull", "Pull Strength", "How hard old pixels are pulled towards the device.", V, PixelOperationStat.Pull, 5, 6f, 40),
+            U("vac_radius", "Suction Range", "How far from the device husks are pulled in.", V, PixelOperationStat.Radius, 5, 0.5f, 40),
+            U("vac_pull", "Pull Strength", "How hard husks are pulled towards the device.", V, PixelOperationStat.Pull, 5, 6f, 40),
 
             U("fan_duration", "Run Time", "How long a placed Fan blows.", F, PixelOperationStat.Duration, 6, 4f, 30, " s"),
             U("fan_radius", "Reach", "How long the blown cone is.", F, PixelOperationStat.Radius, 5, 0.8f, 40),
-            U("fan_blow", "Wind Power", "How hard the Fan pushes old pixels.", F, PixelOperationStat.Blow, 5, 3f, 40),
+            U("fan_blow", "Wind Power", "How hard the Fan pushes husks.", F, PixelOperationStat.Blow, 5, 3f, 40),
 
             U("boost_uses", "Click Capacity", "How many auto-clicker clicks a Charge Booster lasts.", B, PixelOperationStat.Uses, 6, 25f, 40),
             U("boost_charge", "Charge Needed", "Less Electric charge is needed before the super charge (lower is better).", B, PixelOperationStat.ChargeNeeded, 5, -1f, 50),
@@ -123,7 +123,7 @@ public class PixelOperationUpgrade
 
             U("rod_uses", "Strikes", "How many lightning strikes a Lightning Rod lasts.", R, PixelOperationStat.Uses, 6, 3f, 40),
             U("rod_rate", "Strike Rate", "Seconds between strikes (lower is better).", R, PixelOperationStat.StrikeInterval, 5, -0.4f, 50, " s"),
-            U("rod_radius", "Strike Reach", "How far from the rod old pixels are struck.", R, PixelOperationStat.Radius, 5, 0.6f, 40),
+            U("rod_radius", "Strike Reach", "How far from the rod husks are struck.", R, PixelOperationStat.Radius, 5, 0.6f, 40),
 
             U("fuel_storage", "Storage", "How many Combo Fuels you can hold.", C, PixelOperationStat.Storage, 5, 1f, 30),
 

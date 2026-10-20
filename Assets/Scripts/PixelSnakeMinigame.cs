@@ -37,7 +37,7 @@ using UnityEngine.InputSystem;
 public class PixelSnakeMinigame : PixelMinigame
 {
     [Header("References")]
-    [Tooltip("The PixelClicker (camera, old pixels, payouts). Found automatically if left empty.")]
+    [Tooltip("The PixelClicker (camera, husks, payouts). Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
 
     [Header("State")]
@@ -61,7 +61,7 @@ public class PixelSnakeMinigame : PixelMinigame
     [SerializeField] private float maxInterval = 240f;
 
     [Min(2)]
-    [Tooltip("A round only starts when at least this many old pixels are lying around.")]
+    [Tooltip("A round only starts when at least this many husks are lying around.")]
     [SerializeField] private int minPixels = 8;
 
     [Min(3)]
@@ -77,7 +77,7 @@ public class PixelSnakeMinigame : PixelMinigame
     [Tooltip("Payout when every pixel is eaten: this many times the worth of the pixels you ate.")]
     [SerializeField] private float rewardMultiplier = 10f;
 
-    [Header("Movement (sizes are in old-pixel widths)")]
+    [Header("Movement (sizes are in husk widths)")]
     [Min(0.5f)]
     [Tooltip("Starting speed of the snake, in pixel widths per second.")]
     [SerializeField] private float speed = 3f;
@@ -87,7 +87,7 @@ public class PixelSnakeMinigame : PixelMinigame
     [SerializeField] private float speedGain = 0.06f;
 
     [Min(0.5f)]
-    [Tooltip("Size of the head, relative to an old pixel.")]
+    [Tooltip("Size of the head, relative to a husk.")]
     [SerializeField] private float headScale = 1.25f;
 
     [Min(0.3f)]

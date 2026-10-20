@@ -32,7 +32,7 @@ using static PixelInput;
 public class PixelBreakoutMinigame : PixelMinigame
 {
     [Header("References")]
-    [Tooltip("The PixelClicker (camera, old pixels, payouts). Found automatically if left empty.")]
+    [Tooltip("The PixelClicker (camera, husks, payouts). Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
 
     [Header("State")]
@@ -56,11 +56,11 @@ public class PixelBreakoutMinigame : PixelMinigame
     [SerializeField] private float maxInterval = 300f;
 
     [Min(1)]
-    [Tooltip("A game only starts when at least this many old pixels are lying around: they become the bricks.")]
+    [Tooltip("A game only starts when at least this many husks are lying around: they become the bricks.")]
     [SerializeField] private int minPixels = 30;
 
     [Min(5)]
-    [Tooltip("At most this many old pixels become bricks. The rest are removed until the game is over.")]
+    [Tooltip("At most this many husks become bricks. The rest are removed until the game is over.")]
     [SerializeField] private int maxBricks = 45;
 
     [Header("Rules")]
@@ -96,7 +96,7 @@ public class PixelBreakoutMinigame : PixelMinigame
     [SerializeField] private float courtCentreY = 0.5f;
 
     [Range(0.2f, 0.9f)]
-    [Tooltip("How far in front of the camera the court floats, as a fraction of the distance to the cube (it must be in front of the old pixels).")]
+    [Tooltip("How far in front of the camera the court floats, as a fraction of the distance to the cube (it must be in front of the husks).")]
     [SerializeField] private float depthFraction = 0.6f;
 
     [Range(0.4f, 1f)]

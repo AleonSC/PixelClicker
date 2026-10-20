@@ -121,7 +121,7 @@ public partial class PixelClicker : MonoBehaviour
     [Tooltip("Speed of the glow breathing (cycles per second).")]
     [SerializeField] private float glowBreathSpeed = 0.8f;
 
-    [Tooltip("Also add a real light at the pixel so a glowing tier lights up nearby old pixels and the scene.")]
+    [Tooltip("Also add a real light at the pixel so a glowing tier lights up nearby husks and the scene.")]
     [SerializeField] private bool glowCastsLight = true;
 
     [Min(0f)]
@@ -178,7 +178,7 @@ public partial class PixelClicker : MonoBehaviour
     [SerializeField] private float lightTrailSeconds = 0.5f;
 
     [Min(0.05f)]
-    [Tooltip("Width of the trail, as a fraction of the old pixel's size.")]
+    [Tooltip("Width of the trail, as a fraction of the husk's size.")]
     [SerializeField] private float lightTrailWidth = 0.7f;
 
     [Min(0.1f)]
@@ -186,7 +186,7 @@ public partial class PixelClicker : MonoBehaviour
     [SerializeField] private float lightTrailBrightness = 1.6f;
 
     [Min(1f)]
-    [Tooltip("Extra glow on these old pixels: multiplies the tier's Glow Intensity (1 = no extra).")]
+    [Tooltip("Extra glow on these husks: multiplies the tier's Glow Intensity (1 = no extra).")]
     [SerializeField] private float oldPixelGlowBoost = 2.5f;
 
     [Header("Glow Shell (works in builds)")]
@@ -311,7 +311,7 @@ public partial class PixelClicker : MonoBehaviour
     [SerializeField] private bool spawnFallingCopy = true;
 
     [Header("Pixel rules (docs/systems/PixelRules.md)")]
-    [Tooltip("OFF (the pixel rules) = old pixels are husks: material that never pays currency again. The Vacuum pixel and Vacuum Device give XP for what they suck up, the first-person axe gives only XP, a hovering Solar pixel keeps daylight up, and the black hole / Ultra Holes no longer pay a husk's value. ON = the old behaviour (husks pay their value again).")]
+    [Tooltip("OFF (the pixel rules) = husks are material that never pays currency again. The Vacuum pixel and Vacuum Device give XP for what they suck up, the first-person axe gives only XP, a hovering Solar pixel keeps daylight up, and the black hole / Ultra Holes no longer pay a husk's value. ON = the old behaviour (husks pay their value again).")]
     [SerializeField] private bool husksPayCurrency = false;
     [Min(0f)]
     [Tooltip("XP one consumed husk gives (Vacuum pixel, Vacuum Device, Ultra Holes), as a share of the XP a manual click gives. Pure husks train Standard, a skill's husks train that skill. 0 = the coded default (0.5).")]
@@ -321,20 +321,20 @@ public partial class PixelClicker : MonoBehaviour
     [Tooltip("Print a console line listing what each Vacuum click re-collected, per pixel type (for checking the numbers).")]
     [SerializeField] private bool logVacuum = true;
 
-    [Tooltip("Seconds old pixels take to fly into the cube when a Vacuum pixel is clicked.")]
+    [Tooltip("Seconds husks take to fly into the cube when a Vacuum pixel is clicked.")]
     [SerializeField] private float vacuumSuckDuration = 0.4f;
 
     [Tooltip("Speed curve of the suck-in (time 0..1, progress 0..1). Rising curves pull faster toward the end.")]
     [SerializeField] private AnimationCurve vacuumSuckCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
     [Header("Nuclear Pixel")]
-    [Tooltip("Tick to turn off the Nuclear pixel's radiation (its old pixels no longer make their neighbours despawn; the pixel itself stays).")]
+    [Tooltip("Tick to turn off the Nuclear pixel's radiation (its husks no longer make their neighbours despawn; the pixel itself stays).")]
     [SerializeField] private bool disableNuclearFx = false;
 
     [Tooltip("How far an old Nuclear pixel's radiation reaches, in main-pixel widths. 0 = 4.")]
     [SerializeField] private float nuclearRadiusPixels = 0f;
 
-    [Tooltip("How fast other old pixels inside the radiation age, in seconds of age per real second. 0 = 40 (a pixel with a minute left is gone in about a second and a half).")]
+    [Tooltip("How fast other husks inside the radiation age, in seconds of age per real second. 0 = 40 (a pixel with a minute left is gone in about a second and a half).")]
     [SerializeField] private float nuclearAgeRate = 0f;
 
     [Header("Early Pixel Click Effects")]
@@ -345,7 +345,7 @@ public partial class PixelClicker : MonoBehaviour
     [SerializeField] private float clickPopStrength = 0f;
 
     [Header("Fire Pixel / Prospector Ores")]
-    [Tooltip("Tick to turn off the Fire pixel's burst of flames when it is clicked and its burning old pixels (the pixel itself stays).")]
+    [Tooltip("Tick to turn off the Fire pixel's burst of flames when it is clicked and its burning husks (the pixel itself stays).")]
     [SerializeField] private bool disableFireFx = false;
 
     [Min(0f)]
@@ -356,7 +356,7 @@ public partial class PixelClicker : MonoBehaviour
     [SerializeField] private bool disableProspectorFx = false;
 
     [Header("Meteor and Solar")]
-    [Tooltip("Tick to turn off the Meteor's hit particles and the fiery wake of its old pixel (the look's embers come from the look).")]
+    [Tooltip("Tick to turn off the Meteor's hit particles and the fiery wake of its husk (the look's embers come from the look).")]
     [SerializeField] private bool disableMeteorFx = false;
 
     [Range(0f, 1f)]
@@ -367,7 +367,7 @@ public partial class PixelClicker : MonoBehaviour
     [Tooltip("How many times its normal payout a rich vein pays. 0 = the coded default (5).")]
     [SerializeField] private float richVeinMultiplier = 0f;
 
-    [Tooltip("Old pixels sucked up swirl round the Vacuum pixel instead of flying straight in. Tick to turn the swirl off.")]
+    [Tooltip("Husks sucked up swirl round the Vacuum pixel instead of flying straight in. Tick to turn the swirl off.")]
     [SerializeField] private bool disableVacuumSwirl = false;
 
     [Min(0f)]
@@ -385,7 +385,7 @@ public partial class PixelClicker : MonoBehaviour
     [Tooltip("Size of each tiny pixel inside the Vacuum pixel, as a fraction of its edge. 0 = the coded default (0.26).")]
     [SerializeField] private float vacuumContentSize = 0f;
 
-    [Header("Old Pixel Physics")]
+    [Header("Husk Physics")]
     [Tooltip("Seconds a husk lies on the floor before it fades away (Standard's Lingering perk adds to it). 0 = never. 35 s (was 15) so husks WAIT: the player clicks a while, builds a pile, then clears it, instead of husks and clicks competing (docs/GameDesign.md 'Early game feel').")]
     [SerializeField] private float oldPixelLifetime = 35f;
 
@@ -401,7 +401,7 @@ public partial class PixelClicker : MonoBehaviour
 
     [Header("Potions")]
     [Min(1)]
-    [Tooltip("While a potion forces Vacuum pixels to spawn, only every this-many-th Vacuum click actually vacuums the old pixels (the others just pay out). Stops a chained Vacuum potion from re-collecting the whole floor on every click. 1 = every click vacuums.")]
+    [Tooltip("While a potion forces Vacuum pixels to spawn, only every this-many-th Vacuum click actually vacuums the husks (the others just pay out). Stops a chained Vacuum potion from re-collecting the whole floor on every click. 1 = every click vacuums.")]
     [SerializeField] private int potionVacuumEvery = 10;
 
     private int potionVacuumCounter;
@@ -425,9 +425,9 @@ public partial class PixelClicker : MonoBehaviour
     [Tooltip("Extra payout multiplier for each Value milestone reached (2 = doubles at every milestone).")]
     [SerializeField] private float valueMilestoneMultiplier = 2f;
 
-    [Header("Old Pixel Landing Sound")]
+    [Header("Husk Landing Sound")]
     [Min(0f)]
-    [Tooltip("An old pixel only makes a landing sound when it hits a surface at least this fast (world units per second), so resting or rolling pixels stay quiet.")]
+    [Tooltip("A husk only makes a landing sound when it hits a surface at least this fast (world units per second), so resting or rolling pixels stay quiet.")]
     [SerializeField] private float landMinSpeed = 1.5f;
 
     [Min(0.1f)]
@@ -435,30 +435,30 @@ public partial class PixelClicker : MonoBehaviour
     [SerializeField] private float landFullVolumeSpeed = 8f;
 
     [Min(0f)]
-    [Tooltip("Shortest time (seconds) between landing sounds from the same old pixel (it bounces a few times).")]
+    [Tooltip("Shortest time (seconds) between landing sounds from the same husk (it bounces a few times).")]
     [SerializeField] private float landCooldown = 0.12f;
 
-    [Header("Old Pixel Size")]
+    [Header("Husk Size")]
     [Range(0.05f, 1f)]
-    [Tooltip("Full size of an old pixel as a fraction of the clickable pixel (0.5 = half size). Smaller = less visual clutter.")]
+    [Tooltip("Full size of a husk as a fraction of the clickable pixel (0.5 = half size). Smaller = less visual clutter.")]
     [SerializeField] private float oldPixelScale = 0.5f;
 
-    [Header("Old Pixel Pop-In")]
+    [Header("Husk Pop-In")]
     [Range(0.01f, 1f)]
-    [Tooltip("Size an old pixel starts at, as a fraction of its normal size (0.05 = tiny).")]
+    [Tooltip("Size a husk starts at, as a fraction of its normal size (0.05 = tiny).")]
     [SerializeField] private float popStartScale = 0.05f;
 
     [Min(0f)]
-    [Tooltip("Seconds an old pixel takes to grow back to full size while falling. 0 = full size at once.")]
+    [Tooltip("Seconds a husk takes to grow back to full size while falling. 0 = full size at once.")]
     [SerializeField] private float popGrowSeconds = 0.35f;
 
     [Min(0f)]
-    [Tooltip("Seconds right after spawning that an old pixel has NO collision (so quick clicks don't make them pile up). 0 = solid at once.")]
+    [Tooltip("Seconds right after spawning that a husk has NO collision (so quick clicks don't make them pile up). 0 = solid at once.")]
     [SerializeField] private float popNoCollisionSeconds = 0.2f;
 
-    [Header("Old Pixel Despawn")]
+    [Header("Husk Despawn")]
     [Range(1f, 2f)]
-    [Tooltip("How big an old pixel swells (times its size) just before it vanishes.")]
+    [Tooltip("How big a husk swells (times its size) just before it vanishes.")]
     [SerializeField] private float despawnSwellScale = 1.25f;
 
     [Min(0.01f)]
@@ -471,7 +471,7 @@ public partial class PixelClicker : MonoBehaviour
 
     [Header("Fly-Away Pixels (tiers with Fly Away on)")]
     [Min(0.1f)]
-    [Tooltip("Seconds before a fly-away old pixel is removed.")]
+    [Tooltip("Seconds before a fly-away husk is removed.")]
     [SerializeField] private float flyLifetime = 3f;
 
     [Min(0f)]
@@ -499,10 +499,10 @@ public partial class PixelClicker : MonoBehaviour
     /// <summary>Called by the shop's Old Pixel Capacity upgrade (0 = back to the Inspector value).</summary>
     public void SetOldPixelCap(int value) => oldPixelCapOverride = Mathf.Max(0, value);
 
-    [Tooltip("Max old pixels kept while Time Stop is on (the stockpile that bursts out when time resumes). 0 = no cap.")]
+    [Tooltip("Max husks kept while Time Stop is on (the stockpile that bursts out when time resumes). 0 = no cap.")]
     [SerializeField] private int timeStopStockpileMax = 150;
 
-    [Tooltip("Old pixels below this world Y are destroyed (catches pixels that fall off the world).")]
+    [Tooltip("Husks below this world Y are destroyed (catches pixels that fall off the world).")]
     [SerializeField] private float fallingCopyKillHeight = -50f;
 
     [Tooltip("Random launch speed range (min, max) in units/second.")]
@@ -514,7 +514,7 @@ public partial class PixelClicker : MonoBehaviour
     [Tooltip("Random spin range (min, max) in radians/second, applied around a random axis.")]
     [SerializeField] private Vector2 popSpinRange = new Vector2(1f, 6f);
 
-    [Tooltip("Mass of an old pixel. Affects how it pushes other rigidbodies.")]
+    [Tooltip("Mass of a husk. Affects how it pushes other rigidbodies.")]
     [SerializeField] private float fallingCopyMass = 1f;
 
     [Tooltip("Air resistance (linear). 0 = none.")]
@@ -548,13 +548,13 @@ public partial class PixelClicker : MonoBehaviour
     [Tooltip("Continuous collision stops fast pixels tunneling through thin floors. Costs slightly more.")]
     [SerializeField] private CollisionDetectionMode collisionDetection = CollisionDetectionMode.ContinuousDynamic;
 
-    [Tooltip("Layer old pixels are placed on (controls what they collide with in Project Settings > Physics). -1 = leave on Default.")]
+    [Tooltip("Layer husks are placed on (controls what they collide with in Project Settings > Physics). -1 = leave on Default.")]
     [SerializeField] private int fallingCopyLayer = -1;
 
-    [Tooltip("Can old pixels block the click raycast? Off = clicks pass through them to the live pixel.")]
+    [Tooltip("Can husks block the click raycast? Off = clicks pass through them to the live pixel.")]
     [SerializeField] private bool oldPixelsBlockClicks = false;
 
-    [Tooltip("Should old pixels collide with the live floating pixel?")]
+    [Tooltip("Should husks collide with the live floating pixel?")]
     [SerializeField] private bool collideWithLivePixel = false;
 
     [Tooltip("Seconds the new pixel takes to materialize.")]
@@ -611,7 +611,7 @@ public partial class PixelClicker : MonoBehaviour
     [SerializeField] private int seedlingsMax = 0;
 
     [Min(0f)]
-    [Tooltip("Each seed has its own despawn timer: seconds from the moment it drops until it withers away if it hasn't popped its pixel yet. 0 = the coded default (45). The pixel it grows is an ordinary old pixel with its own normal despawn timer.")]
+    [Tooltip("Each seed has its own despawn timer: seconds from the moment it drops until it withers away if it hasn't popped its pixel yet. 0 = the coded default (45). The pixel it grows is an ordinary husk with its own normal despawn timer.")]
     [SerializeField] private float seedSproutLifetime = 0f;
 
     [Min(0f)]
@@ -619,7 +619,7 @@ public partial class PixelClicker : MonoBehaviour
     [SerializeField] private float seedSpacing = 0f;
 
     [Min(1f)]
-    [Tooltip("How big the sprout is drawn compared to an old pixel (bigger = easier to spot).")]
+    [Tooltip("How big the sprout is drawn compared to a husk (bigger = easier to spot).")]
     [SerializeField] private float seedSproutScale = 2.2f;
 
     [Min(0f)]
@@ -631,11 +631,11 @@ public partial class PixelClicker : MonoBehaviour
     [SerializeField] private int solarClusterSize = 5;
 
     [Min(0.5f)]
-    [Tooltip("Two old Solar pixels count as touching when their centres are within this many old-pixel widths of each other.")]
+    [Tooltip("Two old Solar pixels count as touching when their centres are within this many husk widths of each other.")]
     [SerializeField] private float solarClusterDistance = 1.5f;
 
     [Min(0f)]
-    [Tooltip("How close (in old-pixel widths) an old Solar pixel must lie to a growing sprout to speed it up.")]
+    [Tooltip("How close (in husk widths) an old Solar pixel must lie to a growing sprout to speed it up.")]
     [SerializeField] private float seedSolarReach = 6f;
 
     [Min(0f)]
@@ -647,7 +647,7 @@ public partial class PixelClicker : MonoBehaviour
     [SerializeField] private float seedSolarBoostMax = 3f;
 
     [Min(0f)]
-    [Tooltip("How close (in old-pixel widths) a Water pixel must splash to a growing sprout or the Seed pet to water it.")]
+    [Tooltip("How close (in husk widths) a Water pixel must splash to a growing sprout or the Seed pet to water it.")]
     [SerializeField] private float seedWaterReach = 5f;
 
     [Min(0f)]

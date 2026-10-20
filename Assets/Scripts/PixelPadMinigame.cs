@@ -17,7 +17,7 @@ using UnityEngine.Events;
 public class PixelPadMinigame : PixelMinigame
 {
     [Header("References")]
-    [Tooltip("The PixelClicker (for the camera, the old pixels and the pixel counts). Found automatically if left empty.")]
+    [Tooltip("The PixelClicker (for the camera, the husks and the pixel counts). Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
 
     [Header("State")]
@@ -76,7 +76,7 @@ public class PixelPadMinigame : PixelMinigame
     [Tooltip("Where the holes open, as viewport fractions in from the screen edge (x) and in from the black bars (y). The four corners use these.")]
     [SerializeField] private Vector2 cornerInset = new Vector2(0.12f, 0.1f);
 
-    [Tooltip("An old pixel whose middle comes inside this fraction of the radius (and low enough) falls in. 0 = 0.85.")]
+    [Tooltip("A husk whose middle comes inside this fraction of the radius (and low enough) falls in. 0 = 0.85.")]
     [SerializeField] private float captureFraction = 0f;
 
     [Tooltip("Layers that count as ground when picking a spot.")]

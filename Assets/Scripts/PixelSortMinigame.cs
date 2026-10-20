@@ -31,7 +31,7 @@ using static PixelInput;
 public class PixelSortMinigame : PixelMinigame
 {
     [Header("References")]
-    [Tooltip("The PixelClicker (camera, old pixels, payouts). Found automatically if left empty.")]
+    [Tooltip("The PixelClicker (camera, husks, payouts). Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
 
     [Header("State")]
@@ -55,7 +55,7 @@ public class PixelSortMinigame : PixelMinigame
     [SerializeField] private float maxInterval = 300f;
 
     [Min(4)]
-    [Tooltip("A race only starts when at least this many old pixels (of at least two different types) are lying around.")]
+    [Tooltip("A race only starts when at least this many husks (of at least two different types) are lying around.")]
     [SerializeField] private int minPixels = 8;
 
     [Min(4)]
@@ -89,7 +89,7 @@ public class PixelSortMinigame : PixelMinigame
     [Tooltip("Extra multiplier on top for finishing instantly; it shrinks to 0 as the time runs out.")]
     [SerializeField] private float speedBonusMultiplier = 2f;
 
-    [Header("Layout (sizes are in old-pixel widths)")]
+    [Header("Layout (sizes are in husk widths)")]
     [Min(1)]
     [Tooltip("Most pixels in one row of the grid.")]
     [SerializeField] private int maxColumns = 8;
@@ -114,11 +114,11 @@ public class PixelSortMinigame : PixelMinigame
     [Tooltip("The selected pixel grows by this much and hops a little.")]
     [SerializeField] private float selectedScale = 1.3f;
 
-    [Tooltip("The old pixels that are not in the race shrink away while it runs and grow back afterwards.")]
+    [Tooltip("The husks that are not in the race shrink away while it runs and grow back afterwards.")]
     [SerializeField] private bool shrinkOthers = true;
 
     [Min(0.05f)]
-    [Tooltip("Seconds the other old pixels take to shrink away / grow back.")]
+    [Tooltip("Seconds the other husks take to shrink away / grow back.")]
     [SerializeField] private float bystanderSeconds = 0.6f;
 
     [Range(0.05f, 1f)]

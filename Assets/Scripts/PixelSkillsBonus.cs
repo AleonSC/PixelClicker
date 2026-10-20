@@ -22,7 +22,7 @@ using UnityEngine;
 public partial class PixelSkills
 {
     [Header("Bonus XP bank")]
-    [Tooltip("Turns the whole bonus XP bank off (consumed old pixels no longer change it and XP is never doubled).")]
+    [Tooltip("Turns the whole bonus XP bank off (consumed husks no longer change it and XP is never doubled).")]
     [SerializeField] private bool disableBonusXp = false;
 
     [Min(0f)]

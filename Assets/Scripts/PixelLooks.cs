@@ -118,26 +118,26 @@ public class PixelLook
     [Tooltip("How fast it wobbles.")]
     public float wobbleSpeed = 3.2f;
 
-    [Header("Falling (old pixels of this type)")]
-    [Tooltip("Use the bounce / friction / gravity below for this type's old pixels instead of the global ones.")]
+    [Header("Falling (husks of this type)")]
+    [Tooltip("Use the bounce / friction / gravity below for this type's husks instead of the global ones.")]
     public bool customPhysics = false;
 
     [Range(0f, 1.5f)]
-    [Tooltip("Bounciness of the old pixels (1 = keeps all its speed).")]
+    [Tooltip("Bounciness of the husks (1 = keeps all its speed).")]
     public float bounce = 0.85f;
 
     [Range(0f, 1f)]
-    [Tooltip("Friction of the old pixels (low = slides and keeps travelling).")]
+    [Tooltip("Friction of the husks (low = slides and keeps travelling).")]
     public float friction = 0.05f;
 
     [Min(0f)]
-    [Tooltip("Multiplies the normal gravity on these old pixels (0.25 = falls four times more slowly).")]
+    [Tooltip("Multiplies the normal gravity on these husks (0.25 = falls four times more slowly).")]
     public float gravityMultiplier = 0.25f;
 
-    [Tooltip("Old pixels of this type pass through the invisible screen edges instead of bouncing off them.")]
+    [Tooltip("Husks of this type pass through the invisible screen edges instead of bouncing off them.")]
     public bool ignoreViewBounds = false;
 
-    [Tooltip("After a few bounces the old pixel starts to float away and leaves the screen.")]
+    [Tooltip("After a few bounces the husk starts to float away and leaves the screen.")]
     public bool floatAway = false;
 
     [Min(1)]
@@ -187,8 +187,8 @@ public class PixelLook
     [Tooltip("Size of the colour-blind shape as a fraction of the cube's width.")]
     public float colorBlindRadius = 0.28f;
 
-    [Header("Gravity well (old pixels of this type pull others in)")]
-    [Tooltip("An old pixel of this type slowly pulls other old pixels towards it, inside a radius shown by a very faint ring.")]
+    [Header("Gravity well (husks of this type pull others in)")]
+    [Tooltip("A husk of this type slowly pulls other husks towards it, inside a radius shown by a very faint ring.")]
     public bool gravityWell = false;
 
     [Min(0.5f)]
@@ -200,11 +200,11 @@ public class PixelLook
     public float wellFlyReach = 4f;
 
     [Min(0f)]
-    [Tooltip("Seconds the gravity-well pixel itself lasts before it vanishes (0 = 300, i.e. 5 minutes). Other old pixels inside its pull radius don't age while it is working.")]
+    [Tooltip("Seconds the gravity-well pixel itself lasts before it vanishes (0 = 300, i.e. 5 minutes). Other husks inside its pull radius don't age while it is working.")]
     public float wellLifetime = 300f;
 
     [Min(0f)]
-    [Tooltip("How fast nearby old pixels are dragged towards it (world units per second). The drag is constant inside the ring and overcomes the floor's friction.")]
+    [Tooltip("How fast nearby husks are dragged towards it (world units per second). The drag is constant inside the ring and overcomes the floor's friction.")]
     public float wellPullSpeed = 1.6f;
 
     [Min(0f)]
@@ -212,7 +212,7 @@ public class PixelLook
     public float wellGrip = 8f;
 
     [Min(0)]
-    [Tooltip("The most old pixels one well pulls at a time (0 = 20). Other gravity-well pixels inside its radius count towards this, so wells placed close together use up each other's slots and have to be spaced out. A pixel is only ever held by one well.")]
+    [Tooltip("The most husks one well pulls at a time (0 = 20). Other gravity-well pixels inside its radius count towards this, so wells placed close together use up each other's slots and have to be spaced out. A pixel is only ever held by one well.")]
     public int wellMaxPixels = 20;
 
     [Range(0f, 1f)]
@@ -258,7 +258,7 @@ public class PixelLook
     [Tooltip("Seed: draw a brown shell texture (tan with dark cracks that spread as the shell is hit) instead of the default dark surface texture. Needs Damage Cracks.")]
     public bool shellTexture = false;
 
-    [Tooltip("Water: old pixels of this type splash on the ground (they break into smaller Water pixels that fly out and break into droplets, PixelClicker 'Water splash pieces') and are gone (whether or not anything needed watering); nearby Seed sprouts and the Seed pet are watered.")]
+    [Tooltip("Water: husks of this type splash on the ground (they break into smaller Water pixels that fly out and break into droplets, PixelClicker 'Water splash pieces') and are gone (whether or not anything needed watering); nearby Seed sprouts and the Seed pet are watered.")]
     public bool splash = false;
 
     [Tooltip("Ore pixels (Prospector's Pack): draw a rock texture speckled and veined with 'Ore Color' metal; cracks spread over it with every hit (needs Damage Cracks).")]
@@ -293,16 +293,16 @@ public class PixelLook
     [Tooltip("Meteor: dark cratered rock with glowing lava cracks that spread with every hit (needs Damage Cracks).")]
     public bool meteorTexture = false;
 
-    [Tooltip("Meteor: a few embers rise off the cube, and the old pixel that streaks away leaves a fiery wake.")]
+    [Tooltip("Meteor: a few embers rise off the cube, and the husk that streaks away leaves a fiery wake.")]
     public bool cometTail = false;
 
     [Tooltip("Solar: churning gold with a white-hot middle on every face.")]
     public bool sunTexture = false;
 
-    [Tooltip("Solar: a soft turning corona with rays behind the cube, and the old pixel hovers and pays a trickle (swells with daylight).")]
+    [Tooltip("Solar: a soft turning corona with rays behind the cube, and the husk hovers and pays a trickle (swells with daylight).")]
     public bool sunFx = false;
 
-    [Tooltip("Nuclear: radioactive motes drift off the pixel, and the OLD pixel makes every other old pixel near it age extremely fast (they vanish within a second or two).")]
+    [Tooltip("Nuclear: radioactive motes drift off the pixel, and the HUSK makes every other husk near it age extremely fast (they vanish within a second or two).")]
     public bool radiation = false;
 
     /// <summary>The ambient particle effects of the farming blocks.</summary>
@@ -314,10 +314,10 @@ public class PixelLook
     [Tooltip("Ambient particles of an Electrician pixel (Wire, Battery, Capacitor...).")] public ElectricAmbient electricFx = ElectricAmbient.None;
     [Tooltip("Violet sparks drift off the cube (Obsidian).")] public bool obsidianFx = false;
 
-    [Tooltip("Fire: old pixels of this type burn - they fall while slowly shrinking away into embers, then vanish (no payout).")]
+    [Tooltip("Fire: husks of this type burn - they fall while slowly shrinking away into embers, then vanish (no payout).")]
     public bool burn = false;
 
-    [Tooltip("Old pixels of this type shatter into shards when they hit the ground (they are gone afterwards).")]
+    [Tooltip("Husks of this type shatter into shards when they hit the ground (they are gone afterwards).")]
     public bool shatter = false;
 
     /// <summary>Does this look add objects to the cube (outline / core)?</summary>

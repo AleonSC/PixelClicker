@@ -157,7 +157,7 @@ public partial class PixelShop : MonoBehaviour
         [Tooltip("Buying this pack unlocks crafting (the Crafting button and window).")]
         public bool unlocksCrafting = false;
 
-        [Tooltip("Buying this pack lets the player click and drag old pixels.")]
+        [Tooltip("Buying this pack lets the player click and drag husks.")]
         public bool unlocksGrabbing = false;
 
         [Tooltip("Buying this pack lets the player stop time with the T key.")]
@@ -1600,6 +1600,15 @@ public partial class PixelShop : MonoBehaviour
             foreach (ShopPack rp in packs)
                 if (rp != null && rp.unlocksRobot && rp.displayName == "Robot Worker") { rp.displayName = "UFO Helper"; renamed = true; }
 
+
+        // 'Old pixel' is 'husk' in every player text now: packs saved in the scene keep their old texts otherwise.
+        if (packs != null)
+            foreach (ShopPack hp in packs)
+            {
+                if (hp == null) continue;
+                string name = PixelClicker.HuskWording(hp.displayName), text = PixelClicker.HuskWording(hp.description);
+                if (name != hp.displayName || text != hp.description) { hp.displayName = name; hp.description = text; renamed = true; }
+            }
 
         // The short-lived Pong pack (replaced by Breakout) may still be saved in the scene's pack list: take it out, and fix the
         // pack numbers the other packs' requirements point at.

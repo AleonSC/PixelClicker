@@ -52,7 +52,7 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
     [SerializeField] private float spawnWeightMultiplier = 2f;
 
     [Min(1f)]
-    [Tooltip("While a pet is out (owned and switched on), old pixels of its pixel type last this many times longer before they despawn (2 = half as fast).")]
+    [Tooltip("While a pet is out (owned and switched on), husks of its pixel type last this many times longer before they despawn (2 = half as fast).")]
     [SerializeField] private float despawnSlowFactor = 2f;
 
     [Header("Pet Treat")]
@@ -77,7 +77,7 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
 
     [Header("Roaming")]
     [Min(0.1f)]
-    [Tooltip("Mass of a pet (heavier pets shove old pixels around more).")]
+    [Tooltip("Mass of a pet (heavier pets shove husks around more).")]
     [SerializeField] private float petMass = 2f;
 
     [Range(0f, 1.5f)]
@@ -142,19 +142,19 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
 
     [Header("Vacuum pet")]
     [Min(0.5f)]
-    [Tooltip("How far the Vacuum Pet reaches for old pixels, in pixel-widths.")]
+    [Tooltip("How far the Vacuum Pet reaches for husks, in pixel-widths.")]
     [SerializeField] private float vacuumRadius = 2.5f;
 
     [Min(0.02f)]
-    [Tooltip("Seconds between the old pixels it sucks up (one at a time).")]
+    [Tooltip("Seconds between the husks it sucks up (one at a time).")]
     [SerializeField] private float vacuumInterval = 0.15f;
 
     [Min(0.05f)]
-    [Tooltip("Seconds an old pixel takes to fly into the Vacuum Pet while shrinking.")]
+    [Tooltip("Seconds a husk takes to fly into the Vacuum Pet while shrinking.")]
     [SerializeField] private float vacuumFlySeconds = 0.25f;
 
     [Min(0.1f)]
-    [Tooltip("Size of the number above the Vacuum Pet (how many old pixels it has sucked up in total).")]
+    [Tooltip("Size of the number above the Vacuum Pet (how many husks it has sucked up in total).")]
     [SerializeField] private float counterTextSize = 3f;
 
     [Min(0f)]

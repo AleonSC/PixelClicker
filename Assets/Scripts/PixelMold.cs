@@ -26,10 +26,10 @@ public class PixelMold : MonoBehaviour
     [Tooltip("Setting the Mold off covers the WHOLE field at once (every husk lying anywhere gets moldy). Off = the old growing zone round the cube.")]
     [SerializeField] private bool wholeMap = true;
     [Min(0f)]
-    [Tooltip("How far the mold spreads with each click on the Mold block, in old-pixel widths. 0 = the default (0.9).")]
+    [Tooltip("How far the mold spreads with each click on the Mold block, in husk widths. 0 = the default (0.9).")]
     [SerializeField] private float spreadWidths = 0f;
     [Min(0f)]
-    [Tooltip("Widest the mold zone gets, in old-pixel widths. 0 = the default (8).")]
+    [Tooltip("Widest the mold zone gets, in husk widths. 0 = the default (8).")]
     [SerializeField] private float maxWidths = 0f;
     [Min(0f)]
     [Tooltip("Seconds after the last spread before the zone starts to fade. 0 = the default (30).")]
@@ -38,7 +38,7 @@ public class PixelMold : MonoBehaviour
     [Tooltip("Seconds the zone takes to fade away completely. 0 = the default (25).")]
     [SerializeField] private float zoneFadeSeconds = 0f;
     [Min(0f)]
-    [Tooltip("How often (seconds) the zone infects old pixels lying inside it. 0 = the default (0.5).")]
+    [Tooltip("How often (seconds) the zone infects husks lying inside it. 0 = the default (0.5).")]
     [SerializeField] private float infectInterval = 0f;
     [Tooltip("Colour of the zone on the floor and the mold shells on infected pixels.")]
     [SerializeField] private Color moldColor = new Color(0.62f, 0.95f, 0.8f, 1f);
@@ -61,7 +61,7 @@ public class PixelMold : MonoBehaviour
 
     [Header("Glowing finds")]
     [Range(0f, 1f)]
-    [Tooltip("Chance that a fresh Berry / Mushroom / Herb / Truffle old pixel is a glowing variant. 0 = the default (0.12).")]
+    [Tooltip("Chance that a fresh Berry / Mushroom / Herb / Truffle husk is a glowing variant. 0 = the default (0.12).")]
     [SerializeField] private float glowChance = 0f;
     [Range(0f, 1f)]
     [Tooltip("The variant starts to glow once this fraction of its lifespan has passed. 0 = the default (0.5 = halfway).")]

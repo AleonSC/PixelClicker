@@ -1510,3 +1510,4 @@
 [2026-10-20 10:32 UTC] Biomass Generators now burn Charcoal (worth 3 wood husks) and Wood Chips (worth 4), and the Lumberjack buys Charcoal and Wood Chips husks lying on the floor in his Sell tab.
 [2026-10-20 10:32 UTC] Notes: the Trash Can stays a dev tool, the ring Sorter is gone, unlock tiers and power come later; the outdated HANDOFF.md was folded into docs/systems/OlderNotes.md and removed.
 [2026-10-20 10:32 UTC] The Recycler has a Run Time upgrade again in Upgrades > Operation: +1 minute a level, up to 10 minutes.
+[2026-10-20 10:35 UTC] Every player text, tooltip and doc now says husk(s) instead of old pixel(s); pack, device and tip texts already saved in the scene are reworded on load (PixelClicker.HuskWording).

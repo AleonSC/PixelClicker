@@ -71,7 +71,7 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
     [SerializeField] private float damagePerOtherPixel = 14f;
 
     [Min(1)]
-    [Tooltip("Every this many wood pixels shredded, the machine spits out one Wood Chips block (an old pixel that despawns like any other).")]
+    [Tooltip("Every this many wood pixels shredded, the machine spits out one Wood Chips block (a husk that despawns like any other).")]
     [SerializeField] private int woodPerChips = 5;
 
     [Tooltip("The machine's health; at 0 it breaks for good.")]

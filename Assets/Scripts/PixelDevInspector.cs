@@ -501,7 +501,7 @@ public class PixelDevInspector : MonoBehaviour
             if (m != null) y = AddRow(worldContent, worldRows, m, y);
 
         y = AddSection(worldContent, "Counts", y);
-        y = AddReadout(worldContent, "Old pixels", () => oldCount.ToString(), y);
+        y = AddReadout(worldContent, "Husks", () => oldCount.ToString(), y);
         y = AddReadout(worldContent, "Rigidbodies", () => bodyCount.ToString(), y);
         y = AddReadout(worldContent, "Awake rigidbodies", () => awakeCount.ToString(), y);
         PixelUIKit.UpdateScrollView(worldScroll, worldBar, y + 10f, worldScroll.GetComponent<RectTransform>().rect.height);

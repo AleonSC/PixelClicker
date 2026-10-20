@@ -175,7 +175,7 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].export = PixelVacuumCleaner.ExportState;
         features[features.Count - 1].import = PixelVacuumCleaner.ImportState;
         Register("Trash Can",
-                 "A plain cylinder that deletes things. Put it on the floor: every loose old pixel within a small radius (the teal ring) - thrown out of a Funnel hose, a machine or the end of a conveyor belt - is pulled to its mouth and vanishes, no credit. Belts and hoses that end at a coupling on it feed it directly.",
+                 "A plain cylinder that deletes things. Put it on the floor: every loose husk within a small radius (the teal ring) - thrown out of a Funnel hose, a machine or the end of a conveyor belt - is pulled to its mouth and vanishes, no credit. Belts and hoses that end at a coupling on it feed it directly.",
                  c => PixelTrashCan.CreateGhost(c), (c, p, yw) => PixelTrashCan.Place(c, p, yw));
         features[features.Count - 1].groundPlane = true;
         features[features.Count - 1].export = PixelTrashCan.ExportState;
@@ -242,7 +242,7 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].export = PixelHuskSource.ExportState;
         features[features.Count - 1].import = PixelHuskSource.ImportState;
         Register("Kiln",
-                 "A brick kiln with a glowing mouth on its front. Anything that goes into the mouth from the side burns (lead a conveyor belt into it, or throw things in): each burnt pixel makes a Charcoal old pixel that comes out of the chute at the back. Charcoal despawns like any old pixel, for now.",
+                 "A brick kiln with a glowing mouth on its front. Anything that goes into the mouth from the side burns (lead a conveyor belt into it, or throw things in): each burnt pixel makes a Charcoal husk that comes out of the chute at the back. Charcoal despawns like any husk, for now.",
                  c => PixelKiln.CreateGhost(c), (c, p, yw) => PixelKiln.Place(c, p, yw));
         features[features.Count - 1].export = PixelKiln.ExportState;
         features[features.Count - 1].import = PixelKiln.ImportState;

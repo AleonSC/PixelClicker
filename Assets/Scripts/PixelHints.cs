@@ -129,7 +129,7 @@ public class PixelHints : MonoBehaviour, IPixelSaved
 
     [TextArea(2, 5)]
     [Tooltip("Third new-game intro tip (after the Log and Inventory ones): how you earn currency. Empty = the built-in text. The tier guide (\"Click X more...\") appears once this box is closed.")]
-    [SerializeField] private string introEarnText = "Clicking the pixel is the main way to earn currency. As you play, upgrades, minigames and managing the old pixels that fall to the floor will open up other ways to earn.";
+    [SerializeField] private string introEarnText = "Clicking the pixel is the main way to earn currency. As you play, upgrades, minigames and managing the husks that fall to the floor will open up other ways to earn.";
 
     [TextArea(2, 5)]
     [Tooltip("Fourth new-game intro tip, right after the one about clicking: the right click (Block Hold and its stake). Empty = the built-in text.")]
@@ -205,7 +205,7 @@ public class PixelHints : MonoBehaviour, IPixelSaved
             case "upgrade_clicks": return "Auto Clicker upgraded: more clicks per tick!";
             case "upgrade_combo": return "Combo Meter upgraded!";
             case "upgrade_bank": return "Bank Storage upgraded!";
-            case "upgrade_cap": return "Old Pixel Capacity upgraded!";
+            case "upgrade_cap": return "Husk Capacity upgraded!";
             case "upgrade_ultra": return "Ultra boost bought!";
             case "pixel_Glass": return "You unlocked Glass Pixels!";
             case "pixel_Vacuum": return "You unlocked Vacuum Pixels!";
@@ -251,22 +251,22 @@ public class PixelHints : MonoBehaviour, IPixelSaved
         H("minigame_weakspot", "Weak Spots! The camera zooms in and time slows down. Glowing weak spots appear on the cube: click every one before the time runs out for bonus skill XP. Some drift across the cube (blue), some shrink and swell (green) and some flicker in and out (yellow)."),
         H("minigame_blink", "Cube Blink! The cube keeps shrinking away and teleporting, and the auto clicker is switched off. Click it whenever it shows to land clicks; at the end you get a bonus for every click."),
         H("minigame_dash", "Cube Dash! The cube is dashing around the screen and the auto clicker is switched off. Click it as many times as you can before time runs out: you get a bonus of 10x its worth for every click you landed."),
-        H("minigame_breakout", "Breakout! The old pixels on screen turned into a wall of bricks (the rest shrank away) and the cube stepped aside. Move the paddle along the bottom with the mouse or the Left / Right arrows to bounce the ball into them. Every brick you break pays 10x that pixel's worth; run out of balls and the rest simply drop."),
-        H("minigame_sort", "Sorting race! Some old pixels froze in a jumbled grid. Click one pixel, then another, to swap them. Get every colour together in one unbroken group before the timer runs out - finishing early pays extra."),
-        H("minigame_snake", "Snake! Every old pixel froze and stopped despawning. Steer the snake with the arrow keys (or the on-screen arrows) and eat every pixel without biting yourself - you are paid 10x their worth. Run out of time or bite yourself and they just drop."),
+        H("minigame_breakout", "Breakout! The husks on screen turned into a wall of bricks (the rest shrank away) and the cube stepped aside. Move the paddle along the bottom with the mouse or the Left / Right arrows to bounce the ball into them. Every brick you break pays 10x that pixel's worth; run out of balls and the rest simply drop."),
+        H("minigame_sort", "Sorting race! Some husks froze in a jumbled grid. Click one pixel, then another, to swap them. Get every colour together in one unbroken group before the timer runs out - finishing early pays extra."),
+        H("minigame_snake", "Snake! Every husk froze and stopped despawning. Steer the snake with the arrow keys (or the on-screen arrows) and eat every pixel without biting yourself - you are paid 10x their worth. Run out of time or bite yourself and they just drop."),
         H("minigame_stardust", "A meteor pixel knocked a star out of the sky! Click it to collect stardust before it fades. Enough stardust unlocks something new."),
         H("event_log", "This is the Event Log. It records what happens in the game, like unlocks. Scroll it with the mouse wheel, click a line to read its full tip, and press {key:EventLog} to show or hide it. You can switch it off in Settings > Interface > Event log."),
         H("crafting", "Crafting unlocked! Open the Crafting button at the bottom right, drag two items into the boxes and press Craft. A pixel + Glass makes that pixel's potion."),
-        H("grab", "Pixel Grabbing unlocked! Hold the left mouse button on an old pixel to pick it up, then let go to throw it."),
-        H("timestop", "Time Stop unlocked! Press T to freeze time and T again to resume. It drains an energy meter, but you can still click the cube - the old pixels pile up and burst out when time resumes."),
-        H("bank", "Pixel Bank unlocked! Right-click an old pixel to store it. Open the Bank tab on the left edge, or press B for the hose: left-click spits a pixel out, hold right-click sucks up an area."),
+        H("grab", "Pixel Grabbing unlocked! Hold the left mouse button on a husk to pick it up, then let go to throw it."),
+        H("timestop", "Time Stop unlocked! Press T to freeze time and T again to resume. It drains an energy meter, but you can still click the cube - the husks pile up and burst out when time resumes."),
+        H("bank", "Pixel Bank unlocked! Right-click a husk to store it. Open the Bank tab on the left edge, or press B for the hose: left-click spits a pixel out, hold right-click sucks up an area."),
         H("minigame_ghost", "A ghost! Click it before it floats away to catch it and get a free potion."),
         H("minigame_meteor", "A meteor! Click it as often as you like to chip off meteor chunks."),
-        H("minigame_bomb", "A bomb! Cut the wire that matches the colour you have the MOST of before time runs out. A wrong wire (or timeout) clears your old pixels."),
-        H("minigame_pad", "An Ultra Pad! Drop old pixels of the colour it asks for onto it to earn Ultra pixels. Other colours cost you pixels."),
+        H("minigame_bomb", "A bomb! Cut the wire that matches the colour you have the MOST of before time runs out. A wrong wire (or timeout) clears your husks."),
+        H("minigame_pad", "An Ultra Pad! Drop husks of the colour it asks for onto it to earn Ultra pixels. Other colours cost you pixels."),
         H("potion", "Potion drunk! For a while only that pixel type spawns. Right-click the active potion line at the top to cancel it."),
-        H("device_Vacuum", "Vacuum Device placed! It is grey and asleep: left-click it to switch it on. Then it pulls in old pixels and collects them again for a few seconds. Hold right-click on a placed device to remove it."),
-        H("device_Fan", "Fan placed! It is grey and asleep: left-click it to switch it on. Then it blows old pixels along the floor in front of it until its timer runs out."),
+        H("device_Vacuum", "Vacuum Device placed! It is grey and asleep: left-click it to switch it on. Then it pulls in husks and collects them again for a few seconds. Hold right-click on a placed device to remove it."),
+        H("device_Fan", "Fan placed! It is grey and asleep: left-click it to switch it on. Then it blows husks along the floor in front of it until its timer runs out."),
         H("device_Sprinkler", "Sprinkler placed! It is grey and asleep: left-click it to switch it on. Then it waters every growing seed and Seed pet within its reach about once a second, so they grow much faster."),
         H("device_QuantumOrganizer", "Quantum Organizer placed! Left-click it to switch it on, then grab a husk and drop it onto the pad to bind its type. Every loose husk of that type is dematerialized and stored in the box. Click the box to let some out again."),
         H("device_StorageCrate", "Storage Crate placed! It needs no switching on. Let go of a pixel you are holding (Pixel Grabbing) above the crate and it drops into the next free section; clicking the crate also stores loose pixels lying on it. Click a stored pixel to pick it up again. Drag the handles on its short ends to move it."),
@@ -277,31 +277,31 @@ public class PixelHints : MonoBehaviour, IPixelSaved
         H("device_PocketBiomassGenerator", "Pocket Biomass Generator placed! Every device inside its blue ring runs on its power - their timers stop and show its blue energy bar. Keep it going by dropping Woodcutting husks into the firebox on top; when it runs dry it flashes red, then shuts down for good unless you feed it."),
         H("device_BiomassGenerator", "Biomass Generator placed! A bigger ring and much more charge: every device inside runs on its power while you feed it Woodcutting husks (the firebox on top, or its intake coupling). Empty, it flashes red and then shuts down unless you feed it."),
         H("device_PowerBank", "Power Bank placed! Biomass Generators inside its big ring charge it with their spare power (the arcs show it flowing), and while it holds charge every device in the ring runs on it - their timers stop. It comes empty: put a running generator near it."),
-        H("device_Magnet", "Magnet placed! It is grey and asleep: left-click it to switch it on. Then it pulls loose old pixels in around it and holds them in a heap without collecting them."),
+        H("device_Magnet", "Magnet placed! It is grey and asleep: left-click it to switch it on. Then it pulls loose husks in around it and holds them in a heap without collecting them."),
         H("craft", "Crafted! The new item is in your Inventory under Consumables."),
         H("combo", "Combo! Keep clicking quickly to raise the combo bonus. It breaks if you stop for a moment."),
         H("upgrade_interval", "The auto clicker now clicks faster. Each level shortens the time between its clicks."),
         H("upgrade_clicks", "Multi-Click upgraded! The auto clicker now makes more clicks every time it ticks."),
         H("upgrade_combo", "Combo Meter upgraded! Quick manual clicks build a combo; reaching a combo milestone boosts your payouts, and each level unlocks a higher milestone with a bigger bonus and a flashier meter."),
-        H("upgrade_cap", "Old Pixel Capacity upgraded! More old pixels can lie around at once before the oldest ones are cleared away."),
+        H("upgrade_cap", "Husk Capacity upgraded! More husks can lie around at once before the oldest ones are cleared away."),
         H("upgrade_bank", "Bank Storage upgraded! The Pixel Bank can now hold more stored pixels."),
         H("upgrade_ultra", "Ultra boost bought! That pixel type now pays more for every click. You can keep boosting it with more Ultra pixels."),
         H("pixel_Glass", "Glass Pixels unlocked! They are see-through, and you can combine one with another pixel in Crafting to make a potion."),
-        H("pixel_Vacuum", "Vacuum Pixels unlocked! Clicking one sucks nearby old pixels in and collects them."),
+        H("pixel_Vacuum", "Vacuum Pixels unlocked! Clicking one sucks nearby husks in and collects them."),
         H("pixel_Obsidian", "Obsidian Pixels unlocked! A tougher pixel that takes more than one click to collect."),
         H("pixel_Luminescent", "Luminescent Pixels unlocked! They glow, and they are worth a lot more than the plain ones."),
         H("pixel_Singularity", "Singularity Pixels unlocked! A very rare pixel born from the black holes you fed."),
         H("pixel_Ghost", "Ghost Pixels unlocked! A rare pixel from all the ghosts you caught."),
         H("pixel_Electric", "Electric Pixels unlocked! A cube held together by crackling lightning."),
         H("pixel_Treasure", "Treasure Pixels unlocked! A chest takes a random 1 to 20 clicks to open, and you can't tell how many. The more clicks it took, the bigger the reward - and when it bursts open, a pile of other pixels pours out."),
-        H("pixel_Nuclear", "Nuclear Pixels unlocked! (A testing pixel.) Its old pixel is radioactive: every old pixel lying near it despawns almost at once."),
-        H("pixel_Fire", "Fire Pixels unlocked! (A testing pixel.) Click one and a ring of flames bursts out of the cube; the old pixel burns away as it falls."),
+        H("pixel_Nuclear", "Nuclear Pixels unlocked! (A testing pixel.) Its husk is radioactive: every husk lying near it despawns almost at once."),
+        H("pixel_Fire", "Fire Pixels unlocked! (A testing pixel.) Click one and a ring of flames bursts out of the cube; the husk burns away as it falls."),
         H("pixel_Dirt", "Farmer's Pack unlocked! Eight farm blocks for the Farming skill: Dirt, Seed, Water, Fertilizer, Pollen, Wheat, Weevil and Golden Fruit. Switch on Farming mode in the Toggles window (or Train it in the Skills window) to make them replace the basic pixels. Beware of weevils: click them before they eat your sprouts!"),
         H("hazard", "A hazard block! Pests and gas pockets pay nothing: a few taps are harmless, but hit one too many times and it goes off (pests swarm out and eat your sprouts, gas explodes) and your skill XP drops for a minute. Wait it out - it leaves by itself - or RIGHT-click it to work it away safely (it takes as many right clicks as it takes to break, plus the hits you already made). The auto clicker leaves it alone."),
         H("woodworking", "Your woodchipper and log rack are set up! While you train Woodcutting they stand at the sides of the screen. Drag old blocks into them with Pixel Grabbing for bonus XP: scraps (Bark, Sap, Leaf and Twig) go in the chipper, logs (Wood and Heartwood) on the rack. The blocks are used up, but they fill your bonus XP bank, which doubles the XP of your next chops."),
         H("pixel_Fish", "Angler's Pack unlocked! The Fishing skill: very common Water, Seaweed, Shell, rare Pearl and rare Fish, plus a stinging Jellyfish to avoid. Open the Skills window to train it: its blocks replace the basic pixels while it is in play. Click a Fish to start a Weak Spots round: hit every spot to catch it, miss and it gets away. Bait blocks drop pellets that bring more fish - but a Jellyfish that goes off fries them all. Rarer finds: a Message in a Bottle (break it to unroll a treasure map, then dig up the X; right-click it to ignore it) and the mighty Whale, which fights the line and runs from your mouse while you click it down."),
         H("pixel_Berry", "Forager's Pack unlocked! The Foraging skill: Berry, Mushroom, Herb and rare Truffle blocks, plus Weeds as filler and a spreading Mold to deal with (shake infected pixels clean). Open the Skills window to train it: its blocks replace the basic pixels while it is in play. Weeds are a useless filler that gets rarer as you level."),
-        H("pixel_Wood", "Lumberjack's Pack unlocked! The Woodcutting skill: wood blocks (Wood, Bark, Sap, Leaf, Heartwood) and three fillers (Twig, Pinecone, Moss) plus a Termite Hive to avoid: break it and termites go for your old pixels, so click them to save them. Open the Skills window to train it: its blocks replace the basic pixels while it is in play. The fillers are useless and get rarer as you level."),
+        H("pixel_Wood", "Lumberjack's Pack unlocked! The Woodcutting skill: wood blocks (Wood, Bark, Sap, Leaf, Heartwood) and three fillers (Twig, Pinecone, Moss) plus a Termite Hive to avoid: break it and termites go for your husks, so click them to save them. Open the Skills window to train it: its blocks replace the basic pixels while it is in play. The fillers are useless and get rarer as you level."),
         H("pixel_Rock", "Rock Pixels unlocked! Rock is Mining's filler block: plain and almost worthless, and most of what appears at first. As your mining level rises it gets rarer."),
         H("pixel_Copper", "Prospector's ores unlocked! Copper, Tin, Iron, Silver, Gold, Obsidian and Bedrock are tough rocks: hit them to crack them open (obsidian and bedrock take 15-20 clicks but pay a lot). A glittering one is a rich vein and pays 5x. The ores only spawn while Mining is the skill you are training: pick it in the Skills window."),
         H("pixel_Water", "Water Pixels unlocked! When an old Water pixel splashes on the ground near Seed sprouts or the Seed pet, they grow and sow much faster for a while. The water is used up either way."),
@@ -312,7 +312,7 @@ public class PixelHints : MonoBehaviour, IPixelSaved
         H("dragon_first", "A Dragon Cube! There are seven of them, each with a different number of small cubes inside, and they turn up extremely rarely among the pixels. Gather all seven and a button will appear to summon the cube dragon and make a wish."),
         H("pixel_Meteor", "Meteor Pixels unlocked! They streak away across the screen instead of falling."),
         H("pixel_Red", "Cubie unlocked Red, Green and Blue pixels! They pay the same as the black, gray and white ones; with all six pure currencies you can buy the Auto Clicker, your first skill and more."),
-        H("bank_hose", "The hose is out! Scroll the mouse wheel to pick a stored pixel type. Left-click spits one out, right-click sucks up the nearest old pixel, and holding right-click sucks up everything of that type around the nozzle."),
+        H("bank_hose", "The hose is out! Scroll the mouse wheel to pick a stored pixel type. Left-click spits one out, right-click sucks up the nearest husk, and holding right-click sucks up everything of that type around the nozzle."),
         H("bank_suck", "Stored in the Bank! Open the Bank tab on the left edge to see what you have. Stored pixels keep their value when you spit them back out."),
         H("bank_spit", "Spat a stored pixel back out! It is worth what it was worth when you stored it."),
         H("bank_full", "The Bank is full! Spit some pixels out, or buy Bank Storage upgrades in the shop to hold more."),
@@ -340,6 +340,8 @@ public class PixelHints : MonoBehaviour, IPixelSaved
             {
                 if (existing.text != null && existing.text.Contains("Woodcutter's Pack")) { existing.text = existing.text.Replace("Woodcutter's Pack", "Lumberjack's Pack"); changed = true; }   // (renamed pack)
                 if (string.IsNullOrEmpty(existing.shortText) && !string.IsNullOrEmpty(d.shortText)) { existing.shortText = d.shortText; changed = true; }
+                string text = PixelClicker.HuskWording(existing.text), shortText = PixelClicker.HuskWording(existing.shortText);   // ('old pixel' -> 'husk' in tips saved in the scene)
+                if (text != existing.text || shortText != existing.shortText) { existing.text = text; existing.shortText = shortText; changed = true; }
                 continue;
             }
             hints.Add(d);
@@ -988,7 +990,7 @@ public class PixelHints : MonoBehaviour, IPixelSaved
                 PixelUI.CompactMode = pinnedBefore;
                 // Third tip: how currency is earned. The tier guide ("Click X more...") shows once it is closed.
                 string earn = string.IsNullOrEmpty(introEarnText)
-                    ? "Clicking the pixel is the main way to earn currency. As you play, upgrades, minigames and managing the old pixels that fall to the floor will open up other ways to earn."
+                    ? "Clicking the pixel is the main way to earn currency. As you play, upgrades, minigames and managing the husks that fall to the floor will open up other ways to earn."
                     : introEarnText;
                 PixelNotice.Show(earn, 0f, compact: true, onClosed: () =>
                 {

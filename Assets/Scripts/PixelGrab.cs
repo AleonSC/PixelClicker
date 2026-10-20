@@ -47,7 +47,7 @@ public class PixelGrab : MonoBehaviour, IPixelSaved
     void IPixelSaved.Import(string data) { SaveState s = PixelSaveRegistry.FromJson<SaveState>(data); UserDisabled = s != null && s.disabled; }
 
     [Header("References")]
-    [Tooltip("The PixelClicker whose old pixels can be grabbed. Found automatically if left empty.")]
+    [Tooltip("The PixelClicker whose husks can be grabbed. Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
 
     [Header("State")]
@@ -56,15 +56,15 @@ public class PixelGrab : MonoBehaviour, IPixelSaved
 
     [Header("Grabbing")]
     [Min(0f)]
-    [Tooltip("How forgiving the click is: old pixels are small, so the click can be this far (world units) off a pixel and still grab it.")]
+    [Tooltip("How forgiving the click is: husks are small, so the click can be this far (world units) off a pixel and still grab it.")]
     [SerializeField] private float grabRadius = 0.25f;
 
     [Min(0f)]
-    [Tooltip("An old pixel can't be grabbed for this many seconds after it appears (it is still inside the cube's click area, so it would be grabbed straight through the cube). 0 = the default (0.8).")]
+    [Tooltip("A husk can't be grabbed for this many seconds after it appears (it is still inside the cube's click area, so it would be grabbed straight through the cube). 0 = the default (0.8).")]
     [SerializeField] private float grabDelaySeconds = 0f;
 
     [Min(0f)]
-    [Tooltip("How long (seconds) after the player lets go of an old pixel it still counts as 'recently held by the player' (OldPixelInfo.RecentlyHeld). A Storage Crate stores such a pixel when it lands on it, even if it was dropped from the very top. 0 = the default (6).")]
+    [Tooltip("How long (seconds) after the player lets go of a husk it still counts as 'recently held by the player' (OldPixelInfo.RecentlyHeld). A Storage Crate stores such a pixel when it lands on it, even if it was dropped from the very top. 0 = the default (6).")]
     [SerializeField] private float recentlyHeldSeconds = 0f;
 
     /// <summary>How long a let-go pixel stays tagged 'recently held by the player'.</summary>

@@ -31,7 +31,7 @@ using UnityEngine.Events;
 public class PixelBlackholeMinigame : PixelMinigame
 {
     [Header("References")]
-    [Tooltip("The PixelClicker (camera, old pixels). Found automatically if left empty.")]
+    [Tooltip("The PixelClicker (camera, husks). Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
 
     [Header("State")]
@@ -54,7 +54,7 @@ public class PixelBlackholeMinigame : PixelMinigame
 
     [TextArea(1, 4)]
     [Tooltip("Description of the tracker row in the shop's Minigames tab.")]
-    [SerializeField] private string trackerHelp = "Black holes swallow old pixels that land near them. Push pixels toward an open hole with the fan, Pixel Grabbing or the hose. Feed it enough to unlock the Singularity Pixel.";
+    [SerializeField] private string trackerHelp = "Black holes swallow husks that land near them. Push pixels toward an open hole with the fan, Pixel Grabbing or the hose. Feed it enough to unlock the Singularity Pixel.";
 
     [Tooltip("Text on a locked shop pack that needs the goal. {0} = pixels swallowed, {1} = goal.")]
     [SerializeField] private string requirementLine = "Feed {1} pixels to black holes: {0} / {1}";
@@ -65,7 +65,7 @@ public class PixelBlackholeMinigame : PixelMinigame
 
     [TextArea(2, 5)]
     [Tooltip("The tip. {0} = the goal.")]
-    [SerializeField] private string firstHoleMessage = "A black hole has opened!\nIt is hungry for old pixels. Find a way to feed it - {0} pixels will unlock something new.";
+    [SerializeField] private string firstHoleMessage = "A black hole has opened!\nIt is hungry for husks. Find a way to feed it - {0} pixels will unlock something new.";
 
     [Tooltip("Show a live counter above each black hole (pixels swallowed / goal).")]
     [SerializeField] private bool showHoleCounter = true;
@@ -143,7 +143,7 @@ public class PixelBlackholeMinigame : PixelMinigame
 
     [Header("Swallowing and Spaghettification")]
     [Min(0.1f)]
-    [Tooltip("Old pixels below this height above the hole are caught (world units).")]
+    [Tooltip("Husks below this height above the hole are caught (world units).")]
     [SerializeField] private float captureHeight = 3f;
 
     [Min(0.1f)]
@@ -165,7 +165,7 @@ public class PixelBlackholeMinigame : PixelMinigame
     [Tooltip("The event horizon: a pixel is swallowed once it reaches this fraction of the hole's radius from the centre.")]
     [SerializeField] private float horizonFraction = 0.12f;
 
-    [Tooltip("Time dilation: while a black hole is open, old pixels stop despawning (their lifetime stops counting down). They age normally again when it closes.")]
+    [Tooltip("Time dilation: while a black hole is open, husks stop despawning (their lifetime stops counting down). They age normally again when it closes.")]
     [SerializeField] private bool freezeOldPixels = true;
 
     [Header("Look")]

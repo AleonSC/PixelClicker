@@ -51,7 +51,7 @@ husk: shatters when it lands on the ground and is gone (set it down gently with 
 
 [Vacuum]
 name: Vacuum Pixels
-guide: Clicking it sucks up every old pixel lying around: they swirl into it and their stored value is paid out at once. The old Vacuum pixel then keeps those pixels floating inside its glass body. While a Vacuum potion is running only every 10th click vacuums.
+guide: Clicking it sucks up every husk lying around: they swirl into it and their stored value is paid out at once. The old Vacuum pixel then keeps those pixels floating inside its glass body. While a Vacuum potion is running only every 10th click vacuums.
 husk: 
 
 [Obsidian]
@@ -61,28 +61,28 @@ husk:
 
 [Luminescent]
 name: Luminescent Pixels
-guide: A glowing pixel. Its old pixel stays bright as it falls and leaves a fading trail of light.
+guide: A glowing pixel. Its husk stays bright as it falls and leaves a fading trail of light.
 husk: 
 
 [Singularity]
 name: Singularity Pixels
-guide: Rare. Its old pixel becomes a gravity well: for 5 minutes it drags up to 20 nearby old pixels toward it, keeps them from despawning, and captures meteors that fly close. Wells packed close together starve each other, so space them out. Feeding one to a black hole counts toward the Event Horizon achievement.
-husk: becomes a gravity well that holds up to 20 other old pixels for 5 minutes.
+guide: Rare. Its husk becomes a gravity well: for 5 minutes it drags up to 20 nearby husks toward it, keeps them from despawning, and captures meteors that fly close. Wells packed close together starve each other, so space them out. Feeding one to a black hole counts toward the Event Horizon achievement.
+husk: becomes a gravity well that holds up to 20 other husks for 5 minutes.
 
 [Ghost]
 name: Ghost Pixels
-guide: A gray, gelatinous blob. Clicking it is just a payout; its old pixel is the one that drifts away.
+guide: A gray, gelatinous blob. Clicking it is just a payout; its husk is the one that drifts away.
 husk: bounces slowly a few times, then floats up and drifts off the screen.
 
 [Meteor]
 name: Meteor Pixels
-guide: A cratered rock that needs 3 hits; the lava cracks glow brighter with each one. Its old pixel shoots off across the screen, and every one that does has a chance of knocking a star (Stardust) down beside the cube.
+guide: A cratered rock that needs 3 hits; the lava cracks glow brighter with each one. Its husk shoots off across the screen, and every one that does has a chance of knocking a star (Stardust) down beside the cube.
 husk: streaks away across the screen in a fiery trail instead of falling.
 
 [Solar]
 name: Solar Pixels
 guide: A blazing sun. Every Solar click raises <b>Daylight</b> (it fades slowly): the higher it is, the faster seeds and Seed pets grow and the more hovering Solar pixels pay. Old Solar pixels hover and pay 8% of their value every 4 seconds; five touching ones never despawn and glow with a yellow aura.
-husk: hovers above the floor, lasts 1.6 times longer than other old pixels and pays a small trickle.
+husk: hovers above the floor, lasts 1.6 times longer than other husks and pays a small trickle.
 
 [Electric]
 name: Electric Pixels
@@ -131,12 +131,12 @@ husk:
 
 [Seed]
 name: Seed Pixels
-guide: A shell you dig open. Every hit throws dirt; the click that cracks it pays and plants three sprouts. Each sprout grows a random unlocked pixel over about 6 seconds (rarer types are likelier; never Vacuum or Singularity) and then pops off as an old pixel.
+guide: A shell you dig open. Every hit throws dirt; the click that cracks it pays and plants three sprouts. Each sprout grows a random unlocked pixel over about 6 seconds (rarer types are likelier; never Vacuum or Singularity) and then pops off as a husk.
 husk: 
 
 [Water]
 name: Water Pixels
-guide: A wobbly blue jelly. Its old pixel splashes the first time it lands, paying nothing, and instantly speeds up every growing sprout and planted Seed pet within about 5 pixel-widths (each only accepts water every 0.75 seconds).
+guide: A wobbly blue jelly. Its husk splashes the first time it lands, paying nothing, and instantly speeds up every growing sprout and planted Seed pet within about 5 pixel-widths (each only accepts water every 0.75 seconds).
 husk: splashes the first time it lands (no payout) and speeds up growing sprouts nearby.
 
 [Fire]
@@ -181,8 +181,8 @@ husk:
 
 [Nuclear]
 name: Nuclear Pixels
-guide: A radioactive pixel with a toxic glow. Its old pixel ages every other old pixel within about 4 pixel-widths 40 times faster, so they disappear without paying - clear space before it lands.
-husk: radiates: other old pixels near it age 40 times faster and vanish.
+guide: A radioactive pixel with a toxic glow. Its husk ages every other husk within about 4 pixel-widths 40 times faster, so they disappear without paying - clear space before it lands.
+husk: radiates: other husks near it age 40 times faster and vanish.
 
 [Wood]
 name: Wood Pixels
@@ -266,7 +266,7 @@ husk:
 
 [GasPocket]
 name: Gas Pocket
-guide: A HAZARD. Never worth clicking: hit it {clicks} times and the gas explodes, blowing away the old pixels around the cube, and Mining XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Right-click it to clear it safely: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your mining level rises.
+guide: A HAZARD. Never worth clicking: hit it {clicks} times and the gas explodes, blowing away the husks around the cube, and Mining XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Right-click it to clear it safely: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your mining level rises.
 husk: 
 
 [Bark]
@@ -296,7 +296,7 @@ husk:
 
 [HornetNest]
 name: Termite Hive
-guide: The TERMITE HIVE, a HAZARD. Never worth clicking: break it ({clicks} hits) and the termites pour out, one for every old pixel lying on the floor. Each one runs to an old pixel, and a small bar over the pixel counts down while it chews - click the pixel before the bar runs out to save it, or it is eaten for good. Breaking it also drops Woodcutting XP 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Hold a Pesticide with Block Hold and one left click clears it at once, safely, like the beehive. Right-click works it away instead: 10 right clicks clear it safely, it is collected as currency and drops as an old pixel (breaking it with left clicks pays nothing). They are rare (about half as common as other hazards) and get a bit more common as your woodcutting level rises.
+guide: The TERMITE HIVE, a HAZARD. Never worth clicking: break it ({clicks} hits) and the termites pour out, one for every husk lying on the floor. Each one runs to a husk, and a small bar over the pixel counts down while it chews - click the pixel before the bar runs out to save it, or it is eaten for good. Breaking it also drops Woodcutting XP 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Hold a Pesticide with Block Hold and one left click clears it at once, safely, like the beehive. Right-click works it away instead: 10 right clicks clear it safely, it is collected as currency and drops as a husk (breaking it with left clicks pays nothing). They are rare (about half as common as other hazards) and get a bit more common as your woodcutting level rises.
 husk: 
 
 [Berry]
@@ -371,7 +371,7 @@ husk:
 
 [Jellyfish]
 name: Jellyfish
-guide: A HAZARD, and an electric one. Never worth clicking: hit it {clicks} times and it discharges, stinging everything around it (a wide blast that wipes out the old pixels near the cube), frying every bait pellet, and Fishing XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Right-click it to clear it safely: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your fishing level rises.
+guide: A HAZARD, and an electric one. Never worth clicking: hit it {clicks} times and it discharges, stinging everything around it (a wide blast that wipes out the husks near the cube), frying every bait pellet, and Fishing XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Right-click it to clear it safely: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your fishing level rises.
 husk: 
 
 [Bait]
@@ -466,7 +466,7 @@ husk:
 
 [Acorn]
 name: Acorn
-guide: Woodcutting block: an acorn. One click, pays a little. The trick is its OLD pixel: every acorn lying on the field raises the chance that a wood block turns into a Great Oak (they only have to be there - no gathering). With enough of them out the chance is far higher. Acorns despawn like other old pixels, so keep them coming.
+guide: Woodcutting block: an acorn. One click, pays a little. The trick is its HUSK: every acorn lying on the field raises the chance that a wood block turns into a Great Oak (they only have to be there - no gathering). With enough of them out the chance is far higher. Acorns despawn like other husks, so keep them coming.
 husk: 
 
 [Whetstone]

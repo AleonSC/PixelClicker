@@ -4,7 +4,7 @@ Status: **agreed rule; step 1 built (husks stop paying currency, 2026-10-15).** 
 
 ## The problem
 
-Today one block can pay twice: the click gives currency, and the old pixel it drops can be turned into currency again (the Vacuum and Vacuum Device pay out its stored value, the Pixel Bank stores it, a hovering Solar old pixel pays a trickle). It is not clear which of the two is the "real" reward, and it does not make sense in the game's world: you should get the money **or** the thing, not both.
+Today one block can pay twice: the click gives currency, and the husk it drops can be turned into currency again (the Vacuum and Vacuum Device pay out its stored value, the Pixel Bank stores it, a hovering Solar husk pays a trickle). It is not clear which of the two is the "real" reward, and it does not make sense in the game's world: you should get the money **or** the thing, not both.
 
 ## The rule
 
@@ -13,20 +13,20 @@ Today one block can pay twice: the click gives currency, and the old pixel it dr
 | What you get | What it is | What it is for |
 |---|---|---|
 | **Currency** (from the click) | the block's value | spending in the shop, selling to vendors |
-| **Old pixel** (the body) | the drained, physical leftover - material | machines, crafting, charges, XP; **never currency by itself** (only the Recycler machine turns husks into currency, at a loss) |
+| **Husk** (the body) | the drained, physical leftover - material | machines, crafting, charges, XP; **never currency by itself** (only the Recycler machine turns husks into currency, at a loss) |
 | **Charges** (from holding a utility block) | the block's use | Pesticide, Whetstone and other tools |
 
 ### Why it makes sense in the world: extraction
 
-The clicker does not simply "break" blocks: **a click extracts the block's essence** (its colour, its value) into your counter, and what drops out is the **drained husk**. That is why you get both: the currency *is* the essence, and the old pixel is what is left once the essence is gone. The husk is still a real thing - wood is still wood - so it is useful as material, but it has no value of its own to cash in.
+The clicker does not simply "break" blocks: **a click extracts the block's essence** (its colour, its value) into your counter, and what drops out is the **drained husk**. That is why you get both: the currency *is* the essence, and the husk is what is left once the essence is gone. The husk is still a real thing - wood is still wood - so it is useful as material, but it has no value of its own to cash in.
 
-Idea for the look: old pixels could be slightly duller than the block on the cube (a little desaturated, a faint "drained" shimmer as they drop), so the player can see that the value went into the counter and the husk is what is left.
+Idea for the look: husks could be slightly duller than the block on the cube (a little desaturated, a faint "drained" shimmer as they drop), so the player can see that the value went into the counter and the husk is what is left.
 
 ### The three ways to take a block
 
 | Action | You get | You give up |
 |---|---|---|
-| **Left click** (break) | its currency + its husk (old pixel) | nothing - this is the staple |
+| **Left click** (break) | its currency + its husk | nothing - this is the staple |
 | **Hold** (Block Hold) on a utility block | its **charges** (e.g. Pesticide charges) + its husk | its currency |
 | **Right click** on a hazard (clear) | the hazard as currency + its husk | the time the right clicks take |
 
@@ -98,7 +98,7 @@ Built version: an open bin (DeviceKind.Recycler, first on the shop's Utilities c
 
 ## Hands first, machines later (first person)
 
-First person is **not** a second clicker mode. You can still click the cube high above you, but the mode exists for **handling husks by hand**: breaking old pixels for XP, picking them up and carrying them, and feeding machines yourself (e.g. carrying wood to the Wood Chipper).
+First person is **not** a second clicker mode. You can still click the cube high above you, but the mode exists for **handling husks by hand**: breaking husks for XP, picking them up and carrying them, and feeding machines yourself (e.g. carrying wood to the Wood Chipper).
 
 The progression:
 
@@ -144,10 +144,10 @@ Step 1 (built): with `husksPayCurrency` off none of these pay a husk's value any
 
 | System | Today | Direction |
 |---|---|---|
-| Vacuum pixel / Vacuum Device | paid the stored value of every old pixel it sucked up | **built:** gives husk XP per husk sucked up (no '+N' popup any more). Later it may hand husks to a Recycler / crate instead |
-| Pixel Bank (hose) | stores old pixels with their payout, which comes back when they are spat out | **decided:** husk storage for their EFFECT, never to cash in: keep husks you cannot use yet (e.g. Electric husks before Electrician) and spit them out when a machine wants them. Stored husks carry no payout; capacity is one shared total (already how `PixelBank.IsFull` works) |
-| Solar old pixel | hovered and paid a small currency trickle | **built:** each trickle tick adds a little daylight instead (`PixelDaylight.hoverDaylight`, 0 = 0.02 per tick), so a hovering Solar husk keeps the day going |
-| `PixelClicker.ReleaseOldPixel(body, credit: true)` | re-added the old pixel's reward (black hole option, Ultra Holes right hole) | **built:** the credit only pays with `husksPayCurrency` on; Ultra Holes gives husk XP for a correctly sorted husk; the black hole already gives its minigame XP |
+| Vacuum pixel / Vacuum Device | paid the stored value of every husk it sucked up | **built:** gives husk XP per husk sucked up (no '+N' popup any more). Later it may hand husks to a Recycler / crate instead |
+| Pixel Bank (hose) | stores husks with their payout, which comes back when they are spat out | **decided:** husk storage for their EFFECT, never to cash in: keep husks you cannot use yet (e.g. Electric husks before Electrician) and spit them out when a machine wants them. Stored husks carry no payout; capacity is one shared total (already how `PixelBank.IsFull` works) |
+| Solar husk | hovered and paid a small currency trickle | **built:** each trickle tick adds a little daylight instead (`PixelDaylight.hoverDaylight`, 0 = 0.02 per tick), so a hovering Solar husk keeps the day going |
+| `PixelClicker.ReleaseOldPixel(body, credit: true)` | re-added the husk's reward (black hole option, Ultra Holes right hole) | **built:** the credit only pays with `husksPayCurrency` on; Ultra Holes gives husk XP for a correctly sorted husk; the black hole already gives its minigame XP |
 | First-person axe | paid 1.5x a block's value for chopping a wood husk | **built:** Woodcutting XP only (swinging the axe at a wood block on the cube still adds its tool bonus: that is a click) |
 
 Not changed (open question for the developer): the minigames that use husks as play pieces (Snake, Sorting Race, Breakout) still pay currency per husk as their minigame reward. The Pixel Bank's stored payout is kept in the data but nothing pays it any more.
@@ -157,5 +157,5 @@ Not changed (open question for the developer): the minigames that use husks as p
 - Recycler: is 15% right, how fast does it process, what does it cost, and is there one per save or many?
 
 - Should vendors buy only currency counts (as now), or also husks (e.g. the Lumberjack buys a pile of wood husks for a little)?
-- The "drained" look for old pixels: worth doing, and how subtle?
+- The "drained" look for husks: worth doing, and how subtle?
 - Which blocks become utility blocks with charges, besides Pesticide (and the Whetstone once it moves to Mining)?
