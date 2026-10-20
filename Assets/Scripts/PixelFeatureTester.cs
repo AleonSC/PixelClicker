@@ -695,6 +695,21 @@ public class PixelFeatureTester : MonoBehaviour
         return list.ToArray();
     }
 
+    /// <summary>A placed object was replaced by others (a belt split in two at a Belt Sorter's joint): they take its place in its feature's list, so they are saved.</summary>
+    public static void ReplacePlaced(GameObject old, params GameObject[] added)
+    {
+        if (instance == null) return;
+        foreach (Feature f in instance.features)
+        {
+            int i = f.placed.IndexOf(old);
+            if (i < 0) continue;
+            f.placed.RemoveAt(i);
+            foreach (GameObject g in added) if (g != null) f.placed.Add(g);
+            instance.Refresh();
+            return;
+        }
+    }
+
     /// <summary>Removes EVERY object the tester placed (belts, couplings, hoses, kiln, jumps...): the Dev Hub's 'Clear world' widget. Returns how many went.</summary>
     public static int ClearAllPlaced()
     {

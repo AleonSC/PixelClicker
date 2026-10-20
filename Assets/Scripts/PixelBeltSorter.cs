@@ -5,7 +5,12 @@
 //   and its chute / output swaps with it. FILTER SLOT: a tray on top of the beam holds ONE block, shown spinning above it (like a Storage Crate section): let go of a pixel you are dragging over the tray (or throw / drop one onto it: PixelGrab's 'recently held' tag) and it
 //   goes into the slot (a block already there is handed back); the slot's type is the filter. LEFT CLICK the shown block to take it out again (it jumps into your hand; PixelBeltSorter.ClaimsPointer makes PixelGrab step aside). With an empty slot the sorter lets everything
 //   pass. While a pixel of the filter type rides under the beam, PixelConveyorSystem asks PixelBeltSorter.TryDivert (called from its rider loop): the pixel leaves the belt (a paddle sweeps across), and is thrown out of the side - or put onto a belt that STARTS at the chute's
-//   mouth through its built-in bare 'chute' socket (PixelCouplings.Emit, within ~1.3 cubes), so a second belt can be fed from the side. Other types are untouched. The spot is stored as a distance along the belt (it follows the belt); saved with the tester save (spot, yaw, slot type + amount).
+//   mouth through its built-in bare 'chute' socket (PixelCouplings.Emit, within ~1.3 cubes), so a second belt can be fed from the side. Other types are untouched.
+//   AUTO CHUTE (2026-10-20): the chute is only BUILT while something takes husks beside the sorter - a belt starting there, a machine's In coupling, an
+//   elevator's base (Connected, checked twice a second, RefreshChute); the sorter turns round to face it. Nothing beside it = no chute, kicked husks fall
+//   to the floor. JOINT (2026-10-20): placed in the middle of a belt, it SPLITS the belt there (PixelConveyor.SplitAt) and sits at the start of the second
+//   piece; its joint cuts the line into sections for the Control Levers once a line has two or more sorters (JointsOn, PixelConveyor.CollectSection).
+//   A sorter whose belt was split (another sorter's joint) carries on on the piece under it. The spot is stored as a distance along the belt (it follows the belt); saved with the tester save (spot, yaw, slot type + amount).
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -57,11 +62,18 @@ public class PixelBeltSorter : MonoBehaviour, IPixelSocketDevice
         return true;
     }
 
-    public static GameObject Place(PixelClicker c, Vector3 point, float yaw) { return PlaceWith(c, point, yaw, false, default, 0d); }
+    public static GameObject Place(PixelClicker c, Vector3 point, float yaw) { return PlaceWith(c, point, yaw, false, default, 0d, true); }
 
-    private static GameObject PlaceWith(PixelClicker c, Vector3 point, float yaw, bool withFilter, PixelClicker.PixelType type, double amount)
+    private static GameObject PlaceWith(PixelClicker c, Vector3 point, float yaw, bool withFilter, PixelClicker.PixelType type, double amount, bool makeJoint)
     {
         if (!PixelConveyor.NearestOn(c, point, out PixelConveyor belt, out float s, 1.6f)) { PixelHints.Announce("Click a spot on a conveyor belt for the sorter."); return null; }
+        if (makeJoint)
+        {
+            // A JOINT: placed mid-belt, the belt is split in two right here and the sorter sits at the start of the second piece - the line's power
+            // can be switched section by section between sorters (PixelConveyor.CollectSection, Control Levers).
+            PixelConveyor second = belt.SplitAt(s);
+            if (second != null) { belt = second; s = JointAlong * Mathf.Max(0.05f, c.OldPixelWorldSize); }
+        }
         GameObject root = Build(c, false, "Belt Sorter", belt.Width);
         PixelBeltSorter b = root.GetComponent<PixelBeltSorter>();
         b.belt = belt; b.along = s;
@@ -73,8 +85,46 @@ public class PixelBeltSorter : MonoBehaviour, IPixelSocketDevice
         b.sockets = new[] { new PixelSocket("chute", new Vector3(belt.Width * 0.5f + 1.0f * b.unit, 0f, 0f), Vector3.right, PixelSocketFlow.Output, true) { bare = true } };
         PixelCoupling.FitBuiltIn(b);
         if (withFilter) b.SetFilter(c.IndexOf(type), amount);
+        b.RefreshChute(true);
         PixelAudio.Play("device_place");
         return root;
+    }
+
+    private const float JointAlong = 0.05f;   // (cube widths: a sorter on a joint sits just past the start of the second piece)
+
+    // ---------------- the chute: it forms towards whatever takes husks beside it ----------------
+
+    private GameObject[] chuteParts = new GameObject[0];
+    private float nextChuteCheck;
+
+    /// <summary>The chute's mouth on one side of the belt (world): +1 = the model's +X (where the chute and its socket are), -1 = the other side.</summary>
+    private Vector3 Mouth(int side) => transform.TransformPoint(new Vector3(side * (beltWidth * 0.5f + 1.0f * unit), 0f, 0f));
+
+    /// <summary>Does something take husks at this side's mouth: a belt STARTING there (not the sorter's own belt), a machine's In coupling, an elevator's base?</summary>
+    private bool Connected(int side)
+    {
+        Vector3 m = Mouth(side), facing = transform.right * side;
+        foreach (PixelConveyor c in PixelConveyor.All)
+        {
+            if (c == null || c.IsGhost || c == belt) continue;
+            Vector3 d = c.StartPoint - m;
+            if (new Vector3(d.x, 0f, d.z).magnitude <= 1.3f * unit && Mathf.Abs(d.y) <= 1.2f * unit && Vector3.Dot(c.Direction, facing) > 0.3f) return true;
+        }
+        if (PixelCouplings.IntakeAt(m + facing * 0.5f * unit, unit, this) != null) return true;
+        return PixelElevator.AnyBaseNear(m);
+    }
+
+    /// <summary>
+    /// The chute only exists while something is connected beside the sorter: on the connected side (the sorter turns round to face it, unless the
+    /// other side is connected too); with nothing there it has no chute and kicks husks off to the floor.
+    /// </summary>
+    private void RefreshChute(bool force = false)
+    {
+        if (ghost || (!force && Time.time < nextChuteCheck)) return;
+        nextChuteCheck = Time.time + 0.5f;
+        bool here = Connected(1), there = !here && Connected(-1);
+        if (there) { Flip(); here = true; }
+        foreach (GameObject g in chuteParts) if (g != null && g.activeSelf != here) g.SetActive(here);
     }
 
     private static GameObject Build(PixelClicker c, bool ghostMode, string name, float width)
@@ -100,9 +150,13 @@ public class PixelBeltSorter : MonoBehaviour, IPixelSocketDevice
         k.Box("Strip", transform, new Vector3(0f, beamY + 0.13f * u, 0f), new Vector3(width + 0.5f * u, 0.03f * u, 0.16f * u), accent);
         // The paddle that sweeps pixels across (hangs from the beam), and the chute on the +X side.
         paddle = k.Box("Paddle", transform, new Vector3(-half + 0.1f * u, 0.55f * u, 0f), new Vector3(0.1f * u, 1.0f * u, 0.5f * u), teal, default, false, 0.3f, 0.6f).transform;
-        k.Box("Chute", transform, new Vector3(half + 0.55f * u, 0.12f * u, 0f), new Vector3(1.1f * u, 0.07f * u, 0.9f * u), dark, new Vector3(0f, 0f, -8f), false, 0.4f, 0.4f);
-        k.Box("Chute Wall F", transform, new Vector3(half + 0.55f * u, 0.3f * u, 0.46f * u), new Vector3(1.1f * u, 0.3f * u, 0.07f * u), steel, default, false, 0.7f, 0.5f);
-        k.Box("Chute Wall B", transform, new Vector3(half + 0.55f * u, 0.3f * u, -0.46f * u), new Vector3(1.1f * u, 0.3f * u, 0.07f * u), steel, default, false, 0.7f, 0.5f);
+        chuteParts = new[]
+        {
+            k.Box("Chute", transform, new Vector3(half + 0.55f * u, 0.12f * u, 0f), new Vector3(1.1f * u, 0.07f * u, 0.9f * u), dark, new Vector3(0f, 0f, -8f), false, 0.4f, 0.4f),
+            k.Box("Chute Wall F", transform, new Vector3(half + 0.55f * u, 0.3f * u, 0.46f * u), new Vector3(1.1f * u, 0.3f * u, 0.07f * u), steel, default, false, 0.7f, 0.5f),
+            k.Box("Chute Wall B", transform, new Vector3(half + 0.55f * u, 0.3f * u, -0.46f * u), new Vector3(1.1f * u, 0.3f * u, 0.07f * u), steel, default, false, 0.7f, 0.5f),
+        };
+        if (!ghost) foreach (GameObject g in chuteParts) g.SetActive(false);   // (no chute until something is connected beside it; the placing ghost shows where it would go)
         // The filter slot: a tray on top of the beam (a block placed in it is shown spinning above the tray).
         beamTopY = beamY + 0.13f * u;
         k.Box("Tray", transform, new Vector3(0f, beamTopY + 0.04f * u, 0f), new Vector3(0.8f * u, 0.07f * u, 0.8f * u), dark, default, false, 0.4f, 0.5f);
@@ -153,7 +207,13 @@ public class PixelBeltSorter : MonoBehaviour, IPixelSocketDevice
     private void Update()
     {
         if (ghost || clicker == null) return;
-        if (belt == null) { Destroy(gameObject); return; }
+        if (belt == null)
+        {
+            // Its belt was split at another sorter's joint: carry on on the piece under it; a removed belt takes the sorter with it.
+            if (PixelConveyor.NearestOn(clicker, transform.position, out PixelConveyor again, out float s2, 0.3f)) { belt = again; along = s2; }
+            else { Destroy(gameObject); return; }
+        }
+        RefreshChute();
         Vector3 p = belt.PointAt(Mathf.Clamp(along, 0f, belt.Length));
         transform.position = new Vector3(p.x, p.y + belt.SurfaceHeight, p.z);
         if (slotModel != null) slotModel.Rotate(0f, 35f * Time.deltaTime, 0f, Space.Self);
@@ -272,6 +332,21 @@ public class PixelBeltSorter : MonoBehaviour, IPixelSocketDevice
         }
     }
 
+    /// <summary>
+    /// The JOINTS of the sorters standing on these belts (Control Lever sections, PixelConveyor.CollectSection): the end of its belt a sorter sits on
+    /// (within about a cube of it). A sorter in the middle of an unsplit belt is no joint.
+    /// </summary>
+    public static void JointsOn(List<PixelConveyor> belts, List<Vector3> joints)
+    {
+        foreach (PixelBeltSorter b in all)
+        {
+            if (b == null || b.ghost || b.belt == null || !belts.Contains(b.belt)) continue;
+            float reach = 1.2f * b.unit;
+            if (b.along <= reach) joints.Add(b.belt.StartPoint);
+            else if (b.along >= b.belt.Length - reach) joints.Add(b.belt.ExitPoint);
+        }
+    }
+
     /// <summary>Called by the belt system for every riding pixel: true when a sorter took it off the belt (the system then forgets it).</summary>
     public static bool TryDivert(PixelClicker c, PixelConveyor belt, float s, Rigidbody rb)
     {
@@ -317,6 +392,6 @@ public class PixelBeltSorter : MonoBehaviour, IPixelSocketDevice
         if (s == null) return null;
         PixelClicker.PixelType type = default;
         bool has = s.has && System.Enum.TryParse(s.filter, out type);
-        return PlaceWith(c, s.spot, s.yaw, has, type, s.amount);
+        return PlaceWith(c, s.spot, s.yaw, has, type, s.amount, false);   // (the saved belts are already split at its joint)
     }
 }

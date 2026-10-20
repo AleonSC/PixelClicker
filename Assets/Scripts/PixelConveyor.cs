@@ -7,8 +7,9 @@
 //   CORNERS: where belts chain at an angle the outside of the turn is filled with a ROUNDED corner (an arc, a curved rail and a turntable plate; PixelConveyorJoint.cs).
 //   COUPLING SHROUDS (2026-10-19): a belt end on a coupling's port gets a solid box round it reaching into the machine (RefreshShrouds), tinted like the machine;
 //   the coupling's flange is hidden under it, so the belt runs seamlessly into the machine.
-//   CONTROL LEVER (2026-10-20, PixelControlLever): a lever switched OFF beside a belt halts its whole LINE (CollectLine: every belt joined end to end) by
-//   calling HoldHalt every few frames; Speed is 0 while Halted, so riders wait, the chevrons stop and nothing is carried.
+//   CONTROL LEVER (2026-10-20, PixelControlLever): a lever switched OFF beside a belt halts its SECTION (CollectSection: the whole joined line - CollectLine -
+//   while it has fewer than two Belt Sorters, else only the part between the sorters' joints) by calling HoldHalt every few frames; Speed is 0 while
+//   Halted, so riders wait, the chevrons stop and nothing is carried. JOINTS: a Belt Sorter placed mid-belt splits the belt there (SplitAt).
 //   NO FADING ON A BELT (2026-10-19): a rider's lifetime is paused every physics step (OldPixelDespawn.KeepAlive), so husks on belts never despawn; it runs on once they leave.
 //   LOOK (2026-10-19): rubber belt with moving chevrons and slat seams, steel rails with bolts on a dark frame with a yellow trim line, rollers with end caps.
 //   SHOP: the Conveyor Belt Kit (PixelConsumables DeviceKind.ConveyorBelt) is sold in Utilities for everyone since 2026-10-19 (monochrome price).
@@ -200,6 +201,60 @@ public class PixelConveyor : MonoBehaviour
                 if (Touch(b.a, c.a, reach) || Touch(b.a, c.b, reach) || Touch(b.b, c.a, reach) || Touch(b.b, c.b, reach)) line.Add(c);
             }
         }
+    }
+
+    /// <summary>
+    /// The SECTION of this belt's line a Control Lever switches: the whole line while fewer than two Belt Sorters stand on it; with two or more, the
+    /// sorters' JOINTS (the belt end each sorter sits on: placing a sorter mid-belt splits the belt there, SplitAt) cut the line into sections and only
+    /// the belts on this belt's side of them count.
+    /// </summary>
+    public void CollectSection(List<PixelConveyor> section)
+    {
+        CollectLine(section);
+        sectionJoints.Clear();
+        PixelBeltSorter.JointsOn(section, sectionJoints);
+        if (sectionJoints.Count < 2) return;   // (one sorter or none: the lever switches the whole line)
+        float reach = unit * 0.6f;
+        bool AtJoint(Vector3 end) { foreach (Vector3 j in sectionJoints) if (Touch(end, j, reach)) return true; return false; }
+        section.Clear();
+        section.Add(this);
+        for (int i = 0; i < section.Count; i++)
+        {
+            PixelConveyor b = section[i];
+            foreach (PixelConveyor c in all)
+            {
+                if (c == null || c.ghostMode || section.Contains(c)) continue;
+                foreach (Vector3 e in new[] { b.a, b.b })
+                {
+                    if (AtJoint(e)) continue;   // a sorter's joint: the section ends here
+                    if (Touch(e, c.a, reach) || Touch(e, c.b, reach)) { section.Add(c); break; }
+                }
+            }
+        }
+    }
+
+    private static readonly List<Vector3> sectionJoints = new List<Vector3>();
+
+    /// <summary>
+    /// Splits this belt in two at 's' (along the direction of travel) - a JOINT (a Belt Sorter placed mid-belt does this, so sections of the line can be
+    /// switched apart). The two pieces keep its direction and speed and take its place in the tester's list; its riders drop onto the new pieces. Returns
+    /// the second piece (starting at the joint), or null when 's' is too close to an end.
+    /// </summary>
+    public PixelConveyor SplitAt(float s)
+    {
+        if (ghostMode || s < unit * 0.8f || s > Length - unit * 0.8f) return null;
+        Vector3 joint = PointAt(s);
+        Vector3 start = StartPoint, exit = ExitPoint;
+        GameObject first = Place(clicker, start, joint), second = Place(clicker, joint, exit);
+        if (first == null || second == null) { if (first != null) Destroy(first); if (second != null) Destroy(second); return null; }
+        foreach (GameObject g in new[] { first, second })
+        {
+            PixelConveyor piece = g.GetComponent<PixelConveyor>();
+            piece.customSpeedCubes = customSpeedCubes;
+        }
+        PixelFeatureTester.ReplacePlaced(gameObject, first, second);
+        Destroy(gameObject);
+        return second.GetComponent<PixelConveyor>();
     }
 
     private static bool Touch(Vector3 p, Vector3 q, float reach) => new Vector2(p.x - q.x, p.z - q.z).sqrMagnitude <= reach * reach && Mathf.Abs(p.y - q.y) <= reach;

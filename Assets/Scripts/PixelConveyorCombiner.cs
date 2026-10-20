@@ -151,7 +151,12 @@ public class PixelConveyorCombiner : MonoBehaviour, IPixelAutoIntake
     private void FixedUpdate()
     {
         if (ghost) return;
-        if (belt == null) { Destroy(gameObject); return; }   // (its belt was removed)
+        if (belt == null)
+        {
+            // Its belt was split at a Belt Sorter's joint: carry on on the piece under it; a removed belt takes the box with it.
+            if (PixelConveyor.NearestOn(clicker, transform.position, out PixelConveyor again, out float s2, 0.3f)) { belt = again; along = s2; }
+            else { Destroy(gameObject); return; }
+        }
         for (int i = waiting.Count - 1; i >= 0; i--)
         {
             Rigidbody rb = waiting[i];

@@ -226,6 +226,9 @@ public class PixelElevator : MonoBehaviour, IPixelSocketDevice, IPixelAutoIntake
     private Vector3 TopCentre => transform.position + Vector3.up * height;
     private float Reach => (HalfCubes + linkReachCubes) * unit;
 
+    /// <summary>Does any placed elevator's base take husks handed in at this point (a Belt Sorter's chute forms towards it)?</summary>
+    public static bool AnyBaseNear(Vector3 p) { foreach (PixelElevator e in all) if (e != null && !e.ghost && e.NearBase(p)) return true; return false; }
+
     private bool NearBase(Vector3 p) => Flat(p - BaseCentre) <= Reach && Mathf.Abs(p.y - BaseCentre.y) <= 1.5f * unit;
     private bool NearTop(Vector3 p) => Flat(p - TopCentre) <= Reach && Mathf.Abs(p.y - TopCentre.y) <= 1.5f * unit;
     private static float Flat(Vector3 v) { v.y = 0f; return v.magnitude; }

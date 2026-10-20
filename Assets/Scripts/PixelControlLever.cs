@@ -6,6 +6,8 @@
 //   - OFF (handle back, red lamp): its belt's whole LINE stops - every belt joined to it end to end, either way round, corners included
 //     (PixelConveyor.CollectLine) - by calling PixelConveyor.HoldHalt a few times a second (a belt's speed is 0 while halted: riders wait in place,
 //     the chevrons stop). Click again and they all run on. Two levers on one line: either one OFF stops it.
+//   SECTIONS (2026-10-20): with TWO OR MORE Belt Sorters on the line, a lever only switches its own SECTION - the belts between the sorters' joints
+//   (PixelConveyor.CollectSection); with one sorter or none it switches the whole line.
 //   It finds its belt again by position when needed (a belt laid again in the same spot still counts). Saved with the tester save (position, turn, on / off).
 //   Built with PixelFactoryKit; its body has colliders so it can be clicked (PixelPointerClaim blocks the cube click while the mouse is on it).
 // ---------------------------------------------------
@@ -128,7 +130,7 @@ public class PixelControlLever : MonoBehaviour
         nextCheck = Time.time + checkSeconds;
         if (belt == null && Spot(clicker, transform.position, out PixelConveyor found, out _, out _)) belt = found;   // (its belt was laid again)
         if (on || belt == null) return;
-        belt.CollectLine(lineScratch);
+        belt.CollectSection(lineScratch);
         foreach (PixelConveyor b in lineScratch) if (b != null) b.HoldHalt();
     }
 
@@ -158,7 +160,7 @@ public class PixelControlLever : MonoBehaviour
         }
         if (!byHand) return;
         PixelAudio.Play("ui_click", on ? 1.2f : 0.8f);
-        if (!on && belt != null) { belt.CollectLine(lineScratch); PixelHints.Announce("Lever OFF - " + lineScratch.Count + " belt" + (lineScratch.Count == 1 ? "" : "s") + " stopped"); }
+        if (!on && belt != null) { belt.CollectSection(lineScratch); PixelHints.Announce("Lever OFF - " + lineScratch.Count + " belt" + (lineScratch.Count == 1 ? "" : "s") + " stopped"); }
     }
 
     // ---------------- saving (PixelFeatureTester) ----------------
