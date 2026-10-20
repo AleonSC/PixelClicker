@@ -1499,3 +1499,4 @@
 [2026-10-20 07:58 UTC] Sorting Hopper is standalone: it no longer latches onto a Recycler or Junction Box (and they no longer take a hopper), its green pipe drops its filter type out of the mouth like the side pipes - put a bin or belt under it; the hopper hookup code was removed from the Recycler and Junction Box.
 [2026-10-20 09:05 UTC] Aim lasers: while placing a device (its ghost) or carrying it by its handles, a see-through red beam shines out of each coupling hole, far past the floor, cut off by the first thing in its way with a red dot exactly where it lines up (husks and the device itself don't stop it).
 [2026-10-20 09:05 UTC] To-do: an aim laser for the Junction Box's top opening (a wider beam sized to the opening).
+[2026-10-20 09:29 UTC] Wrote an audit of the conveyor belt system (docs/systems/ConveyorAudit.md): bugs, polish, speed, shared systems and design questions - nothing in the game changed yet.
