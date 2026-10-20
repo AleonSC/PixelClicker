@@ -847,7 +847,7 @@ public class PixelUI : MonoBehaviour
     /// Currency gained somewhere in the world that is NOT a click (a husk recycled in the Recycler): the "+X" next to that currency's entry adds up like a
     /// click's, and a "+X" popup rises from the world point (smaller than a click's). Nothing when popups are off.
     /// </summary>
-    public static void ShowWorldGain(int tierIndex, double amount, Vector3 world)
+    public static void ShowWorldGain(int tierIndex, double amount, Vector3 world, string note = null)
     {
         PixelUI ui = inventoryInstance;
         if (ui == null || ui.clicker == null || amount <= 0d || tierIndex < 0 || tierIndex >= ui.clicker.Tiers.Length) return;
@@ -860,7 +860,9 @@ public class PixelUI : MonoBehaviour
         RectTransformUtility.ScreenPointToLocalPointInRectangle(ui.popupCanvasRect, screen, null, out Vector2 local);
         PixelClicker.PixelTier tier = ui.clicker.Tiers[tierIndex];
         Color color = ui.popupUsesTierColor ? tier.UIColor : ui.popupColor;
-        ui.ShowPopup(string.Format(ui.popupFormat, ui.FormatAmount(amount)), color, PopupAnchor.Fixed, local, Vector2.zero, 0.75f, 0f);
+        string text = string.Format(ui.popupFormat, ui.FormatAmount(amount));
+        if (!string.IsNullOrEmpty(note)) text += " <size=75%><alpha=#CC>(" + note + ")</alpha></size>";   // (a small extra, e.g. the Recycler's streak 'x1.3')
+        ui.ShowPopup(text, color, PopupAnchor.Fixed, local, Vector2.zero, 0.75f, 0f);
     }
 
     /// <summary>Shows (and adds up) "+X" next to a pixel's entry for each click's payout.</summary>

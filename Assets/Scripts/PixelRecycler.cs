@@ -45,7 +45,7 @@
 //   CURRENCY ONLY (2026-10-17 rework, docs/GameDesign.md section 6 'Husk routing rework'): each husk pays payoutShare (50%) of what a click on it pays now
 //   as BONUS currency (AddBonusCurrency: not towards the next tier's unlock), times the same-type STREAK within that batch (in the order the husks went
 //   in: +streakStep 0.1 per same-type husk, a different type keeps streakKeepOnSwitch of it, cap streakMaxMultiplier 1.6), never more than
-//   maxShareOfClick (95%) of a click; the device card shows the streak (FillDeviceInfo: inside, streak; the panel adds pay share, recycle delay, size and this session's husks / paid). NO skill XP (xpPerHusk 0).
+//   maxShareOfClick (95%) of a click; each '+N' popup over a recycled husk carries the streak as a small '(x1.3)' (none at x1.0); the device card shows the streak (FillDeviceInfo: inside, streak; the panel adds pay share, recycle delay, size and this session's husks / paid). NO skill XP (xpPerHusk 0).
 //   SIZE (2026-10-18): placed 1.8x as wide and deep as the first bin by default (DefaultSize 1.8 = the Device's radius - 2 for a day, then 10% smaller;
 //   Operation: Size adds +0.3 a level); it holds capacity (25) husks at that size, more by floor area when bigger (Capacity). A floating down arrow shows on hover (the time left is on the device card).
 //   SEVERAL RECYCLERS: any number can stand at once; the shop price rises with every one held or standing (Device.priceGrowthPerOwned 1.8, PixelConsumables
@@ -861,7 +861,9 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
         lastRecycleTime = Time.time;
         double share = System.Math.Min(payoutShare * StreakMultiplier, Mathf.Clamp(maxShareOfClick, 0.1f, 1f));   // (the streak boosts the CURRENCY, capped below a click)
         double pay = CurrentValue(tier) * share;
-        if (pay > 0d) { clicker.AddBonusCurrency(tier, pay); PixelUI.ShowWorldGain(tier, pay, at + Vector3.up * Unit(clicker) * transform.lossyScale.x); }   // (the currency's '+n' adds up and a '+n' rises over the recycled husk)
+        float streak = StreakMultiplier;
+        string streakNote = streak > 1.001f ? "x" + streak.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : null;   // the streak rides on the popup: '+N (x1.3)'
+        if (pay > 0d) { clicker.AddBonusCurrency(tier, pay); PixelUI.ShowWorldGain(tier, pay, at + Vector3.up * Unit(clicker) * transform.lossyScale.x, streakNote); }   // (the currency's '+n' adds up and a '+n' rises over the recycled husk)
         double xp = Mathf.Max(0f, xpPerHusk);
         PixelSkills skills = PixelSkills.Instance;
         if (xp > 0d && skills != null)
