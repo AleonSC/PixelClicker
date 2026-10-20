@@ -13,7 +13,8 @@
 //   NO FADING ON A BELT (2026-10-19): a rider's lifetime is paused every physics step (OldPixelDespawn.KeepAlive), so husks on belts never despawn; it runs on once they leave.
 //   LOOK (2026-10-19): rubber belt with moving chevrons and slat seams, steel rails with bolts on a dark frame with a yellow trim line, rollers with end caps.
 //   SHOP: the Conveyor Belt Kit (PixelConsumables DeviceKind.ConveyorBelt) is sold in Utilities for everyone since 2026-10-19 (monochrome price).
-//   WIDTH: PixelConveyor.LaneCount = 1 cube wide, 2 at Electrician level 10, 3 at level 20 (every belt, PixelConveyorSystem.Update rebuilds them when it changes). Each rider travels in a LANE (belt-local x, PixelConveyor.LaneOffset / NearestLane): a pixel is
+//   WIDTH: PixelConveyor.LaneCount = 1 cube wide, 2 at Electrician level 10, 3 at level 20 (every belt, PixelConveyorSystem.Update rebuilds them when it changes);
+//   the belt panel's SIZE stepper (2026-10-20) sets a belt's own lane count up to that maximum (SetLanes / WantedLanes, saved with the belt). Each rider travels in a LANE (belt-local x, PixelConveyor.LaneOffset / NearestLane): a pixel is
 //   captured into the lane it landed in, riders keep their gap per lane, and a hand-on to the next belt picks the nearest lane there.
 //   CONVEYOR BELT (a Dev Hub > Tester feature, PixelFeatureTester 'Conveyor Belt'). Placing: click a point, then click another: a belt is built between the two (the second point
 //   starts the next belt, so a series of short straight pieces makes a curve; right click ends the chain, a second right click stops placing). Clicks near the end of an existing belt
@@ -55,6 +56,17 @@ public class PixelConveyor : MonoBehaviour
     }
 
     private int lanesBuilt = 1;
+    private int customLanes;   // set in the belt panel (PixelConveyorPanel): this belt's width in lanes; 0 = as wide as the Electrician level allows
+
+    /// <summary>The lanes this belt should have: its own choice (belt panel), never more than the Electrician level allows.</summary>
+    public int WantedLanes => customLanes > 0 ? Mathf.Min(customLanes, LaneCount) : LaneCount;
+
+    /// <summary>The belt panel's SIZE: this belt's width in lanes (1..LaneCount; it is built again at once). Riders in a lane that went away move inwards.</summary>
+    public void SetLanes(int lanes)
+    {
+        customLanes = Mathf.Clamp(lanes, 1, 3);
+        if (!ghostMode && WantedLanes != lanesBuilt && a != b) Rebuild(a, b);
+    }
     /// <summary>The number of lanes this belt was built with (a pixel rides in the middle of one lane).</summary>
     public int Lanes => lanesBuilt;
     private float LanePitch => 1.1f * unit;
@@ -71,7 +83,7 @@ public class PixelConveyor : MonoBehaviour
     /// <summary>The electrician's upgrade changed the width: build the belt again at the new width (nothing else about it changes).</summary>
     public void RefreshLanes()
     {
-        if (ghostMode || LaneCount == lanesBuilt || a == b) return;
+        if (ghostMode || WantedLanes == lanesBuilt || a == b) return;
         Rebuild(a, b);
     }
 
@@ -252,6 +264,7 @@ public class PixelConveyor : MonoBehaviour
         {
             PixelConveyor piece = g.GetComponent<PixelConveyor>();
             piece.customSpeedCubes = customSpeedCubes;
+            if (customLanes > 0) piece.SetLanes(customLanes);
         }
         PixelFeatureTester.ReplacePlaced(gameObject, first, second);
         Destroy(gameObject);
@@ -381,7 +394,7 @@ public class PixelConveyor : MonoBehaviour
         Vector3 d = b - a; d.y = 0f;
         hLength = d.magnitude;
         length = (b - a).magnitude;
-        lanesBuilt = LaneCount;
+        lanesBuilt = WantedLanes;
         width = (1.35f + (lanesBuilt - 1) * 1.1f) * unit;   // one cube wide, plus a cube for every upgrade (Electrician levels 10 and 20)
         height = 0.16f * unit;
         transform.SetPositionAndRotation((a + b) * 0.5f, Quaternion.LookRotation((b - a).normalized, Vector3.up));
@@ -443,6 +456,7 @@ public class PixelConveyor : MonoBehaviour
         RecordTrimParts();
         ApplyTrims();
         ApplySelection();
+        if (highlighted) { highlighted = false; SetHighlight(true); }   // (the panel's glow, rebuilt at the new size)
         PlaceRibs();
     }
 
@@ -735,6 +749,7 @@ public class PixelConveyor : MonoBehaviour
         public Vector3 a, b;
         public bool reversed;
         public float customSpeed = -1f;
+        public int lanes;   // the belt panel's size choice (0 = as wide as allowed)
         public List<PixelConveyorSystem.RiderSave> riders = new List<PixelConveyorSystem.RiderSave>();
     }
 
@@ -743,7 +758,7 @@ public class PixelConveyor : MonoBehaviour
     {
         PixelConveyor belt = root != null ? root.GetComponent<PixelConveyor>() : null;
         if (belt == null) return null;
-        Save s = new Save { a = belt.a, b = belt.b, reversed = belt.reversed, customSpeed = belt.customSpeedCubes };
+        Save s = new Save { a = belt.a, b = belt.b, reversed = belt.reversed, customSpeed = belt.customSpeedCubes, lanes = belt.customLanes };
         s.riders = PixelConveyorSystem.ExportRiders(belt);
         return JsonUtility.ToJson(s);
     }
@@ -757,6 +772,7 @@ public class PixelConveyor : MonoBehaviour
         PixelConveyor belt = root.GetComponent<PixelConveyor>();
         if (s.reversed) { belt.reversed = true; belt.PlaceRibs(); }
         belt.customSpeedCubes = s.customSpeed;
+        if (s.lanes > 0) belt.SetLanes(s.lanes);
         if (s.riders != null) foreach (PixelConveyorSystem.RiderSave r in s.riders) PixelConveyorSystem.ImportRider(belt, r);
         return root;
     }
@@ -1042,6 +1058,7 @@ public class PixelConveyorSystem : MonoBehaviour
         {
             Rider r = riders[i];
             PixelConveyor belt = r.belt;
+            if (r.lane >= belt.Lanes) r.lane = belt.Lanes - 1;   // (the belt was made narrower in its panel)
             float gap = belt.Unit * 1.1f;
             float limit = belt.Length;
             foreach (Rider o in riders) if (o != r && o.belt == belt && o.lane == r.lane && o.s > r.s) limit = Mathf.Min(limit, o.s - gap);

@@ -213,6 +213,7 @@ public class PixelBeltSorter : MonoBehaviour, IPixelSocketDevice
             if (PixelConveyor.NearestOn(clicker, transform.position, out PixelConveyor again, out float s2, 0.3f)) { belt = again; along = s2; }
             else { Destroy(gameObject); return; }
         }
+        if (!Mathf.Approximately(beltWidth, belt.Width)) { Rebuild(belt.Width); if (sockets.Length > 0) sockets[0].localPosition = new Vector3(belt.Width * 0.5f + 1.0f * unit, 0f, 0f); RefreshChute(true); }   // (its belt was made wider / narrower: the gantry follows)
         RefreshChute();
         Vector3 p = belt.PointAt(Mathf.Clamp(along, 0f, belt.Length));
         transform.position = new Vector3(p.x, p.y + belt.SurfaceHeight, p.z);

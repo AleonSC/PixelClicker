@@ -5,7 +5,7 @@
 //   (PixelConveyor.CollectSection - the whole joined line, or the part between two Belt Sorter joints). While the panel is open the section GLOWS
 //   (PixelConveyor.SetHighlight), so you see what you are editing.
 //   The sheet: how many pieces and how long, the speed, the lane count (Electrician), husks riding, stopped by a lever or not. A SPEED stepper
-//   (- / +, speedStep cube widths a second, the whole section), actions REVERSE (every piece of the section turns round) and REMOVE THIS PIECE, and the
+//   (- / +, speedStep cube widths a second, the whole section), a SIZE stepper (lanes 1..the Electrician maximum: PixelConveyor.SetLanes), actions REVERSE (every piece of the section turns round) and REMOVE THIS PIECE, and the
 //   panel's own Remove button takes the WHOLE SECTION away (asks once). A right HOLD on a belt still removes just that piece (PixelFeatureTester).
 //   Not a MonoBehaviour: one small object per opened panel (the settings below are constants for now).
 // ---------------------------------------------------
@@ -76,7 +76,11 @@ public sealed class PixelConveyorPanel : IPixelPanelSubject
         info.Add("Pieces", pieces.ToString());
         info.Add("Length", (length / unit).ToString("0.#", CultureInfo.InvariantCulture) + " cubes");
         info.Add("Speed", (mixed ? "mixed, " : "") + speed.ToString("0.0#", CultureInfo.InvariantCulture) + " cubes / s");
-        info.Add("Lanes", PixelConveyor.LaneCount + " (wider with Electrician levels)");
+        int lanes = first.Lanes, max = PixelConveyor.LaneCount;
+        bool mixedLanes = false;
+        foreach (PixelConveyor b in section) if (b.Lanes != lanes) mixedLanes = true;
+        info.Add("Size", (mixedLanes ? "mixed, " : "") + lanes + (lanes == 1 ? " lane" : " lanes") + " (up to " + max + ")");
+        if (max < 3) info.Note("<color=#9FB0CC>Electrician level " + (max < 2 ? 10 : 20) + " allows " + (max + 1) + " lanes.</color>");
         info.Add("Husks riding", riders.ToString());
         if (halted) info.Note("<color=#FF8A7A>Stopped by a Control Lever - flip it to run again.</color>");
         info.Note("<color=#9FB0CC>The glowing belts are this section: everything here applies to all of them.</color>");
@@ -85,6 +89,9 @@ public sealed class PixelConveyorPanel : IPixelPanelSubject
         info.AddStepper("Speed", shown,
                         speed > MinSpeed + 0.001f ? () => SetSpeed(Mathf.Max(MinSpeed, Round(speed - SpeedStep))) : (System.Action)null,
                         speed < MaxSpeed - 0.001f ? () => SetSpeed(Mathf.Min(MaxSpeed, Round(speed + SpeedStep))) : (System.Action)null);
+        info.AddStepper("Size", lanes + (lanes == 1 ? " lane" : " lanes"),
+                        lanes > 1 ? () => SetLanes(lanes - 1) : (System.Action)null,
+                        lanes < max ? () => SetLanes(lanes + 1) : (System.Action)null);
         info.AddAction("Reverse", Reverse, ButtonRole.Primary);
         if (pieces > 1 && clicked != null) info.AddAction("Remove this piece", RemovePiece, ButtonRole.Danger);
     }
@@ -95,6 +102,14 @@ public sealed class PixelConveyorPanel : IPixelPanelSubject
     {
         foreach (PixelConveyor b in section) if (b != null) b.SetSpeedCubes(cubesPerSecond);
         PixelAudio.Play("ui_click", 1.2f);
+    }
+
+    /// <summary>Every belt of the section is built again at this width (lanes).</summary>
+    private void SetLanes(int lanes)
+    {
+        foreach (PixelConveyor b in section) if (b != null) { b.SetHighlight(false); b.SetLanes(lanes); }
+        lit.Clear();   // (the glow is put back on the rebuilt belts by the panel's refresh)
+        PixelAudio.Play("device_place", 1.2f);
     }
 
     /// <summary>Every piece of the section turns round (the whole section runs the other way).</summary>
