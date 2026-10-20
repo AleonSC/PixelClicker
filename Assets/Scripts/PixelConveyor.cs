@@ -843,15 +843,7 @@ public class PixelConveyorSystem : MonoBehaviour
         foreach (Rider r in system.riders) if (r.belt == belt) r.s = Mathf.Clamp(belt.Length - r.s, 0f, belt.Length);
     }
 
-    private static void SetVelocity(Rigidbody rb, Vector3 v)
-    {
-#if UNITY_6000_0_OR_NEWER
-        rb.linearVelocity = v;
-#else
-        rb.velocity = v;
-#endif
-        rb.angularVelocity = Vector3.zero;
-    }
+    private static void SetVelocity(Rigidbody rb, Vector3 v) => PixelPathCarrier.SetVelocity(rb, v);
 
     private bool Eligible(Rigidbody rb)
     {

@@ -55,6 +55,7 @@ public sealed class PixelPathCarrier
 
     public static void SetVelocity(Rigidbody rb, Vector3 v)
     {
+        if (rb == null || rb.isKinematic) return;   // (a kinematic body has no velocity to set: Unity warns and ignores it - e.g. a husk handed on while still locked)
 #if UNITY_6000_0_OR_NEWER
         rb.linearVelocity = v;
 #else
