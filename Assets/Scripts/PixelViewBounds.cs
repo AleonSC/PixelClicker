@@ -145,7 +145,7 @@ public class PixelViewBounds : MonoBehaviour
                 (entry.ignores || clicker.IsFlyingPixel(body))) continue;
 
             Vector3 position = body.position;
-            Vector3 velocity = GetVelocity(body);
+            Vector3 velocity = PixelBody.Velocity(body);
             bool changed = false;
 
             // The pixel's half size along each of its own axes (it swells, shrinks and tumbles, so this is read every step).
@@ -202,7 +202,7 @@ public class PixelViewBounds : MonoBehaviour
             if (changed)
             {
                 body.position = position;
-                SetVelocity(body, velocity);
+                PixelBody.Steer(body, velocity);
             }
         }
     }
@@ -266,22 +266,5 @@ public class PixelViewBounds : MonoBehaviour
         return Mathf.Clamp01(PixelHud.Instance.RawBarHeight * scale / Mathf.Max(1, Screen.height)); // the bars are drawn on an unscaled canvas
     }
 
-    private static Vector3 GetVelocity(Rigidbody rb)
-    {
-#if UNITY_6000_0_OR_NEWER
-        return rb.linearVelocity;
-#else
-        return rb.velocity;
-#endif
-    }
 
-    private static void SetVelocity(Rigidbody rb, Vector3 v)
-    {
-        if (rb == null || rb.isKinematic) return;   // (a kinematic body cannot be steered: Unity warns)
-#if UNITY_6000_0_OR_NEWER
-        rb.linearVelocity = v;
-#else
-        rb.velocity = v;
-#endif
-    }
 }

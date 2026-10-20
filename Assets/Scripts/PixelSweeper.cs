@@ -12,7 +12,7 @@
 //   WIND-UP: it runs runSeconds (60) after a wind, slowing to a stop over the last slowDownSeconds (the key on its back turns slower too); stopped, it shows
 //   'click to wind' and a LEFT CLICK on it winds it again (PixelPointerClaim.ClaimButton: the cube and Pixel Grabbing leave that click alone). motorFitted is the
 //   hook for the planned Electrician MOTOR (fitted through a future Power socket): with it on, it never runs down.
-//   The placed device is the permanent PixelChipperDevice stub (bought, kept, placed, saved, removed - hold the right button on it - like every device). Unlock:
+//   The placed device is the permanent PixelPermanentDevice stub (bought, kept, placed, saved, removed - hold the right button on it - like every device). Unlock:
 //   vendorOnly + shopSkillId 'standard' / level 5 (on sale in the shop from Standard 5, pure currency). Saved: the wind left (PlacedState.extra 'W,seconds').
 //   No carry handles: it roams away from its home pad, so it is moved by picking it up (removing) and placing it again. Stats sweeper.rescued.
 //   DEVICE CARD (PixelDeviceCard, FillDeviceInfo): wind left as the bar, what it is doing; the panel adds range and this session's rescues.

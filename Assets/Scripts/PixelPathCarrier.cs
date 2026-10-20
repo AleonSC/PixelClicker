@@ -53,16 +53,7 @@ public sealed class PixelPathCarrier
     public int Count => items.Count;
     public bool Contains(Rigidbody rb) => rb != null && set.Contains(rb);
 
-    public static void SetVelocity(Rigidbody rb, Vector3 v)
-    {
-        if (rb == null || rb.isKinematic) return;   // (a kinematic body has no velocity to set: Unity warns and ignores it - e.g. a husk handed on while still locked)
-#if UNITY_6000_0_OR_NEWER
-        rb.linearVelocity = v;
-#else
-        rb.velocity = v;
-#endif
-        rb.angularVelocity = Vector3.zero;
-    }
+    public static void SetVelocity(Rigidbody rb, Vector3 v) => PixelBody.Steer(rb, v, true);   // (also stops the spin; skips kinematic bodies - e.g. a husk handed on while still locked; PixelBody)
 
     public static float[] Cumulative(Vector3[] path)
     {

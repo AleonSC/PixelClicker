@@ -843,7 +843,6 @@ public class PixelConveyorSystem : MonoBehaviour
         foreach (Rider r in system.riders) if (r.belt == belt) r.s = Mathf.Clamp(belt.Length - r.s, 0f, belt.Length);
     }
 
-    private static void SetVelocity(Rigidbody rb, Vector3 v) => PixelPathCarrier.SetVelocity(rb, v);
 
     private bool Eligible(Rigidbody rb)
     {
@@ -865,7 +864,7 @@ public class PixelConveyorSystem : MonoBehaviour
 
     private void Capture(Rigidbody rb, PixelConveyor belt, float s, int lane)
     {
-        SetVelocity(rb, Vector3.zero);
+        PixelBody.Steer(rb, Vector3.zero, true);
         rb.isKinematic = true;
         float half = PixelAttachment.HalfExtents(rb, belt.Unit).y;
         riders.Add(new Rider { rb = rb, belt = belt, s = Mathf.Clamp(s, 0f, belt.Length), half = half, lane = Mathf.Clamp(lane, 0, belt.Lanes - 1) });
@@ -877,8 +876,8 @@ public class PixelConveyorSystem : MonoBehaviour
         riding.Remove(r.rb);
         if (r.rb == null) return;
         r.rb.isKinematic = false;
-        if (eject && r.belt != null) SetVelocity(r.rb, r.belt.Direction * r.belt.Speed * 1.15f + Vector3.up * (r.belt.Unit * 0.5f + r.belt.SlopeUp * r.belt.Speed));
-        else SetVelocity(r.rb, Vector3.zero);
+        if (eject && r.belt != null) PixelBody.Steer(r.rb, r.belt.Direction * r.belt.Speed * 1.15f + Vector3.up * (r.belt.Unit * 0.5f + r.belt.SlopeUp * r.belt.Speed), true);
+        else PixelBody.Steer(r.rb, Vector3.zero, true);
     }
 
     private void FixedUpdate()

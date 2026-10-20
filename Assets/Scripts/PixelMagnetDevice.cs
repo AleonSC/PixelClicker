@@ -38,7 +38,7 @@ public class PixelMagnetDevice : PixelPlacedDevice
 
     private void FixedUpdate()
     {
-        if (IsDying || !Armed || clicker == null || pullPoint == null) return;
+        if (IsEnding || !Armed || clicker == null || pullPoint == null) return;
         Vector3 target = pullPoint.position + Vector3.down * drop;
         var pixels = clicker.OldPixels;
         for (int i = pixels.Count - 1; i >= 0; i--)

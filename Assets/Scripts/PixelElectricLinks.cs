@@ -247,7 +247,7 @@ public class PixelElectricLinks : MonoBehaviour
         foreach (KeyValuePair<Rigidbody, Link> kv in links)
         {
             PixelPlacedDevice dev = kv.Value.device;
-            if (kv.Key == null || dev == null || dev.UsesMode || dev.IsRemoving || !dev.Armed) continue;
+            if (kv.Key == null || dev == null || dev.UsesMode || dev.IsEnding || !dev.Armed) continue;
             if (kv.Key == petBody) continue;   // the pet is handled separately (first while it has charge, never dissipated)
             int depth = ChainDepth(kv.Key);
             if (!focus.TryGetValue(dev, out Rigidbody cur) || depth > focusDepth[dev] || (depth == focusDepth[dev] && order[kv.Key] < order[cur]))
@@ -260,7 +260,7 @@ public class PixelElectricLinks : MonoBehaviour
         if (petBody != null && petCharge > 0f && links.TryGetValue(petBody, out Link petLink) && petLink.device != null)
         {
             PixelPlacedDevice pd = petLink.device;
-            if (!pd.UsesMode && !pd.IsRemoving && pd.Armed) focus[pd] = petBody;
+            if (!pd.UsesMode && !pd.IsEnding && pd.Armed) focus[pd] = petBody;
         }
         List<Rigidbody> empty = null;
         foreach (KeyValuePair<PixelPlacedDevice, Rigidbody> kv in focus)
@@ -335,7 +335,7 @@ public class PixelElectricLinks : MonoBehaviour
         // Devices that are working.
         List<PixelPlacedDevice> devices = new List<PixelPlacedDevice>();
         foreach (PixelPlacedDevice d in PixelPlacedDevice.All)
-            if (d != null && !d.IsRemoving && d.Armed) devices.Add(d);
+            if (d != null && !d.IsEnding && d.Armed) devices.Add(d);
 
         // Electric old pixels lying around (not flying away, not vanishing).
         scratch.Clear();

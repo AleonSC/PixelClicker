@@ -25,24 +25,7 @@ public class OldPixelStream : MonoBehaviour
         if (box != null) box.isTrigger = true; // no collisions while it is in the stream
     }
 
-    private static Vector3 VelocityOf(Rigidbody rb)
-    {
-#if UNITY_6000_0_OR_NEWER
-        return rb.linearVelocity;
-#else
-        return rb.velocity;
-#endif
-    }
 
-    private static void SetVelocityOf(Rigidbody rb, Vector3 v)
-    {
-        if (rb == null || rb.isKinematic) return;   // (a kinematic body cannot be steered: Unity warns)
-#if UNITY_6000_0_OR_NEWER
-        rb.linearVelocity = v;
-#else
-        rb.velocity = v;
-#endif
-    }
 
     private static readonly RaycastHit[] downHits = new RaycastHit[16];   // (reused by every stream each physics step)
 
@@ -51,7 +34,7 @@ public class OldPixelStream : MonoBehaviour
         if (landed || body == null || clicker == null) return;
         age += Time.fixedDeltaTime;
 
-        Vector3 v = VelocityOf(body);
+        Vector3 v = PixelBody.Velocity(body);
         // Safety: a pixel that never finds the floor (or falls out of the world) lands where it is.
         if (age > 10f || body.position.y < -60f) { Land(body.position, Vector3.up); return; }
         if (v.y > 0.05f) return; // still rising
@@ -102,8 +85,8 @@ public class OldPixelStream : MonoBehaviour
             if (c != box && !c.transform.IsChildOf(transform) && c.GetComponentInParent<OldPixelInfo>() != null)
                 Physics.IgnoreCollision(box, c, true);
 
-        Vector3 v = VelocityOf(body);
-        SetVelocityOf(body, new Vector3(v.x * 0.4f + away.x * 0.4f, 0f, v.z * 0.4f + away.z * 0.4f)); // a gentle slide, no bounce
+        Vector3 v = PixelBody.Velocity(body);
+        PixelBody.Steer(body, new Vector3(v.x * 0.4f + away.x * 0.4f, 0f, v.z * 0.4f + away.z * 0.4f)); // a gentle slide, no bounce
         if (!body.isKinematic) body.angularVelocity *= 0.3f;
         if (box != null) box.isTrigger = false; // solid now
 

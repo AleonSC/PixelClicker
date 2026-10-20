@@ -245,7 +245,7 @@ public partial class PixelShop
         GameObject model = BuildModel(key);
         if (model == null) return null;
         foreach (Renderer r in model.GetComponentsInChildren<Renderer>())
-            if (r.name == "Range" || r.name == "Blow Area" || r.name == "Bend Cone") r.enabled = false;
+            if (PixelPlacedDevice.IsMarking(r)) r.enabled = false;
         return model;
     }
 

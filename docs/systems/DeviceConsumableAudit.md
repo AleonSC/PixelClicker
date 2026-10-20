@@ -2,6 +2,8 @@
 
 Three read-only passes: device code, consumable code, and game design. The design pass used the design docs, the to-do / ideas lists and the real numbers in code. Key claims were checked by hand. Nothing has been changed yet. Effort: S < 1 h, M = a few hours, L = a day.
 
+**Done 2026-10-20:** all of section 1 (B1-B9) and section 2 (quick wins), plus: `PixelClicker.DisplayNameOf` (player name of a block type, used by potions and crafting), `PixelBody` (one velocity helper), `PixelPlacedDevice.IsMarking` + marking-name constants, `IsEnding` (IsDying / IsRemoving merged), `PixelChipperDevice` renamed `PixelPermanentDevice`. Not done from section 2: 'for a minute' in the Pet Treat / Focus texts (their real durations live outside the item). Sections 3 and 4 are open.
+
 ## 1. Bugs (confirmed by reading the code)
 
 | # | Where | Bug | Fix | Effort |

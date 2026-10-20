@@ -65,7 +65,7 @@ public class PixelSprinklerDevice : PixelPlacedDevice
                 if (ps != null && !ps.isPlaying) ps.Play();
 
         sprayTimer -= Time.deltaTime;
-        if (sprayTimer <= 0f && !IsDying && Armed && clicker != null)
+        if (sprayTimer <= 0f && !IsEnding && Armed && clicker != null)
         {
             sprayTimer = interval;
             clicker.WaterSplashAt(transform.position + Vector3.up * 0.2f, radius);

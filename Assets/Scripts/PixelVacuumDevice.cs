@@ -45,7 +45,7 @@ public class PixelVacuumDevice : PixelPlacedDevice
 
     private void FixedUpdate()
     {
-        if (IsDying || !Armed || clicker == null) return;
+        if (IsEnding || !Armed || clicker == null) return;
 
         var pixels = clicker.OldPixels;
         Vector3 target = suckPoint.position;

@@ -1,6 +1,6 @@
 // ---- System notes ----
 // PixelFunnel.cs
-//   The FUNNEL (consumable device, PixelConsumables DeviceKind.Funnel 16, one at a time; the placed device is the thin PixelChipperDevice stub on the same object). A wide glass cone hangs just UNDER
+//   The FUNNEL (consumable device, PixelConsumables DeviceKind.Funnel 16, one at a time; the placed device is the thin PixelPermanentDevice stub on the same object). A wide glass cone hangs just UNDER
 //   the clicker cube (mouth radius mouthRadius cube widths, its mouth mouthDrop below the cube's underside) and catches every loose old pixel that falls into it: the pixel is locked (kinematic,
 //   moved by position by the shared PixelPathCarrier), drawn to the throat and carried down a see-through TUBE (PixelTube, a smooth curve from the throat to the output) at tubeSpeed cube widths per second,
 //   one gap apart. The output sits on the floor where the player clicked (the object's own position; the spout points away from the cube, Scroll / Q / E turns it a bit); at the end the pixel is put back
@@ -334,7 +334,7 @@ public class PixelFunnel : MonoBehaviour, IPixelSocketDevice, IPixelDeviceInfo
     {
         if (mode != Mode.Real || clicker == null || pathLen <= 0f) return;
         if (device == null) device = GetComponent<PixelPlacedDevice>();
-        bool removing = device != null && device.IsRemoving;
+        bool removing = device != null && device.IsEnding;
 
         // 1. Catch: every loose old pixel inside the cone is locked and drawn to the throat.
         if (!removing)

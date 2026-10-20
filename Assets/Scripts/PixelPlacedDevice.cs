@@ -6,7 +6,7 @@
 //   energy bar (PixelEnergyBar) over the device, tracking its charge (the time ring hides meanwhile).
 //   SetRemoveGlow(0..1): while the right mouse button is held on the device (PixelConsumables.UpdateRemoval + PixelHold ring) it tints red, glows and lights up red as the ring fills.
 //   Abstract base of placed devices: countdown (shown as a small RING, PixelWorldRing, once switched on - the timer text only says 'Click to start'
-//   before that and the uses-mode labels like the Charge Booster's CLICK!), shrink-away (InitCommon, OnTick, IsDying). Armed /
+//   before that and the uses-mode labels like the Charge Booster's CLICK!), shrink-away (InitCommon, OnTick, IsEnding). Armed /
 //   disarmed: every device you place starts DISARMED (Disarm() right after SpawnDevice; grey via per-renderer property blocks -
 //   ApplyTint / ClearTint, a desaturated dull version of each material's colour, emission off; the countdown does not run, OnTick is
 //   not called, the timer text shows DisarmedText 'Click to start'; subclasses must check Armed in FixedUpdate / event handlers: fan,
@@ -146,7 +146,14 @@ public abstract class PixelPlacedDevice : MonoBehaviour
     }
 
     /// <summary>Does this part count as 'on the device' for HitTest? (Default: every visible part except the range markings.) Read once per part, when the list is made.</summary>
-    protected virtual bool CountsForHit(Renderer r) => r.name != "Range" && r.name != "Blow Area" && !r.name.StartsWith("Coupling");   // (a coupling on the device is removed on its own)
+    protected virtual bool CountsForHit(Renderer r) => !IsMarking(r) && !r.name.StartsWith("Coupling");
+
+    // The names of a device's MARKINGS (its reach disc / arc, the Fan's blow wedge, the Sorter's bend cone): they are not part of the
+    // device's body (no clicks on them, hidden in shop / Operation pictures). Name a new marking with one of these and use IsMarking to test.
+    public const string RangeMark = "Range", BlowAreaMark = "Blow Area", BendConeMark = "Bend Cone";
+
+    /// <summary>Is this renderer one of a device's markings (range disc / arc, blow wedge, bend cone) rather than its body?</summary>
+    public static bool IsMarking(Renderer r) => r != null && (r.name == RangeMark || r.name == BlowAreaMark || r.name == BendConeMark);   // (a coupling on the device is removed on its own)
 
     private Renderer[] hitRenderers;
     private float hitRenderersTime = -10f;
@@ -245,14 +252,8 @@ public abstract class PixelPlacedDevice : MonoBehaviour
         }
     }
 
-    /// <summary>True once time ran out and the device is shrinking away (it should stop working).</summary>
-    protected bool IsDying => dying;
-
-    /// <summary>True once the device has run out and is shrinking away.</summary>
+    /// <summary>True once the device has run out or is being removed and is shrinking away (it should stop working). (One name: IsEnding / IsEnding were merged into it.)</summary>
     public bool IsEnding => dying;
-
-    /// <summary>Is the device already shrinking away?</summary>
-    public bool IsRemoving => dying;
 
     /// <summary>Raised once when the device's time is up and it starts shrinking away (also when it is removed by hand).</summary>
     public event System.Action<PixelPlacedDevice> Ended;

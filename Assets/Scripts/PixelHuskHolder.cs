@@ -100,14 +100,7 @@ public static class PixelHuskHolder
         if (despawn != null) { despawn.Held = false; if (!despawn.IsDespawning) despawn.KeepAlive(); }
     }
 
-    public static void SetVelocity(Rigidbody body, Vector3 v)
-    {
-#if UNITY_6000_0_OR_NEWER
-        body.linearVelocity = v;
-#else
-        body.velocity = v;
-#endif
-    }
+    public static void SetVelocity(Rigidbody body, Vector3 v) => PixelBody.SetVelocity(body, v);   // (PixelBody: the one version-safe velocity helper)
 
     /// <summary>
     /// The husk (already taken off the list) is switched off and slides into the container, shrinking away; 'target' (if any) is where it goes and,

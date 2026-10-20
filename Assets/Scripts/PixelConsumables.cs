@@ -1918,7 +1918,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     /// <summary>Removes a placed device the way the right-button hold does (it shrinks away glowing red; sound device_remove). Also the device panel's Remove button.</summary>
     public void RemoveDevice(PixelPlacedDevice target)
     {
-        if (target == null || target.IsRemoving) return;
+        if (target == null || target.IsEnding) return;
         target.SetRemoveGlow(1f);   // (it shrinks away glowing)
         target.RemoveNow();
         PixelAudio.Play("device_remove");
@@ -1963,7 +1963,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         for (int i = 0; i < all.Count; i++)
         {
             PixelPlacedDevice device = all[i];
-            if (device == null || device.IsRemoving || (onlyDisarmed && device.Armed)) continue;
+            if (device == null || device.IsEnding || (onlyDisarmed && device.Armed)) continue;
             if (device.HitTest(ray, out float distance) && distance < bestDistance)
             {
                 bestDistance = distance;
@@ -2273,7 +2273,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         Device d = devices[index];
         if (d == null || d.priceGrowthPerOwned <= 1f) return costs;
         int have = d.owned;
-        foreach (PixelPlacedDevice p in PixelPlacedDevice.All) if (p != null && !p.IsRemoving && p.DeviceIndex == index) have++;
+        foreach (PixelPlacedDevice p in PixelPlacedDevice.All) if (p != null && !p.IsEnding && p.DeviceIndex == index) have++;
         have += Mathf.Max(0, extra);
         if (have <= 0) return costs;
         double factor = System.Math.Pow(d.priceGrowthPerOwned, have);
@@ -3311,7 +3311,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         else if (d.kind == DeviceKind.WoodChipper)
         {
             GameObject root = PixelWoodChipper.Place(clicker, point, yaw);
-            PixelChipperDevice chipperDevice = root.AddComponent<PixelChipperDevice>();
+            PixelPermanentDevice chipperDevice = root.AddComponent<PixelPermanentDevice>();
             chipperDevice.Init(clicker, cam, shrinkSeconds);
             result = chipperDevice;
         }
@@ -3325,7 +3325,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         else if (d.kind == DeviceKind.Sweeper)
         {
             GameObject root = PixelSweeper.Place(clicker, point, yaw);
-            PixelChipperDevice sweeperDevice = root.AddComponent<PixelChipperDevice>();   // (the thin permanent-device stub; all the behaviour is in PixelSweeper)
+            PixelPermanentDevice sweeperDevice = root.AddComponent<PixelPermanentDevice>();   // (the thin permanent-device stub; all the behaviour is in PixelSweeper)
             sweeperDevice.Init(clicker, cam, shrinkSeconds);
             result = sweeperDevice;
         }
@@ -3333,7 +3333,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         {
             float size = d.bodyDiameter > 0f ? d.bodyDiameter : 1f;
             GameObject root = PixelBiomassGenerator.Place(clicker, point, yaw, size);
-            PixelChipperDevice generatorDevice = root.AddComponent<PixelChipperDevice>();   // (the thin permanent-device stub; it removes itself when it runs dry)
+            PixelPermanentDevice generatorDevice = root.AddComponent<PixelPermanentDevice>();   // (the thin permanent-device stub; it removes itself when it runs dry)
             generatorDevice.Init(clicker, cam, shrinkSeconds);
             PixelBiomassGenerator gen = root.AddComponent<PixelBiomassGenerator>();
             Device fresh = d.kind == DeviceKind.BiomassGenerator ? CreateDefaultBiomassGenerator() : CreateDefaultPocketBiomassGenerator();
@@ -3343,14 +3343,14 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         else if (d.kind == DeviceKind.JunctionBox)
         {
             GameObject root = PixelJunctionBox.Place(clicker, point, yaw);
-            PixelChipperDevice junctionDevice = root.AddComponent<PixelChipperDevice>();   // (the thin permanent-device stub; all the behaviour is in PixelJunctionBox)
+            PixelPermanentDevice junctionDevice = root.AddComponent<PixelPermanentDevice>();   // (the thin permanent-device stub; all the behaviour is in PixelJunctionBox)
             junctionDevice.Init(clicker, cam, shrinkSeconds);
             result = junctionDevice;
         }
         else if (d.kind == DeviceKind.SortingHopper)
         {
             GameObject root = PixelSortingHopper.Place(clicker, point, yaw, d.radius);   // (d.radius = how far from a Recycler's back it latches on)
-            PixelChipperDevice hopperDevice = root.AddComponent<PixelChipperDevice>();   // (the thin permanent-device stub; all the behaviour is in PixelSortingHopper)
+            PixelPermanentDevice hopperDevice = root.AddComponent<PixelPermanentDevice>();   // (the thin permanent-device stub; all the behaviour is in PixelSortingHopper)
             hopperDevice.Init(clicker, cam, shrinkSeconds);
             result = hopperDevice;
         }
@@ -3440,7 +3440,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         System.Collections.Generic.List<PlacedState> list = new System.Collections.Generic.List<PlacedState>();
         foreach (PixelPlacedDevice placed in PixelPlacedDevice.All)
         {
-            if (placed == null || placed.IsRemoving || placed.DeviceIndex < 0 || placed.DeviceIndex >= devices.Length) continue;
+            if (placed == null || placed.IsEnding || placed.DeviceIndex < 0 || placed.DeviceIndex >= devices.Length) continue;
             PlacedState state = new PlacedState
             {
                 device = devices[placed.DeviceIndex].displayName,
@@ -3490,7 +3490,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         int index = Array.FindIndex(devices, x => x != null && x.displayName == state.device);
         if (index < 0) return;
         PixelPlacedDevice restored = SpawnDevice(index, state.position, state.yaw, state.remaining, state.aim, state.bend, state.force);
-        if (restored != null && state.disarmed && !(restored is PixelStorageCrate) && !(restored is PixelChipperDevice) && !(restored is PixelRecyclerDevice)) restored.Disarm();
+        if (restored != null && state.disarmed && !(restored is PixelStorageCrate) && !(restored is PixelPermanentDevice) && !(restored is PixelRecyclerDevice)) restored.Disarm();
         if (restored is PixelSorterDevice restoredSorter && state.forceValue > 0f) restoredSorter.SetForceValue(state.forceValue);
         if (restored is PixelMagnetSorterDevice restoredMag) restoredMag.ImportState(state.extra);
         if (restored is PixelQuantumDevice restoredOrganizer) restoredOrganizer.ImportState(state.extra);
@@ -3646,7 +3646,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         if (showRange && !displayOnly && d.kind != DeviceKind.MagnetSorter && d.kind != DeviceKind.QuantumOrganizer && d.kind != DeviceKind.StorageCrate)
         {
             GameObject disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            disc.name = "Range";
+            disc.name = PixelPlacedDevice.RangeMark;
             Destroy(disc.GetComponent<Collider>());
             disc.transform.SetParent(root.transform, false);
             disc.transform.localScale = new Vector3(d.radius * 2f, 0.01f, d.radius * 2f);
@@ -3890,7 +3890,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         if (displayOnly) return;
 
         // The pull arc on the floor: a flat fan in front of the magnet.
-        GameObject arc = new GameObject("Range", typeof(MeshFilter), typeof(MeshRenderer));
+        GameObject arc = new GameObject(PixelPlacedDevice.RangeMark, typeof(MeshFilter), typeof(MeshRenderer));
         arc.transform.SetParent(root.transform, false);
         arc.transform.localPosition = new Vector3(0f, 0.03f, z + 0.55f);
         Mesh mesh = new Mesh { name = "Pull Arc" };
@@ -4068,7 +4068,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         // The area that gets blown: a flat wedge on the floor.
         if (showRange && !displayOnly)
         {
-            GameObject wedge = new GameObject("Blow Area", typeof(MeshFilter), typeof(MeshRenderer));
+            GameObject wedge = new GameObject(PixelPlacedDevice.BlowAreaMark, typeof(MeshFilter), typeof(MeshRenderer));
             wedge.transform.SetParent(root.transform, false);
             wedge.transform.localPosition = new Vector3(0f, 0.02f, 0f);
             wedge.GetComponent<MeshFilter>().sharedMesh = BuildWedgeMesh(d.radius, d.coneAngle);

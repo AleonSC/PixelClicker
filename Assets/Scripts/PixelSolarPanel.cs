@@ -162,7 +162,7 @@ public class PixelSolarPanel : MonoBehaviour
         scanTimer -= dt;
         if (scanTimer <= 0f) { scanTimer = 0.2f; Scan(); }
 
-        if (powered && linked != null && !linked.IsRemoving) linked.HoldPower();
+        if (powered && linked != null && !linked.IsEnding) linked.HoldPower();
 
         // The indicator lamp and the link line.
         Color lampColor = powered ? (lasting ? new Color(0.7f, 0.95f, 1f, 1f) : new Color(0.25f, 0.65f, 1f, 1f)) : new Color(0.5f, 0.1f, 0.1f, 1f);
@@ -174,7 +174,7 @@ public class PixelSolarPanel : MonoBehaviour
         }
         if (line != null)
         {
-            bool show = linked != null && !linked.IsRemoving;
+            bool show = linked != null && !linked.IsEnding;
             line.gameObject.SetActive(show);
             if (show)
             {
@@ -296,7 +296,7 @@ public class PixelSolarPanel : MonoBehaviour
         PixelSolarPanel p = root != null ? root.GetComponent<PixelSolarPanel>() : null;
         if (p == null) return null;
         Save s = new Save { position = root.transform.position, yaw = root.transform.eulerAngles.y };
-        if (p.linked != null && !p.linked.IsRemoving) { s.hasLink = true; s.linkPosition = p.linked.transform.position; }
+        if (p.linked != null && !p.linked.IsEnding) { s.hasLink = true; s.linkPosition = p.linked.transform.position; }
         return JsonUtility.ToJson(s);
     }
 
@@ -312,7 +312,7 @@ public class PixelSolarPanel : MonoBehaviour
             float bestD = (c.OldPixelWorldSize * 0.8f) * (c.OldPixelWorldSize * 0.8f);
             foreach (PixelPlacedDevice d in PixelPlacedDevice.All)
             {
-                if (d == null || d.IsRemoving) continue;
+                if (d == null || d.IsEnding) continue;
                 float dd = (d.transform.position - s.linkPosition).sqrMagnitude;
                 if (dd < bestD) { bestD = dd; best = d; }
             }
@@ -330,7 +330,7 @@ public class PixelSolarPanel : MonoBehaviour
         float bestDist = float.MaxValue;
         foreach (PixelPlacedDevice d in PixelPlacedDevice.All)
         {
-            if (d == null || d.IsRemoving || d.IsRemoving) continue;
+            if (d == null || d.IsEnding || d.IsEnding) continue;
             if (Vector3.Distance(d.transform.position, panelRoot.transform.position) > p.LinkRadius) continue;
             if (d.HitTest(ray, out float dist) && dist < bestDist) { bestDist = dist; best = d; }
         }

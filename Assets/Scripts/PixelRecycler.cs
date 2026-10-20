@@ -7,7 +7,7 @@
 //   radius; a placed bin follows the level IN USE live, FollowSizeUpgrade - the device panel's - / + turns a bought level down). Size is +0.135 a level since
 //   2026-10-18 (max 2.475, 25% smaller than with +0.3). (Run Time, Streak Power and Suction rows were removed; their stats still work at their base values.)
 //   RECYCLER (PixelConsumables DeviceKind.Recycler 19, Utilities card - listed FIRST there - and Cubie's gift on visit 1 via the {recycler} page token): a
-//   permanent open-topped bin (PixelChipperDevice stub for removal / saving its spot; built here by Place / CreateGhost / CreateDisplay with PixelFactoryKit:
+//   permanent open-topped bin (PixelPermanentDevice stub for removal / saving its spot; built here by Place / CreateGhost / CreateDisplay with PixelFactoryKit:
 //   plinth + feet, green walls with a dark liner, brushed-metal corner pillars and rim, a glowing band round the body and a status lamp - green idle,
 //   amber while working - recycling arrows on the front, the shared carry handles and a big red button).
 //   Drop old pixels (husks) into it - Pixel Grabbing, or anything that lands inside: a husk that comes to rest inside the bin's walls is CAPTURED

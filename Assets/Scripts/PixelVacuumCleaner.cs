@@ -374,19 +374,11 @@ public class PixelVacuumCleaner : MonoBehaviour
             }
             float k = 1f - Mathf.Clamp01(d / r);
             if (despawn != null) despawn.KeepAlive();
-            PixelPathCarrier.SetVelocity(rb, Vector3.Lerp(VelocityOf(rb), to.normalized * Pull * (0.4f + 0.6f * k), 0.3f + 0.4f * k));
+            PixelPathCarrier.SetVelocity(rb, Vector3.Lerp(PixelBody.Velocity(rb), to.normalized * Pull * (0.4f + 0.6f * k), 0.3f + 0.4f * k));
         }
         if (ignoreUntil.Count > 80) ignoreUntil.Clear();
     }
 
-    private static Vector3 VelocityOf(Rigidbody rb)
-    {
-#if UNITY_6000_0_OR_NEWER
-        return rb.linearVelocity;
-#else
-        return rb.velocity;
-#endif
-    }
 
     /// <summary>A sucked-up husk shrinks into the intake and is gone (its type and value are in the tank).</summary>
     private IEnumerator SuckIn(GameObject go)

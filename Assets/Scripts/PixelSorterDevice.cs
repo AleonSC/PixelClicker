@@ -243,7 +243,7 @@ public class PixelSorterDevice : PixelPlacedDevice
     {
         mouth = transform.position;
         velocity = Vector3.zero;
-        if (IsDying || !Armed || parts == null) return false;
+        if (IsEnding || !Armed || parts == null) return false;
 
         mouth = transform.TransformPoint(parts.MouthLocal);
         Vector3 direction = transform.TransformDirection(new Vector3(Mathf.Cos(parts.ExitHeading * Mathf.Deg2Rad),
@@ -404,7 +404,7 @@ public class PixelSorterDevice : PixelPlacedDevice
             // The cone you click inside to bend the pipe (preview only).
             if (isPreview)
             {
-                GameObject c = new GameObject("Bend Cone", typeof(MeshFilter), typeof(MeshRenderer));
+                GameObject c = new GameObject(PixelPlacedDevice.BendConeMark, typeof(MeshFilter), typeof(MeshRenderer));
                 c.transform.SetParent(p.Root.transform, false);
                 p.cone = c.transform;
                 Color coneColor = device.color; coneColor.a = 0.22f;

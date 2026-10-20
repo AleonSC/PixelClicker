@@ -119,19 +119,11 @@ public class PixelTrashCan : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom
             // Pulled in: the closer, the harder (it lifts a little so it can climb over the rim).
             float k = 1f - Mathf.Clamp01(flat.magnitude / r);
             Vector3 want = (flat.normalized * (0.35f + 0.65f * k) * Pull) + Vector3.up * Mathf.Clamp(to.y, -0.5f * unit, 1.5f * unit) * 2f;
-            Vector3 v = VelocityOf(rb);
+            Vector3 v = PixelBody.Velocity(rb);
             PixelPathCarrier.SetVelocity(rb, Vector3.Lerp(v, want, 0.25f + 0.35f * k));
         }
     }
 
-    private static Vector3 VelocityOf(Rigidbody rb)
-    {
-#if UNITY_6000_0_OR_NEWER
-        return rb.linearVelocity;
-#else
-        return rb.velocity;
-#endif
-    }
 
     private System.Collections.IEnumerator Vanish(Rigidbody rb)
     {

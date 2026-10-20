@@ -299,7 +299,7 @@ public class PixelMagnetSorterDevice : PixelPlacedDevice
 
     private void FixedUpdate()
     {
-        if (IsDying || !Armed || clicker == null || mouth == null) return;
+        if (IsEnding || !Armed || clicker == null || mouth == null) return;
 
         // Suck the old pixels lying in the arc in front of the magnet.
         if (total < settings.boxCapacity)
@@ -401,7 +401,7 @@ public class PixelMagnetSorterDevice : PixelPlacedDevice
 
     private void Shoot()
     {
-        if (IsDying || !Armed || clicker == null || Time.timeScale <= 0f) return;
+        if (IsEnding || !Armed || clicker == null || Time.timeScale <= 0f) return;
         foreach (Pipe p in pipes)
         {
             if (p.tier < 0 || Time.time < p.nextShot) continue;

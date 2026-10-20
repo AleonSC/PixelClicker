@@ -3,7 +3,7 @@
 //   JUNCTION BOX (PixelConsumables DeviceKind.JunctionBox 26; design agreed in the Design Discussion chat, built 2026-10-18; docs/systems/PixelCouplings.md):
 //   a closed box like the Recycler's (PixelFactoryKit: plinth, walls, metal pillars and rim, a teal glowing band, a lid with a junction cross and a small
 //   top hatch; the shared carry handles on its +/-x ends) with EIGHT SOCKETS - two on each side (f0 f1 front -z, b0 b1 back +z, l0 l1 left -x, r0 r1 right +x),
-//   all flow Both, kind Husk, autoDirection. Placed and saved as a permanent device (the PixelChipperDevice stub next to it; PlacedState.extra = filters + buffer).
+//   all flow Both, kind Husk, autoDirection. Placed and saved as a permanent device (the PixelPermanentDevice stub next to it; PlacedState.extra = filters + buffer).
 //   - DIRECTION from what is attached (UpdateDirections, every routeSeconds): a belt that ENDS at a coupling's port or a hose that PUSHES into it = In; a belt
 //     that STARTS at it or a hose that PULLS from it = Out; nothing = idle (PixelCoupling.SetAuto; its arrow shows it, idle shows none).
 //   - TOP OPENING (2026-10-18): a square hole in the lid (HoleHusks) takes husks that drop in (and any husk resting on the lid: nothing piles up on top), and a gentle suction (suckRadiusHusks / suckHeightHusks /

@@ -1781,24 +1781,7 @@ public class OldPixelGravityWell : MonoBehaviour
         ringRenderer.color = c;
     }
 
-    private static Vector3 VelocityOf(Rigidbody rb)
-    {
-#if UNITY_6000_0_OR_NEWER
-        return rb.linearVelocity;
-#else
-        return rb.velocity;
-#endif
-    }
 
-    private static void SetVelocityOf(Rigidbody rb, Vector3 v)
-    {
-        if (rb == null || rb.isKinematic) return;   // (a kinematic body cannot be steered: Unity warns)
-#if UNITY_6000_0_OR_NEWER
-        rb.linearVelocity = v;
-#else
-        rb.velocity = v;
-#endif
-    }
 
     private void FixedUpdate()
     {
@@ -1831,23 +1814,23 @@ public class OldPixelGravityWell : MonoBehaviour
                         Vector3 p = other.position;
                         p.y = centre.y;
                         other.position = p;
-                        Vector3 low = VelocityOf(other);
-                        if (low.y < 0f) { low.y = 0f; SetVelocityOf(other, low); }
+                        Vector3 low = PixelBody.Velocity(other);
+                        if (low.y < 0f) { low.y = 0f; PixelBody.Steer(other, low); }
                     }
-                    Vector3 fv = VelocityOf(other);
+                    Vector3 fv = PixelBody.Velocity(other);
                     float fs = fv.magnitude;
                     if (fs > 0.01f)
                     {
                         Vector3 steered = Vector3.RotateTowards(fv.normalized, (centre - other.position).normalized, 5f * Time.fixedDeltaTime, 0f);
                         if (steered.y < 0f && other.position.y <= centre.y + 0.3f) steered.y = 0f; // skim along the floor, not into it
-                        SetVelocityOf(other, steered * (fs * Mathf.Clamp01(1f - 1.2f * Time.fixedDeltaTime)));
+                        PixelBody.Steer(other, steered * (fs * Mathf.Clamp01(1f - 1.2f * Time.fixedDeltaTime)));
                     }
                     OldPixelDespawn fd = PixelHuskQuery.Get(other).despawn;
                     if (fd != null) fd.KeepAlive();
                     continue;
                 }
                 clicker.LandFlyingPixel(other);
-                SetVelocityOf(other, VelocityOf(other) * 0.2f);
+                PixelBody.Steer(other, PixelBody.Velocity(other) * 0.2f);
             }
             if (other.isKinematic) continue;
             if ((centre - other.position).sqrMagnitude > radius * radius) continue;   // (the distance first: most husks are out of reach)
@@ -1894,9 +1877,9 @@ public class OldPixelGravityWell : MonoBehaviour
             // A constant drag: whatever the pixel is doing (even sitting on the floor against its friction), its speed towards
             // the well is brought up to the drag speed. Speed it already has towards the well is kept.
             Vector3 dir = to / distance;
-            Vector3 v = VelocityOf(other);
+            Vector3 v = PixelBody.Velocity(other);
             float towards = Vector3.Dot(v, dir);
-            if (towards < pullSpeed) SetVelocityOf(other, v + dir * ((pullSpeed - towards) * blend));
+            if (towards < pullSpeed) PixelBody.Steer(other, v + dir * ((pullSpeed - towards) * blend));
         }
     }
 

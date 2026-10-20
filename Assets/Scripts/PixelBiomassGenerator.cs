@@ -1,6 +1,6 @@
 // ---- System notes ----
 // PixelBiomassGenerator.cs
-//   BIOMASS GENERATORS (2026-10-19, Devices session): two placed devices built by this one component (the permanent PixelChipperDevice stub sits next to it):
+//   BIOMASS GENERATORS (2026-10-19, Devices session): two placed devices built by this one component (the permanent PixelPermanentDevice stub sits next to it):
 //   - POCKET BIOMASS GENERATOR (DeviceKind.PocketBiomassGenerator 27): a small one from the shop's Consumables tab;
 //   - BIOMASS GENERATOR (DeviceKind.BiomassGenerator 28): the big one, on sale at Woodcutting level 10 (shopSkillId 'woodcutting').
 //   They differ only in their Device entry: radius (how far the power reaches), generatorMaxCharge (seconds of power when full) and generatorChargePerHusk

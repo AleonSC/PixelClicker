@@ -58,7 +58,7 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelSocketDevice, IPixelHu
         for (int i = 0; i < Sections; i++) sections[i] = new Section();
         carry = gameObject.AddComponent<PixelCarryHandles>();
         carry.Init(() => cam);
-        carry.Blocked = () => IsDying;
+        carry.Blocked = () => IsEnding;
         // Two sockets on the front: 'in' (left) takes belts / hoses in, 'out' (right) lets a hose pull stored husks.
         sockets = new[]
         {
@@ -90,7 +90,7 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelSocketDevice, IPixelHu
     /// <summary>A husk comes in through an In coupling: it flies into the next free section. False when the crate is full (whatever brought it throws it on).</summary>
     public bool AcceptHusk(PixelSocket socket, Rigidbody body)
     {
-        if (body == null || IsDying || NextFree() < 0) return false;
+        if (body == null || IsEnding || NextFree() < 0) return false;
         OldPixelInfo info = PixelHuskQuery.Get(body).info;
         if (info == null || !clicker.IsValidTierIndex(info.tierIndex) || clicker.Tiers[info.tierIndex].flyAway) return false;
         int before = FreeCount();
@@ -172,7 +172,7 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelSocketDevice, IPixelHu
 
     private bool WouldAct()
     {
-        if (IsDying || clicker == null || cam == null) return false;
+        if (IsEnding || clicker == null || cam == null) return false;
         Vector2 pointer = PixelInput.PointerPosition();
         Ray ray = cam.ScreenPointToRay(pointer);
         if (carry != null && (carry.Dragging || carry.Over(ray))) return true;
@@ -189,7 +189,7 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelSocketDevice, IPixelHu
         if (cam == null) cam = Camera.main;
         float spin = 35f * Time.deltaTime;
         foreach (Section s in sections) if (s.model != null) s.model.Rotate(0f, spin, 0f, Space.Self);
-        if (Time.timeScale <= 0f || IsDying || cam == null) return;
+        if (Time.timeScale <= 0f || IsEnding || cam == null) return;
 
         // A pixel you were holding and just let go of over the crate goes into the next free section.
         if (grab == null) grab = PixelFind.First<PixelGrab>();
@@ -290,13 +290,13 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelSocketDevice, IPixelHu
     }
 
     /// <summary>Free sections left (a Container Hose only pumps in what fits).</summary>
-    public int HoseRoom => IsDying ? 0 : FreeCount();
+    public int HoseRoom => IsEnding ? 0 : FreeCount();
 
     /// <summary>A Container Hose pulls one stored pixel out (the last filled section): its type and value; false when the crate is empty.</summary>
     public bool TakeOneForHose(out int tier, out double amount)
     {
         tier = -1; amount = 0;
-        if (IsDying) return false;
+        if (IsEnding) return false;
         for (int i = Sections - 1; i >= 0; i--)
         {
             Section s = sections[i];

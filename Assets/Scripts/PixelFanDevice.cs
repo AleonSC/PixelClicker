@@ -48,7 +48,7 @@ public class PixelFanDevice : PixelPlacedDevice
 
     private void FixedUpdate()
     {
-        if (IsDying || !Armed || clicker == null) return;
+        if (IsEnding || !Armed || clicker == null) return;
 
         Vector3 origin = transform.position;
         Vector3 forward = transform.forward;

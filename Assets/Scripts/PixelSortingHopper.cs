@@ -3,7 +3,7 @@
 //   SORTING HOPPER (PixelConsumables DeviceKind.SortingHopper 22, Utilities; design: docs/GameDesign.md section 6, 'The early husk setup'):
 //   the Recycler's partner. REBUILT 2026-10-18 like a MINECRAFT HOPPER: a big square funnel bowl on four legs that stands behind the Recycler and
 //   rises well above its wall (bowl rim at BowlTopHusks), narrowing underneath (two tapered blocks and a little spout). Built here by Place /
-//   CreateGhost / CreateDisplay with PixelFactoryKit; the placed device is the permanent PixelChipperDevice stub on the same object - bought, kept,
+//   CreateGhost / CreateDisplay with PixelFactoryKit; the placed device is the permanent PixelPermanentDevice stub on the same object - bought, kept,
 //   placed, saved, removed like every device.
 //   - SNAPS ONTO A RECYCLER'S BACK: placed within 'radius' (the Device entry's Reach, 6 world units) of a free Recycler it latches on behind it
 //     (TrySnap, also while placing: the ghost jumps there), turned like the bin, its bowl's front edge just behind the bin's back (BackEdgeLocalZ).
