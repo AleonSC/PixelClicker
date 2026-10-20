@@ -29,7 +29,7 @@ using UnityEngine;
 /// value is kept). Left-click a stored pixel to take it out again - it is handed to the mouse like a grabbed pixel. Removing the crate lets everything out.
 /// NOTE: it must not define its own Update / LateUpdate (they would hide the base's); per-frame work runs in <c>OnTick</c>.
 /// </summary>
-public class PixelStorageCrate : PixelPlacedDevice, IPixelSocketDevice, IPixelHuskSource, IPixelHuskRoom, IPixelStrayTarget
+public class PixelStorageCrate : PixelPlacedDevice, IPixelSocketDevice, IPixelHuskSource, IPixelHuskPicker, IPixelHuskRoom, IPixelStrayTarget
 {
     private const int Columns = 5, Rows = 2, Sections = Columns * Rows;
 
@@ -93,6 +93,7 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelSocketDevice, IPixelHu
     public IReadOnlyList<PixelSocket> Sockets => sockets;
     public Color SocketTint => new Color(0.62f, 0.45f, 0.28f, 1f);
     public bool TakeHuskOut(PixelSocket socket, out int tier, out double amount) => TakeOneForHose(out tier, out amount);
+    public bool TakeHuskOut(PixelSocket socket, System.Predicate<int> want, out int tier, out double amount) => TakeOneForHose(out tier, out amount, want);
     public int HuskRoom(PixelSocket socket) => HoseRoom;
 
     /// <summary>A husk comes in through an In coupling: it flies into the next free section. False when the crate is full (whatever brought it throws it on).</summary>
@@ -308,22 +309,21 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelSocketDevice, IPixelHu
     /// <summary>A belt starting at the 'out' coupling is fed one stored husk (when it has room at its start).</summary>
     private void FeedBelt()
     {
-        if (!PixelCouplings.OutputConnected(this, "out") || !PixelCouplings.OutputHasRoom(this, "out")) return;
-        PixelCoupling c = PixelCoupling.On(this, "out");
-        if (c == null || !TakeOneForHose(out int tier, out double amount)) return;
-        int before = clicker.OldPixels.Count;
-        clicker.SpawnStoredPixel(tier, amount, c.PortWorld + Vector3.up * clicker.OldPixelWorldSize, Vector3.zero);
-        if (clicker.OldPixels.Count > before) PixelCouplings.Emit(this, "out", clicker.OldPixels[clicker.OldPixels.Count - 1]);
+        if (takeAny == null) takeAny = (out int t, out double a) => TakeOneForHose(out t, out a);
+        PixelCouplings.EmitStored(this, "out", clicker, takeAny);
     }
 
-    public bool TakeOneForHose(out int tier, out double amount)
+    private PixelCouplings.TakeStored takeAny;
+
+    /// <summary>Takes one stored husk out (the last filled section; 'want' = only a type it accepts, e.g. what a hose's target takes): false when none.</summary>
+    public bool TakeOneForHose(out int tier, out double amount, System.Predicate<int> want = null)
     {
         tier = -1; amount = 0;
         if (IsEnding) return false;
         for (int i = Sections - 1; i >= 0; i--)
         {
             Section s = sections[i];
-            if (s.tier < 0) continue;
+            if (s.tier < 0 || (want != null && !want(s.tier))) continue;
             tier = s.tier; amount = s.amount;
             if (s.model != null) Destroy(s.model.gameObject);
             s.model = null; s.tier = -1; s.amount = 0;

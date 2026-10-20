@@ -29,7 +29,7 @@ using System.Globalization;
 using System.Text;
 using UnityEngine;
 
-public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, IPixelHuskSource, IPixelStrayTarget, IPixelDeviceInfo
+public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, IPixelHuskSource, IPixelHuskPicker, IPixelStrayTarget, IPixelDeviceInfo
 {
     [Header("Junction Box")]
     [Min(0)]
@@ -323,7 +323,10 @@ public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoo
     }
 
     /// <summary>A hose pulls from an Out coupling: the oldest buffered husk of its filter type (unfiltered: any type no filtered output wants).</summary>
-    public bool TakeHuskOut(PixelSocket socket, out int tier, out double amount)
+    public bool TakeHuskOut(PixelSocket socket, out int tier, out double amount) => TakeHuskOut(socket, null, out tier, out amount);
+
+    /// <summary>The same, only a husk 'want' accepts (what the hose's target takes).</summary>
+    public bool TakeHuskOut(PixelSocket socket, System.Predicate<int> want, out int tier, out double amount)
     {
         tier = -1; amount = 0d;
         int f = FilterOf(socket);
@@ -331,6 +334,7 @@ public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoo
         {
             Held h = buffer[i];
             if (f >= 0 ? h.tier != f : FilteredOutputFor(h.tier)) continue;
+            if (want != null && !want(h.tier)) continue;
             buffer.RemoveAt(i);
             tier = h.tier; amount = h.amount;
             Routed();
@@ -404,9 +408,9 @@ public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoo
         {
             PixelCoupling c = PixelCoupling.On(this, s);
             if (c == null) continue;
-            Vector3 port = c.PortWorld;
-            bool into = PixelCouplings.BeltEndingAt(port) != null || PixelContainerHose.Pushes(c);
-            bool outOf = PixelCouplings.BeltStartingAt(port) != null || PixelContainerHose.Pulls(c);
+            PixelLink link = PixelCouplings.Attached(c);   // (the one connection resolver)
+            bool into = link == PixelLink.BeltIn || link == PixelLink.HoseIn;
+            bool outOf = link == PixelLink.BeltOut || link == PixelLink.HoseOut;
             c.SetAuto(into ? PixelCoupling.AutoState.In : outOf ? PixelCoupling.AutoState.Out : PixelCoupling.AutoState.Idle);
         }
     }

@@ -82,7 +82,7 @@ Two read-only passes: one on the code (belts, riders, couplings, the tester fact
    This is the same job as `DeviceConsumableAudit.md` section 3 item 4, so do them together. It's also what Build mode (to-do 117) needs.
 
 **Also hand-wired:**
-- **Three ways into a machine:** coupling `AcceptHusk`, `IPixelAutoIntake.CatchNear` (the Elevator catches any belt end within 3.35 cubes), and the belt-end throw. Nothing in the world shows which one is active.
+- **(Done 2026-10-20: sockets are the only way in; the Elevator, Belt Jump and Combiner have built-in sockets.)** Was: **Three ways into a machine:** coupling `AcceptHusk`, `IPixelAutoIntake.CatchNear` (the Elevator catches any belt end within 3.35 cubes), and the belt-end throw. Nothing in the world shows which one is active.
 - **Spawn-and-grab:** 7 places "spawn a husk then take the last one in the list" because `SpawnStoredPixel` returns a bool instead of the body.
 - **Missing from the system list:** `PixelConveyorSystem` isn't in `PixelSystems.All` (made from 4 places).
 

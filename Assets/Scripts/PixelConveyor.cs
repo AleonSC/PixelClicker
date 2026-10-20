@@ -351,7 +351,7 @@ public class PixelConveyor : MonoBehaviour
                 state = joins ? 1 : Mathf.Max(state, 2);
                 if (joins) break;
             }
-            if (state != 1 && PixelCouplings.IntakeAt(to, unit) != null) state = 1;
+            if (state != 1 && (PixelCouplings.IntakeAt(to, unit) != null || PixelCouplings.FreeSocketAt(to, true, out _, out _))) state = 1;   // (a free socket gets its coupling when the belt is placed)
         }
         if (state == 0) return;
         PixelFactoryKit k = new PixelFactoryKit(clicker, true, true);
@@ -372,6 +372,7 @@ public class PixelConveyor : MonoBehaviour
         belt.unit = unit;
         belt.Rebuild(from, to);
         PixelConveyorSystem.Ensure(c);
+        PixelCouplings.AutoFitAll();   // a free socket at either end gets its coupling now (In where the belt ends, Out where it starts)
         PixelAudio.Play("device_place");
         return root;
     }
@@ -405,7 +406,7 @@ public class PixelConveyor : MonoBehaviour
             if (belt == null || belt.ghostMode) continue;
             Try(belt.a); Try(belt.b);
         }
-        PixelCouplings.Ports(Try);   // couplings on devices: a belt ends at an In coupling or starts at an Out one
+        PixelCouplings.Ports(Try);   // couplings and free sockets on devices: a belt ends at an In one or starts at an Out one
         foreach (PixelElevator e in PixelElevator.All) if (e != null && !e.IsGhost) e.SnapPoints(Try);
         foreach (PixelBeltJump j in PixelBeltJump.All) if (j != null && !j.IsGhost) j.SnapPoints(Try);
         foreach (PixelConveyorCombiner m in PixelConveyorCombiner.All) if (m != null && !m.IsGhost) m.SnapPoints(Try);   // a Conveyor Combiner's two side inlets: a feeding belt ends there   // a Belt Jump's landing ramp end: a belt started there carries on after the jump   // a Conveyor Elevator: just off each side of its base and its top, at their heights

@@ -1,7 +1,9 @@
 # Sockets and couplings - one way to connect belts and hoses to devices
 
 Agreed in the Design Discussion chat (2026-10-17), BUILT in the Devices session the same day (not yet tested in Unity). Code: `PixelSockets.cs` (sockets, kinds, the device
-hooks, the registry) and `PixelCoupling.cs` (the snap-on coupling piece). Placed from Dev Hub > Tester > **Coupling**.
+hooks, the registry, auto-fit, the type filter, the connection resolver) and `PixelCoupling.cs` (the snap-on coupling piece). Since 2026-10-20
+couplings FIT THEMSELVES when a belt or hose attaches (below); Dev Hub > Tester > **Coupling** still fits one by hand. Sockets carry HUSKS only:
+power will be a separate mechanic and will not use sockets.
 
 ## The problem it replaced
 - Six machines each had their own belt intake (`IPixelBeltAcceptor` in PixelConveyor.cs: Kiln, Storage Crate, Trash Can, Splitter, Elevator,
@@ -13,42 +15,61 @@ hooks, the registry) and `PixelCoupling.cs` (the snap-on coupling piece). Placed
 
 ## The design
 - **Sockets (data).** Every device declares its SOCKETS: a few lines each - `id`, local position (the PORT, where a belt end / hose end meets
-  it, at belt-underside height), outward facing, `flow` = Intake / Output / Both, and a `kind`. Free sockets always show a small PORT PLATE (`PixelSocketPlates`: a chevron, green In / orange Out / teal Both). Sockets sit on openings the device already has:
+  it, at belt-underside height), outward facing, `flow` = Intake / Output / Both (and `kind`, always Husk). Free sockets always show a small PORT PLATE (`PixelSocketPlates`: a chevron, green In / orange Out / teal Both). Sockets sit on openings the device already has:
   Kiln mouth, Storage Crate front, Trash Can side, Recycler back hatch, Quantum Organizer side, Wood Chipper chute, Funnel output, Elevator entry / top, Junction Box (eight, auto direction), Belt Sorter chute.
-- **Couplings (one shared piece).** ONE model (PixelFactoryKit) and ONE component. Placing it near a free socket snaps it on; it is parented to
+- **Couplings (one shared piece).** ONE model (PixelFactoryKit) and ONE component. It is fitted automatically (auto-fit, below); it is parented to
   the device so it moves with it (carry handles, turning); removing the device removes its couplings. It is tinted a little with the device's
   colour (`SocketTint`) so it reads as a flange, not a bolt-on.
 - **Direction is shown on the coupling:** a green arrow pointing INTO the device = Intake, an orange arrow pointing OUT = Output, teal arrows
   both ways = Both.
 - **Fitted couplings.** The factory pieces that ARE belt fittings (Elevator, Belt Sorter; the Splitter until it was removed) come with couplings fitted on their sockets
-  (`PixelSocket.fitted`): built with the piece, not saved, not removable on their own. Everything else needs a placed coupling.
+  (`PixelSocket.fitted`): built with the piece, not saved, not removable on their own. Everything else gets one by auto-fit.
 - **Belts and hoses connect to a COUPLING, never to the device directly:**
   - a belt END at an Intake coupling's port hands the husk in; a belt START at an Output coupling's port is fed by it;
   - a Container Hose starts on an Output (or Both) coupling, runs through any bend points the player clicks, and ends on an Intake one; a quick right click on it reverses its flow;
-  - placing snaps to coupling ports (`PixelConveyor.Snap` and `PixelContainerHose.Snap` ask the couplings).
+  - placing snaps to coupling ports AND free socket ports (`PixelCouplings.Ports`, `PixelContainerHose.Snap`).
 - **ONE device hook for husks in:** `IPixelSocketDevice.AcceptHusk(socket, husk)` - the husk is kinematic and still on the husk list; the device
   takes it (true) or refuses (false, e.g. full). A refused husk is ejected by whatever brought it, like before (a belt throws it on, a hose drops it).
 - **Out:** a device that emits a husk calls `PixelCouplings.Emit(device, socketId, husk)`: with an Output coupling on that socket and a belt
   starting at its port (with room), the husk goes onto the belt; otherwise it returns false and the device does its own thing (fling / drop).
   `PixelCouplings.OutputHasRoom` lets a device wait (the Funnel's backpressure).
-- **Optional extras (not every device):** `IPixelHuskSource` (a hose may pull stored husks out: Storage Crate, Quantum Organizer) and
-  `IPixelHuskRoom` (how many more husks fit: a hose only pumps what fits).
+- **Optional extras (not every device):** `IPixelHuskSource` (a hose may pull stored husks out: Storage Crate, Quantum Organizer, Junction Box, Husk Source),
+  `IPixelHuskPicker` (the same, but only a husk a 'want' test accepts), `IPixelHuskRoom` (how many more husks fit: a hose only pumps what fits) and
+  `IPixelHuskFilter` (which types it takes: Biomass Generator = wood, Crafting Cube = what its recipe still needs). No default interface methods (Unity).
+  `PixelCouplings.EmitStored` = a storing device lets one stored husk out onto what is attached (Storage Crate `out`, Quantum Organizer `side` set to Out).
+
+## Auto-fit (2026-10-20)
+- A belt END at a free socket's port fits an **In** coupling there, a belt START an **Out** one (`PixelCouplings.AutoFitAll`: run when a belt is placed and on every
+  `PixelSocketPlates` refresh, 0.3 s, so a device carried next to a belt or loaded later joins too). A hose end fits one the way the hose runs (`AutoFitAt` from the hose's latch).
+- An Intake socket only takes In, an Output socket only Out; a Both socket follows what attached (`SetDirection`); an auto socket (Junction Box) works it out itself.
+- A just-laid hose may also turn an existing Both coupling to match, but only while nothing else is attached to it.
+- Auto-fitted couplings stay (they are not taken off when the belt goes) and save with the device like before (`Export` / `Import`).
+- The Coupling shop item is retired (dev-only, `consumablePriceVersion` 7); the Dev Hub's Dev items / Tester card still fit one by hand.
+
+## Type-aware intake (2026-10-20)
+- `PixelCouplings.Takes(device, socket, tier)` asks `IPixelHuskFilter` (true when the device doesn't filter).
+- The Container Hose pumps only while the target has room AND, when its source is an `IPixelHuskPicker` (crate, organizer, Junction Box), takes out only a husk
+  the target takes - a mixed crate hosed into a Biomass Generator sends just the wood. Its idle line says "Nothing the target takes in the source".
+- The Kiln takes any amount (each husk burns on its own); the Crafting Cube's room is per type (its filter covers it).
+
+## Connection resolver (2026-10-20)
+`PixelCouplings.Attached(coupling)` = what it is joined to: `BeltIn` / `BeltOut` (a belt ending / starting at it), `HoseIn` / `HoseOut` (a hose pushing / pulling),
+`DeviceOut` (another device's In coupling right in front), `Nothing`. Worked out on demand, never per frame for everything. Used by:
+- the device panel's port rows (`AddPortRows` -> `Describe`: "Port side: Out: feeds a belt", "Port in: free - a belt or hose attaches here");
+- the Junction Box's auto direction;
+- the hose: when the player flips an end's coupling (its teal dot - only the dot is clickable now) the hose FOLLOWS (reverses) when the other end can work
+  that way, else lets go of that end and idles until it is switched back.
 - **Saving:** couplings are saved WITH THEIR DEVICE - `PlacedState.couplings` for shop devices, `TesterSave.couplings` for tester machines
   (a list of socket ids); belts re-attach after a load by position as before.
 - **Unchanged on purpose:** a device's own natural intake (husks falling into the Kiln mouth, the Recycler's open top, the Trash Can's suction)
   works with or without couplings - couplings are only for belts and hoses.
 
-## Socket kinds (an open list)
-The kind is an enum appended over time (`PixelSocketKind`: Husk, Power, Signal, Water, Heat, Link), NOT a yes / no "takes husks" flag. Each later
-kind = a new enum value + its own coupling look + its own hook, never a new system. Built: **Husk** only (belts, hoses).
-- **Power (plan next, Electrician):** today Wire / Battery / Resistor husks and Electric pixels arc to devices in their own hand-made code
-  (PixelElectricLinks, `HoldPower`); that should move onto power sockets (e.g. a powered Recycler works faster).
-- **Signal (plan next, the planned Automation skill):** on / off triggers between devices (a full Storage Crate starts a Recycler, a hopper opens
-  when a colour arrives).
-- Water, Heat and wireless Link: `Assets/Resources/Ideas.txt` ('Device connections beyond husks') for when Farming / Firemaking / the late game need them.
+## Husks only (2026-10-20)
+Sockets carry husks only: `PixelSocketKind` keeps just `Husk = 0` (the field stays so saved data reads). The Power / Signal / Water / Heat / Link kinds
+planned earlier were dropped - power will be its own mechanic, not ports. Signal / Water / Heat ideas stay in `Assets/Resources/Ideas.txt`.
 
 ## Later (noted, not built)
-- BOUGHT (2026-10-17): the Coupling (40 Gray + 40 Black, hold 10) and Container Hose (80 White + 80 Black, hold 3) are shop items in Utilities, right after the Recycler and
+- BOUGHT (2026-10-17; the Coupling RETIRED 2026-10-20, couplings fit themselves): the Coupling (40 Gray + 40 Black, hold 10) and Container Hose (80 White + 80 Black, hold 3) are shop items in Utilities, right after the Recycler and
   Sorting Hopper; right-click one to start placing (PixelInstantItems -> PixelFeatureTester.StartFeature with a 'spend one' callback: one is used up per
   coupling fitted / hose laid, placing stops when none are left). The Dev Hub Tester cards still place them free. Unlocking them by progression is still open.
 - A device can have more sockets than you fill (the Junction Box has eight).
@@ -64,13 +85,18 @@ chute (the same "find a belt that starts here" copy) moved onto a built-in bare 
 | Device | Sockets |
 |---|---|
 | Storage Crate | `in` (In, front left: belts / hoses in) and `out` (Out, front right: a hose pulls stored husks; a belt starting there is fed one stored husk at a time while it has room) |
-| Quantum Organizer | `side` (Both, like the crate; In drops husks onto the pad) |
+| Quantum Organizer | `side` (Both, like the crate; In drops husks onto the pad; Out: a hose pulls stored husks, a belt starting there is fed one every 0.6 s) |
+| Biomass Generator | `intake` (In, wood husks only: `IPixelHuskFilter`) |
+| Crafting Cube | `front`, `back`, `left`, `right` (In, the types its recipe still needs: `IPixelHuskFilter`) |
 | Kiln | `mouth` (In, burns it), `chute` (Out, charcoal) |
 | Trash Can | `front`, `back` (In) |
 | Recycler | `hatch` (In, the back hatch), `f0`..`f3` (In, four holes low on the front) |
 | Funnel | `output` (Out, the spout end; the tube waits while its belt is full) |
 | Wood Chipper | `chute` (Out, on the floor in front of the outlet) |
-| Conveyor Elevator | none since 2026-10-19: it links itself to belt ends, Out couplings and sorter chutes near its base and to a belt start or In coupling near its top (IPixelAutoIntake) |
+| Conveyor Elevator | 8 built-in bare sockets (2026-10-20): `in0`-`in3` (Intake) at the base on each side and `out0`-`out3` (Output) at the top on each side, at the belt snap points; puts husks out with `Emit`, waits while the belt is full, flings when nothing is attached. |
+| Belt Jump | Built-in bare sockets: `in` (Intake, ramp start) and `out` (Output, landing end); the landing waits while the belt there is full. |
+| Conveyor Combiner | Built-in bare sockets: `inL` / `inR` (Intake), one per side inlet; husks merge onto the main belt or wait (up to `queueSize`, then it refuses and the feeding belt holds). |
+| Sorting Hopper | `green` / `orange` / `blue` / `pink` (Output, not built-in: a coupling fits itself when a belt starts there), one per shown output pipe, one husk below its mouth; `EmitStored`, waits while full; with nothing attached husks drop from the mouth. No inputs. |
 | Husk Source (tester) | `front`, `back`, `left`, `right` (Out: endless husks of the picked type while something takes them) |
 | Junction Box | `f0` `f1` (front), `b0` `b1` (back), `l0` `l1`, `r0` `r1` - all Both, **auto direction** |
 | Belt Sorter | `chute` (Out, fitted, bare) |
@@ -100,6 +126,7 @@ chute (the same "find a belt that starts here" copy) moved onto a built-in bare 
 Implement `IPixelSocketDevice` (SocketRoot, Sockets, SocketTint, AcceptHusk), build the socket list once the device knows its size, call
 `PixelCouplings.Register` / `Unregister` in OnEnable / OnDisable, and put husks out with `PixelCouplings.Emit(this, id, husk)` (false = do your own thing).
 A piece that is a belt fitting itself marks its sockets `fitted` (and `bare` if its own shape shows the way) and calls `PixelCoupling.FitBuiltIn(this)`
-after building (and `PixelCoupling.RemoveAll(this)` before a rebuild). Nothing else: the tester, saving, snapping and the belt system pick it up.
+after building (and `PixelCoupling.RemoveAll(this)` before a rebuild). If it takes only some types, implement `IPixelHuskFilter`; if it stores husks a hose can
+pull, `IPixelHuskSource` (+ `IPixelHuskPicker`). Nothing else: auto-fit, the port plates, the device panel rows, saving, snapping and the belt system pick it up.
 
 **Link rules (2026-10-20, conveyor audit).** One reach for every link check: `PixelCouplings.LinkReach` (1.3 husk widths, flat): a belt end hands in to a coupling (`HandIn`) and a coupling finds the belt ending / starting at it (`BeltEndingAt` / `BeltStartingAt`, nearest wins) at the same distance, so a belt that shows as joined really is. `Emit` never puts a husk on a FULL belt (it returns false); devices that must not drop it ask `OutputHasRoom` first and hold it (Kiln, Wood Chipper, Belt Jump landing queue, Funnel, Junction Box, Husk Source, Storage Crate). The Belt Sorter lets a husk ride on when the belt off its chute is full.

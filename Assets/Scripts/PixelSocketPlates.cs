@@ -3,8 +3,9 @@
 //   Shows every FREE socket on a placed device as a small PORT PLATE on its opening, all the time (not only while a coupling is being placed), so the
 //   player can see where couplings go and which way husks flow there: a flat plate at the socket's port with a chevron - green pointing INTO the device =
 //   In, orange pointing OUT = Out, teal = either way (Both). A plate is a child of the device (it moves / turns with it) and goes away when a coupling is
-//   fitted on that socket or something else occupies it (the Sorting Hopper on the Recycler's hatch), and comes back when the socket is free again.
-//   Checked every refreshSeconds over PixelCouplings.Devices; fitted (built-in) sockets and non-Husk kinds get no plate. Parts are named "Coupling Plate ..."
+//   fitted on that socket (couplings fit themselves when a belt / hose attaches) and comes back when the socket is free again.
+//   Checked every refreshSeconds over PixelCouplings.Devices (PixelCouplings.FreeSockets); fitted (built-in) sockets get no plate. Plates keep their size
+//   when the device rescales (PixelCouplings.KeepSize). The same refresh runs the AUTO-FIT pass (PixelCouplings.AutoFitAll), also with plates off. Parts are named "Coupling Plate ..."
 //   so a device's own hover / remove check (PixelPlacedDevice.CountsForHit) leaves them out. disablePlates turns them off. In PixelSystems.All (World).
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -40,20 +41,17 @@ public class PixelSocketPlates : MonoBehaviour
     {
         if (Time.unscaledTime < next) return;
         next = Time.unscaledTime + Mathf.Max(0.05f, refreshSeconds);
+        PixelCouplings.AutoFitAll();   // a belt end / start at a free socket gets its coupling (before the plates look, so its plate goes now)
         seen.Clear();
         if (!disablePlates)
             foreach (IPixelSocketDevice d in PixelCouplings.Devices)
-            {
-                if (d == null || (d is Object o && o == null) || d.SocketRoot == null) continue;
-                foreach (PixelSocket s in d.Sockets)
+                foreach (PixelSocket s in PixelCouplings.FreeSockets(d))
                 {
-                    if (s == null || s.fitted || s.kind != PixelSocketKind.Husk || !PixelCouplings.IsFree(d, s)) continue;
                     string key = ((Object)d).GetInstanceID() + "/" + s.id;
                     seen.Add(key);
-                    if (plates.TryGetValue(key, out GameObject g) && g != null) continue;
+                    if (plates.TryGetValue(key, out GameObject g) && g != null) { PixelCouplings.KeepSize(g.transform); continue; }
                     plates[key] = Build(d, s);
                 }
-            }
         // Plates whose socket is taken (or whose device went) are removed.
         stale.Clear();
         foreach (KeyValuePair<string, GameObject> kv in plates) if (!seen.Contains(kv.Key) || kv.Value == null) stale.Add(kv.Key);
@@ -67,14 +65,13 @@ public class PixelSocketPlates : MonoBehaviour
     /// <summary>A flat plate at the socket's port with a chevron showing the flow (a child of the device, the same size on any device).</summary>
     private GameObject Build(IPixelSocketDevice d, PixelSocket s)
     {
-        float u = clicker != null && clicker.OldPixelWorldSize > 0f ? clicker.OldPixelWorldSize : 0.5f;
+        float u = PixelCouplings.HuskWidth;
         GameObject go = new GameObject("Coupling Plate (" + s.id + ")");
         go.transform.SetParent(d.SocketRoot, false);
         go.transform.localPosition = s.localPosition;
         Vector3 f = s.localFacing; f.y = 0f;
         go.transform.localRotation = Quaternion.LookRotation(f.sqrMagnitude > 1e-6f ? f.normalized : Vector3.forward, Vector3.up);
-        float parentScale = d.SocketRoot.lossyScale.x;
-        if (parentScale > 0.2f) go.transform.localScale = Vector3.one / parentScale;
+        PixelCouplings.KeepSize(go.transform);
         Color c = s.flow == PixelSocketFlow.Intake ? inColor : s.flow == PixelSocketFlow.Output ? outColor : bothColor;
         PixelFactoryKit kit = new PixelFactoryKit(clicker, false);
         Transform t = go.transform;

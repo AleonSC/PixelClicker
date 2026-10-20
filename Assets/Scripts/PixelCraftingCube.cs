@@ -17,7 +17,7 @@ using System.Globalization;
 using TMPro;
 using UnityEngine;
 
-public class PixelCraftingCube : MonoBehaviour, IPixelSocketDevice
+public class PixelCraftingCube : MonoBehaviour, IPixelSocketDevice, IPixelHuskFilter
 {
     [Min(0.1f)]
     [Tooltip("Shortest time between two crafts, in seconds.")]
@@ -188,6 +188,9 @@ public class PixelCraftingCube : MonoBehaviour, IPixelSocketDevice
     /// <summary>A husk through one of its couplings: taken if the recipe needs its type and there is room for it.</summary>
     public bool AcceptHusk(PixelSocket socket, Rigidbody husk) => TryTake(husk);
 
+    /// <summary>Only a type the recipe needs and that isn't stocked up yet (a hose from a mixed crate pulls just those: IPixelHuskFilter).</summary>
+    public bool Takes(PixelSocket socket, int tier) => Wants(tier);
+
     private void OnEnable() { if (!ghost && sockets.Length > 0) PixelCouplings.Register(this); }
     private void OnDisable() { PixelCouplings.Unregister(this); }
     private void OnDestroy() { PixelCraftingCubeWindow.Forget(this); }
@@ -216,14 +219,21 @@ public class PixelCraftingCube : MonoBehaviour, IPixelSocketDevice
     private double Stored(PixelClicker.PixelType type) => stored.TryGetValue(type, out double v) ? v : 0d;
 
     /// <summary>Take a husk if the recipe needs its type and the store has room (the husk flies into the cube).</summary>
+    /// <summary>Does the recipe need this type, with room left to store it?</summary>
+    private bool Wants(int tier)
+    {
+        if (ghost || recipe == null || clicker == null || Crafting == null || !clicker.IsValidTierIndex(tier)) return false;
+        PixelClicker.PixelType type = clicker.Tiers[tier].type;
+        double need = NeedOf(crafting.PricedRecipe(recipe), type);
+        return need > 0d && Stored(type) < need * Mathf.Max(1f, storeMultiple);
+    }
+
     private bool TryTake(Rigidbody husk)
     {
         if (ghost || husk == null || recipe == null || clicker == null || Crafting == null) return false;
         OldPixelInfo info = PixelHuskQuery.Get(husk).info;
-        if (info == null || !clicker.IsValidTierIndex(info.tierIndex)) return false;
+        if (info == null || !Wants(info.tierIndex)) return false;
         PixelClicker.PixelType type = clicker.Tiers[info.tierIndex].type;
-        double need = NeedOf(crafting.PricedRecipe(recipe), type);
-        if (need <= 0d || Stored(type) >= need * Mathf.Max(1f, storeMultiple)) return false;
         double amount = System.Math.Max(0d, info.amount);
         if (!clicker.ReleaseOldPixel(husk, false)) return false;
         StartCoroutine(PixelHuskHolder.FlyIn(husk.gameObject, null, transform.TransformPoint(new Vector3(0f, SideCubes * unit + 0.2f * unit, 0f)), false, 0.25f));

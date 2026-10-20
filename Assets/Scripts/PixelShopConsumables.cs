@@ -57,12 +57,12 @@ public partial class PixelShop
 
     private static readonly PixelConsumables.DeviceKind[] UtilitiesFirst =
     {
-        PixelConsumables.DeviceKind.Recycler, PixelConsumables.DeviceKind.SortingHopper, PixelConsumables.DeviceKind.Coupling, PixelConsumables.DeviceKind.ContainerHose,
+        PixelConsumables.DeviceKind.Recycler, PixelConsumables.DeviceKind.SortingHopper, PixelConsumables.DeviceKind.ContainerHose,
         PixelConsumables.DeviceKind.ConveyorBelt, PixelConsumables.DeviceKind.BeltSorter, PixelConsumables.DeviceKind.ConveyorElevator,
         PixelConsumables.DeviceKind.BeltJump, PixelConsumables.DeviceKind.ConveyorCombiner, PixelConsumables.DeviceKind.SolarPanel,
     };
 
-    /// <summary>Items of a category, in shop order (the Recycler, Sorting Hopper, Coupling and Container Hose first among Utilities).</summary>
+    /// <summary>Items of a category, in shop order (the Recycler, Sorting Hopper and Container Hose first among Utilities).</summary>
     private void CollectCategoryItems(int category, List<int> list)
     {
         list.Clear();
@@ -74,7 +74,7 @@ public partial class PixelShop
         }
         if (category == 1)
         {
-            // The early husk setup leads the Utilities, in this order: Recycler, Sorting Hopper, Coupling, Container Hose (those on sale).
+            // The early husk setup leads the Utilities, in this order: Recycler, Sorting Hopper, Container Hose (those on sale).
             int at = 0;
             foreach (PixelConsumables.DeviceKind kind in UtilitiesFirst)
             {

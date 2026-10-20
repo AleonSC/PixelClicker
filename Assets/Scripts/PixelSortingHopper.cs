@@ -7,12 +7,18 @@
 //   placed, saved, removed like every device. It stands where it is put (turn it while placing); SIZE = a default Recycler's (PixelRecycler.DefaultSize)
 //   x its own Operation 'Size' (SizeMul, UnlatchedSize).
 //   - IT HOLDS HUSKS: a husk that drops into the bowl is taken in as DATA (type + amount, PixelHuskHolder FlyIn into the bowl's throat; no fade timer) -
-//     up to holdRoom (20). Full = husks just lie in the bowl and fade. Nothing connects to it (no sockets, not a Sweeper target): it only puts husks out.
+//     up to holdRoom (20). Full = husks just lie in the bowl and fade. Nothing feeds it through sockets (not a Sweeper target either): husks only drop in.
 //   - SORTING: every FeedInterval (0.35 s; Operation 'Speed' shortens it) the oldest held husk that can go somewhere goes:
-//       the GREEN output's filter type -> drops out of the mouth of the FEED PIPE (front, -z; SendOutFeedPipe) - put a Recycler or a belt under it;
-//       a SIDE output's filter type -> drops out of that side pipe's mouth (SendOutSide);
+//       the GREEN output's filter type -> drops out of the mouth of the FEED PIPE (front, -z; SendOut) - put a Recycler under it, or start a belt at its socket;
+//       a SIDE output's filter type -> drops out of that side pipe's mouth (SendOut);
 //       every OTHER type -> straight down out of the BOTTOM SPOUT (2.2 husks off the floor, between the legs).
 //     No filter chosen on any output = it just holds everything. The pipes keep their own straight shape.
+//   - OUTPUT SOCKETS (2026-10-20, sockets are the only husk connection path): every SHOWN output pipe (unlocked and switched on) has a Husk OUTPUT socket
+//     ('green', 'orange', 'blue', 'pink'; IPixelSocketDevice, NOT fitted) a husk below its mouth, facing out along the pipe. A belt STARTING there gets an
+//     Out coupling (auto-fit) and that output's husks go onto it (PixelCouplings.EmitStored) - and while that belt's start is full they WAIT in the bowl
+//     (the next held husk that can go somewhere goes instead). An Out coupling with another device's In coupling right in front hands them over (Emit).
+//     Nothing attached = exactly as before: they drop out of the pipe's mouth. The bottom spout has no socket (rejects just drop). The socket list is
+//     rebuilt when the shown pipes change (couplings taken off, auto-fit puts them back where a belt still starts). AcceptHusk always refuses (no inputs).
 //   - OUTPUTS (Operation 'Outputs' +1 a level, 3 levels): side pipes on the LEFT, RIGHT and then BACK, each with its own filter (a block of that type spins
 //     over its mouth). Named by their mouth ring's colour (Green = the feed pipe, Orange / Blue / Pink = the side pipes; OutputName / OutputLabel): a
 //     wide glowing ring round each mouth and a band round each pipe. Each has a tick box in the device panel (PixelDeviceInfo.AddToggle): OFF hides
@@ -33,7 +39,7 @@ using System.Globalization;
 using System.Text;
 using UnityEngine;
 
-public class PixelSortingHopper : MonoBehaviour, IPixelDeviceInfo, IPixelTierPickTarget
+public class PixelSortingHopper : MonoBehaviour, IPixelDeviceInfo, IPixelTierPickTarget, IPixelSocketDevice
 {
     [Header("Sorting Hopper")]
     [Tooltip("Seconds between two husks leaving the hopper (into the Recycler or out of the bottom spout).")]
@@ -171,7 +177,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelDeviceInfo, IPixelTierPic
         root.transform.localScale = Vector3.one * UnlatchedSize;   // (its own size: a default Recycler's x its Operation 'Size')
         PixelSortingHopper h = root.AddComponent<PixelSortingHopper>();
         h.Init(clicker);
-        // MOVE HANDLES: drag it about by them (nothing ever connects to it, so they always work).
+        // MOVE HANDLES: drag it about by them (always work: a coupling moves with it, a belt starting at it is left behind and auto-fit re-links it).
         h.carry = root.AddComponent<PixelCarryHandles>();
         h.carry.Init(() => clicker != null ? clicker.TargetCamera : null);
         return root;
@@ -290,8 +296,56 @@ public class PixelSortingHopper : MonoBehaviour, IPixelDeviceInfo, IPixelTierPic
         return device != null && device.HitTest(ray, out _);
     }
 
-    private void OnEnable() { if (!all.Contains(this)) all.Add(this); }
-    private void OnDisable() { all.Remove(this); }
+    private void OnEnable() { if (!all.Contains(this)) all.Add(this); PixelCouplings.Register(this); }
+    private void OnDisable() { all.Remove(this); PixelCouplings.Unregister(this); }
+
+    // ---- Output sockets (one per SHOWN output pipe; no inputs) ----
+
+    private static readonly string[] SocketIds = { "green", "orange", "blue", "pink" };
+    private readonly List<PixelSocket> sockets = new List<PixelSocket>();
+
+    public Transform SocketRoot => transform;
+    public IReadOnlyList<PixelSocket> Sockets => sockets;
+    public Color SocketTint => BodyColor;
+    public bool AcceptHusk(PixelSocket socket, Rigidbody husk) => false;   // (husks only drop in through the bowl)
+
+    /// <summary>Where a husk leaves output 'o' (local): the feed pipe's mouth (o = 0) or that side pipe's mouth.</summary>
+    private Vector3 MouthLocal(int o, float u) => o <= 0 ? (float.IsNaN(pipeExit.x) ? DefaultPipeExit(u) : pipeExit)
+        : SideDir(o - 1) * SideEnd * u + Vector3.up * (PipeY - PipeRadius * 3f) * u;
+
+    /// <summary>The output sockets again, one per shown pipe (ShowSides: the shown pipes changed). Couplings come off; auto-fit puts them back where a belt still starts.</summary>
+    private void RebuildSockets()
+    {
+        PixelCoupling.RemoveAll(this);
+        sockets.Clear();
+        float u = Unit(clicker);
+        int n = 1 + SideOutputs;
+        for (int o = 0; o < n; o++)
+        {
+            if (!OutputOn(o)) continue;
+            Vector3 facing = o == 0 ? Vector3.back : SideDir(o - 1);
+            sockets.Add(new PixelSocket(SocketIds[o], MouthLocal(o, u) + Vector3.down * u, facing, PixelSocketFlow.Output));   // (a husk below the mouth: a belt starts under it)
+        }
+    }
+
+    /// <summary>
+    /// Lets husk 'h' out of output 'o' through its socket. Returns false only when it must WAIT (an Out coupling there feeds a belt that is full);
+    /// true = it went: onto the belt / into the device attached, or (nothing attached) dropped out of the pipe's mouth as always.
+    /// </summary>
+    private bool SendOut(int o, Held h)
+    {
+        string id = SocketIds[o];
+        if (PixelCouplings.OutputConnected(this, id))
+        {
+            if (!PixelCouplings.OutputHasRoom(this, id)) return false;
+            if (PixelCouplings.EmitStored(this, id, clicker, (out int tier, out double amount) => { tier = h.tier; amount = h.amount; return true; })) return true;
+            return false;
+        }
+        int before = clicker.OldPixels.Count;
+        clicker.SpawnStoredPixel(h.tier, h.amount, transform.TransformPoint(MouthLocal(o, Unit(clicker))), Vector3.down * feedPush);
+        if (clicker.OldPixels.Count > before) PixelCouplings.Emit(this, id, clicker.OldPixels[clicker.OldPixels.Count - 1]);   // (an Out coupling with a device's In coupling in front: handed over; else it just drops)
+        return true;
+    }
 
     private int sessionFed, sessionRejected, sessionEjected, sessionSided;   // since it was placed / loaded (the device panel)
 
@@ -334,7 +388,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelDeviceInfo, IPixelTierPic
     public int PickedTier(int slot) => FilterOf(slot);
     public void SetPickedTier(int slot, int tier) => SetFilter(slot, tier);
     public string PickTitle(int slot) => OutputCount > 1 ? OutputName(slot) + " filter" : "Select filter";
-    public string PickHint(int slot) => "Husks of this type leave through this output; types no output filters drop out of the bottom spout.";
+    public string PickHint(int slot) => "Husks of this type leave through this output (onto a belt started at its socket, else out of its mouth); types no output filters drop out of the bottom spout.";
     public bool PickAllowsNone => true;
     public bool PickAllTiers => false;
     public bool PickAlive => this != null;
@@ -455,10 +509,10 @@ public class PixelSortingHopper : MonoBehaviour, IPixelDeviceInfo, IPixelTierPic
             if (!filtered) for (int k = 0; k < sides; k++) if (sideFilters[k] == h.tier && OutputOn(k + 1)) { side = k; break; }
             if (filtered)
             {
-                SendOutFeedPipe(h);   // (it drops out of the green pipe's mouth: a bin put under it catches it)
+                if (!SendOut(0, h)) continue;   // (its belt is full: it waits, the next held husk may go)
                 PixelStats.Count("hopper.husks"); sessionFed++;
             }
-            else if (side >= 0) { SendOutSide(side, h); PixelStats.Count("hopper.sided"); sessionSided++; }
+            else if (side >= 0) { if (!SendOut(side + 1, h)) continue; PixelStats.Count("hopper.sided"); sessionSided++; }
             else { SendOutBottom(h, 1f); PixelStats.Count("hopper.rejected"); sessionRejected++; }
             held.RemoveAt(i);
             nextFeed = Time.time + FeedInterval;
@@ -467,28 +521,13 @@ public class PixelSortingHopper : MonoBehaviour, IPixelDeviceInfo, IPixelTierPic
         }
     }
 
-    /// <summary>One husk drops out of the green feed pipe's mouth (whatever stands under it - a Recycler, a belt - catches it like any falling husk).</summary>
-    private void SendOutFeedPipe(Held h)
-    {
-        float u = Unit(clicker);
-        Vector3 at = transform.TransformPoint(float.IsNaN(pipeExit.x) ? DefaultPipeExit(u) : pipeExit);
-        clicker.SpawnStoredPixel(h.tier, h.amount, at, Vector3.down * feedPush);
-    }
-
-    /// <summary>A husk of a side output's filter drops out of that side pipe's mouth.</summary>
-    private void SendOutSide(int k, Held h)
-    {
-        float u = Unit(clicker);
-        Vector3 local = SideDir(k) * SideEnd * u + Vector3.up * (PipeY - PipeRadius * 3f) * u;
-        clicker.SpawnStoredPixel(h.tier, h.amount, transform.TransformPoint(local), Vector3.down * feedPush);
-    }
-
     /// <summary>Shows the unlocked side pipes (the Outputs level in use can change at any time: bought, or turned down in the device panel).</summary>
     private void ShowSides()
     {
         int n = SideOutputs;
         if (n == sidesShown) return;
         sidesShown = n;
+        RebuildSockets();
         for (int k = 0; k < SideCount; k++) if (sideHolders[k] != null) sideHolders[k].SetActive(k < n && OutputOn(k + 1));
         foreach (string part in new[] { "Feed Pipe", "Feed Mouth", "Feed Mouth Ring", "Feed Band" })
         {

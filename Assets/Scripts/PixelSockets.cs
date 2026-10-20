@@ -1,43 +1,35 @@
 // ---- System notes ----
 // PixelSockets.cs
-//   SOCKETS: the ONE way belts and hoses connect to devices (design: docs/systems/PixelCouplings.md). A device declares its sockets as data
-//   (PixelSocket: id, port = local position where a belt end / hose end meets it, outward facing, flow Intake / Output / Both, kind, fitted) and
-//   implements IPixelSocketDevice: its sockets, a tint for its couplings, and ONE hook for husks coming in (AcceptHusk: take it or refuse when full).
-//   Devices register in OnEnable / unregister in OnDisable (PixelCouplings.Register). A PixelCoupling (PixelCoupling.cs) snaps onto a socket; belts,
-//   hoses and connectors only ever talk to couplings:
+//   SOCKETS: the ONE way husks get into and out of devices (design: docs/systems/PixelCouplings.md). Sockets carry HUSKS only - power is a separate
+//   mechanic and will not use these ports. A device declares its sockets as data (PixelSocket: id, port = local position where a belt end / hose end
+//   meets it, outward facing, flow Intake / Output / Both, fitted) and implements IPixelSocketDevice: its sockets, a tint for its couplings, and ONE hook
+//   for husks coming in (AcceptHusk: take it or refuse when full). Devices register in OnEnable / unregister in OnDisable (PixelCouplings.Register).
+//   A PixelCoupling (PixelCoupling.cs) sits on a socket; belts and hoses only ever talk to couplings:
+//   - AUTO-FIT: couplings are not bought. A belt END at a free socket's port gets an In coupling, a belt START there an Out one, and a hose end gets one
+//     the way the hose runs (AutoFitAt / AutoFitAll - belts placed, devices carried next to belts, every PixelSocketPlates refresh). An Intake socket only
+//     takes In, an Output socket only Out, a Both socket follows what attached. Placing snaps to free socket ports too (Ports).
 //   - a belt END / hose end at an In coupling hands its husk in: PixelCouplings.HandIn(at, husk) -> the device's AcceptHusk;
 //   - a device putting a husk out calls PixelCouplings.Emit(device, socketId, husk): an Out coupling on that socket puts it on the belt that starts at
-//     its port (PixelConveyorSystem.StartHasRoom), or hands it to an In coupling there (device to device); false = nothing attached, the device does
-//     its own thing (fling / drop). OutputHasRoom = may the device let one out now (the Funnel waits when a belt there is full). Emit never puts a husk
-//     on a FULL belt (false, like nothing attached): a device that must not drop it asks OutputHasRoom first and holds it until there is room.
-//   - ONE reach for every link check (LinkReach, in husk widths): a belt end hands in to a coupling, and a coupling finds the belt ending / starting at
-//     it, at the same distance - so a belt that shows as joined really is (the nearest one wins).
-//   - placing belts / hoses snaps to coupling ports (Ports).
-//   Optional extras: IPixelHuskSource (a hose may pull stored husks out of an Out coupling: Storage Crate, Quantum Organizer), IPixelHuskRoom (how many
-//   more husks an In coupling's device takes now: a hose only pumps what fits). A socket can be OCCUPIED by something that is not a coupling (the
-//   a device standing on a socket: Occupy / Vacate). Couplings are saved with their device: Export / Import (socket ids +
-//   direction) into PlacedState.couplings / ... An AUTO-DIRECTION socket (autoDirection, the Junction Box) has no fixed way: its device sets its coupling
-//   In / Out / idle from what is attached (PixelCoupling.SetAuto; BeltEndingAt / BeltStartingAt, PixelContainerHose.Pulls / Pushes). Saved / TesterSave.couplings. Socket KINDS are an open list (PixelSocketKind, appended only): Husk is built;
-//   Power (Electrician) and Signal (Automation) are planned, Water / Heat / Link are ideas - each = a new value + its own coupling look + its own hook.
+//     its port (PixelConveyorSystem.StartHasRoom), or hands it to an In coupling there (device to device); false = nothing attached or the belt there
+//     is full - the device does its own thing. OutputHasRoom = may the device let one out now. EmitStored = spawn a STORED husk and Emit it (crate,
+//     organizer feeding a belt).
+//   - TYPE-AWARE INTAKE: a device that takes only some husks implements IPixelHuskFilter (Takes(socket, tier)); PixelCouplings.Takes asks it (true when
+//     it doesn't). A source that can pick WHICH husk to hand out implements IPixelHuskPicker, so a hose only takes out husks its target takes.
+//   - CONNECTION RESOLVER: Attached(coupling) says what a coupling is joined to (a belt into / out of it, a hose pushing / pulling, another device's
+//     coupling, nothing) - the device card's socket rows, the Junction Box's auto direction and the hose's direction re-check all use it.
+//   - ONE reach for every link check (LinkReach, in husk widths); FreeSockets / HuskWidth are the shared helpers.
+//   Optional extras: IPixelHuskSource (a hose may pull stored husks out of an Out coupling), IPixelHuskRoom (how many more husks an In coupling's
+//   device takes now). Couplings are saved with their device: Export / Import (socket ids + direction) into PlacedState.couplings / TesterSave.couplings.
+//   An AUTO-DIRECTION socket (autoDirection, the Junction Box) has no fixed way: its device sets its coupling In / Out / idle from Attached.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>What flows through a socket. An open list: append new kinds at the end (Unity stores enums as numbers).</summary>
+/// <summary>What flows through a socket. Sockets carry husks only (power is a separate mechanic, not ports); kept as a field so saved data stays readable.</summary>
 public enum PixelSocketKind
 {
-    /// <summary>Husks (belts, hoses). The only kind built so far.</summary>
+    /// <summary>Husks (belts, hoses).</summary>
     Husk = 0,
-    /// <summary>Planned (Electrician): electricity that speeds machines up or keeps them running.</summary>
-    Power = 1,
-    /// <summary>Planned (Automation): on / off triggers between devices.</summary>
-    Signal = 2,
-    /// <summary>Idea (Farming / Fishing): water piped between devices.</summary>
-    Water = 3,
-    /// <summary>Idea (Firemaking): fuel and heat.</summary>
-    Heat = 4,
-    /// <summary>Idea (late game): a wireless pair that passes a husk or effect along.</summary>
-    Link = 5,
 }
 
 /// <summary>Which way things may go through a socket. A coupling on a Both socket is set to In or Out (click it to switch).</summary>
@@ -55,7 +47,7 @@ public class PixelSocket
     public Vector3 localFacing = Vector3.forward;
     [Tooltip("Intake = husks go in, Output = husks come out, Both = the coupling chooses (click it).")]
     public PixelSocketFlow flow;
-    [Tooltip("What flows through it. Only Husk is built.")]
+    [Tooltip("What flows through it: husks (the only kind).")]
     public PixelSocketKind kind;
     [Tooltip("A coupling comes fitted with the device (the belt-fitting pieces: Elevator, Belt Sorter); not saved, not removable on its own.")]
     public bool fitted;
@@ -86,16 +78,6 @@ public interface IPixelSocketDevice
     bool AcceptHusk(PixelSocket socket, Rigidbody husk);
 }
 
-/// <summary>
-/// A device that catches husks handed in NEAR it, with no coupling needed (the Conveyor Elevator: a belt ending near its base, a device's Out coupling or a
-/// Belt Sorter's chute beside it). PixelCouplings.HandIn asks these after the In couplings (RegisterAutoIntake / UnregisterAutoIntake).
-/// </summary>
-public interface IPixelAutoIntake
-{
-    /// <summary>A husk (kinematic, still on the husk list) is handed in at 'at': take it (true) if it is near enough and there is room.</summary>
-    bool CatchNear(Vector3 at, Rigidbody husk);
-}
-
 /// <summary>A device a hose can pull stored husks out of, through an Out coupling (Storage Crate, Quantum Organizer).</summary>
 public interface IPixelHuskSource
 {
@@ -108,19 +90,27 @@ public interface IPixelHuskRoom
     int HuskRoom(PixelSocket socket);
 }
 
+/// <summary>A device that takes only SOME husks through a socket (the Biomass Generator: wood). Asked before a husk is moved to it (PixelCouplings.Takes).</summary>
+public interface IPixelHuskFilter
+{
+    bool Takes(PixelSocket socket, int tier);
+}
+
+/// <summary>A source that can PICK which stored husk it hands out (the first one 'want' accepts), so a hose never pulls a husk its target refuses.</summary>
+public interface IPixelHuskPicker
+{
+    bool TakeHuskOut(PixelSocket socket, System.Predicate<int> want, out int tier, out double amount);
+}
+
+/// <summary>What a coupling is joined to (PixelCouplings.Attached).</summary>
+public enum PixelLink { Nothing, BeltIn, BeltOut, HoseIn, HoseOut, DeviceOut }
+
 /// <summary>The socket registry and the shared connect steps (hand a husk in, put one out, snap points, saving).</summary>
 public static class PixelCouplings
 {
     private static readonly List<IPixelSocketDevice> devices = new List<IPixelSocketDevice>();
-    private static readonly List<IPixelAutoIntake> autoIntakes = new List<IPixelAutoIntake>();
-
-    /// <summary>A device that catches husks handed in near it without a coupling (IPixelAutoIntake) came into the world / went.</summary>
-    public static void RegisterAutoIntake(IPixelAutoIntake d) { if (d != null && !autoIntakes.Contains(d)) autoIntakes.Add(d); }
-    public static void UnregisterAutoIntake(IPixelAutoIntake d) { autoIntakes.Remove(d); }
-    private static readonly Dictionary<string, Object> occupants = new Dictionary<string, Object>();
-
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { devices.Clear(); occupants.Clear(); autoIntakes.Clear(); PixelStatics.ResetOnRestart(() => { devices.Clear(); occupants.Clear(); autoIntakes.Clear(); }); }
+    private static void ResetStatics() { devices.Clear(); PixelStatics.ResetOnRestart(() => devices.Clear()); }
 
     public static IReadOnlyList<IPixelSocketDevice> Devices => devices;
 
@@ -128,7 +118,8 @@ public static class PixelCouplings
     public static void Register(IPixelSocketDevice d) { if (d != null && !devices.Contains(d)) devices.Add(d); }
     public static void Unregister(IPixelSocketDevice d) { devices.Remove(d); }
 
-    private static bool Alive(IPixelSocketDevice d) => d != null && !(d is Object o && o == null) && d.SocketRoot != null;
+    /// <summary>Is the device still in the world (registered devices can be destroyed without unregistering first)?</summary>
+    public static bool Alive(IPixelSocketDevice d) => d != null && !(d is Object o && o == null) && d.SocketRoot != null;
 
     /// <summary>The socket's port in the world.</summary>
     public static Vector3 Port(IPixelSocketDevice d, PixelSocket s) => d.SocketRoot.TransformPoint(s.localPosition);
@@ -147,20 +138,151 @@ public static class PixelCouplings
         return null;
     }
 
-    private static string Key(IPixelSocketDevice d, string id) => ((Object)d).GetInstanceID() + "/" + id;
+    /// <summary>Is the socket free for a coupling (none on it)?</summary>
+    public static bool IsFree(IPixelSocketDevice d, PixelSocket s) => Alive(d) && s != null && PixelCoupling.On(d, s) == null;
 
-    /// <summary>Something that is not a coupling sits on this socket (the Sorting Hopper on the Recycler's back hatch): no coupling may be fitted there.</summary>
-    public static void Occupy(IPixelSocketDevice d, string id, Object by) { if (Alive(d)) occupants[Key(d, id)] = by; }
-    public static void Vacate(IPixelSocketDevice d, string id, Object by)
+    private static readonly List<PixelSocket> freeScratch = new List<PixelSocket>();
+
+    /// <summary>
+    /// The device's FREE sockets a coupling can go on (not built-in, nothing fitted). The returned list is shared and reused: read it right away.
+    /// (The one 'free socket' loop: placing couplings, the socket plates, auto-fit.)
+    /// </summary>
+    public static List<PixelSocket> FreeSockets(IPixelSocketDevice d)
     {
-        if (!Alive(d)) return;
-        string k = Key(d, id);
-        if (occupants.TryGetValue(k, out Object o) && o == by) occupants.Remove(k);
+        freeScratch.Clear();
+        if (!Alive(d)) return freeScratch;
+        foreach (PixelSocket s in d.Sockets) if (s != null && !s.fitted && IsFree(d, s)) freeScratch.Add(s);
+        return freeScratch;
     }
-    public static bool Occupied(IPixelSocketDevice d, string id) => Alive(d) && occupants.TryGetValue(Key(d, id), out Object o) && o != null;
 
-    /// <summary>Is the socket free for a coupling (none on it, nothing else sitting there)?</summary>
-    public static bool IsFree(IPixelSocketDevice d, PixelSocket s) => Alive(d) && s != null && PixelCoupling.On(d, s) == null && !Occupied(d, s.id);
+    /// <summary>
+    /// Keeps a socket-hung piece (coupling, port plate) at the same world size whatever its device's scale (the Recycler grows with Bin Size):
+    /// rescales it when its parent's scale changed. Cheap enough to call every frame.
+    /// </summary>
+    public static void KeepSize(Transform t)
+    {
+        if (t == null || t.parent == null) return;
+        float parentScale = t.parent.lossyScale.x;
+        if (parentScale <= 0.2f || Mathf.Abs(t.localScale.x * parentScale - 1f) < 0.001f) return;
+        t.localScale = Vector3.one / parentScale;
+    }
+
+    /// <summary>The edge length of a husk in the world (the unit every socket distance is measured in).</summary>
+    public static float HuskWidth { get { PixelClicker c = PixelFind.Cached<PixelClicker>(); return c != null && c.OldPixelWorldSize > 0f ? c.OldPixelWorldSize : 0.5f; } }
+
+    /// <summary>Does the device take a husk of this tier through this socket (IPixelHuskFilter)? True when it doesn't filter.</summary>
+    public static bool Takes(IPixelSocketDevice d, PixelSocket s, int tier) => !(d is IPixelHuskFilter f) || f.Takes(s, tier);
+
+    // ---- auto-fit: couplings appear where a belt / hose meets a free socket ----
+
+    /// <summary>
+    /// The free socket whose port is nearest 'at' (within LinkReach widths sideways, 1.2 up / down) and that can work the wanted way
+    /// (intake = husks go into the device there). False when none.
+    /// </summary>
+    public static bool FreeSocketAt(Vector3 at, bool intake, out IPixelSocketDevice device, out PixelSocket socket, float reachHusks = LinkReach)
+    {
+        device = null; socket = null;
+        float w = HuskWidth, best = (reachHusks * w) * (reachHusks * w), up = 1.2f * w;
+        for (int i = devices.Count - 1; i >= 0; i--)
+        {
+            IPixelSocketDevice d = devices[i];
+            if (!Alive(d)) continue;
+            foreach (PixelSocket s in d.Sockets)
+            {
+                if (s == null || s.fitted || (intake ? !s.CanTakeIn : !s.CanGiveOut) || !IsFree(d, s)) continue;
+                Vector3 dp = Port(d, s) - at;
+                if (Mathf.Abs(dp.y) > up) continue;
+                dp.y = 0f;
+                if (dp.sqrMagnitude <= best) { best = dp.sqrMagnitude; device = d; socket = s; }
+            }
+        }
+        return device != null;
+    }
+
+    /// <summary>
+    /// Fits a coupling on the free socket at 'at' that can work the wanted way, set that way (a Both socket follows it; an auto socket works it out).
+    /// Returns the coupling, or null when there is no free socket there. Nothing happens when a coupling already sits there.
+    /// </summary>
+    public static PixelCoupling AutoFitAt(Vector3 at, bool intake, float reachHusks = LinkReach)
+    {
+        if (!FreeSocketAt(at, intake, out IPixelSocketDevice d, out PixelSocket s, reachHusks)) return null;
+        PixelCoupling c = PixelCoupling.Fit(d, s);
+        if (c == null) return null;
+        if (s.flow == PixelSocketFlow.Both && !s.autoDirection) c.SetDirection(intake);
+        return c;
+    }
+
+    /// <summary>
+    /// Fits couplings on every free socket a belt end / start meets (belt END = In, belt START = Out): belts placed before a device, a device carried next
+    /// to a belt, loading. Called every few tenths of a second (PixelSocketPlates) - cheap: free sockets x belt ends.
+    /// </summary>
+    private static readonly List<PixelSocket> fitScratch = new List<PixelSocket>();
+
+    public static void AutoFitAll()
+    {
+        for (int i = devices.Count - 1; i >= 0; i--)
+        {
+            IPixelSocketDevice d = devices[i];
+            if (!Alive(d) || (d is PixelPlacedDevice pd && pd.IsEnding)) continue;
+            fitScratch.Clear();
+            fitScratch.AddRange(FreeSockets(d));   // (a copy: fitting changes which sockets are free)
+            foreach (PixelSocket s in fitScratch)
+            {
+                Vector3 port = Port(d, s);
+                bool into = s.CanTakeIn && BeltEndingAt(port) != null;
+                bool outOf = !into && s.CanGiveOut && BeltStartingAt(port) != null;
+                if (!into && !outOf) continue;
+                PixelCoupling c = PixelCoupling.Fit(d, s);
+                if (c != null && s.flow == PixelSocketFlow.Both && !s.autoDirection) c.SetDirection(into);
+            }
+        }
+    }
+
+    // ---- what a coupling is joined to ----
+
+    /// <summary>
+    /// What this coupling is joined to: a belt ending at it (BeltIn) / starting at it (BeltOut), a hose pushing in (HoseIn) / pulling out (HoseOut),
+    /// another device's In coupling right in front of it (DeviceOut), or nothing. Worked out on demand (card rows, Junction Box, hose checks).
+    /// </summary>
+    public static PixelLink Attached(PixelCoupling c)
+    {
+        if (c == null || !Alive(c.Device)) return PixelLink.Nothing;
+        Vector3 port = c.PortWorld;
+        if (BeltEndingAt(port) != null) return PixelLink.BeltIn;
+        if (BeltStartingAt(port) != null) return PixelLink.BeltOut;
+        if (PixelContainerHose.Pushes(c)) return PixelLink.HoseIn;
+        if (PixelContainerHose.Pulls(c)) return PixelLink.HoseOut;
+        if (c.IsOut && IntakeAt(port + c.FacingWorld * 0.5f * HuskWidth, HuskWidth, c.Device) != null) return PixelLink.DeviceOut;
+        return PixelLink.Nothing;
+    }
+
+    /// <summary>The device panel's port rows: one per socket a coupling can go on ("Port side: Out: feeds a belt", "Port in: free").</summary>
+    public static void AddPortRows(PixelDeviceInfo info, IPixelSocketDevice d)
+    {
+        if (info == null || !Alive(d)) return;
+        foreach (PixelSocket s in d.Sockets)
+        {
+            if (s == null || s.fitted) continue;
+            PixelCoupling c = PixelCoupling.On(d, s);
+            info.Add("Port " + s.id, c != null ? Describe(c) : "free - a belt or hose attaches here");
+        }
+    }
+
+    /// <summary>One line for a coupling on a device card: "In: a belt", "Out: idle - nothing attached"...</summary>
+    public static string Describe(PixelCoupling c)
+    {
+        if (c == null) return "";
+        string way = c.Direction == PixelCoupling.AutoState.Idle ? "Idle" : c.Direction == PixelCoupling.AutoState.Out ? "Out" : "In";
+        switch (Attached(c))
+        {
+            case PixelLink.BeltIn: return way + ": a belt brings husks in";
+            case PixelLink.BeltOut: return way + ": feeds a belt";
+            case PixelLink.HoseIn: return way + ": a hose pumps husks in";
+            case PixelLink.HoseOut: return way + ": a hose pulls husks out";
+            case PixelLink.DeviceOut: return way + ": hands husks to the device in front";
+            default: return way + ": idle - nothing attached";
+        }
+    }
 
     /// <summary>How far (in husk widths, flat) a belt end may be from a coupling's port and still count as joined to it. One value for every link check.</summary>
     public const float LinkReach = 1.3f;
@@ -188,15 +310,7 @@ public static class PixelCouplings
     {
         if (husk == null) return false;
         PixelCoupling c = IntakeAt(at, reachHusks * HuskWidth, exclude);
-        if (c != null && c.TakeIn(husk)) return true;
-        for (int i = autoIntakes.Count - 1; i >= 0; i--)   // no coupling took it: a device that catches husks near it (the Conveyor Elevator)
-        {
-            IPixelAutoIntake d = autoIntakes[i];
-            if (d == null || (d is Object o && o == null)) { autoIntakes.RemoveAt(i); continue; }
-            if (ReferenceEquals(d, exclude)) continue;
-            if (d.CatchNear(at, husk)) return true;
-        }
-        return false;
+        return c != null && c.TakeIn(husk);   // (sockets are the ONLY way in: the old 'catch husks near it' path is gone since 2026-10-20)
     }
 
     // ---- husks out ----
@@ -255,6 +369,25 @@ public static class PixelCouplings
         return false;
     }
 
+    /// <summary>
+    /// A storing device (crate, organizer) lets one STORED husk out of an Out socket onto what is attached there: 'take' hands out the stored husk
+    /// (its tier and value, or false when empty), it is made at the port and Emitted. Only when a belt / device there has room. True = one went out.
+    /// </summary>
+    public static bool EmitStored(IPixelSocketDevice d, string socketId, PixelClicker clicker, TakeStored take)
+    {
+        if (clicker == null || take == null || !OutputConnected(d, socketId) || !OutputHasRoom(d, socketId)) return false;
+        PixelCoupling c = PixelCoupling.On(d, socketId);
+        if (c == null || !take(out int tier, out double amount)) return false;
+        int before = clicker.OldPixels.Count;
+        clicker.SpawnStoredPixel(tier, amount, c.PortWorld + Vector3.up * clicker.OldPixelWorldSize, Vector3.zero);
+        if (clicker.OldPixels.Count <= before) return false;
+        Emit(d, socketId, clicker.OldPixels[clicker.OldPixels.Count - 1]);
+        return true;
+    }
+
+    /// <summary>Hands out one stored husk (EmitStored): its tier and value, false when empty.</summary>
+    public delegate bool TakeStored(out int tier, out double amount);
+
     /// <summary>May the device let a husk out of this socket now? False only when an Out coupling there feeds a belt with no room at its start.</summary>
     public static bool OutputHasRoom(IPixelSocketDevice d, string socketId)
     {
@@ -273,11 +406,20 @@ public static class PixelCouplings
 
     // ---- placing: snap points ----
 
-    /// <summary>Calls 'visit' with the port of every coupling (in = In couplings, out = Out couplings): belts, connectors and hoses snap to them.</summary>
+    /// <summary>
+    /// Calls 'visit' with the port of every coupling (in = In couplings, out = Out couplings) and of every FREE socket that can work that way (a coupling is
+    /// fitted there when a belt / hose attaches - AutoFitAt): belts and hoses snap to them.
+    /// </summary>
     public static void Ports(System.Action<Vector3> visit, bool ins = true, bool outs = true)
     {
         foreach (PixelCoupling c in PixelCoupling.All)
             if (c != null && Alive(c.Device) && ((ins && c.IsIn) || (outs && c.IsOut))) visit(c.PortWorld);
+        for (int i = devices.Count - 1; i >= 0; i--)
+        {
+            IPixelSocketDevice d = devices[i];
+            if (!Alive(d)) continue;
+            foreach (PixelSocket s in FreeSockets(d)) if ((ins && s.CanTakeIn) || (outs && s.CanGiveOut)) visit(Port(d, s));
+        }
     }
 
     /// <summary>The coupling whose port is nearest this point (within 'reach', flat distance); 'wantOut' / 'wantIn' filter its direction.</summary>
@@ -327,8 +469,4 @@ public static class PixelCouplings
         }
     }
 
-    private static float HuskWidth
-    {
-        get { PixelClicker c = PixelFind.Cached<PixelClicker>(); return c != null && c.OldPixelWorldSize > 0f ? c.OldPixelWorldSize : 0.5f; }
-    }
 }

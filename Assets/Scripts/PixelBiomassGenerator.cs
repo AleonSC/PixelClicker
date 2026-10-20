@@ -20,7 +20,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;
 
-public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, IPixelDeviceInfo
+public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, IPixelHuskFilter, IPixelDeviceInfo
 {
     [Header("Biomass Generator")]
     [Min(0f)]
@@ -199,30 +199,30 @@ public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHu
     public Color SocketTint => TankColor;
     public int HuskRoom(PixelSocket socket) => charge < maxCharge ? Mathf.Max(1, Mathf.CeilToInt((maxCharge - charge) / perHusk)) : 0;
 
-    public bool AcceptHusk(PixelSocket socket, Rigidbody husk)
-    {
-        if (husk == null || !IsWood(husk) || charge >= maxCharge) return false;
-        Burn(husk);
-        return true;
-    }
+    public bool AcceptHusk(PixelSocket socket, Rigidbody husk) => husk != null && IsWood(husk) && charge < maxCharge && Burn(husk);
 
-    private bool IsWood(Rigidbody body)
+    /// <summary>Only wood husks go in (a hose from a mixed crate pulls just the wood: IPixelHuskFilter).</summary>
+    public bool Takes(PixelSocket socket, int tier) => IsWoodTier(tier);
+
+    private bool IsWood(Rigidbody body) => IsWoodTier(PixelHuskQuery.Get(body).Tier);
+
+    private bool IsWoodTier(int tier)
     {
-        int tier = PixelHuskQuery.Get(body).Tier;
         PixelSkills skills = PixelSkills.Instance;
         return clicker != null && clicker.IsValidTierIndex(tier) && skills != null && skills.HuskSkillId(tier) == PixelSkills.WoodcuttingId;
     }
 
-    /// <summary>A wood husk goes in the fire: taken off the floor (it shrinks into the embers), the charge rises, an empty generator is saved.</summary>
-    private void Burn(Rigidbody body)
+    /// <summary>A wood husk goes in the fire: taken off the floor (it shrinks into the embers), the charge rises, an empty generator is saved. False = it could not be taken.</summary>
+    private bool Burn(Rigidbody body)
     {
-        if (clicker == null || !clicker.ReleaseOldPixel(body, false)) return;
+        if (clicker == null || !clicker.ReleaseOldPixel(body, false)) return false;
         float u = Unit(clicker) * size;
         StartCoroutine(PixelHuskHolder.FlyIn(body.gameObject, null, transform.TransformPoint(new Vector3(0f, 2.35f * u, 0f)), false, 0.25f));
         charge = Mathf.Min(maxCharge, Mathf.Max(0f, charge) + perHusk);
         redLeft = -1f;   // (fed in the red state: saved)
         PixelAudio.Play("fire_crackle");
         PixelStats.Count("generator.husks");
+        return true;
     }
 
     private static readonly List<PixelHuskQuery.Husk> nearScratch = new List<PixelHuskQuery.Husk>();

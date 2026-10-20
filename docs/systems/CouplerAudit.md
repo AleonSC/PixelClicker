@@ -8,7 +8,9 @@ A read-only pass on `PixelSockets` / `PixelCoupling` / `PixelSocketPlates`, ever
 - the material leaks;
 - the shared placed-object base.
 
-Nothing changed yet. Effort: S < 1 h, M = a few hours, L = a day.
+Effort: S < 1 h, M = a few hours, L = a day.
+
+**Done 2026-10-20 (sockets as the only husk path, Devices work):** C1, C2, C3, C4, C5; polish 1 (auto-fit + snap to free ports), 2 (moot: the Coupling item is retired, couplings fit themselves), 3 (device panel port rows; no red end marker yet), 4 (tester text); design "separate purchase" (dropped); code structure 1 (moot: sockets are husk-only, power will not use ports), 2 (`FreeSockets` / `HuskWidth`), 3 (Occupy / Vacate / Occupied gone; the Elevator / Hopper items are the parallel fork's); shared systems 2 (`Attached` resolver) and 3 (`IPixelHuskFilter` / `Takes`, used by the hose). Still open: speed item 4 (`On` dictionary, cached attached belt).
 
 ## Bugs (confirmed by reading the code)
 

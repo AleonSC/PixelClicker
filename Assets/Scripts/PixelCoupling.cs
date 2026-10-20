@@ -1,18 +1,20 @@
 // ---- System notes ----
 // PixelCoupling.cs
 //   The COUPLING: the ONE snap-on piece that joins belts and hoses to a device's SOCKET (PixelSockets.cs; design docs/systems/PixelCouplings.md).
+//   - AUTO-FIT: couplings are not bought - one is fitted when a belt end / hose end attaches at a free socket (PixelCouplings.AutoFitAt / AutoFitAll).
 //   - Fit(device, socket): a child of the device's SocketRoot at the socket's port, facing out of it, so it moves / turns with the device (carry handles)
 //     and goes when the device goes. Built with PixelFactoryKit: a flange tinted a little with the device's colour (tintShare of SocketTint), a collar
 //     with a dark opening, a lip at belt height, and a flow ARROW over it that drifts the way husks go - green pointing INTO the device = In, orange
-//     pointing OUT = Out. A coupling on a Both socket (Storage Crate, Quantum Organizer) shows a small teal dot: LEFT-CLICK it to switch In / Out
-//     (PixelPointerClaim.ClaimButton keeps the cube and Pixel Grabbing out of that click). Its parts are named "Coupling ..." so the device's own
+//     pointing OUT = Out. A coupling on a Both socket (Storage Crate, Quantum Organizer) shows a small teal dot: LEFT-CLICK the DOT to switch In / Out
+//     (only the dot is hit-tested; PixelPointerClaim.ClaimButton keeps the cube and Pixel Grabbing out of that click). Its parts are named "Coupling ..." so the device's own
 //     hover / remove check (PixelPlacedDevice.CountsForHit) leaves them out.
 //   - AUTO DIRECTION (socket.autoDirection, the Junction Box): no teal dot and no click switch; the device calls SetAuto(In / Out / Idle) from what is
 //     attached; idle shows no arrow and counts both ways (IsIn and IsOut) so belts and hoses can snap to it.
 //   - TakeIn(husk) = the device's ONE hook (IPixelSocketDevice.AcceptHusk); PortWorld / FacingWorld = where belts meet it.
 //   - Fitted couplings (socket.fitted: the Elevator and Belt Sorter, which are belt fittings themselves) are built with the piece (FitBuiltIn),
 //     are not saved and cannot be removed on their own.
-//   - PLACING (Dev Hub > Tester > 'Coupling'): the ghost (CreateGhost) shows a teal ring on every FREE socket in view and magnetizes to the nearest one
+//   - Keeps the same world size when its device rescales (the Recycler's Bin Size): KeepSize every frame.
+//   - PLACING by hand (dev only: Dev Hub > Tester > 'Coupling'): the ghost (CreateGhost) shows a teal ring on every FREE socket in view and magnetizes to the nearest one
 //     (TrySnapGhost: by screen distance, its arrow shows that socket's direction); a click fits it there (PlaceAt). Hold the right button on a placed
 //     coupling to remove it (the tester's delete). Saved with the device (PixelCouplings.Export / Import).
 // ---------------------------------------------------
@@ -46,6 +48,7 @@ public class PixelCoupling : MonoBehaviour
     private bool ghost;
     private Transform arrowIn, arrowOut;
     private Renderer[] parts;
+    private Renderer switchDot;    // the teal dot of a Both coupling: the only part a click switches on
     private float u = 0.5f;
 
     public IPixelSocketDevice Device => device;
@@ -96,7 +99,7 @@ public class PixelCoupling : MonoBehaviour
     // ---- fitting ----
 
     private static PixelClicker Clicker => PixelFind.Cached<PixelClicker>();
-    private static float HuskWidth { get { PixelClicker c = Clicker; return c != null && c.OldPixelWorldSize > 0f ? c.OldPixelWorldSize : 0.5f; } }
+    private static float HuskWidth => PixelCouplings.HuskWidth;
 
     /// <summary>Fits a coupling onto a socket (a child of the device, facing out of the socket). Null if the socket is taken.</summary>
     public static PixelCoupling Fit(IPixelSocketDevice d, PixelSocket s)
@@ -107,9 +110,8 @@ public class PixelCoupling : MonoBehaviour
         go.transform.localPosition = s.localPosition;
         Vector3 f = s.localFacing; f.y = 0f;
         go.transform.localRotation = Quaternion.LookRotation(f.sqrMagnitude > 1e-6f ? f.normalized : Vector3.forward, Vector3.up);
-        float parentScale = d.SocketRoot.lossyScale.x;
-        if (parentScale > 0.2f) go.transform.localScale = Vector3.one / parentScale;   // the same size on every device (a scaled machine - the Wood Chipper, a bigger Recycler - does not blow it up)
         PixelCoupling c = go.AddComponent<PixelCoupling>();
+        PixelCouplings.KeepSize(go.transform);   // the same size on every device (a scaled machine - the Wood Chipper, a bigger Recycler - does not blow it up)
         c.device = d;
         c.socket = s;
         c.outward = s.flow == PixelSocketFlow.Output;
@@ -170,7 +172,10 @@ public class PixelCoupling : MonoBehaviour
         arrowIn = BuildArrow(kit, "Coupling Arrow In", false, inColor);
         arrowOut = BuildArrow(kit, "Coupling Arrow Out", true, outColor);
         if (socket != null && socket.flow == PixelSocketFlow.Both && !socket.autoDirection && !asGhost)   // a teal dot: click to switch In / Out
-            kit.Ball("Coupling Switch", t, new Vector3(0f, 0.5f * u, -0.06f * u), 0.09f * u, new Color(0.3f, 0.95f, 0.95f, 1f), 0.2f, 0.8f);
+        {
+            GameObject dot = kit.Ball("Coupling Switch", t, new Vector3(0f, 0.5f * u, -0.06f * u), 0.09f * u, new Color(0.3f, 0.95f, 0.95f, 1f), 0.2f, 0.8f);
+            switchDot = dot != null ? dot.GetComponent<Renderer>() : null;
+        }
         ShowArrow();
         parts = GetComponentsInChildren<Renderer>(true);
     }
@@ -198,6 +203,7 @@ public class PixelCoupling : MonoBehaviour
 
     private void Update()
     {
+        if (!ghost) PixelCouplings.KeepSize(transform);
         Transform arrow = outward ? arrowOut : arrowIn;
         if (arrow != null && arrow.gameObject.activeSelf)
         {
@@ -207,7 +213,7 @@ public class PixelCoupling : MonoBehaviour
         if (ghost || auto || socket == null || socket.flow != PixelSocketFlow.Both || PixelCalm.InMenu || PixelInput.PointerOverUI()) return;
         PixelClicker clicker = Clicker;
         Camera cam = clicker != null ? clicker.ViewCamera : null;
-        if (cam == null || !PointerOn(cam)) return;
+        if (cam == null || !OnRenderer(switchDot, cam.ScreenPointToRay(PixelInput.PointerPosition()))) return;   // the teal dot only (C5: not the whole coupling)
         PixelPointerClaim.ClaimButton();
         if (!PixelInput.LeftPressed()) return;
         outward = !outward;
@@ -220,9 +226,11 @@ public class PixelCoupling : MonoBehaviour
     {
         if (parts == null) return false;
         Ray ray = cam.ScreenPointToRay(PixelInput.PointerPosition());
-        foreach (Renderer r in parts) if (r != null && r.enabled && r.gameObject.activeInHierarchy && r.bounds.IntersectRay(ray)) return true;
+        foreach (Renderer r in parts) if (OnRenderer(r, ray)) return true;
         return false;
     }
+
+    private static bool OnRenderer(Renderer r, Ray ray) => r != null && r.enabled && r.gameObject.activeInHierarchy && r.bounds.IntersectRay(ray);
 
     // ---- placing (Dev Hub > Tester > 'Coupling') ----
 
@@ -247,10 +255,8 @@ public class PixelCoupling : MonoBehaviour
         float best = 80f * 80f, reach = 1.5f * HuskWidth;
         foreach (IPixelSocketDevice d in PixelCouplings.Devices)
         {
-            if (d == null || (d is Object o && o == null) || d.SocketRoot == null) continue;
-            foreach (PixelSocket s in d.Sockets)
+            foreach (PixelSocket s in PixelCouplings.FreeSockets(d))
             {
-                if (s == null || s.fitted || s.kind != PixelSocketKind.Husk || !PixelCouplings.IsFree(d, s)) continue;
                 Vector3 port = PixelCouplings.Port(d, s);
                 float score = float.MaxValue;
                 if (cam != null) { Vector3 sp = cam.WorldToScreenPoint(port + Vector3.up * 0.5f * HuskWidth); if (sp.z > 0f) score = (new Vector2(sp.x, sp.y) - mouse).sqrMagnitude; }
@@ -289,10 +295,8 @@ public class PixelCoupling : MonoBehaviour
         float best = (0.6f * HuskWidth) * (0.6f * HuskWidth);
         foreach (IPixelSocketDevice d in PixelCouplings.Devices)
         {
-            if (d == null || (d is Object o && o == null) || d.SocketRoot == null) continue;
-            foreach (PixelSocket s in d.Sockets)
+            foreach (PixelSocket s in PixelCouplings.FreeSockets(d))
             {
-                if (s == null || s.fitted || s.kind != PixelSocketKind.Husk || !PixelCouplings.IsFree(d, s)) continue;
                 float dist = (PixelCouplings.Port(d, s) - point).sqrMagnitude;
                 if (dist < best) { best = dist; bestDevice = d; bestSocket = s; }
             }
@@ -325,14 +329,12 @@ public class PixelCouplingMarkers : MonoBehaviour
         if (Time.unscaledTime < next) return;
         next = Time.unscaledTime + 0.25f;
         PixelClicker c = PixelFind.Cached<PixelClicker>();
-        float u = c != null && c.OldPixelWorldSize > 0f ? c.OldPixelWorldSize : 0.5f;
+        float u = PixelCouplings.HuskWidth;
         int used = 0;
         foreach (IPixelSocketDevice d in PixelCouplings.Devices)
         {
-            if (d == null || (d is Object o && o == null) || d.SocketRoot == null) continue;
-            foreach (PixelSocket s in d.Sockets)
+            foreach (PixelSocket s in PixelCouplings.FreeSockets(d))
             {
-                if (s == null || s.fitted || s.kind != PixelSocketKind.Husk || !PixelCouplings.IsFree(d, s)) continue;
                 if (used >= markers.Count)
                 {
                     PixelFactoryKit kit = new PixelFactoryKit(c, true);

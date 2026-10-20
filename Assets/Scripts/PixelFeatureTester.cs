@@ -13,8 +13,9 @@
 //   SAVING: every placed object is saved with the save file (PixelFeatureTester.ExportAll / ImportAll, TesterSave = feature name + JSON from the feature's ExportState / ImportState; hooked into
 //   PixelSaveGame after the placed devices are restored). LINKING (Solar Panel): after placing, linkPanel mode - click a device inside the ring; a right click on a placed panel starts it again.
 //   The Conveyor Belt is also a real game item (PixelConsumables DeviceKind.ConveyorBelt, the Belt Kit, on sale in the shop's Utilities for everyone): its right click calls PixelFeatureTester.StartFeature("Conveyor Belt"), which places without the Dev Hub.
-//   SHOP ITEMS (2026-10-20): Coupling, Wood Chipper, Conveyor Belt, Container Hose, Belt Sorter, Conveyor Elevator, Junction Box, Belt Jump, Conveyor Combiner and Solar Panel
-//   are sold in the shop, so they get no card here (SoldInShop) but stay registered: the shop item's right click places them through StartFeature.
+//   SHOP ITEMS (2026-10-20): Wood Chipper, Conveyor Belt, Container Hose, Belt Sorter, Conveyor Elevator, Junction Box, Belt Jump, Conveyor Combiner and Solar Panel
+//   are sold in the shop, so they get no card here (SoldInShop) but stay registered: the shop item's right click places them through StartFeature. The Coupling
+//   is no longer sold (couplings fit themselves when a belt / hose attaches: PixelCouplings.AutoFitAt) - its card here fits one by hand.
 //   Features now: Vacuum Cleaner (PixelVacuumCleaner.cs: drive with W A S D / arrows, the front intake sucks husks up and the hose spits them out where the mouse aims), Container Hose (PixelContainerHose.cs: a single line from a crate / organizer to a Recycler / crate / organizer / trash can), Wood Chipper (PixelWoodChipper.cs), Conveyor Belt (PixelConveyor.cs, PixelFactoryKit.cs), Kiln (PixelKiln.cs; makes Charcoal old pixels), Solar Panel (PixelSolarPanel.cs).
 // ---------------------------------------------------
 using System;
@@ -28,7 +29,7 @@ public class PixelFeatureTester : MonoBehaviour
     private const float W = PixelDevHub.ContentW, H = PixelDevHub.ContentH, CardH = 150f;
 
     /// <summary>Features that are real shop items now (2026-10-20): they stay registered (the shop item places them through StartFeature) but get no card in the Tester tab.</summary>
-    private static readonly string[] SoldInShop = { "Coupling", "Wood Chipper", "Conveyor Belt", "Container Hose", "Belt Sorter", "Conveyor Elevator", "Junction Box", "Belt Jump", "Conveyor Combiner", "Solar Panel" };
+    private static readonly string[] SoldInShop = { "Wood Chipper", "Conveyor Belt", "Container Hose", "Belt Sorter", "Conveyor Elevator", "Junction Box", "Belt Jump", "Conveyor Combiner", "Solar Panel" };
 
     /// <summary>A feature may snap its placement (the Wood Chipper latches onto a belt opening): returns true when it did, with the snapped pose.</summary>
     private delegate bool PlaceSnap(PixelClicker c, Vector3 point, float yaw, GameObject ghost, out Vector3 snappedPoint, out float snappedYaw);
@@ -144,13 +145,13 @@ public class PixelFeatureTester : MonoBehaviour
         PixelUIKit.EnsureEventSystem();
 
         Register("Coupling",
-                 "The one piece that joins belts and hoses to a device. Bring it near a device: the free SOCKETS show teal rings and the coupling snaps onto the nearest one (Storage Crate in / out, Kiln mouth, Trash Can side, Recycler back hatch, Sorting Hopper back, Quantum Organizer side, Wood Chipper chute, Funnel output). Its arrow shows the way husks go: green into the device (In), orange out of it (Out); on an organizer click its teal dot to switch. Then end a belt at an In coupling or start one at an Out coupling (belts and hoses snap to it). It moves with the device and is saved with it. Hold the right button on it to take it off.",
+                 "Fits a coupling by hand (couplings also fit themselves when a belt or hose attaches to a free socket's port plate). Bring it near a device: the free SOCKETS show teal rings and it snaps onto the nearest one (Storage Crate in / out, Kiln mouth, Trash Can sides, Recycler hatch / front, Quantum Organizer side, Crafting Cube sides, Biomass Generator intake, Wood Chipper chute, Funnel output). Its arrow shows the way husks go: green into the device (In), orange out of it (Out); on an organizer click its teal DOT to switch. It moves with the device and is saved with it. Hold the right button on it to take it off.",
                  c => PixelCoupling.CreateGhost(c), (c, p, yw) => PixelCoupling.PlaceAt(c, p, yw));
         features[features.Count - 1].placeSnap = PixelCoupling.TrySnapGhost;
         features[features.Count - 1].live = PixelCoupling.Removable;
 
         Register("Wood Chipper",
-                 "A detailed trailer-mounted wood chipper. Wood pixels dropped into its hopper (or lying close above it) are shredded for Woodcutting XP. Anything else damages it, and enough of that breaks it for good - Clear it and place a new one. Drag pixels in with Pixel Grabbing. While placing, an arrow shows where its chips shoot out. Fit a Coupling on its chute (in front of the outlet) and start a belt there: its Wood Chips then drop straight onto the belt.",
+                 "A detailed trailer-mounted wood chipper. Wood pixels dropped into its hopper (or lying close above it) are shredded for Woodcutting XP. Anything else damages it, and enough of that breaks it for good - Clear it and place a new one. Drag pixels in with Pixel Grabbing. While placing, an arrow shows where its chips shoot out. Start a belt at its chute (in front of the outlet; a coupling fits itself there): its Wood Chips then drop straight onto the belt.",
                  c => PixelWoodChipper.CreateGhost(c), (c, p, yw) => PixelWoodChipper.Place(c, p, yw));
         features[features.Count - 1].export = PixelWoodChipper.ExportState;
         features[features.Count - 1].import = PixelWoodChipper.ImportState;
@@ -163,7 +164,7 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].export = PixelConveyor.ExportState;
         features[features.Count - 1].import = PixelConveyor.ImportState;
         RegisterRoute("Container Hose",
-                     "A see-through hose between two COUPLINGS that you route yourself. Click an OUT coupling on a Storage Crate or Quantum Organizer (the crate's right-hand 'out' socket), then click as many points as you like to lead the hose round things (scroll raises / lowers the point), and finish by clicking an IN coupling on the target - a Recycler, another crate, an organizer, a Trash Can, the Kiln... (coupling clicks magnetize). Right click while routing takes the last point back. It pumps the source's stored husks through the hose one by one into the target, only as many as the target has room for. The ends follow the devices when you carry them. A quick right click on a placed hose turns its flow round (when both ends can work the other way).",
+                     "A see-through hose between two COUPLINGS that you route yourself. Click an OUT coupling or free port on a Storage Crate or Quantum Organizer (the crate's right-hand 'out' socket; a coupling fits itself there), then click as many points as you like to lead the hose round things (scroll raises / lowers the point), and finish by clicking an IN coupling or free port on the target - a Recycler, another crate, an organizer, a Trash Can, the Kiln... (coupling clicks magnetize). Right click while routing takes the last point back. It pumps the source's stored husks through the hose one by one into the target, only as many as the target has room for. The ends follow the devices when you carry them. A quick right click on a placed hose turns its flow round (when both ends can work the other way).",
                      c => PixelConveyor.CreateMarker(c), c => PixelContainerHose.CreatePreview(c), PixelContainerHose.UpdatePreview, PixelContainerHose.Place, PixelContainerHose.Snap);
         features[features.Count - 1].export = PixelContainerHose.ExportState;
         features[features.Count - 1].import = PixelContainerHose.ImportState;
@@ -196,7 +197,7 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].export = PixelElevator.ExportState;
         features[features.Count - 1].import = PixelElevator.ImportState;
         Register("Junction Box",
-                 "A box with eight coupling sockets, two on each side, and an opening on top that gently draws in husks above it (a real device: it is saved with the placed devices; also sold in the shop). Fit couplings and connect belts or hoses: a belt ending at a coupling / a hose pushing into it makes it IN, a belt starting at it / a hose pulling from it makes it OUT (its arrow shows which; no arrow = nothing attached). Husks that go in are deleted and NEW ones come out: to the OUT coupling whose filter is their type, else to the unfiltered outputs in turn, else wait in a small buffer (full = it refuses). Set a coupling's filter by dropping a husk on it, or click / scroll it.",
+                 "A box with eight coupling sockets, two on each side, and an opening on top that gently draws in husks above it (a real device: it is saved with the placed devices; also sold in the shop). Connect belts or hoses to its sides (a coupling fits itself): a belt ending at a coupling / a hose pushing into it makes it IN, a belt starting at it / a hose pulling from it makes it OUT (its arrow shows which; no arrow = nothing attached). Husks that go in are deleted and NEW ones come out: to the OUT coupling whose filter is their type, else to the unfiltered outputs in turn, else wait in a small buffer (full = it refuses). Set a coupling's filter by dropping a husk on it, or click / scroll it.",
                  c => PixelJunctionBox.CreateGhost(c), (c, p, yw) => { PixelConsumables pc = PixelFind.Cached<PixelConsumables>(); return pc != null ? pc.PlaceDeviceNow(PixelConsumables.DeviceKind.JunctionBox, p, yw) : null; });
         features[features.Count - 1].groundPlane = true;
         features[features.Count - 1].live = PixelJunctionBox.Placed;   // (saved and removed as a placed device, not by the tester)
@@ -236,7 +237,7 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].export = PixelCraftingCube.ExportState;
         features[features.Count - 1].import = PixelCraftingCube.ImportState;
         Register("Husk Source",
-                 "A test box with a coupling socket on each side. LEFT-CLICK it to choose a block type (any type): it makes endless husks of that type out of every Out coupling that something takes them from - a belt starting at the coupling (while it has room), a machine's In coupling right in front of it, or a Container Hose pulling from it. Fit couplings on its sides first. Nothing connected = nothing made.",
+                 "A test box with a coupling socket on each side. LEFT-CLICK it to choose a block type (any type): it makes endless husks of that type out of every Out coupling that something takes them from - a belt starting at the coupling (while it has room), a machine's In coupling right in front of it, or a Container Hose pulling from it. Belts and hoses get a coupling on its sides by themselves. Nothing connected = nothing made.",
                  c => PixelHuskSource.CreateGhost(c), (c, p, yw) => PixelHuskSource.Place(c, p, yw));
         features[features.Count - 1].export = PixelHuskSource.ExportState;
         features[features.Count - 1].import = PixelHuskSource.ImportState;
@@ -920,7 +921,7 @@ public class PixelFeatureTester : MonoBehaviour
     /// </summary>
     private void UpdateRoute(bool hasPoint, Vector3 p, bool snapped, float groundY, float unit)
     {
-        string text = (routePoints.Count == 0 ? "Click the start (an Out coupling)." : "Click bend points, then an In coupling to finish. Right click: take the last point back.")
+        string text = (routePoints.Count == 0 ? "Click the start (an Out coupling or a free port)." : "Click bend points, then an In coupling or a free port to finish. Right click: take the last point back.")
                       + "  Scroll: height " + (lineElev / unit).ToString("0.0") + " cubes" + (snapped ? "  (on a coupling)" : "");
         if (text != lastElevText) { SetStatus(text); lastElevText = text; }
         if (routePoints.Count == 0)

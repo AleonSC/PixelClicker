@@ -3,18 +3,20 @@
 //   CONVEYOR ELEVATOR (a Dev Hub > Tester feature, PixelFeatureTester 'Conveyor Elevator'): a square tower that lifts pixels from the END of a belt up to a higher belt. PLACING (two stages):
 //   1. the ghost follows the mouse and MAGNETIZES to a belt end that is near it (PixelElevator.TrySnap: it turns to the belt's direction, the belt's end meets its entry face, and its base
 //   takes that belt's height); Q / E turn it when it is not latched; click to fix the base. 2. Move the mouse up or down to set the HEIGHT (the mouse ray is cut with a vertical plane through
-//   the base, quantised to heightStepCubes) and click to confirm; right click goes back to stage 1. The tower's posts run down to the floor when the base is raised. SOCKETS (PixelSockets.cs, couplings built in):
-//   'in' at the entry, 'out' at the top. A belt end at the entry coupling hands its pixels straight in (AcceptHusk), and it also catches husks handed in NEAR its base
-//   (IPixelAutoIntake). They are drawn to the shaft and carried up by a PixelPathCarrier. At the top the tower uses its OWN LINKS, not the 'out' socket
-//   (RefreshLinks, within linkReachCubes): a belt that STARTS near the top (outBelt: the husk is put on it, PixelCouplings.PutOnBelt; while that belt's start
-//   is full the husk WAITS at the top and the shaft queues up - 2026-10-20, it used to be dropped onto the full belt), else an In coupling near the top
-//   (outCoupling: handed in), else it is flung forward off the top. A short trough is drawn to each link. Belts can also be raised and lowered while placing
+//   the base, quantised to heightStepCubes) and click to confirm; right click goes back to stage 1. The tower's posts run down to the floor when the base is raised.
+//   SOCKETS (PixelSockets.cs; since 2026-10-20 the ONLY way husks go in and out - no more near-the-base catching): eight FITTED bare couplings (built in, not
+//   saved, made again on every rebuild), one just off the middle of each side at the BASE ('in0'..'in3', Intake) and at the TOP ('out0'..'out3', Output). Their
+//   ports are the belt snap points (SnapPoints), so a belt end laid against a side hands its husks in (AcceptHusk -> drawn to the shaft and carried up by a
+//   PixelPathCarrier; refused while the shaft is full, so the belt waits), and so does a machine's Out coupling right beside one (Emit -> HandIn). At the top
+//   the tower uses the first 'out' socket with something attached (a belt starting at it, or an In coupling right there: RefreshLinks, every half second):
+//   PixelCouplings.Emit puts the husk out there; while OutputHasRoom says the belt start is full the husk WAITS at the top and the shaft queues up. With
+//   nothing attached at the top it is flung forward off the top. A short trough is drawn to each link. Belts can also be raised and lowered while placing
 //   (scroll wheel, PixelFeatureTester) so ramps and bridges are possible. Saved with the tester save (position, turn, height). Built with PixelFactoryKit.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelElevator : MonoBehaviour, IPixelSocketDevice, IPixelAutoIntake
+public class PixelElevator : MonoBehaviour, IPixelSocketDevice
 {
     [Min(0f)]
     [Tooltip("How fast pixels travel up the shaft, in cube widths per second. 0 = the coded default (3).")]
@@ -57,7 +59,7 @@ public class PixelElevator : MonoBehaviour, IPixelSocketDevice, IPixelAutoIntake
     public bool IsGhost => ghost;
     public float Height => height;
 
-    // ---- Sockets (PixelSockets.cs): the entry at the bottom (In) and the exit at the top (Out), each with a coupling built in ----
+    // ---- Sockets (PixelSockets.cs): an In at the middle of each side of the base, an Out at each side of the top, each with a bare coupling built in ----
     private PixelSocket[] sockets = new PixelSocket[0];
     public Transform SocketRoot => transform;
     public IReadOnlyList<PixelSocket> Sockets => sockets;
@@ -134,10 +136,26 @@ public class PixelElevator : MonoBehaviour, IPixelSocketDevice, IPixelAutoIntake
         for (int i = 0; i < count; i++) pads.Add(k.Box("Pad", transform, Vector3.zero, new Vector3(0.9f * u, 0.05f * u, 0.9f * u), accent, default, false, 0.3f, 0.4f).transform);
         PlacePads();
         if (ghost) return;
-        sockets = new PixelSocket[0];   // (no fixed holes since 2026-10-19: it links itself to whatever is near - RefreshLinks)
+        BuildSockets();
         linkKey = null;
         nextLinkCheck = 0f;
     }
+
+    /// <summary>The eight built-in couplings: Intake just off each side of the base, Output just off each side of the top (the belt snap points).</summary>
+    private void BuildSockets()
+    {
+        float off = SideOffCubes * unit;
+        sockets = new PixelSocket[8];
+        for (int i = 0; i < 4; i++)
+        {
+            Vector3 dir = Quaternion.Euler(0f, i * 90f, 0f) * Vector3.forward;   // (the device's own space)
+            sockets[i] = new PixelSocket("in" + i, dir * off, dir, PixelSocketFlow.Intake, true) { bare = true };
+            sockets[4 + i] = new PixelSocket("out" + i, dir * off + Vector3.up * height, dir, PixelSocketFlow.Output, true) { bare = true };
+        }
+        PixelCoupling.FitBuiltIn(this);
+    }
+
+    private const float SideOffCubes = HalfCubes + 0.9f;   // how far from the tower's centre a side's socket port (and belt snap point) is, in cube widths
 
     private void PlacePads()
     {
@@ -187,14 +205,14 @@ public class PixelElevator : MonoBehaviour, IPixelSocketDevice, IPixelAutoIntake
 
     // ---------------- behaviour ----------------
 
-    private void OnEnable() { if (clicker == null) clicker = PixelFind.First<PixelClicker>(); PixelCouplings.Register(this); PixelCouplings.RegisterAutoIntake(this); if (!all.Contains(this)) all.Add(this); }
-    private void OnDisable() { PixelCouplings.Unregister(this); PixelCouplings.UnregisterAutoIntake(this); all.Remove(this); }
+    private void OnEnable() { if (clicker == null) clicker = PixelFind.First<PixelClicker>(); PixelCouplings.Register(this); if (!all.Contains(this)) all.Add(this); }
+    private void OnDisable() { PixelCouplings.Unregister(this); all.Remove(this); }
     private void OnDestroy() { carrier.ReleaseAll(); }
 
-    /// <summary>A husk comes in through the entry coupling: drawn to the shaft and lifted (refused when the shaft is full).</summary>
+    /// <summary>A husk comes in through one of the base couplings: drawn to the shaft and lifted (refused when the shaft is full - the belt waits).</summary>
     public bool AcceptHusk(PixelSocket socket, Rigidbody pixel)
     {
-        if (ghost || pixel == null || carrier.Count > 14) return false;
+        if (ghost || pixel == null || socket == null || !socket.CanTakeIn || carrier.Count > 14) return false;
         carrier.Add(pixel);
         return true;
     }
@@ -211,17 +229,15 @@ public class PixelElevator : MonoBehaviour, IPixelSocketDevice, IPixelAutoIntake
         if (Time.time >= nextLinkCheck) { nextLinkCheck = Time.time + 0.5f + Random.value * 0.1f; RefreshLinks(); }
     }
 
-    // ---------------- auto links (2026-10-19) ----------------
-    // No fixed entry / exit holes: every half second the tower looks round its BASE for belt ends (with no belt or In coupling after them), machines' Out
-    // couplings and Belt Sorter chutes (bare Out couplings) within linkReachCubes, and round its TOP for the nearest belt START or In coupling. Husks handed
-    // in near the base are caught (IPixelAutoIntake.CatchNear, via PixelCouplings.HandIn) and lifted; at the top they go onto that belt / into that coupling.
-    // A short TROUGH (floor + rails) is built from each linked thing to the tower, so the join looks made for it.
+    // ---------------- links (what is attached to its couplings) ----------------
+    // Every half second the tower looks at its own couplings: which base sockets have a belt ending at them or a machine's Out coupling right beside them
+    // (drawn as troughs), and which top socket has something attached (a belt starting at it, or an In coupling right there) - the first one found is
+    // the way out (outSocket). A short TROUGH (floor + rails) is built from each linked thing to the tower, so the join looks made for it.
 
     private string linkKey;
     private float nextLinkCheck;
     private GameObject linkRoot;
-    private PixelConveyor outBelt;
-    private PixelCoupling outCoupling;
+    private PixelSocket outSocket;
     private Vector3 outDir = Vector3.forward;
     private readonly List<Vector3> inPoints = new List<Vector3>();
 
@@ -233,13 +249,12 @@ public class PixelElevator : MonoBehaviour, IPixelSocketDevice, IPixelAutoIntake
     public static bool AnyBaseNear(Vector3 p) { foreach (PixelElevator e in all) if (e != null && !e.ghost && e.NearBase(p)) return true; return false; }
 
     private bool NearBase(Vector3 p) => Flat(p - BaseCentre) <= Reach && Mathf.Abs(p.y - BaseCentre.y) <= 1.5f * unit;
-    private bool NearTop(Vector3 p) => Flat(p - TopCentre) <= Reach && Mathf.Abs(p.y - TopCentre.y) <= 1.5f * unit;
     private static float Flat(Vector3 v) { v.y = 0f; return v.magnitude; }
 
-    /// <summary>Where belts snap round the tower (placing): just off the middle of each side, at the base's height and at the top's.</summary>
+    /// <summary>Where belts snap round the tower (placing): just off the middle of each side, at the base's height and at the top's (= its sockets' ports).</summary>
     public void SnapPoints(System.Action<Vector3> visit)
     {
-        float off = (HalfCubes + 0.9f) * unit;
+        float off = SideOffCubes * unit;
         for (int i = 0; i < 4; i++)
         {
             Vector3 dir = Quaternion.Euler(0f, i * 90f, 0f) * transform.forward;
@@ -248,46 +263,39 @@ public class PixelElevator : MonoBehaviour, IPixelSocketDevice, IPixelAutoIntake
         }
     }
 
-    /// <summary>A husk handed in near the base (a belt end, an Out coupling, a sorter chute beside it): drawn to the shaft and lifted.</summary>
-    public bool CatchNear(Vector3 at, Rigidbody husk)
-    {
-        if (ghost || husk == null || carrier.Count > 14 || !NearBase(at)) return false;
-        carrier.Add(husk);
-        return true;
-    }
-
     private void RefreshLinks()
     {
         inPoints.Clear();
-        foreach (PixelConveyor belt in PixelConveyor.All)
+        outSocket = null;
+        Vector3 target = Vector3.zero;
+        float reach = PixelCouplings.LinkReach * unit;
+        foreach (PixelSocket sk in sockets)
         {
-            if (belt == null || belt.IsGhost || !NearBase(belt.ExitPoint) || belt.FindNext() != null) continue;
-            if (PixelCouplings.IntakeAt(belt.ExitPoint, unit) != null) continue;   // (it feeds a machine's coupling instead)
-            inPoints.Add(belt.ExitPoint + Vector3.up * belt.SurfaceHeight);
+            if (sk == null) continue;
+            Vector3 port = PixelCouplings.Port(this, sk), facing = PixelCouplings.Facing(this, sk);
+            if (sk.CanTakeIn)
+            {
+                PixelConveyor belt = PixelCouplings.BeltEndingAt(port);
+                if (belt != null && !belt.IsGhost) { inPoints.Add(belt.ExitPoint + Vector3.up * belt.SurfaceHeight); continue; }
+                foreach (PixelCoupling c in PixelCoupling.All)   // a machine's Out coupling right beside this side (device to device)
+                {
+                    if (c == null || !c.IsOut || ReferenceEquals(c.Device, this) || c.Device == null || (c.Device is Object o && o == null)) continue;
+                    Vector3 mouth = c.PortWorld + c.FacingWorld * 0.5f * unit;
+                    if (Flat(mouth - port) <= reach && Mathf.Abs(mouth.y - port.y) <= 1.2f * unit) { inPoints.Add(mouth + Vector3.up * 0.1f * unit); break; }
+                }
+            }
+            else if (outSocket == null)
+            {
+                PixelConveyor belt = PixelCouplings.BeltStartingAt(port);
+                if (belt != null && !belt.IsGhost) { outSocket = sk; outDir = facing; target = belt.StartPoint + Vector3.up * belt.SurfaceHeight; continue; }
+                PixelCoupling into = PixelCouplings.IntakeAt(port + facing * 0.5f * unit, reach, this);
+                if (into != null) { outSocket = sk; outDir = facing; target = into.PortWorld + Vector3.up * 0.1f * unit; }
+            }
         }
-        foreach (PixelCoupling c in PixelCoupling.All)
-        {
-            if (c == null || !c.IsOut || ReferenceEquals(c.Device, this) || c.Device == null || (c.Device is Object o && o == null)) continue;
-            Vector3 mouth = c.PortWorld + c.FacingWorld * 0.5f * unit;
-            if (!NearBase(mouth) || PixelCouplings.BeltStartingAt(c.PortWorld) != null) continue;
-            inPoints.Add(mouth + Vector3.up * 0.1f * unit);
-        }
-        // The way out: the nearest belt that starts near the top, else the nearest In coupling there.
-        outBelt = null; outCoupling = null;
-        float best = float.MaxValue;
-        foreach (PixelConveyor belt in PixelConveyor.All)
-        {
-            if (belt == null || belt.IsGhost || !NearTop(belt.StartPoint)) continue;
-            float d = Flat(belt.StartPoint - TopCentre);
-            if (d < best) { best = d; outBelt = belt; }
-        }
-        if (outBelt == null) outCoupling = PixelCouplings.IntakeAt(TopCentre, Reach, this);
-        Vector3 target = outBelt != null ? outBelt.StartPoint + Vector3.up * outBelt.SurfaceHeight : outCoupling != null ? outCoupling.PortWorld + Vector3.up * 0.1f * unit : Vector3.zero;
-        bool hasOut = outBelt != null || outCoupling != null;
-        Vector3 dir = hasOut ? target - TopCentre : transform.forward;
-        dir.y = 0f;
-        Vector3 newDir = dir.sqrMagnitude > 1e-4f ? dir.normalized : transform.forward;
-        if ((newDir - outDir).sqrMagnitude > 1e-4f) { outDir = newDir; path = null; }   // (the shaft's last leg points at the way out)
+        bool hasOut = outSocket != null;
+        Vector3 newDir = hasOut ? outDir : transform.forward;
+        if ((newDir - lastPathDir).sqrMagnitude > 1e-4f) { lastPathDir = newDir; path = null; }   // (the shaft's last leg points at the way out)
+        outDir = newDir;
 
         System.Text.StringBuilder key = new System.Text.StringBuilder();
         foreach (Vector3 p in inPoints) key.Append(p.ToString("F2"));
@@ -307,6 +315,8 @@ public class PixelElevator : MonoBehaviour, IPixelSocketDevice, IPixelAutoIntake
         }
         if (hasOut) Trough(TopCentre + outDir * half + Vector3.up * plateTop, target);
     }
+
+    private Vector3 lastPathDir = Vector3.forward;
 
     /// <summary>A short trough (a dark floor with steel rails) between two world points, so a link looks built for it.</summary>
     private void Trough(Vector3 from, Vector3 to)
@@ -346,14 +356,14 @@ public class PixelElevator : MonoBehaviour, IPixelSocketDevice, IPixelAutoIntake
         carrier.Step(path, cum, LiftSpeed * unit, Gap * unit, Time.fixedDeltaTime, PutOut, 0.25f, TopHasRoom);
     }
 
-    /// <summary>The way out at the top is free: no linked belt, or its start has room (else the husk waits at the top and the shaft queues up).</summary>
-    private bool TopHasRoom() => outBelt == null || outBelt.IsGhost || PixelConveyorSystem.StartHasRoom(outBelt);
+    /// <summary>The way out at the top is free: nothing attached, or the belt there has room (else the husk waits at the top and the shaft queues up).</summary>
+    private bool TopHasRoom() => outSocket == null || PixelCouplings.OutputHasRoom(this, outSocket.id);
 
-    /// <summary>A pixel reaches the top: onto the linked belt, into the linked In coupling, or flung off the top towards the way out.</summary>
+    /// <summary>A pixel reaches the top: out through the linked top coupling (onto its belt / into the In coupling there), else flung off the top.</summary>
     private void PutOut(Rigidbody rb)
     {
-        if (outBelt != null && !outBelt.IsGhost) { PixelCouplings.PutOnBelt(outBelt, rb); return; }
-        if (outCoupling != null && outCoupling.IsIn) { rb.isKinematic = true; if (outCoupling.TakeIn(rb)) return; rb.isKinematic = false; }
+        if (outSocket != null && PixelCouplings.Emit(this, outSocket.id, rb)) return;
+        rb.isKinematic = false;
         rb.position = path[path.Length - 1];
         PixelPathCarrier.SetVelocity(rb, outDir * unit * 2f);
     }

@@ -2,16 +2,19 @@
 // PixelConveyorCombiner.cs
 //   CONVEYOR COMBINER (2026-10-19, a Dev Hub > Tester feature 'Conveyor Combiner'): a box that sits ON a conveyor belt anywhere along it (snaps to the belt
 //   under the mouse, like the Belt Sorter). Husks riding the belt pass straight through it. Each SIDE has an inlet: a belt that ENDS at an inlet (belts snap
-//   there: SnapPoints, so the feeding belt comes in square to the main one) hands its husks in (IPixelAutoIntake.CatchNear, via PixelCouplings.HandIn) and they
+//   there: SnapPoints, so the feeding belt comes in square to the main one) hands its husks in and they
 //   are MERGED onto the main belt at the box (PixelConveyorSystem.TryMerge) as soon as there is a gap there - the two feeds become one. While there is no gap
-//   they wait at the inlet (up to queueSize; kept alive), then the feeding belt's husks are thrown off its end as at any full device.
+//   they wait at the inlet (up to queueSize; kept alive), then the feeding belt holds its husks as at any full device.
+//   SOCKETS (2026-10-20, sockets are the only husk connection path): each inlet is a FITTED, bare Husk Intake socket ('inL' / 'inR', IPixelSocketDevice;
+//   the box's own lip is the fitting: built in, not saved, not removable, made again when the hood is rebuilt for a new belt width). A feeding belt ending
+//   there hands its husks in through PixelCouplings.HandIn -> AcceptHusk.
 //   SHOP (2026-10-20): sold in Utilities (PixelConsumables DeviceKind.ConveyorCombiner, a PixelInstantItems tool: right-click starts this placing, one used up per box).
 //   The spot is a distance along the belt (it follows the belt). When its belt is removed the box goes back into the backpack (refunded, LoseBelt). Saved with the tester save (position, turn).
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelConveyorCombiner : MonoBehaviour, IPixelAutoIntake
+public class PixelConveyorCombiner : MonoBehaviour, IPixelSocketDevice
 {
     [Min(0)]
     [Tooltip("How many husks may wait at the inlets for a gap on the main belt (more = the feeding belt throws them off its end).")]
@@ -29,6 +32,11 @@ public class PixelConveyorCombiner : MonoBehaviour, IPixelAutoIntake
     private PixelConveyor belt;
     private float along;
     private readonly List<Rigidbody> waiting = new List<Rigidbody>();
+    private PixelSocket[] sockets = new PixelSocket[0];
+
+    public Transform SocketRoot => transform;
+    public IReadOnlyList<PixelSocket> Sockets => sockets;
+    public Color SocketTint => new Color(0.24f, 0.3f, 0.36f, 1f);
 
     public bool IsGhost => ghost;
 
@@ -76,6 +84,7 @@ public class PixelConveyorCombiner : MonoBehaviour, IPixelAutoIntake
 
     private void Rebuild(float width)
     {
+        if (!ghost) PixelCoupling.RemoveAll(this);   // (its built-in couplings are children: made again below at the new inlets)
         for (int i = transform.childCount - 1; i >= 0; i--) { GameObject old = transform.GetChild(i).gameObject; old.SetActive(false); Destroy(old); }
         beltWidth = width;
         float u = unit, half = width * 0.5f + 0.25f * u, h = 1.3f * u, len = 1.6f * u, t = 0.12f * u;
@@ -102,27 +111,28 @@ public class PixelConveyorCombiner : MonoBehaviour, IPixelAutoIntake
             for (int s = -1; s <= 1; s += 2)
                 k.Box("End Post", transform, new Vector3(s * (half + t * 0.5f), h * 0.5f, z), new Vector3(t * 1.2f, h, t * 0.6f), steel, default, false, 0.8f, 0.6f);
         }
+        if (ghost) return;
+        // The two inlets are fitted Husk Intake sockets (bare: the box's lip is the fitting), facing out to the side where the feeding belt ends.
+        sockets = new PixelSocket[2];
+        for (int s = -1; s <= 1; s += 2)
+            sockets[(s + 1) / 2] = new PixelSocket(s < 0 ? "inL" : "inR", InletLocal(s), new Vector3(s, 0f, 0f), PixelSocketFlow.Intake, true) { bare = true };
+        PixelCoupling.FitBuiltIn(this);
     }
 
     // ---------------- inlets ----------------
 
-    /// <summary>The two inlet ports (world): just off each side at the belt's underside height - a feeding belt ENDS here.</summary>
-    private Vector3 Inlet(int side) => transform.TransformPoint(new Vector3(side * (beltWidth * 0.5f + 1.1f * unit), 0f, 0f));
+    /// <summary>The two inlet ports (local / world): just off each side at the belt's underside height - a feeding belt ENDS here.</summary>
+    private Vector3 InletLocal(int side) => new Vector3(side * (beltWidth * 0.5f + 1.1f * unit), 0f, 0f);
+    private Vector3 Inlet(int side) => transform.TransformPoint(InletLocal(side));
 
     /// <summary>Where belts snap (placing): both inlets.</summary>
     public void SnapPoints(System.Action<Vector3> visit) { if (!ghost) { visit(Inlet(-1)); visit(Inlet(1)); } }
 
-    /// <summary>A husk handed in at an inlet (the end of a feeding belt): merged onto the main belt now, or it waits for a gap.</summary>
-    public bool CatchNear(Vector3 at, Rigidbody husk)
+    /// <summary>A husk handed in at an inlet socket (the end of a feeding belt): merged onto the main belt now, or it waits for a gap.</summary>
+    public bool AcceptHusk(PixelSocket socket, Rigidbody husk)
     {
-        if (ghost || belt == null || husk == null) return false;
-        int side = 0;
-        for (int s = -1; s <= 1; s += 2)
-        {
-            Vector3 d = at - Inlet(s);
-            if (Mathf.Abs(d.y) <= 0.8f * unit && new Vector2(d.x, d.z).magnitude <= 0.9f * unit) side = s;
-        }
-        if (side == 0) return false;
+        if (ghost || belt == null || husk == null || socket == null || !socket.CanTakeIn) return false;
+        int side = socket.id == "inL" ? -1 : 1;
         if (waiting.Count == 0 && PixelConveyorSystem.TryMerge(belt, husk, Spot)) return true;
         if (waiting.Count >= Mathf.Max(0, queueSize)) return false;
         husk.isKinematic = true;
@@ -133,8 +143,8 @@ public class PixelConveyorCombiner : MonoBehaviour, IPixelAutoIntake
 
     // ---------------- every frame ----------------
 
-    private void OnEnable() { PixelCouplings.RegisterAutoIntake(this); if (!all.Contains(this)) all.Add(this); }
-    private void OnDisable() { PixelCouplings.UnregisterAutoIntake(this); all.Remove(this); }
+    private void OnEnable() { PixelCouplings.Register(this); if (!all.Contains(this)) all.Add(this); }
+    private void OnDisable() { PixelCouplings.Unregister(this); all.Remove(this); }
 
     private void Awake() => PixelHuskPool.HuskReleasing += OnHuskReleasing;
 

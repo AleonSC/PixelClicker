@@ -16,7 +16,7 @@ using Unity.Profiling;
 //   (SpawnStoredPixel, ignored by the organizer for 10 s); when its time runs out or it is removed (Ended) everything stored comes
 //   out. Saved in PlacedState.extra (ExportState/ImportState, 'Q,tier,count,total;'). It must not define its own Update / LateUpdate:
 //   per-frame work runs in OnTick. Tip device_QuantumOrganizer. SOCKET (PixelSockets.cs): one 'side' socket (Both): In = a hose / belt drops husks onto the pad
-//   (AcceptHusk), Out = a Container Hose pulls stored husks (TakeHuskOut / HuskRoom). Not part of the Operation tab or the UFO's placeable list yet.
+//   (AcceptHusk), Out = a Container Hose pulls stored husks (TakeHuskOut / HuskRoom) and a belt starting there is fed one every 0.6 s (FeedBelt). Not part of the Operation tab or the UFO's placeable list yet.
 // ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
@@ -33,7 +33,7 @@ using UnityEngine;
 /// text and shrink-away come from <see cref="PixelPlacedDevice"/>; the model is built by <see cref="PixelConsumables"/>.
 /// NOTE: it must not define its own Update / LateUpdate (they would hide the base's); per-frame work runs in <c>OnTick</c>.
 /// </summary>
-public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelHuskSource, IPixelHuskRoom
+public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelHuskSource, IPixelHuskPicker, IPixelHuskRoom
 {
     private const int MaxTypes = 3;          // pixel types one organizer can hold
     private const float BindHeldSeconds = 6f; // a husk binds its type only if the player held / threw it this recently
@@ -107,6 +107,18 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
     public IReadOnlyList<PixelSocket> Sockets => sockets;
     public Color SocketTint => tint;
     public bool TakeHuskOut(PixelSocket socket, out int tier, out double amount) => TakeOneForHose(out tier, out amount);
+    public bool TakeHuskOut(PixelSocket socket, System.Predicate<int> want, out int tier, out double amount) => TakeOneForHose(out tier, out amount, want);
+
+    private const float BeltOutSeconds = 0.6f;   // (how often a belt on the side coupling set to Out is fed one stored husk)
+    private float nextBeltOut;
+    private PixelCouplings.TakeStored takeAny;
+
+    /// <summary>A belt starting at the side coupling (set to Out) is fed one stored husk when it has room at its start (as the Storage Crate does).</summary>
+    private void FeedBelt()
+    {
+        if (takeAny == null) takeAny = (out int t, out double a) => TakeOneForHose(out t, out a);
+        PixelCouplings.EmitStored(this, "side", clicker, takeAny);
+    }
     public int HuskRoom(PixelSocket socket) => HoseRoom;
 
     /// <summary>A husk comes in through an In coupling: it is dropped onto the middle of the pad (the organizer binds / takes it like any husk lying there). Refused when full.</summary>
@@ -150,6 +162,7 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
         if (label != null && cam != null) label.transform.rotation = cam.transform.rotation;
         if (labelDirty) RefreshLabel();
         if (Time.timeScale <= 0f || IsEnding) return;
+        if (Time.time >= nextBeltOut) { nextBeltOut = Time.time + BeltOutSeconds; FeedBelt(); }
 
         // Mouse over the organizer: a click lets stored pixels out.
         if (cam != null && !PixelInput.PointerOverUI())
@@ -256,14 +269,14 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
     /// <summary>Room left in the organizer (a Container Hose only pumps in what fits).</summary>
     public int HoseRoom => IsEnding ? 0 : Mathf.Max(0, capacity - stored);
 
-    /// <summary>A Container Hose pulls one stored pixel out (the first type with any): its type and average value; false when nothing is stored.</summary>
-    public bool TakeOneForHose(out int tier, out double amount)
+    /// <summary>A hose / belt takes one stored pixel out (the first type with any; 'want' = only a type it accepts): its type and average value; false when none.</summary>
+    public bool TakeOneForHose(out int tier, out double amount, System.Predicate<int> want = null)
     {
         tier = -1; amount = 0;
         if (IsEnding) return false;
         foreach (Slot s in slots)
         {
-            if (s.count <= 0) continue;
+            if (s.count <= 0 || (want != null && !want(s.tier))) continue;
             amount = s.total / s.count;
             tier = s.tier;
             s.count--;

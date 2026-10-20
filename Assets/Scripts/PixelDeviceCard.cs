@@ -19,6 +19,7 @@
 //     SECTION (PixelConveyorPanel: a right tap on a belt; the section glows while the panel is open). The subject fills the sheet and says what Remove does.
 //   * LEFT-CLICK is untouched (each device's own button, flag, winding...).
 //   The lines come from the device itself: PixelPlacedDevice.BuildInfo (common lines + AddInfo + IPixelDeviceInfo components; PixelDeviceInfo.cs).
+//   The panel then adds one row per husk socket (PixelCouplings.AddPortRows: what each port is joined to, from the connection resolver).
 //   Refreshed every refreshSeconds while shown (no per-frame text building).
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -183,7 +184,7 @@ public class PixelDeviceCard : MonoBehaviour
         info.Clear();
         info.Full = true;
         if (panelSubject != null) panelSubject.BuildPanelInfo(info);
-        else panelDevice.BuildInfo(info);
+        else { panelDevice.BuildInfo(info); PixelCouplings.AddPortRows(info, panelDevice.GetComponent<IPixelSocketDevice>()); }
         panel.Title.text = info.Title.ToUpperInvariant();
         float pad = 18f, w = panelWidth - pad * 2f, y = panel.HeaderHeight + 10f;
         panelLines.text = string.Join("\n", info.Lines);

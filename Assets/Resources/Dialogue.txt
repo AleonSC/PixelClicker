@@ -122,7 +122,7 @@ text: Sweeper placed! It rolls out from its pad and carries husks that are about
 overlay line: You placed a Sweeper!
 
 [Tip: device_JunctionBox]
-text: Junction Box placed! Fit couplings on its sides and connect belts or hoses: whatever brings husks in makes that coupling IN, whatever takes them away makes it OUT. Husks are shared out in turn between the outputs, or sent to the one whose filter is their type - drop a husk on a coupling (or click / scroll it) to set its filter.
+text: Junction Box placed! Connect belts or hoses to its sides (a coupling fits itself there): whatever brings husks in makes that coupling IN, whatever takes them away makes it OUT. Husks are shared out in turn between the outputs, or sent to the one whose filter is their type - drop a husk on a coupling (or click / scroll it) to set its filter.
 overlay line: You placed a Junction Box!
 
 [Tip: device_PocketBiomassGenerator]

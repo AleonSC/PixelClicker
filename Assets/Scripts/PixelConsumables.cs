@@ -227,7 +227,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         PesticideSpray = 21,
         /// <summary>Placed, permanent: the Sorting Hopper (PixelSortingHopper) - a standalone funnel that holds husks and drops each filtered type out of its own pipe. On sale from Standard level 3.</summary>
         SortingHopper = 22,
-        /// <summary>Not placed by hand: right-click starts placing couplings (PixelCoupling) on device sockets; one is used up per coupling fitted. Listed with the Utilities.</summary>
+        /// <summary>Dev only (2026-10-20: couplings fit themselves when a belt / hose attaches): right-click starts placing couplings (PixelCoupling) on device sockets by hand.</summary>
         Coupling = 23,
         /// <summary>Not placed by hand: right-click starts routing a Container Hose between two couplings; one is used up per hose. Listed with the Utilities.</summary>
         ContainerHose = 24,
@@ -444,7 +444,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     [Tooltip("Add the default Vacuum Device if the list has none (e.g. when this component was added before devices existed).")]
     [SerializeField] private bool addDefaultDevices = true;
 
-    [SerializeField, HideInInspector] private int consumablePriceVersion;   // 1 = the 2026-10-17 repricing (2-3 pure colours per item; see ResetDefaultDevicePrices), 2 = the 2026-10-18 dev-only items, 3 = Conveyor Belt Kit for everyone, 4 = Junction Box on sale, 5 = Quantum Organizer reach 24, 6 = kinds 29-34 renumbered (merge)
+    [SerializeField, HideInInspector] private int consumablePriceVersion;   // 1 = the 2026-10-17 repricing (2-3 pure colours per item; see ResetDefaultDevicePrices), 2 = the 2026-10-18 dev-only items, 3 = Conveyor Belt Kit for everyone, 4 = Junction Box on sale, 5 = Quantum Organizer reach 24, 6 = kinds 29-34 renumbered (merge), 7 = Coupling dev-only
 
     [Header("Prices")]
     [Tooltip("Potion and device prices paid in a pixel type are multiplied by that pixel's Value upgrade multiplier, so they stay worth the same as its payout grows. Off = the prices typed above, always.")]
@@ -1120,7 +1120,8 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         {
             kind = DeviceKind.Coupling,
             displayName = "Coupling",
-            description = "The piece that joins belts and hoses to a machine. Right-click to fit couplings: bring one near a device and it snaps onto a free socket (teal rings) - the Recycler's back hatch, the Storage Crate's in / out ports, the Funnel's output... Its arrow shows the way husks go (green in, orange out; click an organizer's coupling dot to switch). One is used up per coupling fitted.",
+            description = "Dev item: fits a coupling on a device's free socket by hand. In the game couplings fit themselves when a belt or hose attaches to a socket (the port plates). Its arrow shows the way husks go (green in, orange out; click an organizer's coupling dot to switch).",
+            devOnly = true,   // (2026-10-20: no longer sold - couplings fit themselves; Dev Hub > Main > Dev items gives it)
             requiredType = PixelClicker.PixelType.White,
             costs = new[]
             {
@@ -1558,6 +1559,13 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             // coded name is dropped; the right defaults are added again below.
             devices = Array.FindAll(devices, d => d == null || d.attuned || (int)d.kind < 29 || d.displayName == DefaultNameOf(d.kind));
             consumablePriceVersion = 6;
+            added = true;
+        }
+        if (consumablePriceVersion < 7 && devices != null)
+        {
+            // 2026-10-20: the Coupling leaves the shop (couplings fit themselves when a belt / hose attaches): saved entries take the coded flag.
+            foreach (Device d in devices) if (d != null && !d.attuned && d.kind == DeviceKind.Coupling) d.devOnly = true;
+            consumablePriceVersion = 7;
             added = true;
         }
 
@@ -2793,7 +2801,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     /// <summary>0 = potion, 1 = placeable device (Utilities), 2 = seed, 3 = supply (instant-use item).</summary>
     public int CategoryOf(int item) => IsSeedItem(item) ? 2 : IsSupplyItem(item) && !UtilityTool(item) ? 3 : IsDevice(item) ? 1 : 0;
 
-    /// <summary>An instant-use item listed with the Utilities (the Coupling and Container Hose sit next to the machines they connect).</summary>
+    /// <summary>An instant-use item listed with the Utilities (the Container Hose sits next to the machines it connects).</summary>
     private bool UtilityTool(int item) { PixelInstantItems.Entry e = PixelInstantItems.Find(devices[item - potions.Length].kind); return e != null && e.withUtilities; }
 
     /// <summary>How many items of this kind the player holds (huge with infinite resources).</summary>

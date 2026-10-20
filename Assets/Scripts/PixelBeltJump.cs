@@ -1,11 +1,12 @@
 // ---- System notes ----
 // PixelBeltJump.cs
 //   BELT JUMP (2026-10-19, a Dev Hub > Tester feature 'Belt Jump'): a PAIR of small ramps on a conveyor line -
-//   a LAUNCH ramp that clips onto the END of a belt and a LANDING ramp straight across a gap. A husk that reaches the belt's end is caught by the launch ramp
-//   (IPixelAutoIntake.CatchNear, via PixelCouplings.HandIn), sped up and thrown in a fixed ARC (a sampled parabola carried by PixelPathCarrier: the same arc
-//   every time) onto the landing ramp, slides down it and is put onto the belt that STARTS at the landing ramp's end (belts snap there: SnapPoints), or set
-//   down on the floor if there is none. A FULL belt there: the husk waits on the landing lip (held, never fades) until the belt has room (landing queue).
-//   A machine's In coupling at the landing end gets the husk locked (kinematic), as the Elevator and Hose hand them in.
+//   a LAUNCH ramp that clips onto the END of a belt and a LANDING ramp straight across a gap. SOCKETS (PixelSockets.cs; since 2026-10-20 the only way husks go
+//   in and out): two FITTED bare couplings (built in, not saved, made again on every rebuild) - 'in' (Intake) at the launch ramp's foot, where the belt ends,
+//   and 'out' (Output) at the landing ramp's end. A husk that reaches the belt's end is handed in through 'in' (AcceptHusk), sped up and thrown in a fixed ARC
+//   (a sampled parabola carried by PixelPathCarrier: the same arc every time) onto the landing ramp, slides down it and goes out through 'out'
+//   (PixelCouplings.Emit: onto the belt that STARTS there - belts snap there: SnapPoints - or into a machine's In coupling right there), or is set down on the
+//   floor when nothing is attached. A FULL belt there (OutputHasRoom false): the husk waits on the landing lip (held, never fades) until it has room.
 //   PLACING (two stages, PixelFeatureTester 'scrollStage'): 1. the ghost SNAPS to a belt end near the mouse (TrySnap, turned the belt's way) - it can only be
 //   placed snapped; click to fix it. 2. the SCROLL WHEEL widens / narrows the gap (gapStepCubes steps, minGapCubes..maxGapCubes); the landing ramp always
 //   sits DIRECTLY ACROSS, in line with the belt, so the arc always lands. Click to confirm, right click goes back.
@@ -15,7 +16,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelBeltJump : MonoBehaviour, IPixelAutoIntake
+public class PixelBeltJump : MonoBehaviour, IPixelSocketDevice
 {
     [Min(0.5f)]
     [Tooltip("How fast a husk flies through the jump, in cube widths per second (a speed boost over the belt's 1.6).")]
@@ -45,6 +46,12 @@ public class PixelBeltJump : MonoBehaviour, IPixelAutoIntake
 
     public bool IsGhost => ghost;
     public float Gap => gap;
+
+    // ---- Sockets (PixelSockets.cs): 'in' at the launch ramp's foot, 'out' at the landing ramp's end, each a bare coupling built in ----
+    private PixelSocket[] sockets = new PixelSocket[0];
+    public Transform SocketRoot => transform;
+    public IReadOnlyList<PixelSocket> Sockets => sockets;
+    public Color SocketTint => new Color(0.55f, 0.58f, 0.64f, 1f);
 
     // ---------------- building ----------------
 
@@ -83,6 +90,7 @@ public class PixelBeltJump : MonoBehaviour, IPixelAutoIntake
 
     private void Rebuild(float gapWorld)
     {
+        PixelCoupling.RemoveAll(this);   // (its built-in couplings are children: made again below, the 'out' one at the new gap)
         for (int i = transform.childCount - 1; i >= 0; i--) { GameObject old = transform.GetChild(i).gameObject; old.SetActive(false); Destroy(old); }
         glows.Clear();
         path = null;
@@ -108,6 +116,13 @@ public class PixelBeltJump : MonoBehaviour, IPixelAutoIntake
         foreach (float z in new[] { ramp - 0.1f * u, z0 + 0.1f * u })
             for (int s = -1; s <= 1; s += 2)
                 k.Box("Leg", transform, new Vector3(s * (w * 0.5f - 0.08f * u), lip * 0.5f, z), new Vector3(0.1f * u, lip, 0.1f * u), steel, default, false, 0.7f, 0.5f);
+        if (ghost) return;
+        sockets = new[]
+        {
+            new PixelSocket("in", Vector3.zero, Vector3.back, PixelSocketFlow.Intake, true) { bare = true },                          // (the belt ends here, coming from behind)
+            new PixelSocket("out", new Vector3(0f, 0f, 2f * ramp + gap), Vector3.forward, PixelSocketFlow.Output, true) { bare = true },   // (the landing ramp's end)
+        };
+        PixelCoupling.FitBuiltIn(this);
     }
 
     /// <summary>One ramp from z0 (height y0) to z1 (height y1): a sloped plate, two rails, a yellow lip stripe.</summary>
@@ -172,8 +187,8 @@ public class PixelBeltJump : MonoBehaviour, IPixelAutoIntake
 
     // ---------------- behaviour ----------------
 
-    private void OnEnable() { if (clicker == null) clicker = PixelFind.Cached<PixelClicker>(); PixelCouplings.RegisterAutoIntake(this); if (!all.Contains(this)) all.Add(this); }
-    private void OnDisable() { PixelCouplings.UnregisterAutoIntake(this); all.Remove(this); }
+    private void OnEnable() { if (clicker == null) clicker = PixelFind.Cached<PixelClicker>(); PixelCouplings.Register(this); if (!all.Contains(this)) all.Add(this); }
+    private void OnDisable() { PixelCouplings.Unregister(this); all.Remove(this); }
     private void Awake() => PixelHuskPool.HuskReleasing += OnHuskReleasing;
 
     private void OnDestroy()
@@ -190,14 +205,10 @@ public class PixelBeltJump : MonoBehaviour, IPixelAutoIntake
     // Husks that reached the landing end while the belt there was full: they wait on the lip (in order) until it has room.
     private readonly List<Rigidbody> landing = new List<Rigidbody>();
 
-    /// <summary>A husk handed in at the belt's end (where the launch ramp sits): it is launched.</summary>
-    public bool CatchNear(Vector3 at, Rigidbody husk)
+    /// <summary>A husk handed in through the 'in' coupling (the belt's end, where the launch ramp sits): it is launched. Refused while too many are in the air (the belt waits).</summary>
+    public bool AcceptHusk(PixelSocket socket, Rigidbody husk)
     {
-        if (ghost || husk == null || carrier.Count > 20) return false;
-        Vector3 d = at - transform.position;
-        if (Mathf.Abs(d.y) > 0.8f * unit) return false;
-        d.y = 0f;
-        if (d.magnitude > 0.8f * unit) return false;
+        if (ghost || husk == null || socket == null || !socket.CanTakeIn || carrier.Count > 20) return false;
         carrier.Add(husk);
         PixelAudio.Play("ui_click", 1.6f);
         return true;
@@ -237,19 +248,18 @@ public class PixelBeltJump : MonoBehaviour, IPixelAutoIntake
         cum = PixelPathCarrier.Cumulative(path);
     }
 
-    /// <summary>A husk reaches the end of the landing ramp: onto the belt that starts there, or set down on the floor.</summary>
+    /// <summary>A husk reaches the end of the landing ramp: out through the 'out' coupling (onto the belt that starts there / into a machine's In coupling
+    /// right there), queued on the lip while that belt is full, or set down on the floor when nothing is attached.</summary>
     private void Land(Rigidbody rb)
     {
         if (rb == null) return;
-        PixelConveyor next = PixelCouplings.BeltStartingAt(LandingEnd);
-        if (next != null && !next.IsGhost)
+        if (PixelCouplings.OutputConnected(this, "out"))
         {
-            if (landing.Count == 0 && PixelConveyorSystem.StartHasRoom(next)) { PixelCouplings.PutOnBelt(next, rb); return; }
+            if (landing.Count == 0 && PixelCouplings.Emit(this, "out", rb)) return;
             Hold(rb);   // (the belt is full, or others are already waiting: it queues on the lip)
             return;
         }
-        rb.isKinematic = true;   // (HandIn takes a locked husk, as the Elevator and Hose hand them in)
-        if (PixelCouplings.HandIn(LandingEnd, rb)) return;   // (a machine's In coupling right there)
+        if (PixelCouplings.Emit(this, "out", rb)) return;   // (a machine's In coupling right there: Emit locks it and hands it in)
         rb.isKinematic = false;
         PixelPathCarrier.SetVelocity(rb, transform.forward * unit * 1.5f);
     }
@@ -274,17 +284,16 @@ public class PixelBeltJump : MonoBehaviour, IPixelAutoIntake
             if (life != null && !life.IsDespawning) life.KeepAlive();   // (waiting on the lip never fades)
         }
         if (landing.Count == 0) return;
-        PixelConveyor next = PixelCouplings.BeltStartingAt(LandingEnd);
-        if (next == null || next.IsGhost)
+        if (!PixelCouplings.OutputConnected(this, "out"))
         {
             // The belt was taken away: set them down like a landing with no belt.
             foreach (Rigidbody rb in landing) if (rb != null) { rb.isKinematic = false; PixelPathCarrier.SetVelocity(rb, transform.forward * unit * 1.5f); }
             landing.Clear();
             return;
         }
-        if (!PixelConveyorSystem.StartHasRoom(next)) return;
+        if (!PixelCouplings.OutputHasRoom(this, "out")) return;
         Rigidbody first = landing[0];
+        if (!PixelCouplings.Emit(this, "out", first)) return;   // (still no room: try again next step)
         landing.RemoveAt(0);
-        PixelCouplings.PutOnBelt(next, first);
     }
 }

@@ -1505,3 +1505,4 @@
 [2026-10-20 09:43 UTC] Belts: a right click while laying a belt now takes the last piece back (drawing carries on from its start); with none left it ends the chain as before.
 [2026-10-20 09:44 UTC] Wrote an audit of the coupler system (docs/systems/CouplerAudit.md): bugs, polish, design and code findings - nothing in the game changed yet.
 [2026-10-20 09:51 UTC] Decision noted: power will be its own mechanic, not sockets / couplings - sockets carry husks only.
+[2026-10-20 10:02 UTC] Sockets are now the only way husks move between machines: couplings fit themselves when a belt or hose snaps to a port (the Coupling is no longer sold), the Elevator, Belt Jump, Combiner and Sorting Hopper outputs connect through ports, hoses only carry husks the target accepts (no more spills), device panels list what each port is connected to, and the Quantum Organizer can feed a belt.

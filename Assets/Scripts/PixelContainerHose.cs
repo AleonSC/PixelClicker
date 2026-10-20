@@ -3,14 +3,16 @@
 //   CONTAINER HOSE (a Dev Hub > Tester feature, PixelFeatureTester 'Container Hose', placed as a ROUTE: start, any bend points, end): a see-through hose like the
 //   Funnel's that joins one device to another THROUGH COUPLINGS (PixelSockets.cs / PixelCoupling.cs, docs/systems/PixelCouplings.md). Click an OUT coupling on a device a
 //   hose can pull from (IPixelHuskSource: Storage Crate, Quantum Organizer - the crate's 'out' socket, or an organizer coupling set to Out with its teal dot), then an IN coupling on the target
-//   (Recycler back hatch, Storage Crate, Quantum Organizer, Trash Can, Kiln, Sorting Hopper...); coupling clicks magnetize (Snap). Between them the player clicks any number of
+//   (Recycler back hatch, Storage Crate, Quantum Organizer, Trash Can, Kiln, Sorting Hopper...); clicks magnetize to couplings AND free sockets (Snap). An end on
+//   a FREE socket fits a coupling there the way the hose runs (AUTO-FIT, PixelCouplings.FreeSocketAt); when placed, a Both coupling with nothing else attached
+//   turns to match. If the player later flips an end's coupling (its teal dot), the hose FOLLOWS (runs the other way) when it can, else it stops and says why. Between them the player clicks any number of
 //   BEND points (scroll sets their height; PixelFeatureTester.RegisterRoute) and the hose runs through them as a smooth Catmull-Rom curve (straight with none) - no forced arc.
 //   Routed the other way round it runs the right way anyway. An idle hose says why over its middle (IdleReason). A quick RIGHT CLICK on a placed hose (PixelRightTap; a hold
 //   removes it) REVERSES its flow (Reverse): only when the far end can hand husks out (a crate / organizer) and the start can take them in; Both couplings flip to match.
 //   Every pumpSeconds (0.5 s) it pulls one stored husk out of the source (TakeHuskOut), spawns it at the hose's start (SpawnStoredPixel) and carries it along the tube
 //   (PixelPathCarrier, can't be grabbed on the way). At the far end the target coupling hands it to its device (PixelCoupling.TakeIn -> the device's one hook AcceptHusk);
 //   refused (full) = it drops out of the end. It only pumps while the target has room (IPixelHuskRoom.HuskRoom; devices without it take 6 at a time), counting what is in
-//   the tube. The ends follow their couplings (carried / turned devices). A coupling that is removed leaves its end where it was: the hose idles and latches onto a
+//   the tube, and only takes out husks the target TAKES (IPixelHuskFilter, e.g. the Biomass Generator: wood) when the source can pick (IPixelHuskPicker). The ends follow their couplings (carried / turned devices). A coupling that is removed leaves its end where it was: the hose idles and latches onto a
 //   coupling put back there (every half second). Removing the hose lets what is inside it fall out. Saved with the tester save (both end points and the bend points).
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -80,7 +82,7 @@ public class PixelContainerHose : MonoBehaviour
         GameObject root = Build(c, false, "Container Hose");
         PixelContainerHose h = root.GetComponent<PixelContainerHose>();
         h.SetRoute(points);
-        h.Latch();
+        h.Latch(true);
         h.a = h.EndAt(h.source, h.a);
         h.b = h.EndAt(h.target, h.b);
         h.Rebuild();
@@ -96,18 +98,59 @@ public class PixelContainerHose : MonoBehaviour
         for (int i = 1; i < points.Count - 1; i++) bends.Add(points[i]);
     }
 
-    /// <summary>Finds the couplings at the two ends: an Out coupling on a device a hose can pull from, and an In coupling (clicked either way round).</summary>
-    private void Latch()
+    /// <summary>
+    /// Finds the couplings at the two ends: an Out coupling on a device a hose can pull from, and an In coupling (clicked either way round). An end on a free
+    /// socket fits a coupling there (auto-fit). 'placing' = the hose was just laid: a Both coupling with nothing else attached may turn to match.
+    /// </summary>
+    private void Latch(bool placing = false)
     {
-        float reach = 1.5f * unit;
-        PixelCoupling first = PixelCouplings.NearestCoupling(LowerEnd(a), reach, true, true), second = PixelCouplings.NearestCoupling(LowerEnd(b), reach, true, true);
-        if (second == first) second = null;
-        if (!IsSource(first) && IsSource(second)) { PixelCoupling t = first; first = second; second = t; Vector3 tp = a; a = b; b = tp; bends.Reverse(); }   // (routed the other way round)
-        if (source == null && IsSource(first)) source = first;
-        if (target == null && second != null && second.IsIn) target = second;
+        if (source == null && target == null && !CanSourceAt(LowerEnd(a), placing) && CanSourceAt(LowerEnd(b), placing))
+        { Vector3 tp = a; a = b; b = tp; bends.Reverse(); }   // (routed the other way round)
+        if (source == null) source = SourceAt(LowerEnd(a), placing);
+        if (target == null) target = TargetAt(LowerEnd(b), placing);
+        if (target != null && target == source) target = null;
     }
 
     private static bool IsSource(PixelCoupling k) => k != null && k.IsOut && k.Device is IPixelHuskSource;
+
+    private float Reach => 1.5f * unit;
+
+    /// <summary>The coupling at this end (any way), or null.</summary>
+    private PixelCoupling CouplingAt(Vector3 p) => PixelCouplings.NearestCoupling(p, Reach, true, true);
+
+    /// <summary>A Both coupling that may turn to match a hose just laid: only while nothing else is attached to it.</summary>
+    private static bool MayTurn(PixelCoupling k, bool placing) => placing && k != null && k.Socket.flow == PixelSocketFlow.Both && !k.Auto && PixelCouplings.Attached(k) == PixelLink.Nothing;
+
+    /// <summary>Could this end be the hose's source (an Out coupling / a free socket on a device a hose can pull from)?</summary>
+    private bool CanSourceAt(Vector3 p, bool placing)
+    {
+        PixelCoupling k = CouplingAt(p);
+        if (k != null) return IsSource(k) || (MayTurn(k, placing) && k.Device is IPixelHuskSource);
+        return PixelCouplings.FreeSocketAt(p, false, out IPixelSocketDevice d, out PixelSocket _, Reach / PixelCouplings.HuskWidth) && d is IPixelHuskSource;
+    }
+
+    private PixelCoupling SourceAt(Vector3 p, bool placing)
+    {
+        PixelCoupling k = CouplingAt(p);
+        if (k != null)
+        {
+            if (!IsSource(k) && MayTurn(k, placing) && k.Device is IPixelHuskSource) k.SetDirection(false);
+            return IsSource(k) ? k : null;
+        }
+        if (!PixelCouplings.FreeSocketAt(p, false, out IPixelSocketDevice d, out PixelSocket _, Reach / PixelCouplings.HuskWidth) || !(d is IPixelHuskSource)) return null;
+        return PixelCouplings.AutoFitAt(p, false, Reach / PixelCouplings.HuskWidth);
+    }
+
+    private PixelCoupling TargetAt(Vector3 p, bool placing)
+    {
+        PixelCoupling k = CouplingAt(p);
+        if (k != null)
+        {
+            if (!k.IsIn && MayTurn(k, placing)) k.SetDirection(true);
+            return k.IsIn ? k : null;
+        }
+        return PixelCouplings.AutoFitAt(p, true, Reach / PixelCouplings.HuskWidth);
+    }
 
     /// <summary>Where the hose meets a coupling: over its collar (or the saved point when there is none).</summary>
     private Vector3 EndAt(PixelCoupling k, Vector3 fallback) => k != null ? k.PortWorld + Vector3.up * 0.55f * unit + k.FacingWorld * 0.35f * unit : fallback;
@@ -115,7 +158,7 @@ public class PixelContainerHose : MonoBehaviour
     /// <summary>The end point brought back down to port height (the saved ends are over the collar).</summary>
     private Vector3 LowerEnd(Vector3 p) => p - Vector3.up * 0.55f * unit;
 
-    /// <summary>Magnetizes a click to the nearest coupling on screen (within ~90 px), over its collar.</summary>
+    /// <summary>Magnetizes a click to the nearest coupling or free socket on screen (within ~90 px), over its collar.</summary>
     public static Vector3 Snap(PixelClicker c, Vector3 p, out bool snapped)
     {
         snapped = false;
@@ -133,6 +176,15 @@ public class PixelContainerHose : MonoBehaviour
             float d = (new Vector2(sp.x, sp.y) - mouse).sqrMagnitude;
             if (d < best) { best = d; result = end; snapped = true; }
         }
+        foreach (IPixelSocketDevice dev in PixelCouplings.Devices)   // free sockets too: a coupling is fitted there when the hose is placed
+            foreach (PixelSocket s in PixelCouplings.FreeSockets(dev))
+            {
+                Vector3 end = PixelCouplings.Port(dev, s) + Vector3.up * 0.55f * u + PixelCouplings.Facing(dev, s) * 0.35f * u;
+                Vector3 sp = cam.WorldToScreenPoint(end);
+                if (sp.z <= 0f) continue;
+                float d = (new Vector2(sp.x, sp.y) - mouse).sqrMagnitude;
+                if (d < best) { best = d; result = end; snapped = true; }
+            }
         return result;
     }
 
@@ -237,14 +289,15 @@ public class PixelContainerHose : MonoBehaviour
     /// <summary>Why the hose is idle (shown over its middle), or "" while it works.</summary>
     private string IdleReason()
     {
-        if (source == null) return "No source: start the hose on an OUT coupling of a Storage Crate or Quantum Organizer";
-        if (target == null) return "No target: end it on an IN coupling (Recycler, crate, organizer, trash can...)";
+        if (source == null) return "No source: start the hose on an OUT coupling / free port of a Storage Crate or Quantum Organizer";
+        if (target == null) return "No target: end it on an IN coupling / free port (Recycler, crate, organizer, trash can...)";
         if (Room() <= 0 && carrier.Count > 0) return "Waiting: the target is full";
-        if (carrier.Count == 0 && pumpedNothing) return "The source is empty";
+        if (carrier.Count == 0 && pumpedNothing) return source.Device is IPixelHuskPicker && target.Device is IPixelHuskFilter ? "Nothing the target takes in the source" : "The source is empty";
         return "";
     }
 
     private bool pumpedNothing;
+    private System.Predicate<int> wanted;   // "does the target take this tier?" (made once)
 
     private void UpdateStatus()
     {
@@ -280,6 +333,7 @@ public class PixelContainerHose : MonoBehaviour
         if (ghost || clicker == null) return;
         if (source != null && source.Device == null) source = null;
         if (target != null && target.Device == null) target = null;
+        FollowFlips();
         if ((source == null || target == null) && Time.time >= nextRelatch) { nextRelatch = Time.time + 0.5f; Latch(); }   // (a coupling put back / loaded after the hose)
         UpdateStatus();
         // A quick right click on the hose (not a hold - that removes it) turns its flow round.
@@ -289,6 +343,23 @@ public class PixelContainerHose : MonoBehaviour
         // The ends follow their couplings (devices carried by the handles, turned...).
         Vector3 na = EndAt(source, a), nb = EndAt(target, b);
         if ((na - a).sqrMagnitude > 0.0004f || (nb - b).sqrMagnitude > 0.0004f) { a = na; b = nb; Rebuild(); }
+    }
+
+    /// <summary>
+    /// The player switched an end's coupling (its teal dot): the hose FOLLOWS - runs the other way - when the other end can work that way, else it lets go of
+    /// that end and idles (it latches again once the coupling is switched back).
+    /// </summary>
+    private void FollowFlips()
+    {
+        bool sourceFlipped = source != null && !source.IsOut, targetFlipped = target != null && !target.IsIn;
+        if (!sourceFlipped && !targetFlipped) return;
+        if (source != null && target != null && sourceFlipped != targetFlipped)
+        {
+            bool ok = sourceFlipped ? target.Socket.CanGiveOut && target.Device is IPixelHuskSource : source.Socket.CanTakeIn;
+            if (ok) { Reverse(); return; }
+        }
+        if (sourceFlipped) { source = null; carrier.ReleaseAll(); }
+        if (targetFlipped) target = null;
     }
 
     /// <summary>How many more husks the target takes right now (minus what is already in the tube's last stretch).</summary>
@@ -308,7 +379,11 @@ public class PixelContainerHose : MonoBehaviour
         if (pumpTimer > 0f) return;
         pumpTimer = pumpSeconds;
         if (source == null || target == null || carrier.Count >= maxInHose || carrier.Count >= Room()) return;
-        bool got = ((IPixelHuskSource)source.Device).TakeHuskOut(source.Socket, out int tier, out double amount);
+        if (wanted == null) wanted = tier => target != null && PixelCouplings.Takes(target.Device, target.Socket, tier);
+        int tier; double amount;
+        bool got = source.Device is IPixelHuskPicker picker
+            ? picker.TakeHuskOut(source.Socket, wanted, out tier, out amount)   // only a husk the target takes (a mixed crate into a Biomass Generator: the wood)
+            : ((IPixelHuskSource)source.Device).TakeHuskOut(source.Socket, out tier, out amount);
         pumpedNothing = !got;
         if (!got) return;
         if (!clicker.SpawnStoredPixel(tier, amount, path[0], Vector3.zero)) return;   // (a normal husk: a 'streamed' one passes through walls until it lands)
