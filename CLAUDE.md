@@ -52,7 +52,7 @@
   - **Cosmetic Elements** - looks: floors, skies, filters, block looks, effects, pet outfits, Look Studio.
   - **Skills** - the Skills window, skill packs, gathering skills, perks, trees, Mastery, XP.
   - **Shops** - the Shop, packs, upgrades, Operation, consumables, vendors' wares and prices.
-  - **Devices** - husk machines and devices: Recycler, Storage Crate, Quantum Organizer, Funnel, Magnet, Fan, Vacuum, Sprinkler, attuned devices, zone effects, the tester factory (conveyors, kiln, elevator, splitter, robot...).
+  - **Devices** - husk machines and devices: Recycler, Storage Crate, Quantum Organizer, Funnel, Magnet, Fan, Vacuum, Sprinkler, attuned devices, zone effects, the tester factory (conveyors, kiln, elevator, splitter, robot...). Commits from this session go straight to the default branch.
   - **Husks and Physics** - how husks (and pets) move and feel: falling, bouncing, tumbling and settling, Pixel Grabbing (grab / throw), carrying in first person, the floor cap and lifetime, physics materials and weights.
   - **Gameplay Logs** - analysing the session recorder reports (`PixelSessionRecorder`) the user records while playing: pace, income / XP per minute, milestones, husk counts, and the balance changes they point to. Commits from this session go straight to the default branch.
   - **Sound** - everything you hear: `PixelAudio` (+ `docs/systems/PixelAudio.md`), the code-made synths (`PixelSynth`, God / Snitch synths...), music tracks and the title music selector, block sounds (`soundAs` on the catalog cards), volumes and the Audio settings, the Dev Hub Sounds tab. Commits from this session go straight to the default branch.
