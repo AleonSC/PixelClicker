@@ -26,6 +26,7 @@ public class PixelControlLever : MonoBehaviour
     private PixelConveyor belt;
     private Transform handle;
     private Renderer lamp;
+    private Material lampOnMat, lampOffMat;   // (two shared materials swapped on the lamp: no material copy per lever)
     private readonly List<Collider> body = new List<Collider>();
     private static readonly List<PixelConveyor> lineScratch = new List<PixelConveyor>();
 
@@ -80,7 +81,7 @@ public class PixelControlLever : MonoBehaviour
         PixelControlLever lever = root.AddComponent<PixelControlLever>();
         lever.clicker = c; lever.ghost = ghostMode; lever.unit = U(c);
         float u = lever.unit;
-        PixelFactoryKit k = new PixelFactoryKit(c, ghostMode);
+        PixelFactoryKit k = new PixelFactoryKit(c, ghostMode, true);   // (shared materials)
         Transform t = root.transform;
         Color plate = new Color(0.16f, 0.17f, 0.2f, 1f), housing = new Color(0.95f, 0.75f, 0.15f, 1f), steel = new Color(0.7f, 0.73f, 0.78f, 1f),
               dark = new Color(0.07f, 0.07f, 0.08f, 1f), knob = new Color(0.85f, 0.15f, 0.12f, 1f);
@@ -103,6 +104,8 @@ public class PixelControlLever : MonoBehaviour
         lever.handle = arm.transform;
         GameObject l = k.Prim(PrimitiveType.Sphere, "Lamp", t, new Vector3(0.2f * u, 0.52f * u, -0.3f * u), Vector3.one * 0.12f * u, LampOn, default, 0f, 0.8f, false, LampOn);
         lever.lamp = l.GetComponent<Renderer>();
+        lever.lampOnMat = k.Mat(LampOn, 0f, 0.8f, LampOn);
+        lever.lampOffMat = k.Mat(LampOff, 0f, 0.8f, LampOff);
         if (col)
         {
             // A click box round the handle too (the arm itself is thin).
@@ -151,13 +154,7 @@ public class PixelControlLever : MonoBehaviour
     {
         on = value;
         nextCheck = 0f;   // (the belts react straight away)
-        if (lamp != null)
-        {
-            Material m = lamp.material;
-            Color c = on ? LampOn : LampOff;
-            m.color = c;
-            if (m.HasProperty("_EmissionColor")) { m.EnableKeyword("_EMISSION"); m.SetColor("_EmissionColor", c); }
-        }
+        if (lamp != null && lampOnMat != null) lamp.sharedMaterial = on ? lampOnMat : lampOffMat;
         if (!byHand) return;
         PixelAudio.Play("ui_click", on ? 1.2f : 0.8f);
         if (!on && belt != null) { belt.CollectSection(lineScratch); PixelHints.Announce("Lever OFF - " + lineScratch.Count + " belt" + (lineScratch.Count == 1 ? "" : "s") + " stopped"); }

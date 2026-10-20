@@ -83,7 +83,7 @@ public static class PixelConveyorJoint
         foreach (Vector3 p in local) centre += p;
         centre /= local.Count;
 
-        PixelFactoryKit kit = new PixelFactoryKit(clicker, false);
+        PixelFactoryKit kit = new PixelFactoryKit(clicker, false, true);   // (shared materials: a joint is rebuilt whenever its belts move)
         Color rubber = new Color(0.16f, 0.17f, 0.2f, 1f), steel = new Color(0.55f, 0.58f, 0.64f, 1f), frame = new Color(0.26f, 0.28f, 0.32f, 1f);
 
         // The slab: fan top and bottom plus a skirt round the edges (each triangle faced to match its own normal).
@@ -117,7 +117,7 @@ public static class PixelConveyorJoint
         mesh.RecalculateBounds();
         GameObject slab = new GameObject("Slab", typeof(MeshFilter), typeof(MeshRenderer));
         slab.transform.SetParent(joint.transform, false);
-        slab.GetComponent<MeshFilter>().sharedMesh = mesh;
+        PixelOwnedMesh.Own(slab, mesh);   // (the mesh is freed with the joint: it used to stay behind every time a corner was rebuilt)
         slab.GetComponent<MeshRenderer>().sharedMaterial = kit.Mat(rubber, 0.1f, 0.3f);
 
         // The curved outer rail (short pieces along the arc, just outside it) on a dark frame, and a round turntable plate with a steel hub over the

@@ -11,6 +11,8 @@
 //   while it has fewer than two Belt Sorters, else only the part between the sorters' joints) by calling HoldHalt every few frames; Speed is 0 while
 //   Halted, so riders wait, the chevrons stop and nothing is carried. JOINTS: a Belt Sorter placed mid-belt splits the belt there (SplitAt).
 //   NO FADING ON A BELT (2026-10-19): a rider's lifetime is paused every physics step (OldPixelDespawn.KeepAlive), so husks on belts never despawn; it runs on once they leave.
+//   MATERIALS (2026-10-20): every belt part, highlight, shroud and the placing ghost use PixelFactoryKit's SHARED materials (rebuilt belts no longer leak).
+//   PLACING TINT (2026-10-20): the ghost's free end shows a green disc when it will join a belt start / In coupling, red when something is there but it won't.
 //   LOOK (2026-10-19): rubber belt with moving chevrons and slat seams, steel rails with bolts on a dark frame with a yellow trim line, rollers with end caps.
 //   SHOP: the Conveyor Belt Kit (PixelConsumables DeviceKind.ConveyorBelt) is sold in Utilities for everyone since 2026-10-19 (monochrome price).
 //   WIDTH: PixelConveyor.LaneCount = 1 cube wide, 2 at Electrician level 10, 3 at level 20 (every belt, PixelConveyorSystem.Update rebuilds them when it changes);
@@ -22,7 +24,7 @@
 //   the way. LOCKED RIDING (no physics): an old pixel that lands on a belt (not held, not glued into a build, not flying, and there is room: riders keep a gap of 1.1 cube widths)
 //   is CAPTURED by PixelConveyorSystem - made kinematic, centred on the line and carried along it at beltSpeedCubes (0 = 1.6 cube widths per second) by position, like the Storage Crate
 //   locks pixels in. At the end of a belt it is handed on to a belt that STARTS there (a chained piece, ends within 0.45 cube widths and not head-on); when there is no belt to hand it
-//   to, the end is detected: an In COUPLING whose port is there (PixelSockets.cs / PixelCoupling.cs, docs/systems/PixelCouplings.md) hands the pixel to its device, otherwise it is EJECTED: physics back on, thrown on a little along the belt's direction (so it can fly into a Kiln mouth or onto the floor). Riders queue
+//   to, the end is detected: an In COUPLING whose port is there (PixelSockets.cs / PixelCoupling.cs, docs/systems/PixelCouplings.md) hands the pixel to its device - when that device refuses it (full, busy) the pixel WAITS at the end and the queue behind it stops (2026-10-20; it used to be thrown off); with nothing there it is EJECTED: physics back on, thrown on a little along the belt's direction (so it can fly into a Kiln mouth or onto the floor). END STATUS: the belt panel says what happens at the end (EndStatus) and a red ring floats over an end that spilled husks in the last few seconds. Riders queue
 //   when the one ahead is stopped. Flipping a belt flips its riders; grabbing a rider with Pixel Grabbing frees it. Things spat out of a machine or dropped by the player simply land on a
 //   belt and get captured. Belts are saved with the tester save (shape incl. heights, riders). Built with PixelFactoryKit. SPEED: each belt can have its own speed - in FIRST PERSON a right click on a belt opens a small window (PixelConveyorSystem
 //   speed editor: a number box in cube widths per second, Set / Reverse / Close; the mouse is freed while it is open). In the normal view a right CLICK opens the
@@ -294,7 +296,7 @@ public class PixelConveyor : MonoBehaviour
     /// <summary>A small marker disc that follows the mouse while the first point is chosen.</summary>
     public static GameObject CreateMarker(PixelClicker c)
     {
-        PixelFactoryKit k = new PixelFactoryKit(c, true);
+        PixelFactoryKit k = new PixelFactoryKit(c, true, true);   // (shared materials)
         float u = c.OldPixelWorldSize;
         GameObject root = new GameObject("Conveyor Marker");
         k.Cyl("Disc", root.transform, new Vector3(0f, 0.05f * u, 0f), 0.45f * u, 0.1f * u, new Color(0.4f, 0.9f, 1f, 1f));
@@ -326,7 +328,36 @@ public class PixelConveyor : MonoBehaviour
         Vector3 d = to - from; d.y = 0f;
         if (d.magnitude < 0.2f * belt.unit) { preview.SetActive(false); return; }
         preview.SetActive(true);
-        if ((belt.a - from).sqrMagnitude > 1e-4f || (belt.b - to).sqrMagnitude > 1e-4f) belt.Rebuild(from, to);
+        if ((belt.a - from).sqrMagnitude > 1e-4f || (belt.b - to).sqrMagnitude > 1e-4f) { belt.Rebuild(from, to); belt.TintPreviewEnd(from, to); }
+    }
+
+    /// <summary>
+    /// Placing (2026-10-20): the ghost's FREE end shows whether it will join up - a green disc when it lands on a belt start or an In coupling it chains to,
+    /// a red one when something is there but it won't chain (another height, head-on, too sharp a turn), nothing when the end is free.
+    /// </summary>
+    private void TintPreviewEnd(Vector3 from, Vector3 to)
+    {
+        int state = 0;   // 0 = free end, 1 = joins, 2 = won't join
+        if (TurnProblem(from, to) != null) state = 2;
+        else
+        {
+            Vector3 dir = to - from; dir.y = 0f; dir = dir.sqrMagnitude > 1e-6f ? dir.normalized : Vector3.forward;
+            foreach (PixelConveyor c in all)
+            {
+                if (c == null || c.ghostMode) continue;
+                Vector3 sp = c.StartPoint;
+                if (Flat(sp - to) > unit * 1.2f) continue;
+                bool joins = Flat(sp - to) < unit * 0.45f && Mathf.Abs(sp.y - to.y) <= unit * 0.45f && Vector3.Dot(c.Direction, dir) >= -0.5f;
+                state = joins ? 1 : Mathf.Max(state, 2);
+                if (joins) break;
+            }
+            if (state != 1 && PixelCouplings.IntakeAt(to, unit) != null) state = 1;
+        }
+        if (state == 0) return;
+        PixelFactoryKit k = new PixelFactoryKit(clicker, true, true);
+        k.alpha = 0.7f;
+        Vector3 local = transform.InverseTransformPoint(to) + Vector3.up * (height + 0.02f * unit);
+        k.Cyl("End Tint", transform, local, 0.42f * unit, 0.02f * unit, state == 1 ? new Color(0.3f, 1f, 0.4f, 1f) : new Color(1f, 0.3f, 0.25f, 1f));
     }
 
     /// <summary>A working belt between two ground points.</summary>
@@ -399,7 +430,7 @@ public class PixelConveyor : MonoBehaviour
         height = 0.16f * unit;
         transform.SetPositionAndRotation((a + b) * 0.5f, Quaternion.LookRotation((b - a).normalized, Vector3.up));
 
-        PixelFactoryKit k = new PixelFactoryKit(clicker, ghostMode);
+        PixelFactoryKit k = new PixelFactoryKit(clicker, ghostMode, true);   // (shared materials: a belt is rebuilt on every mouse move while it is placed - each rebuild used to make ~8 new ones)
         Color rubber = new Color(0.16f, 0.17f, 0.2f, 1f), steel = new Color(0.55f, 0.58f, 0.64f, 1f), accent = new Color(1f, 0.78f, 0.15f, 1f);
         // The belt slab (its top is the surface things stand on) and the side rails.
         k.Box("Belt", transform, new Vector3(0f, height * 0.5f, 0f), new Vector3(width, height, length), rubber, default, true, 0.1f, 0.3f);
@@ -516,7 +547,7 @@ public class PixelConveyor : MonoBehaviour
         GameObject root = new GameObject("Coupling Shroud");
         root.transform.SetParent(transform, false);
         root.transform.SetPositionAndRotation(p + f * ((front - back) * 0.5f), Quaternion.LookRotation(f, Vector3.up));   // (its +z points out of the machine)
-        PixelFactoryKit k = new PixelFactoryKit(clicker, false);
+        PixelFactoryKit k = new PixelFactoryKit(clicker, false, true);   // (shared materials)
         Transform r = root.transform;
         k.Box("Shroud Roof", r, new Vector3(0f, hgt + t * 0.5f, 0f), new Vector3(inner + 2f * t, t, len), body, default, false, 0.4f, 0.5f);
         for (int s = -1; s <= 1; s += 2)
@@ -711,7 +742,58 @@ public class PixelConveyor : MonoBehaviour
         if (ghostMode) return;
         ribOffset += Time.deltaTime * Speed;
         PlaceRibs();
-        if (Time.time >= nextJointCheck) { nextJointCheck = Time.time + 0.5f + Random.value * 0.1f; PixelConveyorJoint.Refresh(this, clicker, ref jointKey, ref joint); RefreshShrouds(); }
+        if (Time.time >= nextJointCheck) { nextJointCheck = Time.time + 0.5f + Random.value * 0.1f; PixelConveyorJoint.Refresh(this, clicker, ref jointKey, ref joint); RefreshShrouds(); RefreshSpillMarker(); }
+    }
+
+    // ---------------- end state (2026-10-20): why a line stops or spills ----------------
+    // The rider system notes what happened at this belt's END (PixelConveyorSystem: NoteSpilled / NoteWaiting). The belt panel shows it as one status line
+    // (EndStatus), and a small red ring floats over an end that has thrown husks off in the last few seconds (RefreshSpillMarker, every half second).
+
+    private const float RecentSeconds = 4f;
+    private float lastSpillTime = -100f, lastWaitTime = -100f, lastHandTime = -100f;
+    private PixelWorldRing spillMarker;
+
+    /// <summary>A rider was thrown off this belt's end (nothing there to take it).</summary>
+    public void NoteSpilled() { lastSpillTime = Time.time; }
+    /// <summary>A rider is waiting at this belt's end (the machine there is full or busy).</summary>
+    public void NoteWaiting() { lastWaitTime = Time.time; }
+    /// <summary>A rider was handed into a machine at this belt's end (a coupling, or a machine that catches husks near it like the Elevator).</summary>
+    public void NoteHandedIn() { lastHandTime = Time.time; }
+
+    private void RefreshSpillMarker()
+    {
+        bool show = Time.time - lastSpillTime < RecentSeconds && FindNext() == null;
+        if (!show) { if (spillMarker != null) spillMarker.Set(-1f, Color.red); return; }
+        Vector3 local = transform.InverseTransformPoint(ExitPoint) + Vector3.up * (height + 0.9f * unit);
+        if (spillMarker == null) spillMarker = PixelWorldRing.Attach(transform, local, 0.22f * unit, SpillColor);
+        else spillMarker.transform.localPosition = local;
+        spillMarker.Set(1f, SpillColor);
+    }
+
+    private static readonly Color SpillColor = new Color(1f, 0.35f, 0.3f, 1f);
+
+    /// <summary>
+    /// What happens at this belt's END, in words (the belt panel), or null when it hands on to the next belt: stopped by a lever, waiting for a full or busy
+    /// machine, feeding a machine, spilling (nothing attached), or a belt that looks joined but isn't (another height, head-on).
+    /// </summary>
+    public string EndStatus()
+    {
+        if (ghostMode) return null;
+        if (Halted) return "Stopped by a Control Lever";
+        if (FindNext() != null) return null;
+        Vector3 exit = ExitPoint;
+        if (Time.time - lastWaitTime < 1f) return "Waiting: the machine at its end is full or busy";
+        if (Time.time - lastHandTime < RecentSeconds || PixelCouplings.IntakeAt(exit, unit) != null) return "Feeds the machine at its end";
+        foreach (PixelConveyor c in all)
+        {
+            if (c == null || c == this || c.ghostMode) continue;
+            Vector3 sp = c.StartPoint;
+            if (Flat(sp - exit) > unit * 1.2f) continue;
+            if (Mathf.Abs(sp.y - exit.y) > unit * 0.45f) return "End: the next belt is at another height - husks fall off here";
+            if (Vector3.Dot(c.Direction, Direction) < -0.5f) return "End: the next belt runs head-on into this one - husks fall off here";
+            return "End: not joined to the next belt (move the end closer) - husks fall off here";
+        }
+        return Time.time - lastSpillTime < RecentSeconds ? "End: spilling (nothing attached)" : "End: nothing attached - husks fall off here";
     }
 
     /// <summary>Right click: the belt runs the other way.</summary>
@@ -770,7 +852,7 @@ public class PixelConveyor : MonoBehaviour
         GameObject root = Place(c, s.a, s.b);
         if (root == null) return null;
         PixelConveyor belt = root.GetComponent<PixelConveyor>();
-        if (s.reversed) { belt.reversed = true; belt.PlaceRibs(); }
+        if (s.reversed) { belt.reversed = true; belt.PlaceRibs(); belt.PaintArrows(); }   // (the arrows' reversed colour too)
         belt.customSpeedCubes = s.customSpeed;
         if (s.lanes > 0) belt.SetLanes(s.lanes);
         if (s.riders != null) foreach (PixelConveyorSystem.RiderSave r in s.riders) PixelConveyorSystem.ImportRider(belt, r);
@@ -817,7 +899,7 @@ public class PixelConveyor : MonoBehaviour
             if (child.name == "Panel Highlight") { child.gameObject.SetActive(false); Destroy(child.gameObject); }
         }
         if (!on || ghostMode) return;
-        PixelFactoryKit k = new PixelFactoryKit(clicker, true);
+        PixelFactoryKit k = new PixelFactoryKit(clicker, true, true);
         k.alpha = 0.45f;
         k.Box("Panel Highlight", transform, new Vector3(0f, height * 0.5f + 0.1f * unit, 0f), new Vector3(width + 0.6f * unit, height + 0.55f * unit, length + 0.2f * unit), new Color(1f, 0.8f, 0.25f, 1f));
     }
@@ -830,7 +912,7 @@ public class PixelConveyor : MonoBehaviour
             if (child.name == "Selection") { child.gameObject.SetActive(false); Destroy(child.gameObject); }
         }
         if (!selected || ghostMode) return;
-        PixelFactoryKit k = new PixelFactoryKit(clicker, true);
+        PixelFactoryKit k = new PixelFactoryKit(clicker, true, true);
         k.alpha = 0.4f;
         k.Box("Selection", transform, new Vector3(0f, height * 0.5f + 0.1f * unit, 0f), new Vector3(width + 0.5f * unit, height + 0.45f * unit, length + 0.3f * unit), new Color(0.2f, 0.9f, 1f, 1f));
     }
@@ -1075,11 +1157,24 @@ public class PixelConveyorSystem : MonoBehaviour
                     Rigidbody taken = r.rb;
                     if (PixelCouplings.HandIn(belt.ExitPoint, taken))
                     {
+                        belt.NoteHandedIn();
                         riding.Remove(taken);
                         riders.RemoveAt(i);
                         continue;
                     }
+                    // (2026-10-20) An In COUPLING is there but its machine refused it (full, busy, fading): the husk WAITS at the end and the ones behind
+                    // queue up (riders never fade); it is handed in again next step. Only an end with nothing to hand into throws the husk off.
+                    if (PixelCouplings.IntakeAt(belt.ExitPoint, belt.Unit) != null)
+                    {
+                        belt.NoteWaiting();
+                        r.s = belt.Length;
+                        Vector3 wait = belt.LanePointAt(r.lane, r.s);
+                        wait.y += (belt.SurfaceHeight + r.half) * belt.LiftFactor;
+                        r.rb.MovePosition(Vector3.Lerp(r.rb.position, wait, 0.55f));
+                        continue;
+                    }
                     riders.RemoveAt(i);
+                    belt.NoteSpilled();
                     Release(r, true);      // an end: the pixel leaves the belt
                     continue;
                 }

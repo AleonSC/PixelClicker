@@ -4,8 +4,11 @@
 //   1. the ghost follows the mouse and MAGNETIZES to a belt end that is near it (PixelElevator.TrySnap: it turns to the belt's direction, the belt's end meets its entry face, and its base
 //   takes that belt's height); Q / E turn it when it is not latched; click to fix the base. 2. Move the mouse up or down to set the HEIGHT (the mouse ray is cut with a vertical plane through
 //   the base, quantised to heightStepCubes) and click to confirm; right click goes back to stage 1. The tower's posts run down to the floor when the base is raised. SOCKETS (PixelSockets.cs, couplings built in):
-//   'in' at the entry, 'out' at the top. A belt end at the entry coupling hands its pixels straight in (AcceptHusk): they are drawn to the shaft, carried up by a PixelPathCarrier and put out of the
-//   top coupling (PixelCouplings.Emit) onto a belt that STARTS there (belts snap to coupling ports, so a new belt snaps to the top of the tower, at its height) or flung forward. Belts can also be raised and lowered while placing
+//   'in' at the entry, 'out' at the top. A belt end at the entry coupling hands its pixels straight in (AcceptHusk), and it also catches husks handed in NEAR its base
+//   (IPixelAutoIntake). They are drawn to the shaft and carried up by a PixelPathCarrier. At the top the tower uses its OWN LINKS, not the 'out' socket
+//   (RefreshLinks, within linkReachCubes): a belt that STARTS near the top (outBelt: the husk is put on it, PixelCouplings.PutOnBelt; while that belt's start
+//   is full the husk WAITS at the top and the shaft queues up - 2026-10-20, it used to be dropped onto the full belt), else an In coupling near the top
+//   (outCoupling: handed in), else it is flung forward off the top. A short trough is drawn to each link. Belts can also be raised and lowered while placing
 //   (scroll wheel, PixelFeatureTester) so ramps and bridges are possible. Saved with the tester save (position, turn, height). Built with PixelFactoryKit.
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -314,7 +317,7 @@ public class PixelElevator : MonoBehaviour, IPixelSocketDevice, IPixelAutoIntake
         t.transform.SetParent(linkRoot.transform, false);
         t.transform.SetPositionAndRotation((from + to) * 0.5f, Quaternion.LookRotation(d.normalized, Vector3.up));
         float len = d.magnitude + 0.2f * unit, w = 1.1f * unit;
-        PixelFactoryKit k = new PixelFactoryKit(clicker, false);
+        PixelFactoryKit k = new PixelFactoryKit(clicker, false, true);   // (shared materials: troughs are rebuilt whenever the links change)
         Color rubber = new Color(0.16f, 0.17f, 0.2f, 1f), steel = new Color(0.55f, 0.58f, 0.64f, 1f), accent = new Color(1f, 0.78f, 0.15f, 1f);
         k.Box("Trough Floor", t.transform, new Vector3(0f, -0.05f * unit, 0f), new Vector3(w, 0.1f * unit, len), rubber, default, false, 0.1f, 0.3f);
         for (int s = -1; s <= 1; s += 2)
@@ -340,8 +343,11 @@ public class PixelElevator : MonoBehaviour, IPixelSocketDevice, IPixelAutoIntake
             };
             cum = PixelPathCarrier.Cumulative(path);
         }
-        carrier.Step(path, cum, LiftSpeed * unit, Gap * unit, Time.fixedDeltaTime, PutOut);
+        carrier.Step(path, cum, LiftSpeed * unit, Gap * unit, Time.fixedDeltaTime, PutOut, 0.25f, TopHasRoom);
     }
+
+    /// <summary>The way out at the top is free: no linked belt, or its start has room (else the husk waits at the top and the shaft queues up).</summary>
+    private bool TopHasRoom() => outBelt == null || outBelt.IsGhost || PixelConveyorSystem.StartHasRoom(outBelt);
 
     /// <summary>A pixel reaches the top: onto the linked belt, into the linked In coupling, or flung off the top towards the way out.</summary>
     private void PutOut(Rigidbody rb)

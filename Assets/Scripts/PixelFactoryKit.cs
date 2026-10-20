@@ -3,6 +3,10 @@
 //   Small shared helper for building machines out of primitives in code (conveyor belt, kiln): materials copied from the cube's material (PixelClicker.CreateVisualMaterial, emission off
 //   unless asked), boxes / cylinders / balls, see-through ghost versions (alpha) with no colliders. The Wood Chipper still has its own private copy of this (its Kit class): move it onto
 //   this helper when it is next touched. DestroyMaterials() frees the materials it made (a temporary build like the studio intro).
+//   SHARED MATERIALS (2026-10-20): a kit made with shared = true takes its materials from ONE static cache (keyed by colour incl. ghost alpha, metal,
+//   smoothness, emission), so pieces that are rebuilt often (belts while placing, highlights, corner joints, elevator troughs) stop making new materials
+//   every time - they used to leak about 8 a frame while a belt was being placed. Only for builds that never change a material they got from the kit
+//   (use a MaterialPropertyBlock for per-object colour); DestroyMaterials leaves shared ones alone. PixelOwnedMesh frees a code-made Mesh with its object.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -13,15 +17,24 @@ public sealed class PixelFactoryKit
     public bool ghost;
     public float alpha = 0.35f;
     private readonly Dictionary<string, Material> mats = new Dictionary<string, Material>();
+    private readonly bool shared;
+    private static readonly Dictionary<string, Material> sharedMats = new Dictionary<string, Material>();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() => sharedMats.Clear();   // (the materials themselves are not scene objects: they stay valid across a Restart)
 
     public PixelFactoryKit(PixelClicker owner, bool forGhost) { clicker = owner; ghost = forGhost; }
+
+    /// <summary>'sharedMaterials' = take materials from the one static cache (see the notes at the top): for builds rebuilt often that never change their materials.</summary>
+    public PixelFactoryKit(PixelClicker owner, bool forGhost, bool sharedMaterials) { clicker = owner; ghost = forGhost; shared = sharedMaterials; }
 
     public Material Mat(Color c, float metal = 0.2f, float smooth = 0.4f, Color? emission = null)
     {
         Color col = c;
         if (ghost) col.a = alpha;
-        string key = col.ToString() + metal + smooth + (emission.HasValue ? emission.Value.ToString() : "");
-        if (mats.TryGetValue(key, out Material cached) && cached != null) return cached;
+        string key = col.ToString() + metal + smooth + (emission.HasValue ? emission.Value.ToString() : "") + (ghost ? "g" : "");
+        Dictionary<string, Material> cache = shared ? sharedMats : mats;
+        if (cache.TryGetValue(key, out Material cached) && cached != null) return cached;
         Material m = clicker != null ? clicker.CreateVisualMaterial(col, ghost) : null;
         if (m == null)
         {
@@ -37,7 +50,7 @@ public sealed class PixelFactoryKit
             if (emission.HasValue && !ghost) { m.EnableKeyword("_EMISSION"); m.SetColor("_EmissionColor", emission.Value); }
             else { m.SetColor("_EmissionColor", Color.black); m.DisableKeyword("_EMISSION"); }
         }
-        mats[key] = m;
+        cache[key] = m;
         return m;
     }
 
@@ -68,10 +81,29 @@ public sealed class PixelFactoryKit
     public GameObject Ball(string name, Transform parent, Vector3 pos, float radius, Color c, float metal = 0.2f, float smooth = 0.5f)
         => Prim(PrimitiveType.Sphere, name, parent, pos, Vector3.one * radius * 2f, c, default, metal, smooth, false);
 
-    /// <summary>Destroys every material this kit made (call when what it built is destroyed for good, e.g. the studio intro's set).</summary>
+    /// <summary>Destroys every material this kit made for itself (call when what it built is destroyed for good, e.g. the studio intro's set). Shared materials are kept.</summary>
     public void DestroyMaterials()
     {
         foreach (Material m in mats.Values) if (m != null) Object.Destroy(m);
         mats.Clear();
     }
+}
+
+/// <summary>Destroys a Mesh made in code when the object showing it is destroyed (a destroyed GameObject does not free its meshes). Add it next to the MeshFilter.</summary>
+public sealed class PixelOwnedMesh : MonoBehaviour
+{
+    public Mesh mesh;
+
+    /// <summary>Puts 'mesh' on the object's MeshFilter and makes the object free it when it goes.</summary>
+    public static void Own(GameObject go, Mesh mesh)
+    {
+        if (go == null || mesh == null) return;
+        MeshFilter mf = go.GetComponent<MeshFilter>();
+        if (mf != null) mf.sharedMesh = mesh;
+        PixelOwnedMesh o = go.GetComponent<PixelOwnedMesh>();
+        if (o == null) o = go.AddComponent<PixelOwnedMesh>();
+        o.mesh = mesh;
+    }
+
+    private void OnDestroy() { if (mesh != null) Destroy(mesh); }
 }

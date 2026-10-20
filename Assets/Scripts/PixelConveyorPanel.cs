@@ -4,7 +4,8 @@
 //   panel (PixelDeviceCard.OpenSubject - the same window as every placed device) on that belt's SECTION: the belts a Control Lever would switch with it
 //   (PixelConveyor.CollectSection - the whole joined line, or the part between two Belt Sorter joints). While the panel is open the section GLOWS
 //   (PixelConveyor.SetHighlight), so you see what you are editing.
-//   The sheet: how many pieces and how long, the speed, the lane count (Electrician), husks riding, stopped by a lever or not. A SPEED stepper
+//   The sheet: how many pieces and how long, the speed, the lane count (Electrician), husks riding, stopped by a lever or not, and a STATUS line
+//   (PixelConveyor.EndStatus: running, feeding a machine, waiting for a full / busy machine, or spilling and why - nothing attached, another height, head-on). A SPEED stepper
 //   (- / +, speedStep cube widths a second, the whole section), a SIZE stepper (lanes 1..the Electrician maximum: PixelConveyor.SetLanes), actions REVERSE (every piece of the section turns round) and REMOVE THIS PIECE, and the
 //   panel's own Remove button takes the WHOLE SECTION away (asks once). A right HOLD on a belt still removes just that piece (PixelFeatureTester).
 //   Not a MonoBehaviour: one small object per opened panel (the settings below are constants for now).
@@ -82,6 +83,16 @@ public sealed class PixelConveyorPanel : IPixelPanelSubject
         info.Add("Size", (mixedLanes ? "mixed, " : "") + lanes + (lanes == 1 ? " lane" : " lanes") + " (up to " + max + ")");
         if (max < 3) info.Note("<color=#9FB0CC>Electrician level " + (max < 2 ? 10 : 20) + " allows " + (max + 1) + " lanes.</color>");
         info.Add("Husks riding", riders.ToString());
+        // (2026-10-20) What happens at the section's end(s), in words: running on, feeding a machine, waiting for a full one, or spilling and why.
+        string status = null;
+        foreach (PixelConveyor b in section)
+        {
+            string s = b != null ? b.EndStatus() : null;
+            if (s == null) continue;
+            if (status == null) status = s;
+            else if (s != status) info.Note("<color=#9FB0CC>Another end: " + s + "</color>");
+        }
+        info.Add("Status", status ?? "Running");
         if (halted) info.Note("<color=#FF8A7A>Stopped by a Control Lever - flip it to run again.</color>");
         info.Note("<color=#9FB0CC>The glowing belts are this section: everything here applies to all of them.</color>");
 

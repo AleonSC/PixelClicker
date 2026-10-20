@@ -15,7 +15,10 @@ public sealed class PixelPathCarrier
     private static readonly HashSet<Rigidbody> carriedAll = new HashSet<Rigidbody>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { carriedAll.Clear(); carriers.Clear(); listening = false; }
+    private static void ResetStatics() { carriedAll.Clear(); carriers.Clear(); listening = false; PixelStatics.ResetOnRestart(OnRestart); }
+
+    // (Restart reloads the scene: the carried husks are gone with it - the set would only keep dead entries)
+    private static void OnRestart() { carriedAll.Clear(); }
 
     // Every carrier made (weakly held: a machine that is removed just drops its carrier), so one listener can take a husk out of all of them.
     private static readonly List<WeakReference<PixelPathCarrier>> carriers = new List<WeakReference<PixelPathCarrier>>();
