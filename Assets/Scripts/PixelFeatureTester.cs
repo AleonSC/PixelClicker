@@ -3,6 +3,8 @@
 //   The 'Tester' tab of the Dev Hub: a place to spawn and try things that are not part of the game yet (a consumable, a device, a machine...). Each testable thing is a Feature registered in
 //   Awake (Register(name, description, ghostBuilder, placeBuilder)): the tab lists them as cards with a 'Place' button. Place = a see-through GHOST follows the mouse over the floor
 //   (PixelConsumables.TryGetFloorPoint); left click puts a real one down (and keeps placing), Q / E turn it, right click or Escape stops (PixelWindows entry); 'Clear' removes the ones placed.
+//   LINE pieces (belts): while drawing a chain a right click takes the LAST piece of that chain back (lineChain, TakeBackLastPiece) and drawing
+//   carries on from its start; with nothing left to take back it ends the chain, and a further right click stops placing.
 //   While placing, clicks on the cube are blocked (PixelClicker.ExternalClickBlock). Placed test objects ARE saved (see SAVING below). To add something to test: write a builder (see PixelWoodChipper:
 //   CreateGhost / Place) and add one Register line here.
 //   Two-point features (RegisterLine, a conveyor belt) use a marker ghost, then a preview piece between the first point and the mouse; every click builds a piece and the end starts the next.
@@ -387,6 +389,7 @@ public class PixelFeatureTester : MonoBehaviour
 
     private void StopPlacing()
     {
+        ClearLineChain();
         PixelStatusLines.Clear(HudLineKey);
         gameplayPlacing = false;
         spendOne = null;
@@ -852,6 +855,7 @@ public class PixelFeatureTester : MonoBehaviour
             {
                 hasStart = true;
                 lineStart = p;
+                ClearLineChain();
                 if (ghost != null) ghost.SetActive(false);
                 if (previewGhost == null) previewGhost = placing.preview(clicker);
                 Refresh();
@@ -860,21 +864,49 @@ public class PixelFeatureTester : MonoBehaviour
             else
             {
                 GameObject go = placing.placeLine(clicker, lineStart, p);
-                if (go != null) { placing.placed.Add(go); lineStart = p; }
+                if (go != null) { placing.placed.Add(go); lineChain.Add(go); lineChainStarts.Add(lineStart); lineStart = p; }
                 Refresh();
             }
         }
         else if (PixelInput.RightPressed())
         {
-            if (hasStart)
+            if (hasStart && TakeBackLastPiece()) Refresh();   // takes the last piece of this chain back (like the hose's last point)
+            else if (hasStart)
             {
-                hasStart = false;                                   // ends the chain, the first point can be chosen again
+                hasStart = false;                                   // nothing left to take back: ends the chain, the first point can be chosen again
+                ClearLineChain();
                 if (previewGhost != null) Destroy(previewGhost);
                 previewGhost = null;
                 Refresh();
             }
             else StopPlacing();
         }
+    }
+
+    // The pieces placed in the chain being drawn now (and where each started), so a right click while placing takes the last one back.
+    private readonly List<GameObject> lineChain = new List<GameObject>();
+    private readonly List<Vector3> lineChainStarts = new List<Vector3>();
+
+    private void ClearLineChain() { lineChain.Clear(); lineChainStarts.Clear(); }
+
+    /// <summary>Removes the last piece of the current chain (the same way a right hold removes a piece) and carries on drawing from its start. False when there is none.</summary>
+    private bool TakeBackLastPiece()
+    {
+        while (lineChain.Count > 0)
+        {
+            int last = lineChain.Count - 1;
+            GameObject go = lineChain[last];
+            Vector3 start = lineChainStarts[last];
+            lineChain.RemoveAt(last);
+            lineChainStarts.RemoveAt(last);
+            if (go == null) continue;   // (already removed some other way)
+            foreach (Feature f in features) f.placed.Remove(go);
+            Destroy(go);   // (a belt's riders are let go by the belt system)
+            PixelAudio.Play("device_remove");
+            lineStart = start;
+            return true;
+        }
+        return false;
     }
 
     // ---------------- routed placing (the Container Hose) ----------------
