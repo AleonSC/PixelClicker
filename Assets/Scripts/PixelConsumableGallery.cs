@@ -26,7 +26,7 @@ public class PixelConsumableGallery : MonoBehaviour
     [Tooltip("Size of one tile (its picture is square, the name and count under it).")]
     [SerializeField] private Vector2 tileSize = new Vector2(220f, 270f);
     [Tooltip("The drop-down's filters, in order: All, Devices, Potions, Seeds, Supplies.")]
-    [SerializeField] private string[] filterNames = { "All", "Devices", "Potions", "Seeds", "Supplies" };
+    [SerializeField] private string[] filterNames = { "All", "Utilities", "Potions", "Seeds", "Supplies" };
     [Tooltip("Shown when nothing matches the filter.")]
     [SerializeField] private string emptyText = "You don't hold any of these yet.";
     [Tooltip("The hint line under the drop-down.")]
@@ -127,7 +127,7 @@ public class PixelConsumableGallery : MonoBehaviour
         filter = PixelUIKit.CreateDropdown(font, window.Root.transform, "Filter", new Vector2(300f, 54f), PixelUITheme.ColorOf(ButtonRole.Neutral),
                                            new Color(0.12f, 0.12f, 0.16f, 1f), Color.white, 26f);
         filter.options.Clear();
-        foreach (string f in filterNames) filter.options.Add(new TMP_Dropdown.OptionData(f));
+        foreach (string f in filterNames) filter.options.Add(new TMP_Dropdown.OptionData(f == "Devices" ? "Utilities" : f));   // (one name everywhere: the shop calls it Utilities)
         filter.SetValueWithoutNotify(0);
         filter.RefreshShownValue();
         filter.onValueChanged.AddListener(v => { filterIndex = v; RebuildTiles(); });

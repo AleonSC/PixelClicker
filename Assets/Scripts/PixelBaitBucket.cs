@@ -8,8 +8,8 @@
 //   pixels (waterCapacity 0 = 40) over it (ScanPixels, like the woodchipper): they are stored with their payout instead of splashing /
 //   despawning (a Water pixel dropped in is saved from breaking). Stored fish are live bait: PixelBaitBucket.FishBonus (fishBonusEach 0 =
 //   0.15 per fish, waterBonusEach 0 = 0.05 per water) is added to PixelBait.FishMultiplier, so Fish spawns more. Left-click the bucket
-//   (PixelPointerClaim / ClaimsPointer keep the cube and Pixel Grabbing out of it) takes the last stored pixel out into the mouse's hand. Not
-//   saved: a bucket is gone after a load (its contents are lost). Its bail is a carrying handle (shared PixelCarryHandles): drag it to move
+//   (PixelPointerClaim / ClaimsPointer keep the cube and Pixel Grabbing out of it) takes the last stored pixel out into the mouse's hand. Saved
+//   (its own save part 'baitBucket', PixelSaveRegistry): where it stands and what it holds come back on load. Its bail is a carrying handle (shared PixelCarryHandles): drag it to move
 //   the bucket anywhere on the floor (scroll / Q / E turn it); the bucket's own click steps aside while the bail has the pointer.
 //   Which husks it may take, the fly-in and taking one out into the hand are the shared PixelHuskHolder steps.
 // ---------------------------------------------------
@@ -18,7 +18,7 @@ using TMPro;
 using UnityEngine;
 
 /// <summary>The Bait Bucket consumable: a bucket on the floor that stores Fish and Water pixels and makes fish spawn more while Fishing is the skill in play.</summary>
-public class PixelBaitBucket : MonoBehaviour
+public class PixelBaitBucket : MonoBehaviour, IPixelSaved
 {
     [Header("Bait Bucket")]
     [Tooltip("Turn the Bait Bucket off (it cannot be placed).")]
@@ -80,6 +80,7 @@ public class PixelBaitBucket : MonoBehaviour
 
     private void Awake()
     {
+        PixelSaveRegistry.Register(this);
         instance = this;
         clicker = GetComponent<PixelClicker>();
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
@@ -87,8 +88,50 @@ public class PixelBaitBucket : MonoBehaviour
 
     private void OnDestroy()
     {
+        PixelSaveRegistry.Unregister(this);
         if (instance == this) instance = null;
         if (root != null) Destroy(root);
+    }
+
+    // ---- save: where the bucket stands and what it holds (PixelSaveRegistry) ----
+
+    [System.Serializable] private class SavedEntry { public int type; public double amount; public bool fish; }
+    [System.Serializable] private class SaveState { public Vector3 position; public float yaw; public SavedEntry[] stored; }
+
+    string IPixelSaved.SaveId => "baitBucket";
+    int IPixelSaved.SaveOrder => PixelSaveRegistry.WorldBand + 130;   // (after the placed devices)
+
+    string IPixelSaved.Export()
+    {
+        if (root == null || !wanted) return null;   // (none out, or it is leaving)
+        SaveState st = new SaveState { position = root.transform.position, yaw = root.transform.eulerAngles.y, stored = new SavedEntry[stored.Count] };
+        for (int i = 0; i < stored.Count; i++)
+            st.stored[i] = new SavedEntry { type = clicker.IsValidTierIndex(stored[i].tier) ? (int)clicker.Tiers[stored[i].tier].type : -1, amount = stored[i].amount, fish = stored[i].fish };
+        return PixelSaveRegistry.ToJson(st);
+    }
+
+    void IPixelSaved.Import(string data)
+    {
+        // Whatever stood here goes (its contents too: the save says what is in the bucket now).
+        stored.Clear();
+        fishCount = waterCount = 0;
+        ClearModels();
+        if (root != null) { Destroy(root); root = null; }
+        SaveState st = PixelSaveRegistry.FromJson<SaveState>(data);
+        if (st == null || clicker == null || disableBaitBucket) return;
+        cam = clicker.ViewCamera;
+        if (cam == null) return;
+        Build();
+        root.transform.SetPositionAndRotation(st.position, Quaternion.Euler(0f, st.yaw, 0f));
+        if (st.stored != null)
+            foreach (SavedEntry e in st.stored)
+            {
+                int tier = e.type >= 0 ? clicker.IndexOf((PixelClicker.PixelType)e.type) : -1;
+                if (tier < 0) continue;
+                stored.Add(new Entry { tier = tier, amount = e.amount, fish = e.fish });
+                if (e.fish) { fishCount++; AddModel(tier); } else waterCount++;
+            }
+        Refresh();
     }
 
     /// <summary>Right-click use of the consumable. Returns false (with a message to show) when the bucket cannot be put out.</summary>

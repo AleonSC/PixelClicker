@@ -291,21 +291,20 @@ public static class PixelDatabase
         if (consumables != null)
             for (int i = 0; i < consumables.ItemCount; i++)
             {
-                string name;
-                try { name = consumables.ItemName(i); } catch (Exception) { continue; }
-                if (string.IsNullOrEmpty(name)) continue;
-                string desc = "";
-                try { desc = Plain(consumables.ItemDescription(i)); } catch (Exception) { }
-                Entry ie = Add("Consumable", name, desc);
-                try { ie.discovered = clicker != null && clicker.IsUnlocked(consumables.ItemRequiredType(i)); } catch (Exception) { }
-                if (consumables.ItemListable(i)) { ie.pinType = "fav"; ie.pinKey = "item:" + name; }
-                itemEntries[name] = ie;
+                // Only items a player can meet: the thousands of craft-only combo potions / attuned devices show up once you hold one.
+                if (!consumables.ItemListable(i)) continue;
                 try
                 {
+                    string name = consumables.ItemName(i);
+                    if (string.IsNullOrEmpty(name)) continue;
+                    Entry ie = Add("Consumable", name, Plain(consumables.ItemDescription(i)));
+                    ie.discovered = clicker != null && clicker.IsUnlocked(consumables.ItemRequiredType(i));
+                    ie.pinType = "fav"; ie.pinKey = "item:" + name;
+                    itemEntries[name] = ie;
                     PixelShop.PackCost[] costs = consumables.ItemCosts(i);
-                    if (costs != null) foreach (PixelShop.PackCost c in costs) if (string.IsNullOrEmpty(c.minigameCurrency)) Link(ie, "Costs " + c.amount, PixelOf(c.type), "Pays for consumable");
+                    if (costs != null) foreach (PixelShop.PackCost c in costs) if (c != null && string.IsNullOrEmpty(c.minigameCurrency)) Link(ie, "Costs " + c.amount, PixelOf(c.type), "Pays for consumable");
                 }
-                catch (Exception) { }
+                catch (Exception e) { Debug.LogError("PixelDatabase: could not list consumable " + i + " - " + e.Message); }   // (shown, not hidden: a broken item should be noticed)
             }
 
         // ---- Vendors' wares (a vendor's entry lists what it sells; the consumable points back) ----

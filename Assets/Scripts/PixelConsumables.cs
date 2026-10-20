@@ -71,14 +71,14 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             int second = SecondOf(p), third = ThirdOf(p);
             PotionSave saved = s != null && s.potions != null ? System.Array.Find(s.potions, x => x.type == (int)p.type && x.second == second && x.third == third) : null;
             p.bonusCap = saved != null ? Mathf.Max(0, saved.bonus) : 0;
-            p.owned = saved != null ? ClampHeld(i, saved.owned) : 0;
+            p.owned = saved != null ? Mathf.Max(0, saved.owned) : 0;   // (clamped to the caps in the world part: the Operation Storage levels load later, with the stats)
         }
         CancelPlacement();
         for (int i = 0; i < DeviceCount; i++)
         {
             string name = GetDevice(i).displayName;
             DeviceSave saved = s != null && s.devices != null ? System.Array.Find(s.devices, x => x.name == name) : null;
-            GetDevice(i).owned = saved != null ? ClampDeviceHeld(i, saved.owned) : 0;
+            GetDevice(i).owned = saved != null ? Mathf.Max(0, saved.owned) : 0;
         }
     }
 
@@ -107,6 +107,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
 
         public void Import(string data)
         {
+            owner.ClampAllHeld();   // (now that the Operation levels - Storage - are loaded too)
             WorldState s = PixelSaveRegistry.FromJson<WorldState>(data);
             owner.ClearPlacedDevices();
             if (s == null) return;
@@ -255,7 +256,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
 
         [TextArea(1, 3)]
         [Tooltip("Shown in the shop. {radius} = reach, {duration} = seconds.")]
-        public string description = "Place it on the floor. It pulls in old pixels within {radius} units and collects them again for {duration} seconds.";
+        public string description = "Place it on the floor. It pulls in husks within {radius} units and collects them again for {duration} seconds.";
 
         [Tooltip("Listed in the shop once this pixel type is unlocked (or when you already own one).")]
         public PixelClicker.PixelType requiredType = PixelClicker.PixelType.Vacuum;
@@ -691,7 +692,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         {
             kind = DeviceKind.Fan,
             displayName = "Fan",
-            description = "Place it and turn it. It gently blows old pixels along a cone up to {radius} units long for {duration} seconds.",
+            description = "Place it and turn it. It gently blows husks along a cone up to {radius} units long for {duration} seconds.",
             requiredType = PixelClicker.PixelType.Glass,
             costs = new[]
             {
@@ -713,7 +714,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         {
             kind = DeviceKind.Magnet,
             displayName = "Magnet",
-            description = "Place it near the cube. For {duration} seconds it pulls every loose old pixel within {radius} units into a heap around it, without collecting them.",
+            description = "Place it near the cube. For {duration} seconds it pulls every loose husk within {radius} units into a heap around it, without collecting them.",
             requiredType = PixelClicker.PixelType.Electric,
             costs = new[]
             {
@@ -825,7 +826,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             color = new Color(0.55f, 0.8f, 1f, 1f),
             bodyDiameter = 3f,
             bodyHeight = 3f,
-            placingMessage = "Click the floor where the {0}'s output should be. Scroll or Q / E turns the spout a little; a conveyor belt opening in front of it latches on  (right-click to cancel)",
+            placingMessage = "Click the floor where the {0}'s output should be. Scroll or Q / E turns the spout a little; fit a coupling on its output socket to send the husks down a belt  (right-click to cancel)",
         };
     }
 
@@ -838,7 +839,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             shopSkillId = "woodcutting",   // Woodcutting level 2 puts it on sale in the shop as well
             shopSkillLevel = 2,
             displayName = "Wood Chipper",
-            description = "A trailer-mounted wood chipper, bought from the Lumberjack. Wood pixels dropped into its hopper are shredded for Woodcutting XP and every few of them make a Wood Chips block that shoots out of its chute (a conveyor belt opening in front of the chute latches on). Anything that is not wood damages it, and enough of that breaks it for good.",
+            description = "A trailer-mounted wood chipper, bought from the Lumberjack. Wood pixels dropped into its hopper are shredded for Woodcutting XP and every few of them make a Wood Chips block that shoots out of its chute (fit a coupling on the chute's socket to send them down a belt). Anything that is not wood damages it, and enough of that breaks it for good.",
             requiredType = PixelClicker.PixelType.Wood,
             costs = new[]
             {
@@ -851,7 +852,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             color = new Color(0.9f, 0.45f, 0.1f, 1f),
             bodyDiameter = 3f,
             bodyHeight = 3f,
-            placingMessage = "Scroll or Q / E to turn the {0}. The arrow shows where its chips go (a conveyor belt opening latches on). Click the floor to place it  (right-click to cancel)",
+            placingMessage = "Scroll or Q / E to turn the {0}. The arrow shows where its chips go (a coupling on the chute's socket sends them down a belt). Click the floor to place it  (right-click to cancel)",
         };
     }
 
@@ -862,7 +863,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             devOnly = true,   // (2026-10-18: out of the shop for now, Dev Hub > Main > Dev items gives it)
             kind = DeviceKind.QuantumOrganizer,
             displayName = "Quantum Organizer",
-            description = "A pad with walls. Switch it on, then drop a pixel onto the pad to bind that pixel type to it (up to three types). Every loose old pixel of a bound type is dematerialized with a glitch and rematerializes inside the box as storage (up to 60 pixels). Click the box to let some out again; everything comes out when its {duration} seconds run out.",
+            description = "A pad with walls. Switch it on, then drop a pixel onto the pad to bind that pixel type to it (up to three types). Every loose husk of a bound type is dematerialized with a glitch and rematerializes inside the box as storage (up to 60 pixels). Click the box to let some out again; everything comes out when its {duration} seconds run out.",
             requiredType = PixelClicker.PixelType.Electric,
             costs = new[]
             {
@@ -885,7 +886,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         {
             kind = DeviceKind.MagnetSorter,
             displayName = "Magnetized Sorter",
-            description = "Craft it from a Sorter and a Magnet. Its magnet pulls loose old pixels from an arc in front of it into a box. Click an exit pipe to grab it and click again to put it down anywhere; scroll over a pipe to choose which stored pixel type it shoots out.",
+            description = "Craft it from a Sorter and a Magnet. Its magnet pulls loose husks from an arc in front of it into a box. Click an exit pipe to grab it and click again to put it down anywhere; scroll over a pipe to choose which stored pixel type it shoots out.",
             requiredType = PixelClicker.PixelType.Electric,
             costs = new PixelShop.PackCost[0],
             craftOnly = true,
@@ -970,7 +971,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         {
             kind = DeviceKind.ComboFuel,
             displayName = "Combo Fuel",
-            description = "Hold up to 3. When your combo bar would run out, one is used automatically: the combo is kept and the bar slowly refills instead. Click before it is full again to carry on.",
+            description = "Hold up to {held}. When your combo bar would run out, one is used automatically: the combo is kept and the bar slowly refills instead. Click before it is full again to carry on.",
             requiredType = PixelClicker.PixelType.Red,
             costs = new[]
             {
@@ -1204,7 +1205,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         {
             kind = DeviceKind.PetTreat,
             displayName = "Pet Treat",
-            description = "Right-click to use. Your pets go hyper and glow for a minute, and the extra spawn chance they give is doubled. Hold up to 5.",
+            description = "Right-click to use. Your pets go hyper and glow for a minute, and the extra spawn chance they give is doubled. Hold up to {held}.",
             requiredType = PixelClicker.PixelType.Black,
             costs = new[]
             {
@@ -1222,7 +1223,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         {
             kind = DeviceKind.FocusPotion,
             displayName = "Lumberjack's Focus",
-            description = "Right-click to drink. For a minute no Termite Hive turns up while you train Woodcutting. Sold now and then by the Lumberjack. Hold up to 5.",
+            description = "Right-click to drink. For a minute no Termite Hive turns up while you train Woodcutting. Sold now and then by the Lumberjack. Hold up to {held}.",
             requiredType = PixelClicker.PixelType.Wood,
             costs = new[]
             {
@@ -1240,7 +1241,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         {
             kind = DeviceKind.PesticideSpray,
             displayName = "Pesticide Spray",
-            description = "Right-click to use. Adds 3 Pesticide charges: each one clears a Termite Hive by itself. Sold by the Lumberjack. Hold up to 10.",
+            description = "Right-click to use. Adds {charges} Pesticide charges: each one clears a Termite Hive by itself. Sold by the Lumberjack. Hold up to {held}.",
             requiredType = PixelClicker.PixelType.Pesticide,
             costs = new[]
             {
@@ -1280,7 +1281,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         {
             kind = DeviceKind.LightningRod,
             displayName = "Lightning Rod",
-            description = "Place it. Every few seconds lightning strikes it and turns every old pixel around it into an Electric pixel. Dissolves after 8 strikes.",
+            description = "Place it. Every few seconds lightning strikes it and turns every husk around it into an Electric pixel. Dissolves after {uses} strikes.",
             requiredType = PixelClicker.PixelType.Electric,
             costs = new[]
             {
@@ -1654,9 +1655,47 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         }
 
         EnsureDefaultPotions();
+        UseDescriptionPlaceholders();
         ApplyShopText();   // names, descriptions and prices from Resources/ShopText.txt (before the attuned copies are made from them)
+        NamePotionsByTier();
         AppendComboPotions();
         AppendAttunedDevices();
+    }
+
+    /// <summary>
+    /// Device texts saved in the scene still carry the numbers they were written with ("Hold up to 5", "Adds 3 Pesticide charges", "old pixels"):
+    /// swap those for the placeholders ItemDescription fills in from the real settings, and 'old pixel' for 'husk'. A text without them is left alone.
+    /// </summary>
+    private void UseDescriptionPlaceholders()
+    {
+        foreach (Device d in devices)
+        {
+            if (d == null) continue;
+            if (!string.IsNullOrEmpty(d.description))
+            {
+                string t = d.description;
+                if (d.maxHeld > 0) t = System.Text.RegularExpressions.Regex.Replace(t, @"Hold up to \d+", "Hold up to {held}");
+                if (d.kind == DeviceKind.PesticideSpray) t = System.Text.RegularExpressions.Regex.Replace(t, @"Adds \d+ Pesticide charges", "Adds {charges} Pesticide charges");
+                if (d.kind == DeviceKind.LightningRod) t = System.Text.RegularExpressions.Regex.Replace(t, @"after \d+ strikes", "after {uses} strikes");
+                d.description = t.Replace("old pixels", "husks").Replace("old pixel", "husk");
+            }
+            if (!string.IsNullOrEmpty(d.placingMessage)) d.placingMessage = d.placingMessage.Replace("old pixels", "husks").Replace("old pixel", "husk");
+            // (belts join machines through couplings now, not by latching onto an opening)
+            if (d.description != null) d.description = d.description.Replace("(a conveyor belt opening in front of the chute latches on)", "(fit a coupling on the chute's socket to send them down a belt)");
+            if (d.placingMessage != null) d.placingMessage = d.placingMessage
+                .Replace("(a conveyor belt opening latches on)", "(a coupling on the chute's socket sends them down a belt)")
+                .Replace("a conveyor belt opening in front of it latches on", "fit a coupling on its output socket to send the husks down a belt");
+        }
+    }
+
+    /// <summary>The name players see for a pixel type: its tier's display name ("Termite Hive"), not the code name ("HornetNest").</summary>
+    private string TierName(PixelClicker.PixelType type) => clicker != null ? clicker.DisplayNameOf(type) : PixelClicker.TypeName(type);   // (PixelClicker.DisplayNameOf)
+
+    /// <summary>A plain potion still carrying the automatic code-name title ("HornetNest Potion") gets its tier's name instead (a name typed in the Inspector stays).</summary>
+    private void NamePotionsByTier()
+    {
+        foreach (Potion p in potions)
+            if (p != null && !p.craftOnly && p.displayName == PixelClicker.TypeName(p.type) + " Potion") p.displayName = TierName(p.type) + " Potion";
     }
 
     /// <summary>
@@ -1686,7 +1725,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             comboLookup[pairMask] = all.Count;
             all.Add(new Potion
             {
-                displayName = a.type + " + " + b.type + " Potion",
+                displayName = TierName(a.type) + " + " + TierName(b.type) + " Potion",
                 type = a.type,
                 secondType = b.type,
                 craftOnly = true,
@@ -1705,7 +1744,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
                 comboLookup[tripleMask] = all.Count;
                 all.Add(new Potion
                 {
-                    displayName = a.type + " + " + b.type + " + " + c.type + " Potion",
+                    displayName = TierName(a.type) + " + " + TierName(b.type) + " + " + TierName(c.type) + " Potion",
                     type = a.type,
                     secondType = b.type,
                     hasThird = true,
@@ -1740,13 +1779,13 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             {
                 Device src = FindDeviceOfKind(kind);
                 if (src == null) continue;
-                string name = "Attuned " + src.displayName + " (" + p.type + ")";
+                string name = "Attuned " + src.displayName + " (" + TierName(p.type) + ")";
                 if (all.Exists(x => x != null && x.displayName == name)) continue;
                 Device d = src.Clone();
                 d.attuned = true;
                 d.attuneType = p.type;
                 d.displayName = name;
-                d.description = "Works like the " + src.displayName + ", but only affects " + p.type + " pixels. Made by crafting a " + src.displayName + " with a " + p.type + " potion.";
+                d.description = "Works like the " + src.displayName + ", but only affects " + TierName(p.type) + " husks. Made by crafting a " + src.displayName + " with a " + TierName(p.type) + " potion.";
                 d.craftOnly = true;
                 d.costs = new PixelShop.PackCost[0];
                 d.owned = 0;
@@ -1893,8 +1932,24 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     }
     private static readonly RaycastHit[] cubeHits = new RaycastHit[64];   // (reused by DeviceUnderPointer)
 
+    // (asked 2-3 times a frame - right click, removal, arming: worked out once per frame for each of the two questions)
+    private int pointerDeviceFrame = -1, pointerDisarmedFrame = -1;
+    private PixelPlacedDevice pointerDevice, pointerDisarmed;
+
     /// <summary>The placed device under the mouse (nearest first). Looks at the device's visible parts, not its range markings. 'onlyDisarmed' = only devices still waiting for their first click.</summary>
     private PixelPlacedDevice DeviceUnderPointer(bool onlyDisarmed = false)
+    {
+        int frame = Time.frameCount;
+        if (onlyDisarmed)
+        {
+            if (pointerDisarmedFrame != frame) { pointerDisarmedFrame = frame; pointerDisarmed = FindDeviceUnderPointer(true); }
+            return pointerDisarmed;
+        }
+        if (pointerDeviceFrame != frame) { pointerDeviceFrame = frame; pointerDevice = FindDeviceUnderPointer(false); }
+        return pointerDevice;
+    }
+
+    private PixelPlacedDevice FindDeviceUnderPointer(bool onlyDisarmed)
     {
         Camera cam = clicker.ViewCamera;
         if (cam == null) return null;
@@ -2007,9 +2062,16 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     public int MaxPotionsHeld => maxPotionsHeld;
 
     /// <summary>A potion count cut down to the limit (used when loading a save).</summary>
+    /// <summary>Puts every held count back inside its cap (after a load, once the Operation Storage levels are known).</summary>
+    private void ClampAllHeld()
+    {
+        for (int i = 0; i < potions.Length; i++) if (potions[i] != null) potions[i].owned = ClampHeld(i, potions[i].owned);
+        for (int i = 0; i < devices.Length; i++) if (devices[i] != null) devices[i].owned = ClampDeviceHeld(i, devices[i].owned);
+    }
+
     public int ClampHeld(int index, int owned) => maxPotionsHeld > 0 ? Mathf.Clamp(owned, 0, ItemCapacity(index)) : Mathf.Max(0, owned);
 
-    /// <summary>How many more of an item you can hold right now (devices: no limit).</summary>
+    /// <summary>How many more of an item you can hold right now (no limit when its capacity is unlimited).</summary>
     public int ItemRoom(int item)
     {
         if (Inf) return int.MaxValue;
@@ -2018,16 +2080,16 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         return Mathf.Max(0, cap - ItemOwned(item));
     }
 
-    /// <summary>
-    /// Drinks one potion: only its pixel type spawns for its duration. Drinking another potion replaces the
-    /// running one. Returns false if you have none or its pixel type isn't unlocked.
-    /// </summary>
     /// <summary>Raised when the player drinks a potion (its name). Used by the stats.</summary>
     public static event Action<string> PotionDrunk;
 
     /// <summary>Raised when the player places a device. Used by the stats.</summary>
     public static event Action<DeviceKind> DevicePlaced;
 
+    /// <summary>
+    /// Drinks one potion: only its pixel type spawns for its duration. Drinking another potion replaces the
+    /// running one (the event log says so). Returns false if you have none or its pixel type isn't unlocked.
+    /// </summary>
     public bool TryConsume(int index)
     {
         if (index < 0 || index >= potions.Length) return false;
@@ -2037,6 +2099,8 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         if (potion.craftOnly && (!clicker.IsUnlocked(potion.secondType) || (potion.hasThird && !clicker.IsUnlocked(potion.thirdType)))) return false;
 
         if (!Inf) potion.owned--;
+        if (IsActive && Remaining > 0.5f)   // (one potion at a time: tell the player the running one ended, with its time left)
+            PixelHints.Announce(ItemName(index) + " replaced " + ItemName(ActiveIndex) + " (" + Mathf.CeilToInt(Remaining) + " s were left)");
         ApplyPotion(index, 1f);
         PotionDrunk?.Invoke(ItemName(index));
         return true;
@@ -2201,8 +2265,8 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     /// What one of an item costs right now. Potions: from their expected output (see <see cref="potionPriceFromOutput"/>).
     /// Devices (and potions with that off): the typed prices, scaled by each pixel's Value multiplier when that is on.
     /// </summary>
-    /// <summary>A device with a rising price (Device.priceGrowthPerOwned): its costs times growth ^ (how many are held + standing).</summary>
-    private PixelShop.PackCost[] Laddered(int item, PixelShop.PackCost[] costs)
+    /// <summary>A device with a rising price (Device.priceGrowthPerOwned): its costs times growth ^ (how many are held + standing + 'extra' already in this purchase).</summary>
+    private PixelShop.PackCost[] Laddered(int item, PixelShop.PackCost[] costs, int extra = 0)
     {
         if (!IsDevice(item) || costs == null) return costs;
         int index = item - potions.Length;
@@ -2210,6 +2274,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         if (d == null || d.priceGrowthPerOwned <= 1f) return costs;
         int have = d.owned;
         foreach (PixelPlacedDevice p in PixelPlacedDevice.All) if (p != null && !p.IsRemoving && p.DeviceIndex == index) have++;
+        have += Mathf.Max(0, extra);
         if (have <= 0) return costs;
         double factor = System.Math.Pow(d.priceGrowthPerOwned, have);
         PixelShop.PackCost[] up = new PixelShop.PackCost[costs.Length];
@@ -2221,7 +2286,34 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         return up;
     }
 
-    public PixelShop.PackCost[] ItemCosts(int item)
+    public PixelShop.PackCost[] ItemCosts(int item) => ItemCosts(item, 0);
+
+    /// <summary>
+    /// What 'count' of an item cost together. A device with a rising price (the Recycler) adds up each step (75 + 150 + 300...),
+    /// not 'count' times the price of the next one.
+    /// </summary>
+    public PixelShop.PackCost[] ItemCostsTotal(int item, int count)
+    {
+        if (count <= 0) return new PixelShop.PackCost[0];
+        System.Collections.Generic.List<PixelShop.PackCost> total = new System.Collections.Generic.List<PixelShop.PackCost>();
+        bool laddered = IsDevice(item) && devices[item - potions.Length] != null && devices[item - potions.Length].priceGrowthPerOwned > 1f;
+        for (int k = 0; k < (laddered ? count : 1); k++)
+        {
+            PixelShop.PackCost[] step = ItemCosts(item, k);
+            if (step == null) continue;
+            int times = laddered ? 1 : count;
+            foreach (PixelShop.PackCost c in step)
+            {
+                if (c == null) continue;
+                PixelShop.PackCost same = total.Find(t => t.type == c.type && t.minigameCurrency == c.minigameCurrency);
+                if (same != null) same.amount += c.amount * times;
+                else total.Add(new PixelShop.PackCost { type = c.type, amount = c.amount * times, minigameCurrency = c.minigameCurrency });
+            }
+        }
+        return total.ToArray();
+    }
+
+    private PixelShop.PackCost[] ItemCosts(int item, int extra)
     {
         if (IsDevice(item) && devices[item - potions.Length].kind == DeviceKind.Seed && clicker != null && !IsDragonSeed(item))
         {
@@ -2241,7 +2333,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         }
 
         PixelShop.PackCost[] baseCosts = IsDevice(item) ? devices[item - potions.Length].costs : potions[item].costs;
-        baseCosts = Laddered(item, baseCosts);
+        baseCosts = Laddered(item, baseCosts, extra);
         if (!scalePricesWithValue || clicker == null || baseCosts == null) return baseCosts;
 
         PixelShop.PackCost[] scaled = new PixelShop.PackCost[baseCosts.Length];
@@ -2662,9 +2754,15 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         if (!IsDevice(item)) return Describe(item);
 
         Device d = EffectiveDevice(devices[item - potions.Length]);
-        return (d.description ?? "")
+        string text = d.description ?? "";
+        if (text.IndexOf('{') < 0) return text;
+        int held = ItemCapacity(item);
+        return text
             .Replace("{radius}", d.radius.ToString("0.##"))
-            .Replace("{duration}", DeviceSeconds(d).ToString("0.##"));
+            .Replace("{duration}", DeviceSeconds(d).ToString("0.##"))
+            .Replace("{held}", held == int.MaxValue ? "any number" : held.ToString())
+            .Replace("{charges}", PesticideSprayCharges.ToString())
+            .Replace("{uses}", d.uses.ToString());
     }
 
     /// <summary>Gives the player devices of a kind (a gift, e.g. Cubie's Recycler). False if there is no such device.</summary>
@@ -2796,8 +2894,10 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         Device effective = EffectiveDevice(devices[index]);
         PixelPlacedDevice placed = SpawnDevice(index, point, yaw, UsesKind(kind) ? effective.uses : DeviceSeconds(effective), 0f, 0f, -1);
         if (placed == null) return null;
+        if (StartsDisarmed(kind)) placed.Disarm();   // (like a device the player places)
         PixelAudio.Play("device_place");
         DevicePlaced?.Invoke(kind);
+        onDevicePlaced?.Invoke(index);
         return placed.gameObject;
     }
 
@@ -2883,6 +2983,9 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         if (placed == null) return null;
         if (!Inf) d.owned = Mathf.Max(0, d.owned - 1);
         PixelAudio.Play("device_place");
+        // (it stays switched on: keeping a device going without the player is the UFO's job. The placed events fire like for any device.)
+        DevicePlaced?.Invoke(d.kind);
+        onDevicePlaced?.Invoke(deviceIndex);
         return placed;
     }
 
@@ -3128,12 +3231,17 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
 
         Device effective = EffectiveDevice(d);
         PixelPlacedDevice placed = SpawnDevice(index, point, placingYaw, UsesKind(d.kind) ? effective.uses : DeviceSeconds(effective), 0f, 0f, -1);
-        if (placed != null && d.kind != DeviceKind.StorageCrate && d.kind != DeviceKind.WoodChipper && d.kind != DeviceKind.Funnel && d.kind != DeviceKind.Recycler && d.kind != DeviceKind.SortingHopper && d.kind != DeviceKind.Sweeper && d.kind != DeviceKind.JunctionBox && !IsGeneratorKind(d.kind)) placed.Disarm();   // (the crate needs no switching on) starts grey and idle until you left-click it
+        if (placed != null && StartsDisarmed(d.kind)) placed.Disarm();   // starts grey and idle until you left-click it
 
         EndPlacement();
         DevicePlaced?.Invoke(d.kind);
         onDevicePlaced?.Invoke(index);
     }
+
+    /// <summary>Does a device of this kind start grey and idle until it is clicked once? (The permanent machines need no switching on.)</summary>
+    public static bool StartsDisarmed(DeviceKind kind) =>
+        kind != DeviceKind.StorageCrate && kind != DeviceKind.WoodChipper && kind != DeviceKind.Funnel && kind != DeviceKind.Recycler &&
+        kind != DeviceKind.SortingHopper && kind != DeviceKind.Sweeper && kind != DeviceKind.JunctionBox && !IsGeneratorKind(kind);
 
     /// <summary>Builds a working device in the world (placing it, or restoring it from a save).</summary>
     private PixelPlacedDevice SpawnDevice(int index, Vector3 point, float yaw, float duration, float aim, float bend, int force)
@@ -4054,9 +4162,9 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     {
         Potion potion = potions[index];
         return (potion.description ?? "")
-            .Replace("{pixel}", potion.type.ToString())
-            .Replace("{pixel2}", potion.secondType.ToString())
-            .Replace("{pixel3}", potion.thirdType.ToString())
+            .Replace("{pixel}", TierName(potion.type))
+            .Replace("{pixel2}", TierName(potion.secondType))
+            .Replace("{pixel3}", TierName(potion.thirdType))
             .Replace("{duration}", potion.durationSeconds.ToString("0.##"));
     }
 }

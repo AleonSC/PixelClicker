@@ -2244,7 +2244,7 @@ public partial class PixelShop : MonoBehaviour
         if (consumables.ItemCraftOnly(itemIndex) || consumables.ItemNotSold(itemIndex) || consumables.ItemVendorOnly(itemIndex) || ItemLocked(itemIndex)) return false;
         if (count > consumables.ItemRoom(itemIndex)) return false; // potions are capped per type
 
-        PackCost[] total = ScaleCosts(consumables.ItemCosts(itemIndex), count);
+        PackCost[] total = consumables.ItemCostsTotal(itemIndex, count);   // (a rising price adds up step by step)
         if (!CanAffordCosts(total)) return false;
 
         foreach (PackCost cost in total) SpendCost(cost);

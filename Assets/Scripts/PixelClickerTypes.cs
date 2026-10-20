@@ -147,6 +147,13 @@ public partial class PixelClicker
         return name;
     }
 
+    /// <summary>The name PLAYERS see for a pixel type: its tier's display name ("Termite Hive"), never the code name ("HornetNest"). Use it in every player-facing text.</summary>
+    public string DisplayNameOf(PixelType type)
+    {
+        int i = IndexOf(type);
+        return i >= 0 && !string.IsNullOrEmpty(tiers[i].displayName) ? tiers[i].displayName : TypeName(type);
+    }
+
     /// <summary>Ores taken out of Mining (none at the moment: Lead, Zinc and Nickel are back). Tag a block RetiredOre to keep it out of the spawns.</summary>
     public static bool IsRetiredOre(PixelType type) => PixelBlockTags.Has(type, PixelTag.RetiredOre);   // (the tag table in PixelBlockTags.cs)
 
