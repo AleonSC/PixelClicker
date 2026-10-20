@@ -100,7 +100,7 @@ Two read-only passes: one on the code (belts, riders, couplings, the tester fact
 
   The Workbench (109) is a strong fourth.
 - **Dead ends:**
-  - the Kiln burns any husk (no filter) into Charcoal as a pixel type (against the "machines make products" rule); keep it out of the shop until Charcoal has a use (Biomass fuel fits now);
+  - (2026-10-20: Charcoal is now Biomass fuel and the Lumberjack buys it; the Trash Can stays a dev tool.) The Kiln burns any husk (no filter) into Charcoal as a pixel type (against the "machines make products" rule); keep it out of the shop until Charcoal has a use (Biomass fuel fits now);
   - cut the Trash Can;
   - the Control Lever has no job until Signal sockets exist.
 - **Throughput is free (guess).** About 1.45 husks/s per lane at the default speed. The panel allows up to 8 cubes/s at no cost, which removes the one thing to tune. Belt speed could be the Electrician lever, or later run faster while powered.

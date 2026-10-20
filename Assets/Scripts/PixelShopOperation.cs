@@ -23,7 +23,7 @@ public partial class PixelShop
     };
 
     /// <summary>Operation rows that were removed (2026-10-18: one Speed and one Size per husk machine): taken out of the saved list.</summary>
-    private static readonly string[] RemovedOperationUpgrades = { "rec_duration", "rec_streak", "rec_suction", "sort_duration", "sort_force" };
+    private static readonly string[] RemovedOperationUpgrades = { "rec_streak", "rec_suction", "sort_duration", "sort_force" };
 
     /// <summary>Adds any built-in Operation upgrade missing from the list (by id). Returns true if something was added.</summary>
     private bool EnsureDefaultOperationUpgrades()

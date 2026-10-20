@@ -2,7 +2,11 @@
 
 History and system notes moved from CLAUDE.md long ago. The open IDEAS from here now live in `Assets/Resources/Ideas.txt` (Dev Hub > Docs > Ideas); this file keeps the background (balance decisions, reworks, profiling).
 
-- **Handoff + optimization review written (2026-10-07): see `HANDOFF.md` in the repo root** (working rules recap, unverified items, lessons, and a prioritized optimization list). Done so far: #1-6, 9, 10, 11, 14, 22, 24, 27 (see git log). Remaining items are still open.
+- **Handoff + first optimization review (2026-10-07).** The old `HANDOFF.md` (removed 2026-10-20: its rules recap and branch / attribution lines were outdated, CLAUDE.md is the rule book) held a 29-item optimization list. Its items were done or carried into `OptimizationReview2.md` (old "HANDOFF #N" references there point to this list); still open from it: one time-scale owner (#26: pause, Time Stop and the title screen each save / restore `Time.timeScale`), a pack-effect list instead of one bool per effect (#25), the title-screen blur's `Camera.main.Render()` on URP overlay cameras (#28), and further big-file splits (#29).
+- **Lessons kept from that handoff:**
+  - Patching by "first text match" put code in the wrong function twice: when editing with scripts, assert the match is unique or anchor on the function name, then `grep -n` the result.
+  - `Time.timeScale = 0` is used by the pause menu, Time Stop and the title screen: anything that must run while frozen uses `Time.unscaledDeltaTime`.
+  - A fresh UI element's `rect` is not valid until the canvas updates: compute sizes from `Screen` / the canvas scale instead.
 - **Optimization review 2 (2026-10-17, whole codebase): `docs/systems/OptimizationReview2.md`** - ranked list, none of it done yet.
 - The UI helper (`PixelUIKit`) and minigame base (`PixelMinigame`) refactors are verified in Unity by the user.
 - Cleanup still worth doing: (`PixelShop` is now split into three partial-class files; a deeper split into separate logic and UI classes is still possible); (the shop's "add missing defaults" code is now one table-driven loop; potions/devices/achievements keep their own small versions); optionally replace scene searches with one shared game object that owns the references (the version-check duplication is already gone via `PixelFind`).

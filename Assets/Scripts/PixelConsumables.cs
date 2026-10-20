@@ -235,7 +235,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         Sweeper = 25,
         /// <summary>Placed, permanent: a box with eight auto-direction coupling sockets (PixelJunctionBox) that routes husks from its In couplings to its Out ones (filters, round robin, a small buffer). On sale in the shop's Utilities (2026-10-19).</summary>
         JunctionBox = 26,
-        /// <summary>Placed: a small Biomass Generator (PixelBiomassGenerator) - burns Woodcutting husks to power every device in its radius (their timers stop). Shop Consumables.</summary>
+        /// <summary>Placed: a small Biomass Generator (PixelBiomassGenerator) - burns Woodcutting, Charcoal and Wood Chips husks to power every device in its radius (their timers stop). Shop Consumables.</summary>
         PocketBiomassGenerator = 27,
         /// <summary>Placed: the big Biomass Generator (PixelBiomassGenerator) - more charge, a wider radius. On sale at Woodcutting level 10.</summary>
         BiomassGenerator = 28,
@@ -994,7 +994,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         {
             kind = DeviceKind.PocketBiomassGenerator,
             displayName = "Pocket Biomass Generator",
-            description = "A little generator that burns Woodcutting husks. Every device inside its blue ring runs on its power, so their timers stop - they all show its blue energy bar. It comes fully charged and slowly runs down: drop wood husks into the firebox on top to top it up. When it runs dry it flashes red for a few seconds and then shuts down for good - unless you feed it in time.",
+            description = "A little generator that burns Woodcutting husks (Charcoal and Wood Chips burn longer). Every device inside its blue ring runs on its power, so their timers stop - they all show its blue energy bar. It comes fully charged and slowly runs down: drop wood husks into the firebox on top to top it up. When it runs dry it flashes red for a few seconds and then shuts down for good - unless you feed it in time.",
             requiredType = PixelClicker.PixelType.Wood,
             costs = new[]
             {
@@ -1019,7 +1019,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         {
             kind = DeviceKind.BiomassGenerator,
             displayName = "Biomass Generator",
-            description = "A big generator that burns Woodcutting husks. Every device inside its wide blue ring runs on its power, so their timers stop - they all show its blue energy bar. It comes fully charged and holds much more than the pocket one: drop wood husks into the firebox on top (or feed them in through its intake coupling). When it runs dry it flashes red for a few seconds and then shuts down for good - unless you feed it in time.",
+            description = "A big generator that burns Woodcutting husks (Charcoal and Wood Chips burn longer). Every device inside its wide blue ring runs on its power, so their timers stop - they all show its blue energy bar. It comes fully charged and holds much more than the pocket one: drop wood husks into the firebox on top (or feed them in through its intake coupling). When it runs dry it flashes red for a few seconds and then shuts down for good - unless you feed it in time.",
             requiredType = PixelClicker.PixelType.Wood,
             costs = new[]
             {

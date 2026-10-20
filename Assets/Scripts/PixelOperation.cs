@@ -135,6 +135,7 @@ public class PixelOperationUpgrade
 
             // One Speed and one Size upgrade per husk machine (2026-10-18).
             U("rec_speed", "Speed", "Husks are recycled sooner after they land in the Recycler.", Y, PixelOperationStat.Speed, 5, -0.08f, 60, " s"),
+            U("rec_duration", "Run Time", "How long a placed Recycler works: +1 minute a level, up to 10 minutes.", Y, PixelOperationStat.Duration, 5, 60f, 100, " s"),
             U("rec_size", "Size", "A bigger bin: it catches more husks, holds more and its suction reaches further round it.", Y, PixelOperationStat.Radius, 5, 0.135f, 80, "x"),
             U("hop_speed", "Speed", "Husks leave the Sorting Hopper faster (into the Recycler or out of its bottom spout).", H, PixelOperationStat.Speed, 5, -0.05f, 60, " s"),
             U("hop_size", "Size", "A bigger funnel: a wider bowl catches more husks.", H, PixelOperationStat.Size, 5, 0.12f, 80, "x"),

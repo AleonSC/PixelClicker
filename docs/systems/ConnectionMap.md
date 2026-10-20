@@ -52,7 +52,7 @@ Keep this map current: when a system gets a new link (or loses one), change its 
 | Quantum Organizer | bound types | stores them in its box | despawn, space | ? | Built |
 | Storage Crate | old pixels | stores them, click to take out | despawn | ? | Built |
 | Funnel | falling old pixels | a queue down a tube to a belt (with backpressure) | space, despawn | Electrician? | Built |
-| Wood Chipper | wood husks | Woodcutting XP + Wood Chips | despawn | Woodcutting | Built |
+| Wood Chipper | wood husks | Woodcutting XP + Wood Chips (Biomass fuel x4, sold to the Lumberjack) | despawn | Woodcutting | Built |
 | Sprinkler | - | waters sprouts | - | Farming | Built |
 | Charge Booster | Electric pixels | a super charge | - | Electrician | Built |
 | Lightning Rod | old pixels around it | turns them into Electric pixels | - | Electrician | Built |
@@ -75,7 +75,7 @@ Keep this map current: when a system gets a new link (or loses one), change its 
 | Conveyor Elevator | a belt's husks | lifts them to a higher belt | space | Electrician? | Built (tester) |
 | Container Hose | husks stored in a crate / organizer (Out coupling) | into any In coupling, routed through bend points | space | Electrician? | Built (tester) |
 | Belt Sorter | a belt's husks + one filter block | that type off the side | space, the rotation | Electrician? | Built (tester) |
-| Kiln | husks | Charcoal husks | despawn | ? | Built (tester) |
+| Kiln | husks | Charcoal husks (Biomass fuel x3, sold to the Lumberjack) | despawn | ? | Built (tester) |
 | Trash Can | loose husks | deletes them | space | ? | Built (tester) |
 | Sweeper | husks close to fading | into the nearest crate / hopper / Recycler with room | despawn, space | Standard 5 (motor: Electrician, planned) | Built |
 
@@ -89,7 +89,7 @@ Keep this map current: when a system gets a new link (or loses one), change its 
 
 Machines can **break** from the wrong input (main cause) or gentle wear (optional); a broken machine stops and keeps its contents until it is repaired in first person (`PixelRules.md`, "Machine breakdowns and repair").
 
-**Gaps:** Charcoal (Kiln) and Wood Chips (Chipper) have no use yet; most factory machines have no decided skill home (Electrician is the natural one); several shop devices have no skill home (fine for early-game tools, but say so).
+**Gaps:** (2026-10-20: Charcoal and Wood Chips now fuel Biomass Generators and sell to the Lumberjack.) most factory machines have no decided skill home (Electrician is the natural one); several shop devices have no skill home (fine for early-game tools, but say so).
 
 ## 4. Pressures and what answers them
 
@@ -155,7 +155,7 @@ Machines can **break** from the wrong input (main cause) or gentle wear (optiona
 2. **Fishing:** an outgoing link (e.g. Water -> Farming, Pearls -> crafting).
 3. **Mining:** an incoming link (e.g. Electrician powers a drill; Charcoal fuels a smelter). Its metal husks as machine repair material (Designed) give it an outgoing link.
 4. **Electrician as the factory skill:** confirm it is the home of belts, splitters, elevators, hoses, couplings, sorters and the Sweeper's motor.
-5. **Dead-end outputs:** Charcoal, Wood Chips and Magic Wood need a use.
+5. **Dead-end outputs:** Magic Wood needs a use (Charcoal and Wood Chips: Biomass fuel + the Lumberjack, 2026-10-20).
 6. **Minigames:** give each one a skill it feeds.
 7. **Pixel rules rework:** step 1 built (husks stop paying; Vacuum gives husk XP, Solar keeps daylight up, Bank is storage). Open: should the husk minigames (Snake, Sorting Race, Breakout) keep paying currency per husk?
 8. **Shop relics:** most shop pixels and devices are left over from early development. Decide which consumables stay shop-only from the start and which move to unlocks later (and from which skill).

@@ -52,8 +52,8 @@ Three read-only passes: device code, consumable code, and game design. The desig
 ## 4. Design findings (decisions for you / the Design Discussion session)
 
 **Biggest friction**
-- **Recycler lifetime.** Every device chain ends in the Recycler (Sweeper, Hopper, hose, crate), but it lasts 5 minutes and vanishes with its contents. The Run Time Operation row that came with the 5-minute change (2026-10-16) has since been removed, so only a Woodcutting Biomass Generator can keep it running. Options: make it permanent with its price ladder, bring Run Time back, or keep it timed on purpose. (Its script header says "permanent" and its doubling factor is 1.8, but the data says 300 s and 2.)
-- **Too much at once.** When the shop opens (~6 min) Utilities already lists Recycler, Coupling, Hose, Belt Kit and Junction Box (all gated by White), plus the Crate (Gray): four factory parts with nothing worth connecting. Gate the factory parts behind the Funnel at about Standard 6-7, using the planned shared "needs skill X level N" table (to-do line 21). Three different gating mechanisms exist today: `requiredType`, `shopSkillId`, `devOnly`.
+- **Recycler lifetime.** (Done 2026-10-20: Run Time is back, +1 minute a level up to 10 minutes.) Every device chain ends in the Recycler (Sweeper, Hopper, hose, crate), but it lasts 5 minutes and vanishes with its contents. The Run Time Operation row that came with the 5-minute change (2026-10-16) has since been removed, so only a Woodcutting Biomass Generator can keep it running. Options: make it permanent with its price ladder, bring Run Time back, or keep it timed on purpose. (Its script header says "permanent" and its doubling factor is 1.8, but the data says 300 s and 2.)
+- **Too much at once.** (2026-10-20: the user will tier the unlocks themselves later.) When the shop opens (~6 min) Utilities already lists Recycler, Coupling, Hose, Belt Kit and Junction Box (all gated by White), plus the Crate (Gray): four factory parts with nothing worth connecting. Gate the factory parts behind the Funnel at about Standard 6-7, using the planned shared "needs skill X level N" table (to-do line 21). Three different gating mechanisms exist today: `requiredType`, `shopSkillId`, `devOnly`.
 - **Dead zone after the Sweeper (Standard 5, ~30 min).** The Magnet needs the Electrician pack, the Fan needs Glass, and the Funnel, Organizer and Sorter are dev-only. That leaves no new general husk tools for an estimated 1-3 hours.
 
 **Items that need a clearer job**
@@ -62,16 +62,16 @@ Three read-only passes: device code, consumable code, and game design. The desig
 - **Vacuum Device (dev-only):** really an automatic Husk Crush. Rework it into a permanent "Crusher" that auto-crushes for about 0.35 of a click's XP, so the Recycler automates money and the Crusher automates XP.
 - **Storage Crate:** stored husks have no use until the Workbench exists (to-do lines 109-111); it costs more than the Hopper and does less. Prioritise the Workbench, or cheapen the Crate meanwhile.
 - **Quantum Organizer (dev-only):** a storage device on a timer that empties it. Make it permanent at Standard 12+ (as planned).
-- **Dead outputs:** Charcoal (Kiln) and Wood Chips have no use. Make them Biomass fuel (planned, to-do line 120, but it fits the existing generator now).
+- **Dead outputs:** (Done 2026-10-20: Biomass Generators burn Charcoal x3 and Wood Chips x4, and the Lumberjack buys both husks off the floor.) Charcoal (Kiln) and Wood Chips have no use. Make them Biomass fuel (planned, to-do line 120, but it fits the existing generator now).
 - **Unreachable recipes:** the Magnetized Sorter and the attuned Vacuum need the dev-only Sorter / Vacuum. Re-recipe them (for example Magnet + Junction Box).
 - **Bait Bucket:** Fishing is on sale but its only tool is dev-only.
 
 **Cut or merge candidates**
-- **Trash Can (tester):** does what the despawn timer already does.
-- **Sorter ring (dev-only):** dates from before husks stopped paying; Aimed Clicks and the Funnel cover it.
+- **Trash Can (tester):** (Decided 2026-10-20: it stays a dev tool, never sold.) Does what the despawn timer already does.
+- **Sorter ring (dev-only):** (Done 2026-10-20: removed.) Dates from before husks stopped paying; Aimed Clicks and the Funnel cover it.
 - **Belt Sorter (tester):** a third filter device; merge into the Junction Box filters (which also overlap the Hopper's Outputs upgrade).
 
-**Bigger direction (already in Ideas: "Power... plan this one next")**
+**Bigger direction (already in Ideas: "Power... plan this one next"; 2026-10-20: power comes later as its own mechanic, not through the husk sockets)**
 - **Power as the one upkeep rule:** replace the per-device timers (Fan 30 s, Magnet 30 s, Sprinkler 45 s, Organizer 600 s, Magnetized Sorter 180 s) with "runs while powered". Power would come from Biomass (wood), Solar, Electric husks / Charge Booster and Charcoal. That gives Electrician, Woodcutting and Solar outgoing links (Connection Map gaps) and replaces the pile of timers with one rule.
 
 **Stale docs:** `ConnectionMap.md` still lists the belt as "Electrician level 5", the Vacuum Device as plain "Built" and the Recycler as "Designed" under despawn.

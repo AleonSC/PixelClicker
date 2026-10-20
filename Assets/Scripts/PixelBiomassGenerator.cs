@@ -5,7 +5,8 @@
 //   - BIOMASS GENERATOR (DeviceKind.BiomassGenerator 28): the big one, on sale at Woodcutting level 10 (shopSkillId 'woodcutting').
 //   They differ only in their Device entry: radius (how far the power reaches), generatorMaxCharge (seconds of power when full) and generatorChargePerHusk
 //   (seconds one wood husk adds), and the model's size (bodyDiameter).
-//   - FUEL: husks of WOODCUTTING (PixelSkills.HuskSkillId == woodcutting) that land in the open firebox on top (dropped by hand or by physics) - or come
+//   - FUEL: husks of WOODCUTTING (PixelSkills.HuskSkillId == woodcutting), plus CHARCOAL (the Kiln's, x charcoalFuel = 3 wood husks) and WOOD CHIPS
+//     (the Wood Chipper's, x woodChipsFuel = 4; 2026-10-20, FuelOf) that land in the open firebox on top (dropped by hand or by physics) - or come
 //     in through its intake coupling socket - are burnt: taken off the floor (FlyIn), + generatorChargePerHusk, up to the max. Other husks are left alone.
 //     The firebox is never narrower than 1.8 husk widths (the pocket model is small) and a husk resting on its rim counts. A SMALL SUCTION (suckRadiusHusks,
 //     suckStrength) draws loose Woodcutting husks nearby up and in towards it while it has room for fuel (FixedUpdate).
@@ -39,6 +40,14 @@ public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHu
     [Min(0f)]
     [Tooltip("How strong that pull is (husk widths per second squared). Small on purpose.")]
     [SerializeField] private float suckStrength = 7f;
+
+    [Header("Fuel")]
+    [Min(0f)]
+    [Tooltip("How many wood husks' worth of charge one CHARCOAL husk (from the Kiln) gives. 0 = Charcoal is not burnt.")]
+    [SerializeField] private float charcoalFuel = 3f;
+    [Min(0f)]
+    [Tooltip("How many wood husks' worth of charge one WOOD CHIPS husk (from the Wood Chipper) gives. 0 = Wood Chips are not burnt.")]
+    [SerializeField] private float woodChipsFuel = 4f;
 
     [Tooltip("Colour of the energy bar (and the radius ring).")]
     [SerializeField] private Color energyColor = new Color(0.35f, 0.7f, 1f, 1f);
@@ -201,24 +210,33 @@ public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHu
 
     public bool AcceptHusk(PixelSocket socket, Rigidbody husk) => husk != null && IsWood(husk) && charge < maxCharge && Burn(husk);
 
-    /// <summary>Only wood husks go in (a hose from a mixed crate pulls just the wood: IPixelHuskFilter).</summary>
+    /// <summary>Only fuel goes in (a hose from a mixed crate pulls just the wood, Charcoal and Wood Chips: IPixelHuskFilter).</summary>
     public bool Takes(PixelSocket socket, int tier) => IsWoodTier(tier);
 
     private bool IsWood(Rigidbody body) => IsWoodTier(PixelHuskQuery.Get(body).Tier);
 
-    private bool IsWoodTier(int tier)
+    private bool IsWoodTier(int tier) => FuelOf(tier) > 0f;
+
+    /// <summary>How many wood husks' worth of charge a husk of this tier gives: 1 for a Woodcutting husk, charcoalFuel / woodChipsFuel for the
+    /// Kiln's and the Wood Chipper's products, 0 = not fuel.</summary>
+    private float FuelOf(int tier)
     {
+        if (clicker == null || !clicker.IsValidTierIndex(tier)) return 0f;
+        PixelClicker.PixelType type = clicker.Tiers[tier].type;
+        if (type == PixelClicker.PixelType.Charcoal) return charcoalFuel;
+        if (type == PixelClicker.PixelType.WoodChips) return woodChipsFuel;
         PixelSkills skills = PixelSkills.Instance;
-        return clicker != null && clicker.IsValidTierIndex(tier) && skills != null && skills.HuskSkillId(tier) == PixelSkills.WoodcuttingId;
+        return skills != null && skills.HuskSkillId(tier) == PixelSkills.WoodcuttingId ? 1f : 0f;
     }
 
-    /// <summary>A wood husk goes in the fire: taken off the floor (it shrinks into the embers), the charge rises, an empty generator is saved. False = it could not be taken.</summary>
+    /// <summary>A fuel husk goes in the fire: taken off the floor (it shrinks into the embers), the charge rises (perHusk x its fuel value), an empty generator is saved. False = it could not be taken.</summary>
     private bool Burn(Rigidbody body)
     {
+        float fuel = FuelOf(PixelHuskQuery.Get(body).Tier);
         if (clicker == null || !clicker.ReleaseOldPixel(body, false)) return false;
         float u = Unit(clicker) * size;
         StartCoroutine(PixelHuskHolder.FlyIn(body.gameObject, null, transform.TransformPoint(new Vector3(0f, 2.35f * u, 0f)), false, 0.25f));
-        charge = Mathf.Min(maxCharge, Mathf.Max(0f, charge) + perHusk);
+        charge = Mathf.Min(maxCharge, Mathf.Max(0f, charge) + perHusk * fuel);
         redLeft = -1f;   // (fed in the red state: saved)
         PixelAudio.Play("fire_crackle");
         PixelStats.Count("generator.husks");
@@ -348,7 +366,9 @@ public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHu
         if (!info.Full) return;
         info.Add("Reach", radius.ToString("0.#") + " units");
         info.Add("Per wood husk", "+" + perHusk.ToString("0.#") + " s");
-        info.Note("<color=#9FB0CC>Drop Woodcutting husks into the firebox on top (or feed them in through its intake coupling). Every device in the blue ring runs on its power: its timer stops.</color>");
+        if (charcoalFuel > 0f) info.Add("Per Charcoal", "+" + (perHusk * charcoalFuel).ToString("0.#") + " s");
+        if (woodChipsFuel > 0f) info.Add("Per Wood Chips", "+" + (perHusk * woodChipsFuel).ToString("0.#") + " s");
+        info.Note("<color=#9FB0CC>Drop Woodcutting, Charcoal or Wood Chips husks into the firebox on top (or feed them in through its intake coupling). Every device in the blue ring runs on its power: its timer stops.</color>");
     }
 
     // ---- Saving (PixelConsumables puts this in PlacedState.extra) ----

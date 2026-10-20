@@ -7,7 +7,8 @@
 //   1-3 in stock, costs 3-8 Pesticide + 50-150 of one random pure pixel). PRICES (RollVisitPrice, once per visit): a potion costs some of its own material
 //   (potionMaterialRange 10-30) + ONE random pure pixel (potionPureFraction 30-60% of its normal price); Focus costs focusHiveCost (3) Termite Hives + TWO
 //   different random pure pixels (focusPureRange 100-300 each) + some of one random woodcutting pixel you have unlocked (focusWoodRange 10-30). Each potion comes 0-2 times (potionStockLow / High) - 0 = not on sale this visit. SELL tab (2026-10-16, its own panel - PixelVisitorMinigame.CustomSellPanel): pick ANY woodcutting currency you hold
-//   (drop-down), the AMOUNT (slider + 10% / 25% / 50% / All), what to be paid in (a pure pixel you have unlocked), then 'Ask for an offer' - he names a RANDOM price; Accept or Decline.
+//   (drop-down) - or (2026-10-20) CHARCOAL / WOOD CHIPS HUSKS lying loose on the floor (the Kiln's and the Wood Chipper's products; HuskWorthInWood:
+//   charcoalWorthInWood 3 / woodChipsWorthInWood 4 Wood each; on Accept he takes that many off the floor, TakeHusks) - the AMOUNT (slider + 10% / 25% / 50% / All), what to be paid in (a pure pixel you have unlocked), then 'Ask for an offer' - he names a RANDOM price; Accept or Decline.
 //   OFFER FORMULA (Offer): fair = amount x UnitValue(wood) / UnitValue(pure)   [UnitValue = 1 / (spawn weight x pay per click / clicks) - the rarer, the more it is worth]
 //     x sellRate (0.8, his cut)  x bulk = 1 - bulkDiscountMax (0.3) x amount / (amount + bulkHalfAmount 400)  [big piles get a worse rate per unit]
 //     x mood (rolled once per visit, moodRange 0.85-1.15)  x roll = the average of two randoms in offerRollRange 0.7-1.25 (usually near the middle, rarely an extreme)
@@ -46,6 +47,14 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
     [Range(0f, 0.05f)]
     [Tooltip("Better prices per Woodcutting level (0.01 = +1% a level, at most +30%).")]
     [SerializeField] private float levelBonusPerLevel = 0.01f;
+
+    [Header("Buying your Charcoal and Wood Chips husks (Sell tab)")]
+    [Min(0f)]
+    [Tooltip("What one CHARCOAL husk (from the Kiln) is worth to him, in Wood (his fair rate: x the Wood block's value, then his cut, mood and roll). 0 = he doesn't buy them.")]
+    [SerializeField] private float charcoalWorthInWood = 3f;
+    [Min(0f)]
+    [Tooltip("What one WOOD CHIPS husk (from the Wood Chipper) is worth to him, in Wood. 0 = he doesn't buy them.")]
+    [SerializeField] private float woodChipsWorthInWood = 4f;
 
     [Header("Focus potions")]
     [Range(0f, 1f)]
@@ -187,6 +196,33 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
         return 1d / earnRate;
     }
 
+    /// <summary>Husk goods he buys straight off the floor (Charcoal, Wood Chips: they only exist as husks): what one is worth in Wood, 0 = not a husk good.</summary>
+    private float HuskWorthInWood(PixelClicker.PixelType t) =>
+        t == PixelClicker.PixelType.Charcoal ? charcoalWorthInWood : t == PixelClicker.PixelType.WoodChips ? woodChipsWorthInWood : 0f;
+
+    /// <summary>How many of the thing in this tier you can sell him: your currency for a wood block, the loose husks on the floor for a husk good.</summary>
+    private double HeldToSell(int tier)
+    {
+        PixelClicker.PixelTier t = clicker.Tiers[tier];
+        if (HuskWorthInWood(t.type) <= 0f) return System.Math.Floor(t.count);
+        int n = 0;
+        foreach (Rigidbody b in clicker.OldPixels)
+            if (b != null && PixelHuskQuery.Get(b).Tier == tier && PixelHuskHolder.Takeable(clicker, b)) n++;
+        return n;
+    }
+
+    /// <summary>He takes 'amount' loose husks of this tier off the floor (they shrink away upwards). False if fewer are left.</summary>
+    private bool TakeHusks(int tier, double amount)
+    {
+        if (HeldToSell(tier) < amount) return false;
+        List<Rigidbody> take = new List<Rigidbody>();
+        foreach (Rigidbody b in clicker.OldPixels)
+            if (take.Count < amount && b != null && PixelHuskQuery.Get(b).Tier == tier && PixelHuskHolder.Takeable(clicker, b)) take.Add(b);
+        foreach (Rigidbody b in take)
+            if (clicker.ReleaseOldPixel(b, false)) StartCoroutine(PixelHuskHolder.FlyIn(b.gameObject, null, b.position + Vector3.up * 1.5f, false, 0.4f));
+        return true;
+    }
+
     private static bool IsPure(PixelClicker.PixelType type) => type >= PixelClicker.PixelType.White && type <= PixelClicker.PixelType.Blue;
 
     // ------------------------------------------------------------------
@@ -296,7 +332,12 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
         List<string> woodNames = new List<string>(), payNames = new List<string>();
         for (int i = 0; i < tiers.Length; i++)
         {
-            if (IsPackPixel(tiers[i].type) && tiers[i].count >= 1d) { woodTiers.Add(i); woodNames.Add(tiers[i].displayName + "  (" + PixelClicker.FormatNumberShort(System.Math.Floor(tiers[i].count)) + ")"); }
+            bool husks = HuskWorthInWood(tiers[i].type) > 0f;
+            if ((IsPackPixel(tiers[i].type) || husks) && HeldToSell(i) >= 1d)
+            {
+                woodTiers.Add(i);
+                woodNames.Add(tiers[i].displayName + (husks ? " husks  (" + HeldToSell(i) + " on the floor)" : "  (" + PixelClicker.FormatNumberShort(HeldToSell(i)) + ")"));
+            }
             if (IsPure(tiers[i].type) && tiers[i].unlocked) { payTiers.Add(i); payNames.Add(tiers[i].displayName); }
         }
         if (woodNames.Count == 0) woodNames.Add("(no wood to sell)");
@@ -318,7 +359,7 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
     private void RefreshAmount(bool resetToHalf)
     {
         int wood = SelectedWood;
-        double held = wood >= 0 ? System.Math.Floor(clicker.Tiers[wood].count) : 0d;
+        double held = wood >= 0 ? HeldToSell(wood) : 0d;
         panelUpdating = true;
         float max = (float)System.Math.Min(held, 1e9);
         amountSlider.minValue = max >= 1f ? 1f : 0f;
@@ -341,7 +382,10 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
     private double Offer(int wood, int pay, double amount)
     {
         PixelClicker.PixelTier[] tiers = clicker.Tiers;
-        double fair = amount * UnitValue(tiers[wood]) / UnitValue(tiers[pay]);
+        float huskWorth = HuskWorthInWood(tiers[wood].type);   // (a husk good is valued as that much Wood)
+        int woodBlock = clicker.IndexOf(PixelClicker.PixelType.Wood);
+        double unit = huskWorth > 0f ? (woodBlock >= 0 ? huskWorth * UnitValue(tiers[woodBlock]) : huskWorth) : UnitValue(tiers[wood]);
+        double fair = amount * unit / UnitValue(tiers[pay]);
         double rate = sellRate > 0f ? sellRate : 0.8f;
         double bulk = 1d - bulkDiscountMax * amount / (amount + System.Math.Max(1d, bulkHalfAmount));
         // His random roll is made ONCE per wood / pay pair per visit, so asking again (or changing the amount) never rerolls the price.
@@ -378,7 +422,8 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
     private void AcceptOffer()
     {
         if (offerWood < 0 || clicker == null) return;
-        if (!clicker.TrySpend(offerWood, offerAmount)) { ClearOffer("Looks like you don't have that much any more."); RefreshLists(); return; }
+        bool paid = HuskWorthInWood(clicker.Tiers[offerWood].type) > 0f ? TakeHusks(offerWood, offerAmount) : clicker.TrySpend(offerWood, offerAmount);
+        if (!paid) { ClearOffer("Looks like you don't have that much any more."); RefreshLists(); return; }
         clicker.AddCurrency(offerPay, offerGet);
         PixelStats.Count(Id + ".sold");
         PixelAudio.Play("purchase");

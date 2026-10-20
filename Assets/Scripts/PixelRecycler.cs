@@ -5,9 +5,9 @@
 //   it shrinks away with whatever is inside when time is up). Upgrades > Operation (2026-10-18: one of each): SPEED (-0.08 s of RecycleDelay a level;
 //   3x that off the button cycle's shake) and SIZE (+0.3 to the size factor a level - the whole bin, its catching area and its capacity grow; Place sizeFactor = the device's
 //   radius; a placed bin follows the level IN USE live, FollowSizeUpgrade - the device panel's - / + turns a bought level down). Size is +0.135 a level since
-//   2026-10-18 (max 2.475, 25% smaller than with +0.3). (Run Time, Streak Power and Suction rows were removed; their stats still work at their base values.)
+//   2026-10-18 (max 2.475, 25% smaller than with +0.3). RUN TIME (2026-10-20, back): +60 s a level, 5 levels, 300 s -> 10 minutes. (Streak Power and Suction rows were removed; their stats still work at their base values.)
 //   RECYCLER (PixelConsumables DeviceKind.Recycler 19, Utilities card - listed FIRST there - and Cubie's gift on visit 1 via the {recycler} page token): a
-//   permanent open-topped bin (PixelPermanentDevice stub for removal / saving its spot; built here by Place / CreateGhost / CreateDisplay with PixelFactoryKit:
+//   timed open-topped bin (PixelPermanentDevice stub for removal / saving its spot; built here by Place / CreateGhost / CreateDisplay with PixelFactoryKit:
 //   plinth + feet, green walls with a dark liner, brushed-metal corner pillars and rim, a glowing band round the body and a status lamp - green idle,
 //   amber while working - recycling arrows on the front, the shared carry handles and a big red button).
 //   Drop old pixels (husks) into it - Pixel Grabbing, or anything that lands inside: a husk that comes to rest inside the bin's walls is CAPTURED
@@ -48,7 +48,7 @@
 //   maxShareOfClick (95%) of a click; each '+N' popup over a recycled husk carries the streak as a small '(x1.3)' (none at x1.0); the device card shows the streak (FillDeviceInfo: inside, streak; the panel adds pay share, recycle delay, size and this session's husks / paid). NO skill XP (xpPerHusk 0).
 //   SIZE (2026-10-18): placed 1.8x as wide and deep as the first bin by default (DefaultSize 1.8 = the Device's radius - 2 for a day, then 10% smaller;
 //   Operation: Size adds +0.3 a level); it holds capacity (25) husks at that size, more by floor area when bigger (Capacity). A floating down arrow shows on hover (the time left is on the device card).
-//   SEVERAL RECYCLERS: any number can stand at once; the shop price rises with every one held or standing (Device.priceGrowthPerOwned 1.8, PixelConsumables
+//   SEVERAL RECYCLERS: any number can stand at once; the shop price rises with every one held or standing (Device.priceGrowthPerOwned 2, PixelConsumables
 //   Laddered). ONE OWNER PER HUSK: Capture, the suction and the suck-in only take husks PixelHuskHolder.Takeable says are free (a husk the Sweeper / hopper /
 //   another bin has reserved or captured is left alone).
 //   Stats recycler.husks / paid / xp, Best recycler.streak. The idea is that husks reach it WITHOUT the player stopping (bin placed where husks land; edge-click

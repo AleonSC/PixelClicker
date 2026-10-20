@@ -1,6 +1,6 @@
 # Optimization review 2 (2026-10-17)
 
-The first review (HANDOFF.md section 4, 2026-10-08) covered ~22k lines. This one covers all ~133k lines (293 scripts). Six read-only passes each took about 22k lines and followed the callers to confirm how often the code runs. The top items were then checked again by hand. There is still no profiler data, so "cost" below is read from the code. Profile before doing the L items.
+The first review (the old HANDOFF.md section 4, 2026-10-08; summarised in `OlderNotes.md`) covered ~22k lines. This one covers all ~133k lines (293 scripts). Six read-only passes each took about 22k lines and followed the callers to confirm how often the code runs. The top items were then checked again by hand. There is still no profiler data, so "cost" below is read from the code. Profile before doing the L items.
 
 Effort: S < 1 h, M = a few hours, L = a day. Risk = chance of breaking behaviour.
 

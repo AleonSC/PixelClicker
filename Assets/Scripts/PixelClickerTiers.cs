@@ -207,7 +207,6 @@ public partial class PixelClicker
         return insertAt;
     }
 
-    /// <summary>The Wood Chips tier (made on first use; never spawns on the cube, the Wood Chipper spits them out as old pixels). Returns its index.</summary>
     /// <summary>The Charcoal tier (made on first use; the Kiln spits it out as old pixels, it never spawns on the cube). Returns its index.</summary>
     public int EnsureCharcoalTier()
     {
@@ -223,6 +222,7 @@ public partial class PixelClicker
         });
     }
 
+    /// <summary>The Wood Chips tier (made on first use; never spawns on the cube, the Wood Chipper spits them out as old pixels). Returns its index.</summary>
     public int EnsureWoodChipsTier()
     {
         return EnsureTier(new PixelTier

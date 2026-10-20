@@ -1,6 +1,6 @@
 // ---- System notes ----
 // PixelTrashCan.cs
-//   TRASH CAN (a Dev Hub > Tester feature, PixelFeatureTester 'Trash Can'): a plain cylinder you put on the floor. Within suctionRadiusCubes (default 2.5 cube widths) of it every loose old pixel - things thrown out of a Funnel hose, a machine or the end of a conveyor belt,
+//   TRASH CAN - A DEV TOOL ONLY (2026-10-20 decision: never sold; it clears test setups): a Dev Hub > Tester feature (PixelFeatureTester 'Trash Can'): a plain cylinder you put on the floor. Within suctionRadiusCubes (default 2.5 cube widths) of it every loose old pixel - things thrown out of a Funnel hose, a machine or the end of a conveyor belt,
 //   or simply lying there - is pulled towards its mouth and, once it gets there, shrinks away and is DELETED (PixelClicker.ClaimOldPixel, no credit). SOCKETS (PixelSockets.cs): 'front' and 'back' (In): a belt, connector or hose ending at an In coupling there hands its husks straight in (AcceptHusk). Pixels the player holds,
 //   ones riding a belt / carried by a machine (kinematic), flying pixels and attached ones are left alone. Saved with the tester save (position).
 // ---------------------------------------------------
