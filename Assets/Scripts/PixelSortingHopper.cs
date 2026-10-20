@@ -27,7 +27,7 @@
 //     (PixelHoverMarker) shows on hover.
 //   Removing it lets everything it holds out of the bottom spout first.
 //   MOVE HANDLES (2026-10-20): carrying handles on the bowl's sides (shared PixelCarryHandles) - drag to move it, scroll / Q / E to turn it - but ONLY
-//   while nothing is connected to it (Connected: latched onto a host, or a coupling on its back socket). Put down within reach of a free host, it latches on.
+//   while nothing is connected to it (Connected: latched onto a host). Put down within reach of a free host, it latches on.
 //   OUTPUT NAMES + ON / OFF (2026-10-20): outputs are named by their mouth ring's colour (Green = the feed pipe, Orange / Blue / Pink = the side pipes;
 //   OutputName / OutputLabel). Each has a tick box in the device panel (PixelDeviceInfo.AddToggle): OFF hides its pipe and nothing goes out of it
 //   (its filter type goes on to the other outputs or the bottom spout); saved as ';O<n>,off'.
@@ -37,7 +37,8 @@
 //   HOSTS (2026-10-18): it latches onto any IPixelHopperHost (interface below) - the Recycler (occupies 'hatch') and the JUNCTION BOX (occupies b0 / b1;
 //   the feed pipe drops into its top hatch and TakeFeed routes the husk like any other). 'Recycler' in the notes above means 'its host'.
 //   Unlock: vendorOnly + shopSkillId 'standard' / level 3 = it appears in the shop at Standard level 3 (no vendor sells it); bought for White.
-//   SOCKETS (PixelSockets.cs): its own 'back' socket (In) takes belts / hoses: AcceptHusk takes the husk in (refused when full).
+//   SOCKETS: none since 2026-10-20 (it only puts husks out; its old 'back' In socket was removed). It stays an IPixelSocketDevice with an empty list so it
+//   can occupy its host's hopper sockets.
 //   Saved in PlacedState.extra: 'F,Type' (or 'F,-') then ';Type,amount' per held husk.
 //   Stats hopper.husks (into a bin), hopper.rejected (out of the bottom spout), hopper.ejected (Empty out). Tip device_SortingHopper.
 // ---------------------------------------------------
@@ -274,7 +275,9 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         float pipeStart = -1.4f * u, pipeEnd = PipeEndZ * u, py = PipeY * u, pr = PipeRadius * u;
         kit.Cyl("Feed Pipe", tr, new Vector3(0f, py, (pipeStart + pipeEnd) * 0.5f), pr, pipeStart - pipeEnd, Metal, new Vector3(90f, 0f, 0f), 0.85f, 0.6f);
         kit.Cyl("Feed Mouth", tr, new Vector3(0f, py - pr * 0.9f, pipeEnd), pr * 1.1f, pr * 2.6f, Metal, default, 0.85f, 0.6f);
-        kit.Cyl("Feed Mouth Ring", tr, new Vector3(0f, py - pr * 2.2f, pipeEnd), pr * 1.3f, pr * 0.4f, Stripe, default, 0f, 0.8f);
+        // The output's COLOUR (2026-10-20: thicker, glowing, so each output is easy to tell apart): a wide ring round the mouth and a band round the pipe.
+        kit.Prim(PrimitiveType.Cylinder, "Feed Mouth Ring", tr, new Vector3(0f, py - pr * 1.9f, pipeEnd), new Vector3(pr * 3f, pr * 0.6f, pr * 3f), Stripe, default, 0f, 0.8f, false, Stripe * 0.6f);
+        kit.Prim(PrimitiveType.Cylinder, "Feed Band", tr, new Vector3(0f, py, (pipeStart + pipeEnd) * 0.5f), new Vector3(pr * 2.5f, 0.45f * u, pr * 2.5f), Stripe, new Vector3(90f, 0f, 0f), 0f, 0.8f, false, Stripe * 0.6f);
         // THE SIDE OUTPUTS (Operation 'Outputs': left, right, back): pipes like the feed pipe, each in its own holder (shown only when unlocked;
         // a husk of that output's filter drops out of its mouth). Hidden on the ghost and the shop picture.
         for (int k = 0; k < SideCount; k++)
@@ -285,7 +288,8 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
             Transform ht = holder.transform;
             kit.Cyl("Side Pipe", ht, new Vector3(0f, py, (SideStart + SideEnd) * 0.5f * u), pr, (SideEnd - SideStart) * u, Metal, new Vector3(90f, 0f, 0f), 0.85f, 0.6f);
             kit.Cyl("Side Mouth", ht, new Vector3(0f, py - pr * 0.9f, SideEnd * u), pr * 1.1f, pr * 2.6f, Metal, default, 0.85f, 0.6f);
-            kit.Cyl("Side Mouth Ring", ht, new Vector3(0f, py - pr * 2.2f, SideEnd * u), pr * 1.3f, pr * 0.4f, OutputColors[k], default, 0f, 0.8f);
+            kit.Prim(PrimitiveType.Cylinder, "Side Mouth Ring", ht, new Vector3(0f, py - pr * 1.9f, SideEnd * u), new Vector3(pr * 3f, pr * 0.6f, pr * 3f), OutputColors[k], default, 0f, 0.8f, false, OutputColors[k] * 0.6f);
+            kit.Prim(PrimitiveType.Cylinder, "Side Band", ht, new Vector3(0f, py, (SideStart + SideEnd) * 0.5f * u), new Vector3(pr * 2.5f, 0.45f * u, pr * 2.5f), OutputColors[k], new Vector3(90f, 0f, 0f), 0f, 0.8f, false, OutputColors[k] * 0.6f);
             GameObject top = new GameObject("Side Filter");
             top.transform.SetParent(ht, false);
             top.transform.localPosition = new Vector3(0f, py + pr * 2.8f, SideEnd * u);
@@ -311,7 +315,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         clicker = owner;
         snapRange = Mathf.Max(0.5f, reach);
         float su = Unit(clicker);
-        sockets = new[] { new PixelSocket("back", new Vector3(0f, 0f, BowlHusks * su * 0.5f + 0.35f * su), Vector3.forward, PixelSocketFlow.Intake) };
+        // (No sockets since 2026-10-20: the hopper only gives husks out. Husks come in by dropping into the bowl or from the Sweeper.)
         baseScale = transform.localScale;
         flagTop = transform.Find("Flag Top");
         Transform flag = transform.Find("Flag");
@@ -331,7 +335,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
     private void OnEnable() { if (!all.Contains(this)) all.Add(this); PixelCouplings.Register(this); }
     private void OnDisable() { all.Remove(this); PixelCouplings.Unregister(this); }
 
-    // ---- Socket (PixelSockets.cs): the BACK, an In socket - a belt / hose ending at a coupling there hands husks in ----
+    // ---- Sockets (PixelSockets.cs): none (it only gives husks out); the list stays so it can occupy its host's hopper sockets ----
     private PixelSocket[] sockets = new PixelSocket[0];
     public Transform SocketRoot => transform;
     public IReadOnlyList<PixelSocket> Sockets => sockets;
@@ -491,8 +495,8 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
 
     private PixelCarryHandles carry;
 
-    /// <summary>Is anything connected to it (a host it latched onto, a coupling on its back)? Its move handles only work while not.</summary>
-    public bool Connected => recycler != null || PixelCoupling.On(this, "back") != null;
+    /// <summary>Is anything connected to it (a host it latched onto)? Its move handles only work while not.</summary>
+    public bool Connected => recycler != null;
 
     /// <summary>Latches onto a free Recycler within reach (every half second when it has none) and follows it when it is carried.</summary>
     private void KeepLatched()
@@ -539,7 +543,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         pipe.localRotation = Quaternion.FromToRotation(Vector3.up, dir / len);
         pipe.localScale = new Vector3(pr * 2f, len * 0.5f, pr * 2f);
         if (mouth != null) mouth.localPosition = end - Vector3.up * pr * 0.9f;
-        if (mouthRing != null) mouthRing.localPosition = end - Vector3.up * pr * 2.2f;
+        if (mouthRing != null) mouthRing.localPosition = end - Vector3.up * pr * 1.9f;
     }
 
     // ---- Holding ----
@@ -634,7 +638,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelSocketDevice, IPixelHuskR
         if (n == sidesShown) return;
         sidesShown = n;
         for (int k = 0; k < SideCount; k++) if (sideHolders[k] != null) sideHolders[k].SetActive(k < n && OutputOn(k + 1));
-        foreach (string part in new[] { "Feed Pipe", "Feed Mouth", "Feed Mouth Ring" })
+        foreach (string part in new[] { "Feed Pipe", "Feed Mouth", "Feed Mouth Ring", "Feed Band" })
         {
             Transform p = transform.Find(part);
             if (p != null && p.gameObject.activeSelf != OutputOn(0)) p.gameObject.SetActive(OutputOn(0));
