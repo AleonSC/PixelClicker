@@ -11,6 +11,8 @@
 //   SAVING: every placed object is saved with the save file (PixelFeatureTester.ExportAll / ImportAll, TesterSave = feature name + JSON from the feature's ExportState / ImportState; hooked into
 //   PixelSaveGame after the placed devices are restored). LINKING (Solar Panel): after placing, linkPanel mode - click a device inside the ring; a right click on a placed panel starts it again.
 //   The Conveyor Belt is also a real game item (PixelConsumables DeviceKind.ConveyorBelt, on sale at Electrician level 5): its right click calls PixelFeatureTester.StartFeature("Conveyor Belt"), which places without the Dev Hub.
+//   SHOP ITEMS (2026-10-20): Coupling, Wood Chipper, Conveyor Belt, Container Hose, Belt Sorter, Conveyor Elevator, Junction Box, Belt Jump, Conveyor Combiner and Solar Panel
+//   are sold in the shop, so they get no card here (SoldInShop) but stay registered: the shop item's right click places them through StartFeature.
 //   Features now: Vacuum Cleaner (PixelVacuumCleaner.cs: drive with W A S D / arrows, the front intake sucks husks up and the hose spits them out where the mouse aims), Container Hose (PixelContainerHose.cs: a single line from a crate / organizer to a Recycler / crate / organizer / trash can), Wood Chipper (PixelWoodChipper.cs), Conveyor Belt (PixelConveyor.cs, PixelFactoryKit.cs), Kiln (PixelKiln.cs; makes Charcoal old pixels), Solar Panel (PixelSolarPanel.cs).
 // ---------------------------------------------------
 using System;
@@ -22,6 +24,9 @@ using UnityEngine.UI;
 public class PixelFeatureTester : MonoBehaviour
 {
     private const float W = PixelDevHub.ContentW, H = PixelDevHub.ContentH, CardH = 150f;
+
+    /// <summary>Features that are real shop items now (2026-10-20): they stay registered (the shop item places them through StartFeature) but get no card in the Tester tab.</summary>
+    private static readonly string[] SoldInShop = { "Coupling", "Wood Chipper", "Conveyor Belt", "Container Hose", "Belt Sorter", "Conveyor Elevator", "Junction Box", "Belt Jump", "Conveyor Combiner", "Solar Panel" };
 
     /// <summary>A feature may snap its placement (the Wood Chipper latches onto a belt opening): returns true when it did, with the snapped pose.</summary>
     private delegate bool PlaceSnap(PixelClicker c, Vector3 point, float yaw, GameObject ghost, out Vector3 snappedPoint, out float snappedYaw);
@@ -272,6 +277,7 @@ public class PixelFeatureTester : MonoBehaviour
         float y = 0f;
         foreach (Feature f in features)
         {
+            if (System.Array.IndexOf(SoldInShop, f.name) >= 0) continue;   // (a shop item now: still registered, so buying one places it, but no card here)
             Feature feature = f;
             GameObject card = new GameObject("Card " + f.name, typeof(RectTransform), typeof(Image));
             card.transform.SetParent(content, false);

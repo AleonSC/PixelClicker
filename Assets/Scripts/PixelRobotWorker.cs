@@ -23,7 +23,14 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
     int IPixelSaved.SaveOrder => 160;
     string IPixelSaved.Export() => PixelSaveRegistry.ToJson(new SaveState { job = Export(), disabled = UserDisabled });
     void IPixelSaved.Import(string data) { SaveState s = PixelSaveRegistry.FromJson<SaveState>(data); Import(s != null ? s.job : null); UserDisabled = s != null && s.disabled; }
-    private void Awake() => PixelSaveRegistry.Register(this);
+    private void Awake()
+    {
+        PixelSaveRegistry.Register(this);
+        PixelHuskPool.HuskReleasing += OnHuskReleasing;
+    }
+
+    // (PixelHuskPool: the husk it was going for is going away and may be reused - pick a new one)
+    private void OnHuskReleasing(Rigidbody body) { if (body == bankTarget) { bankTarget = null; abductT = 0f; } }
 
     [Header("UFO")]
     [Tooltip("Turn the UFO Helper off completely.")]
@@ -225,6 +232,7 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
     private void OnDestroy()
     {
         PixelSaveRegistry.Unregister(this);
+        PixelHuskPool.HuskReleasing -= OnHuskReleasing;
         PixelWindows.Unregister(this);
         ExitCockpit();
         Hovering = false;

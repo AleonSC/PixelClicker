@@ -40,6 +40,8 @@ public class PixelBeltSorter : MonoBehaviour, IPixelSocketDevice
 
     // ---------------- placing ----------------
 
+    /// <summary>The model alone, for the shop / inventory pictures (no working parts: PixelConsumables.DisplayOnly strips them).</summary>
+    public static GameObject CreateDisplay(PixelClicker c) => PixelConsumables.DisplayOnly(Build(c, false, "Belt Sorter (Display)", 1.35f * Mathf.Max(0.05f, c.OldPixelWorldSize)));
     public static GameObject CreateGhost(PixelClicker c) { return Build(c, true, "Belt Sorter (Ghost)", 1.35f * Mathf.Max(0.05f, c.OldPixelWorldSize)); }
 
     public static bool TrySnap(PixelClicker c, Vector3 point, float yaw, GameObject ghostRoot, out Vector3 snappedPoint, out float snappedYaw)

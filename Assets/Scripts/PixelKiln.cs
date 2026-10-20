@@ -234,9 +234,7 @@ public class PixelKiln : MonoBehaviour, IPixelSocketDevice
         for (int i = list.Count - 1; i >= 0; i--)
         {
             Rigidbody rb = list[i];
-            if (rb == null || rb.isKinematic || PixelAttachment.IsAttached(rb) || clicker.IsFlyingPixel(rb)) continue;
-            OldPixelDespawn despawn = PixelHuskQuery.Get(rb).despawn;
-            if (despawn != null && (despawn.IsDespawning || despawn.Held)) continue;
+            if (!PixelHuskHolder.Takeable(clicker, rb, true) || PixelAttachment.IsAttached(rb)) continue;   // (one owner per husk; it now also leaves the husk in the player's hand alone)
             if (!InMouth(rb.worldCenterOfMass)) continue;
             if (clicker.ClaimOldPixel(rb)) StartCoroutine(BurnPixel(rb));
         }

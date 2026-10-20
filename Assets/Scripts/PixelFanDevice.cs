@@ -48,7 +48,7 @@ public class PixelFanDevice : PixelPlacedDevice
 
     private void FixedUpdate()
     {
-        if (IsDying || !Armed || clicker == null) return;
+        if (IsEnding || !Armed || clicker == null) return;
 
         Vector3 origin = transform.position;
         Vector3 forward = transform.forward;
@@ -68,10 +68,19 @@ public class PixelFanDevice : PixelPlacedDevice
             float distance = to.magnitude;
             if (distance > range || distance < 0.05f) continue;
             if (Vector3.Angle(forward, to) > halfAngle) continue; // outside the cone
+            if (!PixelHuskHolder.Takeable(clicker, body, true)) continue;   // (not the husk in the player's hand, nor one a machine keeps or carries)
 
             // Strongest right at the fan, fading toward the far end.
             float strength = Mathf.Lerp(1f, 0.25f, distance / range);
             body.AddForce((forward * blow + Vector3.up * lift) * strength, ForceMode.Acceleration);
         }
+    }
+
+    // ---- the device card (PixelDeviceCard) ----
+    protected override void AddInfo(PixelDeviceInfo info)
+    {
+        info.Add("Blows", range.ToString("0.#") + " units ahead, " + Mathf.RoundToInt(halfAngle * 2f) + "\u00b0 wide");
+        if (!info.Full) return;
+        info.Add("Push", blow.ToString("0.#") + (lift > 0f ? " (lift " + lift.ToString("0.#") + ")" : ""));
     }
 }

@@ -117,7 +117,7 @@ public class PixelDeviceCard : MonoBehaviour
         else if (rightWasHeld && !held)
         {
             // Released: a short press on the same device opens its panel.
-            if (pressDevice != null && pressDevice == under && !pressDevice.IsRemoving && Time.unscaledTime - pressTime <= tapSeconds) OpenPanel(pressDevice);
+            if (pressDevice != null && pressDevice == under && !pressDevice.IsEnding && Time.unscaledTime - pressTime <= tapSeconds) OpenPanel(pressDevice);
             pressDevice = null;
         }
         rightWasHeld = held;
@@ -146,7 +146,7 @@ public class PixelDeviceCard : MonoBehaviour
     private void UpdatePanel(bool calm)
     {
         if (panel == null || !PixelPop.IsOpen(panel.Root)) { panelDevice = null; return; }
-        if (panelDevice == null || !calm || panelDevice.IsRemoving) { ClosePanel(); return; }   // (null = the device was destroyed)
+        if (panelDevice == null || !calm || panelDevice.IsEnding) { ClosePanel(); return; }   // (null = the device was destroyed)
         // A click anywhere outside the panel closes it (a right tap on another device reopens it on release).
         if ((PixelInput.LeftPressed() || PixelInput.RightPressed()) && !RectTransformUtility.RectangleContainsScreenPoint(panel.Rect, PixelInput.PointerPosition(), null))
         {
@@ -328,7 +328,7 @@ public class PixelDeviceCard : MonoBehaviour
     private void UpdateCard(PixelPlacedDevice under)
     {
         bool blocked = under == null || under == panelDevice || PixelBlockTooltip.HoveringBlock || PixelPointerClaim.ButtonClaimed || PixelCarryHandles.Hot
-                       || PixelInput.RightHeld() || under.IsRemoving;
+                       || PixelInput.RightHeld() || under.IsEnding;
         PixelPlacedDevice want = blocked ? null : under;
         if (want != hovered) { hovered = want; hoverTime = 0f; }
         if (hovered != null) hoverTime += Time.unscaledDeltaTime;

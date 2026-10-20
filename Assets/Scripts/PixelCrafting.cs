@@ -432,7 +432,7 @@ public class PixelCrafting : MonoBehaviour
             if (PixelClicker.IsRareCube(type)) continue;
             list.Add(new Recipe
             {
-                label = type + " Potion",
+                label = PixelClicker.TypeName(type) + " Potion",   // (static default data: only a fallback, the shown name comes from the result item)
                 a = new Ingredient(ItemKind.Pixel, type, 50),
                 b = new Ingredient(ItemKind.Pixel, PixelClicker.PixelType.Glass, 20),
                 resultKind = ResultKind.Potion,
@@ -455,7 +455,7 @@ public class PixelCrafting : MonoBehaviour
             if (recipes.Exists(r => r != null && r.resultKind == ResultKind.Potion && r.resultPotion == type)) continue;
             recipes.Add(new Recipe
             {
-                label = type + " Potion",
+                label = (clicker != null ? clicker.DisplayNameOf(type) : PixelClicker.TypeName(type)) + " Potion",
                 a = new Ingredient(ItemKind.Pixel, type, defaultPixelCost),
                 b = new Ingredient(ItemKind.Pixel, PixelClicker.PixelType.Glass, defaultGlassCost),
                 resultKind = ResultKind.Potion,
@@ -1187,7 +1187,7 @@ public class PixelCrafting : MonoBehaviour
             return dv >= 0 ? consumables.ItemName(dv) : item.device.ToString();
         }
         int p = PotionIndexOf(item);
-        return p >= 0 ? consumables.ItemName(p) : item.type + " Potion";
+        return p >= 0 ? consumables.ItemName(p) : (clicker != null ? clicker.DisplayNameOf(item.type) : PixelClicker.TypeName(item.type)) + " Potion";
     }
 
     /// <summary>The consumables index of a potion item (plain, 2-type or 3-type combo), or -1.</summary>

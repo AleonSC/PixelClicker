@@ -789,9 +789,9 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
         rb.useGravity = !p.ghost;
         if (throwIt)
         {
-            Vector3 v = GetVelocity(rb) * throwStrength * PixelTimeStop.SlowFactor; // back to what the mouse did
+            Vector3 v = PixelBody.Velocity(rb) * throwStrength * PixelTimeStop.SlowFactor; // back to what the mouse did
             if (v.magnitude > maxThrowSpeed) v = v.normalized * maxThrowSpeed;
-            SetVelocity(rb, v);
+            PixelBody.Steer(rb, v);
             PixelAudio.Play("drop");
         }
         p.hopTimer = Random.Range(hopInterval.x, hopInterval.y);
@@ -810,18 +810,10 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
         float slow = PixelTimeStop.SlowFactor; // velocities are per slowed second while time is slowed
         Vector3 velocity = (target - rb.position) * followSharpness / slow;
         if (velocity.magnitude > maxFollowSpeed / slow) velocity = velocity.normalized * (maxFollowSpeed / slow);
-        SetVelocity(rb, velocity);
+        PixelBody.Steer(rb, velocity);
         SetAngular(rb, rb.angularVelocity * 0.9f);
     }
 
-    private static Vector3 GetVelocity(Rigidbody rb)
-    {
-#if UNITY_6000_0_OR_NEWER
-        return rb.linearVelocity;
-#else
-        return rb.velocity;
-#endif
-    }
 
     /// <summary>Sets the spin (not on a kinematic body, where Unity warns: a held, planted or otherwise frozen pet has no physics to steer).</summary>
     private static void SetAngular(Rigidbody rb, Vector3 w)
@@ -830,15 +822,6 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
         rb.angularVelocity = w;
     }
 
-    private static void SetVelocity(Rigidbody rb, Vector3 v)
-    {
-        if (rb == null || rb.isKinematic) return;
-#if UNITY_6000_0_OR_NEWER
-        rb.linearVelocity = v;
-#else
-        rb.velocity = v;
-#endif
-    }
 
     // ------------------------------------------------------------------
     // Roaming
@@ -857,17 +840,17 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
         if (pos.y < cube.y - 25f)
         {
             rb.position = cube + Vector3.up * size * 3f;
-            SetVelocity(rb, Vector3.zero);
+            PixelBody.Steer(rb, Vector3.zero);
             return;
         }
 
-        Vector3 v = GetVelocity(rb);
+        Vector3 v = PixelBody.Velocity(rb);
 
         // The mouse is over it: it settles down and stands still (gravity still works).
         if (stopped)
         {
             float k = Mathf.Exp(-hoverStopDamping * Time.deltaTime);
-            SetVelocity(rb, new Vector3(v.x * k, v.y, v.z * k));
+            PixelBody.Steer(rb, new Vector3(v.x * k, v.y, v.z * k));
             SetAngular(rb, rb.angularVelocity * k);
             p.hopTimer = Mathf.Max(p.hopTimer, 0.4f);
             return;
@@ -878,7 +861,7 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
         if (flat.magnitude > maxSpeed)
         {
             flat = flat.normalized * maxSpeed;
-            SetVelocity(rb, new Vector3(flat.x, v.y, flat.y));
+            PixelBody.Steer(rb, new Vector3(flat.x, v.y, flat.y));
         }
 
         p.hopTimer -= Time.deltaTime;
@@ -923,11 +906,11 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
             if (rb.position.y < clicker.PixelTransform.position.y - 25f)
             {
                 rb.position = clicker.PixelTransform.position + Vector3.up * size * 3f;
-                SetVelocity(rb, Vector3.zero);
+                PixelBody.Steer(rb, Vector3.zero);
                 return;
             }
             // Resting on the ground: plant itself here (never in its first moments, and only when something other than itself is just below).
-            if (Time.time - p.born > 0.5f && GetVelocity(rb).sqrMagnitude < 0.2f * 0.2f && SolidBelow(p, rb.position, size))
+            if (Time.time - p.born > 0.5f && PixelBody.Velocity(rb).sqrMagnitude < 0.2f * 0.2f && SolidBelow(p, rb.position, size))
                 PlantPet(p, rb, size);
             return;
         }
@@ -1017,7 +1000,7 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
 
     private void PlantPet(Pet p, Rigidbody rb, float size)
     {
-        SetVelocity(rb, Vector3.zero);
+        PixelBody.Steer(rb, Vector3.zero);
         SetAngular(rb, Vector3.zero);
         rb.isKinematic = true;
         rb.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
@@ -1104,12 +1087,12 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
         float size = clicker.PixelBaseSize;
         Vector3 pos = rb.position;
         Vector3 cube = clicker.PixelTransform.position;
-        Vector3 v = GetVelocity(rb);
+        Vector3 v = PixelBody.Velocity(rb);
 
         if (stopped)
         {
             float k = Mathf.Exp(-hoverStopDamping * Time.deltaTime);
-            SetVelocity(rb, v * k);
+            PixelBody.Steer(rb, v * k);
             SetAngular(rb, rb.angularVelocity * k);
             return;
         }
@@ -1129,7 +1112,7 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
         Vector3 to = p.target - pos;
         Vector3 desired = to.normalized * Mathf.Min(ghostSpeed * Hyper, to.magnitude * 1.2f);
         desired.y += Mathf.Sin(Time.time * 2f + p.phase) * 0.25f; // bobbing
-        SetVelocity(rb, Vector3.Lerp(v, desired, 1f - Mathf.Exp(-2f * Time.deltaTime))); // a throw fades into the drift
+        PixelBody.Steer(rb, Vector3.Lerp(v, desired, 1f - Mathf.Exp(-2f * Time.deltaTime))); // a throw fades into the drift
         SetAngular(rb, Vector3.Lerp(rb.angularVelocity, new Vector3(Mathf.Sin(Time.time + p.phase) * 0.3f, 0.4f, Mathf.Cos(Time.time * 0.7f + p.phase) * 0.3f),
                                           1f - Mathf.Exp(-1.5f * Time.deltaTime)));
     }
@@ -1143,7 +1126,7 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
         if (p.broken || glassBreakChance <= 0f || Time.time < p.glassNextBreak) return;
         Rigidbody rb = p.body.GetComponent<Rigidbody>();
         if (rb == null) return;
-        float speed = GetVelocity(rb).magnitude;
+        float speed = PixelBody.Velocity(rb).magnitude;
         if (speed < 0.6f) return; // standing still: nothing to break it
         float k = Mathf.Min(speed / glassBreakSpeed, 2f);
         if (Random.value < glassBreakChance * k * Time.deltaTime) StartCoroutine(BreakAndReform(p));

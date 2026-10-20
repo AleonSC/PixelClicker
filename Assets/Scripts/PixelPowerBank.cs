@@ -1,6 +1,6 @@
 // ---- System notes ----
 // PixelPowerBank.cs
-//   POWER BANK (2026-10-20, Devices session; DeviceKind.PowerBank 31, a permanent placed device with the PixelChipperDevice stub, like the generators):
+//   POWER BANK (2026-10-20, Devices session; DeviceKind.PowerBank 34, a permanent placed device with the PixelPermanentDevice stub, like the generators):
 //   a big battery that STORES power and hands it out over a LARGE radius.
 //   - CHARGE IN: every Biomass Generator standing inside its radius feeds it (PixelBiomassGenerator.GiveCharge): up to chargeInPerSecond per generator,
 //     but only the generator's charge above keepInGenerator (a fraction of its max) - so a fed generator keeps running and never drains itself to death

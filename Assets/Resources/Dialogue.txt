@@ -1,0 +1,532 @@
+# DIALOGUE - every 'Got it' box and every character's lines. Edit them here; the game reads this file when it starts.
+#
+# The word in [brackets] tells the game where a text goes - do not change it. Each line is 'field: text'.
+# Leave a text empty to keep the game's own one. Everything stays on ONE line: write \n for a new line.
+# Rich text works: <b>bold</b>, <i>italic</i>, <color=#FFD27F>colour</color>.
+# Keep the {words in braces} where you want the game to fill something in: {0} (a number / name), {gift}, {recycler}, {key:EventLog}...
+# Lists (Cubie's pages, tutorial steps): change the text of each numbered line. For Cubie you can add a page (the next number) or
+#   remove one (write just -). Tutorial steps keep their number of boxes (each one also opens a tab / points at something).
+# New texts the game gets later are added to the end of this file by themselves (in the editor). Lines starting with # are notes.
+# Egg and Bean: their greeting is left empty here on purpose (it keeps their two built-in greetings: first visit / later).
+
+[Tip: minigame_traffic]
+text: Red light, green light! Click on GREEN to score. Never click on RED: it costs you a point. On YELLOW click slowly, only when the circle closes on the cube; any other click costs a point. The auto clicker is switched off.
+overlay line: Red light, green light!
+
+[Tip: minigame_evade]
+text: Cube Evasion! The cube runs away from your mouse and the auto clicker is switched off. Corner it against an edge and click it; at the end you get a bonus for every click.
+overlay line: Cube Evasion!
+
+[Tip: minigame_weakspot]
+text: Weak Spots! The camera zooms in and time slows down. Glowing weak spots appear on the cube: click every one before the time runs out for bonus skill XP. Some drift across the cube (blue), some shrink and swell (green) and some flicker in and out (yellow).
+overlay line: Weak Spots!
+
+[Tip: minigame_blink]
+text: Cube Blink! The cube keeps shrinking away and teleporting, and the auto clicker is switched off. Click it whenever it shows to land clicks; at the end you get a bonus for every click.
+overlay line: Cube Blink!
+
+[Tip: minigame_dash]
+text: Cube Dash! The cube is dashing around the screen and the auto clicker is switched off. Click it as many times as you can before time runs out: you get a bonus of 10x its worth for every click you landed.
+overlay line: Cube Dash!
+
+[Tip: minigame_breakout]
+text: Breakout! The old pixels on screen turned into a wall of bricks (the rest shrank away) and the cube stepped aside. Move the paddle along the bottom with the mouse or the Left / Right arrows to bounce the ball into them. Every brick you break pays 10x that pixel's worth; run out of balls and the rest simply drop.
+overlay line: Breakout!
+
+[Tip: minigame_sort]
+text: Sorting race! Some old pixels froze in a jumbled grid. Click one pixel, then another, to swap them. Get every colour together in one unbroken group before the timer runs out - finishing early pays extra.
+overlay line: Sorting race!
+
+[Tip: minigame_snake]
+text: Snake! Every old pixel froze and stopped despawning. Steer the snake with the arrow keys (or the on-screen arrows) and eat every pixel without biting yourself - you are paid 10x their worth. Run out of time or bite yourself and they just drop.
+overlay line: Snake time!
+
+[Tip: minigame_stardust]
+text: A meteor pixel knocked a star out of the sky! Click it to collect stardust before it fades. Enough stardust unlocks something new.
+overlay line: A star fell from the sky!
+
+[Tip: event_log]
+text: This is the Event Log. It records what happens in the game, like unlocks. Scroll it with the mouse wheel, click a line to read its full tip, and press {key:EventLog} to show or hide it. You can switch it off in Settings > Interface > Event log.
+overlay line: This is the Event Log - click this line to read about it
+
+[Tip: crafting]
+text: Crafting unlocked! Open the Crafting button at the bottom right, drag two items into the boxes and press Craft. A pixel + Glass makes that pixel's potion.
+overlay line: You unlocked Crafting!
+
+[Tip: grab]
+text: Pixel Grabbing unlocked! Hold the left mouse button on an old pixel to pick it up, then let go to throw it.
+overlay line: You unlocked Pixel Grabbing!
+
+[Tip: timestop]
+text: Time Stop unlocked! Press T to freeze time and T again to resume. It drains an energy meter, but you can still click the cube - the old pixels pile up and burst out when time resumes.
+overlay line: You unlocked Time Stop! (press T)
+
+[Tip: bank]
+text: Pixel Bank unlocked! Right-click an old pixel to store it. Open the Bank tab on the left edge, or press B for the hose: left-click spits a pixel out, hold right-click sucks up an area.
+overlay line: You unlocked the Pixel Bank!
+
+[Tip: minigame_ghost]
+text: A ghost! Click it before it floats away to catch it and get a free potion.
+overlay line: A ghost appeared!
+
+[Tip: minigame_meteor]
+text: A meteor! Click it as often as you like to chip off meteor chunks.
+overlay line: A meteor appeared!
+
+[Tip: minigame_bomb]
+text: A bomb! Cut the wire that matches the colour you have the MOST of before time runs out. A wrong wire (or timeout) clears your old pixels.
+overlay line: A bomb appeared!
+
+[Tip: minigame_pad]
+text: An Ultra Pad! Drop old pixels of the colour it asks for onto it to earn Ultra pixels. Other colours cost you pixels.
+overlay line: An Ultra Pad appeared!
+
+[Tip: potion]
+text: Potion drunk! For a while only that pixel type spawns. Right-click the active potion line at the top to cancel it.
+overlay line: You drank a potion!
+
+[Tip: device_Vacuum]
+text: Vacuum Device placed! It is grey and asleep: left-click it to switch it on. Then it pulls in old pixels and collects them again for a few seconds. Hold right-click on a placed device to remove it.
+overlay line: You placed a Vacuum Device!
+
+[Tip: device_Fan]
+text: Fan placed! It is grey and asleep: left-click it to switch it on. Then it blows old pixels along the floor in front of it until its timer runs out.
+overlay line: You placed a Fan!
+
+[Tip: device_Sprinkler]
+text: Sprinkler placed! It is grey and asleep: left-click it to switch it on. Then it waters every growing seed and Seed pet within its reach about once a second, so they grow much faster.
+overlay line: You placed a Sprinkler!
+
+[Tip: device_MagnetSorter]
+text: Magnetized Sorter placed! Left-click it to switch it on. It sucks loose old pixels from the arc in front of its magnet into the box. Click an exit pipe to grab it, click again to put it down; scroll over a pipe to choose which stored pixel type it shoots out.
+overlay line: You placed a Magnetized Sorter!
+
+[Tip: device_QuantumOrganizer]
+text: Quantum Organizer placed! Left-click it to switch it on, then drop a pixel onto the pad to bind its type. Every loose old pixel of that type is dematerialized and stored in the box. Click the box to let some out again.
+overlay line: You placed a Quantum Organizer!
+
+[Tip: device_StorageCrate]
+text: Storage Crate placed! It needs no switching on. Let go of a pixel you are holding (Pixel Grabbing) above the crate and it drops into the next free section; clicking the crate also stores loose pixels lying on it. Click a stored pixel to pick it up again. Drag the handles on its short ends to move it.
+overlay line: You placed a Storage Crate!
+
+[Tip: device_SortingHopper]
+text: Sorting Hopper placed! Put it near a Recycler and it latches onto the back. Husks dropped into its bowl are held (up to 20). Right-click the hopper and press Select filter: that type goes into the Recycler, every other type drops out of its bottom spout.
+overlay line: You placed a Sorting Hopper!
+
+[Tip: device_Funnel]
+text: Funnel placed! Its glass cone hangs under the cube and catches every husk that falls into it, then sends them one by one down the tube to the spout where you placed it (scroll or Q / E turns the spout). Placing it again moves it.
+overlay line: You placed a Funnel!
+
+[Tip: device_Sweeper]
+text: Sweeper placed! It rolls out from its pad and carries husks that are about to fade to the nearest Storage Crate, Sorting Hopper or Recycler with room. It runs about a minute and slows to a stop - click it to wind it again.
+overlay line: You placed a Sweeper!
+
+[Tip: device_JunctionBox]
+text: Junction Box placed! Fit couplings on its sides and connect belts or hoses: whatever brings husks in makes that coupling IN, whatever takes them away makes it OUT. Husks are shared out in turn between the outputs, or sent to the one whose filter is their type - drop a husk on a coupling (or click / scroll it) to set its filter.
+overlay line: You placed a Junction Box!
+
+[Tip: device_PocketBiomassGenerator]
+text: Pocket Biomass Generator placed! Every device inside its blue ring runs on its power - their timers stop and show its blue energy bar. Keep it going by dropping Woodcutting husks into the firebox on top; when it runs dry it flashes red, then shuts down for good unless you feed it.
+overlay line: You placed a Pocket Biomass Generator!
+
+[Tip: device_BiomassGenerator]
+text: Biomass Generator placed! A bigger ring and much more charge: every device inside runs on its power while you feed it Woodcutting husks (the firebox on top, or its intake coupling). Empty, it flashes red and then shuts down unless you feed it.
+overlay line: You placed a Biomass Generator!
+
+[Tip: device_Magnet]
+text: Magnet placed! It is grey and asleep: left-click it to switch it on. Then it pulls loose old pixels in around it and holds them in a heap without collecting them.
+overlay line: You placed a Magnet!
+
+[Tip: device_Sorter]
+text: Sorter placed! It is grey and asleep: left-click its ring or pipe to switch it on. Then click its buttons to change how hard old pixels are pushed out of the pipe.
+overlay line: You placed a Sorter!
+
+[Tip: craft]
+text: Crafted! The new item is in your Inventory under Consumables.
+overlay line: You crafted something!
+
+[Tip: combo]
+text: Combo! Keep clicking quickly to raise the combo bonus. It breaks if you stop for a moment.
+overlay line: Combo started!
+
+[Tip: upgrade_interval]
+text: The auto clicker now clicks faster. Each level shortens the time between its clicks.
+overlay line: Auto Clicker upgraded: faster clicks!
+
+[Tip: upgrade_clicks]
+text: Multi-Click upgraded! The auto clicker now makes more clicks every time it ticks.
+overlay line: Auto Clicker upgraded: more clicks per tick!
+
+[Tip: upgrade_combo]
+text: Combo Meter upgraded! Quick manual clicks build a combo; reaching a combo milestone boosts your payouts, and each level unlocks a higher milestone with a bigger bonus and a flashier meter.
+overlay line: Combo Meter upgraded!
+
+[Tip: upgrade_cap]
+text: Old Pixel Capacity upgraded! More old pixels can lie around at once before the oldest ones are cleared away.
+overlay line: Old Pixel Capacity upgraded!
+
+[Tip: upgrade_bank]
+text: Bank Storage upgraded! The Pixel Bank can now hold more stored pixels.
+overlay line: Bank Storage upgraded!
+
+[Tip: upgrade_ultra]
+text: Ultra boost bought! That pixel type now pays more for every click. You can keep boosting it with more Ultra pixels.
+overlay line: Ultra boost bought!
+
+[Tip: pixel_Glass]
+text: Glass Pixels unlocked! They are see-through, and you can combine one with another pixel in Crafting to make a potion.
+overlay line: You unlocked Glass Pixels!
+
+[Tip: pixel_Vacuum]
+text: Vacuum Pixels unlocked! Clicking one sucks nearby old pixels in and collects them.
+overlay line: You unlocked Vacuum Pixels!
+
+[Tip: pixel_Obsidian]
+text: Obsidian Pixels unlocked! A tougher pixel that takes more than one click to collect.
+overlay line: You unlocked Obsidian Pixels!
+
+[Tip: pixel_Luminescent]
+text: Luminescent Pixels unlocked! They glow, and they are worth a lot more than the plain ones.
+overlay line: You unlocked Luminescent Pixels!
+
+[Tip: pixel_Singularity]
+text: Singularity Pixels unlocked! A very rare pixel born from the black holes you fed.
+overlay line: You unlocked Singularity Pixels!
+
+[Tip: pixel_Ghost]
+text: Ghost Pixels unlocked! A rare pixel from all the ghosts you caught.
+overlay line: You unlocked Ghost Pixels!
+
+[Tip: pixel_Electric]
+text: Electric Pixels unlocked! A cube held together by crackling lightning.
+overlay line: You unlocked Electric Pixels!
+
+[Tip: pixel_Treasure]
+text: Treasure Pixels unlocked! A chest takes a random 1 to 20 clicks to open, and you can't tell how many. The more clicks it took, the bigger the reward - and when it bursts open, a pile of other pixels pours out.
+overlay line: You unlocked Treasure Pixels!
+
+[Tip: pixel_Nuclear]
+text: Nuclear Pixels unlocked! (A testing pixel.) Its old pixel is radioactive: every old pixel lying near it despawns almost at once.
+overlay line: You unlocked Nuclear Pixels!
+
+[Tip: pixel_Fire]
+text: Fire Pixels unlocked! (A testing pixel.) Click one and a ring of flames bursts out of the cube; the old pixel burns away as it falls.
+overlay line: You unlocked Fire Pixels!
+
+[Tip: pixel_Dirt]
+text: Farmer's Pack unlocked! Eight farm blocks for the Farming skill: Dirt, Seed, Water, Fertilizer, Pollen, Wheat, Weevil and Golden Fruit. Switch on Farming mode in the Toggles window (or Train it in the Skills window) to make them replace the basic pixels. Beware of weevils: click them before they eat your sprouts!
+overlay line: You unlocked the Farmer's Pack!
+
+[Tip: hazard]
+text: A hazard block! Pests and gas pockets pay nothing: a few taps are harmless, but hit one too many times and it goes off (pests swarm out and eat your sprouts, gas explodes) and your skill XP drops for a minute. Wait it out - it leaves by itself - or RIGHT-click it to work it away safely (it takes as many right clicks as it takes to break, plus the hits you already made). The auto clicker leaves it alone.
+overlay line: Hazard block!
+
+[Tip: woodworking]
+text: Your woodchipper and log rack are set up! While you train Woodcutting they stand at the sides of the screen. Drag old blocks into them with Pixel Grabbing for bonus XP: scraps (Bark, Sap, Leaf and Twig) go in the chipper, logs (Wood and Heartwood) on the rack. The blocks are used up, but they fill your bonus XP bank, which doubles the XP of your next chops.
+overlay line: The woodchipper and log rack are set up!
+
+[Tip: pixel_Fish]
+text: Angler's Pack unlocked! The Fishing skill: very common Water, Seaweed, Shell, rare Pearl and rare Fish, plus a stinging Jellyfish to avoid. Open the Skills window to train it: its blocks replace the basic pixels while it is in play. Click a Fish to start a Weak Spots round: hit every spot to catch it, miss and it gets away. Bait blocks drop pellets that bring more fish - but a Jellyfish that goes off fries them all. Rarer finds: a Message in a Bottle (break it to unroll a treasure map, then dig up the X; right-click it to ignore it) and the mighty Whale, which fights the line and runs from your mouse while you click it down.
+overlay line: You unlocked the Angler's Pack!
+
+[Tip: pixel_Berry]
+text: Forager's Pack unlocked! The Foraging skill: Berry, Mushroom, Herb and rare Truffle blocks, plus Weeds as filler and a spreading Mold to deal with (shake infected pixels clean). Open the Skills window to train it: its blocks replace the basic pixels while it is in play. Weeds are a useless filler that gets rarer as you level.
+overlay line: You unlocked the Forager's Pack!
+
+[Tip: pixel_Wood]
+text: Lumberjack's Pack unlocked! The Woodcutting skill: wood blocks (Wood, Bark, Sap, Leaf, Heartwood) and three fillers (Twig, Pinecone, Moss) plus a Termite Hive to avoid: break it and termites go for your old pixels, so click them to save them. Open the Skills window to train it: its blocks replace the basic pixels while it is in play. The fillers are useless and get rarer as you level.
+overlay line: You unlocked the Lumberjack's Pack!
+
+[Tip: pixel_Rock]
+text: Rock Pixels unlocked! Rock is Mining's filler block: plain and almost worthless, and most of what appears at first. As your mining level rises it gets rarer.
+overlay line: You unlocked Rock Pixels!
+
+[Tip: pixel_Copper]
+text: Prospector's ores unlocked! Copper, Tin, Iron, Silver, Gold, Obsidian and Bedrock are tough rocks: hit them to crack them open (obsidian and bedrock take 15-20 clicks but pay a lot). A glittering one is a rich vein and pays 5x. The ores only spawn while Mining is the skill you are training: pick it in the Skills window.
+overlay line: You unlocked the Prospector's ores!
+
+[Tip: pixel_Water]
+text: Water Pixels unlocked! When an old Water pixel splashes on the ground near Seed sprouts or the Seed pet, they grow and sow much faster for a while. The water is used up either way. Stream them over your sprouts with a Sorter!
+overlay line: You unlocked Water Pixels!
+
+[Tip: pixel_Seed]
+text: Seed Pixels unlocked! Old Seed pixels slowly grow bigger and worth more. Vacuum them, hose them up or click a ripe one to harvest.
+overlay line: You unlocked Seed Pixels!
+
+[Tip: pixel_Mirror]
+text: Mirror Pixels unlocked! Clicking one also counts as a click on the last other pixel you collected, so it pays that pixel's amount again.
+overlay line: You unlocked Mirror Pixels!
+
+[Tip: stone_first]
+text: A PRIME CUBE! There are six (Space, Mind, Reality, Power, Time and Soul), each rarer than a Dragon Cube, and only ONE of each can be held. Gather all six and the Wizard may know what to do with them.
+overlay line: You found a Prime Cube!
+
+[Tip: god_first]
+text: A GOD CUBE! Slifer the Sky Dragon, Ra the Winged Dragon and Obelisk the Tormentor are the rarest things in the game: roughly one pixel in millions. Only ONE of each can ever be held, so keep it safe in your backpack.
+overlay line: You found a God Cube!
+
+[Tip: dragon_first]
+text: A Dragon Cube! There are seven of them, each with a different number of small cubes inside, and they turn up extremely rarely among the pixels. Gather all seven and a button will appear to summon the cube dragon and make a wish.
+overlay line: You found a Dragon Cube!
+
+[Tip: pixel_Meteor]
+text: Meteor Pixels unlocked! They streak away across the screen instead of falling.
+overlay line: You unlocked Meteor Pixels!
+
+[Tip: pixel_Red]
+text: Cubie unlocked Red, Green and Blue pixels! They pay the same as the black, gray and white ones; with all six pure currencies you can buy the Auto Clicker, your first skill and more.
+overlay line: You unlocked Red, Green and Blue Pixels!
+
+[Tip: bank_hose]
+text: The hose is out! Scroll the mouse wheel to pick a stored pixel type. Left-click spits one out, right-click sucks up the nearest old pixel, and holding right-click sucks up everything of that type around the nozzle.
+overlay line: Hose equipped!
+
+[Tip: bank_suck]
+text: Stored in the Bank! Open the Bank tab on the left edge to see what you have. Stored pixels keep their value when you spit them back out.
+overlay line: Pixel stored in the Bank!
+
+[Tip: bank_spit]
+text: Spat a stored pixel back out! It is worth what it was worth when you stored it.
+overlay line: Spat out a stored pixel!
+
+[Tip: bank_full]
+text: The Bank is full! Spit some pixels out, or buy Bank Storage upgrades in the shop to hold more.
+overlay line: The Bank is full!
+
+[Tip: node_standard_aimed]
+text: Aimed Clicks! Click near the EDGE of the cube and its husk flies out of that side - the cursor turns into an arrow that shows where. A click in the middle still scatters it at random. Send husks into a Recycler, onto a crate, or somewhere clear to crush them.
+overlay line: Aimed Clicks: click near the cube's edge to aim husks
+
+[Tip: husk_crush]
+text: Right-click a husk to crush it for XP! The blocks that fall off the cube are husks: material, never money. Crushing one gives a little XP to its own skill - watch the ??? bar at the bottom left fill up. Husks fade after a while, so use them while they lie there.
+overlay line: Right-click a husk to crush it for XP
+
+[Tip: stake_intro]
+text: Try this: HOLD the right mouse button on a basic block (black, gray, white, red, green or blue) on the cube. A stake grows on it the longer you hold (watch the number by the meter). Let go and the block goes back in line; when it comes round again it glows green and pays more - or red and pays nothing. Most stakes pay off, but not all of them.
+overlay line: 
+
+[Tip: blockhold]
+text: Block Hold unlocked! HOLD the right mouse button on the block on the cube to pull it out of the rotation: you get a new block while it stays held. Let go and it goes back. Holding drains the meter under the cube; if it runs dry the block is put back and the meter recharges more slowly.
+overlay line: 
+
+[Tip: robot]
+text: UFO Helper hired! It hovers off to the side of the screen. Click him, pick a consumable and place its ghost where you want it: whenever that device runs out, he puts a new one there as long as you have one to spare.
+overlay line: You hired the UFO Helper!
+
+[Tip: timeslow]
+text: Time Slow unlocked! Press {key:TimeSlow} to slow time and again to return to normal. It uses the same energy meter as Time Stop, but drains it more slowly. Meteor pixels crawl while time is slow - grab one with Pixel Grabbing and put it where you like.
+overlay line: You unlocked Time Slow! (press S)
+
+[Tip: timestop_slow]
+text: Time is slowed! Everything crawls - even meteor pixels, which you can now grab. The Time Stop meter drains slowly while it lasts; press {key:TimeSlow} to go back to normal speed.
+overlay line: Time slowed!
+
+[Tip: timestop_first]
+text: Time is stopped! Everything freezes, but you can keep clicking the cube. The meter at the top drains while time is stopped and refills once it runs again; press T to resume.
+overlay line: Time stopped!
+
+[Tip: timestop_empty]
+text: The Time Stop meter ran out, so time started again. It refills quickly while time runs - wait until it is a little full before stopping time again.
+overlay line: Time Stop ran out of energy!
+
+[Tip: ultra]
+text: Ultra pixel earned! Your Ultra pixels are one general currency, shown at the very top of the Inventory's Currency tab.
+overlay line: You earned an Ultra pixel!
+
+[Intro tips]
+log: This is your Log. It tracks your achievements and your goals - what to work towards next. (Your click counts per pixel are in Settings > Stats.) Open it any time with the Log button at the bottom left.
+inventory: This is your Inventory. Currency shows how many of each pixel you hold - you spend them in the shop. Consumables holds your potions and devices. Open it any time with the Inventory button at the top left.
+earn: Clicking the pixel is the main way to earn currency. As you play, upgrades, minigames and managing the old pixels that fall to the floor will open up other ways to earn.
+right click: Try the right mouse button too: HOLD it on the block on the cube. It's each block's second action. On the pure pixels (black, gray, white, red, green and blue) it puts a stake on the block - the longer you hold (watch the meter by your cursor), the more it is worth when it comes round again, but the stake can also go bad and pay nothing. Skill blocks you meet later do their own thing when held.
+
+[Tutorial: Shop]
+step 1: Welcome to the Shop! The list on the left shows every pixel you hold - prices are paid in those pixels. The tabs along the top split up what is for sale.
+step 2: Pixels: packs that unlock new pixel types. Every new type is its own currency, and some need goals from the minigames before you can buy them.
+step 3: Upgrades - Features: one-time unlocks such as the Auto Clicker, Pixel Grabbing, Time Stop and the Pixel Bank, plus upgrades for them.
+step 4: Upgrades - Value: makes a pixel type pay more, paid in that same pixel. Each level costs a little more than the last. Shift-click buys as many levels as you can afford.
+step 5: Upgrades - Operation: improves your consumables. Each one has a spinning picture and an orange arrow that opens its upgrades: longer lasting, bigger reach, more uses, more storage.
+step 6: Consumables: things with a one-time use - potions, devices, seeds and supplies. Buy them here, then use them from the Consumables tab of your Inventory.
+step 7: Minigames: events that start on their own once you buy them, from ghosts and meteors to Snake and Breakout. They pay rewards and unlock rare pixels. Every minigame can be switched on or off in the Toggles window, so you can customize your gameplay experience.
+step 8: Anything greyed out shows what it still needs. Open the Shop again any time with the Shop button at the top right.
+
+[Tutorial: Toggles]
+step 1: Psst - you bought the Auto Clicker! It starts switched OFF. See the Toggles tab on the right edge of the screen? Every on / off switch in the game lives there. Let me open it.
+step 2: Upgrades: here is your Auto Clicker. Tick it to start it, untick it to stop. Pixel Grabbing and Time Stop will show up here as soon as you own them.
+step 3: Only things you own are listed. Pixels: some special pixels (like Glass) spawn on their own, so switch off the ones you don't want. Minigames, Vendors and Pets get their own groups, so you can shape your own game.
+
+[Tutorial: Skills]
+step 1: Welcome to Skills! Every pixel you collect now trains a skill. Standard levels from the very first click, and the skill packs you buy add skills of their own.
+step 2: The bar along the top shows the skill you are training, its level and its XP. Fill it and the skill levels up.
+step 3: Pick a skill on the left. Standard is always there, every pack you unlock adds a card, and locked ones show ???. The orange ! on a card says what it swaps out and what it spawns.
+step 4: Press Train to put a skill in play. A pack swaps the basic cubes in your rotation for its own pixels, and only that skill earns XP. XP is kept per skill, so you can switch back and forth whenever you like.
+step 5: Each level unlocks a perk, listed on the right. Standard's perks work in every rotation, like longer-lasting old pixels and a roomier floor.
+step 6: Every level above 1 also gives a skill point. Spend it in the Skill tree: open it with the Skill tree button on a skill's page.
+step 7: Careful: skill packs bring bad blocks too. Right-click a hazard to defuse it safely, or it goes off and costs you XP. What you do with old pixels matters as well: clearing out the useful ones earns bonus XP, junk costs it.
+step 8: The Mastery bar along the bottom adds up all your skills. It only fills completely when every skill is maxed out.
+step 9: The pin button turns your current skill into a small window with an XP bar you can move around. Open Skills any time with the tab on the left edge of the screen.
+
+[Guide: Woodcutting]
+question: First time chopping? Want a quick tutorial on how Woodcutting works?
+later: No problem! Whenever you want it, the <b>guide book</b> next to the skill's name opens the Woodcutting guide.
+step 1: <b>Woodcutting</b> is a skill. Press <b>Train</b> and the cube stops showing pure pixels and grows a forest instead. Every woodcutting block you break pays its own currency and gives Woodcutting XP.
+step 2: Between trees the cube shows <b>filler</b>: Twig, Leaf and Wood at random (Moss and Sap join at level 2). Filler is quick and cheap - and the higher your level, the shorter the wait for the next tree.
+step 3: Then a <b>tree</b> arrives and plays out <b>in order</b>: leaves first, then a run of Wood, and its special blocks near the end - Sap (level 2+), Acorn (level 3+) and Heartwood (level 6+). The <b>tree bar</b> at the top shows how far along you are.
+step 4: Break a tree's last block for <b>Timber!</b> - bonus XP for the whole tree. Once you know a tree's shape you know what's coming next.
+step 5: From level 2 some trees are <b>infested</b>: the tree bar warns you, and the tree ends in a <b>Termite Hive</b>, a tough hazard block. Pesticide (it shows up in a tree's trunk now and then) and the Lumberjack's Focus potion help.
+step 6: Rare: the <b>Great Oak</b>. From level 3 a tree can be a Great Oak - one giant block that shakes bird nests loose (click them for XP). <b>Acorn</b> husks left lying on the field make it more likely.
+step 7: Every level gives a <b>skill point</b> for the <b>Skill tree</b>, and Big Tim the <b>Lumberjack</b> visits while you chop - he buys your wood for pure pixels. Open this guide again any time with the <b>book</b> next to the skill's name.
+
+[Perk popup: standard level 2]
+text: That ??? bar was a skill all along: STANDARD - and it just reached level 2! Every block you collect gives it 1 XP (crushing husks too), and every level gives a perk AND a skill point.\n\nSpend your point in Standard's skill tree (the tree button on its card): Block Hold or Power Click - two new ways to click. At level 3 your next point can take the other one - or Aimed Clicks, to throw husks where you want them. Later points branch further.\n\nYour first perk, Lingering pixels: husks on the floor last 5 seconds longer for every Standard level.
+
+[Perk popup: standard level 3]
+text: Standard level 3 - another skill point! Take the move you skipped (Block Hold or Power Click), or Aimed Clicks: click near the cube's edge and its husk flies out of that side, so you can send husks to a Recycler or a clear spot. Until then every husk scatters at random.\n\nYour perk, Steady grip: Block Hold lasts 10% longer.
+
+[Perk popup: woodcutting level 2]
+text: Woodcutting level 2! The <b>Wood Chipper</b> is now for sale in the Shop. Open the Shop and look under Consumables, or just type <b>chipper</b> into the search bar at the top of the Shop: searching finds every pack, potion and device in one go.
+
+[Perk popup: woodcutting level 3]
+text: Woodcutting level 3! Old wood pixels now <b>last longer</b> before they vanish (the Seasoned wood perk), so more of them are still lying there when you collect or chip them.
+
+[Perk popup: woodcutting level 5]
+text: Woodcutting level 5! <b>Wood</b> can now be switched on in the <b>Toggles</b> window (listed as Wood (Woodcutting)), so wood pixels also spawn when you play other rotations.
+
+[Perk popup: electrician level 5]
+text: Electrician level 5! The Conveyor Belt Kit is on sale in the Shop (Utilities).
+
+[Perk popup: electrician level 10]
+text: Electrician level 10! Every conveyor belt is now two cubes wide.
+
+[Perk popup: electrician level 20]
+text: Electrician level 20! Every conveyor belt is now three cubes wide.
+
+[Cubie]
+name: Cubie
+next button: Next
+last button: Okay!
+recycler gift: <b>+1 Recycler</b> (in your Consumables)
+visit 1 page 1: Psst... over here. The name's Cubie. I deal in pixels. A very legitimate little operation.
+visit 1 page 2: See, pixels are money around here. The white, gray and black ones, then red, green and blue later. Why those? Why not the shiny ones? Who knows. That's just what we're all told, so we go with it.
+visit 1 page 3: Now, how do you get them? You click. And click. And click some more. Same thing, all day. Don't look at me like that, everybody starts at the bottom.
+visit 1 page 4: Oh, and those leftover bits piling up on the floor? Don't just let them rot. Take this Recycler: anything that lands in it gets recycled for a little something back. Same colour in a row? Even better.\n\n{recycler}
+visit 1 page 5: Think of it as paying your dues. Tedious? Absolutely. But grind long enough and the good stuff opens up. Come find me when you've got a pile worth my time.
+visit 2 page 1: Well, well... look at that pile of black. White, gray, black: you've got the basics down. Real, official, everybody-agrees-it's-worth-something money.
+visit 2 page 2: But that's only half of the pure stuff. Here: red, green and blue. They'll turn up on your cube from now on. Consider it a loan. A friendly one. Mostly.\n\n{gift}
+visit 2 page 3: Grind all six and you're as rich as plain pixels get. That's the last step before you branch off into the good stuff. And my shop's open now - the Shop button's at the top right. Don't worry, I'm not counting your pockets. Much.
+visit 2 page 4: Here's the secret nobody tells you: the clicking never really stops. It just gets better pay. Save up for an Auto Clicker first, and the work starts doing itself while you do the clever bits.
+visit 2 page 5: Then learn a skill. The fancy pixels, wood, ore, crops and sparks, are goods, not coin - worth plenty to the right buyer. Big Tim the Lumberjack is a good place to start.
+visit 2 page 6: More vendors will wander through as you grow. Where from? Nobody asks. They pay in the same pixels, and that's good enough for everyone. You can switch them off in the Toggles menu (it opens up once you get the Auto Clicker).
+visit 2 page 7: My friend the Wizard might drop by soon. Keep him away from my stock, he turns things into frogs. Be seeing you...
+
+[Visitor: tinkerer]
+name: Tinkerer
+greeting: Well hello there! I'm the Tinkerer. I've got gadgets for every occasion, and for you I'll knock {0}% off every one. Interested?
+wares title: Tinkerer's Wares
+arrival log: The Tinkerer is here!
+accept button: Show me!
+reject button: No thanks
+done button: Done
+buy button: Buy
+full label: Full
+peek bubble: Psst! {0} is here. Click me to see what I've got!
+missed log: {0} stopped by and left.
+
+[Visitor: wizard]
+name: Wizard
+greeting: Ah, a customer! I am the Wizard, brewer of fine potions. For you, a mere {0}% off every bottle. Shall we deal?
+wares title: Wizard's Potions
+arrival log: The Wizard is here!
+accept button: Show me!
+reject button: No thanks
+done button: Done
+buy button: Buy
+full label: Full
+peek bubble: Psst! {0} is here. Click me to see what I've got!
+missed log: {0} stopped by and left.
+gauntlet aside: Six cubes! In one pocket! Well, well, well... I have a little thing here, a Gauntlet, golden and rather shiny. Set them in its faces and something very small and very powerful will come out. For a fee, naturally.
+
+[Visitor: entrepreneur]
+name: Pixel Entrepreneur
+greeting: Pleasure! I'm the Pixel Entrepreneur. I buy and sell pixels, and today I have a few deals with your name on them. Some are bargains, some are not. Care to look?
+wares title: Today's Deals
+arrival log: The Pixel Entrepreneur is here!
+accept button: Show me!
+reject button: No thanks
+done button: Done
+buy button: Buy
+full label: Full
+peek bubble: Psst! {0} is here. Click me to see what I've got!
+missed log: {0} stopped by and left.
+
+[Visitor: farmer]
+name: Farmer
+greeting: Howdy! I'm the Farmer. Seeds for every pixel under the sun, and for you a fair {0}% off. Plant 'em, water 'em, watch 'em grow. Care to take a look?
+wares title: Farmer's Seeds
+arrival log: The Farmer is here!
+accept button: Show me!
+reject button: No thanks
+done button: Done
+buy button: Buy
+full label: Full
+peek bubble: Psst! {0} is here. Click me to see what I've got!
+missed log: {0} stopped by and left.
+dragon aside: Some guys with tails literally FLEW BY and dropped these. I ain't gonna say no to some extra cash though!
+
+[Visitor: prospector]
+name: Pip the Prospector
+greeting: Well, look at you, a fellow digger! I buy rocks, ore and anything shiny. Pure pixels, fresh from the vault. My prices are fair-ish. Care to sell?
+wares title: Today's Offers
+arrival log: The Prospector is here!
+accept button: Show me!
+reject button: No thanks
+done button: Done
+buy button: Buy
+full label: Full
+peek bubble: Psst! {0} is here. Click me to see what I've got!
+missed log: {0} stopped by and left.
+
+[Visitor: lumberjack]
+name: Big Tim the Lumberjack
+greeting: Timber! A fellow chopper! I sell wood chippers and potions, and I'll buy any wood you've got - tell me how much and I'll name a fair-ish price.
+wares title: Big Tim's Yard
+arrival log: The Lumberjack is here!
+accept button: Show me!
+reject button: No thanks
+done button: Done
+buy button: Buy
+full label: Full
+peek bubble: Psst! {0} is here. Click me to see what I've got!
+missed log: {0} stopped by and left.
+
+[Visitor: egg]
+name: Egg
+greeting: 
+wares title: Egg
+arrival log: A cat called Egg stopped by...
+accept button: Show me!
+reject button: No thanks
+done button: Done
+buy button: Buy
+full label: Full
+peek bubble: Psst! {0} is here. Click me to see what I've got!
+missed log: {0} stopped by and left.
+farewell: Click it. Keep clicking. Something will hatch, and I won't tell you what. Mrrp. I'll stop by again. Maybe.
+gift farewell: Mrrp. You're welcome. Don't tell the other cats.
+
+[Visitor: bean]
+name: Bean
+greeting: 
+wares title: Bean
+arrival log: A grey tabby called Bean stopped by...
+accept button: Show me!
+reject button: No thanks
+done button: Done
+buy button: Buy
+full label: Full
+peek bubble: Psst! {0} is here. Click me to see what I've got!
+missed log: {0} stopped by and left.
+farewell: Find a nice open spot and plant them. Then stand back, dear. Don't wait too long to pick what grows. Mrrow!
+gift farewell: Mrrow! Fresh from the garden. I'll bring more if I find any.
+
+[Minigame: Black Hole]
+first hole: A black hole has opened!\nIt is hungry for old pixels. Find a way to feed it - {0} pixels will unlock something new.

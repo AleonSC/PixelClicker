@@ -731,7 +731,7 @@ public class PixelFirstPerson : MonoBehaviour
             foreach (Collider c in body.GetComponentsInChildren<Collider>()) c.enabled = true;
             body.transform.SetPositionAndRotation(hPos + hRot * relPos[i], hRot * relRot[i]);
             body.isKinematic = false;
-            SetBodyVelocity(body, Vector3.zero);
+            PixelBody.Steer(body, Vector3.zero, true);
             ScaledGravity gravity = body.GetComponent<ScaledGravity>();
             if (gravity != null) gravity.enabled = true;
             OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
@@ -825,16 +825,6 @@ public class PixelFirstPerson : MonoBehaviour
 
     private readonly System.Collections.Generic.List<Rigidbody> carried = new System.Collections.Generic.List<Rigidbody>();
 
-    private static void SetBodyVelocity(Rigidbody rb, Vector3 v)
-    {
-        if (rb == null || rb.isKinematic) return;
-#if UNITY_6000_0_OR_NEWER
-        rb.linearVelocity = v;
-#else
-        rb.velocity = v;
-#endif
-        rb.angularVelocity = Vector3.zero;
-    }
 
     /// <summary>The old pixel the crosshair is nearest to (within reach and a small angle), or null. Cubes glued into a build count too.</summary>
     private Rigidbody FindPickup()
@@ -884,7 +874,7 @@ public class PixelFirstPerson : MonoBehaviour
             OldPixelShatter shatter = body.GetComponent<OldPixelShatter>();
             if (shatter != null) shatter.Grabbed();
             foreach (Collider c in body.GetComponentsInChildren<Collider>()) c.enabled = false;   // a carried cube pushes nothing and nothing pushes it
-            SetBodyVelocity(body, Vector3.zero);
+            PixelBody.Steer(body, Vector3.zero, true);
             body.isKinematic = true;
             carried.Add(body);
             relPos.Add(inv * (body.transform.position - handle.transform.position));
@@ -916,7 +906,7 @@ public class PixelFirstPerson : MonoBehaviour
             if (gravity != null) gravity.enabled = true;
             OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
             if (despawn != null) despawn.Held = false;
-            SetBodyVelocity(body, throwVelocity ?? forward * unit * 0.6f);
+            PixelBody.Steer(body, throwVelocity ?? forward * unit * 0.6f, true);
             OldPixelShatter shatter = body.GetComponent<OldPixelShatter>();
             if (shatter != null) shatter.Released(true, 3f);
         }

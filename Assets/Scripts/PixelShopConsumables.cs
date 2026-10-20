@@ -42,12 +42,11 @@ public partial class PixelShop
     /// <summary>How many of an item you could buy right now (room and maxPerPurchase allowing).</summary>
     private int MaxAffordable(int item)
     {
-        PackCost[] one = consumables.ItemCosts(item);
         int lo = 0, hi = Mathf.Min(maxPerPurchase, consumables.ItemRoom(item));
         while (lo < hi)   // (affordability only drops as the count grows, so halve the range each step)
         {
             int mid = (lo + hi + 1) / 2;
-            if (CanAffordCosts(ScaleCosts(one, mid))) lo = mid; else hi = mid - 1;
+            if (CanAffordCosts(consumables.ItemCostsTotal(item, mid))) lo = mid; else hi = mid - 1;
         }
         return lo;
     }
@@ -56,18 +55,11 @@ public partial class PixelShop
     private bool ItemLocked(int item) =>
         potionsNeedUnlockedPixel && consumables.ItemOwned(item) <= 0 && !clicker.IsUnlocked(consumables.ItemRequiredType(item));
 
-    private static PackCost[] ScaleCosts(PackCost[] costs, int count)
-    {
-        if (costs == null) return new PackCost[0];
-        PackCost[] scaled = new PackCost[costs.Length];
-        for (int i = 0; i < costs.Length; i++) scaled[i] = new PackCost { type = costs[i].type, amount = costs[i].amount * count, minigameCurrency = costs[i].minigameCurrency };
-        return scaled;
-    }
-
     private static readonly PixelConsumables.DeviceKind[] UtilitiesFirst =
     {
         PixelConsumables.DeviceKind.Recycler, PixelConsumables.DeviceKind.SortingHopper, PixelConsumables.DeviceKind.Coupling, PixelConsumables.DeviceKind.ContainerHose,
-        PixelConsumables.DeviceKind.ConveyorBelt, PixelConsumables.DeviceKind.ConveyorCombiner, PixelConsumables.DeviceKind.BeltJump,
+        PixelConsumables.DeviceKind.ConveyorBelt, PixelConsumables.DeviceKind.BeltSorter, PixelConsumables.DeviceKind.ConveyorElevator,
+        PixelConsumables.DeviceKind.BeltJump, PixelConsumables.DeviceKind.ConveyorCombiner, PixelConsumables.DeviceKind.SolarPanel,
     };
 
     /// <summary>Items of a category, in shop order (the Recycler, Sorting Hopper, Coupling and Container Hose first among Utilities).</summary>
@@ -128,7 +120,7 @@ public partial class PixelShop
             SetPageBuy(page, false, lockedText);
             return;
         }
-        PackCost[] total = ScaleCosts(consumables.ItemCosts(item), page.count);
+        PackCost[] total = consumables.ItemCostsTotal(item, page.count);
         SetCosts(page.barCosts, total, false);
         SetPageBuy(page, CanAffordCosts(total), string.Format(buyCountFormat, page.count));
     }

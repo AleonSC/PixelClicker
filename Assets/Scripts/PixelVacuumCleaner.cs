@@ -356,12 +356,11 @@ public class PixelVacuumCleaner : MonoBehaviour
         for (int i = pixels.Count - 1; i >= 0 && tank.Count < capacity; i--)
         {
             Rigidbody rb = pixels[i];
-            if (rb == null || rb.isKinematic || clicker.IsFlyingPixel(rb) || PixelAttachment.IsAttached(rb) || PixelPathCarrier.IsCarried(rb)) continue;
+            if (!PixelHuskHolder.Takeable(clicker, rb, true) || PixelAttachment.IsAttached(rb) || PixelPathCarrier.IsCarried(rb)) continue;   // (one owner per husk)
             if (ignoreUntil.TryGetValue(rb, out float until) && Time.time < until) continue;
-            OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
-            if (info == null || info.heldByPlayer || !clicker.IsValidTierIndex(info.tierIndex)) continue;
-            OldPixelDespawn despawn = rb.GetComponent<OldPixelDespawn>();
-            if (despawn != null && (despawn.IsDespawning || despawn.Held)) continue;
+            PixelHuskQuery.Husk husk = PixelHuskQuery.Get(rb);
+            OldPixelInfo info = husk.info;
+            OldPixelDespawn despawn = husk.despawn;
             Vector3 to = mouth - rb.position;
             float d = to.magnitude;
             if (d > r) continue;
@@ -375,19 +374,11 @@ public class PixelVacuumCleaner : MonoBehaviour
             }
             float k = 1f - Mathf.Clamp01(d / r);
             if (despawn != null) despawn.KeepAlive();
-            PixelPathCarrier.SetVelocity(rb, Vector3.Lerp(VelocityOf(rb), to.normalized * Pull * (0.4f + 0.6f * k), 0.3f + 0.4f * k));
+            PixelPathCarrier.SetVelocity(rb, Vector3.Lerp(PixelBody.Velocity(rb), to.normalized * Pull * (0.4f + 0.6f * k), 0.3f + 0.4f * k));
         }
         if (ignoreUntil.Count > 80) ignoreUntil.Clear();
     }
 
-    private static Vector3 VelocityOf(Rigidbody rb)
-    {
-#if UNITY_6000_0_OR_NEWER
-        return rb.linearVelocity;
-#else
-        return rb.velocity;
-#endif
-    }
 
     /// <summary>A sucked-up husk shrinks into the intake and is gone (its type and value are in the tank).</summary>
     private IEnumerator SuckIn(GameObject go)

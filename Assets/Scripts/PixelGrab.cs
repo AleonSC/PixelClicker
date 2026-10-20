@@ -435,8 +435,8 @@ public class PixelGrab : MonoBehaviour, IPixelSaved
         {
             Rigidbody other = pair.Key;
             if (other == null || pair.Value < now || other == held) { scratch.Add(other); continue; }
-            Vector3 v = GetVelocity(other);
-            if (v.magnitude > limit) SetVelocity(other, v.normalized * limit);
+            Vector3 v = PixelBody.Velocity(other);
+            if (v.magnitude > limit) PixelBody.Steer(other, v.normalized * limit);
             if (other.angularVelocity.magnitude > limit * 2f) other.angularVelocity = other.angularVelocity.normalized * limit * 2f;
         }
         foreach (Rigidbody done in scratch) limitedUntil.Remove(done);
@@ -560,7 +560,7 @@ public class PixelGrab : MonoBehaviour, IPixelSaved
         float slow = PixelTimeStop.SlowFactor;
         Vector3 velocity = (target - held.position) * followSharpness / slow;
         if (velocity.magnitude > maxFollowSpeed / slow) velocity = velocity.normalized * (maxFollowSpeed / slow);
-        SetVelocity(held, velocity);
+        PixelBody.Steer(held, velocity);
         if (!held.isKinematic) held.angularVelocity *= 1f - spinDamping;
     }
 
@@ -592,9 +592,9 @@ public class PixelGrab : MonoBehaviour, IPixelSaved
     {
         if (held == null) return;
 
-        Vector3 v = GetVelocity(held) * throwStrength * PixelTimeStop.SlowFactor; // back to what the mouse did
+        Vector3 v = PixelBody.Velocity(held) * throwStrength * PixelTimeStop.SlowFactor; // back to what the mouse did
         if (v.magnitude > maxThrowSpeed) v = v.normalized * maxThrowSpeed;
-        SetVelocity(held, v);
+        PixelBody.Steer(held, v);
 
         OldPixelInfo letGoInfo = held.GetComponent<OldPixelInfo>();
         if (letGoInfo != null) { letGoInfo.heldByPlayer = false; letGoInfo.lastHeldTime = Time.unscaledTime; }
@@ -701,22 +701,5 @@ public class PixelGrab : MonoBehaviour, IPixelSaved
     private static void SetPhysicsMaterial(Collider col, UnityEngine.Object m) { col.sharedMaterial = (PhysicMaterial)m; }
 #endif
 
-    private static Vector3 GetVelocity(Rigidbody rb)
-    {
-#if UNITY_6000_0_OR_NEWER
-        return rb.linearVelocity;
-#else
-        return rb.velocity;
-#endif
-    }
 
-    private static void SetVelocity(Rigidbody rb, Vector3 v)
-    {
-        if (rb == null || rb.isKinematic) return;   // (a kinematic body cannot be steered: Unity warns)
-#if UNITY_6000_0_OR_NEWER
-        rb.linearVelocity = v;
-#else
-        rb.velocity = v;
-#endif
-    }
 }

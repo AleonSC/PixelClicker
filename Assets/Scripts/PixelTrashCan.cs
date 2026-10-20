@@ -107,11 +107,7 @@ public class PixelTrashCan : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom
         for (int i = pixels.Count - 1; i >= 0; i--)
         {
             Rigidbody rb = pixels[i];
-            if (rb == null || rb.isKinematic || clicker.IsFlyingPixel(rb) || PixelAttachment.IsAttached(rb)) continue;
-            OldPixelInfo info = PixelHuskQuery.Get(rb).info;
-            if (info == null || info.heldByPlayer) continue;
-            OldPixelDespawn despawn = PixelHuskQuery.Get(rb).despawn;
-            if (despawn != null && (despawn.IsDespawning || despawn.Held)) continue;
+            if (!PixelHuskHolder.Takeable(clicker, rb, true) || PixelAttachment.IsAttached(rb)) continue;   // (one owner per husk)
             Vector3 to = mouth - rb.position;
             Vector3 flat = new Vector3(to.x, 0f, to.z);
             if (flat.magnitude > r || rb.position.y > mouth.y + 3f * unit) continue;
@@ -123,19 +119,11 @@ public class PixelTrashCan : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom
             // Pulled in: the closer, the harder (it lifts a little so it can climb over the rim).
             float k = 1f - Mathf.Clamp01(flat.magnitude / r);
             Vector3 want = (flat.normalized * (0.35f + 0.65f * k) * Pull) + Vector3.up * Mathf.Clamp(to.y, -0.5f * unit, 1.5f * unit) * 2f;
-            Vector3 v = VelocityOf(rb);
+            Vector3 v = PixelBody.Velocity(rb);
             PixelPathCarrier.SetVelocity(rb, Vector3.Lerp(v, want, 0.25f + 0.35f * k));
         }
     }
 
-    private static Vector3 VelocityOf(Rigidbody rb)
-    {
-#if UNITY_6000_0_OR_NEWER
-        return rb.linearVelocity;
-#else
-        return rb.velocity;
-#endif
-    }
 
     private System.Collections.IEnumerator Vanish(Rigidbody rb)
     {

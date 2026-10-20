@@ -8,7 +8,7 @@
 //   PLACING (two stages, PixelFeatureTester 'scrollStage'): 1. the ghost SNAPS to a belt end near the mouse (TrySnap, turned the belt's way) - it can only be
 //   placed snapped; click to fix it. 2. the SCROLL WHEEL widens / narrows the gap (gapStepCubes steps, minGapCubes..maxGapCubes); the landing ramp always
 //   sits DIRECTLY ACROSS, in line with the belt, so the arc always lands. Click to confirm, right click goes back.
-//   SHOP (2026-10-19): also sold in Utilities (PixelConsumables DeviceKind.BeltJump, a PixelInstantItems tool: right-click starts this placing, one used up per jump).
+//   SHOP (2026-10-20): sold in Utilities (PixelConsumables DeviceKind.BeltJump, a PixelInstantItems tool: right-click starts this placing, one used up per jump).
 //   Saved with the tester save (position, turn, gap). Built with PixelFactoryKit.
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -47,15 +47,9 @@ public class PixelBeltJump : MonoBehaviour, IPixelAutoIntake
 
     // ---------------- building ----------------
 
+    /// <summary>The model alone, for the shop / inventory pictures (no working parts: PixelConsumables.DisplayOnly strips them).</summary>
+    public static GameObject CreateDisplay(PixelClicker c) => PixelConsumables.DisplayOnly(Build(c, false, DefaultGapCubes * U(c)));
     public static GameObject CreateGhost(PixelClicker c) => Build(c, true, DefaultGapCubes * U(c));
-
-    /// <summary>A picture-only model for the shop (solid, does nothing: its script is switched off).</summary>
-    public static GameObject CreateDisplay(PixelClicker c)
-    {
-        GameObject root = Build(c, false, DefaultGapCubes * U(c));
-        root.GetComponent<PixelBeltJump>().enabled = false;
-        return root;
-    }
 
     /// <summary>Places a working jump with its launch ramp at 'point' (a belt's end), facing 'yaw', the landing ramp 'gapWorld' across.</summary>
     public static GameObject PlaceGap(PixelClicker c, Vector3 point, float yaw, float gapWorld)

@@ -146,7 +146,7 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
         if (cam == null) cam = Camera.main;
         if (label != null && cam != null) label.transform.rotation = cam.transform.rotation;
         if (labelDirty) RefreshLabel();
-        if (Time.timeScale <= 0f || IsDying) return;
+        if (Time.timeScale <= 0f || IsEnding) return;
 
         // Mouse over the organizer: a click lets stored pixels out.
         if (cam != null && !PixelInput.PointerOverUI())
@@ -174,12 +174,9 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
         for (int i = pixels.Count - 1; i >= 0 && captured < 4; i--)
         {
             Rigidbody body = pixels[i];
-            if (body == null || body.isKinematic || clicker.IsFlyingPixel(body)) continue;
+            if (!PixelHuskHolder.Takeable(clicker, body)) continue;   // (one owner per husk; it now also leaves the husk in the player's hand alone)
             if (ignoreUntil.TryGetValue(body, out float until) && Time.time < until) continue;
-            OldPixelDespawn despawn = PixelHuskQuery.Get(body).despawn;
-            if (despawn != null && (despawn.Held || despawn.IsDespawning)) continue;
             OldPixelInfo info = PixelHuskQuery.Get(body).info;
-            if (info == null || !clicker.IsValidTierIndex(info.tierIndex) || clicker.Tiers[info.tierIndex].flyAway) continue;
 
             Slot slot = SlotOf(info.tierIndex);
             if (slot == null)
@@ -254,13 +251,13 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
 
     /// <summary>Lets up to 'count' stored pixels out (they keep their stored value and drop onto the floor round the pad).</summary>
     /// <summary>Room left in the organizer (a Container Hose only pumps in what fits).</summary>
-    public int HoseRoom => IsDying ? 0 : Mathf.Max(0, capacity - stored);
+    public int HoseRoom => IsEnding ? 0 : Mathf.Max(0, capacity - stored);
 
     /// <summary>A Container Hose pulls one stored pixel out (the first type with any): its type and average value; false when nothing is stored.</summary>
     public bool TakeOneForHose(out int tier, out double amount)
     {
         tier = -1; amount = 0;
-        if (IsDying) return false;
+        if (IsEnding) return false;
         foreach (Slot s in slots)
         {
             if (s.count <= 0) continue;

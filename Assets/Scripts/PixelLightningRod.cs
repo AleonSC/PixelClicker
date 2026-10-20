@@ -136,4 +136,12 @@ public class PixelLightningRod : PixelPlacedDevice
     {
         if (bolts != null) bolts.Destroy();
     }
+
+    // ---- the device card (PixelDeviceCard) ----
+    protected override void AddInfo(PixelDeviceInfo info)
+    {
+        if (Armed) info.Add("Next strike", Mathf.Max(0f, strikeTimer).ToString("0") + " s");
+        if (!info.Full) return;
+        info.Add("Strikes within", radius.ToString("0.#") + " units, every " + strikeSeconds.ToString("0") + " s");
+    }
 }

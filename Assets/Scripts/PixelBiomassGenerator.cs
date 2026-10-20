@@ -1,6 +1,6 @@
 // ---- System notes ----
 // PixelBiomassGenerator.cs
-//   BIOMASS GENERATORS (2026-10-19, Devices session): two placed devices built by this one component (the permanent PixelChipperDevice stub sits next to it):
+//   BIOMASS GENERATORS (2026-10-19, Devices session): two placed devices built by this one component (the permanent PixelPermanentDevice stub sits next to it):
 //   - POCKET BIOMASS GENERATOR (DeviceKind.PocketBiomassGenerator 27): a small one from the shop's Consumables tab;
 //   - BIOMASS GENERATOR (DeviceKind.BiomassGenerator 28): the big one, on sale at Woodcutting level 10 (shopSkillId 'woodcutting').
 //   They differ only in their Device entry: radius (how far the power reaches), generatorMaxCharge (seconds of power when full) and generatorChargePerHusk
@@ -317,7 +317,7 @@ public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHu
         }
     }
 
-    /// <summary>Every placed device within the radius (not other generators) runs on this generator's power: its countdown stops and it shows this bar.</summary>
+    /// <summary>Every timed, switched-on placed device within the radius (not other generators) runs on this generator's power: its countdown stops and it shows this bar.</summary>
     private void PowerAround(float fraction)
     {
         powering = 0;
@@ -325,6 +325,7 @@ public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHu
         foreach (PixelPlacedDevice d in PixelPlacedDevice.All)
         {
             if (d == null || d == device || d.IsEnding || IsPowerSource(d)) continue;
+            if (d.Permanent || !d.Armed) continue;   // (no countdown to stop: a permanent device, or one not switched on yet - no energy bar, not counted)
             Vector3 dv = d.transform.position - me; dv.y = 0f;
             if (dv.sqrMagnitude > radius * radius) continue;
             d.HoldPower(fraction, energyColor);

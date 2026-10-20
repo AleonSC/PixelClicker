@@ -38,7 +38,7 @@ public class PixelMagnetDevice : PixelPlacedDevice
 
     private void FixedUpdate()
     {
-        if (IsDying || !Armed || clicker == null || pullPoint == null) return;
+        if (IsEnding || !Armed || clicker == null || pullPoint == null) return;
         Vector3 target = pullPoint.position + Vector3.down * drop;
         var pixels = clicker.OldPixels;
         for (int i = pixels.Count - 1; i >= 0; i--)
@@ -61,5 +61,13 @@ public class PixelMagnetDevice : PixelPlacedDevice
             }
             else body.AddForce(to / distance * pull, ForceMode.Acceleration);
         }
+    }
+
+    // ---- the device card (PixelDeviceCard) ----
+    protected override void AddInfo(PixelDeviceInfo info)
+    {
+        info.Add("Pulls", "husks within " + radius.ToString("0.#") + " units into a heap");
+        if (!info.Full) return;
+        info.Add("Pull", pull.ToString("0.#"));
     }
 }

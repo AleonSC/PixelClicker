@@ -158,7 +158,7 @@ public class PixelUI : MonoBehaviour
     [SerializeField] private string noConsumablesText = "No potions yet.";
 
     [Tooltip("The kinds of consumable in the drop-down at the top of the Consumables tab. The first is potions, the second devices (fan, magnet, vacuum device...). Add names here when new kinds exist.")]
-    [SerializeField] private string[] consumableCategories = { "Potions", "Devices" };
+    [SerializeField] private string[] consumableCategories = { "Potions", "Utilities" };
 
     [Min(20f)]
     [Tooltip("Height of that drop-down.")]
@@ -743,8 +743,20 @@ public class PixelUI : MonoBehaviour
             tooltipCustomText = consumables.ItemName(item) + "  -  click to " + verb;
             return;
         }
-        tooltipCustomText = consumables != null && consumables.IsSeedItem(item) ? seedHint : consumables != null && consumables.IsSupplyItem(item) ? supplyHint : consumables != null && consumables.IsDevice(item) ? deviceHint : potionHint;
+        string hint = consumables != null && consumables.IsSeedItem(item) ? seedHint : consumables != null && consumables.IsSupplyItem(item) ? supplyHint : consumables != null && consumables.IsDevice(item) ? deviceHint : potionHint;
+        if (consumables == null) { tooltipCustomText = hint; return; }
+        // What it is and what it does (the same description as the shop and the 3D window), then how to use it.
+        string description = consumables.ItemDescription(item);
+        tooltipCustomText = "<b>" + consumables.ItemName(item) + "</b>"
+                          + (string.IsNullOrEmpty(description) ? "" : "\n<size=82%>" + description + "</size>")
+                          + "\n<size=76%><i>" + hint + "</i></size>";
     }
+
+    [Tooltip("Widest the Inventory's item tooltip gets before its text wraps.")]
+    [SerializeField] private float itemTipMaxWidth = 460f;
+
+    private string measuredTipText;
+    private Vector2 measuredTipSize;
 
     private void UpdateTooltip()
     {
@@ -756,6 +768,36 @@ public class PixelUI : MonoBehaviour
 
         string text = custom ? tooltipCustomText
             : clicker.Tiers[tooltipTier].displayName;
+        if (custom && text.IndexOf('\n') >= 0)
+        {
+            // A several-line tip (an item: name + description + how to use it): wraps at itemTipMaxWidth, measured only when the text changes.
+            if (text != measuredTipText)
+            {
+                measuredTipText = text;
+                tooltipLabel.textWrappingMode = TextWrappingModes.Normal;
+                RectTransform lr = tooltipLabel.rectTransform;
+                lr.offsetMin = new Vector2(14f, 6f);
+                lr.offsetMax = new Vector2(-14f, -6f);
+                tooltipLabel.text = text;
+                float maxW = Mathf.Max(160f, itemTipMaxWidth);
+                Vector2 pref = tooltipLabel.GetPreferredValues(text, maxW, 0f);
+                float w = Mathf.Min(maxW, pref.x);
+                pref = tooltipLabel.GetPreferredValues(text, w, 0f);
+                measuredTipSize = new Vector2(w + 30f, pref.y + 16f);
+            }
+            tooltipRect.sizeDelta = measuredTipSize;
+            PixelUIKit.PlaceTooltip(tooltipRect, popupCanvasRect, CursorLocal(), 20f);
+            return;
+        }
+        if (measuredTipText != null)
+        {
+            // back to the one-line tip: its text box is much wider than the tooltip, so it never wraps (centred, it simply overflows)
+            measuredTipText = null;
+            tooltipLabel.textWrappingMode = TextWrappingModes.NoWrap;
+            RectTransform lr = tooltipLabel.rectTransform;
+            lr.offsetMin = new Vector2(-400f, 0f);
+            lr.offsetMax = new Vector2(400f, 0f);
+        }
         tooltipLabel.text = text;
         tooltipLabel.ForceMeshUpdate();
         float measured = tooltipLabel.preferredWidth;
@@ -1699,7 +1741,7 @@ public class PixelUI : MonoBehaviour
         dr.sizeDelta = new Vector2(innerWidth, categoryDropdownHeight);
         dr.anchoredPosition = new Vector2(0f, -(tabTop + subTabHeight + subTabGap));
         categoryDropdown.options.Clear();
-        foreach (string category in consumableCategories) categoryDropdown.options.Add(new TMP_Dropdown.OptionData(category));
+        foreach (string category in consumableCategories) categoryDropdown.options.Add(new TMP_Dropdown.OptionData(category == "Devices" ? "Utilities" : category));   // (one name for the category everywhere: the shop calls it Utilities)
         if (categoryDropdown.options.Count < 3) categoryDropdown.options.Add(new TMP_Dropdown.OptionData("Seeds")); // a scene saved before seeds existed has only two names
         if (categoryDropdown.options.Count < 4) categoryDropdown.options.Add(new TMP_Dropdown.OptionData("Supplies"));
         categoryDropdown.SetValueWithoutNotify(0);

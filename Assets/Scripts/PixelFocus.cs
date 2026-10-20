@@ -7,13 +7,13 @@
 //   First potion: Lumberjack's Focus (woodcutting, 60 s, holds off the Termite Hive, the Hornet Nest block's new name). Now an ITEM too (PixelConsumables DeviceKind.FocusPotion, Supplies, vendorOnly: the Lumberjack sells it now
 //   and then, focusChance; right-click drinks it through DrinkForSkill). Also consumed from Dev Tools (the 'Focus potions' widget: drop-down +
 //   Drink + Cancel) through Drink(index) / Cancel(). A shop / crafting recipe from the skill's own materials is the intended source later.
-//   Runs on game time (pauses with the game), one potion at a time (drinking another replaces it), not saved. The countdown shows as a PixelStatusLines line (key 'focus').
+//   Runs on game time (pauses with the game), one potion at a time (drinking another replaces it). The running potion is saved (save part 'focus'). The countdown shows as a PixelStatusLines line (key 'focus').
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelFocus : MonoBehaviour
+public class PixelFocus : MonoBehaviour, IPixelSaved
 {
     [Serializable]
     public class FocusPotion
@@ -69,6 +69,7 @@ public class PixelFocus : MonoBehaviour
 
     private void Awake()
     {
+        PixelSaveRegistry.Register(this);
         Instance = this;
         if (potions == null) potions = new List<FocusPotion>();
         if (potions.Count == 0) potions.Add(new FocusPotion());   // Lumberjack's Focus
@@ -76,7 +77,34 @@ public class PixelFocus : MonoBehaviour
 
     private void OnDestroy()
     {
+        PixelSaveRegistry.Unregister(this);
         if (Instance == this) { Instance = null; PixelStatusLines.Clear(StatusKey); }
+    }
+
+    // ---- save: the running potion and its time left (PixelSaveRegistry) ----
+
+    [Serializable] private class SaveState { public string skillId; public string name; public float remaining; }
+
+    string IPixelSaved.SaveId => "focus";
+    int IPixelSaved.SaveOrder => PixelSaveRegistry.WorldBand + 125;
+
+    string IPixelSaved.Export() => Active ? PixelSaveRegistry.ToJson(new SaveState { skillId = active.skillId, name = active.displayName, remaining = remaining }) : null;
+
+    void IPixelSaved.Import(string data)
+    {
+        Cancel();
+        SaveState st = PixelSaveRegistry.FromJson<SaveState>(data);
+        if (st == null || st.remaining <= 0f || potions == null) return;
+        for (int i = 0; i < potions.Count; i++)
+        {
+            FocusPotion p = potions[i];
+            if (p == null || p.skillId != st.skillId || (p.displayName != st.name && i != potions.FindIndex(x => x != null && x.skillId == st.skillId))) continue;
+            if (!Drink(i)) return;
+            remaining = st.remaining;
+            shownSecond = -1;
+            RefreshStatus();
+            return;
+        }
     }
 
     /// <summary>Drinks the potion at this index of <see cref="Potions"/> (replaces the one that is active). False if there is no such potion or focus is switched off.</summary>

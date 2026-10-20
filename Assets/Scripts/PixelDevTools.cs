@@ -212,6 +212,8 @@ public class PixelDevTools : MonoBehaviour
 
     [Tooltip("Height of each row.")]
     [SerializeField] private float rowHeight = 64f;
+    [Tooltip("Hover text of the Time control widget's buttons.")]
+    [SerializeField] private string timeControlTipText = "Rewind / Pause / Play / Slow / Fast. Press Slow, Fast or Rewind again for the next speed; while one is on, the mouse wheel changes the speed by 0.1x (0.1x - 5x). Rewind only moves husks back - currency, timers and devices stay as they are.";
 
     [Tooltip("Text size of rows and buttons.")]
     [SerializeField] private float fontSize = 30f;
@@ -408,6 +410,7 @@ public class PixelDevTools : MonoBehaviour
     {
         PixelDevHub.OpenChanged -= OnHubOpenChanged;
         PixelDevDocs.Shown -= OnDocsShown;
+        PixelTimeControl.Changed -= RefreshTimeStatus;
         if (instance == this)
         {
             instance = null;
@@ -908,7 +911,34 @@ public class PixelDevTools : MonoBehaviour
         Place(clickCountField.GetComponent<RectTransform>(), 40f + inner * 0.6f, y, inner * 0.4f);
         Widget(content, board, "clicks", ws, y);
         y += rowHeight + 24f;
+        ws = content.childCount;
 
+        // Time control: Pause / Play / Slow / Fast / Rewind (PixelTimeControl), and a status line under them
+        {
+            string[] names = { "Rewind", "Pause", "Play", "Slow", "Fast" };
+            System.Action[] acts =
+            {
+                () => PixelTimeControl.Instance?.Rewind(), () => PixelTimeControl.Instance?.Pause(), () => PixelTimeControl.Instance?.Play(),
+                () => PixelTimeControl.Instance?.Slow(), () => PixelTimeControl.Instance?.Fast(),
+            };
+            float bw = (inner - 4 * 8f) / names.Length;
+            for (int i = 0; i < names.Length; i++)
+            {
+                System.Action act = acts[i];
+                Button b = PixelUIKit.CreateButton(font, content, "Time " + names[i] + " Button", names[i], new Vector2(bw, rowHeight), buttonColor, textColor, fontSize * 0.8f);
+                Place(b.GetComponent<RectTransform>(), 40f + i * (bw + 8f), y, bw);
+                b.onClick.AddListener(() => act());
+                AddTip(b.gameObject, timeControlTipText);
+            }
+            timeStatus = PixelUIKit.CreateText(font, content, "Time Status", "", fontSize * 0.8f, TextAlignmentOptions.MidlineLeft, FontStyles.Normal, textColor);
+            Place(timeStatus.rectTransform, 40f, y + rowHeight + WidgetRowGap, inner);
+            RefreshTimeStatus();
+            PixelTimeControl.Changed += RefreshTimeStatus;
+            Widget(content, board, "timecontrol", ws, y, 2);
+            y += 2f * rowHeight + WidgetRowGap + 24f;
+        }
+
+        BuildResourceToolsCard(content, board);
         board.Finish();   // the saved order, the layout and the scroll size
         refreshCollapse();
 
@@ -932,6 +962,13 @@ public class PixelDevTools : MonoBehaviour
         if (PixelDevHub.IsOpen) FillDropdowns();
     }
 
+    private void RefreshTimeStatus()
+    {
+        if (timeStatus == null) return;
+        PixelTimeControl tc = PixelTimeControl.Instance;
+        timeStatus.text = tc == null ? "Time control is off in this build" : tc.StatusText() + "   -   " + tc.RecordedSeconds.ToString("0") + " s to rewind";
+    }
+
     private void OnDocsShown(int sub)
     {
         if (sub == 0) RebuildTodo();
@@ -941,6 +978,7 @@ public class PixelDevTools : MonoBehaviour
     private void OnHubOpenChanged(bool open)
     {
         if (open && pixelDropdown != null) { FillDropdowns(); FillSelector(); }
+        if (open) RefreshTimeStatus();
     }
 
     /// <summary>Turns the controls built since child number 'start' of 'content' (one row) into a draggable widget card at row position y.</summary>
@@ -948,6 +986,8 @@ public class PixelDevTools : MonoBehaviour
     {
         switch (id)
         {
+            case "resources": return "Resource Tools";
+            case "timecontrol": return "Time control";
             case "addpixel": return "Add pixels";
             case "spawnpixel": return "Spawned pixel";
             case "spawnminigame": return "Minigames";
@@ -1016,10 +1056,58 @@ public class PixelDevTools : MonoBehaviour
         }
     }
 
+    // ---- Resource Tools: these tools share ONE card (in this order) instead of a card each; ids with a label of their own get no sub-title. ----
+    private static readonly string[] ResourceToolIds = { "infinite", "god", "nodespawn", "huskpile", "clear", "nolimit", "spawnpixel", "middleclick", "addpixel", "focus", "clicks" };
+    private static readonly HashSet<string> ResourceToolsWithOwnLabel = new HashSet<string> { "infinite", "god", "nodespawn", "clear", "nolimit", "clicks" };
+    private readonly Dictionary<string, KeyValuePair<List<Transform>, float>> resourceParts = new Dictionary<string, KeyValuePair<List<Transform>, float>>();
+    private const float ResourceSubtitleH = 26f;
+
+    /// <summary>Builds the 'Resource Tools' card from the tools Widget set aside (ResourceToolIds), stacked in that order with a small title over the ones without a label.</summary>
+    private void BuildResourceToolsCard(RectTransform content, PixelWidgetBoard board)
+    {
+        float hdr = PixelWidgetBoard.CardHeaderH, inner = PixelDevHub.ContentW - 100f;
+        GameObject card = new GameObject("Widget resources", typeof(RectTransform), typeof(Image));
+        card.transform.SetParent(content, false);
+        RectTransform cr = card.GetComponent<RectTransform>();
+        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(0f, 1f);
+        Image im = card.GetComponent<Image>();
+        im.color = new Color(1f, 1f, 1f, 0.05f);
+        im.raycastTarget = false;
+        PixelUIKit.StyleBox(im);
+        float acc = 0f;   // how far down the card the next tool starts (below the header strip)
+        foreach (string id in ResourceToolIds)
+        {
+            if (!resourceParts.TryGetValue(id, out KeyValuePair<List<Transform>, float> part)) continue;
+            if (!ResourceToolsWithOwnLabel.Contains(id))
+            {
+                TMP_Text sub = PixelUIKit.CreateText(font, card.transform, id + " Title", WidgetTitle(id), fontSize - 3f, TextAlignmentOptions.BottomLeft, FontStyles.Bold, new Color(0.6f, 0.75f, 1f, 1f));
+                sub.raycastTarget = false;
+                RectTransform sr = sub.rectTransform;
+                sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0f, 1f);
+                sr.sizeDelta = new Vector2(inner, ResourceSubtitleH);
+                sr.anchoredPosition = new Vector2(40f, -(8f + hdr + acc));
+                acc += ResourceSubtitleH;
+            }
+            foreach (Transform k in part.Key)
+            {
+                k.SetParent(card.transform, false);
+                RectTransform kr = (RectTransform)k;
+                kr.anchoredPosition += new Vector2(0f, part.Value - 8f - hdr - acc);   // (built at row -y; now at this tool's place in the card)
+                foreach (TMP_Dropdown dd in k.GetComponentsInChildren<TMP_Dropdown>(true)) PixelUIKit.LetListEscapeMasks(dd);
+                foreach (Button b in k.GetComponentsInChildren<Button>(true)) PixelUIKit.FitOneLine(b.GetComponentInChildren<TMP_Text>(true));
+            }
+            acc += rowHeight + WidgetRowGap + 4f;
+        }
+        float cardH = hdr + 8f + acc + 4f;
+        cr.sizeDelta = new Vector2(PixelDevHub.ContentW - 24f, cardH);
+        board.Add("resources", cr, cardH, WidgetTitle("resources"));
+    }
+
     private void Widget(RectTransform content, PixelWidgetBoard board, string id, int start, float y, int rows = 1)
     {
         List<Transform> kids = new List<Transform>();
         for (int i = start; i < content.childCount; i++) kids.Add(content.GetChild(i));
+        if (System.Array.IndexOf(ResourceToolIds, id) >= 0) { resourceParts[id] = new KeyValuePair<List<Transform>, float>(kids, y); return; }   // (goes into the Resource Tools card)
         float hdr = PixelWidgetBoard.CardHeaderH;   // the card's header strip (title + minimize button) sits above the controls
         float cardH = rows * rowHeight + (rows - 1) * WidgetRowGap + 16f + hdr;   // (a widget with more rows places them WidgetRowGap apart)
         GameObject card = new GameObject("Widget " + id, typeof(RectTransform), typeof(Image));
@@ -1049,6 +1137,7 @@ public class PixelDevTools : MonoBehaviour
 
     private Button resetButton;
     private TMP_Text resetLabel;
+    private TMP_Text timeStatus;   // the Time control widget's status line
     private float resetConfirmUntil;
 
     private void ResetCountsClicked()
