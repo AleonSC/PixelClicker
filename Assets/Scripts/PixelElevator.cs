@@ -62,6 +62,8 @@ public class PixelElevator : MonoBehaviour, IPixelSocketDevice, IPixelAutoIntake
 
     // ---------------- building ----------------
 
+    /// <summary>The model alone, for the shop / inventory pictures (no working parts: PixelConsumables.DisplayOnly strips them).</summary>
+    public static GameObject CreateDisplay(PixelClicker c) => PixelConsumables.DisplayOnly(Build(c, false, DefaultHeightCubes, "Conveyor Elevator (Display)"));
     public static GameObject CreateGhost(PixelClicker c) { return Build(c, true, DefaultHeightCubes, "Conveyor Elevator (Ghost)"); }
 
     public static GameObject PlaceTall(PixelClicker c, Vector3 point, float yaw, float heightWorld)

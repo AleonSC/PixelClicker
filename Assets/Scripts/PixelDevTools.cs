@@ -904,6 +904,7 @@ public class PixelDevTools : MonoBehaviour
         Widget(content, board, "clicks", ws, y);
         y += rowHeight + 24f;
 
+        BuildResourceToolsCard(content, board);
         board.Finish();   // the saved order, the layout and the scroll size
         refreshCollapse();
 
@@ -943,6 +944,7 @@ public class PixelDevTools : MonoBehaviour
     {
         switch (id)
         {
+            case "resources": return "Resource Tools";
             case "addpixel": return "Add pixels";
             case "spawnpixel": return "Spawned pixel";
             case "spawnminigame": return "Minigames";
@@ -989,10 +991,58 @@ public class PixelDevTools : MonoBehaviour
         }
     }
 
+    // ---- Resource Tools: these tools share ONE card (in this order) instead of a card each; ids with a label of their own get no sub-title. ----
+    private static readonly string[] ResourceToolIds = { "infinite", "god", "nodespawn", "huskpile", "clear", "nolimit", "spawnpixel", "middleclick", "addpixel", "focus", "clicks" };
+    private static readonly HashSet<string> ResourceToolsWithOwnLabel = new HashSet<string> { "infinite", "god", "nodespawn", "clear", "nolimit", "clicks" };
+    private readonly Dictionary<string, KeyValuePair<List<Transform>, float>> resourceParts = new Dictionary<string, KeyValuePair<List<Transform>, float>>();
+    private const float ResourceSubtitleH = 26f;
+
+    /// <summary>Builds the 'Resource Tools' card from the tools Widget set aside (ResourceToolIds), stacked in that order with a small title over the ones without a label.</summary>
+    private void BuildResourceToolsCard(RectTransform content, PixelWidgetBoard board)
+    {
+        float hdr = PixelWidgetBoard.CardHeaderH, inner = PixelDevHub.ContentW - 100f;
+        GameObject card = new GameObject("Widget resources", typeof(RectTransform), typeof(Image));
+        card.transform.SetParent(content, false);
+        RectTransform cr = card.GetComponent<RectTransform>();
+        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(0f, 1f);
+        Image im = card.GetComponent<Image>();
+        im.color = new Color(1f, 1f, 1f, 0.05f);
+        im.raycastTarget = false;
+        PixelUIKit.StyleBox(im);
+        float acc = 0f;   // how far down the card the next tool starts (below the header strip)
+        foreach (string id in ResourceToolIds)
+        {
+            if (!resourceParts.TryGetValue(id, out KeyValuePair<List<Transform>, float> part)) continue;
+            if (!ResourceToolsWithOwnLabel.Contains(id))
+            {
+                TMP_Text sub = PixelUIKit.CreateText(font, card.transform, id + " Title", WidgetTitle(id), fontSize - 3f, TextAlignmentOptions.BottomLeft, FontStyles.Bold, new Color(0.6f, 0.75f, 1f, 1f));
+                sub.raycastTarget = false;
+                RectTransform sr = sub.rectTransform;
+                sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0f, 1f);
+                sr.sizeDelta = new Vector2(inner, ResourceSubtitleH);
+                sr.anchoredPosition = new Vector2(40f, -(8f + hdr + acc));
+                acc += ResourceSubtitleH;
+            }
+            foreach (Transform k in part.Key)
+            {
+                k.SetParent(card.transform, false);
+                RectTransform kr = (RectTransform)k;
+                kr.anchoredPosition += new Vector2(0f, part.Value - 8f - hdr - acc);   // (built at row -y; now at this tool's place in the card)
+                foreach (TMP_Dropdown dd in k.GetComponentsInChildren<TMP_Dropdown>(true)) PixelUIKit.LetListEscapeMasks(dd);
+                foreach (Button b in k.GetComponentsInChildren<Button>(true)) PixelUIKit.FitOneLine(b.GetComponentInChildren<TMP_Text>(true));
+            }
+            acc += rowHeight + WidgetRowGap + 4f;
+        }
+        float cardH = hdr + 8f + acc + 4f;
+        cr.sizeDelta = new Vector2(PixelDevHub.ContentW - 24f, cardH);
+        board.Add("resources", cr, cardH, WidgetTitle("resources"));
+    }
+
     private void Widget(RectTransform content, PixelWidgetBoard board, string id, int start, float y, int rows = 1)
     {
         List<Transform> kids = new List<Transform>();
         for (int i = start; i < content.childCount; i++) kids.Add(content.GetChild(i));
+        if (System.Array.IndexOf(ResourceToolIds, id) >= 0) { resourceParts[id] = new KeyValuePair<List<Transform>, float>(kids, y); return; }   // (goes into the Resource Tools card)
         float hdr = PixelWidgetBoard.CardHeaderH;   // the card's header strip (title + minimize button) sits above the controls
         float cardH = rows * rowHeight + (rows - 1) * WidgetRowGap + 16f + hdr;   // (a widget with more rows places them WidgetRowGap apart)
         GameObject card = new GameObject("Widget " + id, typeof(RectTransform), typeof(Image));

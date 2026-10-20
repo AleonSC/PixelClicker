@@ -1471,3 +1471,6 @@
 [2026-10-20 05:46 UTC] Fixed the 'Setting linear/angular velocity of a kinematic body is not supported' warnings: the shared husk velocity helper (also used by belts) now skips husks that are still locked, e.g. ones a hose or elevator hands onto a belt.
 [2026-10-20 05:47 UTC] Code cleanup: one shared helper for husk speeds (PixelBody), one name for 'this device is ending', named device markings, and the generic always-on device base is now called PixelPermanentDevice.
 [2026-10-20 05:55 UTC] Every first-time minigame tip is now a small box at the top right of the screen (like the potion tip) and still stops time and darkens the screen until Got it.
+[2026-10-20 06:12 UTC] Dev Hub: the Infinite resources, God mode, Husk despawn, Husk pile, Clear key, Husk limit, Spawned pixel, Middle click, Add pixels, Focus potions and Click count widgets are now one 'Resource Tools' widget.
+[2026-10-20 06:12 UTC] The Dev Hub Tester no longer lists Coupling, Wood Chipper, Conveyor Belt, Container Hose, Belt Sorter, Conveyor Elevator, Junction Box, Belt Jump, Conveyor Combiner and Solar Panel (they are shop items now).
+[2026-10-20 06:12 UTC] Added Belt Sorter, Conveyor Elevator, Belt Jump, Conveyor Combiner and Solar Panel to the shop's Utilities: right-click one to place it like the Coupling, one is used up per piece.

@@ -6,7 +6,8 @@
 //   Supplies category) and the display model (BuildItemModel). A NEW instant item = its DeviceKind (appended to the enum), its CreateDefault... in
 //   PixelConsumables (name, costs, maxHeld...), one Entry here, and a model branch in PixelConsumables.BuildItemModel.
 //   Current: Combo Fuel (used by itself), Ghost Bait, Pet Treat, Bait Bucket, Prime Gauntlet (opens its window), Conveyor Belt (a tool, never used up),
-//   Lumberjack's Focus, Pesticide Spray.
+//   Lumberjack's Focus, Pesticide Spray, and the conveyor-line pieces placed through the Tester features (Coupling, Container Hose, Belt Sorter,
+//   Conveyor Elevator, Belt Jump, Conveyor Combiner, Solar Panel: PlacePieces).
 // ---------------------------------------------------
 using UnityEngine;
 
@@ -96,6 +97,37 @@ public static class PixelInstantItems
             kind = PixelConsumables.DeviceKind.ContainerHose, usedUp = false, withUtilities = true,   // (one is used up per hose laid)
             use = (PixelConsumables c, int item, out string msg) => PlacePieces(c, PixelConsumables.DeviceKind.ContainerHose, "Container Hose",
                 "Click an Out coupling, then bend points, then an In coupling. Right click takes a point back", out msg),
+        },
+        // The conveyor-line pieces bought in the shop (2026-10-20): each starts its Dev Hub Tester feature's placing; one is used up per piece placed.
+        new Entry
+        {
+            kind = PixelConsumables.DeviceKind.BeltSorter, usedUp = false, withUtilities = true,
+            use = (PixelConsumables c, int item, out string msg) => PlacePieces(c, PixelConsumables.DeviceKind.BeltSorter, "Belt Sorter",
+                "Bring the sorter over a belt: it snaps on. Click to place it. Right click stops", out msg),
+        },
+        new Entry
+        {
+            kind = PixelConsumables.DeviceKind.ConveyorElevator, usedUp = false, withUtilities = true,
+            use = (PixelConsumables c, int item, out string msg) => PlacePieces(c, PixelConsumables.DeviceKind.ConveyorElevator, "Conveyor Elevator",
+                "Bring the tower to a belt's end, click, then move the mouse to set its height and click again. Right click stops", out msg),
+        },
+        new Entry
+        {
+            kind = PixelConsumables.DeviceKind.BeltJump, usedUp = false, withUtilities = true,
+            use = (PixelConsumables c, int item, out string msg) => PlacePieces(c, PixelConsumables.DeviceKind.BeltJump, "Belt Jump",
+                "Bring the jump to a belt's end, click, scroll to set the gap and click again. Right click stops", out msg),
+        },
+        new Entry
+        {
+            kind = PixelConsumables.DeviceKind.ConveyorCombiner, usedUp = false, withUtilities = true,
+            use = (PixelConsumables c, int item, out string msg) => PlacePieces(c, PixelConsumables.DeviceKind.ConveyorCombiner, "Conveyor Combiner",
+                "Bring the combiner over a belt: it snaps on. Click to place it. Right click stops", out msg),
+        },
+        new Entry
+        {
+            kind = PixelConsumables.DeviceKind.SolarPanel, usedUp = false, withUtilities = true,
+            use = (PixelConsumables c, int item, out string msg) => PlacePieces(c, PixelConsumables.DeviceKind.SolarPanel, "Solar Panel",
+                "Click the floor to place the panel, then click a device inside its blue ring to link it. Right click stops", out msg),
         },
         new Entry
         {

@@ -58,7 +58,8 @@ public partial class PixelShop
     private static readonly PixelConsumables.DeviceKind[] UtilitiesFirst =
     {
         PixelConsumables.DeviceKind.Recycler, PixelConsumables.DeviceKind.SortingHopper, PixelConsumables.DeviceKind.Coupling, PixelConsumables.DeviceKind.ContainerHose,
-        PixelConsumables.DeviceKind.ConveyorBelt,
+        PixelConsumables.DeviceKind.ConveyorBelt, PixelConsumables.DeviceKind.BeltSorter, PixelConsumables.DeviceKind.ConveyorElevator,
+        PixelConsumables.DeviceKind.BeltJump, PixelConsumables.DeviceKind.ConveyorCombiner, PixelConsumables.DeviceKind.SolarPanel,
     };
 
     /// <summary>Items of a category, in shop order (the Recycler, Sorting Hopper, Coupling and Container Hose first among Utilities).</summary>

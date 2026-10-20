@@ -239,6 +239,16 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         PocketBiomassGenerator = 27,
         /// <summary>Placed: the big Biomass Generator (PixelBiomassGenerator) - more charge, a wider radius. On sale at Woodcutting level 10.</summary>
         BiomassGenerator = 28,
+        /// <summary>Placed tester piece bought in the shop (2026-10-20): right-click starts placing Belt Sorters on belts (PixelInstantItems.PlacePieces, feature 'Belt Sorter'); one used up per piece.</summary>
+        BeltSorter = 29,
+        /// <summary>Shop piece: the Conveyor Elevator (feature 'Conveyor Elevator'), one used up per tower.</summary>
+        ConveyorElevator = 30,
+        /// <summary>Shop piece: the Belt Jump ramps (feature 'Belt Jump'), one used up per jump.</summary>
+        BeltJump = 31,
+        /// <summary>Shop piece: the Conveyor Combiner (feature 'Conveyor Combiner'), one used up per box.</summary>
+        ConveyorCombiner = 32,
+        /// <summary>Shop piece: the Solar Panel (feature 'Solar Panel'), one used up per panel.</summary>
+        SolarPanel = 33,
     }
 
     /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
@@ -1145,6 +1155,51 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         };
     }
 
+    /// <summary>
+    /// The conveyor-line pieces sold in the shop's Utilities (2026-10-20, moved out of the Dev Hub Tester): Belt Sorter, Conveyor Elevator, Belt Jump,
+    /// Conveyor Combiner and Solar Panel. Each is placed by its tester feature (PixelInstantItems.PlacePieces): one is used up per piece placed.
+    /// </summary>
+    private static Device CreateDefaultBeltPiece(DeviceKind kind)
+    {
+        Device d = new Device { kind = kind, requiredType = PixelClicker.PixelType.White, maxHeld = 5 };
+        PixelShop.PackCost Cost(PixelClicker.PixelType t, double a) => new PixelShop.PackCost { type = t, amount = a };
+        switch (kind)
+        {
+            case DeviceKind.BeltSorter:
+                d.displayName = "Belt Sorter";
+                d.description = "A low gantry that sits on a conveyor belt and kicks every husk of ONE type off the side - onto the floor, or onto a belt that starts at its chute. Drop a husk on its tray to choose the type. Right-click to place it: bring it over a belt and it snaps on. One is used up per sorter.";
+                d.costs = new[] { Cost(PixelClicker.PixelType.Gray, 200), Cost(PixelClicker.PixelType.Black, 150) };
+                d.color = new Color(0.85f, 0.55f, 0.25f, 1f);
+                break;
+            case DeviceKind.ConveyorElevator:
+                d.displayName = "Conveyor Elevator";
+                d.description = "A tower that lifts husks from the end of a belt up to a higher belt. Right-click to place it: bring it to a belt's end (it snaps on), click, move the mouse up or down to set the height and click again. Start a new belt at its top. One is used up per tower.";
+                d.costs = new[] { Cost(PixelClicker.PixelType.Gray, 250), Cost(PixelClicker.PixelType.Black, 200) };
+                d.color = new Color(0.5f, 0.6f, 0.75f, 1f);
+                break;
+            case DeviceKind.BeltJump:
+                d.displayName = "Belt Jump";
+                d.description = "A pair of ramps for a conveyor line: husks reaching a belt's end are launched over a gap and land on a belt that starts at the landing ramp - so a line can cross over other things. Right-click to place it on a belt's end, then scroll to set the gap. One is used up per jump.";
+                d.costs = new[] { Cost(PixelClicker.PixelType.Gray, 150), Cost(PixelClicker.PixelType.Black, 100) };
+                d.color = new Color(0.9f, 0.75f, 0.3f, 1f);
+                break;
+            case DeviceKind.ConveyorCombiner:
+                d.displayName = "Conveyor Combiner";
+                d.description = "A box that sits on a conveyor belt and merges the belts that end at its two side inlets onto it whenever there is a gap - two feeds become one. Right-click to place it: bring it over a belt and it snaps on. One is used up per box.";
+                d.costs = new[] { Cost(PixelClicker.PixelType.Gray, 200), Cost(PixelClicker.PixelType.Black, 150) };
+                d.color = new Color(0.45f, 0.7f, 0.55f, 1f);
+                break;
+            case DeviceKind.SolarPanel:
+                d.displayName = "Solar Panel";
+                d.requiredType = PixelClicker.PixelType.Solar;
+                d.description = "A flat solar panel: while Solar husks lie on it, it stops the countdown of the ONE device it is linked to. Solar husks on it are slowly used up, unless they sit in a complete group of 5. Right-click to place it, then click a device inside its blue ring to link it. One is used up per panel.";
+                d.costs = new[] { Cost(PixelClicker.PixelType.Solar, 150), Cost(PixelClicker.PixelType.Black, 100) };
+                d.color = new Color(0.3f, 0.45f, 0.85f, 1f);
+                break;
+        }
+        return d;
+    }
+
     private static Device CreateDefaultCoupling()
     {
         return new Device
@@ -1387,6 +1442,11 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.JunctionBox, CreateDefaultJunctionBox),
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.PocketBiomassGenerator, CreateDefaultPocketBiomassGenerator),
         new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.BiomassGenerator, CreateDefaultBiomassGenerator),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.BeltSorter, () => CreateDefaultBeltPiece(DeviceKind.BeltSorter)),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ConveyorElevator, () => CreateDefaultBeltPiece(DeviceKind.ConveyorElevator)),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.BeltJump, () => CreateDefaultBeltPiece(DeviceKind.BeltJump)),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ConveyorCombiner, () => CreateDefaultBeltPiece(DeviceKind.ConveyorCombiner)),
+        new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.SolarPanel, () => CreateDefaultBeltPiece(DeviceKind.SolarPanel)),
     };
 
     /// <summary>
@@ -2551,12 +2611,28 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
                 case DeviceKind.BiomassGenerator:
                     root = PixelBiomassGenerator.CreateDisplay(clicker, d.bodyDiameter > 0f ? d.bodyDiameter : 1f);
                     break;
+                case DeviceKind.BeltSorter: root = PixelBeltSorter.CreateDisplay(clicker); break;
+                case DeviceKind.ConveyorElevator: root = PixelElevator.CreateDisplay(clicker); break;
+                case DeviceKind.BeltJump: root = PixelBeltJump.CreateDisplay(clicker); break;
+                case DeviceKind.ConveyorCombiner: root = PixelConveyorCombiner.CreateDisplay(clicker); break;
+                case DeviceKind.SolarPanel: root = PixelSolarPanel.CreateDisplay(clicker); break;
                 default:
                     if (PixelInstantItems.Find(kind) != null) root = BuildItemModel(kind, d);   // instant-use items (PixelInstantItems) have small item models
                     break;
             }
         }
         finally { displayOnly = false; }
+        return root;
+    }
+
+    /// <summary>
+    /// Turns a working machine built by its own Build into a picture-only model: every behaviour on it (the machine itself, its couplings) is
+    /// removed at once, so it never registers as a real device or touches husks. Used by the conveyor pieces' CreateDisplay.
+    /// </summary>
+    public static GameObject DisplayOnly(GameObject root)
+    {
+        if (root == null) return null;
+        foreach (MonoBehaviour b in root.GetComponentsInChildren<MonoBehaviour>(true)) if (b != null) DestroyImmediate(b);
         return root;
     }
 

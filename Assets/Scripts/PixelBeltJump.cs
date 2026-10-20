@@ -46,6 +46,8 @@ public class PixelBeltJump : MonoBehaviour, IPixelAutoIntake
 
     // ---------------- building ----------------
 
+    /// <summary>The model alone, for the shop / inventory pictures (no working parts: PixelConsumables.DisplayOnly strips them).</summary>
+    public static GameObject CreateDisplay(PixelClicker c) => PixelConsumables.DisplayOnly(Build(c, false, DefaultGapCubes * U(c)));
     public static GameObject CreateGhost(PixelClicker c) => Build(c, true, DefaultGapCubes * U(c));
 
     /// <summary>Places a working jump with its launch ramp at 'point' (a belt's end), facing 'yaw', the landing ramp 'gapWorld' across.</summary>

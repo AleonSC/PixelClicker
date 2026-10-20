@@ -71,3 +71,6 @@ Main tab widget **Super Rares** (`superrares`) replaced the three separate 'Give
 ## Dev reports widget
 
 Main tab widget **Dev reports** (`devreports`, 3 rows of two buttons) replaced the six separate report widgets: **Open crash report folder** (greyed out when crash reports are off) | **Snapshot bounds**; **Mark this moment** | **UI layout dump**; **Balance report** | **Session recorder** (Start, then Stop & save with the time recorded on the button; `PixelSessionRecorder`). Old widget ids `report`, `bounds`, `moment`, `uidump`, `balance`, `session` are gone.
+
+## Resource Tools widget (2026-10-20)
+One Main-tab card 'Resource Tools' (`BuildResourceToolsCard`) holds what used to be 11 separate widgets: Infinite resources, God mode, Husk despawn, Husk pile, Clear key, Husk limit, Spawned pixel, Middle click, Add pixels, Focus potions, Click count (`ResourceToolIds`). `Widget()` keeps their controls aside instead of making a card; the combined card stacks them in that order, with a small sub-title above the tools that have no label of their own. The Tester tab no longer shows the 10 conveyor / device features that are now shop items (`PixelFeatureTester.SoldInShop`; still registered for StartFeature).

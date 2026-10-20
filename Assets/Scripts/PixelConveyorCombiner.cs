@@ -36,6 +36,8 @@ public class PixelConveyorCombiner : MonoBehaviour, IPixelAutoIntake
 
     // ---------------- placing ----------------
 
+    /// <summary>The model alone, for the shop / inventory pictures (no working parts: PixelConsumables.DisplayOnly strips them).</summary>
+    public static GameObject CreateDisplay(PixelClicker c) => PixelConsumables.DisplayOnly(Build(c, false, 1.35f * Mathf.Max(0.05f, c.OldPixelWorldSize)));
     public static GameObject CreateGhost(PixelClicker c) => Build(c, true, 1.35f * Mathf.Max(0.05f, c.OldPixelWorldSize));
 
     /// <summary>Snaps the ghost to the belt under the mouse, turned the belt's way.</summary>

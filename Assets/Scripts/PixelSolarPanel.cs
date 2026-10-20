@@ -51,6 +51,8 @@ public class PixelSolarPanel : MonoBehaviour
 
     // ---------------- placement (PixelFeatureTester) ----------------
 
+    /// <summary>The model alone, for the shop / inventory pictures (no working parts: PixelConsumables.DisplayOnly strips them).</summary>
+    public static GameObject CreateDisplay(PixelClicker c) => PixelConsumables.DisplayOnly(Build(c, false));
     public static GameObject CreateGhost(PixelClicker c) { GameObject g = Build(c, true); g.name = "Solar Panel (Ghost)"; return g; }
     public static GameObject Place(PixelClicker c, Vector3 point, float yaw)
     {
