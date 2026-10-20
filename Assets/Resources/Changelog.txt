@@ -1464,3 +1464,4 @@
 [2026-10-19 18:16 UTC] Added the Conveyor Combiner (Dev Hub > Tester): a box that snaps onto a conveyor belt; husks on it pass straight through, and a belt that ends at either side inlet (belts snap there) has its husks merged onto the main belt at the box whenever there is a gap, waiting at the inlet meanwhile.
 [2026-10-19 18:20 UTC] The Galactic Arcade studio intro's sound effects (whoosh, game over jingle, arcade hum) are half as loud.
 [2026-10-19 23:25 UTC] Assets/Resources/Dialogue.txt now exists right away with every tip, intro box, tutorial step, the Woodcutting guide, perk popups, Cubie's pages and every visitor's lines, ready to edit (built from the game's texts by tools/dialogue/build.py).
+[2026-10-20 00:31 UTC] Wrote an audit of every device and consumable (docs/systems/DeviceConsumableAudit.md): bugs found, quick fixes, shared systems worth building and design questions - nothing in the game changed yet.
