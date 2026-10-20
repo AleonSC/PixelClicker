@@ -12,7 +12,7 @@
 //   - placing belts / hoses snaps to coupling ports (Ports).
 //   Optional extras: IPixelHuskSource (a hose may pull stored husks out of an Out coupling: Storage Crate, Quantum Organizer), IPixelHuskRoom (how many
 //   more husks an In coupling's device takes now: a hose only pumps what fits). A socket can be OCCUPIED by something that is not a coupling (the
-//   Sorting Hopper latched on the Recycler's back hatch: Occupy / Vacate). Couplings are saved with their device: Export / Import (socket ids +
+//   a device standing on a socket: Occupy / Vacate). Couplings are saved with their device: Export / Import (socket ids +
 //   direction) into PlacedState.couplings / ... An AUTO-DIRECTION socket (autoDirection, the Junction Box) has no fixed way: its device sets its coupling
 //   In / Out / idle from what is attached (PixelCoupling.SetAuto; BeltEndingAt / BeltStartingAt, PixelContainerHose.Pulls / Pushes). Saved / TesterSave.couplings. Socket KINDS are an open list (PixelSocketKind, appended only): Husk is built;
 //   Power (Electrician) and Signal (Automation) are planned, Water / Heat / Link are ideas - each = a new value + its own coupling look + its own hook.

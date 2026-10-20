@@ -18,8 +18,7 @@
 //   - FILTERS (one per coupling, used while it is an output): drop a husk you were holding onto a coupling (within filterDropReach) to set it to that type;
 //     left-click / scroll a coupling to step through the unlocked types (and none). A small block of the filter type spins over the coupling; hovering the
 //     coupling shows the block card (PixelBlockTooltip.ShowFor). Clicks on a coupling are claimed (PixelPointerClaim.ClaimButton).
-//   - A SORTING HOPPER latches onto its back like onto a Recycler (IPixelHopperHost: it occupies b0 / b1, its feed pipe reaches over the top opening -> TakeFeed
-//     routes the husk). The SWEEPER treats it as a container with room (IPixelStrayTarget + IPixelHuskRoom = buffer room).
+//   - The SWEEPER treats it as a container with room (IPixelStrayTarget + IPixelHuskRoom = buffer room).
 //   - Device card / panel (FillDeviceInfo): buffer n / size, each coupling's way and filter; panel actions Clear filters / Empty buffer (the buffer's husks
 //     pop out on top).
 //   OVERLAP: it covers the old tester Splitter (round robin; removed 2026-10-18) and much of the tester Belt Sorter (one type to one side) - see PixelCouplings.md.
@@ -30,7 +29,7 @@ using System.Globalization;
 using System.Text;
 using UnityEngine;
 
-public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, IPixelHuskSource, IPixelStrayTarget, IPixelHopperHost, IPixelDeviceInfo
+public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, IPixelHuskSource, IPixelStrayTarget, IPixelDeviceInfo
 {
     [Header("Junction Box")]
     [Min(0)]
@@ -527,20 +526,6 @@ public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoo
     }
 
     private float bandShown;
-
-    // ---- IPixelHopperHost (a Sorting Hopper on the back: b0 / b1) ----
-    public string HostName => "Junction Box";
-    public IEnumerable<string> HopperSockets { get { yield return "b0"; yield return "b1"; } }
-    public float BackEdgeLocalZ => Unit(clicker) * (SideHusks * 0.5f + 0.45f);
-    public Vector3 FeedDropPoint => transform.TransformPoint(new Vector3(0f, HeightHusks * Unit(clicker) + 0.35f * Unit(clicker), 0f));   // (over the top opening)
-    public bool Fading => !Fresh;
-    public bool CanTakeFeed => Fresh && (carry == null || !carry.Dragging) && buffer.Count < bufferSize;
-
-    /// <summary>A hopper feeds a husk into the top hatch: routed like any husk coming in (to an output now, else the buffer). False = full.</summary>
-    public bool TakeFeed(int tier, double amount, Vector3 at, Vector3 velocity)
-    {
-        return clicker != null && clicker.IsValidTierIndex(tier) && TakeData(tier, amount, null);
-    }
 
     // ---- The device card / panel ----
 

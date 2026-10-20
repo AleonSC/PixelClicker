@@ -225,7 +225,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         FocusPotion = 20,
         /// <summary>Not placed: right-click to add Pesticide charges (PixelBlockRules.AddCharges for the Termite Hive: each charge clears a hive by itself). Sold by the Lumberjack.</summary>
         PesticideSpray = 21,
-        /// <summary>Placed, permanent: a sloped tray that latches onto a Recycler's back (PixelSortingHopper) and slides ONE chosen husk type through the back hatch into the bin (a steady streak); other husks lie in it and fade. On sale from Standard level 3.</summary>
+        /// <summary>Placed, permanent: the Sorting Hopper (PixelSortingHopper) - a standalone funnel that holds husks and drops each filtered type out of its own pipe. On sale from Standard level 3.</summary>
         SortingHopper = 22,
         /// <summary>Not placed by hand: right-click starts placing couplings (PixelCoupling) on device sockets; one is used up per coupling fitted. Listed with the Utilities.</summary>
         Coupling = 23,
@@ -725,7 +725,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         {
             kind = DeviceKind.SortingHopper,
             displayName = "Sorting Hopper",
-            description = "A big funnel that stands behind a Recycler and holds up to 20 husks dropped into it. Right-click it and press Select filter: that type goes into the Recycler, one after another (so the streak builds); every other husk drops out of its bottom spout. The Outputs upgrade adds side pipes (left, right, back), each with its own filter. It stays until you remove it.",
+            description = "A big sorting funnel that holds up to 20 husks dropped into it. Right-click it and pick a filter: that type drops out of its green pipe, one after another - put a Recycler or a belt under it; every other husk drops out of its bottom spout. Drag it by its handles to move it. The Outputs upgrade adds side pipes (left, right, back), each with its own filter. It stays until you remove it.",
             requiredType = PixelClicker.PixelType.White,
             costs = new[]
             {
@@ -970,7 +970,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         {
             kind = DeviceKind.JunctionBox,
             displayName = "Junction Box",
-            description = "A box with eight coupling sockets, two on each side, and an opening on top that gently draws in husks just above it. Fit couplings and connect belts or hoses: a belt or hose bringing husks in makes that coupling an IN, one taking husks away makes it an OUT. Husks that go in are taken apart and new ones come out: they are shared out in turn between the outputs - or sent to the output whose FILTER is their type (drop a husk on a coupling, or click / scroll it, to set its filter). When no output can take a husk it waits in a small buffer. A Sorting Hopper can latch onto its back. It stays until you remove it.",
+            description = "A box with eight coupling sockets, two on each side, and an opening on top that gently draws in husks just above it. Fit couplings and connect belts or hoses: a belt or hose bringing husks in makes that coupling an IN, one taking husks away makes it an OUT. Husks that go in are taken apart and new ones come out: they are shared out in turn between the outputs - or sent to the output whose FILTER is their type (drop a husk on a coupling, or click / scroll it, to set its filter). When no output can take a husk it waits in a small buffer. It stays until you remove it.",
             requiredType = PixelClicker.PixelType.White,
             costs = new[]   // (a machine, so monochrome: ~3.5 min of Gray, 2.5 of Black at early income)
             {
@@ -1499,7 +1499,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             {
                 if (d != null && d.kind == DeviceKind.Recycler && (d.radius < 1.5f || Mathf.Approximately(d.radius, 2f))) d.radius = PixelRecycler.DefaultSize;   // (2026-10-18: 2 -> 1.8, 10% smaller)   // (2026-10-18: the Recycler is twice as wide and deep by default)
                 if (d != null && d.kind == DeviceKind.Recycler && d.description != null && d.description.StartsWith("A big bin that catches")) d.description = CreateDefaultRecycler().description;   // (2026-10-18: auto recycling back)
-                if (d != null && d.kind == DeviceKind.SortingHopper && d.description != null && (d.description.StartsWith("A wide tray") || d.description.Contains("side tube"))) d.description = CreateDefaultSortingHopper().description;   // (2026-10-18: the funnel hopper)
+                if (d != null && d.kind == DeviceKind.SortingHopper && d.description != null && (d.description.StartsWith("A wide tray") || d.description.Contains("side tube") || d.description.Contains("behind a Recycler"))) d.description = CreateDefaultSortingHopper().description;   // (2026-10-18: the funnel hopper)
                 if (d != null && d.kind == DeviceKind.Recycler && d.priceGrowthPerOwned <= 0f) { Device fresh = CreateDefaultRecycler(); d.priceGrowthPerOwned = fresh.priceGrowthPerOwned; d.maxHeld = Mathf.Max(d.maxHeld, fresh.maxHeld); d.description = fresh.description; }   // (2026-10-17 rework: currency only, suction, a rising price for more Recyclers)
             }
 
@@ -3050,16 +3050,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         }
 
         if (devices[placingIndex].kind == DeviceKind.SortingHopper)
-        {
-            // Near a free Recycler the hopper's ghost latches onto its back (turned and sized like the bin); elsewhere it stands where you point.
-            preview.transform.localScale = Vector3.one * PixelSortingHopper.UnlatchedSize;   // (sized for a default Recycler until it latches)
-            if (hasPoint && PixelSortingHopper.TrySnap(clicker, point, devices[placingIndex].radius, out Vector3 hopperPoint, out float hopperYaw, out float hopperSize))
-            {
-                chipperLatched = true; chipperLatchPoint = hopperPoint; chipperLatchYaw = hopperYaw;
-                preview.transform.SetPositionAndRotation(hopperPoint, Quaternion.Euler(0f, hopperYaw, 0f));
-                preview.transform.localScale = Vector3.one * hopperSize;
-            }
-        }
+            preview.transform.localScale = Vector3.one * PixelSortingHopper.UnlatchedSize;   // (it stands where you point - it never snaps onto a Recycler / Junction Box)
 
         if (devices[placingIndex].kind == DeviceKind.Seed)
         {
@@ -3126,7 +3117,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     {
         int index = placingIndex;
         Device d = devices[index];
-        if (chipperLatched && (d.kind == DeviceKind.Funnel || d.kind == DeviceKind.SortingHopper)) { point = chipperLatchPoint; placingYaw = chipperLatchYaw; }
+        if (chipperLatched && d.kind == DeviceKind.Funnel) { point = chipperLatchPoint; placingYaw = chipperLatchYaw; }
         if (robotPicked != null)
         {
             Action<int, Vector3, float> picked = robotPicked;
@@ -3240,7 +3231,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         }
         else if (d.kind == DeviceKind.SortingHopper)
         {
-            GameObject root = PixelSortingHopper.Place(clicker, point, yaw, d.radius);   // (d.radius = how far from a Recycler's back it latches on)
+            GameObject root = PixelSortingHopper.Place(clicker, point, yaw);
             PixelPermanentDevice hopperDevice = root.AddComponent<PixelPermanentDevice>();   // (the thin permanent-device stub; all the behaviour is in PixelSortingHopper)
             hopperDevice.Init(clicker, cam, shrinkSeconds);
             result = hopperDevice;
@@ -3483,7 +3474,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         if (d.kind == DeviceKind.SortingHopper)
         {
             suckPoint = null; timer = null;
-            return isPreview ? PixelSortingHopper.CreateGhost(clicker) : displayOnly ? PixelSortingHopper.CreateDisplay(clicker) : PixelSortingHopper.Place(clicker, Vector3.zero, 0f, d.radius);
+            return isPreview ? PixelSortingHopper.CreateGhost(clicker) : displayOnly ? PixelSortingHopper.CreateDisplay(clicker) : PixelSortingHopper.Place(clicker, Vector3.zero, 0f);
         }
 
         GameObject root = new GameObject(isPreview ? d.displayName + " (Preview)" : d.displayName);

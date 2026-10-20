@@ -14,7 +14,7 @@ hooks, the registry) and `PixelCoupling.cs` (the snap-on coupling piece). Placed
 ## The design
 - **Sockets (data).** Every device declares its SOCKETS: a few lines each - `id`, local position (the PORT, where a belt end / hose end meets
   it, at belt-underside height), outward facing, `flow` = Intake / Output / Both, and a `kind`. Free sockets always show a small PORT PLATE (`PixelSocketPlates`: a chevron, green In / orange Out / teal Both). Sockets sit on openings the device already has:
-  Kiln mouth, Storage Crate front, Trash Can side, Recycler back hatch (shared with the Sorting Hopper: a latched hopper occupies it), Sorting
+  Kiln mouth, Storage Crate front, Trash Can side, Recycler back hatch, Sorting
   Hopper back wall, Quantum Organizer side, Wood Chipper chute, Funnel output, Elevator entry / top, Junction Box (eight, auto direction), Belt Sorter chute.
 - **Couplings (one shared piece).** ONE model (PixelFactoryKit) and ONE component. Placing it near a free socket snaps it on; it is parented to
   the device so it moves with it (carry handles, turning); removing the device removes its couplings. It is tinted a little with the device's
@@ -68,13 +68,13 @@ chute (the same "find a belt that starts here" copy) moved onto a built-in bare 
 | Quantum Organizer | `side` (Both, like the crate; In drops husks onto the pad) |
 | Kiln | `mouth` (In, burns it), `chute` (Out, charcoal) |
 | Trash Can | `front`, `back` (In) |
-| Recycler | `hatch` (In, the back hatch; a latched Sorting Hopper OCCUPIES it), `f0`..`f3` (In, four holes low on the front) |
+| Recycler | `hatch` (In, the back hatch), `f0`..`f3` (In, four holes low on the front) |
 | Sorting Hopper | `back` (In, takes the husk into what it holds; refuses when full, `holdRoom`) |
 | Funnel | `output` (Out, the spout end; the tube waits while its belt is full) |
 | Wood Chipper | `chute` (Out, on the floor in front of the outlet) |
 | Conveyor Elevator | none since 2026-10-19: it links itself to belt ends, Out couplings and sorter chutes near its base and to a belt start or In coupling near its top (IPixelAutoIntake) |
 | Husk Source (tester) | `front`, `back`, `left`, `right` (Out: endless husks of the picked type while something takes them) |
-| Junction Box | `f0` `f1` (front), `b0` `b1` (back; a latched Sorting Hopper OCCUPIES both), `l0` `l1`, `r0` `r1` - all Both, **auto direction** |
+| Junction Box | `f0` `f1` (front), `b0` `b1` (back), `l0` `l1`, `r0` `r1` - all Both, **auto direction** |
 | Belt Sorter | `chute` (Out, fitted, bare) |
 
 ## The Junction Box (built 2026-10-18, Devices session; design from the Design Discussion chat)
@@ -89,7 +89,6 @@ chute (the same "find a belt that starts here" copy) moved onto a built-in bare 
   spawned at an output onto its belt (or wait in the buffer). **Top opening:** a square hole in the lid takes husks that drop in, with a gentle suction
   for husks just above the box (Inspector: suckRadiusHusks, suckHeightHusks, suckStrength). A Sorting Hopper's feed pipe reaches over the opening.
 - **Filters**: one per coupling - drop a husk you were holding on it, or click / scroll it (unlocked types + none); a small block spins over it; hover shows the card.
-- **Hosts a Sorting Hopper** (`IPixelHopperHost`, shared with the Recycler): the hopper occupies `b0` / `b1`, its feed pipe drops into the top hatch (`TakeFeed` routes it).
   The Sweeper sees it as a container with room (buffer room).
 - Saved as a placed device (`PlacedState.extra`: filters + buffer). Price / unlock: the **Shops** session (monochrome, as machines are; a placeholder Gray + Black cost is in the entry, `vendorOnly` so it is not sold yet).
 

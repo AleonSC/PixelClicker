@@ -54,17 +54,16 @@
 //   Stats recycler.husks / paid / xp, Best recycler.streak. The idea is that husks reach it WITHOUT the player stopping (bin placed where husks land; edge-click
 //   aiming is planned). The button / capacity / lid cycle below is the old manual mode (autoRecycle off) and still works in auto mode for anything left inside.
 //   A FULL bin makes its button flash and pulse (UpdateButtonFlash, flashColor). Removing the Recycler destroys what is inside. Not a belt acceptor yet.
-//   SORTING HOPPER (2026-10-18 funnel version): a PixelSortingHopper stands behind the back wall (BackEdgeLocalZ, SizeFactor), occupying the hatch socket;
-//   its feed pipe reaches over the back wall and drops its filter type into the bin, where Capture takes it as usual.
+//   SORTING HOPPER: no hookup since 2026-10-20 (the hopper is standalone): a bin put under its green pipe simply catches what drops out of it.
 //   Capturing / letting go / freezing use the shared PixelHuskHolder steps.
 //   FROM ABOVE ONLY (2026-10-18, suctionFromAboveOnly): the ring and the suck-in only take husks higher than the rim (falling / flying over it, up to
 //   suctionHeightHusks); nothing lying beside the bin is drawn in. Each recycled husk shows a '+n' rising over it and adds to the currency's '+n' (PixelUI.ShowWorldGain).
 //   SUCTION RING + SUCK-IN (2026-10-17): a modest ring (suctionRadius 2 husk widths past the rim + the Suction upgrades, suctionStrength) draws LOOSE
 //   husks nearby towards the bin (a little lift by the wall); a husk over the opening or right by the rim (suckReach) is SUCKED IN like the Storage
 //   Crate - it glides into the middle of the bin (SuckOne, suckSeconds) and is caught as usual. Modest on purpose: one bin catches some of a random
-//   scatter, not all of it. Behind the back wall of a bin with a Sorting Hopper (where its bottom spout drops husks) is left alone (BehindHopper).
+//   scatter, not all of it.
 //   FRONT SOCKETS (2026-10-18): four In coupling holes low on the front ('f0'..'f3', FrontPortX): a belt / hose there drops husks in just inside the front wall.
-//   SOCKET (PixelSockets.cs): the back hatch is an In socket ('hatch'). With no hopper latched (a latched hopper OCCUPIES it), a coupling there takes belts / connectors / hoses:
+//   SOCKET (PixelSockets.cs): the back hatch is an In socket ('hatch'): a coupling there takes belts / connectors / hoses:
 //   AcceptHusk counts the husk at once and lets it fall in behind the back wall (HatchInside); refused while working or full (HuskRoom).
 // ---------------------------------------------------
 using System.Collections;
@@ -73,7 +72,7 @@ using System.Text;
 using TMPro;
 using UnityEngine;
 
-public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, IPixelStrayTarget, IPixelHopperHost, IPixelDeviceInfo
+public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, IPixelStrayTarget, IPixelDeviceInfo
 {
     [Tooltip("How many husks fit in the bin at the default size (2). A bigger bin (Operation: Size) holds more - by its floor area.")]
     [SerializeField] private int capacity = 25;
@@ -194,7 +193,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     /// <summary>How many more husks fit in the bin.</summary>
     public int HoseRoom => Mathf.Max(0, Capacity - inside.Count);
 
-    // ---- Socket (PixelSockets.cs): the BACK HATCH, an In socket. A Sorting Hopper latched on the back occupies it (PixelCouplings.Occupy); otherwise a coupling
+    // ---- Socket (PixelSockets.cs): the BACK HATCH, an In socket. A coupling
     // there takes belts / connectors / hoses ----
     public const string HatchSocket = "hatch";
     private PixelSocket[] sockets = new PixelSocket[0];
@@ -219,31 +218,21 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
         return true;
     }
 
-    // ---- The Sorting Hopper's hookup (PixelSortingHopper snaps onto the back wall with its exit at the back hatch) ----
+    // ---- Size / state ----
 
-    /// <summary>The bin's size factor (Operation: Bin Size); a Sorting Hopper on its back is built to the same scale.</summary>
+    /// <summary>The bin's size factor (Operation: Bin Size).</summary>
     public float SizeFactor => baseScale.x;
 
-    /// <summary>True while the floor's props fade scales the bin (main menu, after a load): a hopper on it waits.</summary>
+    /// <summary>True while the floor's props fade scales the bin (main menu, after a load).</summary>
     public bool Fading => (transform.localScale - baseScale).sqrMagnitude > 0.0001f;
 
-    /// <summary>True while the bin works (lid shut) or is being carried: a hopper feeds nothing in then.</summary>
+    /// <summary>True while the bin works (lid shut) or is being carried.</summary>
     public bool Busy => processing || (carry != null && carry.Dragging);
 
-    /// <summary>How far behind the bin's middle (its own unscaled units, +z) the back wall, pillars and plinth end: a hopper's exit edge goes here.</summary>
+    /// <summary>How far behind the bin's middle (its own unscaled units, +z) the back wall, pillars and plinth end (the back hatch socket sits here).</summary>
     public float BackEdgeLocalZ => Unit(clicker) * (DepthHusks * 0.5f + 0.4f);
 
     /// <summary>Just inside the back wall, behind the hatch: a husk slid in here falls into the bin (world).</summary>
-    // ---- IPixelHopperHost (a Sorting Hopper on the back) ----
-    public string HostName => "Recycler";
-    public IEnumerable<string> HopperSockets { get { yield return HatchSocket; } }
-    public bool CanTakeFeed => !Busy && !Fading && HoseCanTake;
-
-    /// <summary>A hopper feeds a husk in: it is spawned at the pipe's mouth and falls into the bin (Capture takes it from there).</summary>
-    public bool TakeFeed(int tier, double amount, Vector3 at, Vector3 velocity) => clicker != null && clicker.SpawnStoredPixel(tier, amount, at, velocity);
-
-    /// <summary>Where a Sorting Hopper's feed pipe lets a husk go: at rim height, just inside the back wall (world; follows the bin's size).</summary>
-    public Vector3 FeedDropPoint => transform.TransformPoint(new Vector3(0f, wallH - Unit(clicker) * 0.45f, innerD * 0.5f - Unit(clicker) * 0.9f));   // (a default bin + hopper: the pipe runs level)
 
     public Vector3 HatchInside => transform.TransformPoint(new Vector3(0f, HatchPassY, innerD * 0.5f - Unit(clicker) * 0.9f));
 
@@ -529,7 +518,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     /// <summary>
     /// The suck-in: a husk over the opening (above the rim) or right by the rim (within suckReach - in the air, or low by the wall where the suction ring
     /// brings it) is taken - kept from anything else (PixelHuskHolder.Reserve) - and glides down into the middle of the bin, where the usual Capture catches
-    /// it. Only husks nobody else owns (Takeable); never behind a latched Sorting Hopper (its bottom spout's husks).
+    /// it. Only husks nobody else owns (Takeable).
     /// </summary>
     private void SuckIn()
     {
@@ -547,7 +536,6 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
             if (overOpening && local.y < wallH) continue;   // (already inside the walls: Capture takes it)
             if (!overOpening && local.y < wallH * 0.5f && !suction) continue;   // (lying low beside the bin: only taken with the suction ring on)
             if (suctionFromAboveOnly && local.y < wallH) continue;   // (from above only: nothing beside the bin is sucked in)
-            if (BehindHopper(local)) continue;   // (behind a Sorting Hopper: its bottom spout's husks)
             if (local.y > wallH + 4f * u) continue;
             if (Mathf.Abs(local.x) > innerW * 0.5f + suckReach * u || Mathf.Abs(local.z) > innerD * 0.5f + suckReach * u) continue;
             StartCoroutine(SuckOne(b));
@@ -596,9 +584,6 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     /// <summary>The suction base before any upgrade (the Operation tooltip starts from it).</summary>
     public static float DefaultSuctionRadius => 2f;
 
-    /// <summary>Behind the back wall while a Sorting Hopper is latched there: the hopper's bottom spout drops husks there, the bin leaves them alone.</summary>
-    private bool BehindHopper(Vector3 local) => local.z > innerD * 0.5f && PixelCouplings.Occupied(this, HatchSocket);
-
     /// <summary>
     /// The SUCTION RING: loose husks (on the floor or in the air) outside the walls within SuctionReach of the rim are pulled towards the bin - harder
     /// near the rim - and get a little lift close to the wall so they hop up to it, where the suck-in takes them. Modest: a far husk drifts, it is not
@@ -617,7 +602,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
             Rigidbody b = h.body;
             if (b == null || inside.Contains(b) || sucking.Contains(b) || !PixelHuskHolder.Takeable(clicker, b)) continue;
             Vector3 local = transform.InverseTransformPoint(b.position);
-            if (local.y > wallH + Mathf.Max(0.5f, suctionHeightHusks) * u || BehindHopper(local)) continue;
+            if (local.y > wallH + Mathf.Max(0.5f, suctionHeightHusks) * u) continue;
             if (suctionFromAboveOnly && local.y < wallH + 0.1f * u) continue;   // (from above only: husks beside the bin on the floor are left alone)
             float ox = Mathf.Max(0f, Mathf.Abs(local.x) - innerW * 0.5f), oz = Mathf.Max(0f, Mathf.Abs(local.z) - innerD * 0.5f);
             float past = Mathf.Sqrt(ox * ox + oz * oz) / u;   // husk widths past the rim (0 = over the opening)
@@ -961,13 +946,12 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     /// <summary>
     /// Husks lying in the bin that are NOT counted (the bin was OVERFILLED past its capacity, or one fell in as the lid closed) POP out when the button
     /// is pressed: lifted just over the rim and launched up and out with a little spin, so the bin holds exactly what is recycled. Out over the front /
-    /// back rim (the handles stick out on the X ends); only the front while a Sorting Hopper sits on the back. The suction may draw them back in after
+    /// back rim (the handles stick out on the X ends). The suction may draw them back in after
     /// the cycle, which is fine - they are counted then.
     /// </summary>
     private void EjectUncounted()
     {
         if (clicker == null) return;
-        bool hopperBehind = PixelCouplings.Occupied(this, HatchSocket);
         int popped = 0;
         IReadOnlyList<Rigidbody> pixels = clicker.OldPixels;
         for (int i = pixels.Count - 1; i >= 0; i--)
@@ -977,7 +961,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
             OldPixelInfo info = PixelHuskQuery.Get(b).info;
             if (info != null && info.heldByPlayer) continue;
             Vector3 p = transform.InverseTransformPoint(b.position);
-            float side = hopperBehind ? -1f : (p.z >= 0f ? 1f : -1f);
+            float side = p.z >= 0f ? 1f : -1f;
             float size = b.transform.lossyScale.x;
             b.position = transform.TransformPoint(new Vector3(p.x, wallH, side * innerD * 0.3f)) + Vector3.up * size;   // (just over the rim, so the walls and the closing lid don't catch it)
             Vector3 dir = transform.TransformDirection(new Vector3(Random.Range(-0.35f, 0.35f), 1.3f, side)).normalized;

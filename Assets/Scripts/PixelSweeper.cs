@@ -3,9 +3,9 @@
 //   THE SWEEPER (PixelConsumables DeviceKind.Sweeper 25, Utilities; design: docs/GameDesign.md section 6 'The Sweeper'): an early stray-husk helper, NOT tied to
 //   Electrician. Built from the old Tiny Robot (the tester's belt-feeding hover bot, same fetch loop) into a little wind-up CLOCKWORK CUBE with a broom: it rolls
 //   out from its home pad, fetches husks that are CLOSE TO FADING (it sets off once RemainingReal <= fadingSeconds + headStartSeconds + the trip there; the most urgent one within rangeCubes of home first), carries
-//   them on its head (kept alive on the way) and drops them into the NEAREST container with room that is an IPixelStrayTarget (Storage Crate, Sorting Hopper,
+//   them on its head (kept alive on the way) and drops them into the NEAREST container with room that is an IPixelStrayTarget (Storage Crate,
 //   Recycler - nearest to where the husk was picked up), through the container's one husk hook (IPixelSocketDevice.AcceptHusk; room = IPixelHuskRoom). So the
-//   player's placement decides where strays go: a crate nearest = stored safe, the hopper nearest = straight to recycling. It MOVES husks, never processes them.
+//   player's placement decides where strays go: a crate nearest = stored safe, a Recycler nearest = straight to recycling. It MOVES husks, never processes them.
 //   After a drop it pauses pauseAfterDrop (0.35 s), then goes straight to the next stray; with none it rolls back to its pad (it looks every searchSeconds).
 //   Refused (full) or no container: it puts the husk down where it stands. Husks held by the player, kinematic (riding / kept by a machine), flying, attached or
 //   high above the floor are left alone; one the player grabs from it is let go.
@@ -249,7 +249,7 @@ public class PixelSweeper : MonoBehaviour, IPixelDeviceInfo
         return pick;
     }
 
-    /// <summary>The container with room nearest this point (a Storage Crate, Sorting Hopper or Recycler).</summary>
+    /// <summary>The container with room nearest this point (a Storage Crate, Junction Box or Recycler).</summary>
     private static IPixelSocketDevice NearestContainer(Vector3 from)
     {
         IPixelSocketDevice best = null;
