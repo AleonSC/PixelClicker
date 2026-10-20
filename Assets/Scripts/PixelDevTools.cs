@@ -196,6 +196,11 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Text of the 'Super Rares' widget's button that puts a Prime Gauntlet in your inventory.")]
     [SerializeField] private string giveGauntletText = "Gauntlet";
 
+    [Tooltip("Label of the 'Clear world' widget's button: removes every placed device and every tester object (it asks once more first).")]
+    [SerializeField] private string clearWorldText = "Clear all placed";
+    [Tooltip("The same button's label while it waits for the second click that confirms.")]
+    [SerializeField] private string clearWorldConfirmText = "Click again to clear";
+
     [Tooltip("Text of the 'Dev items' widget's button that puts the picked dev-only device in your inventory.")]
     [SerializeField] private string giveDevItemText = "Give";
 
@@ -951,6 +956,7 @@ public class PixelDevTools : MonoBehaviour
             case "shopunlock": return "Unlock";
             case "maxxp": return "Max XP";
             case "huskpile": return "Husk pile";
+            case "clearworld": return "Clear world";
             case "devreports": return "Dev reports";
             case "superrares": return "Super Rares";
             case "devitems": return "Dev items";
@@ -963,6 +969,27 @@ public class PixelDevTools : MonoBehaviour
             case "clicks": return "Click count";
             default: return id;
         }
+    }
+
+    /// <summary>The 'Clear world' button (confirmed): every placed device and every tester object goes.</summary>
+    private void ClearWorld()
+    {
+        PixelConsumables consumables = PixelFind.Cached<PixelConsumables>();
+        int devices = 0;
+        if (consumables != null)
+        {
+            foreach (PixelPlacedDevice d in PixelPlacedDevice.All) if (d != null) devices++;
+            consumables.ClearPlacedDevices();
+        }
+        int objects = PixelFeatureTester.ClearAllPlaced();
+        PixelHints.Announce("Cleared " + devices + " device" + (devices == 1 ? "" : "s") + " and " + objects + " placed object" + (objects == 1 ? "" : "s"));
+    }
+
+    /// <summary>Puts a button's label back after a while (the 'click again' state ran out) - unless it was already changed back.</summary>
+    private static System.Collections.IEnumerator ResetLabelLater(TMP_Text label, string text, float seconds)
+    {
+        yield return new WaitForSecondsRealtime(seconds);
+        if (label != null) label.text = text;
     }
 
     /// <summary>The 'Fill floor' button: random unlocked husks dropped in a ring round the cube, a few per frame, until the floor limit is reached.</summary>
@@ -1144,6 +1171,28 @@ public class PixelDevTools : MonoBehaviour
         fillFloor.onClick.AddListener(() => StartCoroutine(FillFloorWithHusks()));
         AddTip(fillFloor.gameObject, "Drop random husks round the cube until the floor limit is reached. Profile with Window > Analysis > Profiler; the Dev Inspector's World tab shows how many bodies are awake.");
         Widget(root, board, "huskpile", start, y);
+
+        // ---- Clear world: every placed device (machines, timed devices, generators...) and every tester object (belts, couplings, hoses...) removed at once. ----
+        start = root.childCount;
+        Button clearWorld = PixelUIKit.CreateButton(font, root, "Clear World Button", clearWorldText, new Vector2(bw * 2f + gap, rowHeight), ButtonRole.Danger, fontSize);
+        Place(clearWorld.GetComponent<RectTransform>(), 40f, y, bw * 2f + gap);
+        TMP_Text clearWorldLabel = clearWorld.GetComponentInChildren<TMP_Text>();
+        float clearArmedUntil = -1f;
+        clearWorld.onClick.AddListener(() =>
+        {
+            if (Time.unscaledTime > clearArmedUntil)
+            {
+                clearArmedUntil = Time.unscaledTime + 3f;   // (a second click within 3 s confirms)
+                if (clearWorldLabel != null) clearWorldLabel.text = clearWorldConfirmText;
+                StartCoroutine(ResetLabelLater(clearWorldLabel, clearWorldText, 3f));
+                return;
+            }
+            clearArmedUntil = -1f;
+            if (clearWorldLabel != null) clearWorldLabel.text = clearWorldText;
+            ClearWorld();
+        });
+        AddTip(clearWorld.gameObject, "Remove EVERY placed device (Recycler, generators, Junction Box, timed devices...) and every tester object (belts, couplings, hoses, kiln, jumps...) at once. Click twice to confirm. Husks and seeds stay.");
+        Widget(root, board, "clearworld", start, y);
 
         // ---- Super Rares: pick a Dragon / God / Prime Cube, the Cubelette or the Golden Snitch and Spawn it on the clicker cube; Gauntlet gives a Prime Gauntlet. ----
         start = root.childCount;

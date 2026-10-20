@@ -678,6 +678,22 @@ public class PixelFeatureTester : MonoBehaviour
     }
 
     /// <summary>Loading a save: the placed test objects are replaced by the saved ones.</summary>
+    /// <summary>Removes EVERY object the tester placed (belts, couplings, hoses, kiln, jumps...): the Dev Hub's 'Clear world' widget. Returns how many went.</summary>
+    public static int ClearAllPlaced()
+    {
+        if (instance == null) return 0;
+        instance.StopPlacing();
+        int n = 0;
+        foreach (Feature f in instance.features)
+        {
+            SyncLive(f);
+            foreach (GameObject g in f.placed) if (g != null) { Destroy(g); n++; }
+            f.placed.Clear();
+        }
+        instance.Refresh();
+        return n;
+    }
+
     public static void ImportAll(TesterSave[] saved)
     {
         kept = saved;
