@@ -15,7 +15,7 @@ Loose ideas that are NOT on the to-do yet. Claude adds to this when an idea come
 
 # Device connections beyond husks (sockets + couplings)
 - The socket / coupling system (belts and hoses snap to a coupling on a device socket) starts with HUSK flow; its socket kind is an open list so more connection kinds can be added later, each with its own coupling look.
-- Power (Electrician): electricity that speeds machines up or keeps them running. Today Wire / Battery / Resistor husks and Electric pixels arc to devices in their own hand-made code; moving that onto power sockets gives Electrician a real job in the factory (e.g. a powered Recycler works faster). Plan this one next.
+- Power (Electrician): electricity that speeds machines up or keeps them running. Today Wire / Battery / Resistor husks and Electric pixels arc to devices in their own hand-made code; it will be its OWN mechanic, NOT sockets / couplings (decided 2026-10-20: sockets carry husks only) - giving Electrician a real job in the factory (e.g. a powered Recycler works faster). Plan this one next.
 - Signal (the planned Automation skill): on / off triggers between devices - a full Storage Crate starts a Recycler, a hopper opens when a colour arrives. Turns a pile of machines into a factory. Plan this one next too.
 - Water (Farming / Fishing): Sprinkler, Water pixels and the Bait Bucket's water piped between devices for growing and cooling.
 - Heat (Firemaking, later Smithing): fuel and heat for the Kiln, Charcoal and burning.

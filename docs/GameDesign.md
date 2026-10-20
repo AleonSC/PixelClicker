@@ -334,7 +334,7 @@ A little wind-up clockwork cube with a broom: early automation for stray husks t
   is possible).
 - **Unlock:** Standard 5-6 (~30-45 min), in the shop for pure currency - after the player has felt husks fading even with Crush, the
   Recycler and the hopper.
-- **Upgrades without needing them:** Electrician fits a motor (no more winding - an early use of power sockets); Standard upgrades
+- **Upgrades without needing them:** Electrician fits a motor (no more winding - an early use of power; power is its own mechanic, not sockets); Standard upgrades
   range and speed.
 - **Built from the Tiny Robot** (`PixelTinyRobot.cs`, tester: fetches loose husks onto a belt): same fetching code, new target (a
   container instead of a belt), wind-up instead of electric - not a fourth separate husk fetcher. Its own job next to the Magnet

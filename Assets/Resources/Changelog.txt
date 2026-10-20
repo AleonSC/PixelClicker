@@ -1504,3 +1504,4 @@
 [2026-10-20 09:41 UTC] Belt pieces fixed: a Belt Sorter stays put when its belt is reversed and catches husks on fast belts, removing a belt gives its Sorter / Combiner back, belt ends join machines reliably, the Kiln, Wood Chipper, Belt Jump and Sorter wait for room instead of dropping husks on a full belt, a Storage Crate can feed a belt, and the placing hints now show on screen when placing belts from the shop.
 [2026-10-20 09:43 UTC] Belts: a right click while laying a belt now takes the last piece back (drawing carries on from its start); with none left it ends the chain as before.
 [2026-10-20 09:44 UTC] Wrote an audit of the coupler system (docs/systems/CouplerAudit.md): bugs, polish, design and code findings - nothing in the game changed yet.
+[2026-10-20 09:51 UTC] Decision noted: power will be its own mechanic, not sockets / couplings - sockets carry husks only.
