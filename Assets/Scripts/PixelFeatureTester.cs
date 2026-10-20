@@ -419,8 +419,15 @@ public class PixelFeatureTester : MonoBehaviour
     private void Clear(Feature f)
     {
         SyncLive(f);
-        foreach (GameObject g in f.placed) if (g != null) Destroy(g);
+        List<GameObject> gone = new List<GameObject>(f.placed);
         f.placed.Clear();
+        foreach (GameObject g in gone)
+        {
+            if (g == null) continue;
+            PixelBeltSorter sorter = g.GetComponent<PixelBeltSorter>();
+            if (sorter != null) sorter.HealJoint();   // (clearing the sorters heals their joints)
+            Destroy(g);
+        }
         Refresh();
     }
 
@@ -468,6 +475,8 @@ public class PixelFeatureTester : MonoBehaviour
         if (!deleted || target == null) return;
         redTarget = null;
         foreach (Feature f in features) f.placed.Remove(target);
+        PixelBeltSorter sorterGone = target.GetComponent<PixelBeltSorter>();
+        if (sorterGone != null) sorterGone.HealJoint();   // (a removed Belt Sorter's joint becomes one belt again)
         Destroy(target);   // (a belt's riders are let go by the belt system; a chipper just vanishes)
         PixelAudio.Play("device_remove");
         Refresh();
@@ -717,6 +726,7 @@ public class PixelFeatureTester : MonoBehaviour
     {
         if (go == null) return;
         if (instance != null) { foreach (Feature f in instance.features) f.placed.Remove(go); instance.Refresh(); }
+        go.SetActive(false);   // (gone from every list at once - OnDisable - not only at the end of the frame)
         Destroy(go);
     }
 

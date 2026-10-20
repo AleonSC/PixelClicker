@@ -7,7 +7,8 @@
 //     (PixelConveyor.CollectLine) - by calling PixelConveyor.HoldHalt a few times a second (a belt's speed is 0 while halted: riders wait in place,
 //     the chevrons stop). Click again and they all run on. Two levers on one line: either one OFF stops it.
 //   SECTIONS (2026-10-20): with TWO OR MORE Belt Sorters on the line, a lever only switches its own SECTION - the belts between the sorters' joints
-//   (PixelConveyor.CollectSection); with one sorter or none it switches the whole line.
+//   (PixelConveyor.CollectSection); with one sorter or none it switches the whole line - unless both ends of the line are connected (a coupling, an
+//   elevator): then one sorter already cuts it into two sections.
 //   It finds its belt again by position when needed (a belt laid again in the same spot still counts). Saved with the tester save (position, turn, on / off).
 //   Built with PixelFactoryKit; its body has colliders so it can be clicked (PixelPointerClaim blocks the cube click while the mouse is on it).
 // ---------------------------------------------------

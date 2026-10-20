@@ -219,8 +219,8 @@ public class PixelConveyor : MonoBehaviour
     }
 
     /// <summary>
-    /// The SECTION of this belt's line a Control Lever switches: the whole line while fewer than two Belt Sorters stand on it; with two or more, the
-    /// sorters' JOINTS (the belt end each sorter sits on: placing a sorter mid-belt splits the belt there, SplitAt) cut the line into sections and only
+    /// The SECTION of this belt's line a Control Lever switches: the whole line while fewer than two Belt Sorters stand on it (ONE is enough when both
+    /// ends of the line are connected to something: a coupling, an elevator - 2026-10-20); with two or more, the sorters' JOINTS (the belt end each sorter sits on: placing a sorter mid-belt splits the belt there, SplitAt) cut the line into sections and only
     /// the belts on this belt's side of them count.
     /// </summary>
     public void CollectSection(List<PixelConveyor> section)
@@ -228,7 +228,7 @@ public class PixelConveyor : MonoBehaviour
         CollectLine(section);
         sectionJoints.Clear();
         PixelBeltSorter.JointsOn(section, sectionJoints);
-        if (sectionJoints.Count < 2) return;   // (one sorter or none: the lever switches the whole line)
+        if (sectionJoints.Count == 0 || (sectionJoints.Count == 1 && !BothEndsConnected(section))) return;   // (no sorter, or one on a line that is not connected at both ends: the lever switches the whole line)
         float reach = unit * 0.6f;
         bool AtJoint(Vector3 end) { foreach (Vector3 j in sectionJoints) if (Touch(end, j, reach)) return true; return false; }
         section.Clear();
@@ -269,8 +269,64 @@ public class PixelConveyor : MonoBehaviour
             if (customLanes > 0) piece.SetLanes(customLanes);
         }
         PixelFeatureTester.ReplacePlaced(gameObject, first, second);
+        gameObject.SetActive(false);   // (out of the belt list at once)
         Destroy(gameObject);
         return second.GetComponent<PixelConveyor>();
+    }
+
+    /// <summary>
+    /// HEALS a sorter's joint (2026-10-20): the belt ENDING where 'second' starts and 'second' become one belt again - only when they run straight on
+    /// (same direction and slope) with the same speed and size. Returns the joined belt, or null (left as two pieces). The removed sorter calls it.
+    /// </summary>
+    public static PixelConveyor JoinAt(PixelConveyor second)
+    {
+        if (second == null || second.ghostMode) return null;
+        float reach = second.unit * 0.6f;
+        PixelConveyor first = null;
+        foreach (PixelConveyor c in all)
+            if (c != null && c != second && !c.ghostMode && Touch(c.ExitPoint, second.StartPoint, reach)) { first = c; break; }
+        if (first == null) return null;
+        if (Vector3.Dot(first.Direction, second.Direction) < 0.999f || Mathf.Abs(first.SlopeUp - second.SlopeUp) > 0.01f) return null;   // (a corner or a ramp change: keep the seam)
+        if (Mathf.Abs(first.customSpeedCubes - second.customSpeedCubes) > 0.001f || first.customLanes != second.customLanes) return null;
+        GameObject joined = Place(first.clicker, first.StartPoint, second.ExitPoint);
+        if (joined == null) return null;
+        PixelConveyor belt = joined.GetComponent<PixelConveyor>();
+        belt.customSpeedCubes = first.customSpeedCubes;
+        if (first.customLanes > 0) belt.SetLanes(first.customLanes);
+        PixelFeatureTester.ReplacePlaced(first.gameObject, joined);
+        first.gameObject.SetActive(false);   // (out of the belt list at once: a second joint healed this frame never joins it again)
+        Destroy(first.gameObject);
+        PixelFeatureTester.RemovePlaced(second.gameObject);
+        return belt;
+    }
+
+    /// <summary>Does something take or give husks at this free end of a line (a coupling's port, an elevator's base)? (Sections: CollectSection.)</summary>
+    private static bool EndConnected(Vector3 end, float u)
+    {
+        foreach (PixelCoupling c in PixelCoupling.All)
+        {
+            if (c == null) continue;
+            Vector3 d = c.PortWorld - end;
+            if (new Vector2(d.x, d.z).magnitude <= 1.3f * u && Mathf.Abs(d.y) <= 1.2f * u) return true;
+        }
+        return PixelElevator.AnyBaseNear(end);
+    }
+
+    /// <summary>Are BOTH free ends of this line connected to something (EndConnected)? Then a single sorter already cuts it into two sections.</summary>
+    private static bool BothEndsConnected(List<PixelConveyor> line)
+    {
+        int free = 0, connected = 0;
+        float reach = line.Count > 0 ? line[0].unit * 0.6f : 0.3f;
+        foreach (PixelConveyor b in line)
+            foreach (Vector3 e in new[] { b.a, b.b })
+            {
+                bool joined = false;
+                foreach (PixelConveyor o in line) if (o != b && (Touch(e, o.a, reach) || Touch(e, o.b, reach))) { joined = true; break; }
+                if (joined) continue;
+                free++;
+                if (EndConnected(e, b.unit)) connected++;
+            }
+        return free >= 2 && connected == free;
     }
 
     private static bool Touch(Vector3 p, Vector3 q, float reach) => new Vector2(p.x - q.x, p.z - q.z).sqrMagnitude <= reach * reach && Mathf.Abs(p.y - q.y) <= reach;
@@ -728,9 +784,10 @@ public class PixelConveyor : MonoBehaviour
             float t = Mathf.Repeat(ribOffset + i * ribSpacing, ribs.Count * ribSpacing);
             float z = -length * 0.5f + t;
             if (z > length * 0.5f) z -= ribs.Count * ribSpacing;
-            bool visible = z > -length * 0.5f + 0.05f * unit + (trimMinSide != 0 ? trimMin : 0f) && z < length * 0.5f - 0.05f * unit - (trimMaxSide != 0 ? trimMax : 0f);   // (not over the next belt at a corner)
+            float zb = reversed ? -z : z;   // (where it is along the BELT: the holder is turned round on a reversed belt, so its +z runs the belt's -z)
+            bool visible = zb > -length * 0.5f + 0.05f * unit + (trimMinSide != 0 ? trimMin : 0f) && zb < length * 0.5f - 0.05f * unit - (trimMaxSide != 0 ? trimMax : 0f);   // (not over the next belt at a corner)
             ribs[i].gameObject.SetActive(visible);
-            ribs[i].localPosition = new Vector3(0f, 0f, reversed ? -z : z);
+            ribs[i].localPosition = new Vector3(0f, 0f, z);   // (2026-10-20: it used to be mirrored here too, so a reversed belt's chevrons still ran the old way)
         }
     }
 

@@ -10,7 +10,9 @@
 //   elevator's base (Connected, checked twice a second, RefreshChute); the sorter turns round to face it. Nothing beside it = no chute, kicked husks fall
 //   to the floor. JOINT (2026-10-20): placed in the middle of a belt, it SPLITS the belt there (PixelConveyor.SplitAt) and sits at the start of the second
 //   piece; its joint cuts the line into sections for the Control Levers once a line has two or more sorters (JointsOn, PixelConveyor.CollectSection).
-//   A sorter whose belt was split (another sorter's joint) carries on on the piece under it. Its spot is measured along the belt from where the belt
+//   A sorter whose belt was split (another sorter's joint) carries on on the piece under it. REMOVING a sorter (hold right, or the tester's Clear) HEALS its
+//   joint (HealJoint -> PixelConveyor.JoinAt): the two pieces become one belt again when they run straight on with the same speed / size and no other
+//   sorter stands there. SECTIONS: one sorter is enough to cut a line in two when both of the line's ends are connected (a coupling, an elevator). Its spot is measured along the belt from where the belt
 //   starts NOW (Spot, like the Combiner), so reversing the belt leaves it where it stands; saved with the tester save (spot, yaw, slot type + amount).
 //   A removed belt takes the sorter with it: the sorter goes back into the backpack (refunded) and its filter block is handed back (LoseBelt).
 //   It catches a rider anywhere on the stretch the rider crosses this physics step, so fast belts can't skip it (TryDivert). When the belt fed by its
@@ -353,6 +355,20 @@ public class PixelBeltSorter : MonoBehaviour, IPixelSocketDevice
             PixelAudio.Play("device_place", 1.3f);
             return;
         }
+    }
+
+    /// <summary>
+    /// The sorter is being REMOVED by the player (the tester's delete): its joint heals - the two belt pieces it split become one belt again
+    /// (PixelConveyor.JoinAt), unless another sorter also stands on that joint or the pieces don't run straight on.
+    /// </summary>
+    public void HealJoint()
+    {
+        if (ghost || belt == null || along > 1.2f * unit) return;   // (not on a joint: it stood in the middle of a belt)
+        foreach (PixelBeltSorter other in all)
+            if (other != null && other != this && !other.ghost && other.belt == belt && other.along <= 1.2f * other.unit) return;   // (another sorter keeps the joint)
+        PixelConveyor second = belt;
+        belt = null;   // (it lets go first, so it does not follow the joined belt)
+        PixelConveyor.JoinAt(second);
     }
 
     /// <summary>
