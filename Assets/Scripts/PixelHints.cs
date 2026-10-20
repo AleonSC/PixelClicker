@@ -1081,8 +1081,8 @@ public class PixelHints : MonoBehaviour, IPixelSaved
         }
         if (next.id == "potion")
         {
-            // The first potion tip stops time (so the potion doesn't run down) and stays until 'Got it'.
-            PixelNotice.Show(next.text, 0f, freezeTime: true);
+            // The first potion tip: a small box at the TOP RIGHT of the screen (just under the top bar), and time keeps running - it should not get in the way.
+            PixelNotice.Show(next.text, 0f, small: true, nearScreen: () => new Vector2(Screen.width * 1.03f, Screen.height * 0.8f), freezeTime: false);
             wasShowing = true;
             return;
         }
