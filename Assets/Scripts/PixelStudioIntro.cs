@@ -822,7 +822,9 @@ public class PixelStudioIntro : MonoBehaviour
     {
         Transform arcade = new GameObject("Arcade").transform;
         arcade.SetParent(world.transform, false);
-        arcade.localPosition = new Vector3(2000f, 0f, 0f);   // (far from the space set: neither camera sees the other set)
+        // Well below the space set (space-local y -90: past the galaxy's edge and in front of its far nebulae / stars). It used to sit at x 2000 =
+        // inside the scaled-up galaxy, whose huge glowing star sprites drifted behind the cabinet as a white sheen.
+        arcade.localPosition = new Vector3(0f, -9000f, 0f);
         Vector3 o = arcade.localPosition;
         Color dark = new Color(0.04f, 0.04f, 0.06f, 1f);
 
