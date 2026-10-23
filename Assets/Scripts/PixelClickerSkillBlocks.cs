@@ -307,7 +307,7 @@ public partial class PixelClicker
         BoxCollider box = go.AddComponent<BoxCollider>();
         box.size = Vector3.one * unit * 0.5f;
         box.center = new Vector3(0f, unit * 0.3f, 0f);
-        box.sharedMaterial = SharedOldPixelPhysicsMaterial();
+        ApplyHuskPhysics(box, null);   // (the shared husk values)
         // A sprout never collides with the live cube (it starts inside it), and, like a fresh old pixel, it is a ghost for a moment
         // (a trigger) so many sprouts born at the same spot don't jam against each other.
         foreach (Collider live in pixelTransform.GetComponentsInChildren<Collider>())

@@ -114,18 +114,10 @@ public class PixelSolarPanel : MonoBehaviour
         if (!show) { if (rangeRing != null) rangeRing.SetActive(false); return; }
         if (rangeRing == null)
         {
-            rangeRing = new GameObject("Link Range");
-            rangeRing.transform.SetParent(transform, false);
-            LineRenderer lr = rangeRing.AddComponent<LineRenderer>();
-            lr.useWorldSpace = false;
-            lr.loop = true;
-            lr.positionCount = 72;
+            LineRenderer lr = PixelFloorRing.Create("Link Range", transform, null, false);   // (local points: the ring moves with the panel)
+            rangeRing = lr.gameObject;
             float r = LinkRadius / Mathf.Max(0.0001f, transform.lossyScale.x);
-            for (int i = 0; i < 72; i++) { float a = i * Mathf.PI * 2f / 72f; lr.SetPosition(i, new Vector3(Mathf.Cos(a) * r, 0.03f, Mathf.Sin(a) * r)); }
-            lr.startWidth = lr.endWidth = 0.06f * unit;
-            lr.sharedMaterial = new Material(PixelShaders.SpriteDefault());
-            lr.startColor = lr.endColor = new Color(0.3f, 0.7f, 1f, 0.7f);
-            lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            PixelFloorRing.Draw(lr, new Vector3(0f, 0.03f, 0f), r, 72, 1f, new Color(0.3f, 0.7f, 1f, 0.7f), 0.06f * unit);
         }
         rangeRing.SetActive(true);
     }

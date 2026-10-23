@@ -536,16 +536,7 @@ public class PixelHuskCrush : MonoBehaviour
     private LineRenderer MakeLine(string name)
     {
         if (lineMaterial == null) lineMaterial = new Material(PixelShaders.SpriteDefault());
-        GameObject go = new GameObject(name, typeof(LineRenderer));
-        go.transform.SetParent(transform, false);
-        LineRenderer lr = go.GetComponent<LineRenderer>();
-        lr.sharedMaterial = lineMaterial;
-        lr.useWorldSpace = true;
-        lr.alignment = LineAlignment.View;
-        lr.numCapVertices = 3;
-        lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        lr.receiveShadows = false;
-        return lr;
+        return PixelFloorRing.Create(name, transform, lineMaterial, true, 3);   // (the ring and the arcs: same line set-up)
     }
 
     private void ShowRing(bool show)
@@ -572,18 +563,8 @@ public class PixelHuskCrush : MonoBehaviour
     {
         if (ring == null) ring = MakeLine("Charge Crush Ring");
         ShowRing(true);
-        int points = Mathf.Max(2, Mathf.CeilToInt(RingPoints * Mathf.Clamp01(fill)) + 1);
-        bool whole = fill >= 0.999f;
-        ring.loop = whole;
-        ring.positionCount = whole ? RingPoints : points;
         float y = chargeCentre.y - clicker.OldPixelWorldSize * 0.45f;   // about the bottom of the husk: on the floor it lies on
-        for (int i = 0; i < ring.positionCount; i++)
-        {
-            float a = (whole ? i / (float)RingPoints : i / (float)(points - 1) * fill) * Mathf.PI * 2f;
-            ring.SetPosition(i, new Vector3(chargeCentre.x + Mathf.Cos(a) * radius, y, chargeCentre.z + Mathf.Sin(a) * radius));
-        }
-        ring.startWidth = ring.endWidth = clicker.OldPixelWorldSize * widthInHusks;
-        ring.startColor = ring.endColor = color;
+        PixelFloorRing.Draw(ring, new Vector3(chargeCentre.x, y, chargeCentre.z), radius, RingPoints, fill, color, clicker.OldPixelWorldSize * widthInHusks);
     }
 
     /// <summary>A short jagged arc from the charge centre to a husk; it fades over arcSeconds (UpdateArcs).</summary>

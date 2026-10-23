@@ -312,90 +312,24 @@ public partial class PixelClicker
     private readonly Dictionary<Color, Gradient> lightTrailGradients = new Dictionary<Color, Gradient>(), flyTrailGradients = new Dictionary<Color, Gradient>();
     private float lightTrailGradientBrightness = -1f;
 
-#if UNITY_6000_0_OR_NEWER
-    private PhysicsMaterial oldPixelPhysics;
-#else
-    private PhysicMaterial oldPixelPhysics;
-#endif
-    private float oldPixelPhysicsBounce = -1f, oldPixelPhysicsFriction = -1f;
-    private readonly System.Collections.Generic.Dictionary<PixelType, UnityEngine.Object> lookPhysics =
-        new System.Collections.Generic.Dictionary<PixelType, UnityEngine.Object>();
+    private static readonly System.Collections.Generic.Dictionary<PixelType, string> lookPhysicsNames =
+        new System.Collections.Generic.Dictionary<PixelType, string>();   // ("OldPixel_<type>", made once per type)
     private readonly System.Collections.Generic.Dictionary<int, Material> trailMaterials = new System.Collections.Generic.Dictionary<int, Material>();
     private readonly System.Collections.Generic.Dictionary<int, Color> trailMaterialColors = new System.Collections.Generic.Dictionary<int, Color>();
 
-    /// <summary>One physics material shared by every old pixel (rebuilt when bounciness / friction change).</summary>
-    /// <summary>Bounce / friction material of one pixel type's look (cached; rebuilt if the values change).</summary>
-#if UNITY_6000_0_OR_NEWER
-    private PhysicsMaterial LookPhysicsMaterial(PixelLook look)
+    /// <summary>
+    /// A husk's bounce / friction (PixelPhysicsMaterials: cached and shared, a changed value gets a new one): the pixel type's own look values
+    /// (customPhysics; frictions combine by Minimum) or the clicker's shared husk values (combine by Average). Bounces combine by Maximum.
+    /// </summary>
+    private void ApplyHuskPhysics(Collider box, PixelLook look)
     {
-        if (lookPhysics.TryGetValue(look.type, out UnityEngine.Object cached) && cached != null)
+        if (look != null && look.customPhysics)
         {
-            PhysicsMaterial existing = (PhysicsMaterial)cached;
-            if (Mathf.Approximately(existing.bounciness, look.bounce) && Mathf.Approximately(existing.dynamicFriction, look.friction)) return existing;
+            if (!lookPhysicsNames.TryGetValue(look.type, out string name)) { name = "OldPixel_" + look.type; lookPhysicsNames[look.type] = name; }
+            PixelPhysicsMaterials.Apply(box, name, look.bounce, look.friction, PixelPhysicsMaterials.Combine.Maximum, PixelPhysicsMaterials.Combine.Minimum);
         }
-        PhysicsMaterial m = new PhysicsMaterial("OldPixel_" + look.type)
-        {
-            bounciness = look.bounce, dynamicFriction = look.friction, staticFriction = look.friction,
-            bounceCombine = PhysicsMaterialCombine.Maximum, frictionCombine = PhysicsMaterialCombine.Minimum
-        };
-        lookPhysics[look.type] = m;
-        return m;
+        else PixelPhysicsMaterials.Apply(box, "OldPixel", bounciness, friction, PixelPhysicsMaterials.Combine.Maximum, PixelPhysicsMaterials.Combine.Average);
     }
-#else
-    private PhysicMaterial LookPhysicsMaterial(PixelLook look)
-    {
-        if (lookPhysics.TryGetValue(look.type, out UnityEngine.Object cached) && cached != null)
-        {
-            PhysicMaterial existing = (PhysicMaterial)cached;
-            if (Mathf.Approximately(existing.bounciness, look.bounce) && Mathf.Approximately(existing.dynamicFriction, look.friction)) return existing;
-        }
-        PhysicMaterial m = new PhysicMaterial("OldPixel_" + look.type)
-        {
-            bounciness = look.bounce, dynamicFriction = look.friction, staticFriction = look.friction,
-            bounceCombine = PhysicMaterialCombine.Maximum, frictionCombine = PhysicMaterialCombine.Minimum
-        };
-        lookPhysics[look.type] = m;
-        return m;
-    }
-#endif
-
-#if UNITY_6000_0_OR_NEWER
-    private PhysicsMaterial SharedOldPixelPhysicsMaterial()
-    {
-        if (oldPixelPhysics == null || oldPixelPhysicsBounce != bounciness || oldPixelPhysicsFriction != friction)
-        {
-            oldPixelPhysics = new PhysicsMaterial("OldPixel")
-            {
-                bounciness = bounciness,
-                dynamicFriction = friction,
-                staticFriction = friction,
-                bounceCombine = PhysicsMaterialCombine.Maximum,
-                frictionCombine = PhysicsMaterialCombine.Average
-            };
-            oldPixelPhysicsBounce = bounciness;
-            oldPixelPhysicsFriction = friction;
-        }
-        return oldPixelPhysics;
-    }
-#else
-    private PhysicMaterial SharedOldPixelPhysicsMaterial()
-    {
-        if (oldPixelPhysics == null || oldPixelPhysicsBounce != bounciness || oldPixelPhysicsFriction != friction)
-        {
-            oldPixelPhysics = new PhysicMaterial("OldPixel")
-            {
-                bounciness = bounciness,
-                dynamicFriction = friction,
-                staticFriction = friction,
-                bounceCombine = PhysicMaterialCombine.Maximum,
-                frictionCombine = PhysicMaterialCombine.Average
-            };
-            oldPixelPhysicsBounce = bounciness;
-            oldPixelPhysicsFriction = friction;
-        }
-        return oldPixelPhysics;
-    }
-#endif
 
     /// <summary>One trail material per pixel type, shared by all of its fly-away copies.</summary>
     private Material TrailMaterialFor(int tierIndex, Color tierColor)
@@ -650,7 +584,7 @@ public partial class PixelClicker
         BoxCollider box = copy.AddComponent<BoxCollider>();
         PixelLook oldLook = IsValidTier(tierIndex) ? LookOf(tiers[tierIndex]) : null;
         bool custom = oldLook != null && oldLook.customPhysics;
-        box.sharedMaterial = custom ? LookPhysicsMaterial(oldLook) : SharedOldPixelPhysicsMaterial();
+        ApplyHuskPhysics(box, oldLook);
 
         // Keep the old pixel from colliding with / bumping the live one if requested.
         if (!collideWithLivePixel)
@@ -929,7 +863,7 @@ public partial class PixelClicker
         if (box != null)
         {
             box.isTrigger = false;
-            box.sharedMaterial = SharedOldPixelPhysicsMaterial();
+            ApplyHuskPhysics(box, null);   // (a landed meteor: the shared husk values)
             if (!collideWithLivePixel && pixelTransform != null)
                 foreach (Collider live in pixelTransform.GetComponentsInChildren<Collider>())
                     Physics.IgnoreCollision(box, live);

@@ -116,6 +116,8 @@ One line per script / system: what it is and where its details are. Search it (`
 | `PixelViewBounds.cs` | Keeps husks inside the camera's view with no scene objects: | in the header comment of `PixelViewBounds.cs` |
 | `PixelFloorModes.cs` | What the floor shows while 'Display floor' is off (PixelFloor.OffMode: Invisible / Flat plane / Landing pulse) and the PixelFloorPulse ripples where husks land. | in the header comment of `PixelFloorModes.cs` |
 | `PixelFloorFade.cs` | Floor edge fade (partial class PixelFloor, UpdateEdgeFade from LateUpdate; | in the header comment of `PixelFloorFade.cs` |
+| `PixelFloorRing.cs` | One helper for rings drawn with a LineRenderer (whole or partial, any plane, radius / fill / colour / width, a shared Sprites/Default material): Charge Crush's ring, the Solar Panel's link range, the drop guide. | in the header comment of `PixelFloorRing.cs` |
+| `PixelPhysicsMaterials.cs` | The one place that makes physics materials (cached by values, hides the Unity 6 PhysicsMaterial / older PhysicMaterial split): husks, thrown-husk grip, pets, the floor. | in the header comment of `PixelPhysicsMaterials.cs` |
 | `PixelFloor.cs` | Floor styles (added by PixelClicker.Awake): | `docs/systems/PixelFloor.md` |
 | `PixelDayNight.cs` | Day / night cycle (added by PixelClicker.Awake; | in the header comment of `PixelDayNight.cs` |
 | `PixelOrthoView.cs` | Flat view (added by PixelClicker.Awake; Settings > Display > 'Flat view' = PixelOrthoView.Enabled, off by default, synced per save): | `docs/systems/PixelOrthoView.md` |
