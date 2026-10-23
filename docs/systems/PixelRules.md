@@ -79,6 +79,14 @@ ingredients, vendor orders, upgrades, cosmetics; vendors may BUY products (the e
 3): ore husk -> ingot -> tool; leaf / moss / seaweed husks -> cloth -> pet outfit. Wood Chips and Charcoal (pixel types today, no use yet)
 are really products and should move over.
 
+**Discovery: products unlock new blocks (agreed 2026-10-21, not built).** A product never turns into a husk, but making enough of a product
+DISCOVERS a new pixel type: from then on the cube spawns it like any block (its own currency, husks, Value upgrades). Example: the Kiln burns
+wood husks into Charcoal PRODUCTS; make enough of them and the Charcoal PIXEL is discovered (a Firemaking block), which then drops real
+Charcoal husks. This is how the MAKING skills (Smithing, Firemaking, ...) get their blocks, while gathering skills keep theirs from shop
+packs - the factory becomes the gateway to new skills. Rules: discovery is ONE-TIME (no feeding a machine to keep a block); NO LOOPS (a
+discovered block's husks process into something new or higher, never back into the product that discovered it); watch the currency count
+(group the Inventory by skill before there are dozens).
+
 ## Crafting uses husks (agreed 2026-10-18, not built)
 
 Currency buys access (shop); husks build things: crafting consumes HUSKS stored in the Workbench (one placeable bench, keeps its stock when moved), not pixel currency. Design: docs/GameDesign.md section 8 'Crafting uses husks: the Workbench'.

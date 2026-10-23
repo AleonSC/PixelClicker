@@ -23,6 +23,7 @@
 //     Recycle 20 husks (after visit 1)               -> Black unlocks
 //     Get a crush streak of 5 (minute 3)             -> 60 Standard XP
 //     Earn 120 Black (after Recycle 20)              -> Cubie's visit 2: RGB + the shop
+//     Earn 2,000 Blue (minute 40, after Earn 120 Black) -> Cubie's visit 3: his BILL (PixelCubieBill; ~1 h, the end of the early game - tune it)
 //   PACE (sized for RGB + the shop at about 6 min, ~3.5 blocks a second, about 60% of the time clicking): click 50 ~0:20 + Cubie ~0:30; Gray ~1:00;
 //   Black ~2:30-3:00 (the Recycler is placed and 20 husks land in it); 120 Black at 1/3 of blocks ~ 2.5-3 min of mixed play -> visit 2 at ~5:30,
 //   the shop at ~6:00. Re-check against the next session report (the recorder's timeline lists 'Goal done: ...').
@@ -80,7 +81,7 @@ public class PixelGoals : MonoBehaviour
         [Tooltip("Reward: the pixel type unlocked (with rewardUnlocksTier).")]
         public PixelClicker.PixelType rewardTier = PixelClicker.PixelType.Gray;
         [Range(0, 2)]
-        [Tooltip("Reward: start Cubie's visit 1 (the Recycler) or 2 (RGB + the shop). 0 = none. PixelGuideVendor.RequestVisit; with Cubie off the visit's gifts still arrive.")]
+        [Tooltip("Reward: start Cubie's visit 1 (the Recycler), 2 (RGB + the shop) or 3 (his bill, PixelCubieBill). 0 = none. PixelGuideVendor.RequestVisit; with Cubie off the visit's gifts still arrive.")]
         public int rewardCubieVisit = 0;
         [Tooltip("Off = this goal never appears.")]
         public bool enabled = true;
@@ -129,6 +130,7 @@ public class PixelGoals : MonoBehaviour
         new GoalDef { id = "recycle20", title = "Recycle 20 husks", description = "Place Cubie's Recycler (in your Consumables) where husks land: every husk that falls in turns back into a little currency.", counter = CounterKind.StatSinceShown, counterKey = "recycler.husks", target = 20d, appear = AppearKind.StatAtLeast, appearKey = "guide.stage1", appearValue = 1d, rewardUnlocksTier = true, rewardTier = PixelClicker.PixelType.Black },
         new GoalDef { id = "crushstreak5", title = "Get a crush streak of 5", description = "Crush 5 husks in a row, each within a second of the last - every crush in a streak gives more XP.", counter = CounterKind.StatValue, counterKey = "husk.crush.streak", target = 5d, appear = AppearKind.MinutesPlayed, appearValue = 3d, rewardXp = 60d },
         new GoalDef { id = "earnblack", title = "Earn 120 Black", description = "Click Black blocks until you have earned 120 Black pixels. Cubie wants to see a real pile.", counter = CounterKind.TierTotal, counterTier = PixelClicker.PixelType.Black, target = 120d, appear = AppearKind.Always, afterGoal = "recycle20", rewardCubieVisit = 2 },
+        new GoalDef { id = "billreveal", title = "Earn 2,000 Blue", description = "Keep clicking and build up the pure colours. Cubie keeps glancing at that tag on your Recycler...", counter = CounterKind.TierTotal, counterTier = PixelClicker.PixelType.Blue, target = 2000d, appear = AppearKind.MinutesPlayed, appearValue = 40d, afterGoal = "earnblack", rewardCubieVisit = 3 },
     };
 
     private void Awake()
@@ -245,6 +247,7 @@ public class PixelGoals : MonoBehaviour
         }
         if (g.rewardCubieVisit == 1) parts.Add("a visitor drops by");
         else if (g.rewardCubieVisit == 2) parts.Add("Red, Green, Blue + the shop");
+        else if (g.rewardCubieVisit == 3) parts.Add("Cubie has something for you");
         if (g.rewardXp > 0d)
         {
             PixelSkills skills = PixelSkills.Instance;

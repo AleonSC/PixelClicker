@@ -12,6 +12,8 @@
 //     < WorldBand (500): after the minigames, before FinishLoad (achievements, stats)
 //     >= WorldBand: after FinishLoad and the husks are back on the field (Bank, placed devices + running potion)
 //   An error in one part is logged and the others still load / save.
+//   BEING REPLACED (2026-10-23): progress is moving into the GameState (PixelGameState; docs/systems/PixelGameState.md), one system at a time.
+//   A moved system drops IPixelSaved; both ways run side by side until the move is done.
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;

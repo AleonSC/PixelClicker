@@ -35,4 +35,16 @@ if [ -n "$HITS" ]; then
   FAIL=1
 fi
 
+# Rule: a system whose progress moved into the GameState (listed in GameState.MovedSystems, docs/systems/PixelGameState.md) no longer
+# saves itself and needs no restart reset: its script must not implement IPixelSaved, register with PixelSaveRegistry or PixelStatics.ResetOnRestart.
+MOVED=$(sed -n 's/.*MovedSystems = {\(.*\)};.*/\1/p' GameState.cs | tr -d ' "' | tr ',' ' ')
+for sys in $MOVED; do
+  [ -f "$sys.cs" ] || { echo "GameState.cs: rule: GameState.MovedSystems names '$sys' but there is no $sys.cs"; FAIL=1; continue; }
+  BAD=$(grep -nE 'IPixelSaved|PixelSaveRegistry\.(Register|Unregister)|PixelStatics\.ResetOnRestart' "$sys.cs" | grep -vE '^[0-9]+:\s*//' | cut -d: -f1)
+  for n in $BAD; do
+    echo "$sys.cs:$n: rule: $sys moved to the GameState (GameState.MovedSystems) - its progress saves and resets with PixelGameState, so no IPixelSaved / PixelSaveRegistry / ResetOnRestart here"
+    FAIL=1
+  done
+done
+
 exit $FAIL

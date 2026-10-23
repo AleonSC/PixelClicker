@@ -52,8 +52,14 @@ public partial class PixelShop
     }
 
     /// <summary>A pixel type's item is locked until that pixel type is unlocked (you may already own some).</summary>
-    private bool ItemLocked(int item) =>
+    private bool ItemLocked(int item) => !PixelCubieBill.TierMet(ItemTrustTier(item)) ||
         potionsNeedUnlockedPixel && consumables.ItemOwned(item) <= 0 && !clicker.IsUnlocked(consumables.ItemRequiredType(item));
+
+    /// <summary>The trust tier of Cubie's bill that puts this item on sale (PixelCubieBill's stock table; 0 = from the start).</summary>
+    private int ItemTrustTier(int item) => consumables.IsDevice(item) ? PixelCubieBill.ItemTier(consumables.DeviceKindOf(item)) : 0;
+
+    /// <summary>Is the item listed at all? (A trust-tier item stays hidden until Cubie's bill is revealed.)</summary>
+    private bool ItemTrustListed(int item) => PixelCubieBill.TierListed(ItemTrustTier(item));
 
     private static readonly PixelConsumables.DeviceKind[] UtilitiesFirst =
     {
@@ -69,7 +75,7 @@ public partial class PixelShop
         if (consumables == null) return;
         for (int i = 0; i < consumables.ItemCount; i++)
         {
-            if (consumables.ItemCraftOnly(i) || consumables.ItemNotSold(i) || consumables.ItemVendorOnly(i) || consumables.IsDragonSeed(i)) continue;   // crafted / vendor items aren't sold here
+            if (consumables.ItemCraftOnly(i) || consumables.ItemNotSold(i) || consumables.ItemVendorOnly(i) || consumables.IsDragonSeed(i) || !ItemTrustListed(i)) continue;   // crafted / vendor items aren't sold here
             if (consumables.CategoryOf(i) == category) list.Add(i);
         }
         if (category == 1)
@@ -112,6 +118,12 @@ public partial class PixelShop
         }
         if (room > 0 && page.count > room) page.count = room;
 
+        if (locked && !PixelCubieBill.TierMet(ItemTrustTier(item)))
+        {
+            SetCostMessage(page.barCosts, PixelCubieBill.LockedText(ItemTrustTier(item)), unaffordableColor);
+            SetPageBuy(page, false, lockedText);
+            return;
+        }
         if (locked)
         {
             int t = clicker.IndexOf(consumables.ItemRequiredType(item));

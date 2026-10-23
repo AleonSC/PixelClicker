@@ -1,0 +1,279 @@
+<title>Pixel Clicker Code Health</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a diagnostic report - the overall reading and trend on top, four category gauges, "fix first", then the area treemap and the full script table. */
+:root {
+  --bg: #f3f5f7; --panel: #ffffff; --ink: #18202b; --dim: #5d6876; --line: #d4dae2; --accent: #1d6fd6;
+  --good: #2f9e5b; --warn: #d9932b; --bad: #cf4a3c; --track: #e3e8ee;
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif; --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f141b; --panel: #161d27; --ink: #e3e8ef; --dim: #8e9aab; --line: #2a3443; --accent: #5aa2ff;
+  --good: #45c27a; --warn: #f0ad45; --bad: #f06a5a; --track: #232c39; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f141b; --panel: #161d27; --ink: #e3e8ef; --dim: #8e9aab; --line: #2a3443; --accent: #5aa2ff;
+  --good: #45c27a; --warn: #f0ad45; --bad: #f06a5a; --track: #232c39; color-scheme: dark }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--display); }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 28px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 22px; }
+h1 { font-size: clamp(1.5rem, 3vw, 2.1rem); font-weight: 800; letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+h2 { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--dim); margin: 0 0 10px; font-weight: 600; }
+.sub { color: var(--dim); font-size: 0.88rem; margin: 6px 0 0; line-height: 1.5; max-width: 70ch; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; min-width: 0; }
+.top { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: 18px; }
+.dial { display: flex; align-items: center; gap: 18px; }
+.dial svg { flex: none; }
+.dial .big { font: 800 2.6rem var(--display); line-height: 1; }
+.dial .grade { font: 600 0.9rem var(--mono); color: var(--dim); margin-top: 4px; }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.facts div { border-top: 1px solid var(--line); padding-top: 8px; }
+.facts b { display: block; font: 600 1.15rem var(--mono); }
+.facts span { font-size: 0.74rem; color: var(--dim); }
+.trend svg { width: 100%; height: 150px; display: block; }
+.trend text { font: 10px var(--mono); fill: var(--dim); }
+.cats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.cat h3 { margin: 0; font-size: 0.95rem; font-weight: 800; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.cat h3 .mono { font-size: 1.2rem; }
+.bar { height: 6px; border-radius: 3px; background: var(--track); margin: 10px 0 12px; overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 3px; }
+.checks { display: flex; flex-direction: column; gap: 4px; }
+.checks button { display: flex; justify-content: space-between; gap: 10px; text-align: left; background: none; border: 0; padding: 4px 6px; margin: 0 -6px; border-radius: 5px; color: var(--ink); font: 0.82rem var(--display); cursor: pointer; }
+.checks button:hover, .checks button.on { background: var(--bg); }
+.checks button.on { outline: 1px solid var(--accent); }
+.checks button .mono { color: var(--dim); }
+.checks .none { font-size: 0.82rem; color: var(--dim); }
+.fix { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; }
+.fix button { display: grid; grid-template-columns: 46px 1fr; gap: 10px; align-items: start; text-align: left; background: none; border: 0; border-top: 1px solid var(--line); padding: 10px 0 4px; color: var(--ink); cursor: pointer; font-family: var(--display); min-width: 0; }
+.fix button:hover .fname { color: var(--accent); }
+.pill { font: 600 0.8rem var(--mono); padding: 3px 0; border-radius: 5px; text-align: center; color: #fff; }
+.fname { font: 600 0.9rem var(--mono); overflow-wrap: anywhere; }
+.fwhy { font-size: 0.8rem; color: var(--dim); line-height: 1.45; margin-top: 2px; }
+#tree { width: 100%; height: 460px; display: block; }
+#tree text { font: 10px var(--mono); fill: #fff; pointer-events: none; }
+#tree .area { font: 800 11px var(--display); fill: var(--ink); text-transform: uppercase; letter-spacing: 0.06em; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.76rem; color: var(--dim); margin-top: 8px; align-items: center; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.tools { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+.tools input, .tools select { font: 0.85rem var(--mono); padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); }
+.tools input { flex: 1 1 200px; min-width: 0; }
+.tools .clear { font: 600 0.8rem var(--display); background: none; border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; color: var(--ink); cursor: pointer; }
+.tablebox { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+th { text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--dim); font-weight: 600; padding: 8px; border-bottom: 1px solid var(--line); cursor: pointer; white-space: nowrap; user-select: none; }
+th.num, td.num { text-align: right; }
+td { padding: 7px 8px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+td.file { font-family: var(--mono); font-weight: 600; }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: var(--bg); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+.more { margin-top: 10px; font: 600 0.82rem var(--display); background: none; border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; color: var(--ink); cursor: pointer; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(520px, 100%); background: var(--panel); border-left: 1px solid var(--line); box-shadow: -10px 0 30px rgba(0,0,0,0.12); padding: 22px; padding-top: max(22px, env(safe-area-inset-top, 0px)); padding-right: max(22px, env(safe-area-inset-right, 0px)); overflow-y: auto; z-index: 20; display: flex; flex-direction: column; gap: 12px; box-sizing: border-box; }
+.drawer .close { align-self: flex-end; font: 600 0.85rem var(--display); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; color: var(--ink); cursor: pointer; }
+.drawer h3 { margin: 0; font: 600 1.15rem var(--mono); overflow-wrap: anywhere; }
+.drawer p { margin: 0; font-size: 0.86rem; line-height: 1.5; }
+.minibars { display: grid; grid-template-columns: auto 1fr auto; gap: 6px 10px; align-items: center; font-size: 0.8rem; }
+.find { border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+.find .t { font-weight: 800; font-size: 0.88rem; }
+.find .w { font-size: 0.8rem; color: var(--dim); line-height: 1.45; }
+.find code { font: 0.76rem var(--mono); background: var(--bg); border-radius: 4px; padding: 4px 6px; overflow-wrap: anywhere; white-space: pre-wrap; display: block; }
+.note { font-size: 0.8rem; color: var(--dim); line-height: 1.5; max-width: 90ch; }
+button:focus-visible, input:focus-visible, select:focus-visible, tr:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 900px) { .top { grid-template-columns: 1fr; } .cats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fix { grid-template-columns: 1fr; } }
+@media (max-width: 520px) { .cats { grid-template-columns: 1fr; } .facts { grid-template-columns: repeat(3, minmax(0, 1fr)); } #tree { height: 380px; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Pixel Clicker Code Health</h1>
+    <p class="sub" id="sub"></p>
+  </header>
+
+  <section class="top">
+    <div class="panel">
+      <h2>Overall</h2>
+      <div class="dial" id="dial"></div>
+      <div class="facts" id="facts"></div>
+    </div>
+    <div class="panel trend">
+      <h2>Score over time</h2>
+      <svg id="trend" role="img" aria-label="Overall health score at each rebuild"></svg>
+    </div>
+  </section>
+
+  <section class="cats" id="cats"></section>
+
+  <section class="panel">
+    <h2>Fix first</h2>
+    <div class="fix" id="fix"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Every script by area (size = lines, colour = score; click one)</h2>
+    <svg id="tree" role="img" aria-label="Treemap of scripts by area, coloured by health score"></svg>
+    <div class="legend"><span><i style="background:var(--bad)"></i>below 60</span><span><i style="background:var(--warn)"></i>60-84</span><span><i style="background:var(--good)"></i>85+</span></div>
+  </section>
+
+  <section class="panel">
+    <h2>All scripts</h2>
+    <div class="tools">
+      <input type="search" id="q" placeholder="Filter by file name..." autocomplete="off" aria-label="Filter by file name">
+      <select id="area" aria-label="Area"></select>
+      <select id="check" aria-label="Finding"></select>
+      <button class="clear" id="clear">Clear filters</button>
+    </div>
+    <div class="tablebox"><table>
+      <thead><tr>
+        <th data-k="file">Script</th><th data-k="group">Area</th><th class="num" data-k="lines">Lines</th><th class="num" data-k="score">Score</th>
+        <th class="num" data-k="Performance">Perf</th><th class="num" data-k="Size and structure">Size</th><th class="num" data-k="Project rules">Rules</th><th class="num" data-k="Docs">Docs</th><th class="num" data-k="n">Findings</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table></div>
+    <button class="more" id="more" hidden>Show all</button>
+  </section>
+
+  <p class="note">How it works: <span class="mono">tools/code-health/build.py</span> reads the C# text (no Unity). Every finding is a pattern with a file and line, so it is a list of places to look, not proof: "every frame" means inside Update / LateUpdate / FixedUpdate / OnGUI only (code those methods call is not followed), and one-time setup guarded by <span class="mono">if (x == null)</span> is not counted. Each script starts at 100 and loses capped points per finding; the overall and category scores are weighted by lines of code. Rebuild with <span class="mono">python3 tools/code-health/build.py</span> (it adds a point to the trend each time the score changes).</p>
+</div>
+
+<div class="drawer" id="drawer" hidden role="dialog" aria-label="Script details"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+const DATA = /*__DATA__*/null;
+(function () {
+  const S = DATA.scripts, C = DATA.checks;
+  S.forEach(s => s.n = s.findings.length);
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const tone = v => v < 60 ? 'var(--bad)' : v < 85 ? 'var(--warn)' : 'var(--good)';
+  const grade = v => v >= 93 ? 'A' : v >= 85 ? 'B' : v >= 75 ? 'C' : v >= 60 ? 'D' : 'F';
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const fmt = n => n.toLocaleString('en-US');
+
+  document.getElementById('sub').textContent = `Built ${DATA.built} UTC from ${fmt(DATA.totals.scripts)} scripts (${fmt(DATA.totals.lines)} lines). Higher is healthier. Click any script for its findings with line numbers.`;
+
+  // ---- overall dial ----
+  const o = DATA.overall, R = 46, Cc = 2 * Math.PI * R;
+  document.getElementById('dial').innerHTML = `<svg width="120" height="120" viewBox="0 0 120 120" aria-hidden="true">
+      <circle cx="60" cy="60" r="${R}" fill="none" stroke="var(--track)" stroke-width="12"></circle>
+      <circle cx="60" cy="60" r="${R}" fill="none" stroke="${tone(o)}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${Cc * o / 100} ${Cc}" transform="rotate(-90 60 60)"></circle>
+      <text x="60" y="68" text-anchor="middle" style="font:800 26px var(--display);fill:var(--ink)">${grade(o)}</text></svg>
+    <div><div class="big mono">${o.toFixed(1)}</div><div class="grade">out of 100 · grade ${grade(o)}</div></div>`;
+  const big = S.filter(s => s.lines > 1500).length, red = S.filter(s => s.score < 60).length;
+  document.getElementById('facts').innerHTML = `<div><b>${fmt(DATA.totals.perFrame)}</b><span>scripts run every frame</span></div>
+    <div><b>${big}</b><span>files over 1,500 lines</span></div><div><b>${red}</b><span>scripts below 60</span></div>`;
+
+  // ---- trend ----
+  (function () {
+    const h = DATA.history, svg = d3.select('#trend'), W = svg.node().clientWidth || 600, H = 150, m = { l: 34, r: 12, t: 12, b: 22 };
+    svg.attr('viewBox', `0 0 ${W} ${H}`);
+    const x = d3.scalePoint().domain(h.map((_, i) => i)).range([m.l, W - m.r]).padding(h.length === 1 ? 0.5 : 0);
+    const lo = Math.max(0, Math.floor((d3.min(h, d => d.score) - 5) / 5) * 5), y = d3.scaleLinear().domain([lo, 100]).range([H - m.b, m.t]);
+    y.ticks(4).forEach(t => { svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(t)).attr('y2', y(t)).attr('stroke', 'var(--line)'); svg.append('text').attr('x', m.l - 6).attr('y', y(t) + 3).attr('text-anchor', 'end').text(t); });
+    const area = d3.area().x((_, i) => x(i)).y0(H - m.b).y1(d => y(d.score)), line = d3.line().x((_, i) => x(i)).y(d => y(d.score));
+    if (h.length > 1) { svg.append('path').attr('d', area(h)).attr('fill', 'var(--accent)').attr('opacity', 0.12); svg.append('path').attr('d', line(h)).attr('fill', 'none').attr('stroke', 'var(--accent)').attr('stroke-width', 2); }
+    const last = h[h.length - 1];
+    svg.append('circle').attr('cx', x(h.length - 1)).attr('cy', y(last.score)).attr('r', 4.5).attr('fill', 'var(--accent)');
+    svg.append('text').attr('x', x(h.length - 1)).attr('y', y(last.score) - 9).attr('text-anchor', h.length === 1 ? 'middle' : 'end').style('fill', 'var(--ink)').style('font-weight', 600).text(last.score.toFixed(1));
+    svg.append('text').attr('x', m.l).attr('y', H - 6).text(h[0].date.slice(0, 10));
+    if (h.length > 1) svg.append('text').attr('x', W - m.r).attr('y', H - 6).attr('text-anchor', 'end').text(last.date.slice(0, 10));
+    if (h.length === 1) svg.append('text').attr('x', W / 2).attr('y', H - 6).attr('text-anchor', 'middle').text('first build - the line grows with each rebuild');
+  })();
+
+  // ---- categories ----
+  let checkFilter = '';
+  function drawCats() {
+    document.getElementById('cats').innerHTML = DATA.categories.map(cat => {
+      const v = DATA.cats[cat];
+      const rows = Object.entries(C).filter(([k, c]) => c.cat === cat && DATA.counts[k]).sort((a, b) => DATA.counts[b[0]] - DATA.counts[a[0]])
+        .map(([k, c]) => `<button data-check="${k}" class="${checkFilter === k ? 'on' : ''}" title="${esc(c.why)}"><span>${esc(c.title)}</span><span class="mono">${DATA.counts[k]}</span></button>`).join('');
+      return `<div class="panel cat"><h3><span>${esc(cat)}</span><span class="mono" style="color:${tone(v)}">${v.toFixed(0)}</span></h3>
+        <div class="bar"><i style="width:${v}%;background:${tone(v)}"></i></div>
+        <div class="checks">${rows || '<span class="none">Nothing found.</span>'}</div></div>`;
+    }).join('');
+    document.querySelectorAll('#cats button[data-check]').forEach(b => b.onclick = () => {
+      checkFilter = checkFilter === b.dataset.check ? '' : b.dataset.check; document.getElementById('check').value = checkFilter; drawCats(); drawTable();
+      if (checkFilter) document.getElementById('rows').closest('section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+  drawCats();
+
+  // ---- fix first: the lowest scores, weighted towards big scripts ----
+  const worst = S.filter(s => s.n).map(s => ({ s, w: (100 - s.score) * Math.log10(10 + s.lines) })).sort((a, b) => b.w - a.w).slice(0, 10);
+  document.getElementById('fix').innerHTML = worst.map(({ s }) => {
+    const byCheck = {}; s.findings.forEach(f => byCheck[f.check] = (byCheck[f.check] || 0) + 1);
+    const main = Object.entries(byCheck).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, n]) => C[k].title.toLowerCase() + (n > 1 ? ' ×' + n : '')).join(', ');
+    return `<button data-file="${esc(s.file)}"><span class="pill" style="background:${tone(s.score)}">${s.score.toFixed(0)}</span><span><div class="fname">${esc(s.file)}</div><div class="fwhy">${fmt(s.lines)} lines · ${esc(main)}</div></span></button>`;
+  }).join('');
+  document.querySelectorAll('#fix button').forEach(b => b.onclick = () => openFile(b.dataset.file));
+
+  // ---- treemap ----
+  function drawTree() {
+    const svg = d3.select('#tree'); svg.selectAll('*').remove();
+    const W = svg.node().clientWidth || 900, H = svg.node().clientHeight || 460;
+    const groups = d3.group(S, s => s.group);
+    const root = d3.hierarchy({ children: [...groups].map(([g, list]) => ({ name: g, children: list })) }).sum(d => d.lines || 0).sort((a, b) => b.value - a.value);
+    d3.treemap().size([W, H]).paddingOuter(3).paddingTop(18).paddingInner(1.5).round(true)(root);
+    const area = svg.selectAll('g.areaG').data(root.children).join('g').attr('class', 'areaG');
+    area.append('rect').attr('x', d => d.x0).attr('y', d => d.y0).attr('width', d => d.x1 - d.x0).attr('height', d => d.y1 - d.y0).attr('fill', 'var(--bg)').attr('stroke', 'var(--line)');
+    area.append('text').attr('class', 'area').attr('x', d => d.x0 + 5).attr('y', d => d.y0 + 13).text(d => (d.x1 - d.x0) > 70 ? d.data.name : '');
+    const leaf = svg.selectAll('g.leaf').data(root.leaves()).join('g').attr('class', 'leaf').attr('transform', d => `translate(${d.x0},${d.y0})`).style('cursor', 'pointer')
+      .attr('tabindex', 0).attr('role', 'button').attr('aria-label', d => d.data.file + ' score ' + d.data.score)
+      .on('click', (e, d) => openFile(d.data.file)).on('keydown', (e, d) => { if (e.key === 'Enter') openFile(d.data.file); });
+    leaf.append('rect').attr('width', d => Math.max(0, d.x1 - d.x0)).attr('height', d => Math.max(0, d.y1 - d.y0)).attr('fill', d => tone(d.data.score)).attr('opacity', d => 0.45 + 0.55 * (1 - d.data.score / 100) + (d.data.score >= 85 ? 0.25 : 0));
+    leaf.append('title').text(d => `${d.data.file}\nscore ${d.data.score} · ${fmt(d.data.lines)} lines · ${d.data.n} findings`);
+    leaf.append('text').attr('x', 4).attr('y', 12).text(d => { const w = d.x1 - d.x0, h = d.y1 - d.y0; if (w < 46 || h < 15) return ''; const n = d.data.file.replace(/^Pixel/, '').replace(/\.cs$/, ''); return n.length * 6 < w - 6 ? n : n.slice(0, Math.max(0, Math.floor((w - 12) / 6))) + '…'; });
+  }
+  drawTree();
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(drawTree, 150); });
+
+  // ---- table ----
+  const areaSel = document.getElementById('area'), checkSel = document.getElementById('check');
+  areaSel.innerHTML = '<option value="">All areas</option>' + [...new Set(S.map(s => s.group))].sort().map(g => `<option>${esc(g)}</option>`).join('');
+  checkSel.innerHTML = '<option value="">Any finding</option>' + Object.entries(C).filter(([k]) => DATA.counts[k]).map(([k, c]) => `<option value="${k}">${esc(c.title)} (${DATA.counts[k]})</option>`).join('');
+  let sortK = 'score', sortDir = 1, showAll = false;
+  const val = (s, k) => k === 'file' || k === 'group' ? s[k] : k === 'score' || k === 'lines' || k === 'n' ? s[k] : s.cats[k];
+  function drawTable() {
+    const q = document.getElementById('q').value.trim().toLowerCase(), a = areaSel.value; checkFilter = checkSel.value;
+    let list = S.filter(s => (!q || s.file.toLowerCase().includes(q)) && (!a || s.group === a) && (!checkFilter || s.findings.some(f => f.check === checkFilter)));
+    list.sort((x, y) => { const p = val(x, sortK), r = val(y, sortK); return (typeof p === 'string' ? p.localeCompare(r) : p - r) * sortDir || x.file.localeCompare(y.file); });
+    const shown = showAll || q || a || checkFilter ? list : list.slice(0, 25);
+    document.getElementById('rows').innerHTML = shown.map(s => `<tr tabindex="0" data-file="${esc(s.file)}">
+      <td class="file">${esc(s.file)}</td><td><span class="dot" style="background:${DATA.colors[s.group] || '#888'}"></span>${esc(s.group)}</td>
+      <td class="num mono">${fmt(s.lines)}</td><td class="num mono" style="color:${tone(s.score)};font-weight:600">${s.score.toFixed(0)}</td>
+      ${DATA.categories.map(c => `<td class="num mono" style="color:${tone(s.cats[c])}">${s.cats[c].toFixed(0)}</td>`).join('')}
+      <td class="num mono">${s.n}</td></tr>`).join('') || '<tr><td colspan="9" style="color:var(--dim)">No script matches these filters.</td></tr>';
+    document.querySelectorAll('#rows tr[data-file]').forEach(r => { r.onclick = () => openFile(r.dataset.file); r.onkeydown = e => { if (e.key === 'Enter') openFile(r.dataset.file); }; });
+    const more = document.getElementById('more'); more.hidden = shown.length === list.length; more.textContent = `Show all ${list.length}`;
+    document.querySelectorAll('th').forEach(th => th.textContent = th.textContent.replace(/ [▲▼]$/, '') + (th.dataset.k === sortK ? (sortDir > 0 ? ' ▲' : ' ▼') : ''));
+    drawCats();
+  }
+  document.querySelectorAll('th').forEach(th => th.onclick = () => { const k = th.dataset.k; if (sortK === k) sortDir = -sortDir; else { sortK = k; sortDir = k === 'file' || k === 'group' || k === 'score' || ['Performance', 'Size and structure', 'Project rules', 'Docs'].includes(k) ? 1 : -1; } drawTable(); });
+  ['q', 'area', 'check'].forEach(id => document.getElementById(id).addEventListener('input', drawTable));
+  document.getElementById('clear').onclick = () => { document.getElementById('q').value = ''; areaSel.value = ''; checkSel.value = ''; showAll = false; drawTable(); };
+  document.getElementById('more').onclick = () => { showAll = true; drawTable(); };
+  drawTable();
+
+  // ---- details drawer ----
+  const drawer = document.getElementById('drawer');
+  function openFile(file) {
+    const s = S.find(x => x.file === file); if (!s) return;
+    const fs = s.findings.slice().sort((a, b) => a.check.localeCompare(b.check) || a.line - b.line);
+    const grouped = {}; fs.forEach(f => (grouped[f.check] = grouped[f.check] || []).push(f));
+    drawer.innerHTML = `<button class="close" id="dclose">Close</button>
+      <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;font-weight:600;color:${DATA.colors[s.group] || 'var(--dim)'}">${esc(s.group)}</div>
+      <h3>${esc(s.file)}</h3>
+      <div class="mono" style="font-size:0.8rem;color:var(--dim)">${fmt(s.lines)} lines · ${s.methods} methods (longest ${s.longest}) · uses ${s.fanOut} scripts${s.hot.length ? ' · runs every frame: ' + s.hot.join(', ') : ''}</div>
+      <p>${esc(s.desc || '')}</p>
+      <div class="minibars"><b>Score</b><div class="bar" style="margin:0"><i style="width:${s.score}%;background:${tone(s.score)}"></i></div><span class="mono">${s.score.toFixed(0)}</span>
+      ${DATA.categories.map(c => `<span>${esc(c)}</span><div class="bar" style="margin:0"><i style="width:${s.cats[c]}%;background:${tone(s.cats[c])}"></i></div><span class="mono">${s.cats[c].toFixed(0)}</span>`).join('')}</div>
+      ${Object.keys(grouped).length ? Object.entries(grouped).map(([k, list]) => `<div class="find"><div class="t">${esc(C[k].title)} <span class="mono" style="color:var(--dim);font-weight:400">×${list.length}</span></div><div class="w">${esc(C[k].why)}</div>
+        ${list.slice(0, 8).map(f => `<code>line ${f.line}: ${esc(f.text)}</code>`).join('')}${list.length > 8 ? `<div class="w">…and ${list.length - 8} more</div>` : ''}</div>`).join('') : '<p style="color:var(--good)">No findings. Nothing to fix here.</p>'}`;
+    drawer.hidden = false;
+    document.getElementById('dclose').onclick = closeDrawer; document.getElementById('dclose').focus();
+  }
+  function closeDrawer() { drawer.hidden = true; }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !drawer.hidden) closeDrawer(); });
+})();
+</script>

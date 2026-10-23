@@ -1,0 +1,273 @@
+<title>Pixel Clicker Code Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a full-height workbench - a narrow index rail on the left (search, areas, the selected script's card), the live map filling the rest. */
+:root {
+  --bg: #eef1f4; --panel: #ffffff; --ink: #18202b; --dim: #5d6876; --line: #c9d1da; --accent: #1d6fd6; --edge: rgba(40, 60, 90, 0.10); --edge-hi: rgba(29, 111, 214, 0.75);
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif; --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f141b; --panel: #161d27; --ink: #e3e8ef; --dim: #8b97a7; --line: #2a3443; --accent: #5aa2ff; --edge: rgba(170, 195, 230, 0.08); --edge-hi: rgba(90, 162, 255, 0.85); color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f141b; --panel: #161d27; --ink: #e3e8ef; --dim: #8b97a7; --line: #2a3443; --accent: #5aa2ff; --edge: rgba(170, 195, 230, 0.08); --edge-hi: rgba(90, 162, 255, 0.85); color-scheme: dark }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--display); }
+.app { display: grid; grid-template-columns: 340px 1fr; height: 100%; }
+aside { background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto; padding-block: 18px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: 16px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+h1 { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+.sub { color: var(--dim); font-size: 0.82rem; line-height: 1.45; margin: 4px 0 0; }
+.sub b { font-family: var(--mono); font-weight: 600; color: var(--ink); }
+label.lbl { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--dim); font-weight: 600; display: block; margin-bottom: 6px; }
+input[type=search] { width: 100%; box-sizing: border-box; font: 0.9rem var(--mono); padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); }
+input[type=search]:focus-visible, button:focus-visible, .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.results { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
+.results button { text-align: left; font: 0.82rem var(--mono); background: none; border: 0; color: var(--ink); padding: 4px 6px; border-radius: 4px; cursor: pointer; }
+.results button:hover { background: var(--bg); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 0.76rem; padding: 4px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--ink); cursor: pointer; font-family: var(--display); }
+.chip i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.chip span { color: var(--dim); font-family: var(--mono); font-size: 0.7rem; }
+.chip.off { opacity: 0.38; }
+.row { display: flex; gap: 8px; align-items: center; font-size: 0.82rem; color: var(--dim); }
+.row input { accent-color: var(--accent); }
+.card { border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.card h2 { font: 600 1rem var(--mono); margin: 0; word-break: break-word; }
+.card .grp { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+.card p { margin: 0; font-size: 0.84rem; line-height: 1.5; color: var(--ink); overflow-wrap: anywhere; }
+.card .meta { font: 0.74rem var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.card h3 { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--dim); margin: 4px 0 0; font-weight: 600; }
+.links { display: flex; flex-wrap: wrap; gap: 4px; }
+.links button { font: 0.72rem var(--mono); border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 4px; padding: 2px 6px; cursor: pointer; }
+.links button:hover { border-color: var(--accent); }
+.empty { color: var(--dim); font-size: 0.84rem; line-height: 1.5; }
+main { position: relative; min-width: 0; overflow: hidden; }
+svg { width: 100%; height: 100%; display: block; cursor: grab; }
+svg:active { cursor: grabbing; }
+.node circle { stroke: var(--panel); stroke-width: 1.5px; cursor: pointer; }
+.node text { font: 10px var(--mono); fill: var(--ink); pointer-events: none; paint-order: stroke; stroke: var(--bg); stroke-width: 3px; }
+.grouplabel { font: 800 15px var(--display); fill: var(--dim); opacity: 0.55; pointer-events: none; text-transform: uppercase; letter-spacing: 0.06em; }
+.hint { position: absolute; right: max(12px, env(safe-area-inset-right, 0px)); bottom: 12px; font-size: 0.74rem; color: var(--dim); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; }
+.zoombtns { position: absolute; right: max(12px, env(safe-area-inset-right, 0px)); top: 12px; display: flex; gap: 6px; }
+.zoombtns button { font: 600 0.9rem var(--display); width: 34px; height: 34px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+.zoombtns button.wide { width: auto; padding: 0 10px; font-size: 0.78rem; }
+@media (max-width: 760px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: auto 70vh; height: auto; }
+  aside { border-right: 0; border-bottom: 1px solid var(--line); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="app">
+  <aside>
+    <div>
+      <h1>Pixel Clicker Code Map</h1>
+      <p class="sub" id="summary"></p>
+    </div>
+    <div>
+      <label class="lbl" for="q">Find a script</label>
+      <input type="search" id="q" placeholder="PixelRecycler, shop, husk..." autocomplete="off">
+      <div class="results" id="results"></div>
+    </div>
+    <div>
+      <label class="lbl">Areas (click to show / hide)</label>
+      <div class="chips" id="chips"></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <label class="row"><input type="checkbox" id="hubs" checked> Hide links to shared helpers (used by 40+ scripts)</label>
+      <label class="row"><input type="checkbox" id="labels"> Show every name</label>
+    </div>
+    <div id="detail"><div class="empty">Click a script on the map to see what it is, what it uses and what uses it. Scroll to zoom, drag to pan.</div></div>
+  </aside>
+  <main>
+    <svg id="map" role="img" aria-label="Map of the game's scripts, grouped by area, with lines for code that uses other code"></svg>
+    <div class="zoombtns"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button><button id="zfit" class="wide">Fit</button></div>
+    <div class="hint">Circle size = lines of code · lines = "uses"</div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+const DATA = /*__DATA__*/null;
+(function () {
+  const nodes = DATA.nodes.map(n => Object.assign({}, n));
+  const byId = new Map(nodes.map(n => [n.id, n]));
+  const links = DATA.links.filter(l => byId.has(l.source) && byId.has(l.target)).map(l => ({ source: l.source, target: l.target }));
+  const uses = new Map(nodes.map(n => [n.id, []])), usedBy = new Map(nodes.map(n => [n.id, []]));
+  links.forEach(l => { uses.get(l.source).push(l.target); usedBy.get(l.target).push(l.source); });
+  nodes.forEach(n => { n.inDeg = usedBy.get(n.id).length; n.r = 3 + Math.sqrt(n.lines) / 4.5; });
+  const HUB = 40;
+  const groups = DATA.groups.filter(g => nodes.some(n => n.group === g));
+  const totalLines = nodes.reduce((s, n) => s + n.lines, 0);
+  const fileCount = nodes.reduce((s, n) => s + n.files.length, 0);
+  document.getElementById('summary').innerHTML = `<b>${fileCount}</b> scripts in <b>${nodes.length}</b> systems, <b>${totalLines.toLocaleString('en-US')}</b> lines, <b>${links.length.toLocaleString('en-US')}</b> "uses" links. Built from Assets/Scripts by tools/code-map/build.py.`;
+
+  const hidden = new Set();
+  let selected = null;
+  const svg = d3.select('#map');
+  const root = svg.append('g');
+  const gLabels = root.append('g'), gLinks = root.append('g'), gNodes = root.append('g');
+
+  // Each area gets a home on a ring; its scripts are pulled towards it.
+  const centre = new Map();
+  function placeGroups() {
+    const R = 170 + groups.length * 44;
+    groups.forEach((g, i) => { const a = (i / groups.length) * Math.PI * 2 - Math.PI / 2; centre.set(g, { x: Math.cos(a) * R, y: Math.sin(a) * R }); });
+  }
+  placeGroups();
+  nodes.forEach(n => { const c = centre.get(n.group); n.x = c.x + (Math.random() - 0.5) * 80; n.y = c.y + (Math.random() - 0.5) * 80; });
+
+  const groupLabel = gLabels.selectAll('text').data(groups).join('text').attr('class', 'grouplabel').attr('text-anchor', 'middle')
+    .text(g => g);
+  // Each area's name sits just above its own cluster (placed once the layout has settled).
+  function placeLabels() {
+    groupLabel.each(function (g) {
+      const ns = nodes.filter(n => n.group === g); if (!ns.length) return;
+      const x = ns.reduce((s, n) => s + n.x, 0) / ns.length, y = Math.min(...ns.map(n => n.y - n.r));
+      d3.select(this).attr('x', x).attr('y', y - 12);
+    });
+  }
+
+  let linkSel = gLinks.selectAll('line'), nodeSel = gNodes.selectAll('g');
+  const visibleNode = n => !hidden.has(n.group);
+  function visibleLinks() {
+    const hideHubs = document.getElementById('hubs').checked;
+    return links.filter(l => {
+      const s = typeof l.source === 'object' ? l.source : byId.get(l.source), t = typeof l.target === 'object' ? l.target : byId.get(l.target);
+      if (!visibleNode(s) || !visibleNode(t)) return false;
+      if (hideHubs && t.inDeg >= HUB && !(selected && (s.id === selected.id || t.id === selected.id))) return false;
+      return true;
+    });
+  }
+
+  const sim = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links).id(d => d.id).strength(0.006).distance(60))
+    .force('charge', d3.forceManyBody().strength(-38))
+    .force('collide', d3.forceCollide(d => d.r + 2))
+    .force('x', d3.forceX(d => centre.get(d.group).x).strength(0.32))
+    .force('y', d3.forceY(d => centre.get(d.group).y).strength(0.32))
+    .on('tick', ticked);
+
+  function render() {
+    const vl = visibleLinks();
+    linkSel = gLinks.selectAll('line').data(vl, d => d.source.id + '>' + d.target.id).join('line').attr('stroke-width', 1);
+    const vn = nodes.filter(visibleNode);
+    nodeSel = gNodes.selectAll('g.node').data(vn, d => d.id).join(enter => {
+      const g = enter.append('g').attr('class', 'node').attr('tabindex', 0).attr('role', 'button').attr('aria-label', d => d.id);
+      g.append('circle').attr('r', d => d.r).attr('fill', d => DATA.colors[d.group] || '#888');
+      g.append('text').attr('x', d => d.r + 3).attr('y', 3).text(d => d.id.replace(/^Pixel/, ''));
+      g.append('title').text(d => d.id + ' (' + d.lines + ' lines)');
+      g.on('click', (e, d) => { e.stopPropagation(); select(d); })
+       .on('keydown', (e, d) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(d); } });
+      g.call(d3.drag().on('start', (e, d) => { if (!e.active) sim.alphaTarget(0.2).restart(); d.fx = d.x; d.fy = d.y; })
+        .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
+        .on('end', (e, d) => { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; placeLabels(); }));
+      return g;
+    });
+    groupLabel.style('display', g => hidden.has(g) ? 'none' : null);
+    style();
+    ticked();
+  }
+
+  function style() {
+    const showAll = document.getElementById('labels').checked;
+    const near = new Set();
+    if (selected) { near.add(selected.id); uses.get(selected.id).forEach(x => near.add(x)); usedBy.get(selected.id).forEach(x => near.add(x)); }
+    const k = currentZoom;
+    nodeSel.style('opacity', d => !selected || near.has(d.id) ? 1 : 0.15);
+    nodeSel.select('circle').attr('stroke', d => selected && d.id === selected.id ? 'var(--ink)' : 'var(--panel)').attr('stroke-width', d => selected && d.id === selected.id ? 3 : 1.5);
+    nodeSel.select('text').style('display', d => showAll || (selected ? near.has(d.id) : (d.lines > 1400 || k > 1.6 || (k > 1.1 && d.lines > 500))) ? null : 'none');
+    linkSel.attr('stroke', d => selected && (d.source.id === selected.id || d.target.id === selected.id) ? 'var(--edge-hi)' : 'var(--edge)')
+      .style('display', d => !selected || d.source.id === selected.id || d.target.id === selected.id ? null : 'none');
+  }
+
+  function ticked() {
+    linkSel.attr('x1', d => d.source.x).attr('y1', d => d.source.y).attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+    nodeSel.attr('transform', d => `translate(${d.x},${d.y})`);
+  }
+
+  // ---- zoom ----
+  let currentZoom = 1;
+  const zoom = d3.zoom().scaleExtent([0.15, 6]).on('zoom', e => { root.attr('transform', e.transform); const was = currentZoom; currentZoom = e.transform.k; if (Math.abs(was - currentZoom) > 0.05) style(); });
+  svg.call(zoom).on('click', () => select(null));
+  function fit(ms) {
+    const el = svg.node(), w = el.clientWidth || 800, h = el.clientHeight || 600;
+    const vn = nodes.filter(visibleNode); if (!vn.length) return;
+    const xs = vn.map(n => n.x), ys = vn.map(n => n.y);
+    const x0 = Math.min(...xs) - 90, x1 = Math.max(...xs) + 90, y0 = Math.min(...ys) - 50, y1 = Math.max(...ys) + 30;
+    const k = Math.min(w / (x1 - x0), h / (y1 - y0), 2.5);
+    svg.transition().duration(ms).call(zoom.transform, d3.zoomIdentity.translate(w / 2, h / 2).scale(k).translate(-(x0 + x1) / 2, -(y0 + y1) / 2));
+  }
+  document.getElementById('zin').onclick = () => svg.transition().duration(250).call(zoom.scaleBy, 1.4);
+  document.getElementById('zout').onclick = () => svg.transition().duration(250).call(zoom.scaleBy, 1 / 1.4);
+  document.getElementById('zfit').onclick = () => fit(400);
+
+  // ---- the selected script's card ----
+  function linkButtons(ids) {
+    return ids.slice().sort((a, b) => byId.get(b).inDeg - byId.get(a).inDeg || a.localeCompare(b))
+      .map(id => `<button data-id="${id}" style="border-left:3px solid ${DATA.colors[byId.get(id).group]}">${id.replace(/^Pixel/, '')}</button>`).join('');
+  }
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  function select(n) {
+    selected = n;
+    const box = document.getElementById('detail');
+    if (!n) {
+      box.innerHTML = '<div class="empty">Click a script on the map to see what it is, what it uses and what uses it. Scroll to zoom, drag to pan.</div>';
+    } else {
+      if (hidden.has(n.group)) { hidden.delete(n.group); drawChips(); }
+      const u = uses.get(n.id), b = usedBy.get(n.id);
+      box.innerHTML = `<div class="card">
+        <div class="grp" style="color:${DATA.colors[n.group]}">${esc(n.group)}</div>
+        <h2>${esc(n.id)}</h2>
+        <div class="meta">${n.files.map(esc).join(', ')} · ${n.lines.toLocaleString('en-US')} lines</div>
+        <p>${esc(n.desc || 'No description yet (add a header comment or a docs/Index.md line).')}</p>
+        ${n.doc ? `<div class="meta">Details: ${esc(n.doc.replace(/`/g, ''))}</div>` : ''}
+        <h3>Uses (${u.length})</h3><div class="links">${linkButtons(u) || '<span class="meta">nothing else</span>'}</div>
+        <h3>Used by (${b.length})</h3><div class="links">${linkButtons(b) || '<span class="meta">no other script</span>'}</div>
+      </div>`;
+      box.querySelectorAll('button[data-id]').forEach(btn => btn.onclick = () => focusOn(byId.get(btn.dataset.id)));
+    }
+    render();
+  }
+  function focusOn(n) {
+    select(n);
+    const el = svg.node(), w = el.clientWidth, h = el.clientHeight, k = Math.max(currentZoom, 1.3);
+    svg.transition().duration(450).call(zoom.transform, d3.zoomIdentity.translate(w / 2, h / 2).scale(k).translate(-n.x, -n.y));
+  }
+
+  // ---- areas ----
+  function drawChips() {
+    const box = document.getElementById('chips');
+    box.innerHTML = groups.map(g => `<button class="chip${hidden.has(g) ? ' off' : ''}" data-g="${esc(g)}" aria-pressed="${!hidden.has(g)}"><i style="background:${DATA.colors[g]}"></i>${esc(g)} <span>${nodes.filter(n => n.group === g).length}</span></button>`).join('');
+    box.querySelectorAll('.chip').forEach(c => c.onclick = e => {
+      const g = c.dataset.g;
+      if (e.shiftKey || e.altKey) { const solo = hidden.size === groups.length - 1 && !hidden.has(g); hidden.clear(); if (!solo) groups.forEach(x => { if (x !== g) hidden.add(x); }); }
+      else if (hidden.has(g)) hidden.delete(g); else hidden.add(g);
+      if (selected && hidden.has(selected.group)) selected = null;
+      drawChips(); render();
+    });
+  }
+  drawChips();
+
+  // ---- search ----
+  const q = document.getElementById('q'), results = document.getElementById('results');
+  q.addEventListener('input', () => {
+    const t = q.value.trim().toLowerCase();
+    if (!t) { results.innerHTML = ''; return; }
+    const hits = nodes.filter(n => n.id.toLowerCase().includes(t) || n.files.some(f => f.toLowerCase().includes(t)) || (n.desc || '').toLowerCase().includes(t))
+      .sort((a, b) => (b.id.toLowerCase().includes(t)) - (a.id.toLowerCase().includes(t)) || b.lines - a.lines).slice(0, 12);
+    results.innerHTML = hits.map(n => `<button data-id="${n.id}"><span style="color:${DATA.colors[n.group]}">●</span> ${esc(n.id)}</button>`).join('') || '<div class="empty">No script matches.</div>';
+    results.querySelectorAll('button').forEach(b => b.onclick = () => focusOn(byId.get(b.dataset.id)));
+  });
+  q.addEventListener('keydown', e => { if (e.key === 'Enter') { const b = results.querySelector('button'); if (b) b.click(); } });
+  document.getElementById('hubs').onchange = render;
+  document.getElementById('labels').onchange = style;
+
+  render();
+  // Settle the layout before the first frame is shown, then fit it to the screen.
+  sim.stop(); for (let i = 0; i < 300; i++) sim.tick(); ticked(); placeLabels(); fit(0);
+  sim.on('end', placeLabels);
+  window.addEventListener('resize', () => fit(0));
+})();
+</script>

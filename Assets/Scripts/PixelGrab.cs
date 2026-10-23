@@ -1,7 +1,7 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelGrab.cs
 //   Pixel Grabbing (unlocked from the start - Awake sets grabbingActive; the shop pack was removed by MigrateOldPackData; it keeps its
-//   on / off switch in Toggles > Upgrades, on by default): hold left mouse on an old pixel (sphere-cast, grabRadius) to drag it on the
+//   on / off switch in Toggles > Upgrades, on by default; the switch is progress in PixelGameState.Current.grab, GameState.cs, moved 2026-10-23): hold left mouse on an old pixel (sphere-cast, grabRadius) to drag it on the
 //   camera-facing plane through it (rigidbody velocity follows the mouse, so it still collides), release to throw (throwStrength,
 //   maxThrowSpeed); a held pixel's OldPixelDespawn.Held freezes its lifetime (a held glass pixel can't shatter; releasing slower than
 //   gentleReleaseSpeed = a soft set-down: no break, speed damped, gentleLifetimeBonus seconds added via OldPixelDespawn.AddLifetime)
@@ -37,14 +37,10 @@ using static PixelInput;
 ///
 /// Add this to any GameObject. PixelShop adds it automatically if it is missing.
 /// </summary>
-public class PixelGrab : MonoBehaviour, IPixelSaved
+public class PixelGrab : MonoBehaviour
 {
-    // ---- save: this system writes its own part of the save file (PixelSaveRegistry) ----
-    [System.Serializable] private class SaveState { public bool disabled; }
-    string IPixelSaved.SaveId => "grab";
-    int IPixelSaved.SaveOrder => 120;
-    string IPixelSaved.Export() => PixelSaveRegistry.ToJson(new SaveState { disabled = UserDisabled });
-    void IPixelSaved.Import(string data) { SaveState s = PixelSaveRegistry.FromJson<SaveState>(data); UserDisabled = s != null && s.disabled; }
+    // ---- progress: the Toggles switch lives in the GameState (PixelGameState.Current.grab) ----
+    private static SwitchState S => PixelGameState.Current.grab;
 
     [Header("References")]
     [Tooltip("The PixelClicker whose husks can be grabbed. Found automatically if left empty.")]
@@ -175,18 +171,23 @@ public class PixelGrab : MonoBehaviour, IPixelSaved
     /// <summary>The player switched grabbing off with the Toggles window. Saved.</summary>
     public bool UserDisabled
     {
-        get => userDisabled;
+        get => S.userDisabled;
         set
         {
-            userDisabled = value;
-            if (userDisabled) Release();
+            S.userDisabled = value;
+            if (value) Release();
             ApplyToClicker();
         }
     }
 
-    private bool userDisabled;
+    // A save was loaded: its switch is in the state now - let go if it is off and tell the clicker.
+    private void OnLoaded()
+    {
+        if (S.userDisabled) Release();
+        ApplyToClicker();
+    }
 
-    private bool Working => grabbingActive && !userDisabled;
+    private bool Working => grabbingActive && !S.userDisabled;
 
     /// <summary>Is grabbing bought and switched on? (The ghost minigame lets you grab its falling potion only then.)</summary>
     public bool CanGrab => Working;
@@ -208,7 +209,7 @@ public class PixelGrab : MonoBehaviour, IPixelSaved
 
     private void Awake()
     {
-        PixelSaveRegistry.Register(this);
+        PixelGameState.Loaded += OnLoaded;
         PixelHuskPool.HuskReleasing += OnHuskReleasing;
         instance = this;
         if (Mathf.Approximately(thrownGrip, 0.6f)) thrownGrip = 0.85f;   // (2026-10-17) above the new resting husk friction 0.65, so a throw still grips harder than a heap
@@ -238,7 +239,7 @@ public class PixelGrab : MonoBehaviour, IPixelSaved
     private void OnDestroy()
     {
         PixelHuskPool.HuskReleasing -= OnHuskReleasing;
-        PixelSaveRegistry.Unregister(this);
+        PixelGameState.Loaded -= OnLoaded;
         if (instance == this) instance = null;
         Release();
         if (clicker != null) clicker.GrabEnabled = false;

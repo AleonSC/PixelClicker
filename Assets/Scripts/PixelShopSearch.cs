@@ -82,7 +82,7 @@ public partial class PixelShop
         if (consumables != null)
             for (int i = 0; i < consumables.ItemCount; i++)
             {
-                if (consumables.ItemCraftOnly(i) || consumables.ItemNotSold(i) || consumables.ItemVendorOnly(i) || consumables.IsDragonSeed(i)) continue;
+                if (consumables.ItemCraftOnly(i) || consumables.ItemNotSold(i) || consumables.ItemVendorOnly(i) || consumables.IsDragonSeed(i) || !ItemTrustListed(i)) continue;
                 if (TextMatches(consumables.ItemName(i)) || TextMatches(consumables.ItemDescription(i)) || TextMatches(CategoryWords[Mathf.Clamp(consumables.CategoryOf(i), 0, 3)]))
                     list.Add(ItemBase + i);
             }

@@ -283,6 +283,8 @@ public partial class PixelAudio : MonoBehaviour
             new Sound { id = "studio_whoosh", cooldown = 0f, pitchMin = 1f, pitchMax = 1f },
             new Sound { id = "studio_gameover", cooldown = 0f, pitchMin = 1f, pitchMax = 1f, volume = 0.6f },
             new Sound { id = "studio_hum", cooldown = 0f, pitchMin = 1f, pitchMax = 1f, volume = 0.3f },
+            new Sound { id = "studio_coin", cooldown = 0f, pitchMin = 1f, pitchMax = 1f, volume = 0.5f },
+            new Sound { id = "studio_start", cooldown = 0f, pitchMin = 1f, pitchMax = 1f, volume = 0.5f },
             Make("blackhole_spawn", 0.2f),
             Make("pad_spawn", 0.2f),
             Make("pad_click", 0.05f, 0.92f, 1.08f),

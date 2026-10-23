@@ -2151,6 +2151,24 @@ public partial class PixelClicker : MonoBehaviour
         return list.ToArray();
     }
 
+    /// <summary>
+    /// Reads a typed amount: '1500', '1,500', '2.5K', '3M', '1B' (K / M / B = thousand / million / billion, any case). False for empty / bad text or a negative.
+    /// The ONE parser for typed amounts (ShopText.txt prices, the Bill window's box).
+    /// </summary>
+    public static bool TryParseAmount(string s, out double amount)
+    {
+        amount = 0d;
+        if (string.IsNullOrWhiteSpace(s)) return false;
+        s = s.Trim().Replace(",", "").Replace(" ", "");
+        double scale = 1d;
+        char last = char.ToUpperInvariant(s[s.Length - 1]);
+        if (last == 'K') scale = 1e3; else if (last == 'M') scale = 1e6; else if (last == 'B') scale = 1e9;
+        if (scale > 1d) s = s.Substring(0, s.Length - 1);
+        bool ok = double.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out amount);
+        amount *= scale;
+        return ok && amount >= 0d;
+    }
+
     /// <summary>Always-abbreviated number formatting (1.2K, 3.4M ... from 1K up), whatever the "Abbreviate numbers" setting says. Used by the shop.</summary>
     public static string FormatNumberShort(double value)
     {

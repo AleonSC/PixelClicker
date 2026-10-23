@@ -2,7 +2,8 @@
 // PixelStudioSynth.cs
 //   Code-made sounds of the Galactic Arcade studio intro (PixelAudio.SynthFor -> PixelStudioSynth.For; put your own clips in the Sounds list to replace them):
 //   studio_whoosh (the fast pull-back from Earth: rising filtered noise and a falling tone), studio_gameover (an 8-bit square-wave 'game over' jingle:
-//   four falling notes and a low buzz) and studio_hum (a soft seamless arcade-cabinet hum loop, PixelAudio.StartLoop / StopLoop).
+//   four falling notes and a low buzz), studio_hum (a soft seamless arcade-cabinet hum loop, PixelAudio.StartLoop / StopLoop), studio_coin (the classic
+//   two-note coin-in ding) and studio_start (a quick rising 8-bit arpeggio when START is pressed).
 // ----------------------
 using UnityEngine;
 
@@ -17,6 +18,8 @@ public static class PixelStudioSynth
             case "studio_whoosh": return new[] { Whoosh() };
             case "studio_gameover": return new[] { GameOver() };
             case "studio_hum": return new[] { Hum() };
+            case "studio_coin": return new[] { Notes("Studio Coin", new[] { 987.8f, 1318.5f }, new[] { 0.07f, 0.4f }, 0.5f, 0.3f) };
+            case "studio_start": return new[] { Notes("Studio Start", new[] { 523.3f, 659.3f, 784f, 1046.5f, 1318.5f, 1568f }, new[] { 0.055f, 0.055f, 0.055f, 0.055f, 0.055f, 0.32f }, 0.25f, 0.3f) };
         }
         return null;
     }
@@ -102,6 +105,31 @@ public static class PixelStudioSynth
             data[i] = v;
         }
         return Finish("Studio Hum", data, 0.18f);   // (half as loud)
+    }
+
+    /// <summary>Square-wave notes one after another ('duty' = how much of each wave is up: 0.5 = hollow, 0.25 = brighter / thinner); the last note rings out.</summary>
+    private static AudioClip Notes(string name, float[] notes, float[] lengths, float duty, float level)
+    {
+        int total = 0;
+        foreach (float l in lengths) total += (int)(Rate * l);
+        float[] data = new float[total];
+        int at = 0;
+        for (int k = 0; k < notes.Length; k++)
+        {
+            int len = (int)(Rate * lengths[k]);
+            bool last = k == notes.Length - 1;
+            float phase = 0f;
+            for (int i = 0; i < len; i++)
+            {
+                float t = i / (float)len;
+                phase += notes[k] * (last ? 1f + 0.006f * Mathf.Sin(t * 30f) : 1f) / Rate;
+                float square = Frac(phase) < duty ? 1f : -1f;
+                float env = Mathf.Clamp01(i / (Rate * 0.003f)) * (last ? Mathf.Pow(1f - t, 2f) : 1f - t * 0.2f);
+                data[at + i] = square * env * 0.6f;
+            }
+            at += len;
+        }
+        return Finish(name, data, level);
     }
 
     private static float Frac(float f) => f - Mathf.Floor(f);

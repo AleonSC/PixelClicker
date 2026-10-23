@@ -5,7 +5,7 @@
 //   only while stopped, auto-resumes at 0, refills immediately after resuming, shown at the top only while stopped / refilling /
 //   briefly after full. Static PixelTimeStop.IsStopped: PixelClicker still takes cube clicks while it is true, animates the cube with
 //   AnimDelta (unscaled), and uses timeStopStockpileMax instead of maxFallingCopies, so spawned old pixels hang at the cube (no
-//   physics step) and burst out on resume (payouts are immediate). Switch in the Toggles window (UserDisabled, saved). A screen haze
+//   physics step) and burst out on resume (payouts are immediate). Switch in the Toggles window (UserDisabled: progress in PixelGameState.Current.timeStop, GameState.cs, moved 2026-10-23). A screen haze
 //   (radial tint + vignette, showHaze, hazeColor/hazeEdgeColor, fades in/out, canvas below other UI) shows while stopped. Sounds
 //   time_stop/time_resume/time_denied plus the looping hum time_stop_loop (loopSoundId; started/stopped via
 //   PixelAudio.StartLoop/StopLoop). PixelShop finds/adds it. Time Slow (shop pack unlocksTimeSlow, Upgrades tab, needs Time Stop;
@@ -32,14 +32,10 @@ using UnityEngine.UI;
 ///
 /// Add this to any GameObject. PixelShop adds it automatically if it is missing.
 /// </summary>
-public class PixelTimeStop : MonoBehaviour, IPixelSaved
+public class PixelTimeStop : MonoBehaviour
 {
-    // ---- save: this system writes its own part of the save file (PixelSaveRegistry) ----
-    [System.Serializable] private class SaveState { public bool disabled; }
-    string IPixelSaved.SaveId => "timeStop";
-    int IPixelSaved.SaveOrder => 130;
-    string IPixelSaved.Export() => PixelSaveRegistry.ToJson(new SaveState { disabled = UserDisabled });
-    void IPixelSaved.Import(string data) { SaveState s = PixelSaveRegistry.FromJson<SaveState>(data); UserDisabled = s != null && s.disabled; }
+    // ---- progress: the Toggles switch lives in the GameState (PixelGameState.Current.timeStop) ----
+    private static SwitchState S => PixelGameState.Current.timeStop;
 
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
@@ -184,15 +180,19 @@ public class PixelTimeStop : MonoBehaviour, IPixelSaved
     /// <summary>The player switched Time Stop off with the Toggles window. Saved.</summary>
     public bool UserDisabled
     {
-        get => userDisabled;
+        get => S.userDisabled;
         set
         {
-            userDisabled = value;
-            if (userDisabled) { SetStopped(false); SetSlowed(false); }
+            S.userDisabled = value;
+            if (value) { SetStopped(false); SetSlowed(false); }
         }
     }
 
-    private bool userDisabled;
+    // A save was loaded: its switch is in the state now - a switched-off Time Stop must not stay stopped / slowed.
+    private void OnLoaded()
+    {
+        if (S.userDisabled) { SetStopped(false); SetSlowed(false); }
+    }
 
     /// <summary>Is time stopped right now?</summary>
     public bool Stopped => stopped;
@@ -213,7 +213,7 @@ public class PixelTimeStop : MonoBehaviour, IPixelSaved
     /// <summary>The meter, 0 (empty) to 1 (full).</summary>
     public float Energy => energy;
 
-    private bool Working => timeStopActive && !userDisabled;
+    private bool Working => timeStopActive && !S.userDisabled;
 
     /// <summary>Called by the shop when the upgrade is bought.</summary>
     public void Activate() => timeStopActive = true;
@@ -229,14 +229,14 @@ public class PixelTimeStop : MonoBehaviour, IPixelSaved
 
     private void Awake()
     {
-        PixelSaveRegistry.Register(this);
+        PixelGameState.Loaded += OnLoaded;
         clicker = PixelFind.First<PixelClicker>();
         baseFixedDelta = Time.fixedDeltaTime;
     }
 
     private void OnDestroy()
     {
-        PixelSaveRegistry.Unregister(this);
+        PixelGameState.Loaded -= OnLoaded;
         SetStopped(false);
         SetSlowed(false);
         IsStopped = false;
