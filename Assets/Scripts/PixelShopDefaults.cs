@@ -1047,26 +1047,6 @@ public partial class PixelShop
         };
     }
 
-    /// <summary>The old Old Pixel Capacity upgrade (5 levels, base 50): NO LONGER sold (not in the default table, MigrateOldPackData removes saved copies); kept as the reference for rebalancing it into a Standard skill reward.</summary>
-    private static ShopPack CreateOldPixelCapPack()
-    {
-        return new ShopPack
-        {
-            displayName = "Husk Capacity",
-            tab = ShopTab.Upgrades,
-            description = "How many husks can lie around at once: {current}  →  {next}",
-            upgradeEffect = UpgradeEffect.OldPixelCap,
-            levels = new[]
-            {
-                new PackLevel { value = 75f,  costs = AllSix(600) },
-                new PackLevel { value = 100f, costs = AllSix(4000) },
-                new PackLevel { value = 150f, costs = AllSix(20000) },
-                new PackLevel { value = 200f, costs = AllSix(80000) },
-                new PackLevel { value = 300f, costs = AllSix(300000) },
-            }
-        };
-    }
-
     private static PackCost[] BankStorageCost(double glass, double vacuum, double bombParts)
     {
         return new[]

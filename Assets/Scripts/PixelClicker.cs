@@ -485,19 +485,14 @@ public partial class PixelClicker : MonoBehaviour
     [Tooltip("Floor limit: most husks lying about at once (Standard's Roomy floor perk adds to it). When it is full the OLDEST husk goes first. 0 = no cap. 120 (was 50): at ~3.5 blocks a second 50 husks filled the floor in ~14 s, so the longer lifetime was culled away.")]
     [SerializeField] private int baseOldPixelCap = 120;
 
-    private int oldPixelCapOverride; // set by the shop's Old Pixel Capacity upgrade (0 = none bought)
-
-    /// <summary>The cap in use: the shop upgrade's value when one is bought, otherwise the Inspector value.</summary>
     /// <summary>Gravity multiplier of old pixels (the Pixel Bank's aim line uses it to predict where a spat pixel lands).</summary>
     public float OldPixelGravityScale => gravityScale;
 
     /// <summary>Linear drag of old pixels (see <see cref="OldPixelGravityScale"/>).</summary>
     public float OldPixelDrag => fallingCopyDrag;
 
-    public int OldPixelCap => (oldPixelCapOverride > 0 ? Mathf.Max(oldPixelCapOverride, baseOldPixelCap) : baseOldPixelCap) + PixelSkills.StandardCapacityBonus;   // + the Standard skill's 'Roomy floor' perk
-
-    /// <summary>Called by the shop's Old Pixel Capacity upgrade (0 = back to the Inspector value).</summary>
-    public void SetOldPixelCap(int value) => oldPixelCapOverride = Mathf.Max(0, value);
+    /// <summary>The floor cap in use: the Inspector value + the Standard skill's 'Roomy floor' perk.</summary>
+    public int OldPixelCap => baseOldPixelCap + PixelSkills.StandardCapacityBonus;
 
     [Tooltip("Max husks kept while Time Stop is on (the stockpile that bursts out when time resumes). 0 = no cap.")]
     [SerializeField] private int timeStopStockpileMax = 150;

@@ -161,10 +161,6 @@ overlay line: Auto Clicker upgraded: more clicks per tick!
 text: Combo Meter upgraded! Quick manual clicks build a combo; reaching a combo milestone boosts your payouts, and each level unlocks a higher milestone with a bigger bonus and a flashier meter.
 overlay line: Combo Meter upgraded!
 
-[Tip: upgrade_cap]
-text: Husk Capacity upgraded! More husks can lie around at once before the oldest ones are cleared away.
-overlay line: Husk Capacity upgraded!
-
 [Tip: upgrade_bank]
 text: Bank Storage upgraded! The Pixel Bank can now hold more stored pixels.
 overlay line: Bank Storage upgraded!

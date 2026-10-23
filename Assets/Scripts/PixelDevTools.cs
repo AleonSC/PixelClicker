@@ -36,7 +36,7 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Start with 'Disable husk despawns' ticked: husks never expire on their own.")]
     [SerializeField] private bool disableDespawn = false;
 
-    [Tooltip("Start with 'Disable husk limit' ticked: any number of husks can lie around (the Husk Capacity cap is ignored).")]
+    [Tooltip("Start with 'Disable husk limit' ticked: any number of husks can lie around (the husk floor cap is ignored).")]
     [SerializeField] private bool disableOldPixelLimit = false;
 
     [Tooltip("Start with 'God pixel mode' ticked: the mouse spawns pixels (left click) and destroys them (right click); scroll to choose the pixel.")]
