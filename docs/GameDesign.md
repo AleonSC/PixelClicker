@@ -20,8 +20,8 @@ Legend: **Built** = in the game now · **Agreed** = decided, not built · **Idea
 |---|---|---|
 | Q1 | Which cosmetics, locked behind which goals? | One per big milestone: a skill cape for the cube at max level, a full Collection Log page, each prestige, rare achievements. A Wardrobe tab in Pocket. |
 | Q2 | Prestige: what resets and what is kept? | Resets currencies, shop unlocks, devices and the floor. Keeps skill levels, the Collection Log, pets, gear and cosmetics. Each payment gives a permanent "Cubie's Goodwill" bonus and unlocks something new. |
-| Q3 | Prestige: how does Cubie's bill grow? | A ledger: interest piles up over play time and Cubie inflates it every time he mentions it. Paying later earns more goodwill. |
-| Q4 | Is there an ending at all? | No hard ending. The long tail is the end game: max every skill, finish the log, collect cosmetics, prestige again. |
+| Q3 | Prestige: how does Cubie's bill grow? | **Answered 2026-10-23 (section 6, 'Cubie's bill'):** one bill per pure colour with milestones spaced ~x100; interest is only talk, the real amount only grows at prestige (next bill x10). |
+| Q4 | Is there an ending at all? | **Answered 2026-10-23:** no hard ending. Cubie's bill is the spine (tiers, then prestige at 'settled'); the long tail (max skills, the Collection Log, cosmetics) carries on. Maybe someday: you take over the shop (Ideas). |
 | Q5 | Exactly what is in 1.0? | The six gathering skills that exist, polished (every perk working), the core devices, the collectibles, Cubie's prestige. Tester machines and dev-only Firemaking stay out. Write a 1.0 checklist. |
 
 **Identity**
@@ -67,6 +67,7 @@ All decided 2026-10-16 unless noted.
 - **Late game:** explore every option you have and grind skills up; cosmetics as rewards are being considered (Q1).
 - **Prestige:** paying Cubie back for his small gift and the Recycler - a joke, not a theme. Interest has piled up and he keeps
   inflating the bill.
+- **Cubie's bill (2026-10-23):** Cubie is a monopolist who takes money only; his bill in the six pure colours is the progression spine - milestones (spaced ~x100) unlock tiers and more of his shop, settling it is prestige (section 6, 'Cubie's bill').
 - **Length:** open-ended, no set playthrough time.
 - **1.0:** flesh out the systems, ship a handful of skills, add more skills as updates (Q5).
 - **After 1.0 (maybe):** gear, the alien vendor and its relics, combat, and first person as an unlock are parked for updates (section 9b); first person stays simple in 1.0.
@@ -409,15 +410,53 @@ By now the player has every tool (machines, consumables, minigames, vendors, fir
 grinding skills towards the cap. **Cosmetics** locked behind long goals give the late game things worth chasing - the game already has
 places for them: pet outfits, floor / sky / bar styles, cube looks, gear models. Which ones and for what: **(Q1)**.
 
-### Prestige - paying Cubie back (Decided theme)
-Cubie gave you a small gift and a Recycler at the start. Prestige is paying him back, and he means it: he talks about suing you,
-*with interest*. **Keep it a joke:** the "debt" is only that small gift and a second-hand bin, but after all this time the interest has
-piled up, and Cubie inflates the bill further every time he brings it up. It is one petty guy and his absurd invoice, never a "pay your
-debts" theme. Each prestige settles the bill and resets the run - and the next bill is somehow even bigger.
-Details: what resets **(Q2)**, how the bill grows **(Q3)**.
+### Cubie's bill - the progression spine (Agreed 2026-10-23, not built)
+**Cubie is a monopolist:** he owns the only shop in existence, so his word is the price. Mundane and transactional, no story. The other
+vendors are 'peddlers' to him; they resent him, and the player ends up on their side. **He takes money only** - the six pure colours;
+vendors take goods (orders) and buy skill currency and products for pure currency.
+
+**The bill**
+- One huge bill per pure colour, shown as an ABSURD total (e.g. 25,000,000,000 White) - the joke. Paid in any amounts at any time from a
+  Bill window, whose bar shows progress to the NEXT MILESTONE (a percentage of the total would sit near 0% for hours).
+- Milestones are fixed amounts spaced ~x100, because income grows exponentially. Starting values per colour (placeholders until session
+  reports cover hours of play; all Inspector values):
+
+| Milestone | Per colour | Target play time | Unlocks |
+|---|---|---|---|
+| The bill appears | - | ~1 h (end of the early game) | the Bill window |
+| 1 | 25K | ~1.5-2 h | Tier 1 Gathering - "A regular, then." |
+| 2 | 2.5M | ~4-6 h | Tier 2 Making - "Back room's open." |
+| 3 | 250M | ~12-15 h | Tier 3 Operation - "Don't tell the others." |
+| Settled | 25B | ~25-30 h (first run) | prestige |
+
+- A milestone may also ask for one light condition (e.g. Standard level 10).
+- **Interest is only talk:** he inflates the number in his speech; the real amount only grows at prestige (the next bill is x10).
+- **Trust opens his shop:** each tier opens more of his stock (Tier 0 starter stock; Tier 1 skill packs, factory parts, better potions;
+  Tier 2 bigger upgrades, generators, rarer consumables; Tier 3 premium stock, cosmetics, rare-hunting gear). Locked items show 'Tier N',
+  through the shop's shared requirement check.
+
+**The tag and the reveal** (no inventory item - decided against a receipt item)
+- Visit 1: the Recycler he gives has a paper PRICE TAG on its rim: 'Property of Cubie.' Hovering it / the device card: 'Terms: see
+  reverse. Amount owed: ???'. His visit-1 pages hint at the monopoly ("The *only* operation, really, but who's counting."; "Oh, don't
+  mind the tag. Standard paperwork. Consider it a gift. Ish."; "I'm *always* around.").
+- Visit 2 adds: "Don't worry about the tag. Yet." (his existing 'a loan... mostly' joke now points at it). Between visits the tag's '???'
+  shivers on each visit, and vendors make jabs at him.
+- **The bill (~60 min, triggered by a goal in the goal table):** Cubie yanks the tag off and it UNROLLS across the screen into an absurdly
+  long invoice ("Interest. It compounds. Like my disappointment."), then: "I own the only shop in existence. So what I say goes. Those
+  other guys? Peddlers. I run the show." and "Look, I know it's rough out here. I was in your position once. Maybe one day you'll run
+  things around here, if you're lucky. So I'll tell you what: every time you prove you're still in this, I'll *let* you buy some of my
+  newer, better stock." The Bill window opens.
+
+**Where the pure money comes from - the value ladder (agreed, not built):** training a skill replaces the basic cubes, so skills must pay
+back in pure currency, and MORE effort must pay MORE: clicking pure pixels 1x; selling raw skill currency to vendors ~1.2x (today 0.8x of the
+rarity rate - too low); selling products ~2x; vendor orders ~3x but limited. Markets SATURATE (a vendor's price for a good drops as you sell
+a lot and recovers over time) instead of hard caps. Husks still never become currency except through the lossy Recycler.
+
+**Prestige** (Q2, details still open): settling the bill resets the run with Cubie's Goodwill (a lasting bonus) and a new, bigger bill.
 
 ### End game
-Open: **(Q4)**. Whatever it becomes, no story payoff - at most Cubie reacts to being paid, the way anyone would.
+**Answered (Q4):** no hard ending. The bill is the spine; the long tail carries on (max skills, the Collection Log, cosmetics, factory
+records). No story payoff - at most Cubie reacts to being paid, the way anyone would.
 
 ### Length (Decided)
 Open-ended, no set playthrough time. Pacing is tuned per skill and per goal (how long a level, a log page, a prestige should take),

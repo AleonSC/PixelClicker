@@ -27,6 +27,9 @@ Loose ideas that are NOT on the to-do yet. Claude adds to this when an idea come
 - Teleport pads (late game, Quantum Organizer tech): a pair; husks entering one come out of the other, any distance.
 - Drone courier (UFO Helper theme): flies batches between two pads every few seconds, over everything.
 
+# Cubie
+- Take over the shop (late endgame, after enough prestiges): you end up running the only shop and Cubie has to visit YOU as a vendor - his 'maybe one day you'll run things around here' line paid off. Mundane, transactional, no story twist.
+
 # Code clean-ups worth doing some day
 - Split PixelShop further into separate logic and UI classes.
 - One shared game object that owns the references, instead of scene searches.
