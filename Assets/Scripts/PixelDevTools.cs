@@ -752,8 +752,13 @@ public class PixelDevTools : MonoBehaviour
         scrollRect.offsetMin = new Vector2(0f, 8f);
         scrollRect.offsetMax = new Vector2(0f, -52f);   // (room above for the collapse-all bar)
         y = 0f; // rows are placed from the top of the scrolling content (each one becomes a draggable widget card)
-        PixelWidgetBoard board = new PixelWidgetBoard(content, PrefPrefix + "WidgetOrder2", 8f, height => PixelUIKit.UpdateScrollView(toolsScroll, toolsBar, height, PixelDevHub.ContentH - 16f), toolsScroll.viewport);
-        board.SearchTab = "main";   // (its cards show up in the hub's search bar)
+        PixelCardBoard board = new PixelCardBoard(content, new PixelCardBoard.Style { sideGrip = true, foldColor = new Color(0.3f, 0.36f, 0.5f, 0.9f) },
+                                                  height => PixelUIKit.UpdateScrollView(toolsScroll, toolsBar, height, PixelDevHub.ContentH - 16f), toolsScroll.viewport)
+        {
+            PrefKey = PrefPrefix + "WidgetOrder2",   // (the board saves the order, folded cards and favorites itself)
+            Favorites = true,                        // (hold the right button on a card)
+            SearchTab = "main",                      // (its cards show up in the hub's search bar)
+        };
 
         // 'Collapse all' above the widgets: folds every card up to its header (and back: it reads 'Expand all' while everything is folded).
         Button collapse = PixelUIKit.CreateButton(font, tools.transform, "Collapse All Button", "Collapse all", new Vector2(220f, 36f), new Color(0.3f, 0.36f, 0.5f, 1f), textColor, 22f);
@@ -1071,9 +1076,9 @@ public class PixelDevTools : MonoBehaviour
     private const float ResourceSubtitleH = 26f;
 
     /// <summary>Builds the 'Resource Tools' card from the tools Widget set aside (ResourceToolIds), stacked in that order with a small title over the ones without a label.</summary>
-    private void BuildResourceToolsCard(RectTransform content, PixelWidgetBoard board)
+    private void BuildResourceToolsCard(RectTransform content, PixelCardBoard board)
     {
-        float hdr = PixelWidgetBoard.CardHeaderH, inner = PixelDevHub.ContentW - 100f;
+        float hdr = PixelCardBoard.DefaultHeaderH, inner = PixelDevHub.ContentW - 100f;
         GameObject card = new GameObject("Widget resources", typeof(RectTransform), typeof(Image));
         card.transform.SetParent(content, false);
         RectTransform cr = card.GetComponent<RectTransform>();
@@ -1111,12 +1116,12 @@ public class PixelDevTools : MonoBehaviour
         board.Add("resources", cr, cardH, WidgetTitle("resources"));
     }
 
-    private void Widget(RectTransform content, PixelWidgetBoard board, string id, int start, float y, int rows = 1)
+    private void Widget(RectTransform content, PixelCardBoard board, string id, int start, float y, int rows = 1)
     {
         List<Transform> kids = new List<Transform>();
         for (int i = start; i < content.childCount; i++) kids.Add(content.GetChild(i));
         if (System.Array.IndexOf(ResourceToolIds, id) >= 0) { resourceParts[id] = new KeyValuePair<List<Transform>, float>(kids, y); return; }   // (goes into the Resource Tools card)
-        float hdr = PixelWidgetBoard.CardHeaderH;   // the card's header strip (title + minimize button) sits above the controls
+        float hdr = PixelCardBoard.DefaultHeaderH;   // the card's header strip (title + minimize button) sits above the controls
         float cardH = rows * rowHeight + (rows - 1) * WidgetRowGap + 16f + hdr;   // (a widget with more rows places them WidgetRowGap apart)
         GameObject card = new GameObject("Widget " + id, typeof(RectTransform), typeof(Image));
         card.transform.SetParent(content, false);
@@ -1175,7 +1180,7 @@ public class PixelDevTools : MonoBehaviour
     private Image spawnPixelButtonImage;
 
     /// <summary>Builds the three spawn widgets into the pinned board (each is one row of controls on a card; 'y' is the row position the controls are placed at).</summary>
-    private void BuildSpawnWidgets(RectTransform root, PixelWidgetBoard board, float inner, float y)
+    private void BuildSpawnWidgets(RectTransform root, PixelCardBoard board, float inner, float y)
     {
         float bw = 140f, gap = 10f, dropW = inner - bw * 2f - gap * 2f;
 

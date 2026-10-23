@@ -123,7 +123,7 @@ public class PixelDevTextEdit : MonoBehaviour
                 }
         }
 
-        // Right click on a label opens the box; right HOLD stays the favorite (PixelWidgetBoard).
+        // Right click on a label opens the box; right HOLD stays the favorite (PixelCardBoard).
         if (PixelInput.RightPressed() || PixelInput.RightHeld() || tap.Pending)
         {
             TMP_Text under = box != null && box.gameObject.activeSelf ? null : LabelUnderPointer();

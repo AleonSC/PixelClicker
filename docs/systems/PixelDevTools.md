@@ -24,7 +24,7 @@ The Dev Tools panel is no longer a modal dialog: no dimmer, so the game stays cl
 
 ## Dev Hub (PixelDevHub.cs) - replaces the Dev Tools panel, the Inspector window and the Mock up window
 
-One window for every dev tool: drag, minimize, dock to a screen side (`PixelWindowChrome`), filing-cabinet tabs (Main, To-Do, Changelog, Inspector, Shapes, UI Mock) that can be reordered by dragging and popped out into floating windows (drag a tab down; 'Dock' button or dropping the window on the hub puts it back). The Main tab is `PixelDevTools`' rows as WIDGETS: every row is a card with a grip (`PixelWidgetBoard`, order saved as `PixelClicker.Dev.WidgetOrder`). The 'Inspector' and 'Mock up mode' tick boxes are gone (they are tabs now). Tools get their content with `PixelDevHub.TabRoot(id)` and `PixelDevHub.SetTabCallback(id, visible => ...)`; `PixelDevMockWindow` is only a doorway to the hub's tab roots. The Inspector applies an edited value while you type and again on Enter, reads it back and reports the result in its status line (so a value the game overwrites is visible).
+One window for every dev tool: drag, minimize, dock to a screen side (`PixelWindowChrome`), filing-cabinet tabs (Main, To-Do, Changelog, Inspector, Shapes, UI Mock) that can be reordered by dragging and popped out into floating windows (drag a tab down; 'Dock' button or dropping the window on the hub puts it back). The Main tab is `PixelDevTools`' rows as WIDGETS: every row is a card with a grip (`PixelCardBoard`, order saved as `PixelClicker.Dev.WidgetOrder`). The 'Inspector' and 'Mock up mode' tick boxes are gone (they are tabs now). Tools get their content with `PixelDevHub.TabRoot(id)` and `PixelDevHub.SetTabCallback(id, visible => ...)`; `PixelDevMockWindow` is only a doorway to the hub's tab roots. The Inspector applies an edited value while you type and again on Enter, reads it back and reports the result in its status line (so a value the game overwrites is visible).
 
 
 ## Hub tabs: icons, Docs, Notes
@@ -46,19 +46,19 @@ The hub's **Tester** tab (`PixelFeatureTester.cs`) lists things that are not in 
 
 ## Hub resize, widget headers
 - The Dev Hub window has a grip in its bottom-right corner (`PixelWindowChrome.EnableResize`): dragging it SCALES the whole hub (0.55x - 1.6x, remembered as `PixelClicker.Dev.Hub.Window.Scale`). It is a scale, not a re-layout: the tabs keep the layout they were built with. A real re-layout would need every tab to build against a variable size.
-- Every widget card (`PixelWidgetBoard`) has a header strip with its title and a '-' button: it folds the card up to just the header (hidden controls are restored on '+'); remembered per board (`<board prefKey>.Min`). The pinned cards at the top push the scrolling list down / up as they fold.
+- Every widget card (`PixelCardBoard`) has a header strip with its title and a '-' button: it folds the card up to just the header (hidden controls are restored on '+'); remembered per board (`<board prefKey>.Min`). The pinned cards at the top push the scrolling list down / up as they fold.
 - Button labels inside widgets shrink to fit (`PixelUIKit.FitOneLine`), so long labels like DESPAWN no longer spill out of their button.
 
 ## One widget board, favorites
-- The Main tab is ONE scrolling `PixelWidgetBoard` (saved order key `Dev.WidgetOrder2`): the old fixed "pinned" top half is gone. Drag a card by its whole header strip (title bar, easy to hit); the small grip icon is part of it.
-- HOLD the right button on a card (0.7 s, a ring fills round the cursor, `PixelWidgetBoardDriver` -> `PixelHold`) to make it a FAVORITE: it snaps to the top, is tinted gold, and stays above the non-favorites (`Partition`); hold again to let it go back to the top of the others. Saved as `<board key>.Fav`.
+- The Main tab is ONE scrolling `PixelCardBoard` (saved order key `Dev.WidgetOrder2`): the old fixed "pinned" top half is gone. Drag a card by its whole header strip (title bar, easy to hit); the small grip icon is part of it.
+- HOLD the right button on a card (0.7 s, a ring fills round the cursor, `PixelCardBoardDriver` -> `PixelHold`) to make it a FAVORITE: it snaps to the top, is tinted gold, and stays above the non-favorites (`Partition`); hold again to let it go back to the top of the others. Saved as `<board key>.Fav`.
 - Drop-downs inside the scrolling board: `PixelUIKit.LetListEscapeMasks` moves an opened list to the root canvas so the scroll view's mask cannot clip it (untested in Unity: if a list still looks cut off, this is the place).
 
 ## Search bar, custom text, docked drag
-- The Dev Hub header has a SEARCH field (`PixelDevHub.BuildSearch` / `RegisterSearch(label, tabId, reveal, keywords)`): it finds tabs, Main-tab widgets (`PixelWidgetBoard.SearchTab` registers every card) and tester features; picking a result (or Enter for the first) opens its tab, unfolds / scrolls to the card (`PixelUIKit.ScrollTo`) and flashes it. Other tabs (Docs, Inspector...) are not searched inside.
+- The Dev Hub header has a SEARCH field (`PixelDevHub.BuildSearch` / `RegisterSearch(label, tabId, reveal, keywords)`): it finds tabs, Main-tab widgets (`PixelCardBoard.SearchTab` registers every card) and tester features; picking a result (or Enter for the first) opens its tab, unfolds / scrolls to the card (`PixelUIKit.ScrollTo`) and flashes it. Other tabs (Docs, Inspector...) are not searched inside.
 - RIGHT CLICK any label in the hub (a quick click; a hold is the widget favorite) to type your own text (`PixelDevTextEdit`: Save / Reset / Cancel). Labels are found by hierarchy path; edits live in PlayerPrefs `PixelClicker.Dev.CustomText` and are stored per save profile by `PixelSettingsSync`. Drop-down captions, typed text and search results are left alone.
 - Docked windows (`PixelWindowChrome`, My Window) can be dragged off the edge by their header: the drag undocks them (`PixelPopoutDrag.onBegin`).
-- A 'Collapse all' button above the Main tab's widgets folds every card up to its header (it reads 'Expand all' while everything is folded; PixelWidgetBoard.SetAllMinimized).
+- A 'Collapse all' button above the Main tab's widgets folds every card up to its header (it reads 'Expand all' while everything is folded; PixelCardBoard.SetAllMinimized).
 
 ## Unlock and Max XP widgets
 
