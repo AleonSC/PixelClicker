@@ -1,8 +1,7 @@
 // ---- System notes ----
 // PixelFactoryKit.cs
 //   Small shared helper for building machines out of primitives in code (conveyor belt, kiln): materials copied from the cube's material (PixelClicker.CreateVisualMaterial, emission off
-//   unless asked), boxes / cylinders / balls, see-through ghost versions (alpha) with no colliders. The Wood Chipper still has its own private copy of this (its Kit class): move it onto
-//   this helper when it is next touched. DestroyMaterials() frees the materials it made (a temporary build like the studio intro).
+//   unless asked), boxes / cylinders / balls, see-through ghost versions (alpha) with no colliders. DestroyMaterials() frees the materials it made (a temporary build like the studio intro).
 //   SHARED MATERIALS (2026-10-20): a kit made with shared = true takes its materials from ONE static cache (keyed by colour incl. ghost alpha, metal,
 //   smoothness, emission), so pieces that are rebuilt often (belts while placing, highlights, corner joints, elevator troughs) stop making new materials
 //   every time - they used to leak about 8 a frame while a belt was being placed. Only for builds that never change a material they got from the kit
@@ -18,6 +17,9 @@ public sealed class PixelFactoryKit
     public PixelClicker clicker;
     public bool ghost;
     public float alpha = 0.35f;
+    /// <summary>The metal / smoothness a part gets when the call leaves them out (a machine with its own house style sets these, e.g. the Wood Chipper 0.25 / 0.45 / balls 0.6).</summary>
+    public float defaultMetal = 0.2f, defaultSmooth = 0.4f, defaultBallSmooth = 0.5f;
+    private const float Default = float.NaN;   // (a left-out metal / smoothness: take the kit's default above)
     private readonly Dictionary<string, Material> mats = new Dictionary<string, Material>();
     private readonly bool shared;
     private static readonly Dictionary<string, Material> sharedMats = new Dictionary<string, Material>();
@@ -30,13 +32,30 @@ public sealed class PixelFactoryKit
     /// <summary>'sharedMaterials' = take materials from the one static cache (see the notes at the top): for builds rebuilt often that never change their materials.</summary>
     public PixelFactoryKit(PixelClicker owner, bool forGhost, bool sharedMaterials) { clicker = owner; ghost = forGhost; shared = sharedMaterials; }
 
-    public Material Mat(Color c, float metal = 0.2f, float smooth = 0.4f, Color? emission = null)
+    public Material Mat(Color c, float metal = Default, float smooth = Default, Color? emission = null)
     {
+        if (float.IsNaN(metal)) metal = defaultMetal;
+        if (float.IsNaN(smooth)) smooth = defaultSmooth;
         Color col = c;
         if (ghost) col.a = alpha;
         string key = col.ToString() + metal + smooth + (emission.HasValue ? emission.Value.ToString() : "") + (ghost ? "g" : "");
         Dictionary<string, Material> cache = shared ? sharedMats : mats;
         if (cache.TryGetValue(key, out Material cached) && cached != null) return cached;
+        Material m = NewMat(col, metal, smooth, emission);
+        cache[key] = m;
+        return m;
+    }
+
+    /// <summary>A material of its OWN (never cached or shared), for a part that changes it later (a blinking lamp, a bar's fill colour).</summary>
+    public Material UniqueMat(Color c, float metal = Default, float smooth = Default, Color? emission = null)
+    {
+        Color col = c;
+        if (ghost) col.a = alpha;
+        return NewMat(col, float.IsNaN(metal) ? defaultMetal : metal, float.IsNaN(smooth) ? defaultSmooth : smooth, emission);
+    }
+
+    private Material NewMat(Color col, float metal, float smooth, Color? emission)
+    {
         Material m = clicker != null ? clicker.CreateVisualMaterial(col, ghost) : null;
         if (m == null)
         {
@@ -52,11 +71,10 @@ public sealed class PixelFactoryKit
             if (emission.HasValue && !ghost) { m.EnableKeyword("_EMISSION"); m.SetColor("_EmissionColor", emission.Value); }
             else { m.SetColor("_EmissionColor", Color.black); m.DisableKeyword("_EMISSION"); }
         }
-        cache[key] = m;
         return m;
     }
 
-    public GameObject Prim(PrimitiveType type, string name, Transform parent, Vector3 pos, Vector3 scale, Color c, Vector3 euler = default, float metal = 0.2f, float smooth = 0.4f, bool collider = false, Color? emission = null)
+    public GameObject Prim(PrimitiveType type, string name, Transform parent, Vector3 pos, Vector3 scale, Color c, Vector3 euler = default, float metal = Default, float smooth = Default, bool collider = false, Color? emission = null)
     {
         GameObject go = GameObject.CreatePrimitive(type);
         go.name = name;
@@ -73,15 +91,15 @@ public sealed class PixelFactoryKit
         return go;
     }
 
-    public GameObject Box(string name, Transform parent, Vector3 pos, Vector3 size, Color c, Vector3 euler = default, bool collider = false, float metal = 0.2f, float smooth = 0.4f, Color? emission = null)
+    public GameObject Box(string name, Transform parent, Vector3 pos, Vector3 size, Color c, Vector3 euler = default, bool collider = false, float metal = Default, float smooth = Default, Color? emission = null)
         => Prim(PrimitiveType.Cube, name, parent, pos, size, c, euler, metal, smooth, collider, emission);
 
     /// <summary>A cylinder of 'radius' and 'length' along the axis given by 'euler' (0 = along Y).</summary>
-    public GameObject Cyl(string name, Transform parent, Vector3 pos, float radius, float length, Color c, Vector3 euler = default, float metal = 0.2f, float smooth = 0.4f, bool collider = false)
+    public GameObject Cyl(string name, Transform parent, Vector3 pos, float radius, float length, Color c, Vector3 euler = default, float metal = Default, float smooth = Default, bool collider = false)
         => Prim(PrimitiveType.Cylinder, name, parent, pos, new Vector3(radius * 2f, length * 0.5f, radius * 2f), c, euler, metal, smooth, collider);
 
-    public GameObject Ball(string name, Transform parent, Vector3 pos, float radius, Color c, float metal = 0.2f, float smooth = 0.5f)
-        => Prim(PrimitiveType.Sphere, name, parent, pos, Vector3.one * radius * 2f, c, default, metal, smooth, false);
+    public GameObject Ball(string name, Transform parent, Vector3 pos, float radius, Color c, float metal = Default, float smooth = Default)
+        => Prim(PrimitiveType.Sphere, name, parent, pos, Vector3.one * radius * 2f, c, default, metal, float.IsNaN(smooth) ? defaultBallSmooth : smooth, false);
 
     /// <summary>A thin cylinder from a to b (a strut, a wire).</summary>
     public GameObject Strut(string name, Transform parent, Vector3 a, Vector3 b, float radius, Color c, float metal = 0.7f, float smooth = 0.6f)

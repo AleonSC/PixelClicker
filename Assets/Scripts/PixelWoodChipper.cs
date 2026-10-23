@@ -1,6 +1,6 @@
 // ---- System notes ----
 // PixelWoodChipper.cs
-//   The WOOD CHIPPER: the first thing built for the Dev Hub's Tester tab (PixelFeatureTester). A detailed machine built from primitives in code (PixelWoodChipper.Build(ghost)): a trailer chassis
+//   The WOOD CHIPPER: the first thing built for the Dev Hub's Tester tab (PixelFeatureTester). A detailed machine built from primitives in code (PixelWoodChipper.Build(ghost), on the shared PixelFactoryKit with its own default metal / smoothness): a trailer chassis
 //   with two tyres, hubs, fenders, a hitch with a jack stand and coupler; an orange cutter housing with a hatch, bolts, a flywheel guard with a spinning pulley, warning stripes and a danger plate;
 //   a big tapered FEED HOPPER (double-sided walls, dark liner, yellow / black hazard rim) over two ribbed feed rollers; a discharge chute with a swivel hood; an engine with fins, valve cover, air
 //   filter, fuel tank, muffler and exhaust stack; a control panel with levers, a gauge and an e-stop; an amber beacon; reflectors. Build(true) makes the see-through placement ghost (no colliders).
@@ -478,7 +478,7 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
     /// <summary>Builds the whole machine (origin on the ground under its middle) and, for a real one, adds this behaviour.</summary>
     private static GameObject Build(PixelClicker clicker, bool ghost, float ghostAlpha = 0.45f, bool withArrow = true)
     {
-        Kit k = new Kit { clicker = clicker, ghost = ghost, alpha = ghostAlpha };
+        PixelFactoryKit k = new PixelFactoryKit(clicker, ghost) { alpha = ghostAlpha, defaultMetal = 0.25f, defaultSmooth = 0.45f, defaultBallSmooth = 0.6f };
         GameObject root = new GameObject("Wood Chipper");
         float scale = clicker != null ? Mathf.Max(0.05f, clicker.PixelBaseSize) * 0.9f : 1f;
 
@@ -515,7 +515,7 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
     }
 
     /// <summary>Remembers every part's colour (so damage can darken them), and builds the floating health bar and the BROKEN label.</summary>
-    private void BuildCondition(Kit k)
+    private void BuildCondition(PixelFactoryKit k)
     {
         foreach (MeshRenderer r in GetComponentsInChildren<MeshRenderer>())
         {
@@ -542,7 +542,7 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
         fill.transform.localPosition = Vector3.zero;
         fill.transform.localScale = new Vector3(1f, 0.1f, 0.02f);
         barFill = fillPivot.transform;   // scaled along X, anchored at the left
-        barFillMat = k.Mat(new Color(0.3f, 0.8f, 0.25f), 0f, 0.1f, true);
+        barFillMat = k.UniqueMat(new Color(0.3f, 0.8f, 0.25f), 0f, 0.1f);
         fill.GetComponent<Renderer>().sharedMaterial = barFillMat;
         // A blue bar under the health bar: it fills with every wood pixel and empties when a Wood Chips block comes out.
         k.Box("Chip Back", barRoot, new Vector3(0f, -0.17f, 0f), new Vector3(1.64f, 0.14f, 0.02f), new Color(0.05f, 0.05f, 0.06f), default, false, 0f, 0.1f);
@@ -555,7 +555,7 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
         chipFill.transform.localPosition = Vector3.zero;
         chipFill.transform.localScale = new Vector3(1f, 0.07f, 0.02f);
         chipBarFill = chipPivot.transform;
-        chipFill.GetComponent<Renderer>().sharedMaterial = k.Mat(new Color(0.2f, 0.55f, 1f), 0f, 0.1f, true);
+        chipFill.GetComponent<Renderer>().sharedMaterial = k.UniqueMat(new Color(0.2f, 0.55f, 1f), 0f, 0.1f);
         // The label (a TextMesh needs no font setup) shows only when it is broken.
         GameObject lg = new GameObject("Broken Label", typeof(TextMesh));
         lg.transform.SetParent(transform, false);
@@ -648,68 +648,7 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
         if (m.HasProperty("_EmissionColor")) m.SetColor("_EmissionColor", c * 1.5f);
     }
 
-    // ---- the kit: makes primitives with a cached material per colour ----
-
-    /// <summary>How much of its colour the machine's paint keeps (1 = the full palette).</summary>
-    private const float PaintBrightness = 1f;
-
-    private sealed class Kit
-    {
-        public PixelClicker clicker;
-        public bool ghost;
-        public float alpha;
-        private readonly Dictionary<string, Material> mats = new Dictionary<string, Material>();
-
-        public Material Mat(Color c, float metal = 0.25f, float smooth = 0.45f, bool unique = false)
-        {
-            Color col = c;
-            col.r *= PaintBrightness; col.g *= PaintBrightness; col.b *= PaintBrightness;
-            if (ghost) col.a = alpha;
-            string key = col.ToString() + metal + smooth;
-            if (!unique && mats.TryGetValue(key, out Material cached) && cached != null) return cached;
-            Material m = clicker != null ? clicker.CreateVisualMaterial(col, ghost) : null;
-            if (m == null)
-            {
-                Shader sh = Shader.Find("Standard");
-                m = new Material(sh != null ? sh : Shader.Find("Sprites/Default"));
-                m.color = col;
-            }
-            if (m.HasProperty("_Metallic")) m.SetFloat("_Metallic", metal);
-            if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", smooth);
-            if (m.HasProperty("_Glossiness")) m.SetFloat("_Glossiness", smooth);
-            // The cube's material (which the copy comes from) can glow: switch every trace of emission off, or the whole machine shines like the cube.
-            if (m.HasProperty("_EmissionColor")) m.SetColor("_EmissionColor", Color.black);
-            m.DisableKeyword("_EMISSION");
-            if (!unique) mats[key] = m;
-            return m;
-        }
-
-        public GameObject Prim(PrimitiveType type, string name, Transform parent, Vector3 pos, Vector3 scale, Color c, Vector3 euler = default, float metal = 0.25f, float smooth = 0.45f, bool collider = false)
-        {
-            GameObject go = GameObject.CreatePrimitive(type);
-            go.name = name;
-            Collider col = go.GetComponent<Collider>();
-            if (col != null && (ghost || !collider)) Object.DestroyImmediate(col);
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = pos;
-            go.transform.localRotation = Quaternion.Euler(euler);
-            go.transform.localScale = scale;
-            Renderer r = go.GetComponent<Renderer>();
-            r.sharedMaterial = Mat(c, metal, smooth);
-            if (ghost) { r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; r.receiveShadows = false; }
-            return go;
-        }
-
-        public GameObject Box(string name, Transform parent, Vector3 pos, Vector3 size, Color c, Vector3 euler = default, bool collider = false, float metal = 0.25f, float smooth = 0.45f)
-            => Prim(PrimitiveType.Cube, name, parent, pos, size, c, euler, metal, smooth, collider);
-
-        /// <summary>A cylinder of 'radius' and 'length' along the axis given by 'euler' (0 = along Y).</summary>
-        public GameObject Cyl(string name, Transform parent, Vector3 pos, float radius, float length, Color c, Vector3 euler = default, float metal = 0.25f, float smooth = 0.45f)
-            => Prim(PrimitiveType.Cylinder, name, parent, pos, new Vector3(radius * 2f, length * 0.5f, radius * 2f), c, euler, metal, smooth, false);
-
-        public GameObject Ball(string name, Transform parent, Vector3 pos, float radius, Color c, float metal = 0.25f, float smooth = 0.6f)
-            => Prim(PrimitiveType.Sphere, name, parent, pos, Vector3.one * radius * 2f, c, default, metal, smooth, false);
-    }
+    // ---- the kit: PixelFactoryKit with the chipper's own default metal / smoothness (0.25 / 0.45, balls 0.6) ----
 
     private static GameObject Empty(string name, Transform parent, Vector3 pos)
     {
@@ -721,7 +660,7 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
 
     // ---- chassis: frame, wheels, fenders, hitch ----
 
-    private static void BuildChassis(Kit k, Transform root, Transform sh)
+    private static void BuildChassis(PixelFactoryKit k, Transform root, Transform sh)
     {
         k.Box("Frame", sh, new Vector3(0.45f, 0.7f, 0f), new Vector3(4.5f, 0.16f, 1.2f), Dark, default, true, 0.5f, 0.35f);
         k.Box("Frame Rail L", sh, new Vector3(0.45f, 0.62f, 0.5f), new Vector3(4.5f, 0.1f, 0.1f), Steel, default, false, 0.7f, 0.5f);
@@ -771,7 +710,7 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
 
     // ---- cutter housing: body, hatch, bolts, danger plate, stripes ----
 
-    private static void BuildHousing(Kit k, Transform sh)
+    private static void BuildHousing(PixelFactoryKit k, Transform sh)
     {
         k.Box("Housing", sh, new Vector3(0.1f, 1.45f, 0f), new Vector3(1.7f, 1.35f, 1.25f), Orange, default, true, 0.3f, 0.5f);
         k.Box("Housing Top Plate", sh, new Vector3(0.1f, 2.15f, 0f), new Vector3(1.78f, 0.06f, 1.33f), DarkOrange, default, false, 0.4f, 0.5f);
@@ -844,7 +783,7 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
         return new[] { new Vector3(cx - hx, y, -hz), new Vector3(cx + hx, y, -hz), new Vector3(cx + hx, y, hz), new Vector3(cx - hx, y, hz) };
     }
 
-    private static void AddMeshObject(Kit k, Transform parent, string name, Mesh mesh, Color c, float metal, float smooth)
+    private static void AddMeshObject(PixelFactoryKit k, Transform parent, string name, Mesh mesh, Color c, float metal, float smooth)
     {
         GameObject g = new GameObject(name, typeof(MeshFilter), typeof(MeshRenderer));
         g.transform.SetParent(parent, false);
@@ -853,7 +792,7 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
         if (k.ghost) { g.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; }
     }
 
-    private static void BuildHopper(Kit k, Transform sh, out Transform rollerA, out Transform rollerB)
+    private static void BuildHopper(PixelFactoryKit k, Transform sh, out Transform rollerA, out Transform rollerB)
     {
         Vector3[] b = Corners(-1.2f, FunnelBaseY, 0.42f, 0.55f), m = Corners(-1.5f, FunnelMouthY, 1f, 1f);
         AddMeshObject(k, sh, "Hopper Outer", FunnelMesh(b, m), Orange, 0.3f, 0.5f);
@@ -907,7 +846,7 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
         k.Cyl("Hose B", sh, new Vector3(-0.78f, 1.7f, -0.55f), 0.025f, 0.35f, Rubber, new Vector3(0f, 0f, 90f), 0f, 0.2f);
     }
 
-    private static Transform BuildRoller(Kit k, Transform parent, Vector3 pos)
+    private static Transform BuildRoller(PixelFactoryKit k, Transform parent, Vector3 pos)
     {
         Transform r = Empty("Roller", parent, pos).transform;
         k.Cyl("Drum", r, Vector3.zero, 0.12f, 0.95f, Steel, new Vector3(90f, 0f, 0f), 0.85f, 0.5f);
@@ -921,7 +860,7 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
 
     // ---- discharge chute with a hood ----
 
-    private static void BuildChute(Kit k, Transform sh)
+    private static void BuildChute(PixelFactoryKit k, Transform sh)
     {
         k.Cyl("Chute Base", sh, new Vector3(0.25f, 2.3f, 0f), 0.34f, 0.3f, DarkOrange, default, 0.4f, 0.5f);
         k.Cyl("Chute Tube", sh, new Vector3(0.25f, 2.7f, 0f), 0.28f, 0.8f, Steel, default, 0.8f, 0.55f);
@@ -940,7 +879,7 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
 
     // ---- flywheel with its guard (a spinning pulley behind a grille) ----
 
-    private static void BuildFlywheel(Kit k, Transform sh, out Transform spinner)
+    private static void BuildFlywheel(PixelFactoryKit k, Transform sh, out Transform spinner)
     {
         Vector3 c = new Vector3(0.1f, 1.45f, 0.78f);
         spinner = Empty("Flywheel", sh, c).transform;
@@ -959,7 +898,7 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
 
     // ---- engine ----
 
-    private static void BuildEngine(Kit k, Transform sh, out Transform exhaustTop)
+    private static void BuildEngine(PixelFactoryKit k, Transform sh, out Transform exhaustTop)
     {
         k.Cyl("Coupling", sh, new Vector3(1.1f, 1.45f, 0f), 0.13f, 0.4f, Steel, new Vector3(0f, 0f, 90f), 0.85f, 0.5f);
         k.Box("Engine Block", sh, new Vector3(1.85f, 1.2f, 0f), new Vector3(1.0f, 0.7f, 0.9f), Dark, default, true, 0.55f, 0.35f);
@@ -988,7 +927,7 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
 
     // ---- control panel + beacon ----
 
-    private static Material BuildControls(Kit k, Transform sh, out Transform lamp)
+    private static Material BuildControls(PixelFactoryKit k, Transform sh, out Transform lamp)
     {
         Vector3 c = new Vector3(-0.5f, 1.42f, 0.7f);
         k.Box("Panel", sh, c, new Vector3(0.38f, 0.5f, 0.08f), Dark, new Vector3(-12f, 0f, 0f), false, 0.5f, 0.3f);
@@ -1010,7 +949,7 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
         k.Cyl("Beacon Base", sh, new Vector3(-0.55f, 2.22f, -0.45f), 0.1f, 0.06f, Dark, default, 0.5f, 0.4f);
         GameObject lampGo = k.Ball("Beacon", sh, new Vector3(-0.55f, 2.3f, -0.45f), 0.09f, new Color(1f, 0.7f, 0.1f), 0f, 0.85f);
         lamp = lampGo.transform;
-        Material own = k.Mat(new Color(1f, 0.7f, 0.1f), 0f, 0.85f, true);   // its own material so blinking doesn't recolour anything else
+        Material own = k.UniqueMat(new Color(1f, 0.7f, 0.1f), 0f, 0.85f);   // its own material so blinking doesn't recolour anything else
         lampGo.GetComponent<Renderer>().sharedMaterial = own;
         if (!k.ghost) own.EnableKeyword("_EMISSION");   // the beacon is the one thing that glows
         return k.ghost ? null : own;
