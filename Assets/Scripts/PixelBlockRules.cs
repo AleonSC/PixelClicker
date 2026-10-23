@@ -17,7 +17,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelBlockRules : MonoBehaviour
+public class PixelBlockRules : MonoBehaviour, IPixelDatabaseSource
 {
     [Serializable]
     public class SpecialRule
@@ -376,5 +376,37 @@ public class PixelBlockRules : MonoBehaviour
         }
         if (PixelBlockHold.IsStakeBlock(type)) sb.Append(PixelBlockHold.StakeNote());   // the basic pixels can carry a stake (Block Hold)
         return sb.ToString();
+    }
+
+    // ---- Game Database (IPixelDatabaseSource): one 'Block rule' entry per special-block and hold-block rule, discovered with its pixel ----
+
+    void IPixelDatabaseSource.DatabaseSteps(PixelDatabase.Steps steps)
+    {
+        steps.Add(PixelDatabase.BlockRulesOrder, b =>
+        {
+            foreach (SpecialRule r in SpecialRules)
+            {
+                if (r == null || r.tier == null) continue;
+                PixelDatabase.Entry px = b.Pixel(r.tier.type);
+                string blockName = px != null ? px.name : r.tier.type.ToString();
+                PixelDatabase.Entry re = b.Add("Block rule", blockName + ": special block", PixelDatabase.Plain(GuideNotes(r.tier.type)).Trim());
+                re.discovered = px != null && px.discovered;
+                b.Link(re, "Special block", px, "Has a special-block rule");
+                if (r.replaces != null) foreach (PixelClicker.PixelType t in r.replaces) b.Link(re, "Replaces", b.Pixel(t), "Can be replaced by a special block");
+                if (r.hasBoost) b.Link(re, "Raised by husks of", b.Pixel(r.boostBlock), "Raises a special block's chance");
+                if (!string.IsNullOrEmpty(r.skillId) && b.Skills.TryGetValue(r.skillId, out PixelDatabase.Entry sk)) b.Link(re, "Skill", sk, "Special block of skill");
+            }
+            foreach (HoldRule r in HoldRules)
+            {
+                if (r == null) continue;
+                PixelDatabase.Entry px = b.Pixel(r.type);
+                string blockName = px != null ? px.name : r.type.ToString();
+                PixelDatabase.Entry re = b.Add("Block rule", blockName + ": hold bonus", PixelDatabase.Plain(GuideNotes(r.type)).Trim());
+                re.discovered = px != null && px.discovered;
+                b.Link(re, "Hold block", px, "Has a hold bonus");
+                if (r.clearsHazard) b.Link(re, "Clears hazard", b.Pixel(r.hazardType), "Cleared by a held block");
+                if (!string.IsNullOrEmpty(r.skillId) && b.Skills.TryGetValue(r.skillId, out PixelDatabase.Entry sk)) b.Link(re, "Skill", sk, "Hold bonus of skill");
+            }
+        });
     }
 }

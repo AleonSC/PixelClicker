@@ -46,14 +46,14 @@
 [x] UI unification step 5: window builder - PixelUIKit.CreateWindow (title, X, optional minimize / lock / dock / drag via PixelWindowChrome, PixelPop, PixelWindows registration, StyleWindow, optional tabs); move windows over one per commit (simple ones first: View, Toggles, Bank), then a compile-check rule against hand-built window headers. Pick the standard first from the window inventory (docs/systems/WindowInventory.md)
 [x] UI unification step 5b: a compile-check guard against hand-built window headers (needs a signal other than StyleWindow, which tooltips use too), and a chrome event for minimized / docked changes (Pocket polls today)
 [x] UI unification step 6: one tip queue - first-time tips, perk popups and Did you know go through one calm-moment queue (PixelCalm.ForTip + PixelNotice) so they take turns instead of competing; after the tutorial runner
-[ ] Game Database: each system declares its own database entries, 'discovered' rule and pin rule (a small data-source interface) so PixelDatabase.Build stops being one 400-line hand-written list and a new feature appears in the database automatically
-[ ] Game Database: add Operation upgrades (PixelOperationUpgrade table, shop Upgrades > Operation) as entries
+[x] Game Database: each system declares its own database entries, 'discovered' rule and pin rule (a small data-source interface) so PixelDatabase.Build stops being one 400-line hand-written list and a new feature appears in the database automatically
+[x] Game Database: add Operation upgrades (PixelOperationUpgrade table, shop Upgrades > Operation) as entries
 [ ] Game Database: add Goals (the Log's goal list) as entries
 [ ] Game Database: add pet outfits (generated + named special outfits, Outfit Studio) - a category or inside the pet entries
 [x] Game Database: add a Settings category (screen filters, day / night lengths, floor off-modes, display options) so players can find them by searching
 [ ] Settings help lines: one short 'what it does' line per Settings row, written once (passed with the row in PixelPauseMenu) and shown as the row's hover tip AND in its Game Database 'Setting' entry (PixelPauseMenu.SettingsCatalog carries it)
 [ ] Game Database: add Cubie, the Prospector and the Lumberjack as character entries (who they are, when they visit, what they do)
-[ ] Game Database: hand-written entries for the Fishing specials (whale fight, treasure map) and the Dragon Cubes / wish - their data lives in code, not in tables
+[x] Game Database: hand-written entries for the Fishing specials (whale fight, treasure map) and the Dragon Cubes / wish - their data lives in code, not in tables
 [ ] Tutorials: audit which skills / tools have their own tip boxes and turn the ones that can be into tooltips or Game Database entries (one shared Skills tutorial; per-tool help lives in tooltips)
 [ ] Game Database: check that every skill, perk, skill-tree node, tool and hazard has a searchable entry (name + description)
 [ ] Pixel facts: one place that holds each block's attributes and description pieces with the numbers read LIVE from the real settings (today PixelGuideTexts.Describe has many hand-typed numbers that can drift from the Inspector values); tooltip, Pixel Rotation window and Game Database already all read Describe, so they would pick it up

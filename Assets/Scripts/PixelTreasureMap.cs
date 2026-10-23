@@ -11,7 +11,7 @@ using static PixelInput;
 /// ground somewhere in view. Click the X several times to dig; the last dig unearths the treasure: a haul of good fishing pixels (mostly bait).
 /// Everything is tunable in the Inspector; right-clicking the bottle skips all of it (see PixelClicker.DismissBottle).
 /// </summary>
-public class PixelTreasureMap : MonoBehaviour
+public class PixelTreasureMap : MonoBehaviour, IPixelDatabaseSource
 {
     [Header("Treasure map")]
     [SerializeField, Tooltip("Turns the whole treasure map off: breaking a bottle then only pays its small value.")]
@@ -668,5 +668,24 @@ public class PixelTreasureMap : MonoBehaviour
         tex.SetPixels(px);
         tex.Apply(false, false);
         return tex;
+    }
+
+    // ---- Game Database (IPixelDatabaseSource): the treasure map as a 'Special' entry (numbers read from the settings above), discovered with the Bottle pixel ----
+
+    void IPixelDatabaseSource.DatabaseSteps(PixelDatabase.Steps steps)
+    {
+        steps.Add(PixelDatabase.ExtrasOrder, b =>
+        {
+            PixelDatabase.Entry bottle = b.Pixel(PixelClicker.PixelType.Bottle);
+            string text = disableMap
+                ? "Fishing's message in a bottle. The treasure map is switched off: breaking a bottle only pays its small value."
+                : "Break a message in a bottle (Fishing) and it unrolls into a treasure map, then an X appears on the ground somewhere in view. Click the X " +
+                  (digClicks > 0 ? digClicks : 6) + " times to dig up the treasure: a haul of about " + (haulPixels > 0 ? haulPixels : 10) + " good fishing pixels (mostly bait). " +
+                  "An X fades after " + Mathf.RoundToInt((markSeconds > 0f ? markSeconds : 300f) / 60f) + " minutes. Right-click the bottle to skip it all.";
+            PixelDatabase.Entry e = b.Add("Special", "Treasure map", text);
+            e.discovered = bottle != null && bottle.discovered;
+            b.Link(e, "Started by", bottle, "Starts a special");
+            if (b.Skills.TryGetValue(PixelSkills.FishingId, out PixelDatabase.Entry fishing)) b.Link(e, "Skill", fishing, "Special of skill");
+        });
     }
 }
