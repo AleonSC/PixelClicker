@@ -3,7 +3,7 @@
 //   (extends PixelPlacedDevice) Magnet (DeviceKind.Magnet 10, auto-added like the fan by EnsureDefaultPotions, Utilities card; needs
 //   Electric unlocked, 20 Electric pixels, durationSeconds 30, radius 5, pullAcceleration 24, absorbDistance 0.9 = the 'settle'
 //   distance): like the Vacuum Device it pulls loose old pixels in radius towards a point in the gap of its horseshoe
-//   (BuildMagnetBody: red arch + legs, silver tips, base plate), but never collects them: pixels inside the settle distance just get
+//   (model: BuildModel in this file: red arch + legs, silver tips, base plate), but never collects them: pixels inside the settle distance just get
 //   their speed damped, so they sit in a heap (held / flying / vanishing / kinematic pixels are skipped, ageing is unchanged); placed
 //   like the vacuum (starts disarmed, click to switch on), robot-placeable (IsPlaceableKind), tip device_Magnet, stat
 //   device.placed.Magnet, not part of the Operation tab yet.
@@ -69,5 +69,41 @@ public class PixelMagnetDevice : PixelPlacedDevice
         info.Add("Pulls", "husks within " + radius.ToString("0.#") + " units into a heap");
         if (!info.Full) return;
         info.Add("Pull", pull.ToString("0.#"));
+    }
+
+    // ---- The model (moved here from PixelConsumables 2026-10-24: each device builds its own look; PixelConsumables.BuildDeviceObject calls it) ----
+
+    /// <summary>An upright horseshoe magnet standing on its two silver tips: a red arch, two legs and a small base plate.</summary>
+    public static void BuildModel(PixelClicker clicker, GameObject root, PixelConsumables.Device d, bool isPreview, float previewOpacity)
+    {
+        float opacity = isPreview ? previewOpacity : 1f;
+        Color red = d.color; red.a = opacity;
+        Color silver = new Color(0.78f, 0.8f, 0.86f, opacity);
+        Color dark = new Color(0.25f, 0.27f, 0.32f, opacity);
+        float D = d.bodyDiameter, H = d.bodyHeight, leg = D * 0.26f;
+
+        GameObject Part(PrimitiveType type, string name, Vector3 pos, Vector3 scale, Color color)
+        {
+            GameObject g = GameObject.CreatePrimitive(type);
+            g.name = name;
+            Destroy(g.GetComponent<Collider>());
+            g.transform.SetParent(root.transform, false);
+            g.transform.localPosition = pos;
+            g.transform.localScale = scale;
+            Material m = clicker.CreateVisualMaterial(color, isPreview);
+            if (m != null) g.GetComponent<Renderer>().sharedMaterial = m;
+            g.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            return g;
+        }
+
+        Part(PrimitiveType.Cylinder, "Base", new Vector3(0f, 0.025f, 0f), new Vector3(D * 1.3f, 0.025f, D * 1.3f), dark);
+        for (int s = -1; s <= 1; s += 2)
+        {
+            float x = s * D * 0.4f;
+            Part(PrimitiveType.Cube, "Leg", new Vector3(x, H * 0.5f, 0f), new Vector3(leg, H * 0.78f, leg), red);
+            Part(PrimitiveType.Cube, "Tip", new Vector3(x, H * 0.12f, 0f), new Vector3(leg * 1.04f, H * 0.24f, leg * 1.04f), silver);
+        }
+        Part(PrimitiveType.Cube, "Arch", new Vector3(0f, H - leg * 0.5f, 0f), new Vector3(D * 0.8f + leg, leg, leg), red);
+        Part(PrimitiveType.Cube, "Arch Cap", new Vector3(0f, H + leg * 0.02f, 0f), new Vector3(D * 0.8f + leg * 0.6f, leg * 0.25f, leg * 0.7f), silver);
     }
 }

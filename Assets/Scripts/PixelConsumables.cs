@@ -3489,33 +3489,33 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
 
         if (d.kind == DeviceKind.Vacuum)
         {
-            BuildVacuumBody(root, d, isPreview);
+            PixelVacuumDevice.BuildModel(clicker, root, d, isPreview, previewOpacity);
         }
         else if (d.kind == DeviceKind.Sprinkler)
         {
-            BuildSprinklerBody(root, d, isPreview);
+            PixelSprinklerDevice.BuildModel(clicker, root, d, isPreview, previewOpacity);
         }
         else if (d.kind == DeviceKind.Magnet)
         {
-            BuildMagnetBody(root, d, isPreview);
+            PixelMagnetDevice.BuildModel(clicker, root, d, isPreview, previewOpacity);
         }
         else if (d.kind == DeviceKind.QuantumOrganizer)
         {
-            BuildQuantumBody(root, d, isPreview);
+            PixelQuantumDevice.BuildModel(clicker, root, d, isPreview, previewOpacity);
             if (isPreview) PixelAimLaser.Attach(root, PixelQuantumDevice.Ports(d));
         }
         else if (d.kind == DeviceKind.StorageCrate)
         {
-            BuildCrateBody(root, d, isPreview);
+            PixelStorageCrate.BuildModel(clicker, root, d, isPreview, previewOpacity);
             if (isPreview) PixelAimLaser.Attach(root, PixelStorageCrate.Ports(d));   // (red aim beams out of its coupling holes while placing)
         }
         else if (d.kind == DeviceKind.LightningRod)
         {
-            BuildRodBody(root, d, isPreview);
+            PixelLightningRod.BuildModel(clicker, root, d, isPreview, previewOpacity);
         }
         else if (d.kind == DeviceKind.ChargeBooster)
         {
-            BuildBoosterBody(root, d, isPreview);
+            PixelChargeBooster.BuildModel(clicker, root, d, isPreview, previewOpacity);
         }
         else
         {
@@ -3578,400 +3578,6 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     }
 
     /// <summary>
-    /// The Vacuum Device's look: a turned (lathe) body with a flared base, a slim waist and a funnel mouth at the top, two glowing bands, a glowing
-    /// core in the funnel and a small spinning turbine ("Spinner", turned by PixelVacuumDevice) above it.
-    /// </summary>
-    /// <summary>A thin cylinder from a to b (a strut, a wire) on the kit.</summary>
-    private static GameObject Strut(PixelFactoryKit k, string name, Transform parent, Vector3 a, Vector3 b, float radius, Color c, float metal = 0.7f, float smooth = 0.6f)
-    {
-        Vector3 dir = b - a;
-        return k.Prim(PrimitiveType.Cylinder, name, parent, (a + b) * 0.5f, new Vector3(radius * 2f, dir.magnitude * 0.5f, radius * 2f), c,
-                      Quaternion.FromToRotation(Vector3.up, dir).eulerAngles, metal, smooth);
-    }
-
-    /// <summary>A flat disc / band round the Y axis (a cylinder 'radius' wide and 'thick' tall), optionally glowing.</summary>
-    private static GameObject Disc(PixelFactoryKit k, string name, Transform parent, float y, float radius, float thick, Color c, float metal = 0.6f, float smooth = 0.6f, Color? glow = null)
-        => k.Prim(PrimitiveType.Cylinder, name, parent, new Vector3(0f, y, 0f), new Vector3(radius * 2f, thick * 0.5f, radius * 2f), c, default, metal, smooth, false, glow);
-
-    /// <summary>
-    /// The Lightning Rod's look (2026-10-19): a two-step stone plinth with a copper ground ring and glowing studs, three steel guy struts, a tapering copper
-    /// mast (steel collars at the joints) with a copper coil low down and a stack of white ceramic insulators in the middle, a glowing band near the top and
-    /// a crown of outward-leaning spikes round the tip. The glowing tip ball itself is added at bodyHeight by PixelLightningRod (DecorateRodModel for the shop).
-    /// </summary>
-    private void BuildRodBody(GameObject root, Device d, bool isPreview)
-    {
-        PixelFactoryKit k = new PixelFactoryKit(clicker, isPreview) { alpha = previewOpacity };
-        Transform t = root.transform;
-        float H = d.bodyHeight, r = Mathf.Max(0.04f, d.bodyDiameter * 0.5f);
-        Color stone = new Color(0.3f, 0.31f, 0.34f, 1f), stoneTop = new Color(0.4f, 0.41f, 0.45f, 1f), copper = new Color(0.86f, 0.5f, 0.27f, 1f),
-              steel = new Color(0.72f, 0.76f, 0.82f, 1f), ceramic = new Color(0.93f, 0.95f, 1f, 1f), glow = Color.Lerp(d.color, Color.white, 0.25f);
-
-        // The plinth: two stone steps, a copper ground ring between them and six glowing studs round the lower step.
-        Disc(k, "Plinth", t, 0.06f, 0.42f, 0.12f, stone, 0.05f, 0.2f);
-        Disc(k, "Ground Ring", t, 0.125f, 0.35f, 0.025f, copper, 0.85f, 0.7f);
-        Disc(k, "Plinth Top", t, 0.17f, 0.28f, 0.08f, stoneTop, 0.05f, 0.25f);
-        for (int i = 0; i < 6; i++)
-        {
-            float a = i * 60f * Mathf.Deg2Rad;
-            k.Prim(PrimitiveType.Sphere, "Stud", t, new Vector3(Mathf.Cos(a) * 0.41f, 0.07f, Mathf.Sin(a) * 0.41f), Vector3.one * 0.05f, glow, default, 0f, 0.8f, false, glow);
-        }
-
-        // The mast: three copper pieces, thinner going up, with steel collars where they meet; a thin spike on top up to the tip.
-        float[] joints = { 0.21f, H * 0.36f, H * 0.68f, H - 0.2f };
-        float[] radii = { r * 1.6f, r * 1.2f, r * 0.85f };
-        for (int i = 0; i < 3; i++)
-        {
-            k.Cyl("Mast " + i, t, new Vector3(0f, (joints[i] + joints[i + 1]) * 0.5f, 0f), radii[i], joints[i + 1] - joints[i], copper, default, 0.85f, 0.65f);
-            Disc(k, "Collar " + i, t, joints[i] + 0.02f, radii[i] * 1.5f, 0.05f, steel, 0.9f, 0.75f);
-        }
-        k.Cyl("Spike", t, new Vector3(0f, H - 0.1f, 0f), r * 0.45f, 0.2f, steel, default, 0.95f, 0.85f);
-
-        // A copper coil wound round the lowest piece (thin rings, every other one tipped a little so it reads as a winding).
-        for (int i = 0; i < 9; i++)
-            k.Prim(PrimitiveType.Cylinder, "Coil", t, new Vector3(0f, 0.26f + i * 0.05f, 0f), new Vector3(r * 4.2f, 0.012f, r * 4.2f), copper,
-                   new Vector3(i % 2 == 0 ? 5f : -5f, 0f, 0f), 0.9f, 0.7f);
-
-        // White ceramic insulators stacked on the middle piece.
-        for (int i = 0; i < 4; i++) Disc(k, "Insulator", t, H * 0.42f + i * 0.09f, r * (3.4f - i * 0.25f), 0.045f, ceramic, 0.1f, 0.9f);
-
-        // Three guy struts from the plinth edge up to the mast, with a steel clamp where they meet it.
-        float clampY = H * 0.3f;
-        Disc(k, "Clamp", t, clampY, r * 2.4f, 0.06f, steel, 0.9f, 0.7f);
-        for (int i = 0; i < 3; i++)
-        {
-            float a = (i * 120f + 30f) * Mathf.Deg2Rad;
-            Vector3 foot = new Vector3(Mathf.Cos(a) * 0.36f, 0.19f, Mathf.Sin(a) * 0.36f);
-            Strut(k, "Guy Strut", t, foot, new Vector3(Mathf.Cos(a) * r * 2.2f, clampY, Mathf.Sin(a) * r * 2.2f), 0.014f, steel);
-            k.Prim(PrimitiveType.Sphere, "Strut Foot", t, foot, Vector3.one * 0.05f, steel, default, 0.9f, 0.7f);
-        }
-
-        // A glowing band near the top and a crown of spikes leaning out round the tip.
-        Disc(k, "Glow Band", t, H * 0.86f, r * 1.4f, 0.07f, glow, 0f, 0.8f, glow);
-        Disc(k, "Crown Ring", t, H - 0.24f, r * 2.2f, 0.035f, steel, 0.9f, 0.8f);
-        for (int i = 0; i < 4; i++)
-        {
-            float a = (i * 90f + 45f) * Mathf.Deg2Rad;
-            Vector3 outward = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
-            Vector3 from = new Vector3(0f, H - 0.24f, 0f) + outward * r * 1.9f;
-            Strut(k, "Crown Spike", t, from, from + (outward * 0.35f + Vector3.up).normalized * 0.22f, 0.011f, steel, 0.95f, 0.85f);
-        }
-    }
-
-    /// <summary>
-    /// The Charge Booster's look (2026-10-19): a dark plinth with a yellow hazard band and bolts, a graphite capacitor drum with three glowing coil rings,
-    /// red / black terminals on its front, a stack of ceramic insulators and a polished Tesla dome on top (PixelChargeBooster.DomeAbove: its sparks and
-    /// click spot sit there), and a steel-framed bracket on its right (+X) holding the charge meter (PixelChargeBooster builds the live meter in it).
-    /// </summary>
-    private void BuildBoosterBody(GameObject root, Device d, bool isPreview)
-    {
-        PixelFactoryKit k = new PixelFactoryKit(clicker, isPreview) { alpha = previewOpacity };
-        Transform t = root.transform;
-        float D = d.bodyDiameter, H = d.bodyHeight, drum = D * 0.32f, top = H * 0.78f;
-        Color plinth = new Color(0.13f, 0.13f, 0.15f, 1f), graphite = new Color(0.2f, 0.21f, 0.24f, 1f), steel = new Color(0.74f, 0.77f, 0.83f, 1f),
-              ceramic = new Color(0.93f, 0.95f, 1f, 1f), glow = d.color;
-
-        // Plinth with a hazard band and four bolts.
-        Disc(k, "Plinth", t, 0.05f, D * 0.55f, 0.1f, plinth, 0.4f, 0.4f);
-        Disc(k, "Hazard Band", t, 0.075f, D * 0.56f, 0.03f, d.color, 0.3f, 0.5f);
-        for (int i = 0; i < 4; i++)
-        {
-            float a = (i * 90f + 45f) * Mathf.Deg2Rad;
-            k.Cyl("Bolt", t, new Vector3(Mathf.Cos(a) * D * 0.46f, 0.11f, Mathf.Sin(a) * D * 0.46f), 0.025f, 0.03f, steel, default, 0.9f, 0.7f);
-        }
-
-        // The capacitor drum with three glowing coil rings and a steel lid.
-        k.Cyl("Drum", t, new Vector3(0f, (0.1f + top) * 0.5f, 0f), drum, top - 0.1f, graphite, default, 0.65f, 0.6f);
-        for (int i = 0; i < 3; i++) Disc(k, "Coil Ring", t, 0.1f + (top - 0.1f) * (0.25f + i * 0.25f), drum * 1.08f, 0.035f, glow, 0f, 0.7f, glow * 0.9f);
-        Disc(k, "Lid", t, top, drum * 1.06f, 0.05f, steel, 0.9f, 0.75f);
-
-        // Red and black terminals on the front (-Z).
-        for (int s = -1; s <= 1; s += 2)
-        {
-            Vector3 p = new Vector3(s * drum * 0.45f, top * 0.55f, -drum * 0.95f);
-            k.Cyl("Terminal", t, p + new Vector3(0f, 0f, -0.04f), 0.03f, 0.1f, steel, new Vector3(90f, 0f, 0f), 0.9f, 0.7f);
-            Color cap = s < 0 ? new Color(0.85f, 0.15f, 0.12f, 1f) : new Color(0.08f, 0.08f, 0.09f, 1f);
-            k.Cyl("Terminal Cap", t, p + new Vector3(0f, 0f, -0.1f), 0.045f, 0.04f, cap, new Vector3(90f, 0f, 0f), 0.2f, 0.6f);
-        }
-
-        // Insulators, a neck and the Tesla dome with a ring under it.
-        for (int i = 0; i < 3; i++) Disc(k, "Insulator", t, top + 0.05f + i * 0.055f, D * (0.2f - i * 0.035f), 0.035f, ceramic, 0.1f, 0.9f);
-        float domeY = H + PixelChargeBooster.DomeAbove;
-        k.Cyl("Neck", t, new Vector3(0f, (top + domeY) * 0.5f, 0f), 0.03f, domeY - top, steel, default, 0.9f, 0.8f);
-        Disc(k, "Dome Ring", t, domeY - 0.06f, D * 0.26f, 0.035f, steel, 0.95f, 0.85f);
-        k.Ball("Dome", t, new Vector3(0f, domeY, 0f), D * 0.2f, steel, 0.95f, 0.9f);
-
-        // The meter bracket on the right (+X): a base plate, two arms to the drum, a top cap and a little glowing lamp.
-        float mx = D * 0.75f, mh = H * 1.1f;
-        k.Box("Meter Plate", t, new Vector3(mx, 0.02f, 0f), new Vector3(0.24f, 0.04f, 0.24f), plinth, default, false, 0.4f, 0.4f);
-        k.Box("Meter Cap", t, new Vector3(mx, mh + 0.025f, 0f), new Vector3(0.2f, 0.05f, 0.2f), steel, default, false, 0.9f, 0.75f);
-        foreach (float y in new[] { mh * 0.25f, mh * 0.75f })
-            k.Box("Meter Arm", t, new Vector3((drum + mx) * 0.5f, y, 0f), new Vector3(mx - drum, 0.04f, 0.06f), steel, default, false, 0.9f, 0.7f);
-        for (int s = -1; s <= 1; s += 2)
-            k.Box("Meter Rail", t, new Vector3(mx, mh * 0.5f, s * 0.085f), new Vector3(0.03f, mh, 0.03f), steel, default, false, 0.9f, 0.7f);
-        k.Prim(PrimitiveType.Sphere, "Meter Lamp", t, new Vector3(mx, mh + 0.08f, 0f), Vector3.one * 0.07f, glow, default, 0f, 0.8f, false, glow);
-    }
-
-    /// <summary>A flat base, a short post and a spinning head with two nozzles ("Spinner" with "Nozzle 0/1" children, used by <see cref="PixelSprinklerDevice"/>).</summary>
-    private void BuildSprinklerBody(GameObject root, Device d, bool isPreview)
-    {
-        float opacity = isPreview ? previewOpacity : 1f;
-        Color main = d.color; main.a = opacity;
-        Color metal = new Color(0.62f, 0.66f, 0.72f, opacity);
-        float H = d.bodyHeight;
-
-        GameObject Part(PrimitiveType type, string name, Transform parent, Vector3 pos, Vector3 scale, Color color)
-        {
-            GameObject g = GameObject.CreatePrimitive(type);
-            g.name = name;
-            Destroy(g.GetComponent<Collider>());
-            g.transform.SetParent(parent, false);
-            g.transform.localPosition = pos;
-            g.transform.localScale = scale;
-            Material m = clicker.CreateVisualMaterial(color, isPreview);
-            if (m != null) g.GetComponent<Renderer>().sharedMaterial = m;
-            g.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            return g;
-        }
-
-        Part(PrimitiveType.Cylinder, "Base", root.transform, new Vector3(0f, 0.04f, 0f), new Vector3(d.bodyDiameter * 1.4f, 0.04f, d.bodyDiameter * 1.4f), metal);
-        Part(PrimitiveType.Cylinder, "Post", root.transform, new Vector3(0f, H * 0.5f, 0f), new Vector3(d.bodyDiameter * 0.28f, H * 0.5f, d.bodyDiameter * 0.28f), main);
-        Transform spinner = new GameObject("Spinner").transform;
-        spinner.SetParent(root.transform, false);
-        spinner.localPosition = new Vector3(0f, H, 0f);
-        Part(PrimitiveType.Sphere, "Hub", spinner, Vector3.zero, Vector3.one * d.bodyDiameter * 0.55f, main);
-        Part(PrimitiveType.Cube, "Arm", spinner, Vector3.zero, new Vector3(d.bodyDiameter * 1.5f, d.bodyDiameter * 0.14f, d.bodyDiameter * 0.14f), metal);
-        for (int i = 0; i < 2; i++)
-        {
-            GameObject nozzle = Part(PrimitiveType.Sphere, "Nozzle " + i, spinner, new Vector3((i == 0 ? 1f : -1f) * d.bodyDiameter * 0.75f, 0f, 0f), Vector3.one * d.bodyDiameter * 0.2f, metal);
-        }
-    }
-
-    /// <summary>An upright horseshoe magnet standing on its two silver tips: a red arch, two legs and a small base plate.</summary>
-    private void BuildMagnetBody(GameObject root, Device d, bool isPreview)
-    {
-        float opacity = isPreview ? previewOpacity : 1f;
-        Color red = d.color; red.a = opacity;
-        Color silver = new Color(0.78f, 0.8f, 0.86f, opacity);
-        Color dark = new Color(0.25f, 0.27f, 0.32f, opacity);
-        float D = d.bodyDiameter, H = d.bodyHeight, leg = D * 0.26f;
-
-        GameObject Part(PrimitiveType type, string name, Vector3 pos, Vector3 scale, Color color)
-        {
-            GameObject g = GameObject.CreatePrimitive(type);
-            g.name = name;
-            Destroy(g.GetComponent<Collider>());
-            g.transform.SetParent(root.transform, false);
-            g.transform.localPosition = pos;
-            g.transform.localScale = scale;
-            Material m = clicker.CreateVisualMaterial(color, isPreview);
-            if (m != null) g.GetComponent<Renderer>().sharedMaterial = m;
-            g.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            return g;
-        }
-
-        Part(PrimitiveType.Cylinder, "Base", new Vector3(0f, 0.025f, 0f), new Vector3(D * 1.3f, 0.025f, D * 1.3f), dark);
-        for (int s = -1; s <= 1; s += 2)
-        {
-            float x = s * D * 0.4f;
-            Part(PrimitiveType.Cube, "Leg", new Vector3(x, H * 0.5f, 0f), new Vector3(leg, H * 0.78f, leg), red);
-            Part(PrimitiveType.Cube, "Tip", new Vector3(x, H * 0.12f, 0f), new Vector3(leg * 1.04f, H * 0.24f, leg * 1.04f), silver);
-        }
-        Part(PrimitiveType.Cube, "Arch", new Vector3(0f, H - leg * 0.5f, 0f), new Vector3(D * 0.8f + leg, leg, leg), red);
-        Part(PrimitiveType.Cube, "Arch Cap", new Vector3(0f, H + leg * 0.02f, 0f), new Vector3(D * 0.8f + leg * 0.6f, leg * 0.25f, leg * 0.7f), silver);
-    }
-
-    /// <summary>The Quantum Organizer: a glowing pad inside four low walls with taller corner posts ('D' = the pad's inner side, 'H' = the wall height).</summary>
-    private void BuildQuantumBody(GameObject root, Device d, bool isPreview)
-    {
-        float opacity = isPreview ? previewOpacity : 1f;
-        float D = d.bodyDiameter, H = d.bodyHeight, wall = 0.12f;
-        Color baseColor = new Color(0.12f, 0.1f, 0.2f, opacity);
-        Color padColor = new Color(0.25f, 0.9f, 1f, opacity);
-        Color wallColor = new Color(d.color.r, d.color.g, d.color.b, opacity);
-        Color rimColor = new Color(0.6f, 1f, 1f, opacity);
-
-        GameObject Part(string name, Vector3 pos, Vector3 scale, Color color)
-        {
-            GameObject g = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            g.name = name;
-            Destroy(g.GetComponent<Collider>());
-            g.transform.SetParent(root.transform, false);
-            g.transform.localPosition = pos;
-            g.transform.localScale = scale;
-            Material m = clicker.CreateVisualMaterial(color, isPreview);
-            if (m != null) g.GetComponent<Renderer>().sharedMaterial = m;
-            g.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            return g;
-        }
-
-        Part("Base", new Vector3(0f, 0.025f, 0f), new Vector3(D + wall * 2f + 0.1f, 0.05f, D + wall * 2f + 0.1f), baseColor);
-        Part("Pad", new Vector3(0f, 0.06f, 0f), new Vector3(D, 0.02f, D), padColor);
-        // Two lines across the pad, like a binding mark.
-        Part("Pad Line", new Vector3(0f, 0.075f, 0f), new Vector3(D * 0.96f, 0.01f, 0.035f), rimColor);
-        Part("Pad Line", new Vector3(0f, 0.075f, 0f), new Vector3(0.035f, 0.01f, D * 0.96f), rimColor);
-
-        float o = D * 0.5f + wall * 0.5f;
-        Part("Wall N", new Vector3(0f, H * 0.5f, o), new Vector3(D + wall * 2f, H, wall), wallColor);
-        Part("Wall S", new Vector3(0f, H * 0.5f, -o), new Vector3(D + wall * 2f, H, wall), wallColor);
-        Part("Wall E", new Vector3(o, H * 0.5f, 0f), new Vector3(wall, H, D), wallColor);
-        Part("Wall W", new Vector3(-o, H * 0.5f, 0f), new Vector3(wall, H, D), wallColor);
-        Part("Rim N", new Vector3(0f, H + 0.015f, o), new Vector3(D + wall * 2f, 0.03f, wall * 1.2f), rimColor);
-        Part("Rim S", new Vector3(0f, H + 0.015f, -o), new Vector3(D + wall * 2f, 0.03f, wall * 1.2f), rimColor);
-        Part("Rim E", new Vector3(o, H + 0.015f, 0f), new Vector3(wall * 1.2f, 0.03f, D), rimColor);
-        Part("Rim W", new Vector3(-o, H + 0.015f, 0f), new Vector3(wall * 1.2f, 0.03f, D), rimColor);
-        for (int sx = -1; sx <= 1; sx += 2)
-            for (int sz = -1; sz <= 1; sz += 2)
-                Part("Post", new Vector3(sx * o, H * 0.65f, sz * o), new Vector3(wall * 1.7f, H * 1.3f, wall * 1.7f), rimColor);
-    }
-
-    private void BuildCrateBody(GameObject root, Device d, bool isPreview)
-    {
-        float opacity = isPreview ? previewOpacity : 1f;
-        float W = d.bodyDiameter, cell = W / 5f, Dp = cell * 2f, H = d.bodyHeight, t = 0.06f;
-        Color wood = new Color(d.color.r, d.color.g, d.color.b, opacity);
-        Color dark = new Color(d.color.r * 0.55f, d.color.g * 0.55f, d.color.b * 0.55f, opacity);
-        Color trim = new Color(0.85f, 0.75f, 0.45f, opacity);
-
-        void Part(string name, Vector3 pos, Vector3 scale, Color color)
-        {
-            GameObject g = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            g.name = name;
-            Destroy(g.GetComponent<Collider>());
-            g.transform.SetParent(root.transform, false);
-            g.transform.localPosition = pos;
-            g.transform.localScale = scale;
-            Material m = clicker.CreateVisualMaterial(color, isPreview);
-            if (m != null) g.GetComponent<Renderer>().sharedMaterial = m;
-            g.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        }
-
-        Part("Floor", new Vector3(0f, 0.03f, 0f), new Vector3(W + t * 2f, 0.06f, Dp + t * 2f), dark);
-        float ox = W * 0.5f + t * 0.5f, oz = Dp * 0.5f + t * 0.5f;
-        Part("Wall N", new Vector3(0f, H * 0.5f, oz), new Vector3(W + t * 2f, H, t), wood);
-        Part("Wall S", new Vector3(0f, H * 0.5f, -oz), new Vector3(W + t * 2f, H, t), wood);
-        Part("Wall E", new Vector3(ox, H * 0.5f, 0f), new Vector3(t, H, Dp), wood);
-        Part("Wall W", new Vector3(-ox, H * 0.5f, 0f), new Vector3(t, H, Dp), wood);
-        Part("Divider", new Vector3(0f, H * 0.45f, 0f), new Vector3(W, H * 0.9f, t * 0.7f), trim);
-        for (int i = 1; i < 5; i++)
-            Part("Divider", new Vector3(-W * 0.5f + i * cell, H * 0.45f, 0f), new Vector3(t * 0.7f, H * 0.9f, Dp), trim);
-        // A carrying handle on each short end (the +X / -X sides): two posts and a grip bar (shared PixelCarryHandles). Click and drag one to move the crate.
-        PixelCarryHandles.BuildParts(Part, W * 0.5f + t, Dp, H * 0.55f, 0.34f, opacity);
-        Part("Rim N", new Vector3(0f, H + 0.012f, oz), new Vector3(W + t * 2f, 0.025f, t * 1.4f), trim);
-        Part("Rim S", new Vector3(0f, H + 0.012f, -oz), new Vector3(W + t * 2f, 0.025f, t * 1.4f), trim);
-        Part("Rim E", new Vector3(ox, H + 0.012f, 0f), new Vector3(t * 1.4f, 0.025f, Dp), trim);
-        Part("Rim W", new Vector3(-ox, H + 0.012f, 0f), new Vector3(t * 1.4f, 0.025f, Dp), trim);
-    }
-
-    private void BuildVacuumBody(GameObject root, Device d, bool isPreview)
-    {
-        float R = d.bodyDiameter * 0.5f, H = d.bodyHeight;
-        float opacity = isPreview ? previewOpacity : 1f;
-        Color main = d.color; main.a = opacity;
-        Color glow = Color.Lerp(d.color, Color.white, 0.55f); glow.a = opacity;
-
-        // The turned body.
-        GameObject body = new GameObject("Body", typeof(MeshFilter), typeof(MeshRenderer));
-        body.transform.SetParent(root.transform, false);
-        body.GetComponent<MeshFilter>().sharedMesh = VacuumLatheMesh(R, H);
-        MeshRenderer bodyRenderer = body.GetComponent<MeshRenderer>();
-        Material bodyMat = clicker.CreateVisualMaterial(main, isPreview);
-        if (bodyMat != null) bodyRenderer.sharedMaterial = bodyMat; else bodyRenderer.material.color = main;
-
-        // Two glowing bands round the body (unlit, so they read as lit from inside).
-        float[] bandHeights = { 0.26f, 0.46f };
-        foreach (float bh in bandHeights)
-        {
-            GameObject band = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            band.name = "Glow Band";
-            Destroy(band.GetComponent<Collider>());
-            band.transform.SetParent(root.transform, false);
-            band.transform.localScale = new Vector3(R * 2f * 0.93f, H * 0.012f, R * 2f * 0.93f);
-            band.transform.localPosition = new Vector3(0f, H * bh, 0f);
-            Renderer br = band.GetComponent<Renderer>();
-            br.sharedMaterial = PixelLooks.OverlayMaterial();
-            br.material.color = glow;
-            br.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            br.receiveShadows = false;
-        }
-
-        // The glowing core in the funnel.
-        GameObject core = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        core.name = "Core";
-        Destroy(core.GetComponent<Collider>());
-        core.transform.SetParent(root.transform, false);
-        core.transform.localScale = new Vector3(R * 2f * 0.8f, H * 0.01f, R * 2f * 0.8f);
-        core.transform.localPosition = new Vector3(0f, H * 0.9f, 0f);
-        Renderer cr = core.GetComponent<Renderer>();
-        cr.sharedMaterial = PixelLooks.OverlayMaterial();
-        cr.material.color = Color.Lerp(glow, Color.white, 0.35f);
-        cr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        cr.receiveShadows = false;
-
-        // A little turbine over the core.
-        GameObject spinner = new GameObject("Spinner");
-        spinner.transform.SetParent(root.transform, false);
-        spinner.transform.localPosition = new Vector3(0f, H * 0.93f, 0f);
-        Color dark = new Color(d.color.r * 0.35f, d.color.g * 0.35f, d.color.b * 0.35f, opacity);
-        for (int i = 0; i < 3; i++)
-        {
-            GameObject blade = MakePrimitive(PrimitiveType.Cube, "Blade " + i, spinner.transform, dark, isPreview);
-            blade.transform.localRotation = Quaternion.Euler(0f, i * 60f, 0f);
-            blade.transform.localScale = new Vector3(R * 1.5f, H * 0.012f, R * 0.14f);
-        }
-    }
-
-    /// <summary>A surface of revolution (a turned body): flared base, straight body, slim waist, funnel mouth with a thin lip and a hollow top.</summary>
-    private static Mesh VacuumLatheMesh(float R, float H)
-    {
-        // (radius as a multiple of R, height as a fraction of H), from the middle of the bottom, out and up, over the lip and back to the middle of the funnel.
-        float[,] profile =
-        {
-            { 0f, 0f }, { 1.3f, 0f }, { 1.3f, 0.045f }, { 1.05f, 0.09f }, { 0.9f, 0.15f }, { 0.9f, 0.58f }, { 0.78f, 0.66f }, { 0.7f, 0.74f },
-            { 0.78f, 0.83f }, { 1.0f, 0.95f }, { 1.1f, 0.99f }, { 1.08f, 1.0f }, { 0.98f, 0.98f }, { 0.85f, 0.93f }, { 0.5f, 0.88f }, { 0f, 0.87f },
-        };
-        int rings = profile.GetLength(0), sides = 28;
-        Vector3[] vertices = new Vector3[rings * sides];
-        for (int i = 0; i < rings; i++)
-            for (int k = 0; k < sides; k++)
-            {
-                float angle = k * Mathf.PI * 2f / sides;
-                float r = profile[i, 0] * R;
-                vertices[i * sides + k] = new Vector3(Mathf.Cos(angle) * r, profile[i, 1] * H, Mathf.Sin(angle) * r);
-            }
-
-        System.Collections.Generic.List<int> triangles = new System.Collections.Generic.List<int>();
-        for (int i = 0; i < rings - 1; i++)
-        {
-            // Outward normal of this stretch of the profile (the solid is on its left): rotate the tangent a quarter turn clockwise.
-            float dr = profile[i + 1, 0] * R - profile[i, 0] * R, dy = profile[i + 1, 1] * H - profile[i, 1] * H;
-            for (int k = 0; k < sides; k++)
-            {
-                int n = (k + 1) % sides;
-                int a = i * sides + k, b = i * sides + n, c = (i + 1) * sides + k, e = (i + 1) * sides + n;
-                float angle = (k + 0.5f) * Mathf.PI * 2f / sides;
-                Vector3 expected = new Vector3(Mathf.Cos(angle) * dy, -dr, Mathf.Sin(angle) * dy);
-                AddOriented(triangles, vertices, a, c, b, expected);
-                AddOriented(triangles, vertices, b, c, e, expected);
-            }
-        }
-
-        Mesh mesh = new Mesh { name = "VacuumBody" };
-        mesh.vertices = vertices;
-        mesh.triangles = triangles.ToArray();
-        mesh.RecalculateNormals();
-        mesh.RecalculateBounds();
-        return mesh;
-    }
-
-    private static void AddOriented(System.Collections.Generic.List<int> triangles, Vector3[] v, int a, int b, int c, Vector3 expectedNormal)
-    {
-        Vector3 geometric = Vector3.Cross(v[b] - v[a], v[c] - v[a]);
-        if (geometric.sqrMagnitude < 1e-12f) return;   // a collapsed triangle (at the middle of the bottom / top)
-        if (Vector3.Dot(geometric, expectedNormal) < 0f) { int t = b; b = c; c = t; }
-        triangles.Add(a); triangles.Add(b); triangles.Add(c);
-    }
-
-    /// <summary>
     /// Builds the fan: a post, a round housing, spinning blades, a floor wedge showing the blown area and (for a real
     /// fan) the timer. The fan blows along the object's forward (+Z) direction.
     /// </summary>
@@ -3984,76 +3590,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
     private GameObject BuildFanObject(Device d, bool isPreview, out Transform blades, out TextMeshPro timer)
     {
         GameObject root = new GameObject(isPreview ? d.displayName + " (Preview)" : d.displayName);
-        PixelFactoryKit k = new PixelFactoryKit(clicker, isPreview) { alpha = previewOpacity };
-        Transform t = root.transform;
-        float D = d.bodyDiameter, H = d.bodyHeight, R = D * 0.5f;
-        Color body = d.color, dark = new Color(d.color.r * 0.3f, d.color.g * 0.3f, d.color.b * 0.3f, 1f), chrome = new Color(0.82f, 0.85f, 0.9f, 1f),
-              rubber = new Color(0.08f, 0.08f, 0.09f, 1f), badge = Color.Lerp(d.color, Color.white, 0.35f);
-
-        // Base: a weighted disc with a coloured bevel, and the control pod at the front.
-        Disc(k, "Base", t, 0.035f, D * 0.38f, 0.07f, dark, 0.5f, 0.55f);
-        Disc(k, "Base Bevel", t, 0.08f, D * 0.31f, 0.03f, body, 0.3f, 0.6f);
-        k.Box("Control Pod", t, new Vector3(0f, 0.09f, D * 0.26f), new Vector3(D * 0.24f, 0.06f, D * 0.12f), dark, new Vector3(-12f, 0f, 0f), false, 0.4f, 0.5f);
-        Color[] buttons = { chrome, body, new Color(0.3f, 1f, 0.45f, 1f) };
-        for (int i = 0; i < 3; i++)
-            k.Prim(PrimitiveType.Cylinder, "Button", t, new Vector3((i - 1) * D * 0.065f, 0.125f, D * 0.265f), new Vector3(0.04f, 0.012f, 0.04f), buttons[i],
-                   new Vector3(-12f, 0f, 0f), 0.4f, 0.7f, false, i == 2 ? buttons[i] : (Color?)null);
-
-        // Post: a dark lower tube, a collar with a knob, a chrome upper tube.
-        float collarY = H * 0.5f;
-        k.Cyl("Post", t, new Vector3(0f, (0.09f + collarY) * 0.5f, 0f), 0.045f, collarY - 0.09f, dark, default, 0.5f, 0.6f);
-        Disc(k, "Collar", t, collarY, 0.065f, 0.06f, chrome, 0.9f, 0.8f);
-        k.Ball("Collar Knob", t, new Vector3(0.08f, collarY, 0f), 0.025f, rubber, 0.2f, 0.5f);
-        k.Cyl("Upper Post", t, new Vector3(0f, (collarY + H - 0.1f) * 0.5f, 0f), 0.03f, H - 0.1f - collarY, chrome, default, 0.95f, 0.85f);
-
-        // Head: the motor, the guard and the blades. It faces +Z.
-        GameObject head = new GameObject("Head");
-        head.transform.SetParent(t, false);
-        head.transform.localPosition = new Vector3(0f, H, 0f);
-        Transform h = head.transform;
-        k.Box("Pivot", h, new Vector3(0f, -0.1f, -0.08f), new Vector3(0.08f, 0.1f, 0.16f), dark, default, false, 0.5f, 0.5f);
-        k.Cyl("Motor", h, new Vector3(0f, 0f, -0.12f), D * 0.15f, 0.18f, body, new Vector3(90f, 0f, 0f), 0.35f, 0.65f);
-        k.Prim(PrimitiveType.Sphere, "Motor Back", h, new Vector3(0f, 0f, -0.21f), new Vector3(D * 0.3f, D * 0.3f, 0.12f), body, default, 0.35f, 0.65f);
-        for (int i = 0; i < 2; i++)
-            k.Cyl("Vent Ring", h, new Vector3(0f, 0f, -0.16f + i * 0.06f), D * 0.155f, 0.012f, dark, new Vector3(90f, 0f, 0f), 0.4f, 0.5f);
-
-        // Blades: four pitched blades with round tips round a chrome spinner.
-        GameObject bladeRoot = new GameObject("Blades");
-        bladeRoot.transform.SetParent(h, false);
-        bladeRoot.transform.localPosition = new Vector3(0f, 0f, 0.08f);
-        for (int i = 0; i < 4; i++)
-        {
-            GameObject arm = new GameObject("Blade " + i);
-            arm.transform.SetParent(bladeRoot.transform, false);
-            arm.transform.localRotation = Quaternion.Euler(0f, 0f, i * 90f);
-            k.Box("Blade", arm.transform, new Vector3(0f, R * 0.46f, 0f), new Vector3(D * 0.2f, R * 0.62f, 0.012f), body, new Vector3(0f, 24f, 0f), false, 0.2f, 0.7f);
-            k.Prim(PrimitiveType.Sphere, "Blade Tip", arm.transform, new Vector3(0f, R * 0.77f, 0f), new Vector3(D * 0.2f, D * 0.11f, 0.012f), body, new Vector3(0f, 24f, 0f), 0.2f, 0.7f);
-        }
-        k.Cyl("Hub", bladeRoot.transform, Vector3.zero, D * 0.07f, 0.05f, chrome, new Vector3(90f, 0f, 0f), 0.95f, 0.85f);
-        k.Prim(PrimitiveType.Sphere, "Spinner", bladeRoot.transform, new Vector3(0f, 0f, 0.03f), new Vector3(D * 0.12f, D * 0.12f, 0.07f), chrome, default, 0.95f, 0.9f);
-        blades = bladeRoot.transform;
-
-        // The guard: a back and a front ring, bars joining them round the rim, spokes across the front and a glowing badge in the middle.
-        float gr = R * 0.98f, back = -0.02f, front = 0.17f;
-        const int RingParts = 20;
-        float seg = 2f * Mathf.PI * gr / RingParts * 1.08f;
-        for (int i = 0; i < RingParts; i++)
-        {
-            float a = i * 360f / RingParts;
-            Vector3 dir = Quaternion.Euler(0f, 0f, a) * Vector3.up;
-            foreach (float z in new[] { back, front })
-                k.Box("Guard Ring", h, dir * gr + Vector3.forward * z, new Vector3(seg, 0.016f, 0.016f), chrome, new Vector3(0f, 0f, a), false, 0.9f, 0.8f);
-            if (i % 2 == 0)
-                k.Box("Guard Bar", h, dir * gr + Vector3.forward * ((back + front) * 0.5f), new Vector3(0.01f, 0.01f, front - back), chrome, new Vector3(0f, 0f, a), false, 0.9f, 0.8f);
-        }
-        for (int i = 0; i < 8; i++)
-        {
-            float a = i * 45f + 22.5f;
-            Vector3 dir = Quaternion.Euler(0f, 0f, a) * Vector3.up;
-            k.Box("Guard Spoke", h, dir * gr * 0.5f + Vector3.forward * front, new Vector3(0.008f, gr, 0.008f), chrome, new Vector3(0f, 0f, a), false, 0.9f, 0.8f);
-        }
-        k.Cyl("Badge", h, new Vector3(0f, 0f, front + 0.005f), D * 0.075f, 0.02f, chrome, new Vector3(90f, 0f, 0f), 0.95f, 0.85f);
-        k.Prim(PrimitiveType.Cylinder, "Badge Glow", h, new Vector3(0f, 0f, front + 0.018f), new Vector3(D * 0.1f, 0.006f, D * 0.1f), badge, new Vector3(90f, 0f, 0f), 0f, 0.8f, false, badge);
+        PixelFanDevice.BuildModel(clicker, root, d, isPreview, previewOpacity, out blades);   // (the model itself: PixelFanDevice.BuildModel)
 
         // The area that gets blown: a flat wedge on the floor.
         if (showRange && !displayOnly)
@@ -4061,7 +3598,7 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
             GameObject wedge = new GameObject(PixelPlacedDevice.BlowAreaMark, typeof(MeshFilter), typeof(MeshRenderer));
             wedge.transform.SetParent(root.transform, false);
             wedge.transform.localPosition = new Vector3(0f, 0.02f, 0f);
-            wedge.GetComponent<MeshFilter>().sharedMesh = BuildWedgeMesh(d.radius, d.coneAngle);
+            wedge.GetComponent<MeshFilter>().sharedMesh = PixelFanDevice.WedgeMesh(d.radius, d.coneAngle);
 
             Color wedgeColor = d.color;
             wedgeColor.a = rangeOpacity;
@@ -4090,47 +3627,9 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         return root;
     }
 
-    /// <summary>A primitive with no collider and the game's material tinted with 'color'.</summary>
+    /// <summary>A primitive with no collider and the game's material tinted with 'color' (PixelFactoryKit.PlainPart).</summary>
     private GameObject MakePrimitive(PrimitiveType type, string objectName, Transform parent, Color color, bool transparent)
-    {
-        GameObject go = GameObject.CreatePrimitive(type);
-        go.name = objectName;
-        Destroy(go.GetComponent<Collider>());
-        go.transform.SetParent(parent, false);
-
-        Renderer r = go.GetComponent<Renderer>();
-        Material mat = clicker.CreateVisualMaterial(color, transparent);
-        if (mat != null) r.sharedMaterial = mat;
-        else r.material.color = color;
-        return go;
-    }
-
-    /// <summary>A flat pie slice opening along +Z, lying on the XZ plane (faces up).</summary>
-    private static Mesh BuildWedgeMesh(float length, float fullAngle)
-    {
-        const int segments = 24;
-        float half = fullAngle * 0.5f * Mathf.Deg2Rad;
-
-        Vector3[] vertices = new Vector3[segments + 2];
-        int[] triangles = new int[segments * 3];
-        vertices[0] = Vector3.zero;
-        for (int i = 0; i <= segments; i++)
-        {
-            float a = Mathf.Lerp(-half, half, i / (float)segments);
-            vertices[i + 1] = new Vector3(Mathf.Sin(a) * length, 0f, Mathf.Cos(a) * length);
-        }
-        for (int i = 0; i < segments; i++)
-        {
-            triangles[i * 3] = 0;
-            triangles[i * 3 + 1] = i + 1;
-            triangles[i * 3 + 2] = i + 2;
-        }
-
-        Mesh mesh = new Mesh { name = "Fan Wedge", vertices = vertices, triangles = triangles };
-        mesh.RecalculateNormals();
-        mesh.RecalculateBounds();
-        return mesh;
-    }
+        => PixelFactoryKit.PlainPart(clicker, type, objectName, parent, color, transparent);
 
     /// <summary>Degrees to turn this frame from the mouse wheel and the Q / E keys.</summary>
     public float TurnInput()

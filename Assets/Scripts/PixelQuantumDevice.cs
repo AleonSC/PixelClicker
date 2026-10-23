@@ -3,7 +3,7 @@ using Unity.Profiling;
 // PixelQuantumDevice.cs
 //   (extends PixelPlacedDevice) Quantum Organizer (DeviceKind.QuantumOrganizer 12, auto-added like the fan by EnsureDefaultPotions,
 //   Utilities card; needs Electric unlocked, 60 Electric, hold 3, durationSeconds 600, radius 24 = reach, boxCapacity 60 stored pixels,
-//   bodyDiameter 2.4 = the pad's inner side, bodyHeight 0.5 = wall height; model PixelConsumables.BuildQuantumBody: a glowing pad
+//   bodyDiameter 2.4 = the pad's inner side, bodyHeight 0.5 = wall height; model BuildModel (this file): a glowing pad
 //   inside four low walls with corner posts). Placed like the Magnet, starts disarmed (click to switch on). While working, every 0.1 s
 //   it scans the old pixels: a loose pixel the PLAYER put on the pad (OldPixelInfo.RecentlyHeld, BindHeldSeconds) binds its type (up to 3 types, MaxTypes); every loose old pixel of a bound
 //   type within reach (not held / flying / despawning / kinematic, not one it just released) is taken out of the old-pixel list
@@ -427,5 +427,51 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
             for (int k = 0; k < Mathf.Min(s.count, MaxVisible); k++) AddModel(s, false);
         }
         labelDirty = true;
+    }
+
+    // ---- The model (moved here from PixelConsumables 2026-10-24: each device builds its own look; PixelConsumables.BuildDeviceObject calls it) ----
+
+    /// <summary>The Quantum Organizer: a glowing pad inside four low walls with taller corner posts ('D' = the pad's inner side, 'H' = the wall height).</summary>
+    public static void BuildModel(PixelClicker clicker, GameObject root, PixelConsumables.Device d, bool isPreview, float previewOpacity)
+    {
+        float opacity = isPreview ? previewOpacity : 1f;
+        float D = d.bodyDiameter, H = d.bodyHeight, wall = 0.12f;
+        Color baseColor = new Color(0.12f, 0.1f, 0.2f, opacity);
+        Color padColor = new Color(0.25f, 0.9f, 1f, opacity);
+        Color wallColor = new Color(d.color.r, d.color.g, d.color.b, opacity);
+        Color rimColor = new Color(0.6f, 1f, 1f, opacity);
+
+        GameObject Part(string name, Vector3 pos, Vector3 scale, Color color)
+        {
+            GameObject g = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            g.name = name;
+            Destroy(g.GetComponent<Collider>());
+            g.transform.SetParent(root.transform, false);
+            g.transform.localPosition = pos;
+            g.transform.localScale = scale;
+            Material m = clicker.CreateVisualMaterial(color, isPreview);
+            if (m != null) g.GetComponent<Renderer>().sharedMaterial = m;
+            g.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            return g;
+        }
+
+        Part("Base", new Vector3(0f, 0.025f, 0f), new Vector3(D + wall * 2f + 0.1f, 0.05f, D + wall * 2f + 0.1f), baseColor);
+        Part("Pad", new Vector3(0f, 0.06f, 0f), new Vector3(D, 0.02f, D), padColor);
+        // Two lines across the pad, like a binding mark.
+        Part("Pad Line", new Vector3(0f, 0.075f, 0f), new Vector3(D * 0.96f, 0.01f, 0.035f), rimColor);
+        Part("Pad Line", new Vector3(0f, 0.075f, 0f), new Vector3(0.035f, 0.01f, D * 0.96f), rimColor);
+
+        float o = D * 0.5f + wall * 0.5f;
+        Part("Wall N", new Vector3(0f, H * 0.5f, o), new Vector3(D + wall * 2f, H, wall), wallColor);
+        Part("Wall S", new Vector3(0f, H * 0.5f, -o), new Vector3(D + wall * 2f, H, wall), wallColor);
+        Part("Wall E", new Vector3(o, H * 0.5f, 0f), new Vector3(wall, H, D), wallColor);
+        Part("Wall W", new Vector3(-o, H * 0.5f, 0f), new Vector3(wall, H, D), wallColor);
+        Part("Rim N", new Vector3(0f, H + 0.015f, o), new Vector3(D + wall * 2f, 0.03f, wall * 1.2f), rimColor);
+        Part("Rim S", new Vector3(0f, H + 0.015f, -o), new Vector3(D + wall * 2f, 0.03f, wall * 1.2f), rimColor);
+        Part("Rim E", new Vector3(o, H + 0.015f, 0f), new Vector3(wall * 1.2f, 0.03f, D), rimColor);
+        Part("Rim W", new Vector3(-o, H + 0.015f, 0f), new Vector3(wall * 1.2f, 0.03f, D), rimColor);
+        for (int sx = -1; sx <= 1; sx += 2)
+            for (int sz = -1; sz <= 1; sz += 2)
+                Part("Post", new Vector3(sx * o, H * 0.65f, sz * o), new Vector3(wall * 1.7f, H * 1.3f, wall * 1.7f), rimColor);
     }
 }

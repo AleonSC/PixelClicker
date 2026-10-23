@@ -72,7 +72,7 @@ internal class PixelBoltLayer
 /// </summary>
 public class PixelChargeBooster : PixelPlacedDevice
 {
-    /// <summary>How far the centre of the Tesla dome on top sits above the body height (PixelConsumables.BuildBoosterBody): sparks and the click spot are there.</summary>
+    /// <summary>How far the centre of the Tesla dome on top sits above the body height (BuildModel, in this file): sparks and the click spot are there.</summary>
     public const float DomeAbove = 0.12f;
 
     private Transform fill;
@@ -277,5 +277,61 @@ public class PixelChargeBooster : PixelPlacedDevice
         info.Add("Charge", Mathf.RoundToInt(ChargeFraction * 100f) + "%");
         if (!info.Full) return;
         info.Add("Supercharge", superSeconds.ToString("0.#") + " s at " + superClicksPerSecond.ToString("0.#") + " clicks a second");
+    }
+
+    // ---- The model (moved here from PixelConsumables 2026-10-24: each device builds its own look; PixelConsumables.BuildDeviceObject calls it) ----
+
+    /// <summary>
+    /// The Charge Booster's look (2026-10-19): a dark plinth with a yellow hazard band and bolts, a graphite capacitor drum with three glowing coil rings,
+    /// red / black terminals on its front, a stack of ceramic insulators and a polished Tesla dome on top (PixelChargeBooster.DomeAbove: its sparks and
+    /// click spot sit there), and a steel-framed bracket on its right (+X) holding the charge meter (PixelChargeBooster builds the live meter in it).
+    /// </summary>
+    public static void BuildModel(PixelClicker clicker, GameObject root, PixelConsumables.Device d, bool isPreview, float previewOpacity)
+    {
+        PixelFactoryKit k = new PixelFactoryKit(clicker, isPreview) { alpha = previewOpacity };
+        Transform t = root.transform;
+        float D = d.bodyDiameter, H = d.bodyHeight, drum = D * 0.32f, top = H * 0.78f;
+        Color plinth = new Color(0.13f, 0.13f, 0.15f, 1f), graphite = new Color(0.2f, 0.21f, 0.24f, 1f), steel = new Color(0.74f, 0.77f, 0.83f, 1f),
+              ceramic = new Color(0.93f, 0.95f, 1f, 1f), glow = d.color;
+
+        // Plinth with a hazard band and four bolts.
+        k.Disc("Plinth", t, 0.05f, D * 0.55f, 0.1f, plinth, 0.4f, 0.4f);
+        k.Disc("Hazard Band", t, 0.075f, D * 0.56f, 0.03f, d.color, 0.3f, 0.5f);
+        for (int i = 0; i < 4; i++)
+        {
+            float a = (i * 90f + 45f) * Mathf.Deg2Rad;
+            k.Cyl("Bolt", t, new Vector3(Mathf.Cos(a) * D * 0.46f, 0.11f, Mathf.Sin(a) * D * 0.46f), 0.025f, 0.03f, steel, default, 0.9f, 0.7f);
+        }
+
+        // The capacitor drum with three glowing coil rings and a steel lid.
+        k.Cyl("Drum", t, new Vector3(0f, (0.1f + top) * 0.5f, 0f), drum, top - 0.1f, graphite, default, 0.65f, 0.6f);
+        for (int i = 0; i < 3; i++) k.Disc("Coil Ring", t, 0.1f + (top - 0.1f) * (0.25f + i * 0.25f), drum * 1.08f, 0.035f, glow, 0f, 0.7f, glow * 0.9f);
+        k.Disc("Lid", t, top, drum * 1.06f, 0.05f, steel, 0.9f, 0.75f);
+
+        // Red and black terminals on the front (-Z).
+        for (int s = -1; s <= 1; s += 2)
+        {
+            Vector3 p = new Vector3(s * drum * 0.45f, top * 0.55f, -drum * 0.95f);
+            k.Cyl("Terminal", t, p + new Vector3(0f, 0f, -0.04f), 0.03f, 0.1f, steel, new Vector3(90f, 0f, 0f), 0.9f, 0.7f);
+            Color cap = s < 0 ? new Color(0.85f, 0.15f, 0.12f, 1f) : new Color(0.08f, 0.08f, 0.09f, 1f);
+            k.Cyl("Terminal Cap", t, p + new Vector3(0f, 0f, -0.1f), 0.045f, 0.04f, cap, new Vector3(90f, 0f, 0f), 0.2f, 0.6f);
+        }
+
+        // Insulators, a neck and the Tesla dome with a ring under it.
+        for (int i = 0; i < 3; i++) k.Disc("Insulator", t, top + 0.05f + i * 0.055f, D * (0.2f - i * 0.035f), 0.035f, ceramic, 0.1f, 0.9f);
+        float domeY = H + PixelChargeBooster.DomeAbove;
+        k.Cyl("Neck", t, new Vector3(0f, (top + domeY) * 0.5f, 0f), 0.03f, domeY - top, steel, default, 0.9f, 0.8f);
+        k.Disc("Dome Ring", t, domeY - 0.06f, D * 0.26f, 0.035f, steel, 0.95f, 0.85f);
+        k.Ball("Dome", t, new Vector3(0f, domeY, 0f), D * 0.2f, steel, 0.95f, 0.9f);
+
+        // The meter bracket on the right (+X): a base plate, two arms to the drum, a top cap and a little glowing lamp.
+        float mx = D * 0.75f, mh = H * 1.1f;
+        k.Box("Meter Plate", t, new Vector3(mx, 0.02f, 0f), new Vector3(0.24f, 0.04f, 0.24f), plinth, default, false, 0.4f, 0.4f);
+        k.Box("Meter Cap", t, new Vector3(mx, mh + 0.025f, 0f), new Vector3(0.2f, 0.05f, 0.2f), steel, default, false, 0.9f, 0.75f);
+        foreach (float y in new[] { mh * 0.25f, mh * 0.75f })
+            k.Box("Meter Arm", t, new Vector3((drum + mx) * 0.5f, y, 0f), new Vector3(mx - drum, 0.04f, 0.06f), steel, default, false, 0.9f, 0.7f);
+        for (int s = -1; s <= 1; s += 2)
+            k.Box("Meter Rail", t, new Vector3(mx, mh * 0.5f, s * 0.085f), new Vector3(0.03f, mh, 0.03f), steel, default, false, 0.9f, 0.7f);
+        k.Prim(PrimitiveType.Sphere, "Meter Lamp", t, new Vector3(mx, mh + 0.08f, 0f), Vector3.one * 0.07f, glow, default, 0f, 0.8f, false, glow);
     }
 }

@@ -7,6 +7,8 @@
 //   smoothness, emission), so pieces that are rebuilt often (belts while placing, highlights, corner joints, elevator troughs) stop making new materials
 //   every time - they used to leak about 8 a frame while a belt was being placed. Only for builds that never change a material they got from the kit
 //   (use a MaterialPropertyBlock for per-object colour); DestroyMaterials leaves shared ones alone. PixelOwnedMesh frees a code-made Mesh with its object.
+//   Also Strut (a cylinder from a to b), Disc (a flat band round Y) and static PlainPart (a collider-less primitive in the game's material) - used by the
+//   device models (each device's own BuildModel, e.g. PixelFanDevice / PixelLightningRod) and the potion models.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -80,6 +82,32 @@ public sealed class PixelFactoryKit
 
     public GameObject Ball(string name, Transform parent, Vector3 pos, float radius, Color c, float metal = 0.2f, float smooth = 0.5f)
         => Prim(PrimitiveType.Sphere, name, parent, pos, Vector3.one * radius * 2f, c, default, metal, smooth, false);
+
+    /// <summary>A thin cylinder from a to b (a strut, a wire).</summary>
+    public GameObject Strut(string name, Transform parent, Vector3 a, Vector3 b, float radius, Color c, float metal = 0.7f, float smooth = 0.6f)
+    {
+        Vector3 dir = b - a;
+        return Prim(PrimitiveType.Cylinder, name, parent, (a + b) * 0.5f, new Vector3(radius * 2f, dir.magnitude * 0.5f, radius * 2f), c,
+                    Quaternion.FromToRotation(Vector3.up, dir).eulerAngles, metal, smooth);
+    }
+
+    /// <summary>A flat disc / band round the Y axis at height y (a cylinder 'radius' wide and 'thick' tall), optionally glowing.</summary>
+    public GameObject Disc(string name, Transform parent, float y, float radius, float thick, Color c, float metal = 0.6f, float smooth = 0.6f, Color? glow = null)
+        => Prim(PrimitiveType.Cylinder, name, parent, new Vector3(0f, y, 0f), new Vector3(radius * 2f, thick * 0.5f, radius * 2f), c, default, metal, smooth, false, glow);
+
+    /// <summary>A plain primitive with no collider and the game's material tinted with 'color' (no kit needed: the potion models, the Vacuum's turbine).</summary>
+    public static GameObject PlainPart(PixelClicker clicker, PrimitiveType type, string name, Transform parent, Color color, bool transparent)
+    {
+        GameObject go = GameObject.CreatePrimitive(type);
+        go.name = name;
+        Object.Destroy(go.GetComponent<Collider>());
+        go.transform.SetParent(parent, false);
+        Renderer r = go.GetComponent<Renderer>();
+        Material mat = clicker != null ? clicker.CreateVisualMaterial(color, transparent) : null;
+        if (mat != null) r.sharedMaterial = mat;
+        else r.material.color = color;
+        return go;
+    }
 
     /// <summary>Destroys every material this kit made for itself (call when what it built is destroyed for good, e.g. the studio intro's set). Shared materials are kept.</summary>
     public void DestroyMaterials()

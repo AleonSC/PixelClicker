@@ -1,7 +1,7 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelStorageCrate.cs
 //   (extends PixelPlacedDevice) Storage Crate (DeviceKind.StorageCrate 13, auto-added like the fan, Utilities card; 300 Black + 200 Blue, hold 3,
-//   bodyDiameter 2.5 = width, bodyHeight 0.3; model PixelConsumables.BuildCrateBody: a wooden tray with two rows of five
+//   bodyDiameter 2.5 = width, bodyHeight 0.3; model BuildModel (this file): a wooden tray with two rows of five
 //   compartments): permanent and never disarmed (no countdown: duration 1e9, timer text hidden; PlaceDevice / RestorePlacedDevice skip
 //   Disarm). Drag old pixels over it with Pixel Grabbing and left-click the crate: loose old pixels lying within its footprint
 //   (FindLoose, nearest first) are stored in the next free section (row 1 left to right, then row 2; ReleaseOldPixel + FlyIn, their
@@ -9,7 +9,7 @@
 //   distance) to take it out: SpawnStoredPixel at the compartment and PixelGrab.BeginHold puts it in the mouse's hand. A pixel you
 //   hold and let go of above the crate is stored at once (any pixel tagged 'recently held by the player' - OldPixelInfo.RecentlyHeld, PixelGrab.recentlyHeldSeconds - that ends up in the footprint is stored too, from ANY height: CaptureRecentlyHeld) (TryStoreReleased: PixelGrab.HeldBody was a pixel last frame and is not now,
 //   and it is inside the footprint and below ~3 units above it). Two grip handles on the short (+/-X) ends (the shared PixelCarryHandles: parts by
-//   PixelCarryHandles.BuildParts from BuildCrateBody, behaviour by the component): hovering one shows the open-hand cursor (PixelHandCursor: code-drawn open hand / fist textures set with
+//   PixelCarryHandles.BuildParts from BuildModel, behaviour by the component): hovering one shows the open-hand cursor (PixelHandCursor: code-drawn open hand / fist textures set with
 //   Cursor.SetCursor, requested per frame, normal cursor returns when nobody asks), left-drag moves the crate over the floor plane
 //   (DragTo, kept on screen) with the fist cursor, and while dragging scroll / Q / E turn it (PixelConsumables.TurnInput; also when placing it; the yaw is saved in PlacedState). PixelStorageCrate.ClaimsPointer() makes PixelGrab step aside when the click belongs
 //   to the crate; PixelPointerClaim blocks cube clicks. Removing it (Ended) lets everything out. Saved in PlacedState.extra
@@ -401,5 +401,45 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelSocketDevice, IPixelHu
             sections[slot].amount = amount;
             MakeModel(sections[slot], slot);
         }
+    }
+
+    // ---- The model (moved here from PixelConsumables 2026-10-24: each device builds its own look; PixelConsumables.BuildDeviceObject calls it) ----
+
+    public static void BuildModel(PixelClicker clicker, GameObject root, PixelConsumables.Device d, bool isPreview, float previewOpacity)
+    {
+        float opacity = isPreview ? previewOpacity : 1f;
+        float W = d.bodyDiameter, cell = W / 5f, Dp = cell * 2f, H = d.bodyHeight, t = 0.06f;
+        Color wood = new Color(d.color.r, d.color.g, d.color.b, opacity);
+        Color dark = new Color(d.color.r * 0.55f, d.color.g * 0.55f, d.color.b * 0.55f, opacity);
+        Color trim = new Color(0.85f, 0.75f, 0.45f, opacity);
+
+        void Part(string name, Vector3 pos, Vector3 scale, Color color)
+        {
+            GameObject g = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            g.name = name;
+            Destroy(g.GetComponent<Collider>());
+            g.transform.SetParent(root.transform, false);
+            g.transform.localPosition = pos;
+            g.transform.localScale = scale;
+            Material m = clicker.CreateVisualMaterial(color, isPreview);
+            if (m != null) g.GetComponent<Renderer>().sharedMaterial = m;
+            g.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        }
+
+        Part("Floor", new Vector3(0f, 0.03f, 0f), new Vector3(W + t * 2f, 0.06f, Dp + t * 2f), dark);
+        float ox = W * 0.5f + t * 0.5f, oz = Dp * 0.5f + t * 0.5f;
+        Part("Wall N", new Vector3(0f, H * 0.5f, oz), new Vector3(W + t * 2f, H, t), wood);
+        Part("Wall S", new Vector3(0f, H * 0.5f, -oz), new Vector3(W + t * 2f, H, t), wood);
+        Part("Wall E", new Vector3(ox, H * 0.5f, 0f), new Vector3(t, H, Dp), wood);
+        Part("Wall W", new Vector3(-ox, H * 0.5f, 0f), new Vector3(t, H, Dp), wood);
+        Part("Divider", new Vector3(0f, H * 0.45f, 0f), new Vector3(W, H * 0.9f, t * 0.7f), trim);
+        for (int i = 1; i < 5; i++)
+            Part("Divider", new Vector3(-W * 0.5f + i * cell, H * 0.45f, 0f), new Vector3(t * 0.7f, H * 0.9f, Dp), trim);
+        // A carrying handle on each short end (the +X / -X sides): two posts and a grip bar (shared PixelCarryHandles). Click and drag one to move the crate.
+        PixelCarryHandles.BuildParts(Part, W * 0.5f + t, Dp, H * 0.55f, 0.34f, opacity);
+        Part("Rim N", new Vector3(0f, H + 0.012f, oz), new Vector3(W + t * 2f, 0.025f, t * 1.4f), trim);
+        Part("Rim S", new Vector3(0f, H + 0.012f, -oz), new Vector3(W + t * 2f, 0.025f, t * 1.4f), trim);
+        Part("Rim E", new Vector3(ox, H + 0.012f, 0f), new Vector3(t * 1.4f, 0.025f, Dp), trim);
+        Part("Rim W", new Vector3(-ox, H + 0.012f, 0f), new Vector3(t * 1.4f, 0.025f, Dp), trim);
     }
 }
