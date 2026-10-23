@@ -1532,3 +1532,4 @@
 [2026-10-23 16:51 UTC] Added an interactive code map (tools/code-map/CodeMap.html, rebuilt by tools/code-map/build.py): every script grouped by area, with what it uses and what uses it.
 [2026-10-23 17:00 UTC] Added a code health report (tools/code-health/CodeHealth.html, rebuilt by tools/code-health/build.py): scores every script for per-frame costs, size, project rules and docs, with a fix-first list and a score trend; first reading 92.5 / 100.
 [2026-10-23 17:08 UTC] Added the interface map: every window, HUD piece, popup, menu and Dev Hub tab has a short ID (like W4.3) to quote when asking for changes, listed in docs/UIMap.md and on an interactive map page.
+[2026-10-23 17:13 UTC] Added the dialogue map: every 'Got it' box, tutorial step, perk popup and character line from Dialogue.txt has a short ID (like T73.1 or C1.5) to quote when asking for rewording, listed in docs/DialogueMap.md and on an interactive page.

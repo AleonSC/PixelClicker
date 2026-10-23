@@ -1,0 +1,164 @@
+<title>Pixel Clicker Dialogue Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<!--SHARED STYLE-->
+<style>
+/* Dialogue map extras: the detail card shows each line as a 'Got it' box preview. */
+.top.dlg { grid-template-columns: minmax(0, 1fr) minmax(0, 520px); }
+@media (max-width: 960px) { .top.dlg { grid-template-columns: minmax(0, 1fr); } }
+.lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; max-height: 70vh; overflow: auto; }
+.lines li { display: grid; gap: 6px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; }
+.lines .lhead { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.lines .lkey { font: 700 12px var(--body); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.lines .lline { font: 500 11.5px var(--mono); color: var(--muted); margin-left: auto; }
+.gotit { background: var(--screen); color: #f1eefc; border: 1px solid var(--neon); border-radius: 8px; padding: 10px 12px; font: 14px/1.45 var(--body); white-space: pre-wrap; overflow-wrap: anywhere; }
+.gotit.empty { color: #a7a3c4; font-style: italic; }
+.gotit .ph { color: #ffcc33; font-family: var(--mono); font-size: 12.5px; }
+.gotit .tag { color: #8fe6f7; font-family: var(--mono); font-size: 11.5px; }
+.sec-raw { font: 500 12px var(--mono); color: var(--muted); }
+.list.dl { grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); }
+.row .rprev { display: block; color: var(--muted); font-size: 12.5px; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.how { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: grid; gap: 8px; align-content: start; }
+.how h2 { margin: 0; font: 700 15px var(--display); letter-spacing: .03em; }
+.how ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px; }
+.stat { background: var(--chip); color: var(--chip-ink); border-radius: 8px; padding: 6px 10px; font-size: 13px; }
+.stat b { font-family: var(--mono); color: var(--accent); }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Pixel Clicker <span>Dialogue Map</span></h1>
+    <p>Every “Got it” box and every character line ({{COUNT}} lines). Pick one, copy its ID and quote it: <b class="mono">reword T12.1</b>, <b class="mono">make C1.5 funnier</b>. The number after the dot is one line of that section.</p>
+  </header>
+
+  <section class="top dlg">
+    <div class="how">
+      <h2>How to use it</h2>
+      <ol>
+        <li>Search or browse the sections below and click one.</li>
+        <li>Its lines show on the right, drawn like the game's boxes, each with its ID and a copy button.</li>
+        <li>Paste the ID into chat with what you want changed, or edit the line yourself in <code>Assets/Resources/Dialogue.txt</code> (the line number is shown).</li>
+      </ol>
+      <p class="example">Yellow <span class="mono">{0}</span>-style words are filled in by the game; blue <span class="mono">&lt;b&gt;</span> tags are formatting. Keep both when you reword.</p>
+      <div id="stats" class="stats"></div>
+    </div>
+    <aside id="detail" class="detail" aria-live="polite"></aside>
+  </section>
+
+  <section class="tools">
+    <input id="q" type="search" placeholder="Search the words, a name or an ID: fan, Cubie, T12…" aria-label="Search the dialogue">
+    <span id="count" class="count"></span>
+  </section>
+  <section id="groups" style="display:grid;gap:18px"></section>
+</div>
+
+<script>
+const DATA = /*DATA*/null;
+const byId = new Map(DATA.sections.map(s => [s.id, s]));
+const groupOf = k => DATA.groups.find(g => g.key === k);
+let selected = null;
+
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+/** The text as the box would show it: \n breaks, placeholders and rich-text tags marked. */
+function preview(t) {
+  return esc(t).replace(/\\n/g, "\n")
+    .replace(/\{[^}]+\}/g, m => `<span class="ph">${m}</span>`)
+    .replace(/&lt;\/?(b|i|color[^&]*)&gt;/g, m => `<span class="tag">${m}</span>`);
+}
+
+function copyText(text, btn) {
+  const done = () => { if (!btn) return; const t = btn.textContent; btn.textContent = "Copied"; btn.classList.add("done"); setTimeout(() => { btn.textContent = t; btn.classList.remove("done"); }, 1200); };
+  try { navigator.clipboard.writeText(text).then(done, () => fallback(text, done)); } catch (e) { fallback(text, done); }
+}
+function fallback(text, done) {
+  const ta = document.createElement("textarea");
+  ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand("copy"); done(); } catch (e) { }
+  ta.remove();
+}
+
+const short = t => t.length > 60 ? t.slice(0, 57) + "…" : t;
+function refText(s, n) {
+  if (n == null) return `${s.id} (${s.title})`;
+  const f = s.fields[n];
+  return `${s.id}.${n + 1} (${s.title} > ${f.key}: "${short(f.text)}")`;
+}
+
+function renderDetail(s) {
+  const d = document.getElementById("detail");
+  if (!s) { d.innerHTML = `<h2>Pick a section</h2>`; return; }
+  const g = groupOf(s.group);
+  const lines = s.fields.map((f, n) => `<li>
+      <div class="lhead"><span class="pid">${s.id}.${n + 1}</span><span class="lkey">${esc(f.key)}</span>
+        <button class="copy" type="button" data-n="${n}">Copy</button><span class="lline">line ${f.line}</span></div>
+      <div class="gotit${f.text ? "" : " empty"}">${f.text ? preview(f.text) : "(empty: the game keeps its own text)"}</div></li>`).join("");
+  d.innerHTML = `
+    <div class="idline"><span class="bigid">${s.id}</span><div class="chips"><span class="chip">${esc(g.title)}</span><span class="chip">${s.fields.length} line${s.fields.length === 1 ? "" : "s"}</span></div></div>
+    <h2>${esc(s.title)}</h2>
+    <div class="sec-raw">[${esc(s.section)}] · Dialogue.txt line ${s.line}</div>
+    <button class="primary" type="button" id="copy-main">Copy “${esc(refText(s))}”</button>
+    <ul class="lines">${lines}</ul>`;
+  d.querySelector("#copy-main").addEventListener("click", e => copyText(refText(s), e.currentTarget));
+  d.querySelectorAll("button[data-n]").forEach(b => b.addEventListener("click", e => copyText(refText(s, +b.dataset.n), e.currentTarget)));
+}
+
+function select(id, fromHash) {
+  const s = byId.get(id) || null;
+  selected = s ? s.id : null;
+  renderDetail(s);
+  document.querySelectorAll(".row").forEach(el => el.classList.toggle("sel", el.dataset.id === selected));
+  if (s && !fromHash) { try { history.replaceState(null, "", "#" + s.id); } catch (e) {} }
+}
+
+function hit(s, q) {
+  if (!q) return { ok: true, n: -1 };
+  if ([s.id, s.title, s.section].join(" ").toLowerCase().includes(q)) return { ok: true, n: -1 };
+  const n = s.fields.findIndex((f, i) => (f.key + " " + f.text).toLowerCase().includes(q) || `${s.id}.${i + 1}`.toLowerCase() === q);
+  return { ok: n >= 0, n };
+}
+
+function buildList() {
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  const root = document.getElementById("groups");
+  root.innerHTML = "";
+  let shown = 0;
+  for (const g of DATA.groups) {
+    const rows = [];
+    for (const s of DATA.sections) {
+      if (s.group !== g.key) continue;
+      const m = hit(s, q);
+      if (!m.ok) continue;
+      shown++;
+      const f = s.fields[m.n >= 0 ? m.n : s.fields.findIndex(x => x.text) ] || s.fields[0];
+      const label = m.n >= 0 ? `${s.id}.${m.n + 1} ` : "";
+      rows.push(`<button class="row${s.id === selected ? " sel" : ""}" type="button" data-id="${s.id}">
+        <span class="rid">${s.id}</span>
+        <span><span class="rname">${esc(s.title)}</span>
+        <span class="rprev">${f ? esc(label + f.text.replace(/\\n/g, " ")) : ""}</span></span></button>`);
+    }
+    if (!rows.length) continue;
+    const sec = document.createElement("div");
+    sec.className = "group";
+    sec.innerHTML = `<h3><span class="key">${g.key}</span> ${esc(g.title)} <small>${esc(g.desc)}</small></h3><div class="list dl">${rows.join("")}</div>`;
+    root.appendChild(sec);
+  }
+  if (!shown) root.innerHTML = `<p class="empty">Nothing matches “${esc(q)}”. Try a word from the box, a character's name or an ID like T12.</p>`;
+  root.querySelectorAll(".row").forEach(r => r.addEventListener("click", () => {
+    select(r.dataset.id);
+    if (window.matchMedia("(max-width: 960px)").matches) document.getElementById("detail").scrollIntoView({ block: "start" });
+  }));
+  document.getElementById("count").textContent = q ? `${shown} of ${DATA.sections.length} sections` : `${DATA.sections.length} sections`;
+}
+
+document.getElementById("stats").innerHTML = DATA.groups.map(g =>
+  `<span class="stat"><b>${g.key}</b> ${esc(g.title)}: ${DATA.sections.filter(s => s.group === g.key).length}</span>`).join("");
+document.getElementById("q").addEventListener("input", buildList);
+buildList();
+const fromHash = (location.hash || "").slice(1).split(".")[0];
+select(byId.has(fromHash) ? fromHash : DATA.sections.find(s => s.section === "Tip: husk_crush")?.id || DATA.sections[0].id, true);
+</script>

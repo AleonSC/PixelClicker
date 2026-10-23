@@ -1,0 +1,106 @@
+# Dialogue map IDs: one per [section] of Assets/Resources/Dialogue.txt. Never renumber or reuse an ID (the user quotes them).
+# New sections get the next free number of their group when build.py runs.
+C1 | Cubie
+C2 | Visitor: tinkerer
+C3 | Visitor: wizard
+C4 | Visitor: entrepreneur
+C5 | Visitor: farmer
+C6 | Visitor: prospector
+C7 | Visitor: lumberjack
+C8 | Visitor: egg
+C9 | Visitor: bean
+G1 | Intro tips
+G2 | Tutorial: Shop
+G3 | Tutorial: Toggles
+G4 | Tutorial: Skills
+G5 | Guide: Woodcutting
+P1 | Perk popup: standard level 2
+P2 | Perk popup: standard level 3
+P3 | Perk popup: woodcutting level 2
+P4 | Perk popup: woodcutting level 3
+P5 | Perk popup: woodcutting level 5
+P6 | Perk popup: electrician level 5
+P7 | Perk popup: electrician level 10
+P8 | Perk popup: electrician level 20
+T1 | Tip: minigame_traffic
+T2 | Tip: minigame_evade
+T3 | Tip: minigame_weakspot
+T4 | Tip: minigame_blink
+T5 | Tip: minigame_dash
+T6 | Tip: minigame_breakout
+T7 | Tip: minigame_sort
+T8 | Tip: minigame_snake
+T9 | Tip: minigame_stardust
+T10 | Tip: event_log
+T11 | Tip: crafting
+T12 | Tip: grab
+T13 | Tip: timestop
+T14 | Tip: bank
+T15 | Tip: minigame_ghost
+T16 | Tip: minigame_meteor
+T17 | Tip: minigame_bomb
+T18 | Tip: minigame_pad
+T19 | Tip: potion
+T20 | Tip: device_Vacuum
+T21 | Tip: device_Fan
+T22 | Tip: device_Sprinkler
+T23 | Tip: device_MagnetSorter
+T24 | Tip: device_QuantumOrganizer
+T25 | Tip: device_StorageCrate
+T26 | Tip: device_SortingHopper
+T27 | Tip: device_Funnel
+T28 | Tip: device_Sweeper
+T29 | Tip: device_JunctionBox
+T30 | Tip: device_PocketBiomassGenerator
+T31 | Tip: device_BiomassGenerator
+T32 | Tip: device_Magnet
+T33 | Tip: device_Sorter
+T34 | Tip: craft
+T35 | Tip: combo
+T36 | Tip: upgrade_interval
+T37 | Tip: upgrade_clicks
+T38 | Tip: upgrade_combo
+T39 | Tip: upgrade_cap
+T40 | Tip: upgrade_bank
+T41 | Tip: upgrade_ultra
+T42 | Tip: pixel_Glass
+T43 | Tip: pixel_Vacuum
+T44 | Tip: pixel_Obsidian
+T45 | Tip: pixel_Luminescent
+T46 | Tip: pixel_Singularity
+T47 | Tip: pixel_Ghost
+T48 | Tip: pixel_Electric
+T49 | Tip: pixel_Treasure
+T50 | Tip: pixel_Nuclear
+T51 | Tip: pixel_Fire
+T52 | Tip: pixel_Dirt
+T53 | Tip: hazard
+T54 | Tip: woodworking
+T55 | Tip: pixel_Fish
+T56 | Tip: pixel_Berry
+T57 | Tip: pixel_Wood
+T58 | Tip: pixel_Rock
+T59 | Tip: pixel_Copper
+T60 | Tip: pixel_Water
+T61 | Tip: pixel_Seed
+T62 | Tip: pixel_Mirror
+T63 | Tip: stone_first
+T64 | Tip: god_first
+T65 | Tip: dragon_first
+T66 | Tip: pixel_Meteor
+T67 | Tip: pixel_Red
+T68 | Tip: bank_hose
+T69 | Tip: bank_suck
+T70 | Tip: bank_spit
+T71 | Tip: bank_full
+T72 | Tip: node_standard_aimed
+T73 | Tip: husk_crush
+T74 | Tip: stake_intro
+T75 | Tip: blockhold
+T76 | Tip: robot
+T77 | Tip: timeslow
+T78 | Tip: timestop_slow
+T79 | Tip: timestop_first
+T80 | Tip: timestop_empty
+T81 | Tip: ultra
+T82 | Minigame: Black Hole

@@ -273,3 +273,4 @@ One line per script / system: what it is and where its details are. Search it (`
 | `PixelDevTools.cs` | Dev tools (Editor/dev builds only unless allowInFullBuild is ticked on the component; | `docs/systems/PixelDevTools.md` |
 | `tools/ui-map/` (`ui_map.txt`, `build.py`) | Interface map: every UI piece with a stable ID (H HUD, W windows, N popups, M menus, O world UI, D Dev Hub; `.n` = part). Builds `docs/UIMap.md` and the interactive map page. | `docs/UIMap.md` |
 | Device map | Interactive HTML map of every device and how husks / power connect them (open in a browser; keep it in step with ConnectionMap.md). | `docs/DeviceMap.html` |
+| `tools/dialogue-map/` (`build.py`, `ids.txt`) | Dialogue map: every section of Dialogue.txt ('Got it' tips T, tutorials / guides G, perk popups P, characters C) with a stable ID; builds `docs/DialogueMap.md` and the interactive dialogue page. | `docs/DialogueMap.md` |

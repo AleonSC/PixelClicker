@@ -17,6 +17,7 @@
 ## Finding things
 - **`docs/Index.md`** = ONE line per script / system (what it is + where its details are: its header comment or `docs/systems/<Name>.md`). Do NOT read it whole: `grep -i <word> docs/Index.md` (a script name, system or feature word) and open the doc / script header it points to.
 - **UI IDs:** when the user quotes an interface ID (`W4`, `N5`, `W4.3` = part 3 of W4), look it up in `docs/UIMap.md` (`grep -n '^| W4 ' docs/UIMap.md`). The data is `tools/ui-map/ui_map.txt`: add a line there for every new window / HUD piece / popup (next free number in its group, never renumber), then `python3 tools/ui-map/build.py` and republish the map page (https://claude.ai/artifact/1EyXDCm4GQmWKkyeCZvd4L, file `tools/ui-map/ui_map.html`).
+- **Dialogue IDs:** IDs like `T73`, `G2`, `P4`, `C1.5` (tips, tutorials / guides, perk popups, characters; `.n` = n-th line of that section) are sections of `Assets/Resources/Dialogue.txt`: look them up in `docs/DialogueMap.md`. After any change to Dialogue.txt run `python3 tools/dialogue-map/build.py` (new sections get the next free ID in `tools/dialogue-map/ids.txt`, never renumber) and republish the page (https://claude.ai/artifact/YToz2sEZEQQabQwrCcMaaC, file `tools/dialogue-map/dialogue_map.html`).
 - Big-picture docs: `docs/GameDesign.md` (design, open questions), `docs/systems/ConnectionMap.md` (what links to what), `docs/systems/PixelRules.md` (click / husk rules), `docs/GameReference.txt` (whole game for another AI; rebuild with `python3 tools/game-reference/build.py`).
 
 ## Data model
