@@ -15,17 +15,13 @@ using static PixelInput;
 /// over the nearest loose pixel of the chosen type and abducts it into your Pixel Bank with its beam.
 /// The job window is the standard Fixed window (PixelUIKit.CreateWindow).
 /// </summary>
-public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
+public partial class PixelRobotWorker : MonoBehaviour
 {
-    // ---- save: this system writes its own part of the save file (PixelSaveRegistry) ----
-    [System.Serializable] private class SaveState { public string job; public bool disabled; }
-    string IPixelSaved.SaveId => "ufo";
-    int IPixelSaved.SaveOrder => 160;
-    string IPixelSaved.Export() => PixelSaveRegistry.ToJson(new SaveState { job = Export(), disabled = UserDisabled });
-    void IPixelSaved.Import(string data) { SaveState s = PixelSaveRegistry.FromJson<SaveState>(data); Import(s != null ? s.job : null); UserDisabled = s != null && s.disabled; }
+    // ---- progress: the switch and the job live in the GameState (PixelGameState.Current.ufo); the job's ghost is rebuilt from it on load ----
+    private static UfoState S => PixelGameState.Current.ufo;
     private void Awake()
     {
-        PixelSaveRegistry.Register(this);
+        PixelGameState.Loaded += OnLoaded;
         PixelHuskPool.HuskReleasing += OnHuskReleasing;
     }
 
@@ -182,22 +178,20 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
 
     public static bool BelongsToUfo(Transform t) => UfoRoot != null && t != null && (t == UfoRoot || t.IsChildOf(UfoRoot));
 
-    public bool Active => active && !disableRobot && !userDisabled;
+    public bool Active => active && !disableRobot && !S.userDisabled;
 
     /// <summary>The upgrade was bought (even if the player switched it off in Toggles).</summary>
     public bool Bought => active && !disableRobot;
 
-    private bool userDisabled;
-
-    /// <summary>The player switched the UFO off with the Toggles window. Saved.</summary>
+    /// <summary>The player switched the UFO off with the Toggles window. Saved (GameState).</summary>
     public bool UserDisabled
     {
-        get => userDisabled;
+        get => S.userDisabled;
         set
         {
-            userDisabled = value;
+            S.userDisabled = value;
             ResetSaver();   // switching off and on again brings it back onto the screen
-            if (userDisabled) { Hovering = false; HideAll(); CloseWindow(); }
+            if (value) { Hovering = false; HideAll(); CloseWindow(); }
         }
     }
 
@@ -231,7 +225,7 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
 
     private void OnDestroy()
     {
-        PixelSaveRegistry.Unregister(this);
+        PixelGameState.Loaded -= OnLoaded;
         PixelHuskPool.HuskReleasing -= OnHuskReleasing;
         PixelWindows.Unregister(this);
         ExitCockpit();
@@ -252,7 +246,7 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
     {
         if (clicker == null || consumables == null) return;
         bool show = Active && !PixelGameMode.TitleOrIntro && !PixelMinigame.TakeoverActive;
-        if (Piloting && (!show || userDisabled)) ExitCockpit();
+        if (Piloting && (!show || S.userDisabled)) ExitCockpit();
         if (!show)
         {
             Hovering = false;
@@ -1162,6 +1156,10 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
         bankJob = false;
         bankTarget = null;
         jobDevice = device; jobPos = point; jobYaw = yaw;
+        S.bankJob = false;   // (the job is progress: kept in the GameState)
+        S.device = device >= 0 && consumables != null ? consumables.GetDevice(device).displayName : "";
+        S.position = point;
+        S.yaw = yaw;
         waitT = 0f;
         occupied = false;
         nextCheck = 0f;
@@ -1172,37 +1170,24 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
 
     private void ClearJob() { SetJob(-1, Vector3.zero, 0f); }
 
-    /// <summary>The job as text for the save file ("" = none).</summary>
-    public string Export()
-    {
-        if (bankJob) return "bank|" + bankType;
-        if (jobDevice < 0 || consumables == null) return "";
-        CultureInfo c = CultureInfo.InvariantCulture;
-        return consumables.GetDevice(jobDevice).displayName + "|" + jobPos.x.ToString("R", c) + "|" + jobPos.y.ToString("R", c) + "|" +
-               jobPos.z.ToString("R", c) + "|" + jobYaw.ToString("R", c);
-    }
-
-    /// <summary>Restores a saved job (an empty or unknown text clears it).</summary>
-    public void Import(string text)
+    // A save was loaded: its switch and job are in the state now - rebuild the job (its ghost) and apply the switch.
+    private void OnLoaded()
     {
         if (consumables == null) consumables = PixelFind.First<PixelConsumables>();
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         ClearJobQuiet();
-        if (string.IsNullOrEmpty(text) || consumables == null) return;
-        string[] p = text.Split('|');
-        if (p.Length == 2 && p[0] == "bank")
-        {
-            if (System.Enum.TryParse(p[1], out PixelClicker.PixelType saved)) SetBankJob(saved);
-            return;
-        }
-        if (p.Length < 5) return;
-        CultureInfo c = CultureInfo.InvariantCulture;
+        bool bank = S.bankJob;
+        PixelClicker.PixelType bankAs = (PixelClicker.PixelType)S.bankType;
+        string device = S.device;
+        Vector3 at = S.position;
+        float yaw = S.yaw;
         int index = -1;
-        for (int i = 0; i < consumables.DeviceCount; i++) if (consumables.GetDevice(i).displayName == p[0]) { index = i; break; }
-        if (index < 0 || !PixelConsumables.IsPlaceableKind(consumables.GetDevice(index).kind)) return;
-        if (!float.TryParse(p[1], NumberStyles.Float, c, out float x) || !float.TryParse(p[2], NumberStyles.Float, c, out float y) ||
-            !float.TryParse(p[3], NumberStyles.Float, c, out float z) || !float.TryParse(p[4], NumberStyles.Float, c, out float yaw)) return;
-        SetJob(index, new Vector3(x, y, z), yaw);
+        if (!bank && !string.IsNullOrEmpty(device) && consumables != null)
+            for (int i = 0; i < consumables.DeviceCount; i++) if (consumables.GetDevice(i).displayName == device) { index = i; break; }
+        if (bank && System.Enum.IsDefined(typeof(PixelClicker.PixelType), bankAs)) SetBankJob(bankAs);
+        else if (index >= 0 && PixelConsumables.IsPlaceableKind(consumables.GetDevice(index).kind)) SetJob(index, at, yaw);
+        else { S.bankJob = false; S.device = ""; }   // (no job, or its device is gone)
+        UserDisabled = S.userDisabled;   // (re-applies the switch: hides it when off)
     }
 
     private void SetBankJob(PixelClicker.PixelType type)
@@ -1211,6 +1196,8 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
         bankJob = true;
         bankType = type;
         bankRetarget = 0f;
+        S.bankJob = true;
+        S.bankType = (int)type;
     }
 
     private void ClearJobQuiet()

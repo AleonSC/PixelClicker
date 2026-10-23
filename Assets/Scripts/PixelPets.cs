@@ -11,14 +11,10 @@ using static PixelInput;
 ///
 /// Added by PixelClicker.Awake.
 /// </summary>
-public partial class PixelPets : MonoBehaviour, IPixelSaved
+public partial class PixelPets : MonoBehaviour
 {
-    // ---- save: this system writes its own part of the save file (PixelSaveRegistry) ----
-    [System.Serializable] private class SaveState { public string[] pets; }
-    string IPixelSaved.SaveId => "pets";
-    int IPixelSaved.SaveOrder => 150;
-    string IPixelSaved.Export() => PixelSaveRegistry.ToJson(new SaveState { pets = Export() });
-    void IPixelSaved.Import(string data) { SaveState s = PixelSaveRegistry.FromJson<SaveState>(data); Import(s != null ? s.pets : null); }
+    // ---- progress: the owned pets live in the GameState (PixelGameState.Current.pets); each live pet keeps a reference to its entry there ----
+    private static PetsState S => PixelGameState.Current.pets;
 
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
@@ -263,11 +259,12 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
         public float sunLeft, sunBoost; // Seed pet: "sun soaked" seconds left after Solar pixels were near, and the boost it gave
         public float born;          // Time.time when the body was built (a Seed pet never plants in its first moments)
         public GameObject mound;
-        public PixelClicker.PixelType type;
+        public PetsState.Entry saved = new PetsState.Entry();   // what is kept of this pet (the GameState's entry once it is owned)
+        public PixelClicker.PixelType type { get => (PixelClicker.PixelType)saved.type; set => saved.type = (int)value; }
         public Collider hitBox;       // the body's collider (kept so the mouse-over check needs no GetComponent every frame)
-        public bool off;
-        public string customName;     // the player's name for the pet ("" = the default)
-        public int outfit;            // which outfit it wears (0 = none)
+        public bool off { get => saved.off; set => saved.off = value; }
+        public string customName { get => saved.customName; set => saved.customName = value ?? ""; }   // the player's name for the pet ("" = the default)
+        public int outfit { get => saved.outfit; set => saved.outfit = value; }                        // which outfit it wears (0 = none)
         public GameObject body;
         public float hopTimer;
         public bool ghost;       // the Ghost pet only hovers
@@ -397,8 +394,8 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
 
     private void Awake()
     {
-        PixelSaveRegistry.Register(this);
         Instance = this;
+        PixelGameState.Loaded += OnLoaded;
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (clicker != null && clicker.UIFont != null) font = clicker.UIFont;
     }
@@ -419,7 +416,7 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
 
     private void OnDestroy()
     {
-        PixelSaveRegistry.Unregister(this);
+        PixelGameState.Loaded -= OnLoaded;
         if (Instance == this) Instance = null;
         CleanupCustomize();
         if (PopupOpen) ClosePopup();
@@ -463,6 +460,7 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
         if (startOffTypes.Remove(type)) off = true;
         Pet p = new Pet { type = type, off = off, hopTimer = Random.Range(0.3f, 1f), ghost = type == PixelClicker.PixelType.Ghost, phase = Random.Range(0f, 6.28f) };
         pets.Add(p);
+        S.owned.Add(p.saved);   // (owned now: progress)
         PixelStats.Count("pets.found");
         Refresh(p);
     }
@@ -1263,45 +1261,21 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
     // Saving
     // ------------------------------------------------------------------
 
-    /// <summary>The pets for the save file: one "type:off" string per pet.</summary>
-    public string[] Export()
-    {
-        string[] list = new string[pets.Count];
-        for (int i = 0; i < list.Length; i++) list[i] = (int)pets[i].type + ":" + (pets[i].off ? 1 : 0) + ":" + pets[i].outfit + ":" + System.Uri.EscapeDataString(pets[i].customName ?? "");
-        return list;
-    }
-
-    /// <summary>Restores the pets from a save (null = none).</summary>
-    public void Import(string[] list)
+    // A save was loaded: its owned pets are in the state now - the old bodies go and each saved pet gets its body back.
+    private void OnLoaded()
     {
         foreach (Pet p in pets) { if (p.body != null) Destroy(p.body); DestroyCounter(p); }
         pets.Clear();
         waiting.Clear();
-        if (list == null)
+        S.owned.RemoveAll(e => !System.Enum.IsDefined(typeof(PixelClicker.PixelType), e.type));   // (a type that no longer exists)
+        HashSet<int> seen = new HashSet<int>();
+        S.owned.RemoveAll(e => !seen.Add(e.type));   // (one pet per type)
+        foreach (PetsState.Entry entry in S.owned)
         {
-            PixelDebug.Info("PixelPets: the save has no pet list (a new game), so no pets were loaded.", this);
-            return;
-        }
-        foreach (string entry in list)
-        {
-            if (string.IsNullOrEmpty(entry)) continue;
-            string[] parts = entry.Split(':');
-            if (parts.Length < 1 || !int.TryParse(parts[0], out int t) || !System.Enum.IsDefined(typeof(PixelClicker.PixelType), t))
-            {
-                PixelDebug.Info("PixelPets: skipped an unreadable pet entry: '" + entry + "'.", this);
-                continue;
-            }
-            PixelClicker.PixelType type = (PixelClicker.PixelType)t;
-            if (IsOwned(type)) continue;
-            int outfit = 0;
-            if (parts.Length > 2) int.TryParse(parts[2], out outfit);
-            string customName = "";
-            try { customName = parts.Length > 3 ? System.Uri.UnescapeDataString(parts[3]) : ""; } catch (System.Exception) { }
-            Pet p = new Pet { type = type, off = parts.Length > 1 && parts[1] == "1", outfit = Mathf.Max(0, outfit), customName = customName,
-                              hopTimer = Random.Range(0.3f, 1f), ghost = type == PixelClicker.PixelType.Ghost, phase = Random.Range(0f, 6.28f) };
+            Pet p = new Pet { saved = entry, hopTimer = Random.Range(0.3f, 1f), ghost = (PixelClicker.PixelType)entry.type == PixelClicker.PixelType.Ghost, phase = Random.Range(0f, 6.28f) };
             pets.Add(p); // it is in the list before anything that could fail, so a problem building its body never loses the pet itself
             try { Refresh(p); }
-            catch (System.Exception e) { Debug.LogError("PixelPets: the " + type + " pet was loaded but its body could not be built: " + e.Message, this); }
+            catch (System.Exception e) { Debug.LogError("PixelPets: the " + p.type + " pet was loaded but its body could not be built: " + e.Message, this); }
         }
         PixelDebug.Info("PixelPets: loaded " + pets.Count + " pet(s) from the save.", this);
     }

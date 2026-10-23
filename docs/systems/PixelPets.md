@@ -1,5 +1,7 @@
 # PixelPets
 
+**Progress (2026-10-24):** the owned pets (type, off, outfit, name) live in the GameState (`PixelGameState.Current.pets`, `PetsState`): each live pet keeps a reference to its entry (`Pet.saved`), and `OnLoaded` rebuilds the bodies. Overrides any older save wording below.
+
 Moved from CLAUDE.md. The script header comments and `CLAUDE.md` index point here.
 
 ## PixelPets.cs

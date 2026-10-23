@@ -1,5 +1,7 @@
 # PixelRobotWorker
 
+**Progress (2026-10-24):** the Toggles switch and the job (device by display name + spot, or banking one pixel type) live in the GameState (`PixelGameState.Current.ufo`, `UfoState`); `SetJob` / `SetBankJob` write it and `OnLoaded` rebuilds the job's ghost. Overrides any older save wording below.
+
 Moved from CLAUDE.md. The script header comments and `CLAUDE.md` index point here.
 
 ## PixelRobotWorker.cs

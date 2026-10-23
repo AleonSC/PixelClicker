@@ -14,7 +14,7 @@ using System.Collections.Generic;
 public class GameState
 {
     /// <summary>The systems whose progress lives here (they must not implement IPixelSaved or register restart resets: tools/compile-check/rules.sh checks it). Add a system's class name when it moves.</summary>
-    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab", "PixelBaitBucket", "PixelCubieBill", "PixelCombo", "PixelHints" };
+    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab", "PixelBaitBucket", "PixelCubieBill", "PixelCombo", "PixelHints", "PixelRobotWorker", "PixelPets" };
 
     public BankState bank = new BankState();
     public StatsState stats = new StatsState();
@@ -26,6 +26,8 @@ public class GameState
     public CubieBillState cubieBill = new CubieBillState();
     public SwitchState combo = new SwitchState();      // the Combo Meter's Toggles switch (PixelCombo)
     public EventLogState eventLog = new EventLogState();
+    public UfoState ufo = new UfoState();
+    public PetsState pets = new PetsState();
 
     /// <summary>Fills in sub-states missing from an older save file (JsonUtility leaves a part the file lacks null in some cases).</summary>
     public void Repair()
@@ -41,6 +43,9 @@ public class GameState
         if (combo == null) combo = new SwitchState();
         if (eventLog == null) eventLog = new EventLogState();
         eventLog.Repair();
+        if (ufo == null) ufo = new UfoState();
+        if (pets == null) pets = new PetsState();
+        pets.Repair();
         baitBucket.Repair();
         cubieBill.Repair();
         bank.Repair();
@@ -267,5 +272,42 @@ public class EventLogState
         if (lines == null) lines = new List<Entry>();
         lines.RemoveAll(e => e == null || string.IsNullOrEmpty(e.text));
         foreach (Entry e in lines) if (e.full == null) e.full = "";
+    }
+}
+
+/// <summary>The UFO Helper (PixelRobotWorker): switched off in Toggles, and its job - keep one device placed at a spot (device by its
+/// display name, as the save always matched it) or bank husks of one pixel type. The ghost of the job is a world object rebuilt from this on load.</summary>
+[Serializable]
+public class UfoState
+{
+    public bool userDisabled;
+    public string device = "";   // the device kept placed ("" = no device job)
+    public UnityEngine.Vector3 position;
+    public float yaw;
+    public bool bankJob;         // the job is banking husks instead
+    public int bankType;         // PixelClicker.PixelType it banks
+}
+
+/// <summary>The pets the player owns (PixelPets), in the order found: type, switched off, outfit, the player's name. The pet bodies are world objects
+/// rebuilt from this on load; each live pet keeps a reference to its entry here, so changing it changes the state.</summary>
+[Serializable]
+public class PetsState
+{
+    [Serializable]
+    public class Entry
+    {
+        public int type;              // PixelClicker.PixelType
+        public bool off;              // switched off in the Toggles window
+        public int outfit;            // 0 = none
+        public string customName = "";   // "" = the default name
+    }
+
+    public List<Entry> owned = new List<Entry>();
+
+    public void Repair()
+    {
+        if (owned == null) owned = new List<Entry>();
+        owned.RemoveAll(e => e == null);
+        foreach (Entry e in owned) { if (e.customName == null) e.customName = ""; if (e.outfit < 0) e.outfit = 0; }
     }
 }

@@ -1,6 +1,6 @@
 # PixelGameState / GameState
 
-Started 2026-10-23 (Phase 1: the owner, plus the Bank and the Stats as the pilot; then the Auto Clicker, the Focus potion, Time Stop and Pixel Grabbing, the Bait Bucket and Cubie's bill, the Combo switch and the event log). The player's PROGRESS moves out of the MonoBehaviours into one plain object, one system at a time. The old `IPixelSaved` registry keeps working for the systems that have not moved yet.
+Started 2026-10-23 (Phase 1: the owner, plus the Bank and the Stats as the pilot; then the Auto Clicker, the Focus potion, Time Stop and Pixel Grabbing, the Bait Bucket and Cubie's bill, the Combo switch, the event log, the UFO Helper and the pets). The player's PROGRESS moves out of the MonoBehaviours into one plain object, one system at a time. The old `IPixelSaved` registry keeps working for the systems that have not moved yet.
 
 ## Why
 - **Saving:** each system saved its own part (`IPixelSaved`) in load-order bands.
@@ -66,5 +66,7 @@ With one state object, saving writes it, loading replaces it and a new game make
 | `PixelCubieBill` | `CubieBillState` (paid per colour by type, trust tier, revealed) | The old part loaded early on purpose (Recyclers rebuilt during the load ask `TagShown`); with `Replace` at the START of the load this now holds by itself. Its `ResetOnRestart` clears event listener lists (not progress), marked `// restart-reset-not-progress:` so the compile-check rule allows it. |
 | `PixelCombo` | `SwitchState` (`combo`: switched off in Toggles) | `Loaded` drops the running combo if it is off and redraws the meter. |
 | `PixelHints` (event log) | `EventLogState` (the log's lines: short text + the tip behind it) | Only the event log's lines moved: the 'seen' flags of first-time tips stay global PlayerPrefs (they are per machine, not per save). `Loaded` redraws the log from the top with no box. |
+| `PixelRobotWorker` (UFO Helper) | `UfoState` (switched off; the job: device by display name + spot, or banking one pixel type) | `SetJob` / `SetBankJob` write the state, so the runtime job and the state never drift; `Loaded` rebuilds the job's ghost and re-applies the switch. |
+| `PixelPets` | `PetsState` (owned pets in the order found: type, off, outfit, name) | Each live `Pet` keeps a reference to its state entry (`Pet.saved`; `type` / `off` / `outfit` / `customName` are properties on it), so every change is the state's at once - the pattern for a list of world objects. `Loaded` rebuilds the bodies. |
 
 The remaining systems, simplest first, are on the to-do list.

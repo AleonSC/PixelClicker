@@ -63,7 +63,7 @@ PROJECT RULES (from CLAUDE.md)
 - Every variable editable in Unity ([SerializeField] private + [Tooltip]); field initializers don't reach already-serialized components (use Awake / OnValidate fix-ups).
 - Enum values are only appended. Copy the whole Assets/Scripts folder together. Compile check: tools/compile-check/check.sh.
 - Save compatibility is not a concern during development. Skill packs are chosen only in the Skills window. Player-facing texts say "husk".
-GENERATED: 2026-10-23 23:51 UTC
+GENERATED: 2026-10-23 23:54 UTC
 
 === 2. DATA MODEL (from CLAUDE.md) ===
 - PixelTier: name, colour/UIColor, PixelType enum (see PixelClicker.cs; values are only ever appended so saves stay valid), TierUnlockMode (PreviousTierThreshold / ShopOnly), spawnWeight, randomPayout + payoutMin/Max (a random whole amount per harvest, e.g. Electric 1-15; amountPerClick = the average for estimates; migrated by packDataVersion 3), clicksToCollect (tough pixels: only the last click pays; PixelClicker.PixelHit event for the others), startingAmount, translucent / materialOverride, glow + glowIntensity (emission on a runtime material copy + point light), vacuum flag, spawnSwitch (Auto = Glass, Luminescent and the IsSpecialType types get a spawn toggle in the Toggles window, see PixelTier.CanSwitchOff; spawnDisabled saved; CanSpawn used by PickSpawnTier), flyAway/flyDirection/flySpeed (old pixel streaks away in a straight camera-relative line with a smooth tapered trail instead of falling - Meteor; flyRandomDirection + flyAngleRange 10-170 deg = a random direction on the top half of the screen), count, totalCollected, unlocked.
@@ -2413,7 +2413,7 @@ Fifth batch - varied grass, see-through lasers, picnic (PixelFloorLive.cs, parti
 --- docs/systems/PixelGameState.md ---
 PixelGameState / GameState
 
-Started 2026-10-23 (Phase 1: the owner, plus the Bank and the Stats as the pilot; then the Auto Clicker, the Focus potion, Time Stop and Pixel Grabbing, the Bait Bucket and Cubie's bill, the Combo switch and the event log). The player's PROGRESS moves out of the MonoBehaviours into one plain object, one system at a time. The old IPixelSaved registry keeps working for the systems that have not moved yet.
+Started 2026-10-23 (Phase 1: the owner, plus the Bank and the Stats as the pilot; then the Auto Clicker, the Focus potion, Time Stop and Pixel Grabbing, the Bait Bucket and Cubie's bill, the Combo switch, the event log, the UFO Helper and the pets). The player's PROGRESS moves out of the MonoBehaviours into one plain object, one system at a time. The old IPixelSaved registry keeps working for the systems that have not moved yet.
 
 Why
 - Saving: each system saved its own part (IPixelSaved) in load-order bands.
@@ -2479,6 +2479,8 @@ Moved so far
 | PixelCubieBill | CubieBillState (paid per colour by type, trust tier, revealed) | The old part loaded early on purpose (Recyclers rebuilt during the load ask TagShown); with Replace at the START of the load this now holds by itself. Its ResetOnRestart clears event listener lists (not progress), marked // restart-reset-not-progress: so the compile-check rule allows it. |
 | PixelCombo | SwitchState (combo: switched off in Toggles) | Loaded drops the running combo if it is off and redraws the meter. |
 | PixelHints (event log) | EventLogState (the log's lines: short text + the tip behind it) | Only the event log's lines moved: the 'seen' flags of first-time tips stay global PlayerPrefs (they are per machine, not per save). Loaded redraws the log from the top with no box. |
+| PixelRobotWorker (UFO Helper) | UfoState (switched off; the job: device by display name + spot, or banking one pixel type) | SetJob / SetBankJob write the state, so the runtime job and the state never drift; Loaded rebuilds the job's ghost and re-applies the switch. |
+| PixelPets | PetsState (owned pets in the order found: type, off, outfit, name) | Each live Pet keeps a reference to its state entry (Pet.saved; type / off / outfit / customName are properties on it), so every change is the state's at once - the pattern for a list of world objects. Loaded rebuilds the bodies. |
 
 The remaining systems, simplest first, are on the to-do list.
 --- docs/systems/PixelGodCubes.md ---
@@ -2603,6 +2605,8 @@ Title plate (2026-10-18): every section screen built with BuildSectionPanel (Set
 --- docs/systems/PixelPets.md ---
 PixelPets
 
+Progress (2026-10-24): the owned pets (type, off, outfit, name) live in the GameState (PixelGameState.Current.pets, PetsState): each live pet keeps a reference to its entry (Pet.saved), and OnLoaded rebuilds the bodies. Overrides any older save wording below.
+
 Moved from CLAUDE.md. The script header comments and CLAUDE.md index point here.
 
 PixelPets.cs
@@ -2625,6 +2629,8 @@ Part of partial class PixelPets: names and outfits. Hovering a pet shows a name 
 2026-10-16: the preview has a 'Spin: on / off' switch in its top right corner (PlayerPrefs PixelClicker.Pets.PreviewSpin, this machine, default on; previewSpinText). The shared cone mesh (PixelPets.Cone, used by built-in accessories and the studio's Cone shape) was inside out and had no base; it is rebuilt with outward faces, slope normals and a flat base.
 --- docs/systems/PixelRobotWorker.md ---
 PixelRobotWorker
+
+Progress (2026-10-24): the Toggles switch and the job (device by display name + spot, or banking one pixel type) live in the GameState (PixelGameState.Current.ufo, UfoState); SetJob / SetBankJob write it and OnLoaded rebuilds the job's ghost. Overrides any older save wording below.
 
 Moved from CLAUDE.md. The script header comments and CLAUDE.md index point here.
 
@@ -2804,7 +2810,7 @@ Open questions
 --- docs/systems/PixelSaveGame.md ---
 PixelSaveGame
 
-GameState (2026-10-23, Phase 1; overrides the wording below for the systems it names). The player's progress is moving into one plain object, GameState (owner PixelGameState, see docs/systems/PixelGameState.md). It is saved whole as SaveData.state; a load calls PixelGameState.Replace(data.state) FIRST and PixelGameState.RaiseLoaded() LAST (after the husks, tester machines and the IPixelSaved parts). Moved so far: the Bank's stored husks, the Stats, the Auto Clicker, the Focus potion, the Time Stop / Pixel Grabbing / Combo switches, the Bait Bucket, Cubie's bill and the event log (no longer IPixelSaved parts). Every other system still uses the registry below.
+GameState (2026-10-23, Phase 1; overrides the wording below for the systems it names). The player's progress is moving into one plain object, GameState (owner PixelGameState, see docs/systems/PixelGameState.md). It is saved whole as SaveData.state; a load calls PixelGameState.Replace(data.state) FIRST and PixelGameState.RaiseLoaded() LAST (after the husks, tester machines and the IPixelSaved parts). Moved so far: the Bank's stored husks, the Stats, the Auto Clicker, the Focus potion, the Time Stop / Pixel Grabbing / Combo switches, the Bait Bucket, Cubie's bill, the event log, the UFO Helper and the pets (no longer IPixelSaved parts). Every other system still uses the registry below.
 
 Save registry (2026-10-18; overrides the per-system wording below). Systems save themselves: they implement IPixelSaved (SaveId, SaveOrder, Export, Import) and register with PixelSaveRegistry in Awake (see its header for the load-order bands). The save file keeps one list SaveData.parts (id + JSON). Now on the registry: auto clicker (autoClicker), Pixel Grabbing / Time Stop / Combo switches (grab, timeStop, combo), pets (pets), the UFO job + switch (ufo), the event log (eventLog), potions + devices held (inventory), placed devices + running potion (inventoryWorld), achievements (stats and the Bank moved to the GameState 2026-10-23). PixelSaveGame itself still writes the core: tiers, Ultra, shop packs, minigame counters, husks, settings, the Dev Hub tester machines, plus playSeconds as a summary for the slot list. A new thing to save = implement IPixelSaved on its system; nothing to add here.
 
@@ -3527,4 +3533,4 @@ Code clean-ups worth doing some day
 [ ] Discovery - products unlock blocks (with 'Products as a new item kind'; rule in docs/systems/PixelRules.md 'Discovery'): making enough of a product discovers a new pixel type that then spawns on the cube with its own currency and husks (e.g. Kiln: wood husks -> Charcoal products -> discover the Charcoal pixel for Firemaking); a TierUnlockMode 'ByDiscovery' (appended) next to ByGoal; one-time, no loops (a discovered block's husks never process back into its product); the making skills get their blocks this way; show progress ('Charcoal: 14 / 25 to discover') on the machine's device card
 [ ] Vendor value ladder + market saturation (Shops; design in docs/GameDesign.md 'Cubie's bill' > value ladder): skill goods must pay back in pure currency and more effort must pay more - clicking pure 1x, selling raw skill currency ~1.2x (today 0.8x of the rarity rate), selling products ~2x, vendor orders ~3x but limited; a vendor's price for a good drops as you sell a lot and recovers over time (no hard caps); measure pure currency per minute per route from session reports and tune
 [ ] Vendor rapport (Shops; later, with Vendor orders): filling a vendor's orders raises their friendship -> better trade rates, rare stock, their own unlockables; vendors are the warm side of the economy, Cubie the cold monopoly
-[ ] GameState move (docs/systems/PixelGameState.md; Phase 1 done: owner + Bank + Stats; then Auto Clicker + Focus potion, Time Stop + Grabbing switches, Bait Bucket + Cubie's bill, Combo switch + event log): move the rest one at a time, simplest first - UFO Helper (ufo, PixelRobotWorker), pets (pets), achievements (achievements), potion / device inventory (inventory; placed devices stay physics objects), skills + XP (PixelSkills), minigame counters + switches (PixelMinigame), shop packs (PixelShop), and LAST PixelClicker (currency, tiers, Ultra); then the ~23 PixelStatics.ResetOnRestart users that hold progress, and retire PixelSaveRegistry
+[ ] GameState move (docs/systems/PixelGameState.md; Phase 1 done: owner + Bank + Stats; then Auto Clicker + Focus potion, Time Stop + Grabbing switches, Bait Bucket + Cubie's bill, Combo switch + event log, UFO Helper + pets): move the rest one at a time, simplest first - achievements (achievements), potion / device inventory (inventory; placed devices stay physics objects), skills + XP (PixelSkills), minigame counters + switches (PixelMinigame), shop packs (PixelShop), and LAST PixelClicker (currency, tiers, Ultra); then the ~23 PixelStatics.ResetOnRestart users that hold progress, and retire PixelSaveRegistry
