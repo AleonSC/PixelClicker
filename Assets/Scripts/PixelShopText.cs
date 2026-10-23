@@ -94,7 +94,7 @@ public static class PixelShopText
             string part = partRaw.Trim();
             if (part.Length == 0) continue;
             int space = part.IndexOf(' ');
-            if (space <= 0 || !TryParseAmount(part.Substring(0, space), out double amount))
+            if (space <= 0 || !PixelClicker.TryParseAmount(part.Substring(0, space), out double amount))
             {
                 Debug.LogWarning("ShopText.txt: can't read the price part '" + part + "' of " + where + " (write it like '75 White').");
                 return null;
@@ -113,17 +113,6 @@ public static class PixelShopText
             costs.Add(new PixelShop.PackCost { type = type, amount = amount });
         }
         return costs.ToArray();
-    }
-
-    private static bool TryParseAmount(string s, out double amount)
-    {
-        double scale = 1d;
-        char last = char.ToUpperInvariant(s[s.Length - 1]);
-        if (last == 'K') scale = 1e3; else if (last == 'M') scale = 1e6; else if (last == 'B') scale = 1e9;
-        if (scale > 1d) s = s.Substring(0, s.Length - 1);
-        bool ok = double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out amount);
-        amount *= scale;
-        return ok && amount >= 0d;
     }
 
     private static bool TryParseType(string name, PixelClicker clicker, out PixelClicker.PixelType type)

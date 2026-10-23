@@ -3,8 +3,10 @@
 //   The BILL WINDOW of Cubie's bill (PixelCubieBill, 2026-10-23): a standard Fixed window (PixelUIKit.CreateWindow, its own canvas above the
 //   shop, Escape closes it: PixelWindows 45). Opened at the end of Cubie's reveal visit and by the shop's 'IOU' header button.
 //   On top: the absurd total owed per colour (the joke) and the trust tier. Then one row per pure colour: name, a bar showing progress to
-//   the NEXT milestone (never to the absurd total, which would sit at 0% for hours), 'paid / needed', and two buttons: 'Pay 10%' (a tenth
-//   of what you hold) and 'Pay max' (up to the next milestone's share, or the rest of the bill once every milestone is met).
+//   the NEXT milestone (never to the absurd total, which would sit at 0% for hours), 'paid / needed', then the payment controls (2026-10-23):
+//   a SLIDER (0..100% of what you can pay: what you hold, capped at what is left of the bill) and an ENTRY BOX kept in step with it (type an
+//   amount like 1500, 1,500, 2.5K or 3M - PixelClicker.TryParseAmount; Enter pays), a 'Pay' button that pays the box's amount, and 'Pay max'
+//   (up to the next milestone's share, or the rest of the bill once every milestone is met). After a payment the slider and box reset.
 //   At the bottom: what the next tier opens and its condition. Refreshed on PixelCubieBill.Paid / TierUnlocked and twice a second while open
 //   (the held amounts change as you play) - no per-frame text building.
 // ---------------------------------------------------
@@ -24,7 +26,9 @@ public class PixelCubieBillWindow : MonoBehaviour
     {
         public TMP_Text name, amounts;
         public RectTransform fill;
-        public Button payTenth, payMax;
+        public Slider slider;
+        public TMP_InputField amount;
+        public Button pay, payMax;
     }
 
     private PixelClicker clicker;
@@ -34,7 +38,7 @@ public class PixelCubieBillWindow : MonoBehaviour
     private readonly List<Row> rows = new List<Row>();
     private float refreshTimer;
 
-    private const float Width = 980f, Pad = 34f, RowH = 78f, Gap = 10f, TopBlock = 120f, BottomBlock = 110f;
+    private const float Width = 1460f, Pad = 34f, RowH = 78f, Gap = 10f, TopBlock = 120f, BottomBlock = 110f;
 
     /// <summary>Is the Bill window open?</summary>
     public static bool IsOpen => instance != null && instance.panel != null && PixelPop.IsOpen(instance.panel);
@@ -97,8 +101,8 @@ public class PixelCubieBillWindow : MonoBehaviour
         Place(trust.rectTransform, new Vector2(Pad, -y - 52f), new Vector2(inner, 60f));
         y += TopBlock;
 
-        float nameW = 150f, btnW = 150f, amountsW = 250f;
-        float barW = inner - nameW - amountsW - 2f * btnW - 4f * Gap;
+        float nameW = 130f, amountsW = 220f, sliderW = 250f, fieldW = 170f, payW = 110f, maxW = 130f;
+        float barW = inner - nameW - amountsW - sliderW - fieldW - payW - maxW - 6f * Gap;
         for (int i = 0; i < n; i++)
         {
             int colour = i;
@@ -129,12 +133,33 @@ public class PixelCubieBillWindow : MonoBehaviour
             Place(r.amounts.rectTransform, new Vector2(Pad + nameW + Gap + barW + Gap, ry), new Vector2(amountsW, RowH));
             PixelUIKit.FitOneLine(r.amounts, 12f);
 
+            // Payment controls: slider (share of what you can pay) <-> entry box, then Pay and Pay max.
             float bx = Pad + nameW + barW + amountsW + 3f * Gap;
-            r.payTenth = PixelUIKit.CreateButton(font, panel.transform, "Pay Tenth", "Pay 10%", new Vector2(btnW, RowH * 0.7f), ButtonRole.Neutral, 22f);
-            Place(r.payTenth.GetComponent<RectTransform>(), new Vector2(bx, ry - RowH * 0.15f), new Vector2(btnW, RowH * 0.7f));
-            r.payTenth.onClick.AddListener(() => PayTenth(colour));
-            r.payMax = PixelUIKit.CreateButton(font, panel.transform, "Pay Max", "Pay max", new Vector2(btnW, RowH * 0.7f), ButtonRole.Success, 22f);
-            Place(r.payMax.GetComponent<RectTransform>(), new Vector2(bx + btnW + Gap, ry - RowH * 0.15f), new Vector2(btnW, RowH * 0.7f));
+            float ch = RowH * 0.62f, cy = ry - (RowH - ch) * 0.5f;
+            r.slider = PixelUIKit.CreateSlider(panel.transform, "Pay Slider", new Color(0f, 0f, 0f, 0.45f), fillImg.color, Color.white);
+            Place(r.slider.GetComponent<RectTransform>(), new Vector2(bx, cy), new Vector2(sliderW, ch));
+            r.amount = PixelUIKit.CreateInputField(font, panel.transform, "Pay Amount", new Vector2(fieldW, ch), new Color(0f, 0f, 0f, 0.4f), Color.white, 22f, "amount");
+            Place(r.amount.GetComponent<RectTransform>(), new Vector2(bx + sliderW + Gap, cy), new Vector2(fieldW, ch));
+            r.amount.contentType = TMP_InputField.ContentType.Standard;
+            r.amount.characterLimit = 16;
+            Row row = r;
+            r.slider.onValueChanged.AddListener(v =>
+            {
+                string text = v > 0f ? System.Math.Floor(Payable(colour) * v).ToString("#,0") : "";
+                row.amount.SetTextWithoutNotify(text);
+                if (row.amount.placeholder != null) row.amount.placeholder.gameObject.SetActive(text.Length == 0);   // (the box's hint hides while it shows an amount)
+            });
+            r.amount.onValueChanged.AddListener(text =>
+            {
+                double can = Payable(colour);
+                row.slider.SetValueWithoutNotify(PixelClicker.TryParseAmount(text, out double a) && can > 0d ? Mathf.Clamp01((float)(a / can)) : 0f);
+            });
+            r.amount.onSubmit.AddListener(_ => PayTyped(colour));
+            r.pay = PixelUIKit.CreateButton(font, panel.transform, "Pay", "Pay", new Vector2(payW, ch), ButtonRole.Primary, 22f);
+            Place(r.pay.GetComponent<RectTransform>(), new Vector2(bx + sliderW + fieldW + 2f * Gap, cy), new Vector2(payW, ch));
+            r.pay.onClick.AddListener(() => PayTyped(colour));
+            r.payMax = PixelUIKit.CreateButton(font, panel.transform, "Pay Max", "Pay max", new Vector2(maxW, ch), ButtonRole.Success, 22f);
+            Place(r.payMax.GetComponent<RectTransform>(), new Vector2(bx + sliderW + fieldW + payW + 3f * Gap, cy), new Vector2(maxW, ch));
             r.payMax.onClick.AddListener(() => PayMax(colour));
             rows.Add(r);
         }
@@ -160,10 +185,30 @@ public class PixelCubieBillWindow : MonoBehaviour
         return t >= 0 ? clicker.Tiers[t].count : 0d;
     }
 
-    private void PayTenth(int colour)
+    /// <summary>The most this colour can take right now: what you hold, capped at what is left of the bill (the slider's 100%).</summary>
+    private double Payable(int colour)
     {
         PixelCubieBill bill = PixelCubieBill.Instance;
-        if (bill != null) bill.Pay(colour, System.Math.Max(1d, System.Math.Floor(Held(bill, colour) * 0.1d)));
+        if (bill == null) return 0d;
+        return System.Math.Floor(System.Math.Max(0d, System.Math.Min(Held(bill, colour), bill.BillPerColour - bill.PaidOf(colour))));
+    }
+
+    /// <summary>Pays the amount in the row's entry box (Pay button / Enter), then resets the slider and box.</summary>
+    private void PayTyped(int colour)
+    {
+        PixelCubieBill bill = PixelCubieBill.Instance;
+        if (bill == null || colour < 0 || colour >= rows.Count) return;
+        Row r = rows[colour];
+        if (!PixelClicker.TryParseAmount(r.amount.text, out double amount) || amount < 1d) return;
+        bill.Pay(colour, amount);   // (Pay caps it at what you hold and what is left of the bill)
+        ResetControls(r);
+    }
+
+    private static void ResetControls(Row r)
+    {
+        r.slider.SetValueWithoutNotify(0f);
+        r.amount.SetTextWithoutNotify("");
+        if (r.amount.placeholder != null) r.amount.placeholder.gameObject.SetActive(true);
     }
 
     private void PayMax(int colour)
@@ -172,6 +217,7 @@ public class PixelCubieBillWindow : MonoBehaviour
         if (bill == null) return;
         double left = bill.LeftForNext(colour);
         bill.Pay(colour, left > 0d ? left : bill.BillPerColour);   // (every milestone met for this colour: towards the rest of the bill)
+        if (colour >= 0 && colour < rows.Count) ResetControls(rows[colour]);
     }
 
     private void Update()
@@ -204,7 +250,9 @@ public class PixelCubieBillWindow : MonoBehaviour
             PixelUIKit.SetText(r.amounts, PixelClicker.FormatNumberShort(paid) + " / " + PixelClicker.FormatNumberShort(target)
                                           + "\n<size=75%><color=#9FB0CC>you hold " + PixelClicker.FormatNumberShort(Held(bill, i)) + "</color></size>");
             bool canPay = Held(bill, i) >= 1d && paid < bill.BillPerColour;
-            r.payTenth.interactable = canPay;
+            r.slider.interactable = canPay;
+            r.amount.interactable = canPay;
+            r.pay.interactable = canPay;
             r.payMax.interactable = canPay;
         }
         if (m == null) PixelUIKit.SetText(next, "The bill is settled. Cubie is speechless. Nearly.");

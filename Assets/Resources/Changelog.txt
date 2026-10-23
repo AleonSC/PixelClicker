@@ -1523,3 +1523,4 @@
 [2026-10-23 10:03 UTC] The Log's Goals tab pins the next trust tier, the Dev Hub has a 'Cubie's bill' widget (Reveal / Tier +1 / Reset), and visiting vendors sometimes end their greeting with a jab at Cubie.
 [2026-10-23 15:50 UTC] Fixed Cubie's unrolling invoice overlapping his speech box: it now hangs to the left of the box, sized to the room there, and tilts away from it.
 [2026-10-23 15:51 UTC] Fixed the shop's IOU button (Cubie's bill) being hidden under the search box: it now sits in the header just left of the ? button, with a hover tip.
+[2026-10-23 16:05 UTC] Cubie's Bill window: replaced 'Pay 10%' with a slider and an amount box per colour (type 1500, 2.5K, 3M...; Enter or Pay pays it); the window is wider to fit.
