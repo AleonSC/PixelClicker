@@ -1,6 +1,6 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelMyWindow.cs   (the window is called POCKET now; the class and the saved keys keep the old name)
-//   POCKET'S PINNED TAB IS A BOARD OF WIDGETS (like the Dev Hub's): each pinned thing is a card (BuildCard) with a header you DRAG by (PixelPocketGrip: the cards slide round each other, the order is saved in the
+//   POCKET'S PINNED TAB IS A BOARD OF WIDGETS (the shared PixelCardBoard, like the Dev Hub's): each pinned thing is a card (BuildCard) with a header you DRAG by (the cards slide round each other, the order is saved in the
 //   entries), a '-' that folds it up to its header (Entry.min, saved), and a small x you HOLD with the left button (0.6 s, a ring round the cursor, the card turns red: UpdateRemoveHold) to remove it. Under the last card a BLANK
 //   card with a + opens a search (OpenPicker / FillPicker: every currency, skill, goal, tool, item, achievement and a note, filtered as you type); picking one pins it and a new blank card follows. With no card left only the
 //   blank one shows. There is no Edit mode any more. (Old text below that talks about Edit mode / rows describes the earlier list.)
@@ -747,20 +747,20 @@ public class PixelMyWindow : MonoBehaviour
     // under the last one opens a search to pin something new. (Same look and moves as the Dev Hub's widgets.)
     // ------------------------------------------------------------------
 
+    // The cards themselves (drag to reorder, fold, layout) are the shared PixelCardBoard (the Dev Hub's widgets use it too); a Pocket card adds
+    // its entry, its rows and the hold-to-remove x. The order and the folds are saved in the entries (per save file), not by the board.
     private class Card
     {
         public Entry entry;
+        public PixelCardBoard.Card card;
         public RectTransform rect, xRect;
         public Image bg;
-        public TMP_Text minLabel;
         public readonly List<Row> rows = new List<Row>();
-        public float full, height;
     }
 
     private readonly List<Card> cards = new List<Card>();
     private RectTransform plusCard;
-    private Card dragging;
-    private float dragTop, boardTotal;
+    private PixelCardBoard board;
     private const float CardHeader = 34f, CardGap = 8f, PlusHeight = 78f, RemoveHoldSeconds = 0.6f;
     private static readonly Color CardColor = new Color(0.07f, 0.09f, 0.16f, 0.9f), CardRed = new Color(0.75f, 0.12f, 0.1f, 0.95f);
 
@@ -770,7 +770,18 @@ public class PixelMyWindow : MonoBehaviour
         foreach (Card c in cards) if (c.rect != null) Destroy(c.rect.gameObject);
         foreach (Row r in rows) if (r.rt != null) Destroy(r.rt.gameObject);   // (rows not yet inside a card)
         if (plusCard != null) Destroy(plusCard.gameObject);
-        cards.Clear(); rows.Clear(); plusCard = null; dragging = null;
+        cards.Clear(); rows.Clear(); plusCard = null;
+        if (board == null)
+            board = new PixelCardBoard(listContent, new PixelCardBoard.Style
+            {
+                headerHeight = CardHeader, topPad = 4f, gap = CardGap, handleAlpha = 0.03f, titleLeft = 40f, titleRight = 78f,
+                foldPos = new Vector2(-38f, -5f), titleColor = new Color(0.85f, 0.9f, 1f, 0.92f), cardColor = CardColor,
+            }, OnBoardHeight)
+            {
+                OrderChanged = OnCardsReordered,
+                FoldChanged = c => { if (c.tag is Card pc) { pc.entry.min = c.folded; SaveEntries(); } },
+            };
+        board.Clear();
         for (int i = 0; i < blob.entries.Count; i++)
         {
             Entry e = blob.entries[i];
@@ -786,7 +797,7 @@ public class PixelMyWindow : MonoBehaviour
         }
         BuildPlusCard();
         rowSignature = Signature();
-        LayoutBoard();
+        board.Finish();   // (lays the cards out; OnBoardHeight puts the blank card under the last one)
         RefreshValues();
     }
 
@@ -856,57 +867,18 @@ public class PixelMyWindow : MonoBehaviour
             c.rows.Add(r);
             rows.Add(r);
         }
-        c.full = y + 4f;
+        c.rect.sizeDelta = new Vector2(-6f, y + 4f);
 
-        // The header: a strip you drag by (with a grip), the title, '-' (fold) and a small x (hold to remove).
-        GameObject hgo = new GameObject("Header Handle", typeof(RectTransform), typeof(Image), typeof(PixelPocketGrip));
-        hgo.transform.SetParent(c.rect, false);
-        hgo.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.03f);
-        RectTransform hr = hgo.GetComponent<RectTransform>();
-        hr.anchorMin = new Vector2(0f, 1f); hr.anchorMax = new Vector2(1f, 1f); hr.pivot = new Vector2(0.5f, 1f);
-        hr.sizeDelta = new Vector2(0f, CardHeader); hr.anchoredPosition = Vector2.zero;
-        PixelPocketGrip grip = hgo.GetComponent<PixelPocketGrip>();
-        grip.owner = this; grip.card = c;
-        GameObject gi = new GameObject("Grip", typeof(RectTransform), typeof(Image));
-        gi.transform.SetParent(hr, false);
-        Image gim = gi.GetComponent<Image>();
-        gim.sprite = PixelUIKit.GripSprite(); gim.color = new Color(1f, 1f, 1f, 0.45f); gim.raycastTarget = false;
-        RectTransform gr = gi.GetComponent<RectTransform>();
-        gr.anchorMin = gr.anchorMax = gr.pivot = new Vector2(0f, 0.5f);
-        gr.sizeDelta = new Vector2(24f, 26f); gr.anchoredPosition = new Vector2(8f, 0f);
-        TMP_Text title = Text(hr, "Title", TitleFor(e).ToUpperInvariant(), 20f, TextAlignmentOptions.MidlineLeft, new Color(0.85f, 0.9f, 1f, 0.92f), FontStyles.Bold);
-        title.raycastTarget = false;
-        title.rectTransform.anchorMin = Vector2.zero; title.rectTransform.anchorMax = Vector2.one;
-        title.rectTransform.offsetMin = new Vector2(40f, 0f); title.rectTransform.offsetMax = new Vector2(-78f, 0f);
-
+        // The header (drag strip, grip, title, '-' fold) comes from the board; Pocket adds the small x you hold to remove the card.
+        c.card = board.Add(e.type + ":" + e.key, c.rect, y + 4f, TitleFor(e));
+        c.card.tag = c;
         Button x = PixelUIKit.CreateButton(Font, c.rect, "Remove (hold)", "x", new Vector2(26f, 24f), ButtonRole.Danger, 18f);
         c.xRect = x.GetComponent<RectTransform>();
         c.xRect.anchorMin = c.xRect.anchorMax = c.xRect.pivot = new Vector2(1f, 1f);
         c.xRect.anchoredPosition = new Vector2(-6f, -5f);
-        Button fold = PixelUIKit.CreateButton(Font, c.rect, "Minimize", e.min ? "+" : "-", new Vector2(30f, 24f), ButtonRole.Neutral, 20f);
-        RectTransform fr = fold.GetComponent<RectTransform>();
-        fr.anchorMin = fr.anchorMax = fr.pivot = new Vector2(1f, 1f);
-        fr.anchoredPosition = new Vector2(-38f, -5f);
-        c.minLabel = fold.GetComponentInChildren<TMP_Text>();
-        fold.onClick.AddListener(() => { SetFolded(c, !c.entry.min); });
-        ApplyFold(c);
+        board.KeepInHeader(c.card, x.gameObject);
+        board.SetFolded(c.card, e.min, false);
         return c;
-    }
-
-    private void ApplyFold(Card c)
-    {
-        foreach (Row r in c.rows) if (r.rt != null) r.rt.gameObject.SetActive(!c.entry.min);
-        c.height = c.entry.min ? CardHeader : c.full;
-        c.rect.sizeDelta = new Vector2(-6f, c.height);
-        if (c.minLabel != null) c.minLabel.text = c.entry.min ? "+" : "-";
-    }
-
-    private void SetFolded(Card c, bool on)
-    {
-        c.entry.min = on;
-        ApplyFold(c);
-        SaveEntries();
-        LayoutBoard();
     }
 
     private void BuildPlusCard()
@@ -925,56 +897,23 @@ public class PixelMyWindow : MonoBehaviour
         PixelUIKit.MakeClickable(go, OpenPicker);
     }
 
-    private void LayoutBoard()
+    // The board laid the cards out: the blank card goes under the last one and the scroll content follows.
+    private void OnBoardHeight(float total)
     {
-        float y = 4f;
-        foreach (Card c in cards)
-        {
-            if (c != dragging) c.rect.anchoredPosition = new Vector2(0f, -y);
-            y += c.height + CardGap;
-        }
-        boardTotal = y;
-        if (plusCard != null) plusCard.anchoredPosition = new Vector2(0f, -y);
-        contentHeight = y + PlusHeight + 8f;
+        if (plusCard != null) plusCard.anchoredPosition = new Vector2(0f, -total);
+        contentHeight = total + PlusHeight + 8f;
         if (scroll != null) UpdateContentHeight();
     }
 
-    internal void BeginCardDragObj(object o) { if (o is Card c) BeginCardDrag(c); }
-    internal void DragCardObj(object o, float dy) { if (o is Card c) DragCard(c, dy); }
-    internal void EndCardDragObj(object o) { if (o is Card c) EndCardDrag(c); }
-
-    private void BeginCardDrag(Card c) { dragging = c; dragTop = -c.rect.anchoredPosition.y; c.rect.SetAsLastSibling(); }
-
-    private void DragCard(Card c, float screenDeltaY)
+    // A card was dragged to a new place: the saved order (the entries) follows the cards.
+    private void OnCardsReordered()
     {
-        if (dragging != c) return;
-        dragTop = Mathf.Clamp(dragTop - screenDeltaY / CanvasScale, 0f, Mathf.Max(0f, boardTotal - CardGap - c.height));
-        c.rect.anchoredPosition = new Vector2(0f, -dragTop);
-        float centre = dragTop + c.height * 0.5f, y = 4f;
-        int index = 0;
-        foreach (Card other in cards)
-        {
-            if (other == c) continue;
-            if (y + other.height * 0.5f < centre) index++;
-            y += other.height + CardGap;
-        }
-        int from = cards.IndexOf(c);
-        if (index != from) { cards.RemoveAt(from); cards.Insert(index, c); }
-        LayoutBoard();
-    }
-
-    private void EndCardDrag(Card c)
-    {
-        if (dragging != c) return;
-        dragging = null;
-        // The saved order follows the cards.
         List<Entry> ordered = new List<Entry>();
-        foreach (Card k in cards) if (!ordered.Contains(k.entry)) ordered.Add(k.entry);
+        foreach (PixelCardBoard.Card k in board.Cards) if (k.tag is Card pc && !ordered.Contains(pc.entry)) ordered.Add(pc.entry);
         foreach (Entry e in blob.entries) if (!ordered.Contains(e)) ordered.Add(e);
         blob.entries = ordered;
         SaveEntries();
         rowSignature = Signature();
-        LayoutBoard();
     }
 
     /// <summary>Hold the LEFT button on a card's small x to remove it: a ring fills round the cursor and the card turns red.</summary>
@@ -1553,16 +1492,6 @@ public class PixelMyWindow : MonoBehaviour
         if (Signature() != rowSignature) RebuildRows();
         else RefreshValues();
     }
-}
-
-/// <summary>The header strip of a Pocket widget: dragging it slides the card up or down.</summary>
-public class PixelPocketGrip : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
-{
-    internal PixelMyWindow owner;
-    internal object card;
-    public void OnBeginDrag(PointerEventData e) { owner.BeginCardDragObj(card); }
-    public void OnDrag(PointerEventData e) { owner.DragCardObj(card, e.delta.y); }
-    public void OnEndDrag(PointerEventData e) { owner.EndCardDragObj(card); }
 }
 
 /// <summary>The corner handle that resizes My Window.</summary>
