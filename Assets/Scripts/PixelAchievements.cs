@@ -38,7 +38,7 @@ using UnityEngine.UI;
 /// Titles and descriptions may use {pixel} (the pixel type), {target} (the tier being worked on) and {tier} (its roman numeral).
 /// Add this to any GameObject (e.g. the cube). PixelLog adds it automatically if it is missing.
 /// </summary>
-public class PixelAchievements : MonoBehaviour, IPixelSaved
+public class PixelAchievements : MonoBehaviour, IPixelSaved, IPixelDatabaseSource
 {
     // ---- save: this system writes its own part of the save file (PixelSaveRegistry) ----
     [System.Serializable] private class SaveState { public string[] earned; }
@@ -1022,5 +1022,22 @@ public class PixelAchievements : MonoBehaviour, IPixelSaved
         popupHeadingLabel.text = popupHeading;
         PositionPopup();
         popupTimer = 2.5f;   // it stays a moment where it was put
+    }
+
+    // ---- Game Database (IPixelDatabaseSource): one 'Achievement' entry per achievement (pinnable), linked to its pixel ----
+
+    void IPixelDatabaseSource.DatabaseSteps(PixelDatabase.Steps steps)
+    {
+        steps.Add(PixelDatabase.AchievementsOrder, b =>
+        {
+            for (int i = 0; i < Count; i++)
+            {
+                Achievement a = Get(i);
+                if (a == null) continue;
+                PixelDatabase.Entry ae = b.Add("Achievement", PixelDatabase.Plain(a.title), PixelDatabase.Plain(a.description));
+                ae.pinType = "achievement"; ae.pinKey = GetId(i);
+                if (a.kind == Kind.CollectPixelType || a.kind == Kind.ClickPixelType) b.Link(ae, "About pixel", b.Pixel(a.pixelType), "Achievement");
+            }
+        });
     }
 }

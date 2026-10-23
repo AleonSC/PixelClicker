@@ -7,7 +7,7 @@ using static PixelInput;
 /// invisible within about a pixel of the cursor and fades in beyond that (the way the bank hose fades out near the camera). If you can't land it in time it
 /// breaks the line and swims off. The auto clicker waits while a fight is on.
 /// </summary>
-public class PixelWhaleFight : MonoBehaviour
+public class PixelWhaleFight : MonoBehaviour, IPixelDatabaseSource
 {
     [Header("Whale fight")]
     [SerializeField, Tooltip("Turns the whale's running and the fishing line off: a whale is then just a block that takes many clicks.")]
@@ -317,5 +317,25 @@ public class PixelWhaleFight : MonoBehaviour
         });
         lineMesh.RecalculateBounds();
         lineFilter.sharedMesh = lineMesh;
+    }
+
+    // ---- Game Database (IPixelDatabaseSource): the whale fight as a 'Special' entry (numbers read from the settings above), discovered with the Whale pixel ----
+
+    void IPixelDatabaseSource.DatabaseSteps(PixelDatabase.Steps steps)
+    {
+        steps.Add(PixelDatabase.ExtrasOrder, b =>
+        {
+            PixelDatabase.Entry whale = b.Pixel(PixelClicker.PixelType.Whale);
+            int restMin = restClicksMin > 0 ? restClicksMin : 2, restMax = restClicksMax > 0 ? restClicksMax : 3;
+            string text = disableFight
+                ? "Fishing's rarest special block. The fight is switched off: a whale is just a block that takes many clicks."
+                : "Fishing's rarest special block. Your first manual click hooks it: it rests for " + restMin + "-" + restMax + " clicks, then dashes to a new spot on the screen, rests again, and so on " +
+                  "while you click it down. A thin fishing line runs from the cursor to it. Land it within " + Mathf.RoundToInt(fightSeconds > 0f ? fightSeconds : 80f) + " seconds or it breaks the line and swims off; " +
+                  "the longer the fight, the more it pays. The auto clicker waits while a fight is on.";
+            PixelDatabase.Entry e = b.Add("Special", "Whale fight", text);
+            e.discovered = whale != null && whale.discovered;
+            b.Link(e, "Started by", whale, "Starts a special");
+            if (b.Skills.TryGetValue(PixelSkills.FishingId, out PixelDatabase.Entry fishing)) b.Link(e, "Skill", fishing, "Special of skill");
+        });
     }
 }

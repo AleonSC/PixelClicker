@@ -692,6 +692,15 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         return names;
     }
 
+    /// <summary>Its Game Database entry also says what it sells; the database's wares step links each ware's consumable entry back ('Sold by').</summary>
+    public override PixelDatabase.Entry AddToDatabase(PixelDatabase.Builder b)
+    {
+        PixelDatabase.Entry e = base.AddToDatabase(b);
+        List<string> ware = WareNames();
+        if (ware.Count > 0) { b.VendorWares.Add(new KeyValuePair<PixelDatabase.Entry, List<string>>(e, ware)); e.detail += "\nSells: " + string.Join(", ", ware) + "."; }
+        return e;
+    }
+
     private PixelShop.PackCost[] PriceOf(int item)
     {
         PixelShop.PackCost[] baseCosts = visitPrice.TryGetValue(item, out PixelShop.PackCost[] own) ? own : consumables.ItemCosts(item);

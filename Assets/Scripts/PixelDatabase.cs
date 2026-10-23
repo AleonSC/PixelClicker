@@ -11,7 +11,18 @@
 //   the entry's name / category / description / reference text; ranked name-exact > starts-with > contains > category > text. The
 //   window (canvas 108, PixelWindows 16, PixelPop): search box + results list on the left, the selected entry's description and its
 //   references on the right (click a reference to jump to it, '< Back' returns). Not covered yet: floors / skies / pets / vendors'
-//   wares. A new kind of game data should be added to PixelDatabase.Build.
+//   wares.
+//   SOURCES (2026-10-24): Build no longer holds one long hand-written list. Every system component that implements IPixelDatabaseSource (found in the
+//   scene each time, one per component type) hands in STEPS with an order (PixelDatabase.PixelsOrder ... GoalsOrder); the steps run in that order on one
+//   Builder (Add / Link + the lookups earlier steps filled: Pixels by type, Minigames by id, Packs by index, Skills by id, Items by name, VendorWares,
+//   Texts). Owners: PixelClicker (pixels, PixelClickerDatabase.cs), PixelShop (packs, pack->skill links, Operation 'Upgrade' entries, PixelShopDatabase.cs),
+//   PixelSkills (skills + tree nodes, PixelSkillsDatabase.cs), PixelMinigame.AddToDatabase (each minigame; PixelVisitorMinigame adds its wares),
+//   PixelBlockRules, PixelPets (PixelPetsDatabase.cs), PixelCrafting (recipes), PixelAchievements, PixelGoals, and the 'Special' entries: PixelWhaleFight
+//   (whale fight), PixelTreasureMap (treasure map), PixelDragonWish (the wish + every wish, from its AllWishes). Kept here as built-in steps: the minigame
+//   loop, consumables, vendors' wares links, floor / sky looks, settings, and tips + guide lines + the 'mentions' pass (TipsOrder: everything added
+//   earlier can be mentioned, except the NotMentioned categories). A NEW kind of game data: implement IPixelDatabaseSource on its system (pick an order
+//   after whatever it links to; before TipsOrder if tips should mention it) and, for a new category, add its colour in CategoryColor and a tab in
+//   PixelDatabaseWindow if it needs one. A step that throws is logged with its source and the others still run.
 //   BROWSE / PICTURES / DISCOVERY: the window has category tabs under the search box (All, Pixels, Packs, Skills, Items, Recipes, Minigames, Awards, Tips; PixelDatabase.Search(query, max,
 //   category, showAll)), a turning 3D picture of the pixel (PixelTierPicture, Entry.tierIndex) beside a pixel's description, and a 'Show ???' switch. Entry.discovered: pixel = unlocked or
 //   collected, shop pack = bought or a reward pixel unlocked, skill = PixelSkills.IsAvailable, consumable = its required pixel unlocked; recipes, minigames, achievements and tips are always
@@ -29,6 +40,16 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+
+/// <summary>
+/// A system that puts its own entries into the Game Database: it hands in one or more steps (PixelDatabase.Steps.Add(order, step)); each step adds entries
+/// with the builder and links them to entries of earlier steps (see the PixelDatabase.*Order constants). Any system COMPONENT in the scene that implements
+/// this is found automatically each time the database is built - a new feature shows up in the database without touching PixelDatabase.
+/// </summary>
+public interface IPixelDatabaseSource
+{
+    void DatabaseSteps(PixelDatabase.Steps steps);
+}
 
 /// <summary>
 /// The game database: one searchable entry for every pixel type, shop pack, skill, consumable, recipe, minigame / vendor, achievement, tip and line of
@@ -86,6 +107,8 @@ public static class PixelDatabase
             case "Block rule": return new Color(0.85f, 0.7f, 1f);
             case "Skill node": return new Color(0.7f, 0.95f, 0.6f);
             case "Setting": return new Color(0.75f, 0.8f, 0.6f);
+            case "Upgrade": return new Color(1f, 0.65f, 0.3f);
+            case "Special": return new Color(0.4f, 0.9f, 0.95f);
             default: return new Color(0.6f, 0.65f, 0.7f);
         }
     }
@@ -119,308 +142,96 @@ public static class PixelDatabase
         Point(b, labelB, a);
     }
 
-    private static string PixelName(PixelClicker.PixelTier t)
+    // ------------------------------------------------------------------
+    // Building: every system adds its own entries (IPixelDatabaseSource), in ORDER steps so links can point at what an earlier step added.
+    // ------------------------------------------------------------------
+
+    /// <summary>When each group of entries is added (lower first). A step can link only to entries of earlier steps; tips come late so they can mention everything.</summary>
+    public const int PixelsOrder = 100, MinigamesOrder = 200, PacksOrder = 300, SkillsOrder = 400, SkillNodesOrder = 410, BlockRulesOrder = 500, PackSkillLinksOrder = 510,
+                     ConsumablesOrder = 600, VendorWaresOrder = 610, LooksOrder = 700, SettingsOrder = 710, PetsOrder = 800, RecipesOrder = 900, AchievementsOrder = 1000,
+                     ExtrasOrder = 1050, TipsOrder = 1100, GoalsOrder = 1200;
+
+    /// <summary>Entry categories that tips / guide lines never 'mention' by name (texts themselves, or names too generic to match safely).</summary>
+    private static readonly HashSet<string> NotMentioned = new HashSet<string> { "Tip", "Achievement", "Recipe", "Floor", "Sky", "Pet", "Block rule", "Skill node", "Upgrade", "Goal" };
+
+    /// <summary>The steps the sources hand in (Build sorts them by order; the same order = the order they were handed in).</summary>
+    public sealed class Steps
+    {
+        internal sealed class Step { public int order, seq; public Action<Builder> run; public string source; }
+        internal readonly List<Step> list = new List<Step>();
+        internal string current;
+
+        /// <summary>Adds a step: 'run' is called with the builder when Build reaches 'order' (see the *Order constants).</summary>
+        public void Add(int order, Action<Builder> run)
+        {
+            if (run != null) list.Add(new Step { order = order, seq = list.Count, run = run, source = current });
+        }
+    }
+
+    /// <summary>What a step gets: Add / Link plus the lookups earlier steps filled (pixels by type, minigames by id, packs by index, skills by id, items by name).</summary>
+    public sealed class Builder
+    {
+        public readonly PixelClicker Clicker;
+        public readonly Dictionary<PixelClicker.PixelType, Entry> Pixels = new Dictionary<PixelClicker.PixelType, Entry>();
+        public readonly Dictionary<string, Entry> Minigames = new Dictionary<string, Entry>();
+        public readonly List<Entry> Packs = new List<Entry>();   // by shop pack index (null for an empty slot)
+        public readonly Dictionary<string, Entry> Skills = new Dictionary<string, Entry>();
+        public readonly Dictionary<string, Entry> Items = new Dictionary<string, Entry>();
+        public readonly List<KeyValuePair<Entry, List<string>>> VendorWares = new List<KeyValuePair<Entry, List<string>>>();   // a vendor's entry + the item names it sells
+        public readonly List<Entry> Texts = new List<Entry>();   // tip / guide entries whose text is searched for mentions of other entries
+
+        internal Builder(PixelClicker clicker) { Clicker = clicker; }
+
+        /// <summary>The entry of category + name (made if new; an existing one keeps its text unless it had none).</summary>
+        public Entry Add(string category, string name, string detail) => PixelDatabase.Add(category, name, detail);
+
+        /// <summary>Two-way link: 'a' lists b under labelA, b lists a under labelB (nulls are ignored).</summary>
+        public void Link(Entry a, string labelA, Entry b, string labelB) => PixelDatabase.Link(a, labelA, b, labelB);
+
+        /// <summary>The pixel entry of a type (null when there is none).</summary>
+        public Entry Pixel(PixelClicker.PixelType type) => Pixels.TryGetValue(type, out Entry e) ? e : null;
+
+        /// <summary>An entry made by an earlier step, by category + name (null if none).</summary>
+        public Entry Find(string category, string name) => PixelDatabase.Find(category + "|" + name);
+
+        public IReadOnlyList<Entry> Entries => entries;
+    }
+
+    /// <summary>Plain text: rich-text tags taken out.</summary>
+    public static string Plain(string s) => string.IsNullOrEmpty(s) ? "" : System.Text.RegularExpressions.Regex.Replace(s, "<[^>]+>", "");
+
+    /// <summary>A pixel's name without a trailing ' Pixels'.</summary>
+    public static string PixelName(PixelClicker.PixelTier t)
     {
         string n = t.displayName;
         return n != null && n.EndsWith(" Pixels") ? n.Substring(0, n.Length - 7) : n;
     }
-
-    private static string Plain(string s) => string.IsNullOrEmpty(s) ? "" : System.Text.RegularExpressions.Regex.Replace(s, "<[^>]+>", "");
 
     public static void Build()
     {
         entries = new List<Entry>();
         byKey = new Dictionary<string, Entry>();
 
-        PixelClicker clicker = PixelFind.First<PixelClicker>();
-        PixelShop shop = PixelFind.First<PixelShop>();
-        PixelSkills skills = PixelSkills.Instance;
-        PixelConsumables consumables = shop != null ? shop.Consumables : PixelFind.First<PixelConsumables>();
-        PixelCrafting crafting = PixelFind.First<PixelCrafting>();
-        PixelAchievements achievements = PixelFind.First<PixelAchievements>();
-        PixelHints hints = PixelFind.First<PixelHints>();
-
-        // ---- Pixels ----
-        Dictionary<PixelClicker.PixelType, Entry> pixels = new Dictionary<PixelClicker.PixelType, Entry>();
-        if (clicker != null)
-            foreach (PixelClicker.PixelTier t in clicker.Tiers)
+        // Collect the steps: every system component in the scene that is a source, plus the providers kept here (data with no natural owner file).
+        Steps steps = new Steps();
+        HashSet<Type> seen = new HashSet<Type>();   // (one source per component type, like the single-system lookups it replaced)
+        foreach (MonoBehaviour mb in PixelFind.All<MonoBehaviour>())
+            if (mb is IPixelDatabaseSource src && seen.Add(mb.GetType()))
             {
-                if (t == null) continue;
-                string desc;
-                try { desc = Plain(PixelGuideTexts.Describe(t.type, t)); } catch (Exception) { desc = ""; }
-                Entry e = Add("Pixel", PixelName(t), desc + "\nPays " + t.amountPerClick + " per collect, " + Mathf.Max(1, t.clicksToCollect) + " click" + (t.clicksToCollect > 1 ? "s" : "") + ", spawn weight " + t.spawnWeight + ". Internal type: " + t.type + ".");
-                e.discovered = clicker.IsUnlocked(t.type) || t.totalCollected > 0d;
-                e.tierIndex = System.Array.IndexOf(clicker.Tiers, t);
-                e.pinType = "currency"; e.pinKey = t.type.ToString();
-                pixels[t.type] = e;
+                steps.current = mb.GetType().Name;
+                try { src.DatabaseSteps(steps); }
+                catch (Exception e) { Debug.LogError("PixelDatabase: " + steps.current + " could not hand in its entries - " + e.Message); }
             }
-        Entry PixelOf(PixelClicker.PixelType type) => pixels.TryGetValue(type, out Entry e) ? e : null;
+        steps.current = "PixelDatabase";
+        BuiltInSteps(steps);
+        steps.list.Sort((a, b) => a.order != b.order ? a.order.CompareTo(b.order) : a.seq.CompareTo(b.seq));
 
-        // ---- Minigames and vendors ----
-        Dictionary<string, Entry> minigames = new Dictionary<string, Entry>();
-        List<KeyValuePair<Entry, List<string>>> vendorWares = new List<KeyValuePair<Entry, List<string>>>();
-        foreach (PixelMinigame m in PixelMinigame.All)
+        Builder builder = new Builder(PixelFind.First<PixelClicker>());
+        foreach (Steps.Step st in steps.list)
         {
-            if (m == null) continue;
-            string desc = m.HasTracker ? Plain(m.TrackerDescription) : "";
-            Entry mgEntry = Add("Minigame", m.DisplayName, (string.IsNullOrEmpty(desc) ? "" : desc + "\n") + "Id: " + m.Id + (m.HasTracker ? "\nHas a goal counter: " + Plain(m.TrackerTitle) : ""));
-            minigames[m.Id] = mgEntry;
-            if (m is PixelVisitorMinigame visitor)
-            {
-                List<string> ware = visitor.WareNames();
-                if (ware.Count > 0) { vendorWares.Add(new KeyValuePair<Entry, List<string>>(mgEntry, ware)); mgEntry.detail += "\nSells: " + string.Join(", ", ware) + "."; }
-            }
+            try { st.run(builder); }
+            catch (Exception e) { Debug.LogError("PixelDatabase: a step of " + st.source + " (order " + st.order + ") failed - " + e.Message); }   // (shown, not hidden: a broken entry should be noticed)
         }
-
-        // ---- Shop packs ----
-        List<Entry> packEntries = new List<Entry>();
-        if (shop != null)
-        {
-            IReadOnlyList<PixelShop.ShopPack> packs = shop.AllPacks;
-            for (int i = 0; i < packs.Count; i++)
-            {
-                PixelShop.ShopPack p = packs[i];
-                if (p == null) { packEntries.Add(null); continue; }
-                Entry packEntry = Add("Shop pack", p.displayName, Plain(p.description) + "\nShop tab: " + p.tab + (p.purchased ? "\nBought." : ""));
-                bool rewardKnown = false;
-                if (p.rewardTiers != null && clicker != null) foreach (PixelClicker.PixelTier rt in p.rewardTiers) if (rt != null && clicker.IsUnlocked(rt.type)) rewardKnown = true;
-                packEntry.discovered = p.purchased || rewardKnown;
-                packEntries.Add(packEntry);
-            }
-            for (int i = 0; i < packs.Count; i++)
-            {
-                PixelShop.ShopPack p = packs[i];
-                Entry pe = packEntries[i];
-                if (p == null || pe == null) continue;
-                if (p.rewardTiers != null)
-                    foreach (PixelClicker.PixelTier t in p.rewardTiers) Link(pe, "Rewards pixel", PixelOf(t.type), "Rewarded by shop pack");
-                if (p.costs != null)
-                    foreach (PixelShop.PackCost c in p.costs)
-                    {
-                        if (!string.IsNullOrEmpty(c.minigameCurrency)) { minigames.TryGetValue(c.minigameCurrency, out Entry mg); Link(pe, "Costs " + c.amount + " of minigame currency", mg, "Spent on shop pack"); }
-                        else Link(pe, "Costs " + c.amount, PixelOf(c.type), "Pays for shop pack");
-                    }
-                if (p.requirements != null)
-                    foreach (PixelShop.PackRequirement r in p.requirements)
-                    {
-                        if (r.kind == PixelShop.RequirementKind.Pack && r.packIndex >= 0 && r.packIndex < packEntries.Count) Link(pe, "Requires pack", packEntries[r.packIndex], "Required by pack");
-                        else if (r.kind != PixelShop.RequirementKind.Pack && minigames.TryGetValue(r.minigameId ?? "", out Entry mg)) Link(pe, "Requires goal of", mg, "Goal needed for shop pack");
-                    }
-                if (!string.IsNullOrEmpty(p.unlocksMinigame) && minigames.TryGetValue(p.unlocksMinigame, out Entry unlocked)) Link(pe, "Unlocks minigame", unlocked, "Unlocked by shop pack");
-            }
-        }
-
-        // ---- Skills ----
-        Dictionary<string, Entry> skillEntries = new Dictionary<string, Entry>();
-        if (skills != null)
-            foreach (PixelSkills.SkillPack s in skills.Packs)
-            {
-                if (s == null) continue;
-                System.Text.StringBuilder sb = new System.Text.StringBuilder(Plain(s.description));
-                if (s.perks != null) foreach (PixelSkills.Perk perk in s.perks) sb.Append("\nLevel ").Append(perk.level).Append(": ").Append(Plain(perk.text));
-                if (s.nodes != null) foreach (PixelSkills.TreeNode n in s.nodes) sb.Append("\nSkill tree - ").Append(n.displayName).Append(": ").Append(Plain(n.description));
-                Entry se = Add("Skill", s.displayName, sb.ToString());
-                se.discovered = skills.IsAvailable(s);
-                se.pinType = "skill"; se.pinKey = s.id;
-                skillEntries[s.id] = se;
-                if (s.types != null) foreach (PixelClicker.PixelType t in s.types) Link(se, "Pixel block", PixelOf(t), "Block of skill");
-                if (Enum.TryParse(s.fillerType, out PixelClicker.PixelType filler)) Link(se, "Filler block", PixelOf(filler), "Filler block of skill");
-                if (Enum.TryParse(s.hazardType, out PixelClicker.PixelType hazard)) Link(se, "Hazard block", PixelOf(hazard), "Hazard block of skill");
-            }
-        // ---- Skill tree nodes (each its own entry, linked to its skill, the node it needs and the block it unlocks) ----
-        if (skills != null)
-            foreach (PixelSkills.SkillPack s in skills.Packs)
-            {
-                if (s == null || s.nodes == null || !skillEntries.TryGetValue(s.id, out Entry owner)) continue;
-                Dictionary<string, Entry> nodeEntries = new Dictionary<string, Entry>();
-                foreach (PixelSkills.TreeNode n in s.nodes)
-                {
-                    if (n == null || string.IsNullOrEmpty(n.displayName)) continue;
-                    string text = Plain(n.description) + "\nCosts " + n.cost + " skill point" + (n.cost == 1 ? "" : "s") + " (a skill earns one per level above 1)." + (n.minLevel > 1 ? "\nNeeds " + s.displayName + " level " + n.minLevel + "." : "") + (n.implemented ? "" : "\nComing soon: the effect is not built yet.");
-                    Entry ne = Add("Skill node", s.displayName + ": " + n.displayName, text);
-                    ne.discovered = owner.discovered;
-                    nodeEntries[n.id] = ne;
-                    Link(ne, "Node of skill", owner, "Tree node");
-                    if (Enum.TryParse(n.guestType, out PixelClicker.PixelType guest)) Link(ne, "Unlocks the block toggle for", PixelOf(guest), "Toggle unlocked by tree node");
-                }
-                foreach (PixelSkills.TreeNode n in s.nodes)
-                    if (n != null && !string.IsNullOrEmpty(n.requires) && nodeEntries.TryGetValue(n.id, out Entry mine))
-                        foreach (string req in n.requires.Split(','))
-                            if (nodeEntries.TryGetValue(req.Trim(), out Entry needed)) Link(mine, "Needs node", needed, "Needed by node");
-            }
-
-        // ---- Special and hold blocks (the rules from PixelBlockRules) ----
-        PixelBlockRules blockRules = PixelBlockRules.Instance;
-        if (blockRules != null)
-        {
-            foreach (PixelBlockRules.SpecialRule r in blockRules.SpecialRules)
-            {
-                if (r == null || r.tier == null) continue;
-                Entry px = PixelOf(r.tier.type);
-                string blockName = px != null ? px.name : r.tier.type.ToString();
-                Entry re = Add("Block rule", blockName + ": special block", Plain(PixelBlockRules.GuideNotes(r.tier.type)).Trim());
-                re.discovered = px != null && px.discovered;
-                Link(re, "Special block", px, "Has a special-block rule");
-                if (r.replaces != null) foreach (PixelClicker.PixelType t in r.replaces) Link(re, "Replaces", PixelOf(t), "Can be replaced by a special block");
-                if (r.hasBoost) Link(re, "Raised by husks of", PixelOf(r.boostBlock), "Raises a special block's chance");
-                if (!string.IsNullOrEmpty(r.skillId) && skillEntries.TryGetValue(r.skillId, out Entry sk)) Link(re, "Skill", sk, "Special block of skill");
-            }
-            foreach (PixelBlockRules.HoldRule r in blockRules.HoldRules)
-            {
-                if (r == null) continue;
-                Entry px = PixelOf(r.type);
-                string blockName = px != null ? px.name : r.type.ToString();
-                Entry re = Add("Block rule", blockName + ": hold bonus", Plain(PixelBlockRules.GuideNotes(r.type)).Trim());
-                re.discovered = px != null && px.discovered;
-                Link(re, "Hold block", px, "Has a hold bonus");
-                if (r.clearsHazard) Link(re, "Clears hazard", PixelOf(r.hazardType), "Cleared by a held block");
-                if (!string.IsNullOrEmpty(r.skillId) && skillEntries.TryGetValue(r.skillId, out Entry sk)) Link(re, "Skill", sk, "Hold bonus of skill");
-            }
-        }
-
-        if (shop != null)
-        {
-            IReadOnlyList<PixelShop.ShopPack> packs = shop.AllPacks;
-            for (int i = 0; i < packs.Count; i++)
-                if (packs[i] != null && !string.IsNullOrEmpty(packs[i].skillId) && skillEntries.TryGetValue(packs[i].skillId, out Entry se))
-                    Link(packEntries[i], "Unlocks skill", se, "Unlocked by shop pack");
-        }
-
-        // ---- Consumables ----
-        Dictionary<string, Entry> itemEntries = new Dictionary<string, Entry>();
-        if (consumables != null)
-            for (int i = 0; i < consumables.ItemCount; i++)
-            {
-                // Only items a player can meet: the thousands of craft-only combo potions / attuned devices show up once you hold one.
-                if (!consumables.ItemListable(i)) continue;
-                try
-                {
-                    string name = consumables.ItemName(i);
-                    if (string.IsNullOrEmpty(name)) continue;
-                    Entry ie = Add("Consumable", name, Plain(consumables.ItemDescription(i)));
-                    ie.discovered = clicker != null && clicker.IsUnlocked(consumables.ItemRequiredType(i));
-                    ie.pinType = "fav"; ie.pinKey = "item:" + name;
-                    itemEntries[name] = ie;
-                    PixelShop.PackCost[] costs = consumables.ItemCosts(i);
-                    if (costs != null) foreach (PixelShop.PackCost c in costs) if (c != null && string.IsNullOrEmpty(c.minigameCurrency)) Link(ie, "Costs " + c.amount, PixelOf(c.type), "Pays for consumable");
-                }
-                catch (Exception e) { Debug.LogError("PixelDatabase: could not list consumable " + i + " - " + e.Message); }   // (shown, not hidden: a broken item should be noticed)
-            }
-
-        // ---- Vendors' wares (a vendor's entry lists what it sells; the consumable points back) ----
-        foreach (KeyValuePair<Entry, List<string>> vw in vendorWares)
-            foreach (string wareName in vw.Value)
-                if (itemEntries.TryGetValue(wareName, out Entry wareEntry)) Link(vw.Key, "Sells", wareEntry, "Sold by");
-
-        // ---- Floors and skies (the looks the Settings pickers list) ----
-        System.Action<string, IPixelLookSource, string> addLooks = (cat, src, where) =>
-        {
-            if (src == null) return;
-            for (int i = 0; i < src.StyleCount; i++)
-            {
-                string styleName = src.StyleName(i);
-                if (string.IsNullOrEmpty(styleName)) continue;
-                Add(cat, styleName, "A " + cat.ToLowerInvariant() + " style for the game. Pick it in Settings > Gameplay > " + where + "." + (src.Current == i ? "\nIn use now." : ""));
-            }
-        };
-        addLooks("Floor", PixelFloor.Instance, "Floor style");
-        addLooks("Sky", PixelSkybox.Instance, "Sky style");
-
-        // ---- Settings: every row of the pause menu's Settings screen (labels, choices and current values read from the built rows) ----
-        PixelPauseMenu pauseMenu = PixelFind.First<PixelPauseMenu>();
-        if (pauseMenu != null)
-            foreach (PixelPauseMenu.SettingInfo st in pauseMenu.SettingsCatalog())
-            {
-                string label = Plain(st.label).Trim();
-                string where = "Settings > " + (string.IsNullOrEmpty(st.section) ? "" : Plain(st.section).Trim() + " > ") + label;
-                string text = "Found in " + where + ". A " + st.kind.ToLowerInvariant() + ".";
-                string lookCategory = st.look == null ? null : (ReferenceEquals(st.look, PixelSkybox.Instance) ? "Sky" : "Floor");
-                if (st.choices != null && st.choices.Length > 0) text += "\nChoices: " + string.Join(", ", st.choices) + ".";
-                if (lookCategory != null) text += "\nChoices: every " + lookCategory.ToLowerInvariant() + " style (each has its own entry under " + (lookCategory == "Sky" ? "Skies" : "Floors") + ").";
-                if (!string.IsNullOrEmpty(st.current)) text += "\nNow: " + Plain(st.current) + ".";
-                Entry se = Add("Setting", label, text);
-                if (lookCategory != null)
-                    for (int i = 0; i < st.look.StyleCount; i++) Link(se, "Lists", Find(lookCategory + "|" + st.look.StyleName(i)), "Picked in setting");
-            }
-
-        // ---- Pets: one per pixel type that can have one ----
-        PixelPets petSystem = PixelPets.Instance;
-        if (clicker != null && petSystem != null)
-            foreach (PixelClicker.PixelTier t in clicker.Tiers)
-            {
-                if (t == null || !PixelPets.CanHavePet(t.type)) continue;
-                string pixelName = PixelName(t);
-                string special = "";
-                switch (t.type.ToString())
-                {
-                    case "Seed": special = "\nThis pet plants itself in the ground and sows seeds."; break;
-                    case "Ghost": special = "\nThis pet only hovers."; break;
-                    case "Glass": special = "\nThis pet shatters now and then and pulls itself back together."; break;
-                    case "Vacuum": special = "\nThis pet sucks up nearby husks and counts them."; break;
-                }
-                Entry pet = Add("Pet", pixelName + " Pet",
-                    "A companion of the " + pixelName + " pixel. Every click has a small chance (" + (petSystem.FindChancePerClick * 100f).ToString("0.###") + "%) of finding it; automatic clicks count less, a Pet Treat helps. " +
-                    "While it is out, " + pixelName + " comes up " + petSystem.SpawnWeightFactor.ToString("0.#") + "x as often and its husks last " + petSystem.DespawnSlowDown.ToString("0.#") + "x longer." + special);
-                pet.discovered = petSystem.IsOwned(t.type);
-                Link(pet, "Pet of pixel", PixelOf(t.type), "Has a pet");
-            }
-
-        // ---- Recipes ----
-        if (crafting != null)
-            foreach (PixelCrafting.Recipe r in crafting.DefinedRecipes)
-            {
-                if (r == null) continue;
-                Entry re = Add("Recipe", string.IsNullOrEmpty(r.label) ? "Recipe" : r.label, "Crafting: makes a " + r.resultKind + (r.resultKind == PixelCrafting.ResultKind.Device ? "" : " (" + r.resultPotion + ")") + ".");
-                foreach (PixelCrafting.Ingredient ing in new[] { r.a, r.b })
-                    if (ing != null && ing.kind != PixelCrafting.ItemKind.Device) Link(re, (ing.kind == PixelCrafting.ItemKind.Potion ? "Uses potion of" : "Uses pixel"), PixelOf(ing.type), "Ingredient in recipe");
-                if (r.resultKind == PixelCrafting.ResultKind.Potion || r.resultKind == PixelCrafting.ResultKind.Combo || r.resultKind == PixelCrafting.ResultKind.Triple) Link(re, "Makes potion of", PixelOf(r.resultPotion), "Potion made by recipe");
-            }
-
-        // ---- Achievements ----
-        if (achievements != null)
-            for (int i = 0; i < achievements.Count; i++)
-            {
-                PixelAchievements.Achievement a = achievements.Get(i);
-                if (a == null) continue;
-                Entry ae = Add("Achievement", Plain(a.title), Plain(a.description));
-                ae.pinType = "achievement"; ae.pinKey = achievements.GetId(i);
-                if (a.kind == PixelAchievements.Kind.CollectPixelType || a.kind == PixelAchievements.Kind.ClickPixelType) Link(ae, "About pixel", PixelOf(a.pixelType), "Achievement");
-            }
-
-        // ---- Tips and the in-game guides: text that MENTIONS other entries ----
-        List<Entry> texts = new List<Entry>();
-        if (hints != null)
-            foreach (PixelHints.Hint h in hints.AllHints)
-                if (h != null && !string.IsNullOrEmpty(h.text)) texts.Add(Add("Tip", h.id, Plain(h.text)));
-        foreach (string resource in new[] { "HowToPlay", "Controls" })
-        {
-            TextAsset asset = Resources.Load<TextAsset>(resource);
-            if (asset == null) continue;
-            foreach (string raw in asset.text.Split('\n'))
-            {
-                string line = raw.Trim();
-                if (line.Length < 8 || line.StartsWith("//") || line.StartsWith("#")) continue;
-                line = Plain(line).Replace(" | ", ":  ");
-                string title = (resource == "HowToPlay" ? "Guide: " : "Controls: ") + (line.Length > 46 ? line.Substring(0, 46) + "..." : line);
-                texts.Add(Add("Tip", title, line));
-            }
-        }
-        List<Entry> mentionable = new List<Entry>();
-        foreach (Entry e in entries) if (e.category != "Tip" && e.category != "Achievement" && e.category != "Recipe" && e.category != "Floor" && e.category != "Sky" && e.category != "Pet" && e.category != "Block rule" && e.category != "Skill node" && e.name.Length >= 3) mentionable.Add(e);
-        foreach (Entry t in texts)
-            foreach (Entry target in mentionable)
-                if (ContainsWord(t.detail, target.name) || ContainsWord(t.name, target.name)) Link(t, "Mentions", target, "Mentioned in tip / guide");
-
-        // ---- Goals (PixelGoals' table: one entry per row, discovered once it has appeared in the Log's Goals tab) ----
-        PixelGoals goalTable = PixelGoals.Instance;
-        if (goalTable != null && goalTable.Defs != null)
-            foreach (PixelGoals.GoalDef g in goalTable.Defs)
-            {
-                if (g == null || !g.enabled || string.IsNullOrEmpty(g.title)) continue;
-                string reward = goalTable.RewardText(g);
-                Entry ge = Add("Goal", g.title, g.description + "\nTarget: " + g.target.ToString("0.#") + (reward.Length > 0 ? "\nReward: " + reward : "") + (PixelGoals.Done(g) ? "\nDone." : ""));
-                ge.discovered = PixelGoals.Shown(g);
-            }
 
         // The mystery bar (PixelSkills.StandardHidden): until Standard level 2 every entry that names it (the skill, its tree nodes, tips and guide
         // lines about it) is undiscovered, so the database never spoils the name.
@@ -437,6 +248,117 @@ public static class PixelDatabase
             e.maskedBlob = ("???\n" + e.category).ToLowerInvariant();
         }
         entries.Sort((a, b) => { int c = string.CompareOrdinal(a.category, b.category); return c != 0 ? c : string.Compare(a.name, b.name, StringComparison.OrdinalIgnoreCase); });
+    }
+
+    // ------------------------------------------------------------------
+    // Providers kept here: groups whose owner is a very large file with no natural place (PixelConsumables, PixelPauseMenu, PixelHints) or that work
+    // over several systems at once (the minigame list, vendors' wares, the look pickers, the Resources guide texts and the 'mentions' pass).
+    // ------------------------------------------------------------------
+
+    private static void BuiltInSteps(Steps steps)
+    {
+        // ---- Minigames and vendors: each minigame describes itself (PixelMinigame.AddToDatabase; a vendor also lists its wares) ----
+        steps.Add(MinigamesOrder, b =>
+        {
+            foreach (PixelMinigame m in PixelMinigame.All) if (m != null) m.AddToDatabase(b);
+        });
+
+        // ---- Consumables ----
+        steps.Add(ConsumablesOrder, b =>
+        {
+            PixelShop shop = PixelFind.First<PixelShop>();
+            PixelConsumables consumables = shop != null ? shop.Consumables : PixelFind.First<PixelConsumables>();
+            if (consumables == null) return;
+            for (int i = 0; i < consumables.ItemCount; i++)
+            {
+                // Only items a player can meet: the thousands of craft-only combo potions / attuned devices show up once you hold one.
+                if (!consumables.ItemListable(i)) continue;
+                try
+                {
+                    string name = consumables.ItemName(i);
+                    if (string.IsNullOrEmpty(name)) continue;
+                    Entry ie = b.Add("Consumable", name, Plain(consumables.ItemDescription(i)));
+                    ie.discovered = b.Clicker != null && b.Clicker.IsUnlocked(consumables.ItemRequiredType(i));
+                    ie.pinType = "fav"; ie.pinKey = "item:" + name;
+                    b.Items[name] = ie;
+                    PixelShop.PackCost[] costs = consumables.ItemCosts(i);
+                    if (costs != null) foreach (PixelShop.PackCost c in costs) if (c != null && string.IsNullOrEmpty(c.minigameCurrency)) b.Link(ie, "Costs " + c.amount, b.Pixel(c.type), "Pays for consumable");
+                }
+                catch (Exception e) { Debug.LogError("PixelDatabase: could not list consumable " + i + " - " + e.Message); }   // (shown, not hidden: a broken item should be noticed)
+            }
+        });
+
+        // ---- Vendors' wares (a vendor's entry lists what it sells; the consumable points back) ----
+        steps.Add(VendorWaresOrder, b =>
+        {
+            foreach (KeyValuePair<Entry, List<string>> vw in b.VendorWares)
+                foreach (string wareName in vw.Value)
+                    if (b.Items.TryGetValue(wareName, out Entry wareEntry)) b.Link(vw.Key, "Sells", wareEntry, "Sold by");
+        });
+
+        // ---- Floors and skies (the looks the Settings pickers list) ----
+        steps.Add(LooksOrder, b =>
+        {
+            System.Action<string, IPixelLookSource, string> addLooks = (cat, src, where) =>
+            {
+                if (src == null) return;
+                for (int i = 0; i < src.StyleCount; i++)
+                {
+                    string styleName = src.StyleName(i);
+                    if (string.IsNullOrEmpty(styleName)) continue;
+                    b.Add(cat, styleName, "A " + cat.ToLowerInvariant() + " style for the game. Pick it in Settings > Gameplay > " + where + "." + (src.Current == i ? "\nIn use now." : ""));
+                }
+            };
+            addLooks("Floor", PixelFloor.Instance, "Floor style");
+            addLooks("Sky", PixelSkybox.Instance, "Sky style");
+        });
+
+        // ---- Settings: every row of the pause menu's Settings screen (labels, choices and current values read from the built rows) ----
+        steps.Add(SettingsOrder, b =>
+        {
+            PixelPauseMenu pauseMenu = PixelFind.First<PixelPauseMenu>();
+            if (pauseMenu == null) return;
+            foreach (PixelPauseMenu.SettingInfo st in pauseMenu.SettingsCatalog())
+            {
+                string label = Plain(st.label).Trim();
+                string where = "Settings > " + (string.IsNullOrEmpty(st.section) ? "" : Plain(st.section).Trim() + " > ") + label;
+                string text = "Found in " + where + ". A " + st.kind.ToLowerInvariant() + ".";
+                string lookCategory = st.look == null ? null : (ReferenceEquals(st.look, PixelSkybox.Instance) ? "Sky" : "Floor");
+                if (st.choices != null && st.choices.Length > 0) text += "\nChoices: " + string.Join(", ", st.choices) + ".";
+                if (lookCategory != null) text += "\nChoices: every " + lookCategory.ToLowerInvariant() + " style (each has its own entry under " + (lookCategory == "Sky" ? "Skies" : "Floors") + ").";
+                if (!string.IsNullOrEmpty(st.current)) text += "\nNow: " + Plain(st.current) + ".";
+                Entry se = b.Add("Setting", label, text);
+                if (lookCategory != null)
+                    for (int i = 0; i < st.look.StyleCount; i++) b.Link(se, "Lists", b.Find(lookCategory, st.look.StyleName(i)), "Picked in setting");
+            }
+        });
+
+        // ---- Tips and the in-game guides: text that MENTIONS other entries (everything added before this step can be mentioned) ----
+        steps.Add(TipsOrder, b =>
+        {
+            PixelHints hints = PixelFind.First<PixelHints>();
+            if (hints != null)
+                foreach (PixelHints.Hint h in hints.AllHints)
+                    if (h != null && !string.IsNullOrEmpty(h.text)) b.Texts.Add(b.Add("Tip", h.id, Plain(h.text)));
+            foreach (string resource in new[] { "HowToPlay", "Controls" })
+            {
+                TextAsset asset = Resources.Load<TextAsset>(resource);
+                if (asset == null) continue;
+                foreach (string raw in asset.text.Split('\n'))
+                {
+                    string line = raw.Trim();
+                    if (line.Length < 8 || line.StartsWith("//") || line.StartsWith("#")) continue;
+                    line = Plain(line).Replace(" | ", ":  ");
+                    string title = (resource == "HowToPlay" ? "Guide: " : "Controls: ") + (line.Length > 46 ? line.Substring(0, 46) + "..." : line);
+                    b.Texts.Add(b.Add("Tip", title, line));
+                }
+            }
+            List<Entry> mentionable = new List<Entry>();
+            foreach (Entry e in entries) if (!NotMentioned.Contains(e.category) && e.name.Length >= 3) mentionable.Add(e);
+            foreach (Entry t in b.Texts)
+                foreach (Entry target in mentionable)
+                    if (ContainsWord(t.detail, target.name) || ContainsWord(t.name, target.name)) b.Link(t, "Mentions", target, "Mentioned in tip / guide");
+        });
     }
 
     private static bool ContainsWord(string text, string word)

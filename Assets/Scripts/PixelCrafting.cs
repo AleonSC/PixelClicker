@@ -22,7 +22,7 @@ using UnityEngine.UI;
 /// recipes, paying the pixel ingredients with husks (MachineRecipes / PricedRecipe / MachineCraft below).
 /// Add this to any GameObject. PixelShop adds it automatically if it is missing.
 /// </summary>
-public class PixelCrafting : MonoBehaviour
+public class PixelCrafting : MonoBehaviour, IPixelDatabaseSource
 {
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
@@ -2104,6 +2104,23 @@ public class PixelCrafting : MonoBehaviour
             audioSource.playOnAwake = false;
         }
         audioSource.PlayOneShot(craftSound, soundVolume);
+    }
+
+    // ---- Game Database (IPixelDatabaseSource): one 'Recipe' entry per defined recipe, linked to its ingredient pixels and the potion it makes ----
+
+    void IPixelDatabaseSource.DatabaseSteps(PixelDatabase.Steps steps)
+    {
+        steps.Add(PixelDatabase.RecipesOrder, b =>
+        {
+            foreach (Recipe r in DefinedRecipes)
+            {
+                if (r == null) continue;
+                PixelDatabase.Entry re = b.Add("Recipe", string.IsNullOrEmpty(r.label) ? "Recipe" : r.label, "Crafting: makes a " + r.resultKind + (r.resultKind == ResultKind.Device ? "" : " (" + r.resultPotion + ")") + ".");
+                foreach (Ingredient ing in new[] { r.a, r.b })
+                    if (ing != null && ing.kind != ItemKind.Device) b.Link(re, (ing.kind == ItemKind.Potion ? "Uses potion of" : "Uses pixel"), b.Pixel(ing.type), "Ingredient in recipe");
+                if (r.resultKind == ResultKind.Potion || r.resultKind == ResultKind.Combo || r.resultKind == ResultKind.Triple) b.Link(re, "Makes potion of", b.Pixel(r.resultPotion), "Potion made by recipe");
+            }
+        });
     }
 }
 

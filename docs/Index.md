@@ -84,7 +84,8 @@ One line per script / system: what it is and where its details are. Search it (`
 | `PixelCustomKeys.cs` | Custom keybinds: bind any item (potion, device...) or tool to your own key; the window is the Keybinds tab of My Window; saved per save file. | in the header comment of `PixelCustomKeys.cs` |
 | `PixelBlockTooltip.cs` | Block hover tooltip (added by PixelClicker.Awake; | in the header comment of `PixelBlockTooltip.cs` |
 | `PixelPixelGuide.cs` / `PixelGuideTexts.cs` | Pixel Guide (added by PixelClicker.Awake): | in the header comment of `PixelPixelGuide.cs` |
-| `PixelDatabase.cs` / `PixelDatabaseWindow.cs` | Game Database (opened by the Database tab of the pause menu's Game Guide screen, PixelPauseMenu.BuildGuideScreen -> PixelDatabaseWindow.Toggle(); | in the header comment of `PixelDatabase.cs` |
+| `PixelDatabase.cs` / `PixelDatabaseWindow.cs` | Game Database (opened by the Database tab of the pause menu's Game Guide screen, PixelPauseMenu.BuildGuideScreen -> PixelDatabaseWindow.Toggle()): a search over the live game data; each system hands in its own entries (IPixelDatabaseSource). | in the header comment of `PixelDatabase.cs` |
+| `PixelClickerDatabase.cs` / `PixelShopDatabase.cs` / `PixelSkillsDatabase.cs` / `PixelPetsDatabase.cs` | Parts of PixelClicker / PixelShop / PixelSkills / PixelPets: their Game Database entries (IPixelDatabaseSource steps: pixels; packs, pack->skill links and Operation upgrades; skills and tree nodes; pets). | in the header comment of each file (and `PixelDatabase.cs` 'SOURCES') |
 | `PixelGrab.cs` | Pixel Grabbing (unlocked from the start - Awake sets grabbingActive; | in the header comment of `PixelGrab.cs` |
 | `PixelTimeStop.cs` | Time Stop (shop pack with unlocksTimeStop, Upgrades tab): | in the header comment of `PixelTimeStop.cs` |
 | `PixelBank.cs` | Pixel Bank (shop pack with unlocksBank, Upgrades tab): | `docs/systems/PixelBank.md` |

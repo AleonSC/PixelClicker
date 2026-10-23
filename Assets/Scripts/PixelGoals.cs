@@ -34,7 +34,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelGoals : MonoBehaviour
+public class PixelGoals : MonoBehaviour, IPixelDatabaseSource
 {
     public enum CounterKind { StatSinceShown, StatValue, ManualClicksSinceShown, TierTotal }
     public enum AppearKind { Always, HusksOnFloor, StatAtLeast, MinutesPlayed }
@@ -337,5 +337,22 @@ public class PixelGoals : MonoBehaviour
         PixelHints.Announce("Goal complete: " + g.title + (reward.Length > 0 ? " (" + reward + ")" : ""), "You completed the goal '" + g.title + "'." + (reward.Length > 0 ? " Reward: " + reward + "." : ""));
         PixelSessionRecorder.Note("Goal done: " + g.title);
         PixelStats.Count("goals.done");
+    }
+
+    // ---- Game Database (IPixelDatabaseSource): one 'Goal' entry per row of the table, discovered once it has appeared in the Log's Goals tab ----
+
+    void IPixelDatabaseSource.DatabaseSteps(PixelDatabase.Steps steps)
+    {
+        steps.Add(PixelDatabase.GoalsOrder, b =>
+        {
+            if (Defs == null) return;
+            foreach (GoalDef g in Defs)
+            {
+                if (g == null || !g.enabled || string.IsNullOrEmpty(g.title)) continue;
+                string reward = RewardText(g);
+                PixelDatabase.Entry ge = b.Add("Goal", g.title, g.description + "\nTarget: " + g.target.ToString("0.#") + (reward.Length > 0 ? "\nReward: " + reward : "") + (Done(g) ? "\nDone." : ""));
+                ge.discovered = Shown(g);
+            }
+        });
     }
 }

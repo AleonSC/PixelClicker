@@ -11,7 +11,7 @@ using UnityEngine.UI;
 /// plays a summoning scene (the cubes circle, spiral together in a flash, and a cube dragon bursts out). The dragon offers three
 /// wishes picked from a pool; choosing one grants it. All of it is drawn in code. Added by PixelClicker.Awake.
 /// </summary>
-public class PixelDragonWish : MonoBehaviour
+public class PixelDragonWish : MonoBehaviour, IPixelDatabaseSource
 {
     [Header("References")]
     [Tooltip("The PixelClicker whose Dragon Cubes are checked. Found automatically if left empty.")]
@@ -557,7 +557,8 @@ public class PixelDragonWish : MonoBehaviour
     // The wishes
     // ------------------------------------------------------------------
 
-    private List<Wish> PickWishes()
+    /// <summary>Every wish the dragon can offer (the pool PickWishes draws from; with includeDragonFriend, the Dragon Friend too - for the Game Database).</summary>
+    private List<Wish> AllWishes(bool includeDragonFriend)
     {
         List<Wish> pool = new List<Wish>
         {
@@ -597,18 +598,26 @@ public class PixelDragonWish : MonoBehaviour
                 apply = GivePet,
             },
         };
+        if (includeDragonFriend) pool.Insert(0, DragonFriend());
+        return pool;
+    }
+
+    private Wish DragonFriend() => new Wish
+    {
+        name = "Dragon Friend",
+        description = "A Dragon Cube pet joins you: one of the seven dragon cubes, a pet only the dragon can give.",
+        available = () => true,
+        apply = GiveDragonPet,
+    };
+
+    private List<Wish> PickWishes()
+    {
+        List<Wish> pool = AllWishes(false);
         pool.RemoveAll(w => !w.available());
 
         List<Wish> offer = new List<Wish>();
         // The dragon always offers one of its own cubes as a pet FIRST (until you have all seven Dragon Cube pets).
-        if (UnownedDragonPetTypes().Count > 0)
-            offer.Add(new Wish
-            {
-                name = "Dragon Friend",
-                description = "A Dragon Cube pet joins you: one of the seven dragon cubes, a pet only the dragon can give.",
-                available = () => true,
-                apply = GiveDragonPet,
-            });
+        if (UnownedDragonPetTypes().Count > 0) offer.Add(DragonFriend());
         while (offer.Count < 3 && pool.Count > 0)
         {
             int i = UnityEngine.Random.Range(0, pool.Count);
@@ -699,5 +708,26 @@ public class PixelDragonWish : MonoBehaviour
         PixelPets.Instance.Award(type, false);
         int tier = clicker.IndexOf(type);
         PixelHints.Announce("A new pet joined you: " + (tier >= 0 ? clicker.Tiers[tier].displayName : type.ToString()) + " Pet!");
+    }
+
+    // ---- Game Database (IPixelDatabaseSource): the wish as a 'Special' entry listing every wish (text from AllWishes), linked to the seven Dragon Cubes;
+    //      discovered once any Dragon Cube is ----
+
+    void IPixelDatabaseSource.DatabaseSteps(PixelDatabase.Steps steps)
+    {
+        steps.Add(PixelDatabase.ExtrasOrder, b =>
+        {
+            System.Text.StringBuilder sb = new System.Text.StringBuilder("Hold one of each of the seven Dragon Cubes (extremely rare pixels with 1-7 small cubes inside) and a '" + buttonText +
+                "' button appears. Pressing it uses up the seven cubes, stops time and summons the cube dragon, who offers three wishes (a Dragon Cube pet first, until you have all seven):");
+            foreach (Wish w in AllWishes(true)) sb.Append("\n").Append(w.name).Append(": ").Append(w.description);
+            PixelDatabase.Entry e = b.Add("Special", "Dragon wish", sb.ToString());
+            e.discovered = false;
+            foreach (KeyValuePair<PixelClicker.PixelType, PixelDatabase.Entry> px in b.Pixels)
+            {
+                if (!PixelClicker.IsDragonCube(px.Key)) continue;
+                b.Link(e, "Needs", px.Value, "Gathered for a special");
+                if (px.Value.discovered) e.discovered = true;
+            }
+        });
     }
 }
