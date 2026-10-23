@@ -400,6 +400,17 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
         kit.Box("Rim Back", tr, new Vector3(0f, h + t * 0.12f, (d + t) * 0.5f), new Vector3(w + 2f * t, t * 0.25f, t * 1.3f), metal, default, false, 0.85f, 0.7f);
         kit.Box("Rim Left", tr, new Vector3(-(w + t) * 0.5f, h + t * 0.12f, 0f), new Vector3(t * 1.3f, t * 0.25f, d), metal, default, false, 0.85f, 0.7f);
         kit.Box("Rim Right", tr, new Vector3((w + t) * 0.5f, h + t * 0.12f, 0f), new Vector3(t * 1.3f, t * 0.25f, d), metal, default, false, 0.85f, 0.7f);
+        // Cubie's PRICE TAG (PixelCubieBill, until he reveals his bill): a paper tag on a string, hanging off the front right corner of the rim.
+        if (PixelCubieBill.TagShown)
+        {
+            GameObject tag = new GameObject(PriceTagName);
+            tag.transform.SetParent(tr, false);
+            tag.transform.localPosition = new Vector3(w * 0.5f + t * 0.6f, h + t * 0.1f, -(d * 0.5f + t * 0.6f));
+            tag.transform.localEulerAngles = new Vector3(0f, 0f, -14f);
+            kit.Box("Tag String", tag.transform, new Vector3(0f, -0.25f * u, 0f), new Vector3(0.03f * u, 0.5f * u, 0.03f * u), new Color(0.85f, 0.8f, 0.7f, 1f));
+            kit.Box("Tag Paper", tag.transform, new Vector3(0f, -0.72f * u, 0f), new Vector3(0.5f * u, 0.5f * u, 0.03f * u), new Color(0.96f, 0.92f, 0.78f, 1f), new Vector3(0f, 0f, 8f), false, 0f, 0.2f);
+            kit.Box("Tag Ink", tag.transform, new Vector3(0f, -0.72f * u, -0.02f * u), new Vector3(0.32f * u, 0.06f * u, 0.01f * u), new Color(0.75f, 0.12f, 0.12f, 1f), new Vector3(0f, 0f, 8f), false, 0f, 0.2f);   // (a red scribble: '???')
+        }
         // A glowing band round the body (it pulses while the bin works).
         float bandY = h * 0.32f, bandT = t * 0.18f;
         kit.Box("Band Front", tr, new Vector3(0f, bandY, -(d + 2f * t) * 0.5f - bandT * 0.5f), new Vector3(w + 2f * t, t * 0.22f, bandT), glow, default, false, 0f, 0.8f, glow);
@@ -1001,9 +1012,23 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
 
     private PixelPlacedDevice device;
 
+    private const string PriceTagName = "Price Tag";
+
+    /// <summary>Cubie revealed his bill (PixelCubieBill.Reveal): every Recycler loses its price tag.</summary>
+    public static void RemoveTags()
+    {
+        foreach (PixelRecycler r in all.ToArray())
+        {
+            Transform tag = r != null ? r.transform.Find(PriceTagName) : null;
+            if (tag != null) Destroy(tag.gameObject);
+        }
+    }
+
     /// <summary>The shared device card / panel (PixelDeviceCard): what is inside, the last batch's streak; the panel adds this session's totals.</summary>
     public void FillDeviceInfo(PixelDeviceInfo info)
     {
+        if (PixelCubieBill.TagShown && transform.Find(PriceTagName) != null)
+            info.Note("<color=#E8DDB5><i>A paper tag: 'Property of Cubie.' Terms: see reverse. Amount owed: <b>???</b></i></color>");
         int cap = Capacity;
         bool streaking = clicker != null && clicker.IsValidTierIndex(streakTier) && streakCount > 0 && Time.time - lastRecycleTime <= streakTimeout;
         if (autoRecycle)

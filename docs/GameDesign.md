@@ -410,7 +410,7 @@ By now the player has every tool (machines, consumables, minigames, vendors, fir
 grinding skills towards the cap. **Cosmetics** locked behind long goals give the late game things worth chasing - the game already has
 places for them: pet outfits, floor / sky / bar styles, cube looks, gear models. Which ones and for what: **(Q1)**.
 
-### Cubie's bill - the progression spine (Agreed 2026-10-23, not built)
+### Cubie's bill - the progression spine (Agreed 2026-10-23, BUILT 2026-10-23: `PixelCubieBill`; value ladder and prestige not built)
 **Cubie is a monopolist:** he owns the only shop in existence, so his word is the price. Mundane and transactional, no story. The other
 vendors are 'peddlers' to him; they resent him, and the player ends up on their side. **He takes money only** - the six pure colours;
 vendors take goods (orders) and buy skill currency and products for pure currency.
@@ -446,6 +446,12 @@ vendors take goods (orders) and buy skill currency and products for pure currenc
   other guys? Peddlers. I run the show." and "Look, I know it's rough out here. I was in your position once. Maybe one day you'll run
   things around here, if you're lucky. So I'll tell you what: every time you prove you're still in this, I'll *let* you buy some of my
   newer, better stock." The Bill window opens.
+- **As built (2026-10-23):** the reveal goal is 'Earn 2,000 Blue' (appears at minute 40, after 'Earn 120 Black') - a placeholder for ~1 h.
+  Every Recycler wears the tag until then (they are timed, so the visit-1 one alone would vanish). Locked stock is hidden before the reveal
+  and shows 'Cubie's trust: Tier N' after it. The DRAFT stock table (on PixelCubieBill, Inspector): Tier 1 belts, Belt Sorter, Elevator,
+  Belt Jump, Combiner, Junction Box + the Forager / Angler / Farmer / Prospector / Electrician packs (Woodcutting stays open: it is the
+  first skill); Tier 2 Biomass Generators, Solar Panel, Power Bank, Quantum Organizer + the Fire / Nuclear packs; Tier 3 the Treasure
+  pack. Potions and cosmetics are not tiered yet. Vendors still sell their own wares whatever the tier (they are the 'peddlers').
 
 **Where the pure money comes from - the value ladder (agreed, not built):** training a skill replaces the basic cubes, so skills must pay
 back in pure currency, and MORE effort must pay MORE: clicking pure pixels 1x; selling raw skill currency to vendors ~1.2x (today 0.8x of the

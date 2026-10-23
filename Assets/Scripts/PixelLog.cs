@@ -1354,6 +1354,10 @@ public class PixelLog : MonoBehaviour
         // The data-driven goals (PixelGoals: crush / recycle / streak goals that alternate with the click and unlock goals), each with its own reward.
         AddTableGoals(goals);
 
+        // Cubie's bill (PixelCubieBill): the next trust tier, pinned once the bill is revealed.
+        if (PixelCubieBill.NextGoal(out string billTitle, out string billText, out double billHave, out double billNeed))
+            goals.Add(new Goal { title = billTitle, description = billText, count = billHave, goal = billNeed, skinTier = -1, iconColor = new Color(0.3f, 0.85f, 0.75f, 1f) });
+
         // Before RGB: earn the Black that brings Cubie's second visit (he unlocks Red, Green and Blue and opens the shop).
         if (goalShop == null) goalShop = PixelFind.First<PixelShop>();
         PixelShop shop = goalShop;

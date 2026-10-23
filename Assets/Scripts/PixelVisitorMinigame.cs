@@ -86,6 +86,14 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     [Tooltip("What the visitor says on arrival. {0} = the discount in percent. Empty = this visitor's own greeting.")]
     [SerializeField] private string greeting = "";
 
+    [TextArea(1, 3)]
+    [Tooltip("Jabs at Cubie (his bill, his monopoly): one may follow the greeting, in italics, once Cubie's shop is open. Empty = this visitor's built-in jabs (CubieJabs).")]
+    [SerializeField] private string[] cubieJabs = new string[0];
+
+    [Range(0f, 1f)]
+    [Tooltip("Chance that a visit's greeting ends with a jab at Cubie.")]
+    [SerializeField] private float cubieJabChance = 0.35f;
+
     [Tooltip("Label of the button that accepts the offer.")]
     [SerializeField] private string acceptText = "Show me!";
 
@@ -230,6 +238,33 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     private const float TypeCharsPerSecond = 70f;
 
     private bool Typing => typedLabel != null && typeShown < typeTotal;
+
+    // ---- Jabs at Cubie (Cubie's bill, PixelCubieBill: the vendors resent his monopoly and the player ends up on their side) ----
+
+    /// <summary>The built-in jabs per visitor id (one table for every vendor; a visitor's Inspector list wins).</summary>
+    private static string[] CubieJabs(string id)
+    {
+        switch (id)
+        {
+            case "lumberjack": return new[] { "Interest on a second-hand bin? Classic Cubie.", "Cubie tried to bill me for the sawdust once. MY sawdust." };
+            case "prospector": return new[] { "He charged me rent for standing near his shop.", "Cubie says he owns the only shop. I say he owns the only shop that owns a shop." };
+            case "wizard": return new[] { "I offered to turn Cubie's ledger into a frog. He invoiced me for the frog.", "Mind that teal fellow. His numbers have more zeroes than my spells." };
+            case "tinkerer": return new[] { "That Recycler of yours? I built the prototype. Cubie built the price tag.", "Cubie calls us peddlers. At least peddlers don't charge interest on gifts." };
+            case "entrepreneur": return new[] { "A monopoly with one customer. Bold business model. I'm taking notes.", "Between us? Cubie's 'only shop in existence' has a back door. I'm standing in it." };
+            case "farmer": return new[] { "Cubie wanted a cut of my harvest. Of the weather, I mean. He billed the rain.", "If his bill grows any faster I'll start planting it." };
+            default: return null;
+        }
+    }
+
+    /// <summary>The greeting, sometimes followed by a jab at Cubie (only once his shop is open: visit 2 done).</summary>
+    private string GreetingWithJab()
+    {
+        string text = string.Format(Pick(greeting, DefaultGreeting), Mathf.RoundToInt(discountFraction * 100f));
+        string[] jabs = cubieJabs != null && cubieJabs.Length > 0 ? cubieJabs : CubieJabs(Id);
+        if (jabs == null || jabs.Length == 0 || !PixelGuideVendor.SecondVisitDone || UnityEngine.Random.value >= cubieJabChance) return text;
+        string jab = jabs[UnityEngine.Random.Range(0, jabs.Length)];
+        return string.IsNullOrEmpty(jab) ? text : text + "\n\n<size=80%><i>" + jab + "</i></size>";
+    }
 
     private void StartType(TMP_Text label)
     {
@@ -515,6 +550,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             again = false;
             greetingPanel.gameObject.SetActive(true);
             PixelPop.Show(greetingPanel.gameObject);
+            if (greetMessage != null && !again) PixelUIKit.SetText(greetMessage, GreetingWithJab());
             StartType(greetMessage);
             while (decision == 0) { TickType(); Bob(restX, barH); yield return null; }
             PixelPop.Hide(greetingPanel.gameObject);

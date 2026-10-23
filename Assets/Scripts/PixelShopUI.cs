@@ -131,6 +131,13 @@ public partial class PixelShop
         // Help button (blue square with a question mark, in the standard right header slot just left of the X): hold it to replay the shop tutorial.
         Button help = parts.AddHeaderButton("Help", "?", false, ButtonRole.Primary);
         ShopButtonExtras(help);
+
+        // Cubie's bill (PixelCubieBill): an 'IOU' button in the left header slot, shown once he has handed the bill over.
+        Button iou = parts.AddHeaderButton("Bill", billButtonText, true, ButtonRole.Primary);
+        ShopButtonExtras(iou);
+        iou.onClick.AddListener(PixelCubieBillWindow.Toggle);
+        billButton = iou.gameObject;
+        billButton.SetActive(PixelCubieBill.IsRevealed);
         GameObject fillGo = new GameObject("Hold Fill", typeof(RectTransform), typeof(Image));
         fillGo.transform.SetParent(help.transform, false);
         Image fillImage = fillGo.GetComponent<Image>();
@@ -920,8 +927,11 @@ public partial class PixelShop
     // Refreshing
     // ------------------------------------------------------------------
 
+    private GameObject billButton;
+
     private void RefreshRows()
     {
+        if (billButton != null && billButton.activeSelf != PixelCubieBill.IsRevealed) billButton.SetActive(PixelCubieBill.IsRevealed);
         float y = 0f;      // main list
         float subY = 0f;   // upgrades window list
         int visibleCount = 0, subVisibleCount = 0;

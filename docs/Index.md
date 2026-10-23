@@ -37,6 +37,7 @@ One line per script / system: what it is and where its details are. Search it (`
 | `PixelVacuumFx.cs` | The Vacuum pixel's look (looksVersion 38 replaced the saved look; | in the header comment of `PixelVacuumFx.cs` |
 | `PixelGelFx.cs` | The Ghost pixel's look (looksVersion 39 replaced the saved look): | in the header comment of `PixelGelFx.cs` |
 | `PixelGuideVendor.cs` | Cubie, the suspicious cube guide / shopkeeper (added by PixelClicker.Awake; | in the header comment of `PixelGuideVendor.cs` |
+| `PixelCubieBill.cs` (+ `PixelCubieBillWindow.cs`) | Cubie's bill, the progression spine: one absurd bill per pure colour, milestones = trust tiers (CurrentTier / TierUnlocked), the shop stock per tier, the Recycler's price tag, the reveal (Cubie's visit 3), the Bill window (shop IOU button) | in the header comment of `PixelCubieBill.cs`; design in `docs/GameDesign.md` section 6 |
 | `PixelShopNudge.cs` (+ `PixelGuideVendor.ShopHold`) | Shop hold after Cubie's second visit (added by PixelClicker.Awake): | in the header comment of `PixelShopNudge.cs` |
 | `PixelHighlight.cs` | Shared pulsing gold frame round any UI element (PixelHighlight.Set(owner, rect) / Clear(owner)): the Shop button during the shop hold, a skill's card beside a perk popup (Perk.noticeInWindow, e.g. Standard level 2). | in the header comment of `PixelHighlight.cs` |
 | `PixelCubiePeek.cs` | Cubie peeks out from behind the Save / Load window (component added to the pause menu by PixelPauseMenu.BuildSaveLoadPanel, Setup(panelRect, isActive)): | in the header comment of `PixelCubiePeek.cs` |

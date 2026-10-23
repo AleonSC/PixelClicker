@@ -171,6 +171,13 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Text of the button that cancels the active focus potion.")]
     [SerializeField] private string cancelFocusText = "Cancel";
 
+    [Tooltip("'Cubie's bill' widget: the button that reveals the bill now (or opens the Bill window once revealed).")]
+    [SerializeField] private string billRevealText = "Reveal";
+    [Tooltip("'Cubie's bill' widget: the button that pays the next milestone for free (the next trust tier opens).")]
+    [SerializeField] private string billNextTierText = "Tier +1";
+    [Tooltip("'Cubie's bill' widget: the button that resets the bill (nothing paid, tier 0, not revealed).")]
+    [SerializeField] private string billResetText = "Reset";
+
     [Tooltip("Text of the button that unlocks the shop pack picked in the 'Shop unlocks' widget (or every pack when 'All' is picked).")]
     [SerializeField] private string shopUnlockText = "Unlock";
 
@@ -993,6 +1000,7 @@ public class PixelDevTools : MonoBehaviour
             case "spawnminigame": return "Minigames";
             case "middleclick": return "Middle click";
             case "focus": return "Focus potions";
+            case "cubiebill": return "Cubie's bill";
             case "shopunlock": return "Unlock";
             case "maxxp": return "Max XP";
             case "huskpile": return "Husk pile";
@@ -1221,6 +1229,23 @@ public class PixelDevTools : MonoBehaviour
         AddTip(drink.gameObject, "Drink the chosen focus potion: the skill's hazard block stops spawning while it lasts (replaces the one that is active).");
         AddTip(cancelFocus.gameObject, "Stop the active focus potion early.");
         Widget(root, board, "focus", start, y);
+
+        // ---- Cubie's bill (PixelCubieBill): reveal it now, open the next trust tier for free, or reset it. ----
+        start = root.childCount;
+        float billW = (inner - 2f * gap) / 3f;
+        Button billReveal = PixelUIKit.CreateButton(font, root, "Bill Reveal Button", billRevealText, new Vector2(billW, rowHeight), buttonColor, textColor, fontSize);
+        Place(billReveal.GetComponent<RectTransform>(), 40f, y, billW);
+        billReveal.onClick.AddListener(() => { if (PixelCubieBill.Instance != null) PixelCubieBill.Instance.DevReveal(); });
+        Button billTier = PixelUIKit.CreateButton(font, root, "Bill Tier Button", billNextTierText, new Vector2(billW, rowHeight), buttonColor, textColor, fontSize);
+        Place(billTier.GetComponent<RectTransform>(), 40f + billW + gap, y, billW);
+        billTier.onClick.AddListener(() => { if (PixelCubieBill.Instance != null) PixelCubieBill.Instance.DevNextTier(); });
+        Button billReset = PixelUIKit.CreateButton(font, root, "Bill Reset Button", billResetText, new Vector2(billW, rowHeight), buttonColor, textColor, fontSize);
+        Place(billReset.GetComponent<RectTransform>(), 40f + 2f * (billW + gap), y, billW);
+        billReset.onClick.AddListener(() => { if (PixelCubieBill.Instance != null) PixelCubieBill.Instance.DevReset(); });
+        AddTip(billReveal.gameObject, "Reveal Cubie's bill now: he comes with his invoice at the next calm moment (quietly with Cubie / tips off). Once revealed: opens the Bill window.");
+        AddTip(billTier.gameObject, "Pay every pure colour up to the next milestone for free: the next trust tier opens (Cubie talks, more shop stock).");
+        AddTip(billReset.gameObject, "Reset the bill: nothing paid, tier 0, not revealed (new Recyclers wear the tag again).");
+        Widget(root, board, "cubiebill", start, y);
 
         // ---- Shop unlocks: pick a shop pack (or All), Unlock it for free or Relock it. Shop packs only; 'Unlock everything' also unlocks pixels and maxes skills. ----
         start = root.childCount;

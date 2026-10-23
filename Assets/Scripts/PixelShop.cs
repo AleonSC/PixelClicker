@@ -278,6 +278,9 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Buy button text for upgrade packs at max level.")]
     [SerializeField] private string maxedText = "Max";
 
+    [Tooltip("Label of the shop header button that opens Cubie's bill (PixelCubieBill; shown once the bill is revealed).")]
+    [SerializeField] private string billButtonText = "IOU";
+
     [Tooltip("Show packs whose requirement isn't met yet (greyed out as 'Locked'). Off = hidden until the requirement is bought.")]
     [SerializeField] private bool showLockedPacks = false;
 
@@ -2084,11 +2087,12 @@ public partial class PixelShop : MonoBehaviour
     }
 
     /// <summary>True when the pack's required pack (if any) has been bought.</summary>
-    public bool IsRequirementMet(int packIndex) => IsPackRequirementMet(packIndex) && IsMinigameGoalMet(packIndex);
+    public bool IsRequirementMet(int packIndex) => IsPackRequirementMet(packIndex) && IsMinigameGoalMet(packIndex) && PixelCubieBill.TierMet(PixelCubieBill.PackTier(packs[packIndex]));
 
     /// <summary>True when every pack this pack requires (if any) has been bought.</summary>
     public bool IsPackRequirementMet(int packIndex)
     {
+        if (!PixelCubieBill.TierListed(PixelCubieBill.PackTier(packs[packIndex]))) return false;   // (Cubie's trust tier: hidden until his bill is revealed, then listed as locked)
         PackRequirement[] requirements = packs[packIndex].requirements;
         if (requirements == null) return true;
 
@@ -2123,6 +2127,8 @@ public partial class PixelShop : MonoBehaviour
     /// <summary>The text for the first requirement that is not met yet ("Requires: ...").</summary>
     private string RequirementText(int packIndex)
     {
+        int trustTier = PixelCubieBill.PackTier(packs[packIndex]);
+        if (!PixelCubieBill.TierMet(trustTier)) return PixelCubieBill.LockedText(trustTier);
         PackRequirement[] requirements = packs[packIndex].requirements;
         if (requirements == null) return "";
 

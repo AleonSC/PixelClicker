@@ -12,3 +12,8 @@ Every visitor (all PixelVisitorMinigame subclasses: Tinkerer, Wizard, Entreprene
 
 **2026-10-16:** the Farmer only visits while Farming is the skill in training (`CanVisit`, like the Lumberjack with Woodcutting). Vendors can show an orange '!' with a tooltip on their Toggles row (`PixelMinigame.ToggleNote`: the Lumberjack and the Farmer say when they visit). The two rare cats (Egg, Bean) can't be switched off (`PixelMinigame.CanSwitchOff` false: no Toggles row; a saved 'off' is switched back on).
 **Shared training rule (2026-10-16 cleanup):** a vendor that only comes while one skill trains overrides `VisitSkillId` (Lumberjack = Woodcutting, Farmer = Farming, Prospector = Mining); the base `CanVisit` checks `PixelSkills.IsTraining(id)` and the base `ToggleNote` writes '<name> only visits while you are training <skill>.' for its Toggles row.
+
+## Jabs at Cubie (2026-10-23, Cubie's bill)
+Once Cubie's shop is open (visit 2 done), a visit's greeting ends with a jab at Cubie `cubieJabChance` (35%) of the time, in small italics
+(`GreetingWithJab`). The built-in jabs are ONE table in `PixelVisitorMinigame.CubieJabs(id)` (Lumberjack, Prospector, Wizard, Tinkerer,
+Entrepreneur, Farmer: two each); a visitor's own `cubieJabs` Inspector list wins. The vendors resent his monopoly, so the player ends up on their side.

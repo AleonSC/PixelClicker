@@ -85,6 +85,7 @@ public static class PixelSystems
         new Entry(typeof(PixelEggHatch), "Rares and Shows"),
         new Entry(typeof(PixelFirstPerson), "Camera"),
         new Entry(typeof(PixelGuideVendor), "Characters"),
+        new Entry(typeof(PixelCubieBill), "Characters"),
         new Entry(typeof(PixelDragonWish), "Rares and Shows"),
         new Entry(typeof(PixelOvercharge), "Skills"),
         new Entry(typeof(PixelElectricLinks), "Skills"),
