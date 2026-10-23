@@ -1,0 +1,271 @@
+<title>Pixel Clicker Interface Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: a 16:9 sketch of the game screen with clickable pieces beside a sticky detail card; the full searchable index below. */
+:root {
+  --bg: #eef0f6; --panel: #ffffff; --ink: #1b1d2b; --muted: #5b5f78; --line: #d6d9e6;
+  --screen: #1a1530; --screen-floor: #2a2150; --bar: #07060d; --neon: #1fb6d4; --pink: #d62f8f;
+  --spot: rgba(31, 182, 212, 0.16); --spot-line: #1fb6d4; --spot-ink: #e9fbff;
+  --win: rgba(214, 47, 143, 0.14); --win-line: #d62f8f; --sel: #ffcc33;
+  --chip: #e5e7f2; --chip-ink: #2b2e45; --accent: #b81f78;
+  --display: "Silkscreen", "Courier New", monospace;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d0b17; --panel: #171427; --ink: #ecebf6; --muted: #a29fc0; --line: #2c2846;
+  --chip: #241f3c; --chip-ink: #dcd8f3; --accent: #ff5cb7; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0d0b17; --panel: #171427; --ink: #ecebf6; --muted: #a29fc0; --line: #2c2846;
+  --chip: #241f3c; --chip-ink: #dcd8f3; --accent: #ff5cb7; color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); }
+.wrap { max-width: 1280px; margin: 0 auto; padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 22px; }
+header h1 { font: 700 clamp(22px, 3.4vw, 34px)/1.1 var(--display); margin: 0; letter-spacing: 0.02em; text-wrap: balance; }
+header h1 span { color: var(--accent); }
+header p { margin: 6px 0 0; color: var(--muted); max-width: 70ch; }
+code, .mono { font-family: var(--mono); }
+kbd { font: 600 12px var(--mono); background: var(--chip); color: var(--chip-ink); padding: 1px 6px; border-radius: 4px; }
+
+.top { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start; }
+@media (max-width: 960px) { .top { grid-template-columns: minmax(0, 1fr); } }
+
+.viewbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.seg { display: inline-flex; background: var(--chip); border-radius: 8px; padding: 3px; gap: 3px; }
+.seg button { font: 700 12px var(--body); border: 0; background: transparent; color: var(--chip-ink); padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.18); }
+.viewbar .hint { color: var(--muted); font-size: 13px; }
+
+.screen { position: relative; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 70%, var(--screen-floor), var(--screen) 70%); border: 1px solid var(--line); }
+.bar { position: absolute; left: 0; right: 0; height: 6%; background: var(--bar); }
+.bar.t { top: 0; box-shadow: 0 2px 10px -2px var(--neon); border-bottom: 1px solid var(--neon); }
+.bar.b { bottom: 0; box-shadow: 0 -2px 10px -2px var(--neon); border-top: 1px solid var(--neon); }
+.cube { position: absolute; left: 50%; top: 51%; width: 9%; aspect-ratio: 1; transform: translate(-50%, -50%) rotate(45deg) skew(-8deg, -8deg);
+  background: linear-gradient(135deg, #6ad1ff, #2a6fd8); border-radius: 6%; opacity: .85; box-shadow: 0 0 24px rgba(106, 209, 255, .45); }
+.floorline { position: absolute; left: 10%; right: 10%; top: 72%; height: 1px; background: rgba(255,255,255,.08); }
+.spot { position: absolute; display: flex; align-items: flex-start; justify-content: flex-start; padding: 2px 4px; border-radius: 4px; cursor: pointer;
+  background: var(--spot); border: 1px solid var(--spot-line); color: var(--spot-ink); font: 700 clamp(8px, 1vw, 12px)/1.15 var(--mono); text-align: left; overflow: hidden; }
+.spot.win { background: var(--win); border-color: var(--win-line); border-style: dashed; }
+.spot small { display: block; font: 400 clamp(7px, .85vw, 11px)/1.15 var(--body); opacity: .85; }
+.spot:hover, .spot:focus-visible { background: rgba(255, 204, 51, .22); outline: none; border-color: var(--sel); }
+.spot.sel { border: 2px solid var(--sel); background: rgba(255, 204, 51, .28); z-index: 3; }
+.spot.dim { opacity: .18; }
+.screen.view-hud .spot.win, .screen.view-win .spot.hud { display: none; }
+.legend { margin-top: 8px; color: var(--muted); font-size: 13px; }
+
+.detail { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; gap: 12px; min-width: 0; }
+.detail .idline { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.detail .bigid { font: 700 30px/1 var(--mono); color: var(--accent); }
+.detail h2 { font: 700 19px/1.25 var(--body); margin: 0; text-wrap: balance; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { font: 700 11px var(--body); text-transform: uppercase; letter-spacing: .06em; background: var(--chip); color: var(--chip-ink); padding: 3px 8px; border-radius: 99px; }
+dl { margin: 0; display: grid; gap: 8px; }
+dt { font: 700 11px var(--body); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+dd { margin: 2px 0 0; overflow-wrap: anywhere; }
+dd code { font-size: 12.5px; }
+.parts { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 340px; overflow: auto; }
+.parts li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: start; padding: 5px 6px; border-radius: 6px; }
+.parts li:hover { background: var(--chip); }
+.parts .pid { font: 700 12.5px var(--mono); color: var(--accent); white-space: nowrap; }
+.copy { font: 700 12px var(--body); border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 6px; padding: 3px 8px; cursor: pointer; white-space: nowrap; }
+.copy:hover { border-color: var(--accent); }
+.copy.done { border-color: #2e9e5b; color: #2e9e5b; }
+.primary { font: 700 14px var(--body); border: 0; background: var(--accent); color: #fff; border-radius: 8px; padding: 9px 14px; cursor: pointer; }
+.example { font-size: 13px; color: var(--muted); }
+.example b { color: var(--ink); font-family: var(--mono); }
+button:focus-visible { outline: 2px solid var(--sel); outline-offset: 2px; }
+
+.tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.tools input { flex: 1 1 260px; min-width: 0; font: 15px var(--body); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+.tools .count { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.group { display: grid; gap: 8px; }
+.group h3 { margin: 10px 0 0; font: 700 15px var(--display); letter-spacing: .03em; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.group h3 .key { color: var(--accent); }
+.group h3 small { font: 400 13px var(--body); color: var(--muted); letter-spacing: 0; }
+.list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); gap: 8px; }
+.row { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 8px; text-align: left; align-items: start; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; cursor: pointer; color: var(--ink); font: 14px/1.3 var(--body); }
+.row:hover { border-color: var(--accent); }
+.row.sel { border-color: var(--sel); box-shadow: 0 0 0 2px var(--sel) inset; }
+.row .rid { font: 700 13px var(--mono); color: var(--accent); }
+.row .rname { font-weight: 700; }
+.row .rmeta { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.row .hitpart { display: block; font-size: 12.5px; margin-top: 3px; }
+.empty { color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .spot, .row { transition: border-color .12s, background .12s, opacity .12s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Pixel Clicker <span>Interface Map</span></h1>
+    <p>Every piece of the game's interface ({{COUNT}} of them) has an ID. Click a piece on the screen sketch or in the list, copy its ID, and quote it when you ask for a change: <b class="mono">make W4.3 wider</b>, <b class="mono">move N5 to the left</b>. A number after the dot is one part of that piece.</p>
+  </header>
+
+  <section class="top">
+    <div>
+      <div class="viewbar">
+        <div class="seg" role="group" aria-label="Screen sketch">
+          <button id="v-hud" type="button" aria-pressed="true">Game screen</button>
+          <button id="v-win" type="button" aria-pressed="false">Windows</button>
+        </div>
+        <span class="hint">Windows view shows where each window opens by default.</span>
+      </div>
+      <div id="screen" class="screen view-hud" aria-label="Sketch of the game screen">
+        <div class="floorline"></div><div class="cube"></div>
+        <div class="bar t"></div><div class="bar b"></div>
+      </div>
+      <p class="legend">Positions are the defaults from the code, drawn roughly to scale on a 1920 × 1080 screen. Pieces that follow the mouse, sit on objects in the world, or cover the whole screen are in the list below.</p>
+    </div>
+
+    <aside id="detail" class="detail" aria-live="polite"></aside>
+  </section>
+
+  <section class="tools">
+    <input id="q" type="search" placeholder="Search: shop, tooltip, PixelLog, W12…" aria-label="Search the interface map">
+    <span id="count" class="count"></span>
+  </section>
+  <section id="groups" style="display:grid;gap:18px"></section>
+</div>
+
+<script>
+const DATA = /*DATA*/null;
+const byId = new Map(DATA.items.map(i => [i.id, i]));
+const groupOf = k => DATA.groups.find(g => g.key === k);
+let selected = null;
+
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+function copyText(text, btn) {
+  const done = () => { if (!btn) return; const t = btn.textContent; btn.textContent = "Copied"; btn.classList.add("done"); setTimeout(() => { btn.textContent = t; btn.classList.remove("done"); }, 1200); };
+  try {
+    navigator.clipboard.writeText(text).then(done, () => fallback(text, done));
+  } catch (e) { fallback(text, done); }
+}
+function fallback(text, done) {
+  const ta = document.createElement("textarea");
+  ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand("copy"); done(); } catch (e) { /* the text stays selected for a manual copy */ }
+  ta.remove();
+}
+
+function refText(item, partIndex) {
+  if (partIndex == null) return `${item.id} (${item.name})`;
+  return `${item.id}.${partIndex + 1} (${item.name} > ${item.parts[partIndex]})`;
+}
+
+function renderDetail(item) {
+  const d = document.getElementById("detail");
+  if (!item) {
+    d.innerHTML = `<div class="idline"><span class="bigid">—</span></div><h2>Pick a piece</h2>
+      <p class="example">Click a box on the screen sketch or a row in the list. Its ID, where it lives in the code and all its parts show here, each with a copy button.</p>`;
+    return;
+  }
+  const g = groupOf(item.group);
+  const parts = item.parts.map((p, n) => `<li><span class="pid">${item.id}.${n + 1}</span><span>${esc(p)}</span>
+      <button class="copy" type="button" data-part="${n}">Copy</button></li>`).join("");
+  d.innerHTML = `
+    <div class="idline"><span class="bigid">${item.id}</span><div class="chips"><span class="chip">${esc(item.kind)}</span><span class="chip">${esc(g.title)}</span></div></div>
+    <h2>${esc(item.name)}</h2>
+    <button class="primary" type="button" id="copy-main">Copy “${esc(refText(item))}”</button>
+    <dl>
+      <div><dt>Where</dt><dd>${esc(item.where)}</dd></div>
+      <div><dt>Opened by</dt><dd>${esc(item.opened)}</dd></div>
+      <div><dt>Code</dt><dd><code>${esc(item.code)}</code></dd></div>
+    </dl>
+    ${item.parts.length ? `<div><dt style="margin-bottom:4px">Parts</dt><ul class="parts">${parts}</ul></div>` : ""}
+    <p class="example">Ask like: <b>${item.id}${item.parts.length ? ".1" : ""}</b> — “make it smaller”, “move it up”, “rename it”.</p>`;
+  d.querySelector("#copy-main").addEventListener("click", e => copyText(refText(item), e.currentTarget));
+  d.querySelectorAll("button[data-part]").forEach(b => b.addEventListener("click", e => copyText(refText(item, +b.dataset.part), e.currentTarget)));
+}
+
+function select(id, fromHash) {
+  const item = byId.get(id) || null;
+  selected = item ? item.id : null;
+  renderDetail(item);
+  document.querySelectorAll(".spot, .row").forEach(el => el.classList.toggle("sel", el.dataset.id === selected));
+  if (item && item.spot) setView(item.spot[0]);
+  if (item && !fromHash) { try { history.replaceState(null, "", "#" + item.id); } catch (e) {} }
+}
+
+function setView(v) {
+  const s = document.getElementById("screen");
+  s.classList.toggle("view-hud", v === "hud");
+  s.classList.toggle("view-win", v === "win");
+  document.getElementById("v-hud").setAttribute("aria-pressed", v === "hud");
+  document.getElementById("v-win").setAttribute("aria-pressed", v === "win");
+}
+
+function buildScreen() {
+  const s = document.getElementById("screen");
+  for (const i of DATA.items) {
+    if (!i.spot) continue;
+    const [view, x, y, w, h] = i.spot;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "spot " + view;
+    b.dataset.id = i.id;
+    b.style.cssText = `left:${x}%;top:${y}%;width:${w}%;height:${h}%`;
+    b.title = `${i.id} ${i.name}`;
+    b.innerHTML = h >= 8 && w >= 9 ? `<span>${i.id}<small>${esc(i.name)}</small></span>` : i.id;
+    b.addEventListener("click", () => select(i.id));
+    s.appendChild(b);
+  }
+}
+
+function matches(item, q) {
+  if (!q) return { hit: true, part: -1 };
+  const hay = [item.id, item.name, item.kind, item.where, item.opened, item.code].join(" ").toLowerCase();
+  if (hay.includes(q)) return { hit: true, part: -1 };
+  const pi = item.parts.findIndex((p, n) => p.toLowerCase().includes(q) || `${item.id}.${n + 1}`.toLowerCase() === q);
+  return { hit: pi >= 0, part: pi };
+}
+
+function buildList() {
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  const root = document.getElementById("groups");
+  root.innerHTML = "";
+  let shown = 0;
+  const visible = new Set();
+  for (const g of DATA.groups) {
+    const rows = [];
+    for (const i of DATA.items) {
+      if (i.group !== g.key) continue;
+      const m = matches(i, q);
+      if (!m.hit) continue;
+      visible.add(i.id);
+      shown++;
+      rows.push(`<button class="row${i.id === selected ? " sel" : ""}" type="button" data-id="${i.id}">
+        <span class="rid">${i.id}</span>
+        <span><span class="rname">${esc(i.name)}</span><span class="rmeta">${esc(i.kind)} · ${esc(i.where)}</span>
+        ${m.part >= 0 ? `<span class="hitpart"><span class="rid">${i.id}.${m.part + 1}</span> ${esc(i.parts[m.part])}</span>` : ""}</span></button>`);
+    }
+    if (!rows.length) continue;
+    const sec = document.createElement("div");
+    sec.className = "group";
+    sec.innerHTML = `<h3><span class="key">${g.key}</span> ${esc(g.title)} <small>${esc(g.desc)}</small></h3><div class="list">${rows.join("")}</div>`;
+    root.appendChild(sec);
+  }
+  if (!shown) root.innerHTML = `<p class="empty">Nothing matches “${esc(q)}”. Try a window name, a script name or an ID like W4.</p>`;
+  root.querySelectorAll(".row").forEach(r => r.addEventListener("click", () => {
+    select(r.dataset.id);
+    if (window.matchMedia("(max-width: 960px)").matches) document.getElementById("detail").scrollIntoView({ block: "start" });
+  }));
+  document.querySelectorAll(".spot").forEach(sp => sp.classList.toggle("dim", !!q && !visible.has(sp.dataset.id)));
+  document.getElementById("count").textContent = q ? `${shown} of ${DATA.items.length} pieces` : `${DATA.items.length} pieces`;
+}
+
+document.getElementById("v-hud").addEventListener("click", () => setView("hud"));
+document.getElementById("v-win").addEventListener("click", () => setView("win"));
+document.getElementById("q").addEventListener("input", buildList);
+buildScreen();
+buildList();
+const fromHash = (location.hash || "").slice(1).split(".")[0];
+select(byId.has(fromHash) ? fromHash : "W4", true);
+</script>
