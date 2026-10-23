@@ -68,7 +68,7 @@ public class PixelSaveGame : MonoBehaviour
         public long ultraPixels;   // Ultra pixels held
         public PackSave[] packs;
         public MinigameSave[] minigames;
-        public GameState state;   // the player's progress for the systems moved to GameState (PixelGameState; Bank, Stats so far)
+        public GameState state;   // the player's progress for the systems moved to GameState (PixelGameState; GameState.MovedSystems lists them)
         public PixelSaveRegistry.Part[] parts;   // every system that still saves itself (IPixelSaved: inventory, achievements, pets, toggles...)
         public PixelFeatureTester.TesterSave[] testerObjects;   // the Dev Hub tester machines (Wood Chipper, belts + their riders, Kiln, Solar Panels)
         public PixelClicker.OldPixelState[] oldPixels;   // where the old pixels lie

@@ -7,13 +7,15 @@
 //   First potion: Lumberjack's Focus (woodcutting, 60 s, holds off the Termite Hive, the Hornet Nest block's new name). Now an ITEM too (PixelConsumables DeviceKind.FocusPotion, Supplies, vendorOnly: the Lumberjack sells it now
 //   and then, focusChance; right-click drinks it through DrinkForSkill). Also consumed from Dev Tools (the 'Focus potions' widget: drop-down +
 //   Drink + Cancel) through Drink(index) / Cancel(). A shop / crafting recipe from the skill's own materials is the intended source later.
-//   Runs on game time (pauses with the game), one potion at a time (drinking another replaces it). The running potion is saved (save part 'focus'). The countdown shows as a PixelStatusLines line (key 'focus').
+//   Runs on game time (pauses with the game), one potion at a time (drinking another replaces it). The countdown shows as a PixelStatusLines line (key 'focus').
+//   PROGRESS (the running potion: skill, name, seconds left) lives in PixelGameState.Current.focus (GameState.cs, moved 2026-10-23): saved / loaded /
+//   reset with it; the potion list stays on this component (Inspector). HoldsOffHazards reads the state, so it works without the component.
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelFocus : MonoBehaviour, IPixelSaved
+public class PixelFocus : MonoBehaviour
 {
     [Serializable]
     public class FocusPotion
@@ -42,69 +44,60 @@ public class PixelFocus : MonoBehaviour, IPixelSaved
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() { Instance = null; PixelStatusLines.Clear(StatusKey); }
 
-    private FocusPotion active;
-    private float remaining;
+    // ---- progress: the running potion lives in the GameState (PixelGameState.Current.focus) ----
+    private static FocusState S => PixelGameState.Current.focus;
+
     private int shownSecond = -1;
     private bool shownInPlay;
 
     public IReadOnlyList<FocusPotion> Potions => potions;
-    public bool Active => active != null && remaining > 0f;
-    public FocusPotion ActivePotion => Active ? active : null;
-    public float Remaining => Active ? remaining : 0f;
+    public bool Active => S.Active;
+    public FocusPotion ActivePotion => Active ? FindPotion(S.skillId, S.name) : null;
+    public float Remaining => Active ? S.remaining : 0f;
 
     /// <summary>Is a focus potion for this skill active? (PixelSkills.TryGetHazard asks this for the skill in play.)</summary>
-    public static bool HoldsOffHazards(string skillId)
-    {
-        PixelFocus f = Instance;
-        return f != null && f.Active && !string.IsNullOrEmpty(skillId) && f.active.skillId == skillId;
-    }
+    public static bool HoldsOffHazards(string skillId) => S.Active && !string.IsNullOrEmpty(skillId) && S.skillId == skillId;
 
     /// <summary>Is a focus potion active for the skill in play right now? (a pre-rolled hazard is dropped while true)</summary>
     public static bool HoldsOffHazardsNow()
     {
-        PixelFocus f = Instance;
         PixelSkills s = PixelSkills.Instance;
-        return f != null && f.Active && s != null && f.active.skillId == s.ActiveId;
+        return S.Active && s != null && S.skillId == s.ActiveId;
+    }
+
+    /// <summary>The potion of this skill with this name (or the skill's first one if no name matches), null if there is none.</summary>
+    private FocusPotion FindPotion(string skillId, string name)
+    {
+        if (potions == null) return null;
+        FocusPotion first = null;
+        foreach (FocusPotion p in potions)
+        {
+            if (p == null || p.skillId != skillId) continue;
+            if (p.displayName == name) return p;
+            if (first == null) first = p;
+        }
+        return first;
     }
 
     private void Awake()
     {
-        PixelSaveRegistry.Register(this);
         Instance = this;
+        PixelGameState.Loaded += OnLoaded;
         if (potions == null) potions = new List<FocusPotion>();
         if (potions.Count == 0) potions.Add(new FocusPotion());   // Lumberjack's Focus
     }
 
     private void OnDestroy()
     {
-        PixelSaveRegistry.Unregister(this);
+        PixelGameState.Loaded -= OnLoaded;
         if (Instance == this) { Instance = null; PixelStatusLines.Clear(StatusKey); }
     }
 
-    // ---- save: the running potion and its time left (PixelSaveRegistry) ----
-
-    [Serializable] private class SaveState { public string skillId; public string name; public float remaining; }
-
-    string IPixelSaved.SaveId => "focus";
-    int IPixelSaved.SaveOrder => PixelSaveRegistry.WorldBand + 125;
-
-    string IPixelSaved.Export() => Active ? PixelSaveRegistry.ToJson(new SaveState { skillId = active.skillId, name = active.displayName, remaining = remaining }) : null;
-
-    void IPixelSaved.Import(string data)
+    // A save was loaded: its running potion (if any) is in the state now - redraw the status line.
+    private void OnLoaded()
     {
-        Cancel();
-        SaveState st = PixelSaveRegistry.FromJson<SaveState>(data);
-        if (st == null || st.remaining <= 0f || potions == null) return;
-        for (int i = 0; i < potions.Count; i++)
-        {
-            FocusPotion p = potions[i];
-            if (p == null || p.skillId != st.skillId || (p.displayName != st.name && i != potions.FindIndex(x => x != null && x.skillId == st.skillId))) continue;
-            if (!Drink(i)) return;
-            remaining = st.remaining;
-            shownSecond = -1;
-            RefreshStatus();
-            return;
-        }
+        shownSecond = -1;
+        if (S.Active) RefreshStatus(); else PixelStatusLines.Clear(StatusKey);
     }
 
     /// <summary>Drinks the potion at this index of <see cref="Potions"/> (replaces the one that is active). False if there is no such potion or focus is switched off.</summary>
@@ -119,8 +112,10 @@ public class PixelFocus : MonoBehaviour, IPixelSaved
     public bool Drink(int index)
     {
         if (disableFocus || potions == null || index < 0 || index >= potions.Count || potions[index] == null) return false;
-        active = potions[index];
-        remaining = Mathf.Max(1f, active.durationSeconds);
+        FocusPotion p = potions[index];
+        S.skillId = p.skillId;
+        S.name = p.displayName;
+        S.remaining = Mathf.Max(1f, p.durationSeconds);
         shownSecond = -1;
         RefreshStatus();
         return true;
@@ -129,30 +124,28 @@ public class PixelFocus : MonoBehaviour, IPixelSaved
     /// <summary>Stops the active potion early (no refund; the hazard can spawn again at once).</summary>
     public void Cancel()
     {
-        if (active == null) return;
-        active = null;
-        remaining = 0f;
+        S.Clear();   // (also when the timer just ran out: Active is already false then, the line still has to go)
         PixelStatusLines.Clear(StatusKey);
     }
 
     private void Update()
     {
-        if (active == null) return;
-        remaining -= Time.deltaTime;
-        if (remaining <= 0f) { Cancel(); return; }
+        if (!S.Active) return;
+        S.remaining -= Time.deltaTime;
+        if (S.remaining <= 0f) { Cancel(); return; }
         RefreshStatus();
     }
 
     /// <summary>Redraws the status line when the shown second or the 'skill in play' state changes (no per-frame string work).</summary>
     private void RefreshStatus()
     {
-        int sec = Mathf.CeilToInt(remaining);
+        int sec = Mathf.CeilToInt(S.remaining);
         PixelSkills s = PixelSkills.Instance;
-        bool inPlay = s != null && s.ActiveId == active.skillId;
+        bool inPlay = s != null && s.ActiveId == S.skillId;
         if (sec == shownSecond && inPlay == shownInPlay) return;
         shownSecond = sec;
         shownInPlay = inPlay;
-        string text = active.displayName + " " + (sec / 60) + ":" + (sec % 60).ToString("00") + (inPlay ? " - hazards held off" : " - not in play");
+        string text = S.name + " " + (sec / 60) + ":" + (sec % 60).ToString("00") + (inPlay ? " - hazards held off" : " - not in play");
         PixelStatusLines.Set(StatusKey, text, statusColor);
     }
 }

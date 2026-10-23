@@ -1,6 +1,6 @@
 # PixelGameState / GameState
 
-Started 2026-10-23 (Phase 1: the owner, plus the Bank and the Stats as the pilot). The player's PROGRESS moves out of the MonoBehaviours into one plain object, one system at a time. The old `IPixelSaved` registry keeps working for the systems that have not moved yet.
+Started 2026-10-23 (Phase 1: the owner, plus the Bank and the Stats as the pilot; then the Auto Clicker and the Focus potion). The player's PROGRESS moves out of the MonoBehaviours into one plain object, one system at a time. The old `IPixelSaved` registry keeps working for the systems that have not moved yet.
 
 ## Why
 - **Saving:** each system saved its own part (`IPixelSaved`) in load-order bands.
@@ -58,5 +58,7 @@ With one state object, saving writes it, loading replaces it and a new game make
 |---|---|---|
 | `PixelBank` | `BankState` (stored husks by pixel type: count + total value) | `Loaded` picks a stocked selection. Dev Tools' reset calls `ClearStored`. Capacity and 'bought' come from the shop (not progress). |
 | `PixelStats` | `StatsState` (typed numbers, potions drunk, generic counters) | `PixelStats.Count / Best / Fastest / Total` now work without the component. `Loaded` counts the session if the 3-second count hasn't run. |
+| `PixelAutoClicker` | `AutoClickerState` (bought, switched off, upgraded interval / clicks per tick) | The Inspector `intervalSeconds` / `clicksPerTick` are BASE values, used while the state holds 0 (the pattern for "an upgrade's value vs the tuning default"). The shop's load step (`SetPackState`) doesn't touch it, so there are no order issues. |
+| `PixelFocus` | `FocusState` (running potion: skill id, name, seconds left) | The potion list stays on the component. `HoldsOffHazards` reads the state, so it works without the component. `Loaded` redraws the status line. |
 
 The remaining systems, simplest first, are on the to-do list.

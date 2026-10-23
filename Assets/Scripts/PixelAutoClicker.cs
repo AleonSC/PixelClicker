@@ -2,7 +2,8 @@
 // PixelAutoClicker.cs
 //   Timer that calls clicker.AutoCollect() (paused while a takeover minigame runs or the cube is shrunk away:
 //   PixelMinigame.TakeoverActive / PixelClicker.CubeHidden); Interval / ClicksPerTick properties; Activate() from shop; startRunning
-//   for testing.
+//   for testing. PROGRESS (bought, switched off, upgraded interval / clicks) lives in PixelGameState.Current.autoClicker (GameState.cs,
+//   moved 2026-10-23): saved / loaded / reset with it. intervalSeconds / clicksPerTick here are the BASE values (used while the state says 0).
 // ---------------------------------------------------
 using UnityEngine;
 using UnityEngine.Events;
@@ -15,7 +16,7 @@ using UnityEngine.Events;
 /// Each automatic click behaves like a real click (currency, effects, falling old pixel,
 /// respawn) and its "+N" popup appears over the cube instead of at the mouse cursor.
 /// </summary>
-public class PixelAutoClicker : MonoBehaviour, IPixelSaved
+public class PixelAutoClicker : MonoBehaviour
 {
     [Header("References")]
     [Tooltip("The PixelClicker to click. Found automatically if left empty.")]
@@ -23,11 +24,11 @@ public class PixelAutoClicker : MonoBehaviour, IPixelSaved
 
     [Header("Timing")]
     [Min(0.02f)]
-    [Tooltip("Seconds between automatic clicks.")]
+    [Tooltip("Seconds between automatic clicks before any upgrade (the Interval upgrade's value is progress, kept in the GameState).")]
     [SerializeField] private float intervalSeconds = 1f;
 
     [Min(1)]
-    [Tooltip("How many clicks happen each time the interval elapses.")]
+    [Tooltip("How many clicks happen each time the interval elapses, before any upgrade (the Clicks upgrade's value is kept in the GameState).")]
     [SerializeField] private int clicksPerTick = 1;
 
     [Tooltip("Keep clicking while the game is paused (Time.timeScale = 0).")]
@@ -37,11 +38,8 @@ public class PixelAutoClicker : MonoBehaviour, IPixelSaved
     [SerializeField] private int maxClicksPerFrame = 10;
 
     [Header("State")]
-    [Tooltip("Run from the start without buying it (for testing).")]
+    [Tooltip("Run from the start without buying it (for testing). Whether it runs is progress: see the Pixel Game State component (State > Auto Clicker).")]
     [SerializeField] private bool startRunning = false;
-
-    [Tooltip("Is the auto clicker currently running? (Read-only in practice - changing it at runtime also works.)")]
-    [SerializeField] private bool running = false;
 
     [Header("Events")]
     [Tooltip("Fired once when the auto clicker is first activated.")]
@@ -52,31 +50,33 @@ public class PixelAutoClicker : MonoBehaviour, IPixelSaved
 
     private float timer;
 
-    public bool Running => running;
+    // ---- progress: lives in the GameState (PixelGameState.Current.autoClicker) ----
+    private static AutoClickerState S => PixelGameState.Current.autoClicker;
+
+    public bool Running => S.running;
 
     /// <summary>The player switched the (bought) auto clicker off with the Toggles window. Saved.</summary>
-    public bool UserDisabled { get; set; }
+    public bool UserDisabled { get => S.userDisabled; set => S.userDisabled = value; }
 
     /// <summary>Bought and not switched off: it is really clicking.</summary>
-    public bool Working => running && !UserDisabled;
+    public bool Working => S.running && !S.userDisabled;
 
-    /// <summary>Seconds between automatic clicks.</summary>
+    /// <summary>Seconds between automatic clicks (the upgraded value, or the Inspector base).</summary>
     public float Interval
     {
-        get => intervalSeconds;
-        set => intervalSeconds = Mathf.Max(0.02f, value);
+        get => S.interval > 0f ? S.interval : Mathf.Max(0.02f, intervalSeconds);
+        set => S.interval = Mathf.Max(0.02f, value);
     }
 
-    /// <summary>Clicks made each time the interval elapses.</summary>
+    /// <summary>Clicks made each time the interval elapses (the upgraded value, or the Inspector base).</summary>
     public int ClicksPerTick
     {
-        get => clicksPerTick;
-        set => clicksPerTick = Mathf.Max(1, value);
+        get => S.clicksPerTick > 0 ? S.clicksPerTick : Mathf.Max(1, clicksPerTick);
+        set => S.clicksPerTick = Mathf.Max(1, value);
     }
 
     private void Awake()
     {
-        PixelSaveRegistry.Register(this);
         if (clicker == null)
         {
             clicker = PixelFind.First<PixelClicker>();
@@ -89,23 +89,25 @@ public class PixelAutoClicker : MonoBehaviour, IPixelSaved
             return;
         }
 
-        if (startRunning) running = true;
+        if (startRunning) S.running = true;
     }
 
     private void Update()
     {
-        if (!running || UserDisabled || PixelTitleScreen.Showing) return;
+        if (!Working || PixelTitleScreen.Showing) return;
         if (PixelMinigame.TakeoverActive || PixelMinigame.AutoClickerPaused || PixelWhaleFight.Active || (clicker != null && clicker.CubeHidden)) return; // nothing to click while an event hides the cube
 
         timer += useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
 
+        float interval = Interval;
+        int perTick = ClicksPerTick;
         int processed = 0;
-        while (timer >= intervalSeconds && processed < maxClicksPerFrame)
+        while (timer >= interval && processed < maxClicksPerFrame)
         {
-            timer -= intervalSeconds;
+            timer -= interval;
             processed++;
 
-            for (int i = 0; i < clicksPerTick; i++)
+            for (int i = 0; i < perTick; i++)
             {
                 clicker.AutoCollect();
                 onAutoClick?.Invoke();
@@ -119,32 +121,13 @@ public class PixelAutoClicker : MonoBehaviour, IPixelSaved
     /// <summary>Starts the auto clicker. Safe to call more than once.</summary>
     public void Activate()
     {
-        if (running) return;
-        running = true;
+        if (S.running) return;
+        S.running = true;
         timer = 0f;
         onActivated?.Invoke();
     }
 
     /// <summary>Stops the auto clicker.</summary>
-    public void Deactivate() => running = false;
-
-    // ---- save (PixelSaveRegistry) ----
-
-    [System.Serializable] private class SaveState { public bool running, disabled; public float interval; public int clicks; }
-
-    string IPixelSaved.SaveId => "autoClicker";
-    int IPixelSaved.SaveOrder => 110;
-    string IPixelSaved.Export() => PixelSaveRegistry.ToJson(new SaveState { running = Running, disabled = UserDisabled, interval = Interval, clicks = ClicksPerTick });
-
-    void IPixelSaved.Import(string data)
-    {
-        SaveState s = PixelSaveRegistry.FromJson<SaveState>(data);
-        if (s != null && s.interval > 0f) Interval = s.interval;
-        if (s != null && s.clicks > 0) ClicksPerTick = s.clicks;
-        UserDisabled = s != null && s.disabled;
-        if (s != null && s.running) Activate(); else Deactivate();
-    }
-
-    private void OnDestroy() => PixelSaveRegistry.Unregister(this);
+    public void Deactivate() => S.running = false;
 }
 

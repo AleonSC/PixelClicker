@@ -14,16 +14,20 @@ using System.Collections.Generic;
 public class GameState
 {
     /// <summary>The systems whose progress lives here (they must not implement IPixelSaved or register restart resets: tools/compile-check/rules.sh checks it). Add a system's class name when it moves.</summary>
-    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats" };
+    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus" };
 
     public BankState bank = new BankState();
     public StatsState stats = new StatsState();
+    public AutoClickerState autoClicker = new AutoClickerState();
+    public FocusState focus = new FocusState();
 
     /// <summary>Fills in sub-states missing from an older save file (JsonUtility leaves a part the file lacks null in some cases).</summary>
     public void Repair()
     {
         if (bank == null) bank = new BankState();
         if (stats == null) stats = new StatsState();
+        if (autoClicker == null) autoClicker = new AutoClickerState();
+        if (focus == null) focus = new FocusState();
         bank.Repair();
         stats.Repair();
     }
@@ -136,4 +140,26 @@ public class StatsState
         counters.Remove(c);
         index.Remove(key);
     }
+}
+
+/// <summary>The Auto Clicker (PixelAutoClicker): bought, switched off in Toggles, and its upgraded speed (0 = the component's Inspector base).</summary>
+[Serializable]
+public class AutoClickerState
+{
+    public bool running;          // bought (the shop's Auto Clicker pack, or 'Start Running' for testing)
+    public bool userDisabled;     // switched off in the Toggles window
+    public float interval;        // seconds between clicks from the Interval upgrade (0 = the Inspector base)
+    public int clicksPerTick;     // clicks per tick from the Clicks upgrade (0 = the Inspector base)
+}
+
+/// <summary>The running Focus potion (PixelFocus): which skill's potion and the seconds left (0 = none running).</summary>
+[Serializable]
+public class FocusState
+{
+    public string skillId;
+    public string name;           // the potion's display name (picks the right one when a skill has several)
+    public float remaining;
+
+    public bool Active => remaining > 0f && !string.IsNullOrEmpty(skillId);
+    public void Clear() { skillId = null; name = null; remaining = 0f; }
 }
