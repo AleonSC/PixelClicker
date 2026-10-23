@@ -14,7 +14,7 @@ using System.Collections.Generic;
 public class GameState
 {
     /// <summary>The systems whose progress lives here (they must not implement IPixelSaved or register restart resets: tools/compile-check/rules.sh checks it). Add a system's class name when it moves.</summary>
-    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab" };
+    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab", "PixelBaitBucket", "PixelCubieBill" };
 
     public BankState bank = new BankState();
     public StatsState stats = new StatsState();
@@ -22,6 +22,8 @@ public class GameState
     public FocusState focus = new FocusState();
     public SwitchState timeStop = new SwitchState();   // Time Stop's Toggles switch (PixelTimeStop)
     public SwitchState grab = new SwitchState();       // Pixel Grabbing's Toggles switch (PixelGrab)
+    public BaitBucketState baitBucket = new BaitBucketState();
+    public CubieBillState cubieBill = new CubieBillState();
 
     /// <summary>Fills in sub-states missing from an older save file (JsonUtility leaves a part the file lacks null in some cases).</summary>
     public void Repair()
@@ -32,6 +34,10 @@ public class GameState
         if (focus == null) focus = new FocusState();
         if (timeStop == null) timeStop = new SwitchState();
         if (grab == null) grab = new SwitchState();
+        if (baitBucket == null) baitBucket = new BaitBucketState();
+        if (cubieBill == null) cubieBill = new CubieBillState();
+        baitBucket.Repair();
+        cubieBill.Repair();
         bank.Repair();
         stats.Repair();
     }
@@ -173,4 +179,67 @@ public class FocusState
 public class SwitchState
 {
     public bool userDisabled;   // switched OFF by the player
+}
+
+/// <summary>The Bait Bucket (PixelBaitBucket): whether one stands on the floor, where, and the Fish / Water husks stored in it (by pixel type, with their payout).
+/// The bucket itself is a world object: it writes its spot here while it stands and is rebuilt from it on load.</summary>
+[Serializable]
+public class BaitBucketState
+{
+    [Serializable]
+    public class Entry
+    {
+        public int type;       // PixelClicker.PixelType
+        public double amount;  // the husk's payout, kept for when it comes out again
+        public bool fish;      // fish (live bait) or water
+    }
+
+    public bool placed;
+    public UnityEngine.Vector3 position;
+    public float yaw;
+    public List<Entry> stored = new List<Entry>();
+
+    public void Repair()
+    {
+        if (stored == null) stored = new List<Entry>();
+        stored.RemoveAll(e => e == null);
+    }
+
+    public int FishCount { get { int n = 0; foreach (Entry e in stored) if (e.fish) n++; return n; } }
+    public int WaterCount => stored.Count - FishCount;
+}
+
+/// <summary>Cubie's bill (PixelCubieBill): what was paid of each pure colour (by pixel type), the trust tier reached and whether the bill was revealed.</summary>
+[Serializable]
+public class CubieBillState
+{
+    [Serializable]
+    public class Paid
+    {
+        public int type;       // PixelClicker.PixelType of the colour
+        public double amount;
+    }
+
+    public int tier;
+    public bool revealed;
+    public List<Paid> paid = new List<Paid>();
+
+    public void Repair()
+    {
+        if (paid == null) paid = new List<Paid>();
+        paid.RemoveAll(p => p == null);
+        if (tier < 0) tier = 0;
+    }
+
+    public double PaidOf(int type)
+    {
+        foreach (Paid p in paid) if (p.type == type) return p.amount;
+        return 0d;
+    }
+
+    public void SetPaid(int type, double amount)
+    {
+        foreach (Paid p in paid) if (p.type == type) { p.amount = amount; return; }
+        paid.Add(new Paid { type = type, amount = amount });
+    }
 }

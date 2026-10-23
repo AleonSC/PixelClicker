@@ -9,7 +9,8 @@
 //   despawning (a Water pixel dropped in is saved from breaking). Stored fish are live bait: PixelBaitBucket.FishBonus (fishBonusEach 0 =
 //   0.15 per fish, waterBonusEach 0 = 0.05 per water) is added to PixelBait.FishMultiplier, so Fish spawns more. Left-click the bucket
 //   (PixelPointerClaim / ClaimsPointer keep the cube and Pixel Grabbing out of it) takes the last stored pixel out into the mouse's hand. Saved
-//   (its own save part 'baitBucket', PixelSaveRegistry): where it stands and what it holds come back on load. Its bail is a carrying handle (shared PixelCarryHandles): drag it to move
+//   (PROGRESS in PixelGameState.Current.baitBucket, GameState.cs, moved 2026-10-24: placed, spot, stored husks by type; the bucket writes its spot
+//   there each frame while it stands, and OnLoaded rebuilds it): where it stands and what it holds come back on load. Its bail is a carrying handle (shared PixelCarryHandles): drag it to move
 //   the bucket anywhere on the floor (scroll / Q / E turn it); the bucket's own click steps aside while the bail has the pointer.
 //   Which husks it may take, the fly-in and taking one out into the hand are the shared PixelHuskHolder steps.
 // ---------------------------------------------------
@@ -18,7 +19,7 @@ using TMPro;
 using UnityEngine;
 
 /// <summary>The Bait Bucket consumable: a bucket on the floor that stores Fish and Water pixels and makes fish spawn more while Fishing is the skill in play.</summary>
-public class PixelBaitBucket : MonoBehaviour, IPixelSaved
+public class PixelBaitBucket : MonoBehaviour
 {
     [Header("Bait Bucket")]
     [Tooltip("Turn the Bait Bucket off (it cannot be placed).")]
@@ -47,7 +48,8 @@ public class PixelBaitBucket : MonoBehaviour, IPixelSaved
     [Tooltip("Each stored Water pixel adds this to the factor on Fish's spawn weight. 0 = 0.05.")]
     [SerializeField] private float waterBonusEach = 0f;
 
-    private struct Entry { public int tier; public double amount; public bool fish; }
+    // ---- progress: placed / spot / stored husks live in the GameState (PixelGameState.Current.baitBucket) ----
+    private static BaitBucketState S => PixelGameState.Current.baitBucket;
 
     private static PixelBaitBucket instance;
 
@@ -69,10 +71,12 @@ public class PixelBaitBucket : MonoBehaviour, IPixelSaved
     private TextMeshPro label;
     private float appear, scale = 1f, scanTimer, floorY;
     private bool wanted;
-    private readonly List<Entry> stored = new List<Entry>();
     private readonly List<Transform> models = new List<Transform>();
     private readonly List<float> modelPhase = new List<float>();
-    private int fishCount, waterCount;
+    private static int fishCount => S.FishCount;
+    private static int waterCount => S.WaterCount;
+    private static List<BaitBucketState.Entry> stored => S.stored;   // (by pixel type: TierOf gives the tier index)
+    private int TierOf(BaitBucketState.Entry e) => clicker != null ? clicker.IndexOf((PixelClicker.PixelType)e.type) : -1;
 
     private int FishCap => fishCapacity > 0 ? fishCapacity : 20;
     private int WaterCap => waterCapacity > 0 ? waterCapacity : 40;
@@ -80,57 +84,31 @@ public class PixelBaitBucket : MonoBehaviour, IPixelSaved
 
     private void Awake()
     {
-        PixelSaveRegistry.Register(this);
         instance = this;
+        PixelGameState.Loaded += OnLoaded;
         clicker = GetComponent<PixelClicker>();
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
     }
 
     private void OnDestroy()
     {
-        PixelSaveRegistry.Unregister(this);
+        PixelGameState.Loaded -= OnLoaded;
         if (instance == this) instance = null;
         if (root != null) Destroy(root);
     }
 
-    // ---- save: where the bucket stands and what it holds (PixelSaveRegistry) ----
-
-    [System.Serializable] private class SavedEntry { public int type; public double amount; public bool fish; }
-    [System.Serializable] private class SaveState { public Vector3 position; public float yaw; public SavedEntry[] stored; }
-
-    string IPixelSaved.SaveId => "baitBucket";
-    int IPixelSaved.SaveOrder => PixelSaveRegistry.WorldBand + 130;   // (after the placed devices)
-
-    string IPixelSaved.Export()
+    // A save was loaded: its bucket (if any) is in the state now. Whatever stood here goes without spilling (the state says what is in the bucket now).
+    private void OnLoaded()
     {
-        if (root == null || !wanted) return null;   // (none out, or it is leaving)
-        SaveState st = new SaveState { position = root.transform.position, yaw = root.transform.eulerAngles.y, stored = new SavedEntry[stored.Count] };
-        for (int i = 0; i < stored.Count; i++)
-            st.stored[i] = new SavedEntry { type = clicker.IsValidTierIndex(stored[i].tier) ? (int)clicker.Tiers[stored[i].tier].type : -1, amount = stored[i].amount, fish = stored[i].fish };
-        return PixelSaveRegistry.ToJson(st);
-    }
-
-    void IPixelSaved.Import(string data)
-    {
-        // Whatever stood here goes (its contents too: the save says what is in the bucket now).
-        stored.Clear();
-        fishCount = waterCount = 0;
         ClearModels();
         if (root != null) { Destroy(root); root = null; }
-        SaveState st = PixelSaveRegistry.FromJson<SaveState>(data);
-        if (st == null || clicker == null || disableBaitBucket) return;
+        if (!S.placed || clicker == null || disableBaitBucket) { S.placed = false; return; }
         cam = clicker.ViewCamera;
         if (cam == null) return;
         Build();
-        root.transform.SetPositionAndRotation(st.position, Quaternion.Euler(0f, st.yaw, 0f));
-        if (st.stored != null)
-            foreach (SavedEntry e in st.stored)
-            {
-                int tier = e.type >= 0 ? clicker.IndexOf((PixelClicker.PixelType)e.type) : -1;
-                if (tier < 0) continue;
-                stored.Add(new Entry { tier = tier, amount = e.amount, fish = e.fish });
-                if (e.fish) { fishCount++; AddModel(tier); } else waterCount++;
-            }
+        root.transform.SetPositionAndRotation(S.position, Quaternion.Euler(0f, S.yaw, 0f));
+        stored.RemoveAll(e => TierOf(e) < 0);   // (a type that no longer exists)
+        foreach (BaitBucketState.Entry e in stored) if (e.fish) AddModel(TierOf(e));
         Refresh();
     }
 
@@ -145,6 +123,7 @@ public class PixelBaitBucket : MonoBehaviour, IPixelSaved
         if (PixelGameMode.TitleOrIntro || PixelMinigame.TakeoverActive) { message = "Not now"; return false; }
         instance.cam = instance.clicker.ViewCamera;
         if (instance.cam == null) return false;
+        stored.Clear();   // (a new bucket starts empty)
         instance.Build();
         message = "Bait Bucket set out. Drop Fish and Water pixels into it - stored fish make more fish show up. It leaves when you stop Fishing.";
         return true;
@@ -163,10 +142,14 @@ public class PixelBaitBucket : MonoBehaviour, IPixelSaved
         root.transform.localScale = Vector3.one * (scale * Mathf.Max(0.001f, Mathf.SmoothStep(0f, 1f, appear)));
         if (!wanted)
         {
+            S.placed = false;   // (it is leaving: a save now has no bucket)
             if (wasWanted || appear < 0.999f && stored.Count > 0) ReleaseAll();
             if (appear <= 0.001f) { Destroy(root); root = null; ClearModels(); }
             return;
         }
+        S.placed = true;   // (its spot, for the save: it can be carried)
+        S.position = root.transform.position;
+        S.yaw = root.transform.eulerAngles.y;
 
         float bob = Time.time;
         for (int i = 0; i < models.Count; i++)
@@ -219,8 +202,8 @@ public class PixelBaitBucket : MonoBehaviour, IPixelSaved
             double amount = info.amount;
             int tier = info.tierIndex;
             if (!clicker.ReleaseOldPixel(body, false)) continue;   // kept in the bucket with its payout, not collected now
-            stored.Add(new Entry { tier = tier, amount = amount, fish = fish });
-            if (fish) { fishCount++; AddModel(tier); } else waterCount++;
+            stored.Add(new BaitBucketState.Entry { type = (int)type, amount = amount, fish = fish });
+            if (fish) AddModel(tier);
             PixelAudio.Play("device_place");
             StartCoroutine(PixelHuskHolder.FlyIn(body.gameObject, null, root.transform.TransformPoint(new Vector3(0f, 0.9f, 0f)), false, 0.3f));   // (shared: it shrinks into the bucket)
             Refresh();
@@ -250,29 +233,31 @@ public class PixelBaitBucket : MonoBehaviour, IPixelSaved
     }
 
     /// <summary>Would a click at the pointer do something here? Pixel Grabbing steps aside then.</summary>
-    public static bool ClaimsPointer() => instance != null && instance.root != null && instance.stored.Count > 0 && instance.Over() && !PixelCarryHandles.Hot;
+    public static bool ClaimsPointer() => instance != null && instance.root != null && stored.Count > 0 && instance.Over() && !PixelCarryHandles.Hot;
 
     private void TakeOut()
     {
-        Entry e = stored[stored.Count - 1];
+        BaitBucketState.Entry e = stored[stored.Count - 1];
         stored.RemoveAt(stored.Count - 1);
-        if (e.fish) { fishCount--; RemoveModel(); } else waterCount--;
+        if (e.fish) RemoveModel();
         Refresh();
         Vector3 at = root.transform.position + Vector3.up * scale * 1.4f;
-        PixelHuskHolder.SpawnIntoHand(clicker, e.tier, e.amount, at);
+        int tier = TierOf(e);
+        if (tier >= 0) PixelHuskHolder.SpawnIntoHand(clicker, tier, e.amount, at);
     }
 
     private void ReleaseAll()
     {
         if (stored.Count == 0) return;
         Vector3 basePos = root != null ? root.transform.position + Vector3.up * scale * 1.2f : clicker.CubeBasePosition;
-        foreach (Entry e in stored)
+        foreach (BaitBucketState.Entry e in stored)
         {
+            int tier = TierOf(e);
+            if (tier < 0) continue;
             Vector3 v = new Vector3(Random.Range(-1.5f, 1.5f), Random.Range(1.5f, 3.2f), Random.Range(-1.5f, 1.5f));
-            clicker.SpawnStoredPixel(e.tier, e.amount, basePos, v);
+            clicker.SpawnStoredPixel(tier, e.amount, basePos, v);
         }
         stored.Clear();
-        fishCount = waterCount = 0;
         ClearModels();
     }
 
@@ -385,10 +370,8 @@ public class PixelBaitBucket : MonoBehaviour, IPixelSaved
         label.fontStyle = FontStyles.Bold;
         label.rectTransform.sizeDelta = new Vector2(8f, 2f);
 
-        stored.Clear();
-        models.Clear();
+        models.Clear();   // (what is stored is the state's: TryPlace empties it for a new bucket, a load keeps the saved contents)
         modelPhase.Clear();
-        fishCount = waterCount = 0;
         appear = 0.001f;
         Refresh();
         PixelStats.Count("baitbucket.placed");

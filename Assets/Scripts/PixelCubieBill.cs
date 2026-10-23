@@ -18,13 +18,14 @@
 //     the tag, it unrolls into an absurd invoice, he explains the monopoly, and the Bill window opens (Reveal). With Cubie or tips off
 //     the bill still arrives at the same point, quietly. Interest is only talk: the amounts never grow by themselves.
 //   - The Log's Goals tab pins the next milestone (PixelLog.CollectGoals -> NextGoal). The shop's header has an 'IOU' button once revealed.
-//   - Saved per save (save part 'cubiebill': paid per colour, tier, revealed). Dev Hub widget 'Cubie's bill': Reveal / next tier / reset.
+//   - PROGRESS (paid per colour by pixel type, tier, revealed) lives in PixelGameState.Current.cubieBill (GameState.cs, moved 2026-10-24): saved / loaded /
+//     reset with it; it is in place at the START of a load, so Recyclers rebuilt during the load already see TagShown right. Dev Hub widget 'Cubie's bill': Reveal / next tier / reset.
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelCubieBill : MonoBehaviour, IPixelSaved
+public class PixelCubieBill : MonoBehaviour
 {
     [Serializable]
     public class Milestone
@@ -122,13 +123,15 @@ public class PixelCubieBill : MonoBehaviour, IPixelSaved
     private static void ResetStatics()
     {
         Instance = null; TierUnlocked = null; Revealed = null; Paid = null;
-        PixelStatics.ResetOnRestart(() => { TierUnlocked = null; Revealed = null; Paid = null; });
+        PixelStatics.ResetOnRestart(() => { TierUnlocked = null; Revealed = null; Paid = null; });   // restart-reset-not-progress: listener lists of the old scene
     }
 
     private PixelClicker clicker;
-    private double[] paid = new double[0];
-    private int tier;
-    private bool revealed;
+
+    // ---- progress: lives in the GameState (PixelGameState.Current.cubieBill) ----
+    private static CubieBillState S => PixelGameState.Current.cubieBill;
+    private int tier { get => S.tier; set => S.tier = value; }
+    private bool revealed { get => S.revealed; set => S.revealed = value; }
 
     private const string Visit3DueKey = "guide.visit3.due";
 
@@ -184,7 +187,7 @@ public class PixelCubieBill : MonoBehaviour, IPixelSaved
     public IReadOnlyList<Milestone> Milestones => milestones;
     public double BillPerColour => billPerColour;
     public int Tier => tier;
-    public double PaidOf(int colour) => colour >= 0 && colour < paid.Length ? paid[colour] : 0d;
+    public double PaidOf(int colour) => colour >= 0 && colour < colours.Length ? S.PaidOf((int)colours[colour]) : 0d;
     /// <summary>The next milestone to reach (null = the bill is settled).</summary>
     public Milestone Next => milestones != null && tier < milestones.Count ? milestones[tier] : null;
     /// <summary>Is the next milestone's condition (a skill level) met?</summary>
@@ -210,12 +213,11 @@ public class PixelCubieBill : MonoBehaviour, IPixelSaved
     public double Pay(int colour, double amount)
     {
         if (disableBill || clicker == null || colour < 0 || colour >= colours.Length) return 0d;
-        EnsurePaid();
         int t = clicker.IndexOf(colours[colour]);
         if (t < 0) return 0d;
-        amount = Math.Floor(Math.Min(amount, Math.Min(clicker.Tiers[t].count, billPerColour - paid[colour])));
+        amount = Math.Floor(Math.Min(amount, Math.Min(clicker.Tiers[t].count, billPerColour - PaidOf(colour))));
         if (amount <= 0d || !clicker.TrySpend(t, amount)) return 0d;
-        paid[colour] += amount;
+        S.SetPaid((int)colours[colour], PaidOf(colour) + amount);
         PixelStats.Count("cubie.bill.paid", amount);
         if (!string.IsNullOrEmpty(paySoundId)) PixelAudio.Play(paySoundId);
         CheckTiers();
@@ -319,10 +321,6 @@ public class PixelCubieBill : MonoBehaviour, IPixelSaved
         if (packStock == null || packStock.Count == 0) packStock = DefaultPackStock();
     }
 
-    private void EnsurePaid()
-    {
-        if (paid == null || paid.Length != colours.Length) Array.Resize(ref paid, colours.Length);
-    }
 
     private void Awake()
     {
@@ -331,8 +329,7 @@ public class PixelCubieBill : MonoBehaviour, IPixelSaved
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (colours == null || colours.Length == 0) colours = new[] { PixelClicker.PixelType.White, PixelClicker.PixelType.Gray, PixelClicker.PixelType.Black, PixelClicker.PixelType.Red, PixelClicker.PixelType.Green, PixelClicker.PixelType.Blue };
         EnsureDefaults();
-        EnsurePaid();
-        PixelSaveRegistry.Register(this);
+        PixelGameState.Loaded += OnLoaded;
     }
 
 #if UNITY_EDITOR
@@ -351,7 +348,7 @@ public class PixelCubieBill : MonoBehaviour, IPixelSaved
 
     private void OnDestroy()
     {
-        PixelSaveRegistry.Unregister(this);
+        PixelGameState.Loaded -= OnLoaded;
         if (Instance == this) Instance = null;
     }
 
@@ -368,27 +365,10 @@ public class PixelCubieBill : MonoBehaviour, IPixelSaved
         else if (RevealDueNow() && !PixelGuideVendor.WillReveal) Reveal(true);   // (Cubie or tips off: the bill still arrives, quietly)
     }
 
-    // ---- save (PixelSaveRegistry) ----
-
-    [Serializable] private class SaveState { public double[] paid; public int tier; public bool revealed; }
-
-    string IPixelSaved.SaveId => "cubiebill";
-    int IPixelSaved.SaveOrder => 205;   // (before the consumables and the placed devices: a rebuilt Recycler asks TagShown)
-
-    string IPixelSaved.Export() => PixelSaveRegistry.ToJson(new SaveState { paid = paid, tier = tier, revealed = revealed });
-
-    void IPixelSaved.Import(string data)
+    // A save was loaded: its bill is in the state now (from the START of the load, so rebuilt Recyclers saw the tag rule already).
+    private void OnLoaded()
     {
-        paid = new double[colours.Length];
-        tier = 0;
-        revealed = false;
-        SaveState st = PixelSaveRegistry.FromJson<SaveState>(data);
-        if (st != null)
-        {
-            if (st.paid != null) for (int i = 0; i < paid.Length && i < st.paid.Length; i++) paid[i] = st.paid[i];
-            tier = Mathf.Clamp(st.tier, 0, milestones.Count);
-            revealed = st.revealed;
-        }
+        tier = Mathf.Clamp(tier, 0, milestones.Count);
         if (revealed) PixelRecycler.RemoveTags();
         Paid?.Invoke();
     }
@@ -408,9 +388,8 @@ public class PixelCubieBill : MonoBehaviour, IPixelSaved
     {
         Milestone m = Next;
         if (m == null) return;
-        EnsurePaid();
         revealed = true;
-        for (int i = 0; i < paid.Length; i++) paid[i] = Math.Max(paid[i], m.perColour);
+        for (int i = 0; i < colours.Length; i++) S.SetPaid((int)colours[i], Math.Max(PaidOf(i), m.perColour));
         string skill = m.conditionSkillId; int level = m.conditionLevel;
         m.conditionSkillId = "";   // (dev: skip the condition for this one step)
         CheckTiers();
@@ -421,7 +400,7 @@ public class PixelCubieBill : MonoBehaviour, IPixelSaved
     /// <summary>Dev: back to no bill (nothing paid, tier 0, not revealed: the tags come back on new Recyclers).</summary>
     public void DevReset()
     {
-        paid = new double[colours.Length];
+        S.paid.Clear();
         tier = 0;
         revealed = false;
         PixelStats.Clear(Visit3DueKey);

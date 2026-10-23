@@ -1,6 +1,6 @@
 # PixelGameState / GameState
 
-Started 2026-10-23 (Phase 1: the owner, plus the Bank and the Stats as the pilot; then the Auto Clicker, the Focus potion, Time Stop and Pixel Grabbing). The player's PROGRESS moves out of the MonoBehaviours into one plain object, one system at a time. The old `IPixelSaved` registry keeps working for the systems that have not moved yet.
+Started 2026-10-23 (Phase 1: the owner, plus the Bank and the Stats as the pilot; then the Auto Clicker, the Focus potion, Time Stop and Pixel Grabbing, the Bait Bucket and Cubie's bill). The player's PROGRESS moves out of the MonoBehaviours into one plain object, one system at a time. The old `IPixelSaved` registry keeps working for the systems that have not moved yet.
 
 ## Why
 - **Saving:** each system saved its own part (`IPixelSaved`) in load-order bands.
@@ -27,7 +27,7 @@ With one state object, saving writes it, loading replaces it and a new game make
 ## Rules for a moved system
 - **Read the state through `PixelGameState.Current.<part>` every time.** Never keep a reference to it: a load swaps the whole object. The usual shape is `private static BankState B => PixelGameState.Current.bank;`.
 - **The component keeps only display, input, per-session numbers and Inspector tuning** (`[SerializeField]` + `[Tooltip]` as always). Anything that must survive save / load / restart goes in the sub-state.
-- **No `IPixelSaved`, no `PixelSaveRegistry.Register`, no `PixelStatics.ResetOnRestart` in its script.** `tools/compile-check/rules.sh` checks this for every name in `GameState.MovedSystems`.
+- **No `IPixelSaved`, no `PixelSaveRegistry.Register`, no `PixelStatics.ResetOnRestart` in its script.** `tools/compile-check/rules.sh` checks this for every name in `GameState.MovedSystems`. A restart reset that clears something that is not progress (the old scene's event listeners) is marked `// restart-reset-not-progress: <what>` on its line.
 - **Key data by stable ids (`PixelType` as int, string keys), not by tier index or list position.** Tier indices shift when pixel types are added. Turn them into tier indices in the component (see `PixelBank.CountAt`).
 - **Physics objects stay outside:** husks, placed devices and tester machines are copied out when saving and rebuilt when loading, as before.
 
@@ -62,5 +62,7 @@ With one state object, saving writes it, loading replaces it and a new game make
 | `PixelFocus` | `FocusState` (running potion: skill id, name, seconds left) | The potion list stays on the component. `HoldsOffHazards` reads the state, so it works without the component. `Loaded` redraws the status line. |
 | `PixelTimeStop` | `SwitchState` (`timeStop`: switched off in Toggles) | The old Import's side effect (a switched-off Time Stop ends any stop / slow) runs in `Loaded`. 'Bought' (`timeStopActive`, `timeSlowOwned`) still comes from the shop packs; it moves with the shop. |
 | `PixelGrab` | `SwitchState` (`grab`: switched off in Toggles) | `Loaded` lets go of a held husk if it is off and re-applies `clicker.GrabEnabled`. Grabbing itself is always unlocked. |
+| `PixelBaitBucket` | `BaitBucketState` (placed, spot, stored Fish / Water husks by type with their payout) | The first WORLD object moved: the bucket writes its spot into the state each frame while it stands (it can be carried) and `Loaded` rebuilds it from the state. The pattern for a placed thing: the state holds what's needed to rebuild it, the object is only the view. |
+| `PixelCubieBill` | `CubieBillState` (paid per colour by type, trust tier, revealed) | The old part loaded early on purpose (Recyclers rebuilt during the load ask `TagShown`); with `Replace` at the START of the load this now holds by itself. Its `ResetOnRestart` clears event listener lists (not progress), marked `// restart-reset-not-progress:` so the compile-check rule allows it. |
 
 The remaining systems, simplest first, are on the to-do list.
