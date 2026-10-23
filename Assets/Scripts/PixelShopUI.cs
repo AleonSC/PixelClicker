@@ -132,12 +132,17 @@ public partial class PixelShop
         Button help = parts.AddHeaderButton("Help", "?", false, ButtonRole.Primary);
         ShopButtonExtras(help);
 
-        // Cubie's bill (PixelCubieBill): an 'IOU' button in the left header slot, shown once he has handed the bill over.
-        Button iou = parts.AddHeaderButton("Bill", billButtonText, true, ButtonRole.Primary);
+        // Cubie's bill (PixelCubieBill): an 'IOU' button in the right header slots, just left of the ?, shown once he has handed the bill over.
+        // (Not the left slot: the search box sits there and covered it.)
+        Button iou = parts.AddHeaderButton("Bill", billButtonText, false, ButtonRole.Primary);
         ShopButtonExtras(iou);
         iou.onClick.AddListener(PixelCubieBillWindow.Toggle);
         billButton = iou.gameObject;
         billButton.SetActive(PixelCubieBill.IsRevealed);
+        PixelHoverTip iouTip = iou.gameObject.AddComponent<PixelHoverTip>();
+        System.Func<string> iouText = () => "Cubie's bill: pay it off to earn his trust (and his better stock)";
+        iouTip.onEnter = () => hoverTip = iouText;
+        iouTip.onExit = () => { if (hoverTip == iouText) hoverTip = null; };
         GameObject fillGo = new GameObject("Hold Fill", typeof(RectTransform), typeof(Image));
         fillGo.transform.SetParent(help.transform, false);
         Image fillImage = fillGo.GetComponent<Image>();
@@ -160,8 +165,8 @@ public partial class PixelShop
         helpTip.onEnter = () => hoverTip = helpText;
         helpTip.onExit = () => { if (hoverTip == helpText) hoverTip = null; };
 
-        // The title keeps clear of the search box (left) and the ? button (right), with the same room on both sides so it stays centred.
-        RectTransform hr = help.GetComponent<RectTransform>();
+        // The title keeps clear of the search box (left) and the IOU / ? buttons (right), with the same room on both sides so it stays centred.
+        RectTransform hr = iou.GetComponent<RectTransform>();   // (the IOU is the innermost right header button)
         float titleRoom = Mathf.Max(panelPadding + Mathf.Max(120f, searchWidth), -hr.anchoredPosition.x + hr.sizeDelta.x) + 8f;
         parts.Title.rectTransform.offsetMin = new Vector2(titleRoom, parts.Title.rectTransform.offsetMin.y);
         parts.Title.rectTransform.offsetMax = new Vector2(-titleRoom, 0f);
