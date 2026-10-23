@@ -1030,6 +1030,7 @@ public class PixelPauseMenu : MonoBehaviour
         PixelCrashLog.EndSessionCleanly(); // a deliberate restart is not a crash
         PixelAchievements.ResetOnNextStart = true; // achievements start from nothing in the new game too
         SetPaused(false);
+        PixelGameState.NewGame();   // the player's progress starts fresh (GameState)
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 

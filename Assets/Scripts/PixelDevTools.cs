@@ -1161,7 +1161,7 @@ public class PixelDevTools : MonoBehaviour
         resetConfirmUntil = 0f;
         clicker.ResetAllCounts();
         PixelBank bank = PixelFind.First<PixelBank>();
-        if (bank != null) bank.SetState(null); // the stored pixels too
+        if (bank != null) bank.ClearStored(); // the stored pixels too
         if (resetLabel != null) resetLabel.text = resetCountsText;
     }
 

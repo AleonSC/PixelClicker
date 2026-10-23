@@ -412,6 +412,7 @@ public partial class PixelTitleScreen : MonoBehaviour
         PixelSaveGame.AutoStartNewGame = true;   // (no Continue detour: OnPlay clears it)
         PixelSaveGame.NewGameKeepsDefaults = true;   // (the save's startup check must not bring an old save's settings back either)
         PixelSettingsSync.ResetToDefaults();   // a new game starts with the default settings
+        PixelGameState.NewGame();   // ...and fresh progress (GameState), with or without the scene reload below
         PixelDebug.Info("New Game in slot " + slot + ": " + (PlayedOnce ? "the game was played this run - the scene reloads and the title presses Play by itself" : "starts at once"), title);
         if (!PlayedOnce) { title.OnPlay(); return; }
         // The game has been played already: reload the scene fresh, the title presses Play by itself.

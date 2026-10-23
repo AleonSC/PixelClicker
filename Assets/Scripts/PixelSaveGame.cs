@@ -68,7 +68,8 @@ public class PixelSaveGame : MonoBehaviour
         public long ultraPixels;   // Ultra pixels held
         public PackSave[] packs;
         public MinigameSave[] minigames;
-        public PixelSaveRegistry.Part[] parts;   // every system that saves itself (IPixelSaved: inventory, stats, achievements, Bank, pets, toggles...)
+        public GameState state;   // the player's progress for the systems moved to GameState (PixelGameState; GameState.MovedSystems lists them)
+        public PixelSaveRegistry.Part[] parts;   // every system that still saves itself (IPixelSaved: inventory, achievements, pets, toggles...)
         public PixelFeatureTester.TesterSave[] testerObjects;   // the Dev Hub tester machines (Wood Chipper, belts + their riders, Kiln, Solar Panels)
         public PixelClicker.OldPixelState[] oldPixels;   // where the old pixels lie
         public PixelSettingsSync.Entry[] settings;       // the settings / dev tool choices of this save file
@@ -591,9 +592,9 @@ public class PixelSaveGame : MonoBehaviour
             foreach (PixelMinigame m in PixelMinigame.All)
                 if (m != null) minigameSaves.Add(new MinigameSave { id = m.Id, value = m.HasTracker ? m.TrackerCount : 0d, disabled = m.UserDisabled, extra = m.ExtraValue });
             data.minigames = minigameSaves.ToArray();
-            PixelStats playStats = PixelFind.Cached<PixelStats>();
-            data.playSeconds = playStats != null ? playStats.PlaySeconds : 0d;
-            data.parts = PixelSaveRegistry.ExportAll();   // (inventory, stats, achievements, Bank, pets, UFO, toggles, event log...: each system's own part)
+            data.state = PixelGameState.Current;   // (the moved systems' progress, whole)
+            data.playSeconds = data.state.stats.playSeconds;
+            data.parts = PixelSaveRegistry.ExportAll();   // (inventory, achievements, pets, UFO, toggles, event log...: each system's own part)
             // A minigame that moved the old pixels around (Breakout, Sorting Race...) is running: their positions aren't real now.
             if (!PixelMinigame.TakeoverActive) data.oldPixels = clicker.GetOldPixelStates().ToArray();
             data.settings = PixelSettingsSync.Collect();
@@ -687,6 +688,9 @@ public class PixelSaveGame : MonoBehaviour
             SaveData data = JsonUtility.FromJson<SaveData>(File.ReadAllText(pathOverride ?? FilePath));
             if (data == null || data.tiers == null) throw new Exception("the file is empty or damaged");
 
+            // The moved systems' progress goes in first, whole (GameState); their views refresh at the end (PixelGameState.Loaded).
+            PixelGameState.Replace(data.state);
+
             // Pixels. Anything the save doesn't mention goes back to nothing / locked.
             foreach (PixelClicker.PixelTier tier in clicker.Tiers)
                 clicker.LoadTierState(tier.type, 0d, 0d, false);
@@ -739,6 +743,7 @@ public class PixelSaveGame : MonoBehaviour
 
             PixelSaveRegistry.ImportRange(data.parts, PixelSaveRegistry.WorldBand, int.MaxValue);   // (after the husks are back: Bank, placed devices + the running potion)
             PixelFeatureTester.ImportAll(data.testerObjects);   // after the devices (a solar panel links to one) and the old pixels (belt riders are made again)
+            PixelGameState.RaiseLoaded();   // (everything is back: the moved systems' views refresh)
 
             if (logToConsole) Debug.Log("PixelSaveGame: loaded the save from " + data.savedAt + ".", this);
             if (showMessage) ShowMessage("Loaded slot " + CurrentSlot);
