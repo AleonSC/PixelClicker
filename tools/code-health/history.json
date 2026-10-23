@@ -1,0 +1,14 @@
+[
+ {
+  "date": "2026-10-23 17:00",
+  "score": 92.5,
+  "cats": {
+   "Performance": 98.3,
+   "Size and structure": 83.2,
+   "Project rules": 97.5,
+   "Docs": 94.8
+  },
+  "scripts": 341,
+  "lines": 149152
+ }
+]

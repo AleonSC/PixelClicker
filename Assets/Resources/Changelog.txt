@@ -1529,3 +1529,4 @@
 [2026-10-23 16:34 UTC] The Auto Clicker (bought, switched off, upgraded speed) and the running Focus potion now keep their progress in the GameState, saved, loaded and reset with it; to-do updated.
 [2026-10-23 16:48 UTC] The Time Stop and Pixel Grabbing on / off switches now live in the GameState (one shared SwitchState), saved, loaded and reset with it; to-do updated.
 [2026-10-23 16:51 UTC] Added an interactive code map (tools/code-map/CodeMap.html, rebuilt by tools/code-map/build.py): every script grouped by area, with what it uses and what uses it.
+[2026-10-23 17:00 UTC] Added a code health report (tools/code-health/CodeHealth.html, rebuilt by tools/code-health/build.py): scores every script for per-frame costs, size, project rules and docs, with a fix-first list and a score trend; first reading 92.5 / 100.
