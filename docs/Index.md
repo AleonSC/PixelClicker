@@ -272,3 +272,4 @@ One line per script / system: what it is and where its details are. Search it (`
 | `PixelDevUI.cs` / `PixelLogBuffer.cs` | PixelDevUI = the shared colours / PlaceTL / button / label / drop-down / tick helpers for Dev Hub tabs (new dev tabs use it); PixelLogBuffer = the one in-memory log record (any thread, from before the first scene) the Console reads. | in the header comment of each script |
 | `PixelDevTools.cs` | Dev tools (Editor/dev builds only unless allowInFullBuild is ticked on the component; | `docs/systems/PixelDevTools.md` |
 | `tools/ui-map/` (`ui_map.txt`, `build.py`) | Interface map: every UI piece with a stable ID (H HUD, W windows, N popups, M menus, O world UI, D Dev Hub; `.n` = part). Builds `docs/UIMap.md` and the interactive map page. | `docs/UIMap.md` |
+| Device map | Interactive HTML map of every device and how husks / power connect them (open in a browser; keep it in step with ConnectionMap.md). | `docs/DeviceMap.html` |

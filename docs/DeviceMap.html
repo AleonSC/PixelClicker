@@ -1,0 +1,467 @@
+<title>Pixel Clicker Device Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a factory floor plan read left to right (where husks come from -> how they move -> what routes them -> machines -> storage / power), with a spec sheet beside it. */
+:root {
+  --bg: #eef1f6;
+  --floor: #f8f9fc;
+  --grid: #dde3ee;
+  --ink: #18202e;
+  --ink-soft: #546079;
+  --line: #c4cddc;
+  --card: #ffffff;
+  --husk: #e0782a;      /* Out-coupling orange: belts and couplings */
+  --intake: #2f9a55;    /* In-coupling green */
+  --hose: #16968f;      /* Both-coupling teal: hoses */
+  --loose: #8a93a6;     /* loose husks: falling, carried */
+  --power: #2f7fe0;     /* generator blue */
+  --addon: #8a55c9;     /* belt add-ons */
+  --focus: #e0782a;
+  --font-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131826; --floor: #181f30; --grid: #222b40; --ink: #e6eaf3; --ink-soft: #97a2ba; --line: #34405a; --card: #1e2639;
+    --husk: #f0904a; --intake: #4cc27a; --hose: #2fc4bb; --loose: #8d97ad; --power: #5aa6ff; --addon: #b085ec; --focus: #f0904a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131826; --floor: #181f30; --grid: #222b40; --ink: #e6eaf3; --ink-soft: #97a2ba; --line: #34405a; --card: #1e2639;
+  --husk: #f0904a; --intake: #4cc27a; --hose: #2fc4bb; --loose: #8d97ad; --power: #5aa6ff; --addon: #b085ec; --focus: #f0904a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 40px;
+}
+.wrap { max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(26px, 3.4vw, 38px); line-height: 1.1; margin: 0; letter-spacing: 0.01em; text-wrap: balance; }
+.lede { margin: 6px 0 0; color: var(--ink-soft); max-width: 62ch; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.search { font: inherit; font-size: 14px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--ink); width: 210px; max-width: 100%; }
+.search:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+select { font: inherit; font-size: 14px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--ink); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 8px; font: 500 13px var(--font-body); padding: 5px 11px 5px 9px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
+.chip[aria-pressed="false"] { opacity: 0.45; text-decoration: line-through; }
+.chip svg { flex: none; }
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 18px; align-items: start; }
+@media (max-width: 1020px) { .main { grid-template-columns: minmax(0, 1fr); } }
+.floor { background: var(--floor); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; min-width: 0; }
+.floor svg { display: block; width: 100%; min-width: 980px; height: auto; }
+.col-label { font: 600 12px var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; fill: var(--ink-soft); }
+.node { cursor: pointer; }
+.node rect.box { fill: var(--card); stroke: var(--line); stroke-width: 1.2; transition: stroke 0.15s, opacity 0.15s; }
+.node .name { font: 600 13.5px var(--font-display); fill: var(--ink); }
+.node .sub { font: 400 10.5px var(--font-mono); fill: var(--ink-soft); }
+.node:hover rect.box, .node:focus-visible rect.box { stroke: var(--ink-soft); }
+.node:focus { outline: none; }
+.node.sel rect.box { stroke: var(--focus); stroke-width: 2.4; }
+.node.match rect.box { stroke: var(--focus); stroke-dasharray: 4 3; stroke-width: 2; }
+.edge { fill: none; stroke-width: 1.8; transition: opacity 0.15s; }
+.edge.husk { stroke: var(--husk); }
+.edge.hose { stroke: var(--hose); stroke-dasharray: 7 4; }
+.edge.loose { stroke: var(--loose); stroke-dasharray: 2 4; stroke-linecap: round; }
+.edge.power { stroke: var(--power); stroke-width: 2.2; }
+.edge.addon { stroke: var(--addon); stroke-dasharray: 10 3 2 3; }
+.dim .edge { opacity: 0.08; }
+.dim .node { opacity: 0.28; }
+.dim .edge.on { opacity: 1; stroke-width: 2.6; }
+.dim .node.on { opacity: 1; }
+.edge.hidden, .node.hidden { display: none; }
+.flow { animation: flow 1.1s linear infinite; }
+@keyframes flow { to { stroke-dashoffset: -22; } }
+@media (prefers-reduced-motion: reduce) { .flow { animation: none; } }
+
+.sheet { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
+@media (max-width: 1020px) { .sheet { position: static; } }
+.eyebrow { font: 500 11px var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); }
+.sheet h2 { font-family: var(--font-display); font-size: 24px; line-height: 1.15; margin: 2px 0 0; text-wrap: balance; }
+.sheet p { margin: 0; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { font: 500 11.5px var(--font-mono); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--line); color: var(--ink-soft); }
+.tag.get { color: var(--ink); }
+dl { margin: 0; display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 8px 12px; }
+dt { font: 500 11px var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); padding-top: 2px; }
+dd { margin: 0; }
+.ports { display: flex; flex-direction: column; gap: 4px; }
+.port { display: flex; gap: 8px; align-items: baseline; font-size: 14px; }
+.port i { flex: none; width: 9px; height: 9px; border-radius: 2px; transform: translateY(1px); }
+.links { display: flex; flex-direction: column; gap: 6px; }
+.link { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; font: inherit; font-size: 14px; color: var(--ink); background: none; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+.link:hover { border-color: var(--ink-soft); }
+.link small { color: var(--ink-soft); font-family: var(--font-mono); font-size: 11px; margin-left: auto; white-space: nowrap; }
+.link svg { flex: none; }
+code { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-soft); word-break: break-word; }
+.foot { color: var(--ink-soft); font-size: 13px; max-width: 90ch; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Device Map</h1>
+      <p class="lede">Every husk machine in Pixel Clicker and how husks and power travel between them. Click a device to read its spec sheet and light up what it connects to.</p>
+    </div>
+    <div class="controls">
+      <input id="q" class="search" type="search" placeholder="Find a device" aria-label="Find a device">
+      <select id="avail" aria-label="Where to get it">
+        <option value="all">All devices</option>
+        <option value="shop">Sold in the game</option>
+        <option value="tester">Dev Hub Tester only</option>
+      </select>
+    </div>
+  </header>
+  <div class="legend" id="legend" aria-label="Connection types"></div>
+  <div class="main">
+    <div class="floor"><svg id="map" viewBox="0 0 1240 710" role="img" aria-label="Map of devices and their connections"></svg></div>
+    <aside class="sheet" id="sheet" aria-live="polite"></aside>
+  </div>
+  <p class="foot">Built from the scripts' header notes and <code>docs/systems/ConnectionMap.md</code> on 2026-10-23. Husks only move between devices through couplings (belts, hoses and fitted ports); power is a separate radius mechanic. Belt add-ons ride on a belt rather than coupling to it.</p>
+</div>
+
+<script>
+const TYPES = {
+  husk:  { label: "Belts and couplings", tip: "husks pass through a coupling port" },
+  hose:  { label: "Container Hose", tip: "pumped one by one through a hose" },
+  loose: { label: "Loose husks", tip: "falling, dropped or carried" },
+  power: { label: "Power", tip: "radius power or charge" },
+  addon: { label: "Belt add-on", tip: "sits on a belt or switches it" },
+};
+const COLS = [
+  { x: 95,   label: "Sources" },
+  { x: 305,  label: "Moving" },
+  { x: 515,  label: "Belt parts" },
+  { x: 735,  label: "Machines" },
+  { x: 950,  label: "Storage" },
+  { x: 1150, label: "Power" },
+];
+// get: shop | tester | dev ; ports: [kind, text] with kind in / out / both
+const N = [
+  { id: "cube", c: 0, y: 115, name: "Clicker Cube", get: "shop", where: "The game's cube",
+    what: "Every click pays the block's currency and drops a husk. Husks are material, never currency.",
+    ins: "Clicks", outs: "One husk per harvest, falling onto the floor", ports: [] , script: "PixelClicker.cs" },
+  { id: "source", c: 0, y: 230, name: "Husk Source", get: "tester", where: "Dev Hub > Tester",
+    what: "A test box: left-click to pick any block type and it makes endless husks of it out of every coupling that has a taker.",
+    ins: "Nothing", outs: "Endless husks of the picked type", ports: [["out", "An Out socket on each side"]], script: "PixelHuskSource.cs" },
+  { id: "funnel", c: 0, y: 345, name: "Funnel", get: "shop", where: "Shop > Utilities, 600 Gray",
+    what: "A glass cone under the cube catches falling husks and carries them down a see-through tube to the floor, queueing when the belt is full.",
+    ins: "Husks falling off the cube", outs: "A queue onto a belt", ports: [["out", "Floor output at the tube's foot"]], script: "PixelFunnel.cs" },
+  { id: "sweeper", c: 0, y: 460, name: "Sweeper", get: "shop", where: "Shop, from Standard 5",
+    what: "A wind-up clockwork cube with a broom. It fetches husks that are close to fading into the nearest container with room. Runs about a minute per wind.",
+    ins: "Husks about to fade", outs: "Into a Storage Crate, Sorting Hopper or Recycler", ports: [], script: "PixelSweeper.cs" },
+  { id: "vacclean", c: 0, y: 575, name: "Vacuum Cleaner", get: "tester", where: "Dev Hub > Tester",
+    what: "Drive it with W A S D. Its front intake sucks husks up and the hose spits them out where the mouse aims.",
+    ins: "Loose husks in front of it", outs: "Husks shot where you aim", ports: [], script: "PixelVacuumCleaner.cs" },
+
+  { id: "belt", c: 1, y: 330, name: "Conveyor Belt", get: "shop", where: "Shop > Utilities, Belt Kit",
+    what: "Carries husks. Two clicks to lay a piece, corners fill themselves. Right-click opens the belt panel for its section: speed, size in lanes, reverse, remove.",
+    ins: "Husks at its start: an Out coupling, a belt end, a machine output", outs: "Husks at its end, into the In coupling there",
+    ports: [["in", "Start: takes from an Out coupling"], ["out", "End: hands in to an In coupling"]], extra: "Lanes: 1, then 2 at Electrician 10 and 3 at Electrician 20.", script: "PixelConveyor.cs, PixelConveyorPanel.cs" },
+  { id: "elevator", c: 1, y: 160, name: "Conveyor Elevator", get: "tester", where: "Dev Hub > Tester",
+    what: "A tower that lifts husks from a belt end up to a higher belt. Snap to a belt end, click, then move the mouse to set the height.",
+    ins: "A belt ending at a base side", outs: "The first top coupling with a belt attached, else flung forward",
+    ports: [["in", "4 base intakes, one per side"], ["out", "4 top outputs, one per side"]], script: "PixelElevator.cs" },
+  { id: "jump", c: 1, y: 480, name: "Belt Jump", get: "shop", where: "Shop > Utilities",
+    what: "A launch ramp on a belt end and a landing ramp across a gap set with the scroll wheel. Husks fly over in the same arc every time.",
+    ins: "The belt ending at the launch ramp", outs: "The belt starting at the landing ramp",
+    ports: [["in", "Launch ramp foot"], ["out", "Landing ramp end"]], script: "PixelBeltJump.cs" },
+  { id: "hose", c: 1, y: 650, name: "Container Hose", get: "tester", where: "Dev Hub > Tester",
+    what: "A see-through hose routed through any bend points. It pumps a stored husk every half second while the target has room, and only husks the target takes.",
+    ins: "An Out coupling on a Storage Crate or Quantum Organizer", outs: "Any In coupling: Recycler, crate, organizer, Kiln, Trash Can, generator, Crafting Cube",
+    ports: [], extra: "Right-click tap reverses it when both ends allow.", script: "PixelContainerHose.cs" },
+
+  { id: "sorter", c: 2, y: 95, name: "Belt Sorter", get: "tester", where: "Dev Hub > Tester",
+    what: "A gantry on a belt with a filter tray. Every husk of the filter type is kicked off its side, or onto a belt starting there. Placing one splits the belt into a joint; removing it heals the seam.",
+    ins: "The belt it stands on", outs: "Filter type off the side; the rest rides on",
+    ports: [["out", "Side chute, forms itself next to a belt or elevator"]], extra: "Sorters cut a line into sections for Control Levers and the belt panel.", script: "PixelBeltSorter.cs" },
+  { id: "combiner", c: 2, y: 205, name: "Conveyor Combiner", get: "shop", where: "Shop > Utilities",
+    what: "A box on a belt that husks pass through. A belt ending at either side inlet merges onto the main belt as soon as there is a gap.",
+    ins: "Belts ending at its side inlets", outs: "Merged onto the belt it sits on",
+    ports: [["in", "Left inlet"], ["in", "Right inlet"]], script: "PixelConveyorCombiner.cs" },
+  { id: "lever", c: 2, y: 315, name: "Control Lever", get: "tester", where: "Dev Hub > Tester",
+    what: "A floor lever beside a belt. Flipped off, it stops its whole line, or just its section when Belt Sorters cut the line up.",
+    ins: "Your click", outs: "Halts belts: riders wait, chevrons stop", ports: [], script: "PixelControlLever.cs" },
+  { id: "junction", c: 2, y: 430, name: "Junction Box", get: "shop", where: "Shop > Utilities",
+    what: "A box with 8 auto-direction couplings, 2 a side. Routes husks from its In couplings to Out ones: a filter per coupling, else round robin, else a small buffer.",
+    ins: "Belts and hoses at In couplings", outs: "Belts at Out couplings",
+    ports: [["both", "8 couplings that set their own direction"]], script: "PixelJunctionBox.cs" },
+  { id: "hopper", c: 2, y: 545, name: "Sorting Hopper", get: "shop", where: "Shop, from Standard 3",
+    what: "A standalone sorting funnel. Holds up to 20 husks dropped into its bowl and drops each output's filter type out of that output's coloured pipe. Nothing snaps to it.",
+    ins: "Husks dropped into the bowl", outs: "Out of the feed pipe and side pipes, each by filter",
+    ports: [], extra: "Outputs can be switched off one by one in its panel; a switched-off pipe hides.", script: "PixelSortingHopper.cs" },
+
+  { id: "recycler", c: 3, y: 110, name: "Recycler", get: "shop", where: "Shop > Utilities; Cubie's first gift",
+    what: "A timed bin. Every husk that lands in it is recycled a moment later for 50% of its click value, with a streak bonus shown as rising +N (x1.1) text.",
+    ins: "Husks in the bin, the back hatch, or front couplings", outs: "Currency",
+    ports: [["in", "Back hatch"], ["in", "4 front couplings"]], extra: "Operation upgrades: Speed, Size, Run Time.", script: "PixelRecycler.cs" },
+  { id: "chipper", c: 3, y: 225, name: "Wood Chipper", get: "tester", where: "Dev Hub > Tester",
+    what: "Shreds wood husks for Woodcutting XP and makes one Wood Chips husk per 5. Any other husk damages it until it breaks for good.",
+    ins: "Wood husks in its feed hopper", outs: "Woodcutting XP, Wood Chips",
+    ports: [["out", "Chute: Wood Chips onto a belt"]], script: "PixelWoodChipper.cs" },
+  { id: "kiln", c: 3, y: 340, name: "Kiln", get: "tester", where: "Dev Hub > Tester",
+    what: "Burns anything that goes into its mouth and drops Charcoal husks out of the back chute.",
+    ins: "Any husk at its mouth", outs: "Charcoal husks",
+    ports: [["in", "Mouth (+X side)"], ["out", "Back chute"]], script: "PixelKiln.cs" },
+  { id: "craft", c: 3, y: 455, name: "Crafting Cube", get: "shop", where: "Crafting window button",
+    what: "A crafting machine with a floating book. Pick a recipe with a right-click tap; it pays the recipe's pixel ingredients in husks by value and crafts into your inventory.",
+    ins: "Husks of the recipe's types (others refused)", outs: "The crafted item, into the inventory",
+    ports: [["in", "One In coupling on each side"]], script: "PixelCraftingCube.cs" },
+  { id: "trash", c: 3, y: 570, name: "Trash Can", get: "dev", where: "Dev Hub > Tester, never sold",
+    what: "Pulls in and deletes loose husks within a small radius. A dev tool for clearing test setups.",
+    ins: "Loose husks nearby, belts and hoses", outs: "Nothing",
+    ports: [["in", "Front"], ["in", "Back"]], script: "PixelTrashCan.cs" },
+
+  { id: "crate", c: 4, y: 210, name: "Storage Crate", get: "shop", where: "Shop > Utilities",
+    what: "Stores husks. Click to take one out. Carry it by its handles.",
+    ins: "Husks dropped in, belts, hoses, the Sweeper", outs: "Its Out socket feeds a hose",
+    ports: [["in", "Intake"], ["out", "Out socket for a hose"]], script: "PixelStorageCrate.cs" },
+  { id: "quantum", c: 4, y: 325, name: "Quantum Organizer", get: "shop", where: "Shop > Utilities",
+    what: "Pulls in husks of the types it is bound to from up to 24 cube widths away and stores them in its box.",
+    ins: "Bound husk types in range", outs: "Couplings set to Out feed a hose",
+    ports: [["both", "Couplings you can flip In or Out"]], script: "PixelQuantumDevice.cs" },
+  { id: "magnet", c: 4, y: 440, name: "Magnet", get: "shop", where: "Shop > Utilities",
+    what: "Holds loose husks in a heap so they don't scatter. Can be attuned to one pixel type by crafting.",
+    ins: "Loose husks", outs: "A held heap", ports: [], script: "PixelMagnetDevice.cs" },
+  { id: "timed", c: 4, y: 600, name: "Timed devices", get: "shop", where: "Shop consumables",
+    what: "Every placed device with a countdown: Recycler, Fan, Vacuum Device, Magnet, Sprinkler and more. While powered, the timer stops and an energy bar shows over it.",
+    ins: "Power from a generator, Power Bank or Solar Panel", outs: "Keeps running", ports: [], script: "PixelPlacedDevice.HoldPower" },
+
+  { id: "biomass", c: 5, y: 160, name: "Biomass Generator", get: "shop", where: "Shop, Woodcutting 10",
+    what: "Burns Woodcutting husks, Charcoal (x3) and Wood Chips (x4) to power every device in its radius. Comes full and drains; empty means a red warning, then it disappears.",
+    ins: "Wood husks in the firebox or its intake coupling", outs: "Power in a radius; spare charge to a Power Bank",
+    ports: [["in", "Intake coupling"]], extra: "Draws loose wood husks nearby into the firebox.", script: "PixelBiomassGenerator.cs" },
+  { id: "pocket", c: 5, y: 290, name: "Pocket Biomass Gen.", get: "shop", where: "Shop > Consumables",
+    what: "The small Biomass Generator: the same rules with a smaller radius and charge.",
+    ins: "Wood husks", outs: "Power in a small radius", ports: [["in", "Intake coupling"]], script: "PixelBiomassGenerator.cs" },
+  { id: "bank", c: 5, y: 430, name: "Power Bank", get: "tester", where: "Not on sale yet",
+    what: "A big battery. Generators in its wide ring feed it their spare charge, and it powers every device in the ring. Comes empty and stays.",
+    ins: "Spare charge from generators in range", outs: "Power over a 16 radius", ports: [], extra: "Holds 1800 seconds of power for one device.", script: "PixelPowerBank.cs" },
+  { id: "solar", c: 5, y: 570, name: "Solar Panel", get: "tester", where: "Dev Hub > Tester",
+    what: "Powered while Solar husks lie on it. Links to one placed device with a blue line and stops its timer. A group of 5 Solar husks keeps it powered for good.",
+    ins: "Solar husks on its pad", outs: "Power to one linked device", ports: [], script: "PixelSolarPanel.cs" },
+];
+const E = [
+  ["cube", "funnel", "loose", "falls into the cone"],
+  ["cube", "hopper", "loose", "drop into the bowl"],
+  ["cube", "recycler", "loose", "lands in the bin"],
+  ["cube", "magnet", "loose", "loose husks"],
+  ["cube", "quantum", "loose", "pulled in by type"],
+  ["cube", "chipper", "loose", "wood into the hopper"],
+  ["cube", "biomass", "loose", "wood into the firebox"],
+  ["vacclean", "crate", "loose", "spat where you aim"],
+  ["sweeper", "crate", "loose", "fetches fading husks"],
+  ["sweeper", "hopper", "loose", "fetches fading husks"],
+  ["sweeper", "recycler", "loose", "fetches fading husks"],
+  ["hopper", "belt", "loose", "drops out of its pipes"],
+  ["funnel", "belt", "husk", "tube foot onto a belt"],
+  ["source", "belt", "husk", "Out sockets"],
+  ["source", "junction", "husk", "Out sockets"],
+  ["belt", "elevator", "husk", "base intake"],
+  ["elevator", "belt", "husk", "top output"],
+  ["belt", "jump", "husk", "launch ramp"],
+  ["jump", "belt", "husk", "landing ramp"],
+  ["belt", "combiner", "husk", "side inlet"],
+  ["belt", "junction", "husk", "In coupling"],
+  ["junction", "belt", "husk", "Out coupling"],
+  ["belt", "recycler", "husk", "back hatch / front"],
+  ["belt", "kiln", "husk", "mouth"],
+  ["kiln", "belt", "husk", "Charcoal out of the chute"],
+  ["chipper", "belt", "husk", "Wood Chips out of the chute"],
+  ["belt", "craft", "husk", "In coupling"],
+  ["belt", "trash", "husk", "front / back"],
+  ["belt", "crate", "husk", "intake"],
+  ["belt", "biomass", "husk", "intake coupling"],
+  ["belt", "pocket", "husk", "intake coupling"],
+  ["kiln", "biomass", "loose", "Charcoal fuel x3"],
+  ["chipper", "biomass", "loose", "Wood Chips fuel x4"],
+  ["crate", "hose", "hose", "Out socket"],
+  ["quantum", "hose", "hose", "Out coupling"],
+  ["hose", "recycler", "hose", "back hatch"],
+  ["hose", "kiln", "hose", "mouth"],
+  ["hose", "trash", "hose", "In coupling"],
+  ["hose", "craft", "hose", "In coupling"],
+  ["hose", "crate", "hose", "intake"],
+  ["hose", "biomass", "hose", "wood only"],
+  ["hose", "junction", "hose", "In coupling"],
+  ["sorter", "belt", "addon", "stands on it, sorts off the side"],
+  ["combiner", "belt", "addon", "sits on it, merges in"],
+  ["lever", "belt", "addon", "halts its line or section"],
+  ["biomass", "bank", "power", "spare charge"],
+  ["pocket", "bank", "power", "spare charge"],
+  ["biomass", "timed", "power", "radius power"],
+  ["pocket", "timed", "power", "radius power"],
+  ["bank", "timed", "power", "wide radius power"],
+  ["solar", "timed", "power", "one linked device"],
+];
+
+const svg = document.getElementById("map");
+const NS = "http://www.w3.org/2000/svg";
+const W = 164, H = 50;
+const byId = Object.fromEntries(N.map(n => [n.id, n]));
+N.forEach(n => { n.x = COLS[n.c].x; });
+const GET_LABEL = { shop: "In the game", tester: "Tester only", dev: "Dev tool" };
+const on = { husk: true, hose: true, loose: true, power: true, addon: true };
+let selected = null;
+
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function swatch(type, w = 26) {
+  return `<svg width="${w}" height="10" viewBox="0 0 ${w} 10" aria-hidden="true"><line x1="1" y1="5" x2="${w - 1}" y2="5" class="edge ${type}" style="opacity:1"/></svg>`;
+}
+
+// Floor grid + column labels
+const defs = el("defs", {}, svg);
+const pat = el("pattern", { id: "grid", width: 20, height: 20, patternUnits: "userSpaceOnUse" }, defs);
+el("path", { d: "M20 0H0V20", fill: "none", stroke: "var(--grid)", "stroke-width": 1 }, pat);
+el("rect", { x: 0, y: 0, width: 1240, height: 710, fill: "url(#grid)" }, svg);
+for (const t of Object.keys(TYPES)) {
+  const m = el("marker", { id: "arr-" + t, viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" }, defs);
+  el("path", { d: "M0 1L9 5L0 9z", fill: `var(--${t})` }, m);
+}
+COLS.forEach(c => { const t = el("text", { x: c.x, y: 40, "text-anchor": "middle", class: "col-label" }, svg); t.textContent = c.label; });
+
+// Edges
+const gEdges = el("g", {}, svg);
+const edgeEls = E.map(([a, b, type, label]) => {
+  const A = byId[a], B = byId[b];
+  let d;
+  if (A.c === B.c) {
+    const side = A.c === 5 ? -1 : 1;
+    const x = A.x + side * W / 2, bend = x + side * 46;
+    d = `M${x} ${A.y}C${bend} ${A.y} ${bend} ${B.y} ${x} ${B.y}`;
+  } else {
+    const dir = B.x > A.x ? 1 : -1;
+    const x1 = A.x + dir * W / 2, x2 = B.x - dir * W / 2;
+    const k = Math.max(40, Math.abs(x2 - x1) * 0.45);
+    // edges going back left run below / above the boxes so they don't hide under them
+    const lift = dir < 0 ? (A.y <= B.y ? 14 : -14) : 0;
+    d = `M${x1} ${A.y + lift}C${x1 + dir * k} ${A.y + lift} ${x2 - dir * k} ${B.y + lift} ${x2} ${B.y + lift}`;
+  }
+  const p = el("path", { d, class: `edge ${type}${type === "husk" || type === "power" ? "" : ""}`, "marker-end": `url(#arr-${type})` }, gEdges);
+  const t = el("title", {}, p); t.textContent = `${A.name} → ${B.name}: ${label}`;
+  return { a, b, type, label, p };
+});
+
+// Nodes
+const gNodes = el("g", {}, svg);
+const nodeEls = {};
+N.forEach(n => {
+  const g = el("g", { class: "node", transform: `translate(${n.x - W / 2} ${n.y - H / 2})`, tabindex: 0, role: "button", "aria-label": n.name }, gNodes);
+  el("rect", { class: "box", width: W, height: H, rx: 7 }, g);
+  // a tiny port strip: what kinds of connections it has
+  const kinds = [...new Set(E.filter(e => e[0] === n.id || e[1] === n.id).map(e => e[2]))];
+  kinds.forEach((k, i) => el("rect", { x: 10 + i * 9, y: 9, width: 6, height: 6, rx: 1, fill: `var(--${k})` }, g));
+  const name = el("text", { x: 10, y: 32, class: "name" }, g); name.textContent = n.name;
+  const sub = el("text", { x: W - 10, y: 15, class: "sub", "text-anchor": "end" }, g); sub.textContent = GET_LABEL[n.get];
+  g.addEventListener("click", () => select(n.id));
+  g.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); select(n.id); } });
+  nodeEls[n.id] = g;
+});
+
+// Legend
+const legend = document.getElementById("legend");
+for (const [t, info] of Object.entries(TYPES)) {
+  const b = document.createElement("button");
+  b.className = "chip"; b.type = "button"; b.id = "type-" + t;
+  b.setAttribute("aria-pressed", "true"); b.title = info.tip + " (click to hide)";
+  b.innerHTML = swatch(t) + info.label;
+  b.addEventListener("click", () => { on[t] = !on[t]; b.setAttribute("aria-pressed", on[t]); refresh(); });
+  legend.appendChild(b);
+}
+
+const q = document.getElementById("q"), avail = document.getElementById("avail");
+q.addEventListener("input", refresh);
+avail.addEventListener("change", refresh);
+
+function visibleNode(n) {
+  const a = avail.value;
+  if (a === "shop") return n.get === "shop";
+  if (a === "tester") return n.get !== "shop" || n.id === "belt" || n.id === "cube";
+  return true;
+}
+function refresh() {
+  const term = q.value.trim().toLowerCase();
+  N.forEach(n => {
+    const g = nodeEls[n.id];
+    g.classList.toggle("hidden", !visibleNode(n));
+    g.classList.toggle("match", !!term && (n.name + " " + n.what).toLowerCase().includes(term));
+  });
+  edgeEls.forEach(e => e.p.classList.toggle("hidden", !on[e.type] || !visibleNode(byId[e.a]) || !visibleNode(byId[e.b])));
+  if (selected && !visibleNode(byId[selected])) select(null); else highlight();
+}
+function highlight() {
+  svg.classList.toggle("dim", !!selected);
+  N.forEach(n => nodeEls[n.id].classList.remove("on", "sel"));
+  edgeEls.forEach(e => e.p.classList.remove("on", "flow"));
+  if (!selected) return;
+  nodeEls[selected].classList.add("on", "sel");
+  edgeEls.forEach(e => {
+    if (e.p.classList.contains("hidden") || (e.a !== selected && e.b !== selected)) return;
+    e.p.classList.add("on");
+    if (e.type !== "power" && e.type !== "addon") e.p.classList.add("flow");
+    nodeEls[e.a].classList.add("on"); nodeEls[e.b].classList.add("on");
+  });
+}
+
+const sheet = document.getElementById("sheet");
+const PORT_COLOR = { in: "var(--intake)", out: "var(--husk)", both: "var(--hose)" };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function select(id) {
+  selected = id;
+  highlight();
+  if (!id) { renderOverview(); return; }
+  const n = byId[id];
+  const links = edgeEls.filter(e => e.a === id || e.b === id);
+  const linkHtml = links.map(e => {
+    const other = byId[e.a === id ? e.b : e.a];
+    const arrow = e.a === id ? "to" : "from";
+    return `<button class="link" type="button" data-id="${other.id}">${swatch(e.type, 20)}<span>${arrow} <strong>${esc(other.name)}</strong></span><small>${esc(e.label)}</small></button>`;
+  }).join("");
+  const ports = n.ports.length
+    ? `<div class="ports">${n.ports.map(([k, t]) => `<div class="port"><i style="background:${PORT_COLOR[k]}"></i><span>${esc(t)}</span></div>`).join("")}</div>`
+    : `<span style="color:var(--ink-soft)">No coupling ports</span>`;
+  sheet.innerHTML = `
+    <div><div class="eyebrow">${esc(COLS[n.c].label)}</div><h2>${esc(n.name)}</h2></div>
+    <div class="tags"><span class="tag get">${esc(n.where)}</span><span class="tag">${esc(GET_LABEL[n.get])}</span></div>
+    <p>${esc(n.what)}</p>
+    <dl>
+      <dt>Takes in</dt><dd>${esc(n.ins)}</dd>
+      <dt>Gives out</dt><dd>${esc(n.outs)}</dd>
+      <dt>Ports</dt><dd>${ports}</dd>
+      ${n.extra ? `<dt>Also</dt><dd>${esc(n.extra)}</dd>` : ""}
+      <dt>Script</dt><dd><code>${esc(n.script)}</code></dd>
+    </dl>
+    <div><div class="eyebrow" style="margin-bottom:8px">Connects with (${links.length})</div><div class="links">${linkHtml || "<span>Nothing yet</span>"}</div></div>
+    <button class="link" type="button" data-id="">Show the whole map</button>`;
+  sheet.querySelectorAll("[data-id]").forEach(b => b.addEventListener("click", () => select(b.dataset.id || null)));
+}
+function renderOverview() {
+  const count = t => E.filter(e => e[2] === t).length;
+  sheet.innerHTML = `
+    <div><div class="eyebrow">Overview</div><h2>${N.length} devices, ${E.length} links</h2></div>
+    <p>Husks start at the cube and only change hands through couplings: a belt end meets an In coupling, a machine's Out coupling starts a belt, a hose joins two couplings. Power never uses couplings; it reaches every device inside a generator's or Power Bank's ring.</p>
+    <dl>
+      ${Object.entries(TYPES).map(([t, i]) => `<dt>${swatch(t, 30)}</dt><dd><strong>${esc(i.label)}</strong> · ${count(t)} links<br><span style="color:var(--ink-soft)">${esc(i.tip)}</span></dd>`).join("")}
+    </dl>
+    <div class="ports">
+      <div class="port"><i style="background:var(--intake)"></i><span>In coupling (green plate in the game)</span></div>
+      <div class="port"><i style="background:var(--husk)"></i><span>Out coupling (orange plate)</span></div>
+      <div class="port"><i style="background:var(--hose)"></i><span>Both ways (teal plate)</span></div>
+    </div>
+    <p style="color:var(--ink-soft)">Pick a device on the map to see its spec sheet.</p>`;
+}
+renderOverview();
+refresh();
+</script>
