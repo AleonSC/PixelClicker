@@ -433,27 +433,15 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         BoxCollider box = ownFloor.AddComponent<BoxCollider>();
         box.center = new Vector3(0f, -0.5f, 0f);
         box.size = new Vector3(size, 1f, size);
-#if UNITY_6000_0_OR_NEWER
-        PhysicsMaterial surface = null;
-#else
-        PhysicMaterial surface = null;
-#endif
+        bool copied = false;
         if (scene != null)
         {
             Collider sc = scene.GetComponent<Collider>();
-            if (sc != null) surface = sc.sharedMaterial;
+            copied = PixelPhysicsMaterials.CopyOf(sc, box);   // (the scene ground's own bounce / friction, if it has a material)
             if (sc != null) sc.enabled = false;
             scene.enabled = false;
         }
-        if (surface == null)
-        {
-#if UNITY_6000_0_OR_NEWER
-            surface = new PhysicsMaterial("Pixel Ground") { dynamicFriction = 0.6f, staticFriction = 0.6f, bounciness = 0.1f };
-#else
-            surface = new PhysicMaterial("Pixel Ground") { dynamicFriction = 0.6f, staticFriction = 0.6f, bounciness = 0.1f };
-#endif
-        }
-        box.sharedMaterial = surface;
+        if (!copied) PixelPhysicsMaterials.Apply(box, "Pixel Ground", 0.1f, 0.6f);
         return mr;
     }
 
@@ -780,7 +768,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         if (floorRenderer == null) return;
         ApplyAreaScale();
         if (exitHold && PixelTitleScreen.Showing) exitHold = false;
-        bool hide = HidesOnTitle && (exitHold || (PixelTitleWanderers.LiveBackground && (PixelTitleScreen.Showing || PixelCameraIntro.Moving)));
+        bool hide = HidesOnTitle && (exitHold || (PixelTitleWanderers.LiveBackground && PixelGameMode.TitleOrIntro));
         // Old pixels and devices go first when leaving and come last when arriving: they fade out, THEN the floor; the floor fades in, THEN they do.
         // (Props only wait for the floor after a real arrival - the title screen / leaving it. A floor fade-in for any other reason, e.g. coming back
         // from first person, where the floor is off, must not shrink every husk and device away and back.)

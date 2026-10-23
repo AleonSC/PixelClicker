@@ -457,16 +457,8 @@ public class PixelGrab : MonoBehaviour
 
     private LineRenderer MakeGuideRenderer(string objectName, bool loop)
     {
-        GameObject go = new GameObject(objectName, typeof(LineRenderer));
-        go.transform.SetParent(transform, false);
-        LineRenderer lr = go.GetComponent<LineRenderer>();
-        lr.sharedMaterial = guideMaterial;
-        lr.useWorldSpace = true;
+        LineRenderer lr = PixelFloorRing.Create(objectName, transform, guideMaterial, true, 4);
         lr.loop = loop;
-        lr.alignment = LineAlignment.View;
-        lr.numCapVertices = 4;
-        lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        lr.receiveShadows = false;
         return lr;
     }
 
@@ -495,7 +487,6 @@ public class PixelGrab : MonoBehaviour
         {
             guideLine = MakeGuideRenderer("Drop Guide Line", false);
             guideRing = MakeGuideRenderer("Drop Guide Ring", true);
-            guideRing.positionCount = GuideRingPoints;
         }
         if (!guideLine.gameObject.activeSelf) { guideLine.gameObject.SetActive(true); guideRing.gameObject.SetActive(true); }
 
@@ -510,8 +501,6 @@ public class PixelGrab : MonoBehaviour
         guideLine.SetPosition(0, from);
         guideLine.SetPosition(1, ground);
 
-        guideRing.startWidth = guideRing.endWidth = width;
-        guideRing.startColor = guideRing.endColor = new Color(1f, 1f, 1f, 0.75f);
         Vector3 normal = pick.normal.sqrMagnitude > 0.01f ? pick.normal.normalized : Vector3.up;
         Vector3 tangent = Vector3.Cross(normal, Vector3.right);
         if (tangent.sqrMagnitude < 0.01f) tangent = Vector3.Cross(normal, Vector3.forward);
@@ -519,11 +508,7 @@ public class PixelGrab : MonoBehaviour
         Vector3 bitangent = Vector3.Cross(normal, tangent);
         float radius = half * 1.25f;
         Vector3 centre = ground + normal * (width * 0.6f);
-        for (int i = 0; i < GuideRingPoints; i++)
-        {
-            float a = i / (float)GuideRingPoints * Mathf.PI * 2f;
-            guideRing.SetPosition(i, centre + (tangent * Mathf.Cos(a) + bitangent * Mathf.Sin(a)) * radius);
-        }
+        PixelFloorRing.Draw(guideRing, centre, tangent, bitangent, radius, GuideRingPoints, 1f, new Color(1f, 1f, 1f, 0.75f), width);   // (lies flat on the surface it would land on)
         return true;
     }
 
@@ -619,7 +604,6 @@ public class PixelGrab : MonoBehaviour
     // ---- Tumbling when thrown: spin along the throw + a little grip so corners catch and tip it over ----
     private struct GripRestore { public Collider col; public UnityEngine.Object original; public float until; }
     private readonly System.Collections.Generic.Dictionary<Rigidbody, GripRestore> thrownGripUntil = new System.Collections.Generic.Dictionary<Rigidbody, GripRestore>();
-    private readonly System.Collections.Generic.Dictionary<UnityEngine.Object, UnityEngine.Object> grippyMaterials = new System.Collections.Generic.Dictionary<UnityEngine.Object, UnityEngine.Object>();
 
     /// <summary>Gives a thrown husk a roll that matches its throw (axis = up x sideways velocity, like a die rolled across a table) and, for a moment, more grip.</summary>
     private void StartTumble(Rigidbody body, Vector3 v)
@@ -638,8 +622,9 @@ public class PixelGrab : MonoBehaviour
 
         if (thrownGrip > 0f && thrownGripSeconds > 0f && col != null)
         {
-            if (!thrownGripUntil.TryGetValue(body, out GripRestore r)) r = new GripRestore { col = col, original = col.sharedMaterial };
-            col.sharedMaterial = GrippyCopy(col.sharedMaterial);
+            bool already = thrownGripUntil.TryGetValue(body, out GripRestore r);
+            UnityEngine.Object replaced = PixelPhysicsMaterials.ApplyGrippy(col, thrownGrip);   // (more grip for a moment: PixelPhysicsMaterials)
+            if (!already) r = new GripRestore { col = col, original = replaced };
             r.until = Time.time + thrownGripSeconds;
             thrownGripUntil[body] = r;
         }
@@ -649,7 +634,7 @@ public class PixelGrab : MonoBehaviour
     private void EndThrownGrip(Rigidbody body)
     {
         if (!thrownGripUntil.TryGetValue(body, out GripRestore r)) return;
-        if (r.col != null) SetPhysicsMaterial(r.col, r.original);
+        if (r.col != null) PixelPhysicsMaterials.Restore(r.col, r.original);
         thrownGripUntil.Remove(body);
     }
 
@@ -666,41 +651,6 @@ public class PixelGrab : MonoBehaviour
         }
     }
 
-#if UNITY_6000_0_OR_NEWER
-    /// <summary>A copy of a husk's material with at least thrownGrip friction, combined by Maximum so its own grip wins against slippery floors / husks (cached per original).</summary>
-    private PhysicsMaterial GrippyCopy(PhysicsMaterial original)
-    {
-        UnityEngine.Object key = original != null ? (UnityEngine.Object)original : this;
-        float grip = Mathf.Max(thrownGrip, original != null ? original.dynamicFriction : 0f);
-        if (grippyMaterials.TryGetValue(key, out UnityEngine.Object cached) && cached != null && Mathf.Approximately(((PhysicsMaterial)cached).dynamicFriction, grip))
-            return (PhysicsMaterial)cached;
-        PhysicsMaterial m = new PhysicsMaterial((original != null ? original.name : "OldPixel") + "_Thrown")
-        {
-            bounciness = original != null ? original.bounciness : 0f, dynamicFriction = grip, staticFriction = grip,
-            bounceCombine = original != null ? original.bounceCombine : PhysicsMaterialCombine.Average, frictionCombine = PhysicsMaterialCombine.Maximum
-        };
-        grippyMaterials[key] = m;
-        return m;
-    }
-    private static void SetPhysicsMaterial(Collider col, UnityEngine.Object m) { col.sharedMaterial = (PhysicsMaterial)m; }
-#else
-    /// <summary>A copy of a husk's material with at least thrownGrip friction, combined by Maximum so its own grip wins against slippery floors / husks (cached per original).</summary>
-    private PhysicMaterial GrippyCopy(PhysicMaterial original)
-    {
-        UnityEngine.Object key = original != null ? (UnityEngine.Object)original : this;
-        float grip = Mathf.Max(thrownGrip, original != null ? original.dynamicFriction : 0f);
-        if (grippyMaterials.TryGetValue(key, out UnityEngine.Object cached) && cached != null && Mathf.Approximately(((PhysicMaterial)cached).dynamicFriction, grip))
-            return (PhysicMaterial)cached;
-        PhysicMaterial m = new PhysicMaterial((original != null ? original.name : "OldPixel") + "_Thrown")
-        {
-            bounciness = original != null ? original.bounciness : 0f, dynamicFriction = grip, staticFriction = grip,
-            bounceCombine = original != null ? original.bounceCombine : PhysicMaterialCombine.Average, frictionCombine = PhysicMaterialCombine.Maximum
-        };
-        grippyMaterials[key] = m;
-        return m;
-    }
-    private static void SetPhysicsMaterial(Collider col, UnityEngine.Object m) { col.sharedMaterial = (PhysicMaterial)m; }
-#endif
 
 
 }

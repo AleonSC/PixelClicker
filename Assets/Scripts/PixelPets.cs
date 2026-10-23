@@ -610,7 +610,7 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
                 Physics.IgnoreCollision(box, live);
         }
         else box.size = Vector3.one * size;
-        box.sharedMaterial = PetMaterial();
+        PixelPhysicsMaterials.Apply(box, "Pet", bounciness, friction, PixelPhysicsMaterials.Combine.Maximum);   // (one shared material per bounce / friction setting)
 
         Rigidbody rb = go.AddComponent<Rigidbody>();
         rb.mass = petMass;
@@ -735,36 +735,6 @@ public partial class PixelPets : MonoBehaviour, IPixelSaved
     }
 
     private static readonly RaycastHit[] cubeHits = new RaycastHit[64];   // (reused by PetUnderPointer)
-
-    // One physics material shared by every pet body (each body used to make its own, never freed); made again only when the bounce / friction settings change.
-#if UNITY_6000_0_OR_NEWER
-    private PhysicsMaterial petMaterial;
-#else
-    private PhysicMaterial petMaterial;
-#endif
-
-#if UNITY_6000_0_OR_NEWER
-    private PhysicsMaterial PetMaterial()
-#else
-    private PhysicMaterial PetMaterial()
-#endif
-    {
-        if (petMaterial != null && petMaterial.bounciness == bounciness && petMaterial.dynamicFriction == friction && petMaterial.staticFriction == friction) return petMaterial;
-#if UNITY_6000_0_OR_NEWER
-        petMaterial = new PhysicsMaterial("Pet")
-        {
-            bounciness = bounciness, dynamicFriction = friction, staticFriction = friction,
-            bounceCombine = PhysicsMaterialCombine.Maximum,
-        };
-#else
-        petMaterial = new PhysicMaterial("Pet")
-        {
-            bounciness = bounciness, dynamicFriction = friction, staticFriction = friction,
-            bounceCombine = PhysicMaterialCombine.Maximum,
-        };
-#endif
-        return petMaterial;
-    }
 
     private void BeginHold(Pet p)
     {
