@@ -14,7 +14,7 @@ using System.Collections.Generic;
 public class GameState
 {
     /// <summary>The systems whose progress lives here (they must not implement IPixelSaved or register restart resets: tools/compile-check/rules.sh checks it). Add a system's class name when it moves.</summary>
-    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab", "PixelBaitBucket", "PixelCubieBill" };
+    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab", "PixelBaitBucket", "PixelCubieBill", "PixelCombo", "PixelHints" };
 
     public BankState bank = new BankState();
     public StatsState stats = new StatsState();
@@ -24,6 +24,8 @@ public class GameState
     public SwitchState grab = new SwitchState();       // Pixel Grabbing's Toggles switch (PixelGrab)
     public BaitBucketState baitBucket = new BaitBucketState();
     public CubieBillState cubieBill = new CubieBillState();
+    public SwitchState combo = new SwitchState();      // the Combo Meter's Toggles switch (PixelCombo)
+    public EventLogState eventLog = new EventLogState();
 
     /// <summary>Fills in sub-states missing from an older save file (JsonUtility leaves a part the file lacks null in some cases).</summary>
     public void Repair()
@@ -36,6 +38,9 @@ public class GameState
         if (grab == null) grab = new SwitchState();
         if (baitBucket == null) baitBucket = new BaitBucketState();
         if (cubieBill == null) cubieBill = new CubieBillState();
+        if (combo == null) combo = new SwitchState();
+        if (eventLog == null) eventLog = new EventLogState();
+        eventLog.Repair();
         baitBucket.Repair();
         cubieBill.Repair();
         bank.Repair();
@@ -241,5 +246,26 @@ public class CubieBillState
     {
         foreach (Paid p in paid) if (p.type == type) { p.amount = amount; return; }
         paid.Add(new Paid { type = type, amount = amount });
+    }
+}
+
+/// <summary>The event log's lines of this save (PixelHints), oldest first: the short line and the tip shown when it is clicked.</summary>
+[Serializable]
+public class EventLogState
+{
+    [Serializable]
+    public class Entry
+    {
+        public string text;
+        public string full;   // the tip shown when the line is clicked (may be empty)
+    }
+
+    public List<Entry> lines = new List<Entry>();
+
+    public void Repair()
+    {
+        if (lines == null) lines = new List<Entry>();
+        lines.RemoveAll(e => e == null || string.IsNullOrEmpty(e.text));
+        foreach (Entry e in lines) if (e.full == null) e.full = "";
     }
 }

@@ -12,14 +12,10 @@ using UnityEngine.UI;
 /// The texts are in the Inspector list (add or edit tips there). Other code calls <c>PixelHints.Trigger("id")</c>.
 /// Added automatically by PixelClicker if the scene has none.
 /// </summary>
-public class PixelHints : MonoBehaviour, IPixelSaved
+public class PixelHints : MonoBehaviour
 {
-    // ---- save: this system writes its own part of the save file (PixelSaveRegistry) ----
-    [System.Serializable] private class SaveState { public string[] texts, fulls; }
-    string IPixelSaved.SaveId => "eventLog";
-    int IPixelSaved.SaveOrder => 170;
-    string IPixelSaved.Export() { ExportHistory(out string[] t, out string[] f); return PixelSaveRegistry.ToJson(new SaveState { texts = t, fulls = f }); }
-    void IPixelSaved.Import(string data) { SaveState s = PixelSaveRegistry.FromJson<SaveState>(data); ImportHistory(s != null ? s.texts : null, s != null ? s.fulls : null); }
+    // ---- progress: the event log's lines live in the GameState (PixelGameState.Current.eventLog); this component draws the log ----
+    private static List<EventLogState.Entry> history => PixelGameState.Current.eventLog.lines;
 
     [Serializable]
     public class Hint
@@ -364,8 +360,8 @@ public class PixelHints : MonoBehaviour, IPixelSaved
     {
         if (introRightClickText == "Try the right mouse button too: HOLD it on the block on the cube to pull the block out of the rotation. On the basic blocks (black, gray, white, red, green and blue) the longer you hold (watch the meter by your cursor), the more the block is worth when it comes round again - but the stake can also go bad and pay nothing.") introRightClickText = "Try the right mouse button too: HOLD it on the block on the cube. It's each block's second action. On the pure pixels (black, gray, white, red, green and blue) it puts a stake on the block - the longer you hold (watch the meter by your cursor), the more it is worth when it comes round again, but the stake can also go bad and pay nothing. Skill blocks you meet later do their own thing when held.";   // (2026-10-16: right-hold is each block's second action)
         if (instance != null && instance != this) { Destroy(this); return; }
-        PixelSaveRegistry.Register(this);
         instance = this;
+        PixelGameState.Loaded += OnLoaded;
         EnsureDefaultHints();
         ApplyDialogueFile();
         // The first-time tips take their turn in the one tip queue (PixelTipQueue): this queue still decides WHICH tip and how it looks.
@@ -412,7 +408,7 @@ public class PixelHints : MonoBehaviour, IPixelSaved
     private void OnDestroy()
     {
         PixelTipQueue.Unregister(this);
-        PixelSaveRegistry.Unregister(this);
+        PixelGameState.Loaded -= OnLoaded;
         if (instance == this) instance = null;
     }
 
@@ -574,26 +570,18 @@ public class PixelHints : MonoBehaviour, IPixelSaved
     /// <summary>Goes up whenever the event log's lines change (My Window's docked Event log tab redraws on it).</summary>
     public static int HistoryVersion { get; private set; }
 
-    public static int HistoryCount => instance != null ? instance.history.Count : 0;
+    public static int HistoryCount => instance != null ? history.Count : 0;
 
     /// <summary>One line of the event log by index (0 = oldest); false when there is none.</summary>
     public static bool TryGetHistory(int index, out string text, out string full)
     {
         text = full = "";
-        if (instance == null || index < 0 || index >= instance.history.Count) return false;
-        text = instance.history[index].text;
-        full = instance.history[index].full ?? "";
+        if (instance == null || index < 0 || index >= history.Count) return false;
+        text = history[index].text;
+        full = history[index].full ?? "";
         return true;
     }
 
-    /// <summary>One line of the event log.</summary>
-    public class Entry
-    {
-        public string text;
-        public string full; // the tip shown when the line is clicked (may be empty)
-    }
-
-    private readonly List<Entry> history = new List<Entry>();
     private float overlayTimer;
     private float scrollOffset;       // pixels scrolled up from the newest line
     private float suppressUntil;
@@ -621,31 +609,15 @@ public class PixelHints : MonoBehaviour, IPixelSaved
         if (instance != null) instance.suppressUntil = Time.realtimeSinceStartup + seconds;
     }
 
-    /// <summary>The log of the current save, for the save file.</summary>
-    public static void ExportHistory(out string[] texts, out string[] fulls)
+    // A save was loaded: its log is in the state now - redraw it from the top, no box shown.
+    private void OnLoaded()
     {
-        List<Entry> list = instance != null ? instance.history : new List<Entry>();
-        texts = new string[list.Count];
-        fulls = new string[list.Count];
-        for (int i = 0; i < list.Count; i++) { texts[i] = list[i].text; fulls[i] = list[i].full ?? ""; }
-    }
-
-    /// <summary>Replaces the log with the one from a save file (no box is shown).</summary>
-    public static void ImportHistory(string[] texts, string[] fulls)
-    {
-        if (instance == null) return;
-        instance.history.Clear();
         HistoryVersion++;
-        if (texts != null)
-        {
-            for (int i = 0; i < texts.Length; i++)
-                instance.history.Add(new Entry { text = texts[i], full = fulls != null && i < fulls.Length ? fulls[i] : "" });
-        }
-        instance.TrimHistory();
-        instance.rowsDirty = true;
-        instance.scrollOffset = 0f;
-        instance.overlayTimer = 0f;
-        if (instance.overlayRoot != null) instance.overlayRoot.SetActive(false);
+        TrimHistory();
+        rowsDirty = true;
+        scrollOffset = 0f;
+        overlayTimer = 0f;
+        if (overlayRoot != null) overlayRoot.SetActive(false);
     }
 
     private void TrimHistory()
@@ -657,7 +629,7 @@ public class PixelHints : MonoBehaviour, IPixelSaved
     {
         if (!hintsEnabled || string.IsNullOrEmpty(shortText)) return;
         if (Time.timeSinceLevelLoad < startupQuietSeconds || Time.realtimeSinceStartup < suppressUntil) return;
-        history.Add(new Entry { text = shortText, full = fullText ?? "" });
+        history.Add(new EventLogState.Entry { text = shortText, full = fullText ?? "" });
         HistoryVersion++;
         TrimHistory();
         rowsDirty = true;
@@ -738,7 +710,7 @@ public class PixelHints : MonoBehaviour, IPixelSaved
         int oldest = fullView ? 0 : history.Count - 1; // a new event shows only the newest line; the whole list is for when the player opens the log
         for (int i = history.Count - 1; i >= oldest; i--) // newest at the bottom
         {
-            Entry entry = history[i];
+            EventLogState.Entry entry = history[i];
                         string text = entry.text;
 
             GameObject row = new GameObject("Row", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));

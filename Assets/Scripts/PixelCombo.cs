@@ -29,14 +29,10 @@ using UnityEngine.UI;
 ///
 /// Add this to any GameObject. PixelShop adds it automatically if it is missing.
 /// </summary>
-public class PixelCombo : MonoBehaviour, IPixelSaved
+public class PixelCombo : MonoBehaviour
 {
-    // ---- save: this system writes its own part of the save file (PixelSaveRegistry) ----
-    [System.Serializable] private class SaveState { public bool disabled; }
-    string IPixelSaved.SaveId => "combo";
-    int IPixelSaved.SaveOrder => 140;
-    string IPixelSaved.Export() => PixelSaveRegistry.ToJson(new SaveState { disabled = UserDisabled });
-    void IPixelSaved.Import(string data) { SaveState s = PixelSaveRegistry.FromJson<SaveState>(data); UserDisabled = s != null && s.disabled; }
+    // ---- progress: the Toggles switch lives in the GameState (PixelGameState.Current.combo) ----
+    private static SwitchState S => PixelGameState.Current.combo;
 
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
@@ -301,17 +297,23 @@ public class PixelCombo : MonoBehaviour, IPixelSaved
     /// <summary>The player switched the combo meter off in the Toggles window. Saved.</summary>
     public bool UserDisabled
     {
-        get => userDisabled;
+        get => S.userDisabled;
         set
         {
-            userDisabled = value;
-            if (userDisabled) combo = 0;
+            S.userDisabled = value;
+            if (value) combo = 0;
             Apply();
         }
     }
 
-    private bool userDisabled;
-    private bool Working => comboActive && !userDisabled;
+    // A save was loaded: its switch is in the state now - an off meter drops its combo and redraws.
+    private void OnLoaded()
+    {
+        if (S.userDisabled) combo = 0;
+        Apply();
+    }
+
+    private bool Working => comboActive && !S.userDisabled;
 
     /// <summary>The highest multiplier the combo can reach.</summary>
     public float MaxMultiplier => maxMultiplier;
@@ -362,7 +364,7 @@ public class PixelCombo : MonoBehaviour, IPixelSaved
 
     private void Awake()
     {
-        PixelSaveRegistry.Register(this);
+        PixelGameState.Loaded += OnLoaded;
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (clicker == null)
         {
@@ -390,7 +392,7 @@ public class PixelCombo : MonoBehaviour, IPixelSaved
 
     private void OnDestroy()
     {
-        PixelSaveRegistry.Unregister(this);
+        PixelGameState.Loaded -= OnLoaded;
         if (glowSprite != null) Destroy(glowSprite);
         if (flameSprite != null) Destroy(flameSprite);
         if (glowTexture != null) Destroy(glowTexture);

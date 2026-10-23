@@ -1,6 +1,6 @@
 # PixelGameState / GameState
 
-Started 2026-10-23 (Phase 1: the owner, plus the Bank and the Stats as the pilot; then the Auto Clicker, the Focus potion, Time Stop and Pixel Grabbing, the Bait Bucket and Cubie's bill). The player's PROGRESS moves out of the MonoBehaviours into one plain object, one system at a time. The old `IPixelSaved` registry keeps working for the systems that have not moved yet.
+Started 2026-10-23 (Phase 1: the owner, plus the Bank and the Stats as the pilot; then the Auto Clicker, the Focus potion, Time Stop and Pixel Grabbing, the Bait Bucket and Cubie's bill, the Combo switch and the event log). The player's PROGRESS moves out of the MonoBehaviours into one plain object, one system at a time. The old `IPixelSaved` registry keeps working for the systems that have not moved yet.
 
 ## Why
 - **Saving:** each system saved its own part (`IPixelSaved`) in load-order bands.
@@ -64,5 +64,7 @@ With one state object, saving writes it, loading replaces it and a new game make
 | `PixelGrab` | `SwitchState` (`grab`: switched off in Toggles) | `Loaded` lets go of a held husk if it is off and re-applies `clicker.GrabEnabled`. Grabbing itself is always unlocked. |
 | `PixelBaitBucket` | `BaitBucketState` (placed, spot, stored Fish / Water husks by type with their payout) | The first WORLD object moved: the bucket writes its spot into the state each frame while it stands (it can be carried) and `Loaded` rebuilds it from the state. The pattern for a placed thing: the state holds what's needed to rebuild it, the object is only the view. |
 | `PixelCubieBill` | `CubieBillState` (paid per colour by type, trust tier, revealed) | The old part loaded early on purpose (Recyclers rebuilt during the load ask `TagShown`); with `Replace` at the START of the load this now holds by itself. Its `ResetOnRestart` clears event listener lists (not progress), marked `// restart-reset-not-progress:` so the compile-check rule allows it. |
+| `PixelCombo` | `SwitchState` (`combo`: switched off in Toggles) | `Loaded` drops the running combo if it is off and redraws the meter. |
+| `PixelHints` (event log) | `EventLogState` (the log's lines: short text + the tip behind it) | Only the event log's lines moved: the 'seen' flags of first-time tips stay global PlayerPrefs (they are per machine, not per save). `Loaded` redraws the log from the top with no box. |
 
 The remaining systems, simplest first, are on the to-do list.

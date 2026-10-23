@@ -1541,3 +1541,4 @@
 [2026-10-23 17:35 UTC] Code cleanup: the Dev Hub widgets and Pocket's Pinned tab now share one draggable / foldable card board (PixelCardBoard); saved layouts are kept.
 [2026-10-23 23:46 UTC] Code cleanup: the Wood Chipper builds its model with the shared PixelFactoryKit (its private copy of the kit is gone; it looks the same).
 [2026-10-23 23:46 UTC] The Bait Bucket (where it stands and what it holds) and Cubie's bill (paid per colour, trust tier, revealed) now keep their progress in the GameState, saved, loaded and reset with it; to-do updated (the Dev Hub speed item is mostly done already: only x10 is missing).
+[2026-10-23 23:50 UTC] The Combo Meter's on / off switch and the event log's lines now live in the GameState, saved, loaded and reset with it; to-do updated.
