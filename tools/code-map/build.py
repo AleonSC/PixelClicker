@@ -16,7 +16,7 @@ TEMPLATE = os.path.join(ROOT, 'tools', 'code-map', 'template.html')
 # (group, regex on the class name without 'Pixel'). Order matters: first match wins.
 GROUPS = [
     ('Dev tools', r'^(Dev|FeatureTester|BalanceReport|SessionRecorder|CrashLog|Debug|LookStudio|ModelEditor|ModelPicture|BoundsSnapshot|TimeControl|Probe)'),
-    ('Save and settings', r'^(Save|Autosaves|Prefs|SettingsSync|DisplaySettings|CustomKeys|Keys|MenuKeys|Input|Statics|ObjectId)'),
+    ('Save and settings', r'^(GameState|Save|Autosaves|Prefs|SettingsSync|DisplaySettings|CustomKeys|Keys|MenuKeys|Input|Statics|ObjectId)'),
     ('Core loop', r'^(Clicker|BlockCatalog|BlockRules|BlockTags|BlockTextures|BlockHold|Looks|LookSource|ClickerAura|Combo|AutoClicker|Hold|PowerClick|ShuffleBonus|NextUp|HazardTell|TimeStop|Overcharge|Infinity|FirePixel|NuclearPixel|ChargeBooster|LightningRod|Stats|Achievements|OfflineProgress|Goals|Bank|Focus)'),
     ('Husks', r'^(Husk|Grab|CarryHandles|Body|Hold$|Snap|PathCarrier|VacuumContents|Mold|SapField)'),
     ('Devices and factory', r'(Device|Conveyor|Belt|Coupling|Socket|Recycler|SortingHopper|Sweeper|StorageCrate|Funnel|Kiln|Elevator|JunctionBox|ContainerHose|Tube|TrashCan|VacuumCleaner|ControlLever|BiomassGenerator|PowerBank|SolarPanel|FactoryKit|CraftingCube|WoodChipper|BaitBucket|Bait$|AimLaser|RobotWorker|RobotCockpit|RobotSaver|ElectricLinks|Operation|Seed|DeviceCard|DeviceInfo|Consumables|ConsumableGallery|InstantItems|Attachment)'),
@@ -106,7 +106,7 @@ def main():
         if n in idx: node['desc'], node['doc'] = idx[n]
         if not node['desc']: node['desc'] = header_summary(src[mainf])
         node['desc'] = re.sub(r'\s+', ' ', node['desc'])[:420]
-        short = n[5:] if n.startswith('Pixel') else n
+        short = n[5:] if n.startswith('Pixel') else n   # (GameState.cs has no prefix)
         for g, rx in GROUPS:
             if re.search(rx, short): node['group'] = g; break
     # links
