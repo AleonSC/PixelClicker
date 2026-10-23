@@ -1543,3 +1543,4 @@
 [2026-10-23 23:46 UTC] The Bait Bucket (where it stands and what it holds) and Cubie's bill (paid per colour, trust tier, revealed) now keep their progress in the GameState, saved, loaded and reset with it; to-do updated (the Dev Hub speed item is mostly done already: only x10 is missing).
 [2026-10-23 23:50 UTC] The Combo Meter's on / off switch and the event log's lines now live in the GameState, saved, loaded and reset with it; to-do updated.
 [2026-10-23 23:51 UTC] Code cleanup: the Game Database is built from each system's own entries (pixels, packs, skills, pets, minigames, rules, recipes, awards, goals) instead of one long hand-written list, and now also lists the Operation upgrades (Upgrades tab) and the Whale fight, Treasure map and Dragon wish (Specials tab).
+[2026-10-23 23:53 UTC] To-do audit: ticked 5 items that were already built (vendors, skill pack system, dead blocks, Database goals, crush refunds) and noted 4 as partly done or maybe superseded.
