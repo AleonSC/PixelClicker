@@ -24,16 +24,15 @@ using UnityEngine.InputSystem;
 /// The window is the standard Fixed window (PixelUIKit.CreateWindow), anchored at the left edge, with the hose toggle in its
 /// left header slot; it opens and closes with PixelPop like its neighbours (Skills, Inventory, Log).
 ///
+/// What is stored is the player's progress, so it lives in the GameState (PixelGameState.Current.bank, by pixel type) - saved, loaded and
+/// reset with it; this component keeps the window, the hose, input and its Inspector tuning.
+///
 /// Add this to any GameObject. PixelShop adds it automatically if it is missing.
 /// </summary>
-public class PixelBank : MonoBehaviour, IPixelSaved
+public class PixelBank : MonoBehaviour
 {
-    // ---- save: this system writes its own part of the save file (PixelSaveRegistry) ----
-    [System.Serializable] private class SaveState { public Entry[] entries; }
-    string IPixelSaved.SaveId => "bank";
-    int IPixelSaved.SaveOrder => PixelSaveRegistry.WorldBand + 110;   // (after the husks are back: the hose may have some in flight)
-    string IPixelSaved.Export() => PixelSaveRegistry.ToJson(new SaveState { entries = GetState().ToArray() });
-    void IPixelSaved.Import(string data) { SaveState s = PixelSaveRegistry.FromJson<SaveState>(data); SetState(s != null ? s.entries : null); }
+    // ---- progress: the stored husks live in the GameState (PixelGameState.Current.bank, by pixel type); this component is the window, the hose and input ----
+    private static BankState B => PixelGameState.Current.bank;
 
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
@@ -243,20 +242,15 @@ public class PixelBank : MonoBehaviour, IPixelSaved
     // State
     // ------------------------------------------------------------------
 
-    /// <summary>One stored pixel type, as the save system keeps it.</summary>
-    [Serializable]
-    public class Entry
-    {
-        public int type;     // PixelClicker.PixelType
-        public long count;
-        public double value; // total payout of the stored pixels (so a spat-out pixel keeps its worth)
-    }
 
     /// <summary>True while the hose is equipped. Other scripts (Pixel Grabbing, device removal) step aside then.</summary>
     public static bool HoseOn { get; private set; }
 
-    private long[] counts = new long[0];
-    private double[] values = new double[0];
+    // The stored husks by TIER INDEX (the window, the hose and the selection work in tier indices; the state keeps pixel types).
+    private int TierCount => clicker != null ? clicker.Tiers.Length : 0;
+    private int TypeAt(int tier) => (int)clicker.Tiers[tier].type;
+    private long CountAt(int tier) => tier >= 0 && tier < TierCount ? B.CountOf(TypeAt(tier)) : 0L;
+    private double ValueAt(int tier) => tier >= 0 && tier < TierCount ? B.ValueOf(TypeAt(tier)) : 0d;
     private int selected = -1;
 
     // Hose
@@ -326,15 +320,7 @@ public class PixelBank : MonoBehaviour, IPixelSaved
     public bool Active => bankActive;
 
     /// <summary>Total number of stored pixels.</summary>
-    public long Total
-    {
-        get
-        {
-            long total = 0;
-            for (int i = 0; i < counts.Length; i++) total += counts[i];
-            return total;
-        }
-    }
+    public long Total => B.Total;
 
     /// <summary>How many pixels the bank can hold (the Bank Storage upgrade raises it).</summary>
     public int Capacity => capacityOverride > 0 ? capacityOverride : capacity;
@@ -345,7 +331,7 @@ public class PixelBank : MonoBehaviour, IPixelSaved
     public void SetCapacityOverride(int value) => capacityOverride = Mathf.Max(0, value);
 
     /// <summary>Stored pixels of a tier.</summary>
-    public long Stored(int tierIndex) => tierIndex >= 0 && tierIndex < counts.Length ? counts[tierIndex] : 0;
+    public long Stored(int tierIndex) => CountAt(tierIndex);
 
     /// <summary>Called by the shop when the upgrade is bought.</summary>
     public void Activate() => bankActive = true;
@@ -358,45 +344,23 @@ public class PixelBank : MonoBehaviour, IPixelSaved
     }
 
     // ------------------------------------------------------------------
-    // Saving
+    // Stored husks (progress in the GameState: saved, loaded and reset with it)
     // ------------------------------------------------------------------
 
-    /// <summary>The stored pixels, for the save system.</summary>
-    public List<Entry> GetState()
+    /// <summary>Empties the bank (Dev Tools' reset counts).</summary>
+    public void ClearStored()
     {
-        List<Entry> list = new List<Entry>();
-        EnsureArrays();
-        for (int i = 0; i < counts.Length; i++)
-            if (counts[i] > 0) list.Add(new Entry { type = (int)clicker.Tiers[i].type, count = counts[i], value = values[i] });
-        return list;
-    }
-
-    /// <summary>Replaces what is stored (used when loading a save).</summary>
-    public void SetState(Entry[] state)
-    {
-        EnsureArrays();
-        Array.Clear(counts, 0, counts.Length);
-        Array.Clear(values, 0, values.Length);
-        if (state != null)
-        {
-            foreach (Entry e in state)
-            {
-                int index = clicker.IndexOf((PixelClicker.PixelType)e.type);
-                if (index < 0 || e.count <= 0) continue;
-                counts[index] = e.count;
-                values[index] = Math.Max(0d, e.value);
-            }
-        }
-        if (selected < 0 || selected >= counts.Length || !Has(selected)) selected = NextStocked(-1, 1);
+        B.stored.Clear();
+        selected = -1;
         refreshTimer = 0f;
     }
 
-    private void EnsureArrays()
+    /// <summary>A save was loaded (its stored husks are in the GameState now): pick a stocked type and redraw.</summary>
+    private void OnLoaded()
     {
-        int n = clicker != null ? clicker.Tiers.Length : 0;
-        if (counts.Length == n) return;
-        Array.Resize(ref counts, n);
-        Array.Resize(ref values, n);
+        if (clicker == null) return;
+        if (selected < 0 || selected >= TierCount || !Has(selected)) selected = NextStocked(-1, 1);
+        refreshTimer = 0f;
     }
 
     // ------------------------------------------------------------------
@@ -405,7 +369,7 @@ public class PixelBank : MonoBehaviour, IPixelSaved
 
     private void Awake()
     {
-        PixelSaveRegistry.Register(this);
+        PixelGameState.Loaded += OnLoaded;
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (clicker == null)
         {
@@ -414,7 +378,6 @@ public class PixelBank : MonoBehaviour, IPixelSaved
             return;
         }
         if (clicker.UIFont != null) font = clicker.UIFont;
-        EnsureArrays();
     }
 
     private void Start()
@@ -427,7 +390,7 @@ public class PixelBank : MonoBehaviour, IPixelSaved
 
     private void OnDestroy()
     {
-        PixelSaveRegistry.Unregister(this);
+        PixelGameState.Loaded -= OnLoaded;
         PixelWindows.Unregister(this);
         HoseOn = false;
         PixelClicker.ExternalClickBlock = false;
@@ -442,7 +405,6 @@ public class PixelBank : MonoBehaviour, IPixelSaved
     private void Update()
     {
         if (!built) return;
-        EnsureArrays();
 
         if (canvasRoot.activeSelf != bankActive) canvasRoot.SetActive(bankActive);
         if (!bankActive)
@@ -856,7 +818,7 @@ public class PixelBank : MonoBehaviour, IPixelSaved
         if (!areaActive && !areaFinished && rightHeldTime >= areaHoldSeconds)
         {
             // The type to take: the selected one, or (if nothing is selected) the type of the old pixel under the beam.
-            areaTier = selected >= 0 && selected < counts.Length ? selected : -1;
+            areaTier = selected >= 0 && selected < TierCount ? selected : -1;
             if (areaTier < 0)
             {
                 OldPixelInfo info = beamTarget != null ? PixelHuskQuery.Get(beamTarget).info : null;
@@ -964,8 +926,8 @@ public class PixelBank : MonoBehaviour, IPixelSaved
     /// <summary>Can this pixel type be spat out? Stored ones, or - with the dev tools' Infinite resources - every unlocked ordinary type, stored or not.</summary>
     private bool Has(int i)
     {
-        if (i < 0 || i >= counts.Length) return false;
-        if (counts[i] > 0) return true;
+        if (i < 0 || i >= TierCount) return false;
+        if (CountAt(i) > 0) return true;
         if (!PixelClicker.InfiniteResources) return false;
         PixelClicker.PixelTier t = clicker.Tiers[i];
         return t.unlocked && !t.rareDrop && !t.flyAway;
@@ -974,7 +936,7 @@ public class PixelBank : MonoBehaviour, IPixelSaved
     /// <summary>The next tier with stored pixels after 'from' in the given direction, or -1 if there is none.</summary>
     private int NextStocked(int from, int direction)
     {
-        int n = counts.Length;
+        int n = TierCount;
         for (int step = 1; step <= n; step++)
         {
             int i = ((from + direction * step) % n + n) % n;
@@ -985,7 +947,7 @@ public class PixelBank : MonoBehaviour, IPixelSaved
 
     private void Spit()
     {
-        if (selected < 0 || selected >= counts.Length || !Has(selected))
+        if (selected < 0 || selected >= TierCount || !Has(selected))
         {
             selected = NextStocked(selected, 1);
             if (selected < 0) { PixelAudio.Play("bank_empty"); fullTimer = 0.9f; flashMessage = emptyDisplayText; }
@@ -993,11 +955,11 @@ public class PixelBank : MonoBehaviour, IPixelSaved
         }
 
         int tier = selected;
-        double amount = counts[tier] > 0 ? values[tier] / counts[tier] : clicker.RollOldPixelAmount(tier);   // infinite resources: a type that was never stored pays its normal amount
+        long held = CountAt(tier);
+        double amount = held > 0 ? ValueAt(tier) / held : clicker.RollOldPixelAmount(tier);   // infinite resources: a type that was never stored pays its normal amount
         if (!PixelClicker.InfiniteResources) // dev tools "Infinite resources": the bank never runs out of what it holds
         {
-            counts[tier]--;
-            values[tier] = counts[tier] > 0 ? Math.Max(0d, values[tier] - amount) : 0d;
+            if (held > 0) B.Set(TypeAt(tier), held - 1, ValueAt(tier) - amount);
         }
 
         // It drops straight down the beam onto the red dot.
@@ -1045,8 +1007,8 @@ public class PixelBank : MonoBehaviour, IPixelSaved
         OldPixelInfo info = PixelHuskQuery.Get(body).info;
         if (info == null || !clicker.ReleaseOldPixel(body, false)) return true; // gone already: not a reason to stop
 
-        counts[info.tierIndex]++;
-        values[info.tierIndex] += info.amount;
+        int storedType = TypeAt(info.tierIndex);
+        B.Set(storedType, B.CountOf(storedType) + 1, B.ValueOf(storedType) + info.amount);
         if (selected < 0) selected = info.tierIndex;
 
         kick = 1f;
@@ -1105,7 +1067,7 @@ public class PixelBank : MonoBehaviour, IPixelSaved
 
     private void UpdateDisplay(Camera cam, Vector3 tip)
     {
-        bool hasSelection = selected >= 0 && selected < counts.Length && Has(selected);
+        bool hasSelection = selected >= 0 && selected < TierCount && Has(selected);
         if (selected >= 0 && !hasSelection) { selected = NextStocked(selected, 1); hasSelection = selected >= 0; }
 
         // The glass cube holds a spinning model of the selected pixel (its real look).
@@ -1128,7 +1090,7 @@ public class PixelBank : MonoBehaviour, IPixelSaved
 
         // The stored count is written on the plate on the nozzle.
         counterPlate.gameObject.SetActive(true);
-        string number = hasSelection ? (PixelClicker.InfiniteResources ? "\u221E" : PixelClicker.FormatNumber(counts[selected])) : "0";
+        string number = hasSelection ? (PixelClicker.InfiniteResources ? "\u221E" : PixelClicker.FormatNumber(CountAt(selected))) : "0";
         if (counterText.text != number) counterText.text = number;
         counterText.color = hasSelection ? new Color(0.55f, 1f, 0.65f, 1f) : new Color(1f, 0.45f, 0.4f, 1f);
 
@@ -1423,9 +1385,10 @@ public class PixelBank : MonoBehaviour, IPixelSaved
             row.go.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -used * (rowHeight + 8f));
             row.swatch.color = new Color(tiers[i].color.r, tiers[i].color.g, tiers[i].color.b, 1f);
             row.label.text = tiers[i].displayName;
-            row.count.text = PixelClicker.FormatNumber(counts[i]);
+            long stored = CountAt(i);
+            row.count.text = PixelClicker.FormatNumber(stored);
             row.background.color = HoseOn && i == selected ? rowSelectedColor : rowColor;
-            float dim = counts[i] > 0 ? 1f : 0.45f;
+            float dim = stored > 0 ? 1f : 0.45f;
             row.label.color = new Color(textColor.r, textColor.g, textColor.b, dim);
             row.count.color = new Color(textColor.r, textColor.g, textColor.b, dim);
             used++;
@@ -1452,7 +1415,7 @@ public class PixelBank : MonoBehaviour, IPixelSaved
         // Clicking a row selects that pixel type (when there are some stored).
         PixelUIKit.MakeClickable(row.go, () =>
         {
-            if (row.tier >= 0 && row.tier < counts.Length && Has(row.tier))
+            if (row.tier >= 0 && row.tier < TierCount && Has(row.tier))
             {
                 selected = row.tier;
                 refreshTimer = 0f;
