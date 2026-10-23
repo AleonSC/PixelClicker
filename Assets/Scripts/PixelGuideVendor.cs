@@ -808,11 +808,16 @@ public class PixelGuideVendor : MonoBehaviour
         go.GetComponent<Image>().color = new Color(0.96f, 0.93f, 0.82f, 1f);
         go.GetComponent<Image>().raycastTarget = false;
         invoice = go.GetComponent<RectTransform>();
-        invoice.anchorMin = invoice.anchorMax = invoice.pivot = new Vector2(0.3f, 1f);
-        invoice.anchoredPosition = new Vector2(0f, -40f);
-        const float width = 520f, fullHeight = 900f;
+        // It hangs LEFT of the speech box (both are placed from the right edge), as wide / tall as the room there allows.
+        Rect screen = canvasRoot.GetComponent<RectTransform>().rect;
+        float boxLeft = -panel.anchoredPosition.x + panel.sizeDelta.x;   // the speech box's left edge, measured from the right edge
+        const float gap = 50f, margin = 30f;
+        float width = Mathf.Clamp(screen.width - boxLeft - gap - margin, 260f, 520f);
+        float fullHeight = Mathf.Min(900f, screen.height - 80f);
+        invoice.anchorMin = invoice.anchorMax = invoice.pivot = new Vector2(1f, 1f);
+        invoice.anchoredPosition = new Vector2(-(boxLeft + gap), -40f);
         invoice.sizeDelta = new Vector2(width, 0f);
-        invoice.localEulerAngles = new Vector3(0f, 0f, 2.5f);
+        invoice.localEulerAngles = new Vector3(0f, 0f, -2.5f);   // (tilted so its bottom swings AWAY from the speech box)
 
         StringBuilder sb = new StringBuilder("<b><size=130%>INVOICE</size></b>\n<i>Property of Cubie.</i>\n\n");
         string total = PixelClicker.FormatNumber(bill != null ? bill.BillPerColour : 25000000000d);
@@ -825,9 +830,12 @@ public class PixelGuideVendor : MonoBehaviour
         sb.Append('\n').Append(invoiceExtraLines.Replace("\\n", "\n").Replace("{total}", total));
         sb.Append("\n\n<b>TOTAL ........ a lot</b>\n<size=70%>Terms: see reverse. Reverse: see terms.</size>");
         TMP_Text text = PixelUIKit.CreateText(Font, go.transform, "Lines", sb.ToString(), 26f, TextAlignmentOptions.TopLeft, FontStyles.Normal, new Color(0.18f, 0.15f, 0.12f, 1f));
+        text.enableAutoSizing = true;   // (a narrow screen: the lines shrink instead of running off the paper)
+        text.fontSizeMax = 26f;
+        text.fontSizeMin = 12f;
         RectTransform tr = text.rectTransform;
         tr.anchorMin = new Vector2(0f, 1f); tr.anchorMax = new Vector2(1f, 1f); tr.pivot = new Vector2(0.5f, 1f);
-        tr.offsetMin = new Vector2(28f, -fullHeight); tr.offsetMax = new Vector2(-28f, -24f);
+        tr.offsetMin = new Vector2(28f, -fullHeight + 24f); tr.offsetMax = new Vector2(-28f, -24f);
         PixelAudio.Play("purchase", 0.6f);
 
         for (float t = 0f; t < 1.6f && invoice != null; t += Time.unscaledDeltaTime)
