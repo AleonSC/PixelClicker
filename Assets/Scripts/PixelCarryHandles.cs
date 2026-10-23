@@ -163,6 +163,8 @@ public class PixelCarryHandles : MonoBehaviour
 
     private IPixelSocketDevice socketDevice;   // (the carried device's sockets: its aim beams)
 
+    private PixelAimOpening[] aimOpenings;
+
     private void Update()
     {
         if (handles.Count == 0) return;
@@ -177,6 +179,8 @@ public class PixelCarryHandles : MonoBehaviour
             // Red aim beams out of the device's coupling holes while it is carried (PixelAimLaser), so it lines up exactly.
             if (socketDevice == null) socketDevice = GetComponent<IPixelSocketDevice>();
             if (socketDevice != null) PixelAimLaser.Ports(socketDevice.SocketRoot, socketDevice.Sockets);
+            if (aimOpenings == null) aimOpenings = GetComponentsInChildren<PixelAimOpening>(true);   // (its marked holes: a wide beam each - found once)
+            PixelAimLaser.Openings(transform, aimOpenings);
             PixelHandCursor.Request(PixelHandCursor.Shape.Closed);
             if (consumables == null) consumables = PixelFind.First<PixelConsumables>();
             float turn = consumables != null ? consumables.TurnInput() : 0f;

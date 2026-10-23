@@ -220,7 +220,7 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Height of each row.")]
     [SerializeField] private float rowHeight = 64f;
     [Tooltip("Hover text of the Time control widget's buttons.")]
-    [SerializeField] private string timeControlTipText = "Rewind / Pause / Play / Slow / Fast. Press Slow, Fast or Rewind again for the next speed; while one is on, the mouse wheel changes the speed by 0.1x (0.1x - 5x). Rewind only moves husks back - currency, timers and devices stay as they are.";
+    [SerializeField] private string timeControlTipText = "Rewind / Pause / Play / Slow / Fast. Press Slow, Fast or Rewind again for the next speed; while one is on, the mouse wheel changes the speed by 0.1x (0.5x above 2x; 0.1x - 10x). Rewind only moves husks back - currency, timers and devices stay as they are.";
 
     [Tooltip("Text size of rows and buttons.")]
     [SerializeField] private float fontSize = 30f;
@@ -940,7 +940,7 @@ public class PixelDevTools : MonoBehaviour
                 Button b = PixelUIKit.CreateButton(font, content, "Time " + names[i] + " Button", names[i], new Vector2(bw, rowHeight), buttonColor, textColor, fontSize * 0.8f);
                 Place(b.GetComponent<RectTransform>(), 40f + i * (bw + 8f), y, bw);
                 b.onClick.AddListener(() => act());
-                AddTip(b.gameObject, timeControlTipText);
+                AddTip(b.gameObject, timeControlTipText.Replace("0.1x (0.1x - 5x)", "0.1x (0.5x above 2x; 0.1x - 10x)"));   // (a scene saved before 10x keeps the old text)
             }
             timeStatus = PixelUIKit.CreateText(font, content, "Time Status", "", fontSize * 0.8f, TextAlignmentOptions.MidlineLeft, FontStyles.Normal, textColor);
             Place(timeStatus.rectTransform, 40f, y + rowHeight + WidgetRowGap, inner);

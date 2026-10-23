@@ -4,7 +4,7 @@
 //   - Slow / Fast set Time.timeScale to Speed (Time.fixedDeltaTime follows below 1x so slow physics stays smooth, like Time Slow does). Pressing
 //     the same button again steps through its presets (slowPresets / fastPresets / rewindPresets).
 //   - While Slow, Fast or Rewind is on, the plain mouse wheel (not over UI, not with Ctrl, not in God mode) raises / lowers Speed by speedStep
-//     (0.1x), between minSpeed and maxSpeed (0.1x - 5x). The mode follows the speed: Slow below 1x, Fast above it.
+//     (0.1x; fastWheelStep 0.5x from 2x up), between minSpeed and maxSpeed (0.1x - 10x). The mode follows the speed: Slow below 1x, Fast above it.
 //   - REWIND: the husks' positions are recorded every recordInterval seconds of game time (up to recordSeconds, a ring of snapshots). Rewind
 //     freezes the game (timeScale 0) and walks the husks back through the snapshots at Speed x real time; Pause / Play / Slow / Fast stop it there,
 //     drop the history after that point and give the husks their recorded velocity back. ONLY husks rewind: currency, timers, minigames and
@@ -26,13 +26,16 @@ public class PixelTimeControl : MonoBehaviour
     [Tooltip("Lowest speed the mouse wheel can set (x real time).")]
     [SerializeField] private float minSpeed = 0.1f;
     [Tooltip("Highest speed the mouse wheel can set (x real time).")]
-    [SerializeField] private float maxSpeed = 5f;
+    [SerializeField] private float maxSpeed = 10f;
     [Tooltip("How much one notch of the mouse wheel changes the speed.")]
     [SerializeField] private float speedStep = 0.1f;
+    [Tooltip("How much one notch of the mouse wheel changes the speed from 2x up (so 10x is a few notches away, not 50).")]
+    [SerializeField] private float fastWheelStep = 0.5f;
     [Tooltip("Speeds the Slow button steps through when pressed again.")]
     [SerializeField] private float[] slowPresets = { 0.5f, 0.25f, 0.1f };
     [Tooltip("Speeds the Fast button steps through when pressed again.")]
-    [SerializeField] private float[] fastPresets = { 2f, 3f, 5f };
+    [SerializeField] private float[] fastPresets = { 2f, 3f, 5f, 10f };
+    [SerializeField, HideInInspector] private int timeDataVersion;   // 1 = up to 10x (2026-10-23)
     [Tooltip("Speeds the Rewind button steps through when pressed again.")]
     [SerializeField] private float[] rewindPresets = { 1f, 2f, 4f };
 
@@ -83,6 +86,19 @@ public class PixelTimeControl : MonoBehaviour
     {
         if (!allowInFullBuild && !Application.isEditor && !Debug.isDebugBuild) { enabled = false; return; }
         Instance = this;
+        if (timeDataVersion < 1)
+        {
+            // (2026-10-23: game speed goes up to 10x - a saved scene still has the old 5x cap and presets)
+            if (maxSpeed < 10f) maxSpeed = 10f;
+            if (fastWheelStep <= 0f) fastWheelStep = 0.5f;
+            if (fastPresets == null || fastPresets.Length == 0 || fastPresets[fastPresets.Length - 1] < 10f)
+            {
+                List<float> list = new List<float>(fastPresets ?? new float[0]);
+                list.Add(10f);
+                fastPresets = list.ToArray();
+            }
+            timeDataVersion = 1;
+        }
         baseFixedDelta = Time.fixedDeltaTime > 0f ? Time.fixedDeltaTime : 0.02f;
         clicker = PixelFind.Cached<PixelClicker>();
     }
@@ -170,7 +186,8 @@ public class PixelTimeControl : MonoBehaviour
         if (Current == Mode.Paused || PixelInput.PointerOverUI() || PixelInput.ControlHeld() || PixelClicker.GodMode) return;
         float scroll = PixelInput.ScrollY();
         if (Mathf.Abs(scroll) < 0.01f) return;
-        float s = Mathf.Round((Speed + Mathf.Sign(scroll) * speedStep) * 10f) / 10f;
+        float step = (scroll > 0f ? Speed >= 2f : Speed > 2f) && fastWheelStep > 0f ? fastWheelStep : speedStep;   // (bigger notches above 2x)
+        float s = Mathf.Round((Speed + Mathf.Sign(scroll) * step) * 10f) / 10f;
         s = Mathf.Clamp(s, minSpeed, maxSpeed);
         Mode m = Current == Mode.Rewind ? Mode.Rewind : s < 1f ? Mode.Slow : s > 1f ? Mode.Fast : Current;
         SetMode(m, s);

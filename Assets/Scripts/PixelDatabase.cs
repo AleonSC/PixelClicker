@@ -109,6 +109,7 @@ public static class PixelDatabase
             case "Setting": return new Color(0.75f, 0.8f, 0.6f);
             case "Upgrade": return new Color(1f, 0.65f, 0.3f);
             case "Special": return new Color(0.4f, 0.9f, 0.95f);
+            case "Character": return new Color(0.45f, 0.95f, 0.85f);
             default: return new Color(0.6f, 0.65f, 0.7f);
         }
     }

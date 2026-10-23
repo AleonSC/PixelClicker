@@ -350,10 +350,15 @@ public abstract class PixelMinigame : MonoBehaviour
     /// Its Game Database entry ('Minigame': the goal counter's text and title, the id), called for every minigame in turn by PixelDatabase's minigame step.
     /// Returns the entry; a subclass adds more to it (a vendor lists its wares: PixelVisitorMinigame).
     /// </summary>
+    /// <summary>The Game Database category of this minigame's entry ('Minigame'; the visitors are 'Character').</summary>
+    protected virtual string DatabaseCategory => "Minigame";
+    /// <summary>The name of this minigame's Game Database entry (a visitor: the person's name).</summary>
+    protected virtual string DatabaseName => DisplayName;
+
     public virtual PixelDatabase.Entry AddToDatabase(PixelDatabase.Builder b)
     {
         string desc = HasTracker ? PixelDatabase.Plain(TrackerDescription) : "";
-        PixelDatabase.Entry e = b.Add("Minigame", DisplayName, (string.IsNullOrEmpty(desc) ? "" : desc + "\n") + "Id: " + Id + (HasTracker ? "\nHas a goal counter: " + PixelDatabase.Plain(TrackerTitle) : ""));
+        PixelDatabase.Entry e = b.Add(DatabaseCategory, DatabaseName, (string.IsNullOrEmpty(desc) ? "" : desc + "\n") + "Id: " + Id + (HasTracker ? "\nHas a goal counter: " + PixelDatabase.Plain(TrackerTitle) : ""));
         b.Minigames[Id] = e;
         return e;
     }

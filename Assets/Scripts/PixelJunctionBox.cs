@@ -7,7 +7,8 @@
 //   - DIRECTION from what is attached (UpdateDirections, every routeSeconds): a belt that ENDS at a coupling's port or a hose that PUSHES into it = In; a belt
 //     that STARTS at it or a hose that PULLS from it = Out; nothing = idle (PixelCoupling.SetAuto; its arrow shows it, idle shows none).
 //   - TOP OPENING (2026-10-18): a square hole in the lid (HoleHusks) takes husks that drop in (and any husk resting on the lid: nothing piles up on top), and a gentle suction (suckRadiusHusks / suckHeightHusks /
-//     suckStrength) draws husks just above the box towards it (FixedUpdate, Swallow).
+//     suckStrength) draws husks just above the box towards it (FixedUpdate, Swallow). While placing / carrying, a wide red AIM BEAM shines straight up out of
+//     the opening (PixelAimOpening), so it lines up under a spout, an elevator's top or a Funnel.
 //   - IN = DELETED, OUT = NEW (2026-10-18): every husk that goes in (a coupling, the top opening, the Sweeper) is deleted - it shrinks into the box - and its
 //     type + value come out as a NEW husk spawned at an output coupling onto its belt (TakeData / SpawnOut), or wait in the buffer.
 //   - ROUTING a husk that comes in (AcceptHusk, from a belt / hose / the Sweeper / a Sorting Hopper's feed pipe / the top opening):
@@ -138,6 +139,7 @@ public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoo
         kit.Box("Lid Back", tr, new Vector3(0f, ly, (hole + side) * 0.5f), new Vector3(lw, t * 0.3f, side), LidColor, default, colliders, 0.45f, 0.6f);
         kit.Box("Lid Left", tr, new Vector3(-(hole + side) * 0.5f, ly, 0f), new Vector3(side, t * 0.3f, hole), LidColor, default, colliders, 0.45f, 0.6f);
         kit.Box("Lid Right", tr, new Vector3((hole + side) * 0.5f, ly, 0f), new Vector3(side, t * 0.3f, hole), LidColor, default, colliders, 0.45f, 0.6f);
+        if (ghost || colliders) PixelAimOpening.Add(tr, new Vector3(0f, ly, 0f), hole);   // (a wide red aim beam up out of the opening while placing / carrying - not on the shop picture)
         kit.Box("Throat", tr, new Vector3(0f, h + t * 0.02f, 0f), new Vector3(hole, t * 0.04f, hole), Color.black, default, false, 0f, 0.1f);
         for (int k = 0; k < 4; k++)
         {

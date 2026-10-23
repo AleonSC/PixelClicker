@@ -48,7 +48,7 @@ using UnityEngine.UI;
 /// after visit 2, the others when enough pixel types are unlocked). Progress is stored in the save file (stat counters guide.stage).
 /// Saves that already have the shop get no visit and no gift; their vendors just start.
 /// </summary>
-public class PixelGuideVendor : MonoBehaviour
+public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
 {
     [Header("References")]
     [Tooltip("The PixelClicker. Found automatically if left empty.")]
@@ -848,6 +848,29 @@ public class PixelGuideVendor : MonoBehaviour
     }
 
     private bool recyclerGiven;
+
+    /// <summary>Game Database: Cubie's own 'Character' entry (who he is, his visits, his bill), linked to the Recycler he gives and the visitors he starts.</summary>
+    void IPixelDatabaseSource.DatabaseSteps(PixelDatabase.Steps steps)
+    {
+        steps.Add(PixelDatabase.ExtrasOrder, b =>
+        {
+            if (disableGuide) return;
+            string bill = PixelCubieBill.IsRevealed
+                ? "\nHis bill: you owe him an absurd amount of every pure colour. Pay it from the IOU button in the shop; each milestone raises his trust (Tier "
+                  + PixelCubieBill.CurrentTier + " now) and puts better stock on his shelves."
+                : "";
+            PixelDatabase.Entry e = b.Add("Character", characterName,
+                "A suspicious teal cube who runs the only shop in existence. He takes pure pixels only (White, Gray, Black, Red, Green, Blue) and calls every other vendor a peddler."
+                + "\nVisits: when the early goals are done - visit 1 hands over a Recycler (with a price tag on it), visit 2 unlocks Red, Green and Blue and opens his shop"
+                + ", later visits deliver his bill and drop by when his trust in you grows. He also narrates the shop, Skills and Toggles tutorials." + bill
+                + "\nSwitch him off: untick 'Show first-time tips' (the game carries on as if his visits happened).");
+            e.discovered = PixelStats.Total(Stage1Key) >= 1d;
+            PixelDatabase.Entry recycler = b.Find("Consumable", "Recycler");
+            if (recycler != null) b.Link(e, "Gives", recycler, "Given by");
+            foreach (string id in new[] { "wizard", "tinkerer", "farmer", "entrepreneur", "lumberjack", "prospector" })
+                if (b.Minigames.TryGetValue(id, out PixelDatabase.Entry v)) b.Link(e, "Sends", v, "Sent by");
+        });
+    }
 
     /// <summary>Visit 1: Cubie gives the player a Recycler (it goes into the Consumables).</summary>
     private void GiveRecycler()

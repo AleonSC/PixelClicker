@@ -693,9 +693,35 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     }
 
     /// <summary>Its Game Database entry also says what it sells; the database's wares step links each ware's consumable entry back ('Sold by').</summary>
+    // ---- Game Database: every visitor is a CHARACTER entry (who they are, when they visit, what they do; 2026-10-23) ----
+
+    protected override string DatabaseCategory => "Character";
+    protected override string DatabaseName => Pick(visitorName, DefaultName);
+
+    /// <summary>Who each visitor is and when they turn up (one table; the greeting and wares are read live).</summary>
+    private static string CharacterBlurb(string id)
+    {
+        switch (id)
+        {
+            case "wizard": return "A wandering wizard and Cubie's 'friend'. He trades potions and odd magic for pixels.\nVisits: from soon after Cubie opens his shop, now and then.";
+            case "tinkerer": return "An inventor who sells devices and tools, often at a discount.\nVisits: once six pixel types are unlocked.";
+            case "entrepreneur": return "A slick dealer who trades one kind of pixel for another at his own rates.\nVisits: once eight pixel types are unlocked.";
+            case "farmer": return "A farmer who deals in seeds and farm goods.\nVisits: once five pixel types are unlocked.";
+            case "lumberjack": return "Big Tim the Lumberjack buys wood goods and sells woodcutting gear (the Focus potion among it).\nVisits: only while Woodcutting is the skill in training.";
+            case "prospector": return "An old miner who buys mining goods and sells mining gear.\nVisits: only while Mining is the skill in training.";
+            case "egg": return "Egg, a very rare cat. A special gift the first time, a random present of pixels after that.\nVisits: rarely, once four pixel types are unlocked.";
+            case "bean": return "Bean, the other very rare cat. A special gift the first time, a random present of pixels after that.\nVisits: rarely, once six pixel types are unlocked.";
+            default: return "";
+        }
+    }
+
     public override PixelDatabase.Entry AddToDatabase(PixelDatabase.Builder b)
     {
         PixelDatabase.Entry e = base.AddToDatabase(b);
+        string blurb = CharacterBlurb(Id);
+        string hello = PixelDatabase.Plain(string.Format(Pick(greeting, DefaultGreeting), Mathf.RoundToInt(discountFraction * 100f)));
+        e.detail = (blurb.Length > 0 ? blurb + "\n" : "") + (hello.Length > 0 ? "Says: \"" + hello + "\"\n" : "") + "Can be switched off in the Toggles window.";
+        e.discovered = Running;   // (met once the guide has started them)
         List<string> ware = WareNames();
         if (ware.Count > 0) { b.VendorWares.Add(new KeyValuePair<PixelDatabase.Entry, List<string>>(e, ware)); e.detail += "\nSells: " + string.Join(", ", ware) + "."; }
         return e;

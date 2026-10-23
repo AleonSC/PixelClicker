@@ -1545,3 +1545,6 @@
 [2026-10-23 23:51 UTC] Code cleanup: the Game Database is built from each system's own entries (pixels, packs, skills, pets, minigames, rules, recipes, awards, goals) instead of one long hand-written list, and now also lists the Operation upgrades (Upgrades tab) and the Whale fight, Treasure map and Dragon wish (Specials tab).
 [2026-10-23 23:53 UTC] To-do audit: ticked 5 items that were already built (vendors, skill pack system, dead blocks, Database goals, crush refunds) and noted 4 as partly done or maybe superseded.
 [2026-10-23 23:54 UTC] The UFO Helper (on / off switch and its job) and the pets you own (type, on / off, outfit, name) now keep their progress in the GameState, saved, loaded and reset with it; to-do updated.
+[2026-10-23 23:59 UTC] Dev Hub time control now goes up to 10x speed (the mouse wheel moves in 0.5x steps above 2x, and Fast has a 10x preset).
+[2026-10-23 23:59 UTC] The Junction Box shows a wide red aim beam straight up out of its top opening while you place or carry it, so it lines up under a spout (any device with a hole can get one through PixelAimOpening).
+[2026-10-23 23:59 UTC] Game Database: Cubie and every visitor (Wizard, Tinkerer, Entrepreneur, Farmer, Big Tim, the Prospector, Egg, Bean) now have Character entries saying who they are, when they visit and what they do, under a new People tab.

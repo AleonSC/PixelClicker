@@ -10,8 +10,9 @@
 //                                       while a device is carried.
 //       Attach(ghost, sockets)        - gives a placing ghost a PixelAimLaserPorts component that calls Ports every frame while the ghost is shown.
 //                                       Each device's CreateGhost does this with its own Ports(...) layout (the same sockets the real device gets).
-//       Beam(origin, dir, width, ignore) - ONE beam by hand (world space; width in world units, < 0 = the default): for later uses such as lining up
-//                                       a Junction Box's top opening (a wider beam).
+//       Beam(origin, dir, width, ignore) - ONE beam by hand (world space; width in world units, < 0 = the default).
+//       Openings(root, openings)      - a WIDE beam out of each hole marked with PixelAimOpening (the Junction Box's top opening), as wide as the
+//                                       hole, along the marker's up. The placing ghost (PixelAimLaserPorts) and PixelCarryHandles call it.
 //   Colours, widths and length are Inspector settings on the manager ("Aim Lasers" object).
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -82,6 +83,17 @@ public sealed class PixelAimLaser : MonoBehaviour
             Vector3 dir = root.TransformDirection(s.localFacing);
             dir.y = 0f;
             Beam(root.TransformPoint(s.localPosition) + Vector3.up * lift, dir, -1f, root);
+        }
+    }
+
+    /// <summary>A wide beam out of each marked opening this frame (PixelAimOpening: as wide as the hole, along its up; the device never stops it).</summary>
+    public static void Openings(Transform root, PixelAimOpening[] openings)
+    {
+        if (root == null || openings == null) return;
+        foreach (PixelAimOpening o in openings)
+        {
+            if (o == null || !o.isActiveAndEnabled) continue;
+            Beam(o.transform.position, o.transform.up, o.Width * o.transform.lossyScale.x, root);
         }
     }
 
