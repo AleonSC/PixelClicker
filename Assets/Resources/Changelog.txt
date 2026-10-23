@@ -1527,3 +1527,4 @@
 [2026-10-23 16:24 UTC] Started moving the player's progress into one GameState object (owner PixelGameState): the Bank's stored husks and the Stats now live there and save, load and reset with it; the steps for moving the other systems are in docs/systems/PixelGameState.md and a compile-check rule guards moved systems.
 [2026-10-23 16:24 UTC] To-do: added the list of systems still to move into the GameState, simplest first, PixelClicker last.
 [2026-10-23 16:34 UTC] The Auto Clicker (bought, switched off, upgraded speed) and the running Focus potion now keep their progress in the GameState, saved, loaded and reset with it; to-do updated.
+[2026-10-23 16:48 UTC] The Time Stop and Pixel Grabbing on / off switches now live in the GameState (one shared SwitchState), saved, loaded and reset with it; to-do updated.

@@ -14,12 +14,14 @@ using System.Collections.Generic;
 public class GameState
 {
     /// <summary>The systems whose progress lives here (they must not implement IPixelSaved or register restart resets: tools/compile-check/rules.sh checks it). Add a system's class name when it moves.</summary>
-    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus" };
+    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab" };
 
     public BankState bank = new BankState();
     public StatsState stats = new StatsState();
     public AutoClickerState autoClicker = new AutoClickerState();
     public FocusState focus = new FocusState();
+    public SwitchState timeStop = new SwitchState();   // Time Stop's Toggles switch (PixelTimeStop)
+    public SwitchState grab = new SwitchState();       // Pixel Grabbing's Toggles switch (PixelGrab)
 
     /// <summary>Fills in sub-states missing from an older save file (JsonUtility leaves a part the file lacks null in some cases).</summary>
     public void Repair()
@@ -28,6 +30,8 @@ public class GameState
         if (stats == null) stats = new StatsState();
         if (autoClicker == null) autoClicker = new AutoClickerState();
         if (focus == null) focus = new FocusState();
+        if (timeStop == null) timeStop = new SwitchState();
+        if (grab == null) grab = new SwitchState();
         bank.Repair();
         stats.Repair();
     }
@@ -162,4 +166,11 @@ public class FocusState
 
     public bool Active => remaining > 0f && !string.IsNullOrEmpty(skillId);
     public void Clear() { skillId = null; name = null; remaining = 0f; }
+}
+
+/// <summary>A bought feature's on / off switch in the Toggles window (Time Stop, Pixel Grabbing; reuse it for the others with only a switch).</summary>
+[Serializable]
+public class SwitchState
+{
+    public bool userDisabled;   // switched OFF by the player
 }
