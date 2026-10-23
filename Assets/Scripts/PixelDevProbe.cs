@@ -49,7 +49,7 @@ public static class PixelDevProbe
     {
         var sb = new StringBuilder(2048);
         sb.AppendLine("Pixel Clicker - marked moment " + System.DateTime.UtcNow.ToString("u") + "  Unity " + Application.unityVersion + "  build " + Application.version);
-        sb.AppendLine("screen=" + Screen.width + "x" + Screen.height + " paused=" + PixelPauseMenu.IsPaused + " title=" + PixelTitleScreen.Showing + " timeScale=" + Time.timeScale +
+        sb.AppendLine("screen=" + Screen.width + "x" + Screen.height + " mode=" + PixelGameMode.Current + " paused=" + PixelPauseMenu.IsPaused + " title=" + PixelTitleScreen.Showing + " timeScale=" + Time.timeScale +
                       " fps=" + (1f / Mathf.Max(0.0001f, Time.unscaledDeltaTime)).ToString("F0"));
         sb.AppendLine("view=" + PixelViewWindow.CurrentView + " orbit=" + PixelOrbitCamera.Active + " zoomed=" + PixelZoom.Zoomed + " ortho=" + PixelOrthoView.Enabled);
         Camera cam = Camera.main;

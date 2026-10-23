@@ -132,7 +132,8 @@ public class PixelCameraIntro : MonoBehaviour
     public static bool ClicksLocked { get; private set; }
 
     /// <summary>True while the camera is in the close-up or moving between it and the normal view (the view-bounds planes are wrong then).</summary>
-    public static bool Moving { get; private set; }
+    public static bool Moving { get => moving; private set { if (moving == value) return; moving = value; PixelGameMode.Refresh(); } }   // (set every frame while it runs: only a change refreshes)
+    private static bool moving;
 
     /// <summary>How far the camera is from the title close-up (0) to its normal view (1); 1 whenever it is at rest. The fitted floors use it to blend their picture.</summary>
     public static float Progress { get; private set; } = 1f;

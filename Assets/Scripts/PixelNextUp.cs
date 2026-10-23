@@ -91,7 +91,7 @@ public class PixelNextUp : MonoBehaviour
     {
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         bool show = clicker != null && Enabled && (!requireTreeNode || PixelSkills.HasStandardNode("nextup"))
-                    && !PixelTitleScreen.Showing && !PixelTitleScreen.Reversing && clicker.Tiers != null && clicker.Tiers.Length > 0;
+                    && !PixelGameMode.OnTitle && clicker.Tiers != null && clicker.Tiers.Length > 0;
         if (!show)
         {
             if (canvasRoot != null && canvasRoot.activeSelf) canvasRoot.SetActive(false);

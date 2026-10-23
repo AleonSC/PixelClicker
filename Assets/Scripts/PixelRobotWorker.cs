@@ -251,7 +251,7 @@ public partial class PixelRobotWorker : MonoBehaviour, IPixelSaved
     private void Update()
     {
         if (clicker == null || consumables == null) return;
-        bool show = Active && !PixelTitleScreen.Showing && !PixelMinigame.TakeoverActive && !PixelCameraIntro.Moving;
+        bool show = Active && !PixelGameMode.TitleOrIntro && !PixelMinigame.TakeoverActive;
         if (Piloting && (!show || userDisabled)) ExitCockpit();
         if (!show)
         {

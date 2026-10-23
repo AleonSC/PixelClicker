@@ -142,7 +142,7 @@ public class PixelBaitBucket : MonoBehaviour, IPixelSaved
         PixelSkills skills = PixelSkills.Instance;
         if (skills == null || skills.ActiveId != PixelSkills.FishingId) { message = "The Bait Bucket needs Fishing as the skill in play"; return false; }
         if (Placed) { message = "A Bait Bucket is already out"; return false; }
-        if (PixelTitleScreen.Showing || PixelCameraIntro.Moving || PixelMinigame.TakeoverActive) { message = "Not now"; return false; }
+        if (PixelGameMode.TitleOrIntro || PixelMinigame.TakeoverActive) { message = "Not now"; return false; }
         instance.cam = instance.clicker.ViewCamera;
         if (instance.cam == null) return false;
         instance.Build();
@@ -156,7 +156,7 @@ public class PixelBaitBucket : MonoBehaviour, IPixelSaved
     {
         if (root == null || clicker == null) return;
         PixelSkills skills = PixelSkills.Instance;
-        wanted = !disableBaitBucket && skills != null && skills.ActiveId == PixelSkills.FishingId && !PixelTitleScreen.Showing && !PixelTitleScreen.Reversing;
+        wanted = !disableBaitBucket && skills != null && skills.ActiveId == PixelSkills.FishingId && !PixelGameMode.OnTitle;
         float dt = Time.unscaledDeltaTime;
         bool wasWanted = appear > 0.999f;
         appear = Mathf.MoveTowards(appear, wanted ? 1f : 0f, dt / 0.6f);

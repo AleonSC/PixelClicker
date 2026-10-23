@@ -1535,3 +1535,5 @@
 [2026-10-23 17:12 UTC] Code cleanup: the 3D models of the Fan, Vacuum, Magnet, Sprinkler, Lightning Rod, Charge Booster, Quantum Organizer and Storage Crate moved out of PixelConsumables.cs into each device's own script (about 500 lines; no change in how they look).
 [2026-10-23 17:13 UTC] Added the dialogue map: every 'Got it' box, tutorial step, perk popup and character line from Dialogue.txt has a short ID (like T73.1 or C1.5) to quote when asking for rewording, listed in docs/DialogueMap.md and on an interactive page.
 [2026-10-23 17:20 UTC] Reworded the husk crushing 'Got it' box (T73.1): husks are leftover material from extracting the essence; right click crushes one for a little XP.
+[2026-10-23 17:32 UTC] Code cleanup: deleted the leftover Husk Capacity upgrade code (the shop no longer sells it; its rebalance into a Standard skill reward stays on the to-do).
+[2026-10-23 17:32 UTC] Code cleanup: new PixelGameMode says in one place whether the game is on the title, in the opening camera move, paused or playing (with a Changed event); the hand-combined title / pause / intro checks now ask it; to-do wording fixed (PixelGameMode, not PixelGameState).

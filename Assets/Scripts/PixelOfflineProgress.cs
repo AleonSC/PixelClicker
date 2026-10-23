@@ -182,7 +182,7 @@ public class PixelOfflineProgress : MonoBehaviour
 
     private void Update()
     {
-        if (pendingGains == null || PixelTitleScreen.Showing || PixelCameraIntro.Moving || (PixelFloor.Instance != null && PixelFloor.Instance.Settling)) return;   // after the title screen, the camera intro AND the floor fade-in
+        if (pendingGains == null || PixelGameMode.TitleOrIntro || (PixelFloor.Instance != null && PixelFloor.Instance.Settling)) return;   // after the title screen, the camera intro AND the floor fade-in
         double[] gains = pendingGains;
         pendingGains = null;
         ShowSummary(pendingAway, pendingClicks, gains);

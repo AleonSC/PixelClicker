@@ -524,7 +524,8 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private Vector2 referenceResolution = new Vector2(1920f, 1080f);
 
     /// <summary>True while the game is paused by this menu.</summary>
-    public static bool IsPaused { get; private set; }
+    public static bool IsPaused { get => isPaused; private set { isPaused = value; PixelGameMode.Refresh(); } }
+    private static bool isPaused;
 
     /// <summary>True while the menu is open AND it has frozen the game (see the 'Pausing stops the game' setting).</summary>
     public static bool GameStopped { get; private set; }

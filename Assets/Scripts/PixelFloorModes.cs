@@ -155,7 +155,7 @@ public partial class PixelFloor
         groundTimer -= Time.unscaledDeltaTime;
         if (groundTimer > 0f) return;
         groundTimer = 0.5f;
-        if (PixelCameraIntro.Moving || PixelTitleScreen.Showing || PixelTitleScreen.Reversing) return;
+        if (PixelGameMode.TitleOrIntro) return;
         PixelClicker clicker = PixelFind.Cached<PixelClicker>();
         if (clicker == null) return;
         Camera cam = PixelOrbitCamera.HomeCamera != null ? PixelOrbitCamera.HomeCamera : clicker.ViewCamera;   // the NORMAL view, like the view bounds
@@ -188,7 +188,7 @@ public partial class PixelFloor
 
     private void UpdatePlane()
     {
-        bool hideForTitle = HidesOnTitle && PixelTitleWanderers.LiveBackground && (PixelTitleScreen.Showing || PixelCameraIntro.Moving || exitHold);
+        bool hideForTitle = HidesOnTitle && PixelTitleWanderers.LiveBackground && (PixelGameMode.TitleOrIntro || exitHold);
         bool want = PlaneMode && floorRenderer != null && !hideForTitle;
         if (!want)
         {

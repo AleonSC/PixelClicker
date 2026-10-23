@@ -471,7 +471,7 @@ public class PixelCombo : MonoBehaviour, IPixelSaved
     private float UpdateEntrance()
     {
         if (disableEntranceFade) { entranceK = 1f; return 1f; }
-        bool settled = !PixelTitleScreen.Showing && !PixelTitleScreen.Reversing && !PixelCameraIntro.Moving && PixelHud.RevealEased >= 0.999f;
+        bool settled = !PixelGameMode.TitleOrIntro && PixelHud.RevealEased >= 0.999f;
         if (!settled) { entranceWait = 0f; entranceK = 0f; return 0f; }
         entranceWait += Time.unscaledDeltaTime;
         float delay = entranceDelaySeconds > 0f ? entranceDelaySeconds : 0.6f;

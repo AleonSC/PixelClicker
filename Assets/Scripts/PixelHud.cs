@@ -338,7 +338,7 @@ public class PixelHud : MonoBehaviour
             foreach (Image im in barImages) if (im != null) im.color = BarTint(barColor);
         }
         // The margins are away while the title screen shows and while the camera swings back to it; they slide in as the camera moves on Play.
-        bool away = PixelTitleScreen.Showing || PixelTitleScreen.Reversing;
+        bool away = PixelGameMode.OnTitle;
         if (reveal < 0f) reveal = away ? 0f : 1f;
         reveal = Mathf.MoveTowards(reveal, away ? 0f : 1f, Time.unscaledDeltaTime / (revealSeconds > 0.05f ? revealSeconds : 0.9f));
         float out01 = 1f - Mathf.SmoothStep(0f, 1f, reveal);

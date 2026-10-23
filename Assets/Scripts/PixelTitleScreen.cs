@@ -215,10 +215,12 @@ public partial class PixelTitleScreen : MonoBehaviour
     // ------------------------------------------------------------------
 
     /// <summary>True while the start screen is up (the game is frozen).</summary>
-    public static bool Showing { get; private set; }
+    public static bool Showing { get => showing; private set { showing = value; PixelGameMode.Refresh(); } }
+    private static bool showing;
 
     /// <summary>True while the camera swings back to the close-up on Quit > Main menu (the black margins slide away meanwhile).</summary>
-    public static bool Reversing { get; private set; }
+    public static bool Reversing { get => reversing; private set { reversing = value; PixelGameMode.Refresh(); } }
+    private static bool reversing;
 
     private GameObject canvasRoot, foreground;
     private Canvas canvas;
