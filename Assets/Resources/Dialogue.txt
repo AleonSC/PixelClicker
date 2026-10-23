@@ -298,7 +298,7 @@ text: Aimed Clicks! Click near the EDGE of the cube and its husk flies out of th
 overlay line: Aimed Clicks: click near the cube's edge to aim husks
 
 [Tip: husk_crush]
-text: Right-click a husk to crush it for XP! The blocks that fall off the cube are husks: material, never money. Crushing one gives a little XP to its own skill - watch the ??? bar at the bottom left fill up. Husks fade after a while, so use them while they lie there.
+text: The blocks that fall off the cube are husks: leftover material from extracting the essence. Crushing one with right click gives a little XP! Husks fade after a while, so use them while they're still around.
 overlay line: Right-click a husk to crush it for XP
 
 [Tip: stake_intro]
