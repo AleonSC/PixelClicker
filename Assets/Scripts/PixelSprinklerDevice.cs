@@ -89,19 +89,8 @@ public class PixelSprinklerDevice : PixelPlacedDevice
         Color metal = new Color(0.62f, 0.66f, 0.72f, opacity);
         float H = d.bodyHeight;
 
-        GameObject Part(PrimitiveType type, string name, Transform parent, Vector3 pos, Vector3 scale, Color color)
-        {
-            GameObject g = GameObject.CreatePrimitive(type);
-            g.name = name;
-            Destroy(g.GetComponent<Collider>());
-            g.transform.SetParent(parent, false);
-            g.transform.localPosition = pos;
-            g.transform.localScale = scale;
-            Material m = clicker.CreateVisualMaterial(color, isPreview);
-            if (m != null) g.GetComponent<Renderer>().sharedMaterial = m;
-            g.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            return g;
-        }
+        GameObject Part(PrimitiveType type, string name, Transform parent, Vector3 pos, Vector3 scale, Color color) =>
+            PixelFactoryKit.ModelPart(clicker, type, name, parent, pos, scale, color, isPreview);
 
         Part(PrimitiveType.Cylinder, "Base", root.transform, new Vector3(0f, 0.04f, 0f), new Vector3(d.bodyDiameter * 1.4f, 0.04f, d.bodyDiameter * 1.4f), metal);
         Part(PrimitiveType.Cylinder, "Post", root.transform, new Vector3(0f, H * 0.5f, 0f), new Vector3(d.bodyDiameter * 0.28f, H * 0.5f, d.bodyDiameter * 0.28f), main);

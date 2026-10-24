@@ -6,7 +6,8 @@
 //   smoothness, emission), so pieces that are rebuilt often (belts while placing, highlights, corner joints, elevator troughs) stop making new materials
 //   every time - they used to leak about 8 a frame while a belt was being placed. Only for builds that never change a material they got from the kit
 //   (use a MaterialPropertyBlock for per-object colour); DestroyMaterials leaves shared ones alone. PixelOwnedMesh frees a code-made Mesh with its object.
-//   Also Strut (a cylinder from a to b), Disc (a flat band round Y) and static PlainPart (a collider-less primitive in the game's material) - used by the
+//   Also Strut (a cylinder from a to b), Disc (a flat band round Y) and static PlainPart (a collider-less primitive in the game's material; ModelPart = placed,
+//   scaled and shadowless, the device models' one part builder - don't write a local Part() copy) - used by the
 //   device models (each device's own BuildModel, e.g. PixelFanDevice / PixelLightningRod) and the potion models.
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -124,6 +125,16 @@ public sealed class PixelFactoryKit
         Material mat = clicker != null ? clicker.CreateVisualMaterial(color, transparent) : null;
         if (mat != null) r.sharedMaterial = mat;
         else r.material.color = color;
+        return go;
+    }
+
+    /// <summary>PlainPart placed at 'pos' with 'scale' and casting no shadow: one part of a device model (Quantum Organizer, Storage Crate, Magnet, Sprinkler).</summary>
+    public static GameObject ModelPart(PixelClicker clicker, PrimitiveType type, string name, Transform parent, Vector3 pos, Vector3 scale, Color color, bool transparent)
+    {
+        GameObject go = PlainPart(clicker, type, name, parent, color, transparent);
+        go.transform.localPosition = pos;
+        go.transform.localScale = scale;
+        go.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         return go;
     }
 

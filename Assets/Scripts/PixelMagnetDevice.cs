@@ -82,19 +82,8 @@ public class PixelMagnetDevice : PixelPlacedDevice
         Color dark = new Color(0.25f, 0.27f, 0.32f, opacity);
         float D = d.bodyDiameter, H = d.bodyHeight, leg = D * 0.26f;
 
-        GameObject Part(PrimitiveType type, string name, Vector3 pos, Vector3 scale, Color color)
-        {
-            GameObject g = GameObject.CreatePrimitive(type);
-            g.name = name;
-            Destroy(g.GetComponent<Collider>());
-            g.transform.SetParent(root.transform, false);
-            g.transform.localPosition = pos;
-            g.transform.localScale = scale;
-            Material m = clicker.CreateVisualMaterial(color, isPreview);
-            if (m != null) g.GetComponent<Renderer>().sharedMaterial = m;
-            g.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            return g;
-        }
+        GameObject Part(PrimitiveType type, string name, Vector3 pos, Vector3 scale, Color color) =>
+            PixelFactoryKit.ModelPart(clicker, type, name, root.transform, pos, scale, color, isPreview);
 
         Part(PrimitiveType.Cylinder, "Base", new Vector3(0f, 0.025f, 0f), new Vector3(D * 1.3f, 0.025f, D * 1.3f), dark);
         for (int s = -1; s <= 1; s += 2)

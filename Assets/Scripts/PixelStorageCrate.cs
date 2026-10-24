@@ -413,18 +413,8 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelSocketDevice, IPixelHu
         Color dark = new Color(d.color.r * 0.55f, d.color.g * 0.55f, d.color.b * 0.55f, opacity);
         Color trim = new Color(0.85f, 0.75f, 0.45f, opacity);
 
-        void Part(string name, Vector3 pos, Vector3 scale, Color color)
-        {
-            GameObject g = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            g.name = name;
-            Destroy(g.GetComponent<Collider>());
-            g.transform.SetParent(root.transform, false);
-            g.transform.localPosition = pos;
-            g.transform.localScale = scale;
-            Material m = clicker.CreateVisualMaterial(color, isPreview);
-            if (m != null) g.GetComponent<Renderer>().sharedMaterial = m;
-            g.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        }
+        void Part(string name, Vector3 pos, Vector3 scale, Color color) =>
+            PixelFactoryKit.ModelPart(clicker, PrimitiveType.Cube, name, root.transform, pos, scale, color, isPreview);
 
         Part("Floor", new Vector3(0f, 0.03f, 0f), new Vector3(W + t * 2f, 0.06f, Dp + t * 2f), dark);
         float ox = W * 0.5f + t * 0.5f, oz = Dp * 0.5f + t * 0.5f;
