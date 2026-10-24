@@ -1923,7 +1923,7 @@ public partial class PixelShop : MonoBehaviour
         PixelWindows.Register(this, 40, () => subPanelObject != null && subPanelObject.activeSelf, CloseUpgradesWindow);   // window-built-in: PixelShopUI.cs (CreateWindow)
         PixelWindows.Register(this, 30, () => panelObject != null && PixelPop.IsOpen(panelObject), () => PixelPop.Hide(panelObject));   // window-built-in: PixelShopUI.cs (CreateWindow)
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG
         // Diagnostic: where each pack is listed and what it is waiting for.
         StringBuilder log = new StringBuilder("PixelShop: " + packs.Length + " packs.");
         for (int i = 0; i < packs.Length; i++)
