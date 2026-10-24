@@ -743,6 +743,8 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
             foreach (PixelRapport.Love l in rapport.LovesOf(Id))
                 loves.Add(System.Enum.TryParse(l.goodId, out PixelClicker.PixelType t) && clicker != null && clicker.IndexOf(t) >= 0 ? clicker.Tiers[clicker.IndexOf(t)].displayName : PixelMaterials.CostName(l.goodId));
             if (loves.Count > 0) e.detail += "\nLoves (as a gift): " + string.Join(", ", loves) + ".";
+            int relic = rapport.RewardTier(Id, out int relicStep);
+            if (relic >= 0 && clicker != null) e.detail += "\nGives you a Relic at " + rapport.StepNameAt(relicStep) + ": " + clicker.Tiers[relic].displayName + ".";
         }
         e.discovered = Running;   // (met once the guide has started them)
         List<string> ware = WareNames();

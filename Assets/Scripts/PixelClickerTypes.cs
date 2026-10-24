@@ -127,6 +127,8 @@ public partial class PixelClicker
         Ash = 99,         // Firemaking's filler block
         Wildfire = 100,   // Firemaking's hazard block: set it off and the flames spread over the husks around the cube
         GoldenSnitch = 101,   // a very rare drop that sprouts wings and flies off the cube: catch it (PixelGoldenSnitch.cs)
+        GoldenAxe = 102,      // a RELIC (PixelRareSets.Relics, PixelRelics.cs): never drops; Big Tim gives it at Friend rapport
+        MarketCharm = 103,    // a RELIC: never drops; the Wizard gives it at Partner rapport
     }
 
     /// <summary>The Firemaking skill pack's blocks (Fire, Tinder, Kindling, Firewood, Flint, Ember, the filler Ash; Wildfire is its hazard).</summary>

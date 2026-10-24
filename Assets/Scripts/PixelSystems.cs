@@ -135,6 +135,7 @@ public static class PixelSystems
         new Entry(typeof(PixelConsumables), "Shop"),
         new Entry(typeof(PixelMarket), "Shop"),
         new Entry(typeof(PixelRapport), "Shop"),
+        new Entry(typeof(PixelRelics), "Shop"),
     };
 
     /// <summary>The groups PixelShop adds itself (in its Awake, before its packs are set up).</summary>

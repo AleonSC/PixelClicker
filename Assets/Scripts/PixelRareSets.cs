@@ -13,18 +13,22 @@
 //   PickMissingDragonCube, the Dragon Wish (uses the seven up), the Collection Log entries and the gallery rows.
 //   A NEW family = its PixelType values (appended to the enum) + block cards in PixelBlockCatalog + one entry here + its looks (PixelLooksDefaults).
 //   The Golden Snitch is a single rare (no set) and keeps its own EnsureGoldenSnitch.
+//   TWO KINDS of collectible: the RARE ones you find (Dragon, God, Prime Cubes: rolled on the cube) and the ones you WORK FOR (the RELICS:
+//   Rarity.Earned, never rolled; a vendor hands one over at a rapport step - PixelRapport Vendor.reward - and each does something while
+//   held - PixelRelics.cs). A member's 'hint' shows on its Collection Log page before it is found (how to get it).
 // ---------------------------------------------------
 using UnityEngine;
 
 public static class PixelRareSets
 {
     public enum Show { None, DragonFind, GodFind }
-    public enum Rarity { Dragon, God }
+    public enum Rarity { Dragon, God, Earned }   // (Earned = the Relics: never rolled, no Inspector switch)
 
     public class Member
     {
         public PixelClicker.PixelType type;
         public string name, flavour;
+        public string hint;  // shown on its Collection Log page before it is found ('???' when empty): how to get it
         public Color color;
         public float glow;   // glow intensity (0 = no glow)
     }
@@ -85,8 +89,24 @@ public static class PixelRareSets
         },
     };
 
+    /// <summary>The RELICS: collectibles you work for (never drop; a vendor gives each one at a rapport step; PixelRelics.cs says what they do).</summary>
+    public static readonly Set Relics = new Set
+    {
+        id = "relic", logSection = "Relics", show = Show.None, rarity = Rarity.Earned, neverRolled = true, oneOfEach = true, renameSaved = true,
+        firstFoundFormat = "You earned the {0}! It is in your Collection Log.", firstFoundTip = "relic_first",
+        members = new[]
+        {
+            new Member { type = PixelClicker.PixelType.GoldenAxe, name = "Golden Axe", color = new Color(1f, 0.78f, 0.2f, 1f), glow = 1.2f,
+                         flavour = "Big Tim's golden axe, handed down to a true friend. While you hold it, Woodcutting earns more XP.",
+                         hint = "Big Tim the Lumberjack gives it to a friend. Deal with him, sell him wood and bring him gifts he loves." },
+            new Member { type = PixelClicker.PixelType.MarketCharm, name = "Market Charm", color = new Color(0.72f, 0.42f, 1f, 1f), glow = 1.6f,
+                         flavour = "A violet charm that hums when coins change hands. Cast it from any vendor's Sell view and every vendor pays full price again. It recharges for an hour.",
+                         hint = "The Wizard trusts only his partners with it. Deal with him, sell him Ectoplasm and Stardust and bring him gifts he loves." },
+        },
+    };
+
     /// <summary>Every set, in the order the tiers are made, the Collection Log lists them and the gallery lays out its rows.</summary>
-    public static readonly Set[] All = { Dragon, God, Prime, Cubelette };
+    public static readonly Set[] All = { Dragon, God, Prime, Cubelette, Relics };
 
     /// <summary>The set this pixel type belongs to (null for every other type).</summary>
     public static Set Of(PixelClicker.PixelType type)

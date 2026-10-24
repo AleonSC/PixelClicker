@@ -496,7 +496,9 @@ vendors are the warm side (you deal with them, they like you).
 - **No decay, a slow trickle (decided 2026-10-24):** a vendor you ignore slowly loses rapport WITHIN their current step, but never drops a
   step once reached - you can never lose a reward. A missed visit earns nothing but costs nothing extra.
 - **Each step gives:** better prices and faster saturation recovery; more frequent visits; bigger / rarer stock; new greeting lines; and
-  ONE unique unlockable per vendor at Friend or Partner (Big Tim: a golden axe; the Wizard: a spell; the Tinkerer: a device blueprint;
+  ONE unique unlockable per vendor at Friend or Partner - **decided 2026-10-24: these are RELICS, collectibles you work for** (a family
+  in the rare-set table beside the Dragon / God / Prime Cubes, which are the rare ones you find; built: Big Tim's Golden Axe, the Wizard's
+  Market Charm) (Big Tim: a golden axe; the Wizard: a spell; the Tinkerer: a device blueprint;
   the cats: a cat pet).
 - **Personality:** the vendors' jabs at Cubie get sharper as they trust you; at Partner they share gossip about him - where Cubie's
   backstory leaks out (the bill story can use it).

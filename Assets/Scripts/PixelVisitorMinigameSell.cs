@@ -13,6 +13,8 @@
 //   - A vendor with no wares opens straight on this view (no Buy / Sell tabs).
 //   - GIFT button beside Sell (rapport, PixelVisitorMinigameRapport.cs): gives some of the picked good for rapport only; goods he LOVES are marked
 //     with a heart, and a loved good he doesn't buy is listed as 'gift only'.
+//   - MARKET CHARM button (only while you hold that Relic, PixelRelics): cast it and every vendor pays full price again; it shows the minutes
+//     left while it recharges.
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -95,8 +97,8 @@ public abstract partial class PixelVisitorMinigame
     private TMP_Dropdown goodDropdown, payDropdown;
     private Slider amountSlider;
     private TMP_Text haveLabel, amountLabel, sayLabel, marketLabel, sellLabel;
-    private Button sellButton, giftButton;
-    private TMP_Text giftLabel;
+    private Button sellButton, giftButton, charmButton;
+    private TMP_Text giftLabel, charmLabel;
     private readonly Button[] tradeButtons = new Button[2];
     private readonly TMP_Text[] tradeLabels = new TMP_Text[2];
     private readonly List<TradeOffer> tradeOffers = new List<TradeOffer>();
@@ -173,10 +175,22 @@ public abstract partial class PixelVisitorMinigame
             tradeButtons[i].gameObject.SetActive(false);
         }
 
+        // The Market Charm (a Relic, PixelRelics): only while you hold it, under the trades; his words move down to make room.
+        charmButton = null;
+        bool charm = PixelRelics.HoldsCharm;
+        if (charm)
+        {
+            charmButton = PixelUIKit.CreateButton(font, parent, "Market Charm", "", new Vector2(100f, 48f), ButtonRole.Selected, 22f);
+            charmLabel = charmButton.GetComponentInChildren<TMP_Text>(true);
+            PixelUIKit.FitOneLine(charmLabel, 12f);
+            SellPlace(charmButton.GetComponent<RectTransform>(), 432f, 48f, 0.1f, 0.9f);
+            charmButton.onClick.AddListener(CastCharm);
+        }
+
         sayLabel = PixelUIKit.CreateText(font, parent, "Say", "", 26f, TextAlignmentOptions.Center, FontStyles.Normal, Color.white);
         sayLabel.richText = true;
         sayLabel.enableAutoSizing = true; sayLabel.fontSizeMax = 26f; sayLabel.fontSizeMin = 14f;
-        SellPlace(sayLabel.rectTransform, 436f, 110f, 0f, 1f);
+        SellPlace(sayLabel.rectTransform, charm ? 486f : 436f, charm ? 60f : 110f, 0f, 1f);
         RefreshSellLists();
     }
 
@@ -276,6 +290,7 @@ public abstract partial class PixelVisitorMinigame
         PixelUIKit.SetText(sellLabel, can ? "Sell for " + PixelClicker.FormatNumberShort(shownPrice) + " " + clicker.Tiers[pay].displayName : g != null && g.giftOnly ? "Gift only" : "Sell");
         sellButton.interactable = can;
         RefreshGiftButton(g);
+        RefreshCharmButton();
 
         // Trades for this good (the Wizard): each button says what it costs and what you get.
         tradeOffers.Clear();
@@ -301,6 +316,22 @@ public abstract partial class PixelVisitorMinigame
         if (GiftsLeft < 1) PixelUIKit.SetText(giftLabel, "No more gifts today");
         else PixelUIKit.SetText(giftLabel, g != null ? "Gift " + PixelClicker.FormatNumberShort(amount) + " " + g.name + (loved ? " \u2665" : "") : "Gift");
         giftButton.interactable = g != null && GiftsLeft > 0 && g.held() >= amount;
+    }
+
+    /// <summary>The Market Charm button: ready to cast, or the minutes left while it recharges.</summary>
+    private void RefreshCharmButton()
+    {
+        if (charmButton == null) return;
+        double left = PixelRelics.CharmReadyIn;
+        PixelUIKit.SetText(charmLabel, left <= 0d ? "\u2726 Cast the Market Charm: every vendor pays full price" : "Market Charm recharging: " + Mathf.CeilToInt((float)(left / 60d)) + " min");
+        charmButton.interactable = left <= 0d;
+    }
+
+    private void CastCharm()
+    {
+        if (!PixelRelics.CastCharm()) return;
+        RefreshSellLists();
+        PixelUIKit.SetText(sayLabel, "Ooh, that charm! Fine, fine. Full price, for everything.");
     }
 
     private void SellNow()

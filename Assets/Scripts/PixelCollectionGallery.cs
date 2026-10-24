@@ -247,12 +247,13 @@ public class PixelCollectionGallery : MonoBehaviour
     private void BuildItems()
     {
         int total = PixelCollectionLog.EntryCount;
-        // One row per super-rare set, in the table's order (PixelRareSets: Dragon Cubes, God Cubes, Prime Cubes, the Cubelette).
-        // Rows are 2.6 apart; a row is spread over the walkable width.
+        // One row per super-rare set, in the table's order (PixelRareSets: Dragon Cubes, God Cubes, Prime Cubes, the Cubelette, the Relics).
+        // Rows are up to 2.6 apart (closer when there are more rows, so all fit in the walkable area); a row is spread over the walkable width.
         float half = cfg.boundsSize * 0.5f;
         List<int>[] rows = new List<int>[PixelRareSets.All.Length];
         float[] rowZ = new float[rows.Length];
-        for (int r = 0; r < rows.Length; r++) { rows[r] = new List<int>(); rowZ[r] = half - 1.2f - 2.6f * r; }
+        float rowGap = Mathf.Min(2.6f, (cfg.boundsSize - 2.4f) / Mathf.Max(1, rows.Length - 1));
+        for (int r = 0; r < rows.Length; r++) { rows[r] = new List<int>(); rowZ[r] = half - 1.2f - rowGap * r; }
         for (int i = 0; i < total; i++)
         {
             int r = System.Array.IndexOf(PixelRareSets.All, PixelRareSets.Of(PixelCollectionLog.EntryType(i)));

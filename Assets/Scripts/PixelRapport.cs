@@ -14,7 +14,10 @@
 //     step he has reached (Entry.reached never falls), so a reward is never lost.
 //   - Per-vendor parts are DATA (vendors, Inspector): his loves (gift goods) and one greeting line per step (added to his greeting).
 //   - Shown: the step in his greeting box title, and on his Game Database Character entry. A step up is announced.
-//   - Rapport never gates core progression (Cubie's bill stays the spine). The unique unlockable per vendor is still a proposal (Todo.txt).
+//   - His RELIC (Vendor.reward / rewardStep): a collectible you work for (PixelRareSets.Relics, effects in PixelRelics.cs) he hands over when
+//     you reach that step (GrantReward: on the step up, and at the start of each visit in case it was missed). Big Tim: the Golden Axe at
+//     Friend; the Wizard: the Market Charm at Partner. The other vendors' relics are still proposals (Todo.txt).
+//   - Rapport never gates core progression (Cubie's bill stays the spine).
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -81,6 +84,11 @@ public class PixelRapport : MonoBehaviour
         public List<Love> loves = new List<Love>();
         [Tooltip("One line per step, Stranger first, added to his greeting. Empty = nothing extra.")]
         public string[] stepLines = new string[0];
+        [Tooltip("The RELIC he gives you (a pixel type name from the Relics family in PixelRareSets: GoldenAxe, MarketCharm). Empty = none.")]
+        public string reward = "";
+        [Range(1, 4)]
+        [Tooltip("The rapport step at which he gives it (1 Customer, 2 Regular, 3 Friend, 4 Partner).")]
+        public int rewardStep = 3;
     }
 
     [Header("Steps (one table for every vendor)")]
@@ -142,6 +150,10 @@ public class PixelRapport : MonoBehaviour
     public int GiftsPerVisit => giftsPerVisit;
     public float DealPointsPerVisit => dealPointsPerVisit;
 
+    [Tooltip("Version of the built-in vendor rewards copied in (raised when built-in relics are added, so an existing vendor row gets its relic once).")]
+    [SerializeField, HideInInspector] private int rewardsVersion = 0;
+    private const int RewardsVersion = 1;
+
     private bool ensured;   // (the built-in rows are checked once, not on every lookup)
 
     private void Awake() => EnsureDefaults();
@@ -169,6 +181,16 @@ public class PixelRapport : MonoBehaviour
         if (vendors == null) vendors = new List<Vendor>();
         foreach (Vendor d in BuiltInVendors())
             if (!vendors.Exists(v => v != null && v.vendorId == d.vendorId)) vendors.Add(d);
+        if (rewardsVersion < RewardsVersion)
+        {
+            // (a vendor row saved before the relics existed gets its built-in relic, once)
+            foreach (Vendor d in BuiltInVendors())
+            {
+                Vendor v = vendors.Find(x => x != null && x.vendorId == d.vendorId);
+                if (v != null && string.IsNullOrEmpty(v.reward) && !string.IsNullOrEmpty(d.reward)) { v.reward = d.reward; v.rewardStep = d.rewardStep; }
+            }
+            rewardsVersion = RewardsVersion;
+        }
     }
 
     private static Love L(string id, float effort = 5f) => new Love { goodId = id, effortClicksPerUnit = effort };
@@ -176,10 +198,10 @@ public class PixelRapport : MonoBehaviour
     /// <summary>The built-in loves and step lines (Stranger, Customer, Regular, Friend, Partner). At Partner they let slip something about Cubie.</summary>
     private static Vendor[] BuiltInVendors() => new[]
     {
-        new Vendor { vendorId = "lumberjack", loves = new List<Love> { L("Heartwood"), L("eviltree") }, stepLines = new[] { "",
+        new Vendor { vendorId = "lumberjack", reward = "GoldenAxe", rewardStep = 3, loves = new List<Love> { L("Heartwood"), L("eviltree") }, stepLines = new[] { "",
             "Back again? Good. I like a steady hand.", "My regular! I saved you the good logs.", "Pull up a stump, friend. Coffee's on the fire.",
             "Partner, between us: Cubie once tried to sell me a tree. It was MY tree. He'd painted it teal." } },
-        new Vendor { vendorId = "wizard", loves = new List<Love> { L("ghost", 6f), L("stardust", 20f) }, stepLines = new[] { "",
+        new Vendor { vendorId = "wizard", reward = "MarketCharm", rewardStep = 4, loves = new List<Love> { L("ghost", 6f), L("stardust", 20f) }, stepLines = new[] { "",
             "Ah, you again. The stars said you'd come.", "My favourite customer! The stars agree.", "A friend of the arcane is a friend of mine.",
             "Partner, a secret: Cubie wasn't always a cube. Don't ask what he was. I still have nightmares about the corners." } },
         new Vendor { vendorId = "tinkerer", loves = new List<Love> { L("bomb", 10f), L("charcoal", 4f) }, stepLines = new[] { "",
@@ -326,6 +348,29 @@ public class PixelRapport : MonoBehaviour
         Step s = StepAt(e.reached);
         PixelHints.Announce(name + " now sees you as a " + s.name + "! " + RewardText(s));
         PixelAudio.Play("achievement");
+        GrantReward(vendorId, name);
+    }
+
+    // ---- His relic (a collectible you work for) ----
+
+    /// <summary>His relic's tier index in the clicker, and the step he gives it at (-1 when he has none).</summary>
+    public int RewardTier(string vendorId, out int step)
+    {
+        Vendor v = DataOf(vendorId);
+        step = v != null ? Mathf.Clamp(v.rewardStep, 1, 4) : 0;
+        PixelClicker c = PixelFind.Cached<PixelClicker>();
+        if (v == null || c == null || string.IsNullOrEmpty(v.reward) || !Enum.TryParse(v.reward, out PixelClicker.PixelType type)) return -1;
+        return c.IndexOf(type);
+    }
+
+    /// <summary>Hands over his relic if your rapport has reached its step and you don't hold it yet (on a step up, and at each visit's start).</summary>
+    public void GrantReward(string vendorId, string name)
+    {
+        int tier = RewardTier(vendorId, out int step);
+        PixelClicker c = PixelFind.Cached<PixelClicker>();
+        if (tier < 0 || c == null || StepIndex(vendorId) < step || c.Tiers[tier].count >= 1d) return;
+        PixelHints.Announce(name + " gives you the " + c.Tiers[tier].displayName + "! A Relic for your Collection Log.");
+        c.AddCurrency(tier, 1d);   // (a first find: the Relics' first-find line and tip follow)
     }
 
     /// <summary>What a step gives, in one plain line.</summary>

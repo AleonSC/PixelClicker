@@ -249,6 +249,10 @@ overlay line: You unlocked Seed Pixels!
 text: Mirror Pixels unlocked! Clicking one also counts as a click on the last other pixel you collected, so it pays that pixel's amount again.
 overlay line: You unlocked Mirror Pixels!
 
+[Tip: relic_first]
+text: A RELIC! Relics are the collectibles you WORK for: they never drop from the cube. Vendors hand them to the players they trust most (build rapport: deal with them, sell to them and bring gifts they love). Each one does something while you hold it - read its page in the Collection Log.
+overlay line: You earned a Relic!
+
 [Tip: stone_first]
 text: A PRIME CUBE! There are six (Space, Mind, Reality, Power, Time and Soul), each rarer than a Dragon Cube, and only ONE of each can be held. Gather all six and the Wizard may know what to do with them.
 overlay line: You found a Prime Cube!
