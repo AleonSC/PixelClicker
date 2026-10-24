@@ -291,7 +291,7 @@ public class PixelSaveGame : MonoBehaviour
             PixelSaveShots.Forget(thumb);
             PixelPrefs.DeleteKey(PendingNamePref + slot);
             PixelPrefs.Save();
-            if (logToConsole) Debug.Log("PixelSaveGame: deleted the save in slot " + slot + ".", this);
+            if (logToConsole) PixelDebug.Info("PixelSaveGame: deleted the save in slot " + slot + ".", this);
             return true;
         }
         catch (Exception e)
@@ -372,7 +372,7 @@ public class PixelSaveGame : MonoBehaviour
         }
 
         BuildMessageUI();
-        if (logToConsole) Debug.Log("PixelSaveGame: slot " + CurrentSlot + " is " + FilePath, this);
+        if (logToConsole) PixelDebug.Info("PixelSaveGame: slot " + CurrentSlot + " is " + FilePath, this);
 
         // One frame later, so every other script has finished its own startup first.
         yield return null;
@@ -568,7 +568,7 @@ public class PixelSaveGame : MonoBehaviour
             HasLoadedSave = true;
             PixelSaveShots.Request(shots);
 
-            if (logToConsole) Debug.Log("PixelSaveGame: saved (" + (fileOverride != null ? fileOverride : slot > 0 ? "slot " + slot : "autosave") + ").", this);
+            if (logToConsole) PixelDebug.Info("PixelSaveGame: saved (" + (fileOverride != null ? fileOverride : slot > 0 ? "slot " + slot : "autosave") + ").", this);
             if (showMessage) { if (fileOverride != null) ShowMessage("Saved"); else if (slot == 0) ShowAutoNote(); else ShowMessage("Saved to slot " + slot); }
             return true;
         }
@@ -653,7 +653,7 @@ public class PixelSaveGame : MonoBehaviour
             PixelGameState.RaiseLoaded();   // (the moved systems' views refresh and their world objects - placed devices... - are rebuilt, BEFORE the tester machines)
             PixelFeatureTester.ImportAll(data.testerObjects);   // after the devices (a solar panel links to one) and the old pixels (belt riders are made again)
 
-            if (logToConsole) Debug.Log("PixelSaveGame: loaded the save from " + data.savedAt + ".", this);
+            if (logToConsole) PixelDebug.Info("PixelSaveGame: loaded the save from " + data.savedAt + ".", this);
             if (showMessage) ShowMessage("Loaded slot " + CurrentSlot);
             return true;
         }
@@ -673,7 +673,7 @@ public class PixelSaveGame : MonoBehaviour
         {
             PixelAutosaves.DeleteAll();   // (Restart: the autosaves of the old game go; manual saves in the slots stay)
             HasLoadedSave = false;
-            if (logToConsole) Debug.Log("PixelSaveGame: save deleted.", this);
+            if (logToConsole) PixelDebug.Info("PixelSaveGame: save deleted.", this);
         }
         catch (Exception e)
         {

@@ -355,7 +355,7 @@ public class PixelFirstPerson : MonoBehaviour
         wall.Setup(clicker, wallColor.a > 0f ? wallColor : new Color(1f, 0.25f, 0.65f, 1f), V(wallVisibleCubes, 10f), V(wallHeightCubes, 12f), V(wallMarginCubes, 1f), spot);
         BuildHud();
         Active = true;
-        Debug.Log("PixelFirstPerson: entered - gravity x" + V(gravityFactor, 2f) + ", jump height " + V(jumpHeight, 0.45f) + ", walk speed " + V(walkSpeed, 5f) + ", head bob " + V(headBobAmount, 0.022f) + " (Inspector values: gravityFactor " + gravityFactor + ", jumpHeight " + jumpHeight + ", headBobAmount " + headBobAmount + ")");
+        PixelDebug.Info("PixelFirstPerson: entered - gravity x" + V(gravityFactor, 2f) + ", jump height " + V(jumpHeight, 0.45f) + ", walk speed " + V(walkSpeed, 5f) + ", head bob " + V(headBobAmount, 0.022f) + " (Inspector values: gravityFactor " + gravityFactor + ", jumpHeight " + jumpHeight + ", headBobAmount " + headBobAmount + ")");
         hotbar = new GameObject("First Person Hotbar").AddComponent<PixelFirstPersonHotbar>();
         hotbar.Setup(clicker, fpCamera, canvasRoot.transform, eyeHeight, V(axeSwingSeconds, 0.42f));
         clicker.PixelCollected += OnCollectedForAxe;
