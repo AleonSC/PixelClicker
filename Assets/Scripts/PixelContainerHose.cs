@@ -14,6 +14,10 @@
 //   refused (full) = it drops out of the end. It only pumps while the target has room (IPixelHuskRoom.HuskRoom; devices without it take 6 at a time), counting what is in
 //   the tube, and only takes out husks the target TAKES (IPixelHuskFilter, e.g. the Biomass Generator: wood) when the source can pick (IPixelHuskPicker). The ends follow their couplings (carried / turned devices). A coupling that is removed leaves its end where it was: the hose idles and latches onto a
 //   coupling put back there (every half second). Removing the hose lets what is inside it fall out. Saved with the tester save (both end points and the bend points).
+//   LOOK (2026-10-24): a see-through RIBBED tube (radiusHusks; ribDepth / ribSpacingHusks: PixelTube with a radius per ring on a finely resampled
+//   line) wound with a solid reinforcing WIRE spiral (wireColor, wireTurnHusks: PixelTube.Helix). At each end the coupling wears a FORM-FITTING
+//   hose adapter (PixelCoupling.SetHoseFitting: rubber sleeve, a bell flaring out to the hose's width, a clamp band) and the hose starts in its
+//   mouth (PixelCoupling.HoseMouthWorld), running straight out of it for legHusks before it bends; the adapter goes when the last hose on it does.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -31,6 +35,24 @@ public class PixelContainerHose : MonoBehaviour
     [SerializeField] private int maxInHose = 6;
     [Tooltip("Colour of the see-through hose.")]
     [SerializeField] private Color hoseColor = new Color(0.6f, 0.9f, 1f, 0.28f);
+    [Header("Look")]
+    [Min(0.1f)]
+    [Tooltip("The hose's radius, in husk widths (a husk must fit through it).")]
+    [SerializeField] private float radiusHusks = 0.58f;
+    [Tooltip("Colour of the reinforcing wire spiral round the hose.")]
+    [SerializeField] private Color wireColor = new Color(0.88f, 0.92f, 0.96f, 1f);
+    [Min(0.1f)]
+    [Tooltip("One turn of the wire spiral every this many husk widths along the hose.")]
+    [SerializeField] private float wireTurnHusks = 0.55f;
+    [Range(0f, 0.2f)]
+    [Tooltip("How deep the hose's ribs are (a share of its radius; 0 = smooth).")]
+    [SerializeField] private float ribDepth = 0.06f;
+    [Min(0.05f)]
+    [Tooltip("Distance between two ribs, in husk widths.")]
+    [SerializeField] private float ribSpacingHusks = 0.28f;
+    [Min(0f)]
+    [Tooltip("How far the hose runs straight out of a coupling's adapter before it bends, in husk widths.")]
+    [SerializeField] private float legHusks = 0.7f;
 
     private PixelClicker clicker;
     private bool ghost;
@@ -51,7 +73,9 @@ public class PixelContainerHose : MonoBehaviour
     public static bool Pushes(PixelCoupling c) { foreach (PixelContainerHose h in all) if (h != null && h.target == c) return true; return false; }
     private TMPro.TextMeshPro status;
     private string statusText;
-    private Mesh mesh;
+    private Mesh mesh, wireMesh;
+    private PixelCoupling fittedA, fittedB;   // the couplings that wear this hose's adapter
+    private static readonly List<Vector3> denseScratch = new List<Vector3>(), helixScratch = new List<Vector3>();
     private Vector3[] path;
     private float[] cum;
     private readonly PixelPathCarrier carrier = new PixelPathCarrier();
@@ -152,11 +176,11 @@ public class PixelContainerHose : MonoBehaviour
         return PixelCouplings.AutoFitAt(p, true, Reach / PixelCouplings.HuskWidth);
     }
 
-    /// <summary>Where the hose meets a coupling: over its collar (or the saved point when there is none).</summary>
-    private Vector3 EndAt(PixelCoupling k, Vector3 fallback) => k != null ? k.PortWorld + Vector3.up * 0.55f * unit + k.FacingWorld * 0.35f * unit : fallback;
+    /// <summary>Where the hose meets a coupling: in its hose adapter's mouth (or the saved point when there is none).</summary>
+    private Vector3 EndAt(PixelCoupling k, Vector3 fallback) => k != null ? k.HoseMouthWorld : fallback;
 
-    /// <summary>The end point brought back down to port height (the saved ends are over the collar).</summary>
-    private Vector3 LowerEnd(Vector3 p) => p - Vector3.up * 0.55f * unit;
+    /// <summary>The end point brought back down to port height (the saved ends are at the adapter's mouth).</summary>
+    private Vector3 LowerEnd(Vector3 p) => p - Vector3.up * PixelCoupling.HoseMouthUp * unit;
 
     /// <summary>Magnetizes a click to the nearest coupling or free socket on screen (within ~90 px), over its collar.</summary>
     public static Vector3 Snap(PixelClicker c, Vector3 p, out bool snapped)
@@ -170,7 +194,7 @@ public class PixelContainerHose : MonoBehaviour
         foreach (PixelCoupling k in PixelCoupling.All)
         {
             if (k == null || (!k.IsIn && !k.IsOut)) continue;
-            Vector3 end = k.PortWorld + Vector3.up * 0.55f * u + k.FacingWorld * 0.35f * u;
+            Vector3 end = PixelCoupling.HoseMouth(k.PortWorld, k.FacingWorld, u);
             Vector3 sp = cam.WorldToScreenPoint(end);
             if (sp.z <= 0f) continue;
             float d = (new Vector2(sp.x, sp.y) - mouse).sqrMagnitude;
@@ -179,7 +203,7 @@ public class PixelContainerHose : MonoBehaviour
         foreach (IPixelSocketDevice dev in PixelCouplings.Devices)   // free sockets too: a coupling is fitted there when the hose is placed
             foreach (PixelSocket s in PixelCouplings.FreeSockets(dev))
             {
-                Vector3 end = PixelCouplings.Port(dev, s) + Vector3.up * 0.55f * u + PixelCouplings.Facing(dev, s) * 0.35f * u;
+                Vector3 end = PixelCoupling.HoseMouth(PixelCouplings.Port(dev, s), PixelCouplings.Facing(dev, s), u);
                 Vector3 sp = cam.WorldToScreenPoint(end);
                 if (sp.z <= 0f) continue;
                 float d = (new Vector2(sp.x, sp.y) - mouse).sqrMagnitude;
@@ -203,14 +227,28 @@ public class PixelContainerHose : MonoBehaviour
         Color col = ghostMode ? new Color(h.hoseColor.r, h.hoseColor.g, h.hoseColor.b, h.hoseColor.a * 0.6f) : h.hoseColor;
         mr.sharedMaterial = c.CreateVisualMaterial(col, true);
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        // The reinforcing wire: a thin solid spiral wound round the see-through hose (its own mesh, a child so it moves with it).
+        GameObject wire = new GameObject("Hose Wire", typeof(MeshFilter), typeof(MeshRenderer));
+        wire.transform.SetParent(root.transform, false);
+        h.wireMesh = new Mesh { name = "Container Hose Wire" };
+        wire.GetComponent<MeshFilter>().sharedMesh = h.wireMesh;
+        MeshRenderer wr = wire.GetComponent<MeshRenderer>();
+        wr.sharedMaterial = new PixelFactoryKit(c, ghostMode, true).Mat(h.wireColor, 0.6f, 0.75f);
+        wr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         return root;
     }
 
-    /// <summary>The hose runs from one end through every routed point to the other: a smooth curve (Catmull-Rom) through them, straight when there are none.</summary>
+    /// <summary>
+    /// The hose runs from one end through every routed point to the other: a smooth curve (Catmull-Rom) through them, straight when there are none.
+    /// At a coupling it first runs straight out of the adapter (legHusks along the coupling's facing), so it leaves the fitting cleanly.
+    /// The look: a see-through ribbed tube (PixelTube with a rib radius per ring, on a finely resampled copy of the line) wound with a solid wire spiral.
+    /// </summary>
     private void Rebuild()
     {
-        List<Vector3> pts = new List<Vector3>(bends.Count + 2) { a };
+        List<Vector3> pts = new List<Vector3>(bends.Count + 4) { a };
+        if (source != null && !ghost) pts.Add(a + source.FacingWorld * legHusks * unit);
         pts.AddRange(bends);
+        if (target != null && !ghost) pts.Add(b + target.FacingWorld * legHusks * unit);
         pts.Add(b);
         List<Vector3> line = new List<Vector3>();
         for (int i = 0; i < pts.Count - 1; i++)
@@ -228,8 +266,49 @@ public class PixelContainerHose : MonoBehaviour
         cum = PixelPathCarrier.Cumulative(path);
         transform.position = Vector3.zero;
         transform.rotation = Quaternion.identity;
-        PixelTube.Build(path, 0.62f * unit, 14, mesh);
+        float r = radiusHusks * unit;
+        Vector3[] dense = Resample(path, 0.07f * unit);
+        float rib = Mathf.Max(0.05f, ribSpacingHusks) * unit, depth = ribDepth;
+        float[] along = PixelPathCarrier.Cumulative(dense);
+        PixelTube.Build(dense, r, 16, mesh, null, i => 1f - depth * 0.5f + depth * 0.5f * Mathf.Cos(along[i] / rib * Mathf.PI * 2f));
         mesh.RecalculateBounds();
+        PixelTube.Helix(dense, r * (1f + depth * 0.5f) + 0.02f * unit, Mathf.Max(0.1f, wireTurnHusks) * unit, helixScratch);
+        PixelTube.Build(helixScratch.ToArray(), 0.035f * unit, 6, wireMesh);
+        if (!ghost) RefreshFittings();
+    }
+
+    /// <summary>The line again with points about 'step' apart (the ribs and the wire spiral need many points; the husks ride the coarse line).</summary>
+    private static Vector3[] Resample(Vector3[] line, float step)
+    {
+        denseScratch.Clear();
+        if (line == null || line.Length == 0) return denseScratch.ToArray();
+        denseScratch.Add(line[0]);
+        for (int i = 1; i < line.Length; i++)
+        {
+            Vector3 p = line[i - 1], q = line[i];
+            int n = Mathf.Max(1, Mathf.CeilToInt(Vector3.Distance(p, q) / Mathf.Max(0.01f, step)));
+            for (int k = 1; k <= n; k++) denseScratch.Add(Vector3.Lerp(p, q, k / (float)n));
+        }
+        return denseScratch.ToArray();
+    }
+
+    /// <summary>The couplings at both ends wear this hose's form-fitting adapter (PixelCoupling.SetHoseFitting); one it left gets its plain look back.</summary>
+    private void RefreshFittings()
+    {
+        float r = radiusHusks * unit;
+        if (fittedA != null && fittedA != source && fittedA != target) Unfit(fittedA);
+        if (fittedB != null && fittedB != source && fittedB != target) Unfit(fittedB);
+        fittedA = source; fittedB = target;
+        if (source != null) source.SetHoseFitting(true, r);
+        if (target != null) target.SetHoseFitting(true, r);
+    }
+
+    /// <summary>Takes a coupling's adapter off unless another hose still ends on it.</summary>
+    private void Unfit(PixelCoupling c)
+    {
+        if (c == null) return;
+        foreach (PixelContainerHose h in all) if (h != null && h != this && (h.source == c || h.target == c)) return;
+        c.SetHoseFitting(false);
     }
 
     // ------------------------------------------------------------------
@@ -407,6 +486,8 @@ public class PixelContainerHose : MonoBehaviour
     {
         carrier.ReleaseAll();   // what was in the hose falls out
         if (mesh != null) Destroy(mesh);
+        if (wireMesh != null) Destroy(wireMesh);
+        if (!ghost) { Unfit(fittedA); if (fittedB != fittedA) Unfit(fittedB); }
     }
 
     // ------------------------------------------------------------------
