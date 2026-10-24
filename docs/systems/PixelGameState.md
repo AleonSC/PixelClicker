@@ -1,6 +1,6 @@
 # PixelGameState / GameState
 
-Started 2026-10-23 (Phase 1: the owner, plus the Bank and the Stats as the pilot; then the Auto Clicker, the Focus potion, Time Stop and Pixel Grabbing, the Bait Bucket and Cubie's bill, the Combo switch, the event log, the UFO Helper, the pets, the achievements, the potion / device inventory, the skill choices, the minigame switches / counters, the shop packs and the currencies - PixelClicker, the last one). The player's PROGRESS moves out of the MonoBehaviours into one plain object, one system at a time. The old `IPixelSaved` registry keeps working for the systems that have not moved yet.
+Started 2026-10-23 (Phase 1: the owner, plus the Bank and the Stats as the pilot; then the Auto Clicker, the Focus potion, Time Stop and Pixel Grabbing, the Bait Bucket and Cubie's bill, the Combo switch, the event log, the UFO Helper, the pets, the achievements, the potion / device inventory, the skill choices, the minigame switches / counters, the shop packs and the currencies - PixelClicker, the last one). The player's PROGRESS moved out of the MonoBehaviours into one plain object, one system at a time; finished 2026-10-24, when the old `IPixelSaved` / `PixelSaveRegistry` per-system save parts were retired.
 
 ## Why
 - **Saving:** each system saved its own part (`IPixelSaved`) in load-order bands.
@@ -12,49 +12,39 @@ With one state object, saving writes it, loading replaces it and a new game make
 
 ## The pieces
 - **`GameState.cs`:**
-  - `GameState` is plain `[Serializable]` data with no `UnityEngine.Object` references. It holds one sub-state per moved system (`BankState`, `StatsState`).
-  - `GameState.MovedSystems` lists the moved systems' class names.
+  - `GameState` is plain `[Serializable]` data with no `UnityEngine.Object` references. It holds one sub-state per system (`BankState`, `StatsState`, ... `ClickerState`).
+  - `GameState.MovedSystems` lists the systems' class names (the compile-check rule reads it).
   - `Repair()` fills in missing parts after a load.
 - **`PixelGameState.cs` (the owner, in `PixelSystems.All`, Core):**
   - `PixelGameState.Current`: never null. It is made on first use, so early callers never wait.
   - `Replace(state)`: PixelSaveGame calls it FIRST in a load.
-  - `RaiseLoaded()` / the `Loaded` event: called once tiers, shop, husks and the IPixelSaved parts are back, but BEFORE the Dev Hub tester machines (a Solar Panel links to a placed device, belts dock on devices' couplings). Views refresh and world objects rebuild here.
+  - `RaiseLoaded()` / the `Loaded` event: called once tiers, shop and husks are back, but BEFORE the Dev Hub tester machines (a Solar Panel links to a placed device, belts dock on devices' couplings). Views refresh and world objects rebuild here.
   - `RaiseSaving()` / the `Saving` event: called right before a save is written. World objects that change all the time (placed devices, the running potion) copy themselves into their sub-state here instead of every frame.
   - `NewGame()`: called right before the scene reloads for Restart (`PixelPauseMenu.Restart`) and New Game (`PixelTitleScreen.StartNewGame`). These are the only two scene loads.
   - It does NOT use `PixelStatics.ResetOnRestart`, because `sceneUnloaded` can arrive after the new scene has started.
   - The component shows `Current` in the Inspector while playing ("State"), so you can read values and type them in to test.
-- **Saving:** `SaveData.state` holds `Current` whole, through JsonUtility. Old parts in the file for moved systems are simply ignored (no migration, per the save rule).
+- **Saving:** `SaveData.state` holds `Current` whole, through JsonUtility. PixelSaveGame itself still writes the husks on the floor, the per-save settings, the Dev Hub tester machines and the slot summary.
 
-## Rules for a moved system
+## Rules for a system with progress
 - **Read the state through `PixelGameState.Current.<part>` every time.** Never keep a reference to it: a load swaps the whole object. The usual shape is `private static BankState B => PixelGameState.Current.bank;`.
 - **The component keeps only display, input, per-session numbers and Inspector tuning** (`[SerializeField]` + `[Tooltip]` as always). Anything that must survive save / load / restart goes in the sub-state.
-- **No `IPixelSaved`, no `PixelSaveRegistry.Register`, no `PixelStatics.ResetOnRestart` in its script.** `tools/compile-check/rules.sh` checks this for every name in `GameState.MovedSystems`. A restart reset that clears something that is not progress (the old scene's event listeners) is marked `// restart-reset-not-progress: <what>` on its line.
+- **No `PixelStatics.ResetOnRestart` for progress in its script.** `tools/compile-check/rules.sh` checks this for every name in `GameState.MovedSystems`. A restart reset that clears something that is not progress (the old scene's event listeners) is marked `// restart-reset-not-progress: <what>` on its line.
 - **Key data by stable ids (`PixelType` as int, string keys), not by tier index or list position.** Tier indices shift when pixel types are added. Turn them into tier indices in the component (see `PixelBank.CountAt`).
 - **Physics objects stay outside:** husks, placed devices and tester machines are copied out when saving and rebuilt when loading, as before.
 
-## Moving a system: the steps
-1. **Read its `IPixelSaved` code:** its `SaveState` class, `Export` / `Import`, and its `SaveOrder` band. Also read every `ResetOnRestart` / `ResetStatics` it registers.
-2. **Split its fields** into progress (saved, or reset on Restart) and the rest (UI, input, timers of the current session, Inspector tuning, caches).
-3. **Add a `[Serializable] public class <Name>State`** to `GameState.cs` with the progress fields, keyed by stable ids.
-   - Add `public <Name>State <name> = new <Name>State();` to `GameState`.
-   - Add a line for it in `GameState.Repair()`, and a `Repair()` on the sub-state if it has lists.
+## Adding a NEW system's progress: the steps
+(Every system was moved by 2026-10-24 and the old per-system save parts - `IPixelSaved` / `PixelSaveRegistry` - are gone. These are the steps for a new feature that has progress to keep.)
+1. **Split its fields** into progress (must survive save / load / Restart) and the rest (UI, input, timers of the current session, Inspector tuning, caches).
+2. **Add a `[Serializable] public class <Name>State`** to `GameState.cs` with the progress fields, keyed by stable ids.
+   - Add `public <Name>State <name> = new <Name>State();` to `GameState`, and a line for it in `GameState.Repair()` (plus a `Repair()` on the sub-state if it has lists).
    - Unity-serializable types only: no `Dictionary`. Use a `List` of small entries plus a `[NonSerialized]` lookup, as `StatsState` does.
-4. **In the component:**
-   - add `private static <Name>State X => PixelGameState.Current.<name>;`;
-   - point every read / write of the old fields at `X.…`;
-   - delete the old fields, the `IPixelSaved` block, the Register / Unregister lines and its restart reset (if the static was progress);
-   - keep the public getters as thin forwards, so callers don't change.
-5. **If its old Import did more than copy data** (pick a selection, rebuild a view, count something "on load"), subscribe to `PixelGameState.Loaded` in Awake / Start (and unsubscribe in OnDestroy) and do it there.
-   - **If it needs ANOTHER system's state during load** (its old SaveOrder band mattered for more than refreshing a view), stop and ask: that is a design question, not a workaround.
-6. **Add its class name to `GameState.MovedSystems`.**
-7. **Update everything that points at the old way:**
-   - callers of the old `GetState` / `SetState`;
-   - its script header and `docs/systems` file;
-   - the "Moved so far" line in `docs/systems/PixelSaveGame.md`;
-   - the to-do line (`Assets/Resources/Todo.txt`).
-8. **Run `tools/compile-check/check.sh`, add a changelog line, and say what to test:** save -> quit -> load, Restart, New game.
+3. **In the component:** `private static <Name>State X => PixelGameState.Current.<name>;` and read / write only through it (or properties over it, as `PixelTier` / `ShopPack` / the minigames do).
+4. **World objects** (bodies in the scene): copy what is needed to rebuild them into the state on `PixelGameState.Saving` (if they change all the time) or the moment they change (if they rarely do), and rebuild them on `PixelGameState.Loaded`.
+5. **Anything else to redo after a load** (a selection, a view, a "don't announce again" flag): subscribe to `PixelGameState.Loaded` in Awake (unsubscribe in OnDestroy). **If it needs ANOTHER system's state in a fixed order during the load**, stop and ask (a core step like the shop's `ApplyLoadedPackStates` / the clicker's `ApplyLoadedTiers` is called from PixelSaveGame at its step).
+6. **No `PixelStatics.ResetOnRestart` for progress** (a new game's fresh state resets it). Add its class name to `GameState.MovedSystems` so the compile check enforces that.
+7. **Docs:** its script header / `docs/systems` file, a row in the table below. Then `tools/compile-check/check.sh`, a changelog line, and what to test: save -> quit -> load, Restart, New game.
 
-## Moved so far
+## What lives where
 | System | Sub-state | Notes |
 |---|---|---|
 | `PixelBank` | `BankState` (stored husks by pixel type: count + total value) | `Loaded` picks a stocked selection. Dev Tools' reset calls `ClearStored`. Capacity and 'bought' come from the shop (not progress). |

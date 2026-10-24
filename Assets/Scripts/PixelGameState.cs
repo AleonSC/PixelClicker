@@ -5,8 +5,8 @@
 //     a save or for this component.
 //   - SAVE: PixelSaveGame calls RaiseSaving() first (the Saving event: WORLD objects - placed devices, the running potion - copy themselves into
 //     their sub-state there, instead of every frame), then writes Current into the save file whole (SaveData.state).
-//   - LOAD: PixelSaveGame calls Replace(the file's copy) at the start of its load and RaiseLoaded() once the tiers, shop, husks and the IPixelSaved
-//     parts are back but BEFORE the Dev Hub tester machines (2026-10-24: a Solar Panel links to a placed device and belts dock on devices' couplings,
+//   - LOAD: PixelSaveGame calls Replace(the file's copy) at the start of its load and RaiseLoaded() once the tiers, shop and husks
+//     are back but BEFORE the Dev Hub tester machines (2026-10-24: a Solar Panel links to a placed device and belts dock on devices' couplings,
 //     so world objects rebuilt in Loaded must exist before the machines come back). Views refresh / world objects rebuild there.
 //   - NEW GAME / RESTART: both reload the scene and call NewGame() right before it (PixelPauseMenu Restart, PixelTitleScreen New Game - the
 //     only two scene loads), so the new scene starts with a fresh 'new GameState()'. Moved systems need no reset of their own. (Not done with

@@ -5,7 +5,8 @@
 //   save file whole (SaveData.state), loading replaces it, a new game / Restart starts a fresh 'new GameState()'.
 //   Systems read and write their sub-state THROUGH PixelGameState.Current every time (never keep a reference: a load swaps the whole object);
 //   their components keep only display, input and Inspector tuning. Husks and placed devices stay physics objects, saved the old way.
-//   MOVING A SYSTEM HERE: docs/systems/PixelGameState.md (steps + the compile-check rule). Systems still saving themselves use IPixelSaved.
+//   ADDING A SYSTEM'S PROGRESS: docs/systems/PixelGameState.md (steps + the compile-check rule). (The old per-system save parts - IPixelSaved /
+//   PixelSaveRegistry - were retired 2026-10-24: everything is here.)
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -13,7 +14,7 @@ using System.Collections.Generic;
 [Serializable]
 public class GameState
 {
-    /// <summary>The systems whose progress lives here (they must not implement IPixelSaved or register restart resets: tools/compile-check/rules.sh checks it). Add a system's class name when it moves.</summary>
+    /// <summary>The systems whose progress lives here (they must not register restart resets for it: tools/compile-check/rules.sh checks it). Add a system's class name when it moves.</summary>
     public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab", "PixelBaitBucket", "PixelCubieBill", "PixelCombo", "PixelHints", "PixelRobotWorker", "PixelPets", "PixelAchievements", "PixelConsumables", "PixelSkills", "PixelMinigame", "PixelShop", "PixelClicker" };
 
     public BankState bank = new BankState();
