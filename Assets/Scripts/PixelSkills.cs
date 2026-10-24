@@ -188,6 +188,9 @@ public partial class PixelSkills : MonoBehaviour
     [Tooltip("Share of the XP an automatic (auto clicker) click gives compared with a manual click.")]
     [SerializeField] private float autoXpFactor = 0.25f;
 
+    [Tooltip("Data version of the skill packs' XP curves (1 = 2026-10-24: every skill pack levels at Standard's pace - baseXp 600, xpGrowth 1.5; Offline Progression keeps its own). Raised by code; lower it to apply the change again.")]
+    [SerializeField] private int skillPaceVersion = 0;
+
     [Tooltip("Turn the whole skill system (and its Skills tab) off.")]
     [SerializeField] private bool disableSkills = false;
 
@@ -295,6 +298,15 @@ public partial class PixelSkills : MonoBehaviour
 
         perkWindowVersion = Mathf.Max(perkWindowVersion, 1);
 
+        // Every skill pack levels at Standard's pace (2026-10-24, the developer's call): the gathering / dev packs had much quicker curves
+        // (Woodcutting, Foraging, Fishing 60 x 1.45 = level 2 after 120 XP). Offline Progression keeps its own (its XP only comes from offline clicks).
+        if (skillPaceVersion < 1)
+        {
+            foreach (SkillPack pack in packs)
+                if (pack != null && pack.id != StandardId && pack.id != OfflineId) { pack.baseXp = 600f; pack.xpGrowth = 1.5f; }
+            skillPaceVersion = 1;
+        }
+
         // Offline Progression is listed right under Standard.
         int offlineAt = packs.FindIndex(p => p.id == OfflineId);
         if (offlineAt > 1)
@@ -324,7 +336,7 @@ public partial class PixelSkills : MonoBehaviour
                 replaces = "Monochrome, RGB", spawns = "Twig, Wood, Bark, Sap, Leaf, Heartwood",
                 xpFrom = "Collecting wood blocks",
                 unlockHint = "Buy the Lumberjack's Pack in the Shop",
-                baseXp = 60f, xpGrowth = 1.45f,
+                baseXp = 600f, xpGrowth = 1.5f,   // (2026-10-24: every skill pack levels at Standard's pace)
                 types = new[] { PixelClicker.PixelType.Wood, PixelClicker.PixelType.Bark, PixelClicker.PixelType.Sap, PixelClicker.PixelType.Leaf,
                                 PixelClicker.PixelType.Heartwood, PixelClicker.PixelType.Twig, PixelClicker.PixelType.Pinecone, PixelClicker.PixelType.Moss, PixelClicker.PixelType.HornetNest, PixelClicker.PixelType.GreatOak, PixelClicker.PixelType.Whetstone, PixelClicker.PixelType.Acorn, PixelClicker.PixelType.Pesticide },
                 fillerType = "Twig", extraFillerTypes = "Pinecone,Moss", fillerStartShare = 0.75f, fillerEndShare = 0.25f, hazardType = "HornetNest", hazardBaseShare = 0.015f, hazardPerLevelShare = 0.001f,
@@ -345,7 +357,7 @@ public partial class PixelSkills : MonoBehaviour
                 replaces = "Monochrome, RGB", spawns = ForagingSpawns,
                 xpFrom = "Collecting foraged blocks",
                 unlockHint = "Buy the Forager's Pack in the Shop",
-                baseXp = 60f, xpGrowth = 1.45f,
+                baseXp = 600f, xpGrowth = 1.5f,   // (2026-10-24: every skill pack levels at Standard's pace)
                 types = new[] { PixelClicker.PixelType.Berry, PixelClicker.PixelType.Mushroom, PixelClicker.PixelType.Herb, PixelClicker.PixelType.Truffle,
                                 PixelClicker.PixelType.Weeds, PixelClicker.PixelType.Mold, PixelClicker.PixelType.Toadstool },
                 fillerType = "Weeds", hazardType = "Mold,Toadstool", uniformRotation = true,
@@ -364,7 +376,7 @@ public partial class PixelSkills : MonoBehaviour
                 replaces = "Monochrome, RGB", spawns = "Water, Fish, Seaweed, Shell, Pearl, Bait, Bottle, Whale",
                 xpFrom = "Collecting fished blocks",
                 unlockHint = "Buy the Angler's Pack in the Shop",
-                baseXp = 60f, xpGrowth = 1.45f,
+                baseXp = 600f, xpGrowth = 1.5f,   // (2026-10-24: every skill pack levels at Standard's pace)
                 types = new[] { PixelClicker.PixelType.Fish, PixelClicker.PixelType.Seaweed, PixelClicker.PixelType.Shell, PixelClicker.PixelType.Pearl,
                                 PixelClicker.PixelType.Water, PixelClicker.PixelType.Driftwood, PixelClicker.PixelType.Bait, PixelClicker.PixelType.Jellyfish,
                                 PixelClicker.PixelType.Bottle, PixelClicker.PixelType.Whale },
@@ -383,7 +395,7 @@ public partial class PixelSkills : MonoBehaviour
                 description = "TEST SKILL (Dev Tools only for now; its mechanics are still to come): swap the basic cubes for fire goods - tinder, kindling, firewood, flint, embers and flames - with plain ash as the filler. Watch out for the wildfire hazard.",
                 replaces = "Monochrome, RGB", spawns = "Ash, Tinder, Kindling, Firewood, Flint, Ember, Fire", xpFrom = "Collecting fire blocks",
                 unlockHint = "Dev Tools only (Shop unlocks: Firemaker's Pack)",
-                baseXp = 80f, xpGrowth = 1.5f,
+                baseXp = 600f, xpGrowth = 1.5f,   // (2026-10-24: every skill pack levels at Standard's pace)
                 types = FiremakingTypes(),
                 fillerType = "Ash", hazardType = "Wildfire",
                 perks = new[] { new Perk { level = 2, text = "Coming soon" } },
@@ -400,7 +412,7 @@ public partial class PixelSkills : MonoBehaviour
                 description = MiningDescription,
                 replaces = "Monochrome, RGB", spawns = MiningSpawns, xpFrom = "Breaking ore pixels",
                 unlockHint = "Buy Prospector's Pack in the Shop",
-                baseXp = 100f, xpGrowth = 1.6f,
+                baseXp = 600f, xpGrowth = 1.5f,   // (2026-10-24: every skill pack levels at Standard's pace)
                 types = MiningTypes(),
                 fillerType = "Rock", hazardType = "GasPocket",
                 perks = new[]
@@ -420,7 +432,7 @@ public partial class PixelSkills : MonoBehaviour
                 replaces = "Monochrome, RGB", spawns = "Dirt, Seed, Water, Fertilizer, Pollen, Wheat, Weevil, Golden Fruit",
                 xpFrom = "Collecting farm blocks and growing sprouts",
                 unlockHint = "Buy Farmer's Pack in the Shop",
-                baseXp = 100f, xpGrowth = 1.6f,
+                baseXp = 600f, xpGrowth = 1.5f,   // (2026-10-24: every skill pack levels at Standard's pace)
                 types = new[] { PixelClicker.PixelType.Dirt, PixelClicker.PixelType.Seed, PixelClicker.PixelType.Water, PixelClicker.PixelType.Fertilizer,
                                 PixelClicker.PixelType.Pollen, PixelClicker.PixelType.Wheat, PixelClicker.PixelType.Weevil, PixelClicker.PixelType.GoldenFruit, PixelClicker.PixelType.Pest },
                 fillerType = "Dirt", hazardType = "Pest",
@@ -438,7 +450,7 @@ public partial class PixelSkills : MonoBehaviour
                 replaces = "Monochrome, RGB", spawns = "Electric, Wire, Battery, Capacitor, Resistor, Transistor, Fuse, Bulb",
                 xpFrom = "Collecting electrical pixels",
                 unlockHint = "Buy the Electrician's Pack in the Shop",
-                baseXp = 100f, xpGrowth = 1.6f,
+                baseXp = 600f, xpGrowth = 1.5f,   // (2026-10-24: every skill pack levels at Standard's pace)
                 types = new[] { PixelClicker.PixelType.Electric, PixelClicker.PixelType.Wire, PixelClicker.PixelType.Battery, PixelClicker.PixelType.Capacitor, PixelClicker.PixelType.Resistor, PixelClicker.PixelType.Transistor, PixelClicker.PixelType.Fuse, PixelClicker.PixelType.Bulb },
                 perks = new[]
                 {
