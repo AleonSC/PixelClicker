@@ -55,7 +55,8 @@ ONE_PLACE = [
     (re.compile(r'\b(?:GetInstanceID|GetEntityId)\s*\('), 'PixelObjectId.cs', 'object id read directly'),
 ]
 DUP_WINDOW = 8   # lines of real code (not braces / blank) that must match for a 'duplicate' finding
-EXEMPT = {'prefs': {'PixelPrefs.cs'}, 'debuglog': {'PixelDebug.cs', 'PixelCrashLog.cs', 'PixelDevConsole.cs'}}
+EXEMPT = {'prefs': {'PixelPrefs.cs'}, 'debuglog': {'PixelDebug.cs', 'PixelCrashLog.cs', 'PixelDevConsole.cs'},
+          'fan-out': {'PixelSystems.cs'}}   # (PixelSystems IS the list of every system: naming them all is its job)
 
 SIG = re.compile(r'^(\s{4}|\t)(?:(?:public|private|protected|internal|static|override|virtual|abstract|sealed|async|new|unsafe|extern)\s+)*'
                  r'(?:[\w<>\[\],.?]+\s+)?(\w+)\s*\([^;{]*\)\s*(?:where[^{]*)?(\{)?\s*$')
@@ -233,9 +234,10 @@ def main():
         base = f[:-3]
         in_index = base in idx or any(base in k for k in idx) or re.search(r'\b' + re.escape(base) + r'\b', open(os.path.join(ROOT, 'docs', 'Index.md'), encoding='utf-8').read()) is not None
         findings, meths, n = analyse(f, src[f], code[f], '', in_index)
-        if fan_out[f] >= 30: findings.append({'check': 'fan-out', 'line': 1, 'text': f'uses {fan_out[f]} other scripts'})
+        fan = 0 if f in EXEMPT['fan-out'] else fan_out[f]
+        if fan >= 30: findings.append({'check': 'fan-out', 'line': 1, 'text': f'uses {fan} other scripts'})
         findings.extend(dups.get(f, []))
-        total, cats = score(findings, n, fan_out[f])
+        total, cats = score(findings, n, fan)
         short = base[5:] if base.startswith('Pixel') else base
         group = next((g for g, rx in codemap.GROUPS if re.search(rx, short)), 'UI')
         desc = idx.get(base, ('', ''))[0] or codemap.header_summary(src[f])

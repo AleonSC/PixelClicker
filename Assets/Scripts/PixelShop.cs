@@ -584,58 +584,17 @@ public partial class PixelShop : MonoBehaviour
 
         if (clicker.UIFont != null) font = clicker.UIFont; // one shared font for the whole game
 
-        if (autoClicker == null) autoClicker = GetComponent<PixelAutoClicker>();
-        if (autoClicker == null)
-        {
-            autoClicker = PixelFind.First<PixelAutoClicker>();
-        }
-        if (autoClicker == null) autoClicker = gameObject.AddComponent<PixelAutoClicker>();
-
-        // The built-in minigames must exist in the scene (the shop switches them on).
-        EnsureMinigame<PixelGhostMinigame>();
-        EnsureMinigame<PixelMeteorMinigame>();
-        EnsureMinigame<PixelEvilTreeMinigame>();
-        EnsureMinigame<PixelBlackholeMinigame>();
-        EnsureMinigame<PixelBombMinigame>();
-        EnsureMinigame<PixelPadMinigame>();
-        EnsureMinigame<PixelStardustMinigame>();
-        EnsureMinigame<PixelSnakeMinigame>();
-        EnsureMinigame<PixelSortMinigame>();
-        EnsureMinigame<PixelBreakoutMinigame>();
-        EnsureMinigame<PixelDashMinigame>();
-        EnsureMinigame<PixelBlinkMinigame>();
-        EnsureMinigame<PixelWeakspotMinigame>();
-        EnsureMinigame<PixelEvadeMinigame>();
-        EnsureMinigame<PixelTrafficMinigame>();
-        EnsureMinigame<PixelTinkererMinigame>();
-        EnsureMinigame<PixelWizardMinigame>();
-        EnsureMinigame<PixelFarmerMinigame>();
-        EnsureMinigame<PixelEntrepreneurMinigame>();
-        EnsureMinigame<PixelProspectorVendor>();
-        EnsureMinigame<PixelLumberjackVendor>();
-        EnsureMinigame<PixelEggMinigame>();
-        EnsureMinigame<PixelBeanMinigame>();
-        if (PixelFind.First<PixelShopTutorial>() == null) gameObject.AddComponent<PixelShopTutorial>();
-
+        // The shop's systems and the built-in minigames must exist in the scene (the shop switches them on): the Shop and Minigames
+        // groups of the one system list (PixelSystems.cs), added here in the list's order.
+        PixelSystems.AddMissing(gameObject, PixelSystems.ShopGroups);
+        if (autoClicker == null) autoClicker = PixelFind.First<PixelAutoClicker>();
         if (grab == null) grab = PixelFind.First<PixelGrab>();
-        if (grab == null) grab = gameObject.AddComponent<PixelGrab>();
         if (timeStop == null) timeStop = PixelFind.First<PixelTimeStop>();
-        if (timeStop == null) timeStop = gameObject.AddComponent<PixelTimeStop>();
         if (bank == null) bank = PixelFind.First<PixelBank>();
-        if (bank == null) bank = gameObject.AddComponent<PixelBank>();
         if (robot == null) robot = PixelFind.First<PixelRobotWorker>();
-        if (robot == null) robot = gameObject.AddComponent<PixelRobotWorker>();
         if (crafting == null) crafting = PixelFind.First<PixelCrafting>();
-        if (crafting == null) crafting = gameObject.AddComponent<PixelCrafting>();
         if (combo == null) combo = PixelFind.First<PixelCombo>();
-        if (combo == null) combo = gameObject.AddComponent<PixelCombo>();
-
-        if (consumables == null) consumables = GetComponent<PixelConsumables>();
-        if (consumables == null)
-        {
-            consumables = PixelFind.First<PixelConsumables>();
-        }
-        if (consumables == null) consumables = gameObject.AddComponent<PixelConsumables>();
+        if (consumables == null) consumables = PixelFind.First<PixelConsumables>();
 
         if (PixelFind.Count<PixelConsumables>() > 1)
             Debug.LogWarning("PixelShop: more than one PixelConsumables component exists in the scene. " +
@@ -658,11 +617,6 @@ public partial class PixelShop : MonoBehaviour
         ApplyShopText();   // names, descriptions and prices from Resources/ShopText.txt (PixelShopDefaults.cs)
     }
 
-    private void EnsureMinigame<T>() where T : PixelMinigame
-    {
-        if (PixelFind.First<T>() == null) gameObject.AddComponent<T>();
-    }
-
     [SerializeField, HideInInspector] private int tileLayoutVersion;   // 1 = 160 x 200 tiles (5 to a row), 2 = 176 tall (no name line)
     [SerializeField, HideInInspector] private int shopBalanceVersion; // 1 = the 2026-10-16 rebalance (new default prices, minigames need only their price)
     [SerializeField, HideInInspector] private int packDataVersion; // 1 = Obsidian pays 7 (was 5); 2 = Singularity spawn weight 0.08 (was 0.2); 3 = Electric pays a random 1-15; 4 = Electric pack gets its real price + Luminescent requirement; 5 = Electric becomes an early unlock (8K RGB, needs the Auto Clicker pack, listed before Vacuum)
@@ -681,45 +635,20 @@ public partial class PixelShop : MonoBehaviour
 
             if (resetBuiltInPricesNow) EditorResetBuiltInPackPrices(true);   // (PixelShopDefaults.cs, shared with the context menu)
 
-            // Make sure the helper components exist in the scene, so their settings are editable in the Inspector.
-            EditorEnsureComponent<PixelConsumables>();
-            EditorEnsureComponent<PixelCombo>();
-            EditorEnsureComponent<PixelCrafting>();
-            EditorEnsureComponent<PixelGrab>();
-            EditorEnsureComponent<PixelTimeStop>();
-            EditorEnsureComponent<PixelBank>();
-            EditorEnsureComponent<PixelGhostMinigame>();
-            EditorEnsureComponent<PixelMeteorMinigame>();
-            EditorEnsureComponent<PixelEvilTreeMinigame>();
-            EditorEnsureComponent<PixelBlackholeMinigame>();
-            EditorEnsureComponent<PixelBombMinigame>();
-            EditorEnsureComponent<PixelPadMinigame>();
-            EditorEnsureComponent<PixelStardustMinigame>();
-            EditorEnsureComponent<PixelSnakeMinigame>();
-            EditorEnsureComponent<PixelSortMinigame>();
-            EditorEnsureComponent<PixelBreakoutMinigame>();
-            EditorEnsureComponent<PixelDashMinigame>();
-            EditorEnsureComponent<PixelBlinkMinigame>();
-            EditorEnsureComponent<PixelEvadeMinigame>();
-            EditorEnsureComponent<PixelTrafficMinigame>();
-            EditorEnsureComponent<PixelTinkererMinigame>();
-            EditorEnsureComponent<PixelWizardMinigame>();
-            EditorEnsureComponent<PixelFarmerMinigame>();
-            EditorEnsureComponent<PixelEntrepreneurMinigame>();
-            EditorEnsureComponent<PixelProspectorVendor>();
-            EditorEnsureComponent<PixelLumberjackVendor>();
-            EditorEnsureComponent<PixelEggMinigame>();
-            EditorEnsureComponent<PixelBeanMinigame>();
-            EditorEnsureComponent<PixelShopTutorial>();
+            // Make sure the shop's systems and minigames exist in the scene, so their settings are editable in the Inspector.
+            EditorEnsureShopSystems();
         };
     }
 
-    private void EditorEnsureComponent<T>() where T : Component
+    /// <summary>Edit mode: adds the Shop and Minigames groups' systems (PixelSystems.cs) that are missing to this object, with Undo.</summary>
+    private void EditorEnsureShopSystems()
     {
-        bool exists = PixelFind.First<T>() != null;
-        if (exists) return;
-        UnityEditor.Undo.AddComponent<T>(gameObject);
-        UnityEditor.EditorUtility.SetDirty(gameObject);
+        foreach (PixelSystems.Entry e in PixelSystems.All)
+        {
+            if (e.type == null || System.Array.IndexOf(PixelSystems.ShopGroups, e.group) < 0 || PixelFind.First(e.type) != null) continue;
+            UnityEditor.Undo.AddComponent(gameObject, e.type);
+            UnityEditor.EditorUtility.SetDirty(gameObject);
+        }
     }
 #endif
 

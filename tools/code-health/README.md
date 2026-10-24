@@ -9,6 +9,7 @@ Rebuild it after changes (each rebuild whose score changed adds a point to `hist
     python3 tools/code-health/build.py          # --no-history = leave the trend alone
 
 - The checks and their points are the `CHECKS` table at the top of `build.py`; the page layout is `template.html`.
+- `EXEMPT` (next to CHECKS) names scripts a check skips because the pattern is their job: PixelPrefs may use PlayerPrefs, PixelDebug / the crash log / the console may Debug.Log, and PixelSystems (the list of every system) is not scored for fan-out.
 - Checks added 2026-10-24, so the report sees the kind of cleanup it used to miss:
   - **duplicate** (Size): the same 8+ lines of real code (declarations, braces and blank lines skipped; text inside quotes compared too) in two places - a helper waiting to be made. `DUP_WINDOW` sets the length.
   - **restart-reset** (Rules): a `PixelStatics.ResetOnRestart` line without `// restart-reset-not-progress: <what>` (progress belongs in the GameState).
