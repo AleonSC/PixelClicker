@@ -27,6 +27,9 @@ public partial class PixelClicker
     /// <summary>When true the auto clicker clicks hazard blocks too and clears them safely (a future upgrade). Off: it leaves them alone.</summary>
     public static bool HazardAutoClear = false;
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetHazardStatics() => HazardAutoClear = false;   // (back to its start value when Enter Play Mode skips the domain reload)
+
     [Min(0f)]
     [Tooltip("How long a hazard block (Pest, Gas Pocket) stays on the cube before it goes away by itself, in seconds. 0 = the coded default (7).")]
     [SerializeField] private float hazardSeconds = 0f;
