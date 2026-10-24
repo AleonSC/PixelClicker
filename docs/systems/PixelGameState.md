@@ -1,6 +1,6 @@
 # PixelGameState / GameState
 
-Started 2026-10-23 (Phase 1: the owner, plus the Bank and the Stats as the pilot; then the Auto Clicker, the Focus potion, Time Stop and Pixel Grabbing, the Bait Bucket and Cubie's bill, the Combo switch, the event log, the UFO Helper and the pets). The player's PROGRESS moves out of the MonoBehaviours into one plain object, one system at a time. The old `IPixelSaved` registry keeps working for the systems that have not moved yet.
+Started 2026-10-23 (Phase 1: the owner, plus the Bank and the Stats as the pilot; then the Auto Clicker, the Focus potion, Time Stop and Pixel Grabbing, the Bait Bucket and Cubie's bill, the Combo switch, the event log, the UFO Helper, the pets and the achievements). The player's PROGRESS moves out of the MonoBehaviours into one plain object, one system at a time. The old `IPixelSaved` registry keeps working for the systems that have not moved yet.
 
 ## Why
 - **Saving:** each system saved its own part (`IPixelSaved`) in load-order bands.
@@ -68,5 +68,6 @@ With one state object, saving writes it, loading replaces it and a new game make
 | `PixelHints` (event log) | `EventLogState` (the log's lines: short text + the tip behind it) | Only the event log's lines moved: the 'seen' flags of first-time tips stay global PlayerPrefs (they are per machine, not per save). `Loaded` redraws the log from the top with no box. |
 | `PixelRobotWorker` (UFO Helper) | `UfoState` (switched off; the job: device by display name + spot, or banking one pixel type) | `SetJob` / `SetBankJob` write the state, so the runtime job and the state never drift; `Loaded` rebuilds the job's ghost and re-applies the switch. |
 | `PixelPets` | `PetsState` (owned pets in the order found: type, off, outfit, name) | Each live `Pet` keeps a reference to its state entry (`Pet.saved`; `type` / `off` / `outfit` / `customName` are properties on it), so every change is the state's at once - the pattern for a list of world objects. `Loaded` rebuilds the bodies. |
+| `PixelAchievements` | `AchievementsState` (earned tiers + when, by achievement id) | The achievement list stays Inspector config; `earnedTiers` / `EarnedAtOf` / `StampTier` read and write the state by id (no stored reference). The old 'ResetOnNextStart' flag that Restart / New Game set is gone: a new game's fresh state has nothing earned. `Loaded` re-grants anything already reached quietly. |
 
 The remaining systems, simplest first, are on the to-do list.

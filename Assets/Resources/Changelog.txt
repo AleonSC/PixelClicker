@@ -1548,3 +1548,4 @@
 [2026-10-23 23:59 UTC] Dev Hub time control now goes up to 10x speed (the mouse wheel moves in 0.5x steps above 2x, and Fast has a 10x preset).
 [2026-10-23 23:59 UTC] The Junction Box shows a wide red aim beam straight up out of its top opening while you place or carry it, so it lines up under a spout (any device with a hole can get one through PixelAimOpening).
 [2026-10-23 23:59 UTC] Game Database: Cubie and every visitor (Wizard, Tinkerer, Entrepreneur, Farmer, Big Tim, the Prospector, Egg, Bean) now have Character entries saying who they are, when they visit and what they do, under a new People tab.
+[2026-10-24 00:13 UTC] Earned achievements (tiers and when) now live in the GameState, saved, loaded and reset with it; the separate 'reset achievements on the next start' flag of Restart / New Game is gone; to-do updated.

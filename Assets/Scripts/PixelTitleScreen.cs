@@ -419,7 +419,6 @@ public partial class PixelTitleScreen : MonoBehaviour
         if (!PlayedOnce) { title.OnPlay(); return; }
         // The game has been played already: reload the scene fresh, the title presses Play by itself.
         PixelHints.ResetSeen();
-        PixelAchievements.ResetOnNextStart = true;
         PixelCrashLog.EndSessionCleanly();
         UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
     }

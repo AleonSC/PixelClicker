@@ -14,7 +14,7 @@ using System.Collections.Generic;
 public class GameState
 {
     /// <summary>The systems whose progress lives here (they must not implement IPixelSaved or register restart resets: tools/compile-check/rules.sh checks it). Add a system's class name when it moves.</summary>
-    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab", "PixelBaitBucket", "PixelCubieBill", "PixelCombo", "PixelHints", "PixelRobotWorker", "PixelPets" };
+    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab", "PixelBaitBucket", "PixelCubieBill", "PixelCombo", "PixelHints", "PixelRobotWorker", "PixelPets", "PixelAchievements" };
 
     public BankState bank = new BankState();
     public StatsState stats = new StatsState();
@@ -28,6 +28,7 @@ public class GameState
     public EventLogState eventLog = new EventLogState();
     public UfoState ufo = new UfoState();
     public PetsState pets = new PetsState();
+    public AchievementsState achievements = new AchievementsState();
 
     /// <summary>Fills in sub-states missing from an older save file (JsonUtility leaves a part the file lacks null in some cases).</summary>
     public void Repair()
@@ -46,6 +47,8 @@ public class GameState
         if (ufo == null) ufo = new UfoState();
         if (pets == null) pets = new PetsState();
         pets.Repair();
+        if (achievements == null) achievements = new AchievementsState();
+        achievements.Repair();
         baitBucket.Repair();
         cubieBill.Repair();
         bank.Repair();
@@ -310,4 +313,48 @@ public class PetsState
         owned.RemoveAll(e => e == null);
         foreach (Entry e in owned) { if (e.customName == null) e.customName = ""; if (e.outfit < 0) e.outfit = 0; }
     }
+}
+
+/// <summary>Earned achievements (PixelAchievements), by achievement id: how many tiers and when each was earned (UTC ticks, 0 = unknown).
+/// The achievements themselves (titles, tiers, targets) are Inspector config on the component.</summary>
+[Serializable]
+public class AchievementsState
+{
+    [Serializable]
+    public class Entry
+    {
+        public string id;
+        public int tiers;
+        public List<long> earnedAt = new List<long>();
+    }
+
+    public List<Entry> earned = new List<Entry>();
+
+    [NonSerialized] private Dictionary<string, Entry> index;   // (a lookup made on first use; never saved)
+
+    public void Repair()
+    {
+        if (earned == null) earned = new List<Entry>();
+        earned.RemoveAll(e => e == null || string.IsNullOrEmpty(e.id));
+        foreach (Entry e in earned) { if (e.earnedAt == null) e.earnedAt = new List<long>(); if (e.tiers < 0) e.tiers = 0; }
+        index = null;
+    }
+
+    /// <summary>The entry of an achievement (null when nothing is earned and 'create' is false).</summary>
+    public Entry Find(string id, bool create)
+    {
+        if (id == null) return null;
+        if (index == null || index.Count != earned.Count)
+        {
+            index = new Dictionary<string, Entry>();
+            foreach (Entry e in earned) if (e != null && e.id != null) index[e.id] = e;
+        }
+        if (index.TryGetValue(id, out Entry found) || !create) return found;
+        found = new Entry { id = id };
+        earned.Add(found);
+        index[id] = found;
+        return found;
+    }
+
+    public void Clear() { earned.Clear(); index = null; }
 }
