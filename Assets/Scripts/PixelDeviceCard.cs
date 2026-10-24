@@ -17,6 +17,8 @@
 //     above Remove / Upgrades (PlaceActions).
 //   * NOT ONLY DEVICES (2026-10-20): OpenSubject(IPixelPanelSubject) shows the same panel for something that is not a placed device - a conveyor belt
 //     SECTION (PixelConveyorPanel: a right tap on a belt; the section glows while the panel is open). The subject fills the sheet and says what Remove does.
+//     HoverSubject(subject) (2026-10-24), called every frame the pointer is on it, gives such a subject the hover card too (the delivery crate);
+//     info.NoRemove hides Remove and its hint.
 //   * LEFT-CLICK is untouched (each device's own button, flag, winding...).
 //   The lines come from the device itself: PixelPlacedDevice.BuildInfo (common lines + AddInfo + IPixelDeviceInfo components; PixelDeviceInfo.cs).
 //   The panel then adds one row per husk socket (PixelCouplings.AddPortRows: what each port is joined to, from the connection resolver).
@@ -67,6 +69,9 @@ public class PixelDeviceCard : MonoBehaviour
     private TMP_Text cardTitle, cardLines;
     private Bar cardBar;
     private PixelPlacedDevice hovered, cardDevice;
+    private IPixelPanelSubject hoveredSubject, cardSubject;   // (or a subject that is not a placed device, while it says it is hovered: HoverSubject)
+    private IPixelPanelSubject hoverRequest;
+    private int hoverRequestFrame = -10;
     private float hoverTime, cardAlpha, nextCardRefresh;
 
     // Panel
@@ -129,6 +134,16 @@ public class PixelDeviceCard : MonoBehaviour
             pressDevice = null;
         }
         rightWasHeld = held;
+    }
+
+    /// <summary>Something that is not a placed device (a delivery crate) calls this every frame the pointer is on it: after hoverDelay the hover card
+    /// shows its essentials (subject.BuildPanelInfo with info.Full false).</summary>
+    public static void HoverSubject(IPixelPanelSubject subject)
+    {
+        PixelDeviceCard card = PixelFind.Cached<PixelDeviceCard>();
+        if (card == null || subject == null) return;
+        card.hoverRequest = subject;
+        card.hoverRequestFrame = Time.frameCount;
     }
 
     /// <summary>Opens the shared panel on something that is not a placed device (a conveyor belt section: PixelConveyorPanel).</summary>
@@ -225,8 +240,13 @@ public class PixelDeviceCard : MonoBehaviour
         float h = panelLines.GetPreferredValues(panelLines.text, w, 0f).y;
         Place(panelLines.rectTransform, pad, y, w, h); y += h + 12f;
         y = PlaceBar(panelBar, pad, y, w);
-        float hh = panelHintText.GetPreferredValues(panelHint, w, 0f).y;
-        Place(panelHintText.rectTransform, pad, y, w, hh); y += hh + 12f;
+        bool canRemove = !info.NoRemove;
+        panelHintText.gameObject.SetActive(canRemove);
+        if (canRemove)
+        {
+            float hh = panelHintText.GetPreferredValues(panelHint, w, 0f).y;
+            Place(panelHintText.rectTransform, pad, y, w, hh); y += hh + 12f;
+        }
         y = PlaceSteppers(pad, y, w);
         y = PlaceToggles(pad, y, w);
         y = PlaceActions(pad, y, w);
@@ -235,10 +255,11 @@ public class PixelDeviceCard : MonoBehaviour
         PixelShop shop = PixelFind.Cached<PixelShop>();
         bool upgrades = kind.HasValue && shop != null && shop.HasOperationRow(kind.Value);
         upgradesButton.gameObject.SetActive(upgrades);
-        float bw = upgrades ? (w - 12f) * 0.5f : w;
-        Place(removeButton.GetComponent<RectTransform>(), pad, y, bw, 56f);
-        if (upgrades) Place(upgradesButton.GetComponent<RectTransform>(), pad + bw + 12f, y, bw, 56f);
-        y += 56f + pad;
+        removeButton.gameObject.SetActive(canRemove);
+        float bw = upgrades && canRemove ? (w - 12f) * 0.5f : w;
+        if (canRemove) Place(removeButton.GetComponent<RectTransform>(), pad, y, bw, 56f);
+        if (upgrades) Place(upgradesButton.GetComponent<RectTransform>(), pad + (canRemove ? bw + 12f : 0f), y, bw, 56f);
+        y += (canRemove || upgrades ? 56f : 0f) + pad;
         panel.SetHeight(y);
     }
 
@@ -436,20 +457,23 @@ public class PixelDeviceCard : MonoBehaviour
 
     private void UpdateCard(PixelPlacedDevice under)
     {
-        bool blocked = under == null || under == panelDevice || PixelBlockTooltip.HoveringBlock || PixelPointerClaim.ButtonClaimed || PixelCarryHandles.Hot
-                       || PixelInput.RightHeld() || under.IsEnding;
+        bool busy = PixelBlockTooltip.HoveringBlock || PixelPointerClaim.ButtonClaimed || PixelCarryHandles.Hot || PixelInput.RightHeld() || PixelCalm.InMenu;
+        bool blocked = under == null || under == panelDevice || busy || under.IsEnding;
         PixelPlacedDevice want = blocked ? null : under;
-        if (want != hovered) { hovered = want; hoverTime = 0f; }
-        if (hovered != null) hoverTime += Time.unscaledDeltaTime;
-        bool show = hovered != null && hoverTime >= hoverDelay;
+        // A subject that said it is hovered this frame or the last (its Update may run before or after this one), when no device is under the pointer.
+        IPixelPanelSubject wantSubject = want == null && !busy && hoverRequest != null && Time.frameCount - hoverRequestFrame <= 1
+                                         && hoverRequest != panelSubject && hoverRequest.PanelAlive ? hoverRequest : null;
+        if (want != hovered || wantSubject != hoveredSubject) { hovered = want; hoveredSubject = wantSubject; hoverTime = 0f; }
+        if (hovered != null || hoveredSubject != null) hoverTime += Time.unscaledDeltaTime;
+        bool show = (hovered != null || hoveredSubject != null) && hoverTime >= hoverDelay;
         if (show && card == null) { EnsureCanvas(); BuildCard(); }
         if (card == null) return;
 
         cardAlpha = Mathf.MoveTowards(cardAlpha, show ? 1f : 0f, Time.unscaledDeltaTime * (show ? 8f : 12f));
-        if (cardAlpha <= 0f) { if (card.gameObject.activeSelf) card.gameObject.SetActive(false); cardDevice = null; return; }
+        if (cardAlpha <= 0f) { if (card.gameObject.activeSelf) card.gameObject.SetActive(false); cardDevice = null; cardSubject = null; return; }
         if (!card.gameObject.activeSelf) card.gameObject.SetActive(true);
         cardGroup.alpha = cardAlpha;
-        if (show && (hovered != cardDevice || Time.unscaledTime >= nextCardRefresh)) { cardDevice = hovered; RefreshCard(); }
+        if (show && (hovered != cardDevice || hoveredSubject != cardSubject || Time.unscaledTime >= nextCardRefresh)) { cardDevice = hovered; cardSubject = hoveredSubject; RefreshCard(); }
 
         RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local);
         PixelUIKit.PlaceTooltip(card, canvasRect, local);
@@ -458,10 +482,11 @@ public class PixelDeviceCard : MonoBehaviour
     private void RefreshCard()
     {
         nextCardRefresh = Time.unscaledTime + refreshSeconds;
-        if (cardDevice == null) return;
+        if (cardDevice == null && (cardSubject == null || !cardSubject.PanelAlive)) return;
         info.Clear();
         info.Full = false;
-        cardDevice.BuildInfo(info);
+        if (cardDevice != null) cardDevice.BuildInfo(info);
+        else cardSubject.BuildPanelInfo(info);
         float pad = 16f, w = cardWidth - pad * 2f, y = pad;
         cardTitle.text = info.Title;
         Place(cardTitle.rectTransform, pad, y, w, titleSize * 1.3f); y += titleSize * 1.3f + 4f;

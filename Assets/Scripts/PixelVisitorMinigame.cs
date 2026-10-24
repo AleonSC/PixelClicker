@@ -393,6 +393,7 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
         f.ApplyOr(section, "arrival log", ref arrivedLog, Pick(arrivedLog, DefaultArrivedLog));
         f.Apply(section, "peek bubble", ref peekText);
         f.Apply(section, "missed log", ref missedLog);
+        ApplyJobDialogue(f, section);
         ApplyDialogue(f, section);
         f.Flush();
     }
@@ -1097,6 +1098,7 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
         PixelUIKit.Caps(done);
         Corner(done.GetComponent<RectTransform>(), new Vector2(0.5f, 0f), new Vector2(0f, 20f));
         done.onClick.AddListener(() => waresDone = true);
+        BuildJobParts();   // (a vendor with a dock: the Delivery job button + its window, PixelVisitorMinigameJobs.cs)
         waresPanel.gameObject.SetActive(false);
     }
 

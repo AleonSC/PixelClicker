@@ -1624,3 +1624,8 @@
 [2026-10-24 10:44 UTC] Built the first two Relics: Big Tim's Golden Axe (at Friend: Woodcutting XP +10% while you hold it) and the Wizard's Market Charm (at Partner: cast it from any vendor's Sell view and every vendor pays full price again, recharges for an hour of play).
 [2026-10-24 10:44 UTC] To-do: the vendor unlockables are now Relics (Golden Axe and Market Charm built) and added relic looks / a hand-over show.
 [2026-10-24 10:47 UTC] Design: delivery crates are dropped by the vendor on their own fixed dock at the floor's edge (always the same spot per vendor), so players have to route husks to it; a line built to a dock keeps paying off.
+[2026-10-24 11:01 UTC] Delivery jobs: vendors post jobs for their own skill's husks during a visit (a Delivery job button beside their wares); accepting drops a delivery crate on their fixed dock at the floor's edge, which you fill by belt, hose or hand for pure currency, rapport and sometimes an item.
+[2026-10-24 11:01 UTC] Device card: things that are not placed devices can now show the hover card too, and a panel can hide its Remove button (used by the delivery crate).
+[2026-10-24 11:01 UTC] The Crafting Cube's 'is the mouse on it' test moved into the shared PixelPointerClaim.PointerOn helper.
+[2026-10-24 11:01 UTC] Game Loop page, UI map and Dialogue map updated for delivery jobs (Delivery jobs station built, the factory's missing-customer gap closed, new job window / crate label / dock marker pieces, vendors' job offer lines).
+[2026-10-24 11:01 UTC] To-do: Delivery jobs ticked off.

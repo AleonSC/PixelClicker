@@ -15,7 +15,7 @@ using System.Collections.Generic;
 public class GameState
 {
     /// <summary>The systems whose progress lives here (they must not register restart resets for it: tools/compile-check/rules.sh checks it). Add a system's class name when it moves.</summary>
-    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab", "PixelBaitBucket", "PixelCubieBill", "PixelCombo", "PixelHints", "PixelRobotWorker", "PixelPets", "PixelAchievements", "PixelConsumables", "PixelSkills", "PixelMinigame", "PixelShop", "PixelClicker", "PixelMaterials", "PixelRapport" };
+    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab", "PixelBaitBucket", "PixelCubieBill", "PixelCombo", "PixelHints", "PixelRobotWorker", "PixelPets", "PixelAchievements", "PixelConsumables", "PixelSkills", "PixelMinigame", "PixelShop", "PixelClicker", "PixelMaterials", "PixelRapport", "PixelDeliveryJobs" };
 
     public BankState bank = new BankState();
     public StatsState stats = new StatsState();
@@ -37,6 +37,7 @@ public class GameState
     public ClickerState clicker = new ClickerState();
     public MaterialsState materials = new MaterialsState();
     public RapportState rapport = new RapportState();
+    public DeliveryState delivery = new DeliveryState();
 
     /// <summary>Fills in sub-states missing from an older save file (JsonUtility leaves a part the file lacks null in some cases).</summary>
     public void Repair()
@@ -71,6 +72,8 @@ public class GameState
         materials.Repair();
         if (rapport == null) rapport = new RapportState();
         rapport.Repair();
+        if (delivery == null) delivery = new DeliveryState();
+        delivery.Repair();
         baitBucket.Repair();
         cubieBill.Repair();
         bank.Repair();
@@ -140,6 +143,55 @@ public class RapportState
         Entry e = new Entry { id = id };
         vendors.Add(e);
         return e;
+    }
+}
+
+/// <summary>Delivery jobs (PixelDeliveryJobs): the running jobs (one per vendor; the crate on his dock is rebuilt from it), when jobs were taken
+/// (the per-hour cap) and which vendors' docks are shown.</summary>
+[Serializable]
+public class DeliveryState
+{
+    /// <summary>One husk type the job asks for: how many, how many are in the crate, and their total payout (they pop back out with it).</summary>
+    [Serializable]
+    public class Line
+    {
+        public int type;        // PixelClicker.PixelType
+        public int need;
+        public int have;
+        public double value;    // total payout of the husks in the crate (an expired job's husks come back with their worth)
+    }
+
+    [Serializable]
+    public class Job
+    {
+        public string vendor;      // the vendor's id (lumberjack, prospector...)
+        public int size;           // index into PixelDeliveryJobs' size table
+        public double started;     // play seconds when it was accepted
+        public float seconds;      // the time limit
+        public int payType;        // the pure colour it pays in (PixelClicker.PixelType)
+        public double pay;         // fixed when offered
+        public float rapport;      // rapport points when filled (a share of it on expiry)
+        public string rewardItem;  // a consumable's display name he adds, or empty
+        public List<Line> lines = new List<Line>();
+    }
+
+    public List<Job> jobs = new List<Job>();
+    public List<double> taken = new List<double>();      // play seconds of each job accepted (the per-hour cap; old ones are dropped)
+    public List<string> docks = new List<string>();      // vendors whose dock shows on the floor (once they have posted a job)
+
+    public void Repair()
+    {
+        if (jobs == null) jobs = new List<Job>();
+        if (taken == null) taken = new List<double>();
+        if (docks == null) docks = new List<string>();
+        jobs.RemoveAll(j => j == null || string.IsNullOrEmpty(j.vendor) || j.lines == null || j.lines.Count == 0);
+    }
+
+    /// <summary>The vendor's running job, or null.</summary>
+    public Job Of(string vendor)
+    {
+        for (int i = 0; i < jobs.Count; i++) if (jobs[i].vendor == vendor) return jobs[i];
+        return null;
     }
 }
 

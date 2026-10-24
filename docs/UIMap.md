@@ -99,7 +99,7 @@ Tips, popups, tooltips, tutorials, shows
 | N18 | Save message / autosave note | popup | bottom-centre | save / load / autosave (Settings > Gameplay 'Autosave message') | `PixelSaveGame.cs:778 (BuildMessageUI)` | **N18.1** message text<br>**N18.2** autosave note |
 | N19 | Crash notice | popup | centred | an error is logged | `PixelCrashLog.cs:416 (ShowNotice)` | **N19.1** notice text<br>**N19.2** buttons |
 | N20 | Cubie (guide vendor) speech | window | bottom-right character + speech window beside him | new game visits / shop hold | `PixelGuideVendor.cs:868 (BuildUI :843)` | **N20.1** Cubie art<br>**N20.2** speech window with character name<br>**N20.3** next / advance (Escape = next page) |
-| N21 | Visitor greeting / wares / aside (Tinkerer, Wizard, Farmer, Bean, Egg, Entrepreneur, Lumberjack, Prospector) | window | right side, beside visitor art | visitor minigame arrives | `PixelVisitorMinigame.cs:1122 (Panel; BuildUI :844)` | **N21.1** Greeting (:871) Accept / Reject<br>**N21.2** Wares list (:924) with buy rows + sell panel<br>**N21.3** Aside (:1041)<br>**N21.4** Rapport meter (PixelVisitorMinigameRapport.cs BuildRapportMeter: a card with the step + progress line, segmented bar and step names<br>**N21.5** in the greeting box above the buttons and in the wares window above Done) |
+| N21 | Visitor greeting / wares / aside (Tinkerer, Wizard, Farmer, Bean, Egg, Entrepreneur, Lumberjack, Prospector) | window | right side, beside visitor art | visitor minigame arrives | `PixelVisitorMinigame.cs:1122 (Panel; BuildUI :844)` | **N21.1** Greeting (:871) Accept / Reject<br>**N21.2** Wares list (:924) with buy rows + sell panel<br>**N21.3** Aside (:1041)<br>**N21.4** Rapport meter (PixelVisitorMinigameRapport.cs BuildRapportMeter: a card with the step + progress line, segmented bar and step names<br>**N21.5** in the greeting box above the buttons and in the wares window above Done)<br>**N21.6** Delivery job button (bottom left of the wares window: PixelVisitorMinigameJobs.cs:55 BuildJobParts) |
 | N22 | Shop tutorial | overlay | small Got it boxes right of Shop window | first time Shop available; Help '?' hold; Settings 'Replay tutorial' | `PixelShopTutorial.cs:114 (BeginRun; Replay :163)` | **N22.1** step currency list<br>**N22.2** step Pixels<br>**N22.3** step Upgrades > Features<br>**N22.4** step Upgrades > Value<br>**N22.5** step Consumables<br>**N22.6** step Minigames |
 | N23 | Skills tutorial | overlay | boxes beside Skills window, Cubie bottom-right | first skill pack available | `PixelSkillsTutorial.cs:96 (StartTutorial)` | **N23.1** Got it steps pointing at Skills window parts |
 | N24 | Toggles tutorial | overlay | beside Toggles window | first time Toggles due | `PixelTogglesTutorial.cs:60 (Replay)` | **N24.1** Got it steps |
@@ -111,6 +111,7 @@ Tips, popups, tooltips, tutorials, shows
 | N30 | Dragon wish scene | overlay | full screen | Summon the Dragon button | `PixelDragonWish.cs:296 (BuildScene)` | **N30.1** summoning scene<br>**N30.2** three wish choices |
 | N31 | Eyedropper | overlay | full screen frozen screenshot + loupe at mouse | eyedropper buttons in Settings | `PixelEyedropper.cs:76 (BuildOverlay)` | **N31.1** screenshot<br>**N31.2** loupe<br>**N31.3** colour swatch<br>**N31.4** Escape cancels |
 | N32 | Screen filters overlay | overlay | full screen | Settings > Display 'Filter' / strength | `PixelFilters.cs:485 (BuildOverlay)` | **N32.1** filter tint layer |
+| N33 | Delivery job window (a vendor's job offer) | window | right side, beside the visitor art (in place of the wares window) | the Delivery job button in a vendor's wares window | `PixelVisitorMinigameJobs.cs:55 (BuildJobParts)` | **N33.1** job text (his offer line, what / by when / pay<br>**N33.2** or the running job<br>**N33.3** or why there is none)<br>**N33.4** Accept<br>**N33.5** Back |
 
 ## M - Menus
 
@@ -144,7 +145,7 @@ Cards, panels and labels on objects in the world
 
 | ID | Piece | Kind | Where | Opened by | Code | Parts |
 |---|---|---|---|---|---|---|
-| O1 | Device hover card | tooltip | follows mouse (beside pointer) | hover a placed device 0.5 s | `PixelDeviceCard.cs:439 (BuildCard)` | **O1.1** name<br>**O1.2** time / uses bar<br>**O1.3** key stats<br>**O1.4** contents |
+| O1 | Device hover card | tooltip | follows mouse (beside pointer) | hover a placed device 0.5 s | `PixelDeviceCard.cs:439 (BuildCard)` | **O1.1** name<br>**O1.2** time / uses bar<br>**O1.3** key stats<br>**O1.4** contents<br>**O1.5** also a delivery crate (PixelDeviceCard.HoverSubject: things that are not placed devices) |
 | O2 | Device panel | window | near the device (Tool window) | right-click tap a placed device / belt | `PixelDeviceCard.cs:357 (BuildPanel; window :360)` | **O2.1** sheet lines<br>**O2.2** steppers<br>**O2.3** Remove (Sure?)<br>**O2.4** Upgrades (shop Operation)<br>**O2.5** device-specific actions (e.g. Select filter) |
 | O3 | Crafting Cube recipe picker | window | centred (above device panel) | right-click tap a Crafting Cube | `PixelCraftingCubeWindow.cs:81 (Build; Open :41)` | **O3.1** "Choose a recipe" scrolling list with result picture, name, ingredients |
 | O4 | Hopper filter picker | window | centred (above device panel) | device panel 'Select filter' (Sorting Hopper / Husk Source) | `PixelSortingHopperWindow.cs:101 (Build; Open :58)` | **O4.1** "Select filter" grid of husk types + None |
@@ -157,6 +158,8 @@ Cards, panels and labels on objects in the world
 | O11 | Hover marker arrow | overlay | above hovered husk / object in world | hover an interactable | `PixelHoverMarker.cs:27 (Attach)` | **O11.1** arrow + optional text |
 | O12 | Hazard warning sign | overlay | above hazard block in world | hazard about to trigger | `PixelHazardTell.cs:110 (BuildSignSprite)` | **O12.1** red-orange triangle with '!' |
 | O13 | Collection gallery (3D room) | overlay | full screen first-person room | Collection Log page camera button (Escape leaves) | `PixelCollectionGallery.cs:315 (BuildCanvas)` | **O13.1** cubes floating<br>**O13.2** leave hint |
+| O14 | Delivery crate label | overlay | above a vendor's delivery crate on his dock (faces the camera) | a delivery job is running | `PixelDeliveryCrate.cs:125 (BuildLabel)` | **O14.1** one line per husk type (Bark 18 / 30, a tick when full)<br>**O14.2** time left (red under a minute) |
+| O15 | Dock marker | overlay | a fixed spot at the floor's edge per vendor | the vendor has posted a delivery job | `PixelDeliveryJobs.cs:501 (BuildMarker)` | **O15.1** faint disc + ring in his colour<br>**O15.2** his initial |
 
 ## D - Dev Hub
 

@@ -12,6 +12,7 @@
 //     amount sold (a big dump drives its own price down as it goes). RecordSale adds the pressure when a deal is accepted.
 //   - RAPPORT (PixelRapport): a vendor's rapport step adds to his price (Quote x PriceFactor) and speeds his recovery (the half-life / RecoverySpeed).
 //   - Not saved: the market recovers anyway, a reload just starts it fresh.
+//   - DELIVERY JOBS (JobQuote, 2026-10-24): husks bought in a job pay the jobs table's rate (2x) x the clicks behind each husk, no saturation (capped jobs).
 //   Used by the Lumberjack's Sell tab and the Prospector's offers; the Entrepreneur's pixel-for-pixel deals use RarityValue.
 //   Husks are never currency: a vendor buys skill CURRENCY (or a husk good he names, valued as currency); the Recycler stays the only
 //   husk-to-currency route.
@@ -143,6 +144,18 @@ public class PixelMarket : MonoBehaviour
         avg = System.Math.Max(minFactor, avg);
         PixelRapport rapport = PixelRapport.Instance;
         return amount * rate * PurePerClick() * clicksPerUnit * avg * (rapport != null ? rapport.PriceFactor(vendor) : 1f);   // (x his rapport step's better price)
+    }
+
+    /// <summary>
+    /// (2026-10-24) What a vendor pays for HUSKS in a delivery job (PixelDeliveryJobs), in pure units: 'rate' x what a click on pure blocks earns x the
+    /// clicks one harvest of that block takes, per husk, x his rapport step's price bonus. No saturation: jobs are capped instead (one per vendor, a few an hour).
+    /// </summary>
+    public double JobQuote(string vendor, int tier, double husks, float rate)
+    {
+        PixelClicker c = Clicker;
+        if (c == null || tier < 0 || tier >= c.Tiers.Length || husks <= 0d) return 0d;
+        PixelRapport rapport = PixelRapport.Instance;
+        return husks * rate * PurePerClick() * System.Math.Max(1, c.Tiers[tier].clicksToCollect) * (rapport != null ? rapport.PriceFactor(vendor) : 1f);
     }
 
     /// <summary>A skill currency at the route's rate (raw goods: 1.2x).</summary>

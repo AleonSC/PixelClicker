@@ -91,7 +91,7 @@ packs - the factory becomes the gateway to new skills. Rules: discovery is ONE-T
 discovered block's husks process into something new or higher, never back into the product that discovered it); watch the currency count
 (group the Inventory by skill before there are dozens).
 
-## Delivery jobs (agreed 2026-10-24, not built)
+## Delivery jobs (agreed 2026-10-24, built 2026-10-24: `PixelDeliveryJobs.cs`, `PixelDeliveryCrate.cs`, `PixelVisitorMinigameJobs.cs`)
 Vendors post DELIVERY JOBS for specific husks ('30 Bark + 10 Sap husks within 10 minutes'). The VENDOR DROPS the DELIVERY CRATE on a FIXED
 SPOT (decided 2026-10-24: so players are forced to route) - each vendor has their own DOCK at the edge of the floor, always in the same
 place, so a line built to Big Tim's dock keeps paying off on every later job. The crate has an In coupling and an open top, a big label ('Bark 18 / 30') and the job's timer; it takes only the requested types (others bounce off),
@@ -100,6 +100,13 @@ the biggest rapport source) + sometimes a reward item. Out of time = no penalty:
 Jobs scale: early ones are small (~15 husks, carried or thrown in by hand before belts exist), later ones big or mixed and only practical with belts, filters and
 sorters (Cubie's trust Tier 1) - the reason to build a factory, and husks fading adds pressure. They replace the to-do's 'Vendor orders':
 the same crates take PRODUCTS later (the ~3x rung of the value ladder) once products exist.
+
+**Built (2026-10-24), the numbers (all Inspector values on `PixelDeliveryJobs`):**
+- **Docks:** 8 vendors, 45 degrees apart round the floor's centre (clockwise from the far side, +Z), at 0.82 of the floor's half width: Big Tim 22.5, Prospector 67.5, Farmer 112.5, Forager 157.5, Angler 202.5, Wizard 247.5, Tinkerer 292.5, Entrepreneur 337.5 - none straight in front of or behind the cube. A faint marker (disc + ring in his colour, his initial) shows once he has posted a job.
+- **What he asks for:** his own skill's husks (Big Tim: Wood, Bark, Sap, Leaf, Heartwood; Prospector: Rock, Copper, Tin, Iron, Silver, Gold; Farmer: Wheat, Seed, Water, Fertilizer; Forager: Berry, Mushroom, Herb, Truffle; Angler: Fish, Seaweed, Shell, Pearl; Wizard: Glass, Luminescent; Tinkerer: Electric, Wire, Battery, Gray; Entrepreneur: Red, Green, Blue), only unlocked types, the first listed most often.
+- **Sizes:** Small 15 of one type, 8 min, 8 rapport (from the start); Large 30 of one type, 10 min, 12 rapport (trust Tier 1); Mixed 30 + 10, 12 min, 16 rapport (Tier 1 + Regular); Big mixed 40 + 20 + 10, 15 min, 22 rapport (Tier 2 + Friend). Item chance 10 / 15 / 25 / 40%.
+- **Limits:** one running job per vendor, 3 taken per play hour (all vendors), an 80% chance he has one at a visit when the limits allow.
+- **Pay:** 2x what the clicks behind the husks would earn on pure blocks (`PixelMarket.JobQuote`; selling goods is 1.2x), x his rapport price bonus, in the unlocked pure colour you hold least of; + the size's rapport (a visit's deals give 8 at most); + sometimes one of his wares. Expired: 50% of the rapport x how full the crate was; the husks pop back out with their worth.
 
 ## Crafting uses husks (agreed 2026-10-18, not built)
 
