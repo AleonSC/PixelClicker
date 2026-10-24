@@ -42,6 +42,7 @@ public static class PixelSystems
         new Entry(typeof(PixelConsumableGallery), "UI"),
         new Entry(typeof(PixelStudioIntro), "UI"),
         new Entry(typeof(PixelGameState), "Core"),
+        new Entry(typeof(PixelMaterials), "Core"),
         new Entry(typeof(PixelCrashLog), "Core"),
         new Entry(typeof(PixelViewBounds), "Core"),
         new Entry(typeof(PixelMinigameLimits), "Core"),

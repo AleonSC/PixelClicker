@@ -76,7 +76,7 @@ chipper | WoodChips | creates | Every few shredded Wood husks make a Wood Chips 
 woodhusks | biomass | feeds | Woodcutting husks are burned for power; devices in the ring stop their timers.
 Charcoal | biomass | feeds | Charcoal and Wood Chips burn longer in a Biomass Generator.
 WoodChips | biomass | feeds | Wood Chips burn longer in a Biomass Generator.
-kiln | Charcoal | creates | The Kiln burns what enters its mouth into Charcoal husks.
+kiln | Charcoal | creates | The Kiln burns what enters its mouth into Charcoal material, which buys the Charcoal Pixel in the shop.
 allhusks | recycler | feeds | Any husk in a Recycler becomes half its value as currency; same colour in a row builds a streak.
 allhusks | crush | feeds | Right-click a husk to crush it for its own skill's XP (half a click's).
 Capacitor | nextclick | reads | Every other click stores a charge (up to 40); clicking it pays +15% per charge.

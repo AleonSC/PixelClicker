@@ -84,6 +84,32 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>The Charcoal Pixel (2026-10-24): paid with Charcoal - the MATERIAL the Kiln makes (PixelMaterials) - plus pure currency. Its husks are Biomass Generator fuel.</summary>
+    private static ShopPack CreateCharcoalPixelPack(int requiresRgbIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Charcoal Pixel",
+            tab = ShopTab.Pixels,
+            description = "Adds the Charcoal pixel to the random spawn pool. Its husks are fuel: drop them into a Biomass Generator and they burn far longer than wood. Paid with the Charcoal the Kiln makes.",
+            requirements = Needs(requiresRgbIndex),
+            costs = new[]
+            {
+                new PackCost { minigameCurrency = PixelMaterials.CharcoalId, amount = 50 },
+                new PackCost { type = PixelClicker.PixelType.Gray,  amount = 1500 },
+                new PackCost { type = PixelClicker.PixelType.Black, amount = 1500 },
+            },
+            rewardTiers = new[]
+            {
+                new PixelClicker.PixelTier
+                {
+                    type = PixelClicker.PixelType.Charcoal, displayName = "Charcoal Pixels", color = new Color(0.16f, 0.15f, 0.15f, 1f),
+                    clicksToCollect = 2, amountPerClick = 6, spawnWeight = 0.3f, unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+                },
+            }
+        };
+    }
+
     /// <summary>Default Vacuum pack: a rare pixel that re-collects every old pixel. Needs the Glass pack first.</summary>
     private static ShopPack CreateVacuumPack(int requiresGlassIndex)
     {
@@ -541,7 +567,7 @@ public partial class PixelShop
             displayName = "Firemaker's Pack",
             hideInShop = true,   // dev-only skill pack for now: Dev Tools 'Shop unlocks'
             tab = ShopTab.Pixels,
-            description = "TEST: Adds the Firemaking skill and its blocks: Tinder, Kindling, Firewood, Flint, Ember, Fire and Charcoal, with plain Ash as the filler and a Wildfire hazard. They only spawn while Firemaking is the pack in play (Skills window). Mechanics still to come.",
+            description = "TEST: Adds the Firemaking skill and its blocks: Tinder, Kindling, Firewood, Flint, Ember and Fire, with plain Ash as the filler and a Wildfire hazard. They only spawn while Firemaking is the pack in play (Skills window). Mechanics still to come.",
             requirements = Needs(-1),
             costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 5 } },
             rewardTiers = new[]
@@ -552,7 +578,6 @@ public partial class PixelShop
                 Block(PixelClicker.PixelType.Flint, "Flint Pixels", new Color(0.32f, 0.33f, 0.38f, 1f), 2, 4, 0.6f),
                 Block(PixelClicker.PixelType.Ember, "Ember Pixels", new Color(1f, 0.38f, 0.12f, 1f), 1, 6, 0.4f, true),
                 Block(PixelClicker.PixelType.Fire, "Fire Pixels", new Color(1f, 0.45f, 0.1f, 1f), 1, 6, 0.5f, true),
-                Block(PixelClicker.PixelType.Charcoal, "Charcoal Pixels", new Color(0.16f, 0.15f, 0.15f, 1f), 2, 8, 0.3f),
                 Block(PixelClicker.PixelType.Ash, "Ash", new Color(0.62f, 0.6f, 0.58f, 1f), 1, 1, 1.0f),
                 // The hazard: hit it too often and the fire spreads, burning the husks around the cube (right-click it to put it out).
                 Block(PixelClicker.PixelType.Wildfire, "Wildfire", new Color(1f, 0.25f, 0.05f, 1f), 5, 0, 0.05f, true),
@@ -1198,6 +1223,8 @@ public partial class PixelShop
                           requires = p => Rewards(p, PixelClicker.PixelType.Electric), create = CreateMirrorPixelPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Vacuum),
                           requires = p => Rewards(p, PixelClicker.PixelType.Glass), create = CreateVacuumPack },
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Charcoal) && !Rewards(p, PixelClicker.PixelType.Fire),
+                          requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateCharcoalPixelPack },
         new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.AutoClickerInterval,
                           requires = p => p.unlocksAutoClicker, create = CreateIntervalUpgradePack },
         new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.AutoClickerClicks,

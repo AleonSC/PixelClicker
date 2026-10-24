@@ -165,7 +165,7 @@ public partial class PixelSkills : MonoBehaviour
     private static PixelClicker.PixelType[] FiremakingTypes() => new[]
     {
         PixelClicker.PixelType.Tinder, PixelClicker.PixelType.Kindling, PixelClicker.PixelType.Firewood, PixelClicker.PixelType.Flint, PixelClicker.PixelType.Ember,
-        PixelClicker.PixelType.Fire, PixelClicker.PixelType.Charcoal, PixelClicker.PixelType.Ash, PixelClicker.PixelType.Wildfire
+        PixelClicker.PixelType.Fire, PixelClicker.PixelType.Ash, PixelClicker.PixelType.Wildfire   // (Charcoal left 2026-10-24: it is its own shop pixel, bought with Kiln charcoal)
     };
 
     public const string MiningId = "mining";
@@ -380,8 +380,8 @@ public partial class PixelSkills : MonoBehaviour
             packs.Add(new SkillPack
             {
                 id = FiremakingId, displayName = "Firemaking", accent = new Color(0.95f, 0.45f, 0.12f),
-                description = "TEST SKILL (Dev Tools only for now; its mechanics are still to come): swap the basic cubes for fire goods - tinder, kindling, firewood, flint, embers, flames and charcoal - with plain ash as the filler. Watch out for the wildfire hazard.",
-                replaces = "Monochrome, RGB", spawns = "Ash, Tinder, Kindling, Firewood, Flint, Ember, Fire, Charcoal", xpFrom = "Collecting fire blocks",
+                description = "TEST SKILL (Dev Tools only for now; its mechanics are still to come): swap the basic cubes for fire goods - tinder, kindling, firewood, flint, embers and flames - with plain ash as the filler. Watch out for the wildfire hazard.",
+                replaces = "Monochrome, RGB", spawns = "Ash, Tinder, Kindling, Firewood, Flint, Ember, Fire", xpFrom = "Collecting fire blocks",
                 unlockHint = "Dev Tools only (Shop unlocks: Firemaker's Pack)",
                 baseXp = 80f, xpGrowth = 1.5f,
                 types = FiremakingTypes(),
@@ -467,6 +467,12 @@ public partial class PixelSkills : MonoBehaviour
     // EnsureDefaults, step 3: a saved pack gets the blocks, fillers, hazards, perks and tree nodes added since it was saved.
     private void FixSavedPackContents(SkillPack pack)
     {
+        if (pack.id == FiremakingId && pack.types != null && System.Array.IndexOf(pack.types, PixelClicker.PixelType.Charcoal) >= 0)   // Charcoal is its own shop pixel now (2026-10-24)
+        {
+            pack.types = System.Array.FindAll(pack.types, t => t != PixelClicker.PixelType.Charcoal);
+            if (pack.spawns != null) pack.spawns = pack.spawns.Replace(", Charcoal", "");
+            if (pack.description != null) pack.description = pack.description.Replace("flint, embers, flames and charcoal", "flint, embers and flames");
+        }
         if (pack.id == ElectricianId && (pack.types == null || pack.types.Length < 8))   // a saved pack from when Electric was its only pixel
         {
             pack.types = new[] { PixelClicker.PixelType.Electric, PixelClicker.PixelType.Wire, PixelClicker.PixelType.Battery, PixelClicker.PixelType.Capacitor, PixelClicker.PixelType.Resistor, PixelClicker.PixelType.Transistor, PixelClicker.PixelType.Fuse, PixelClicker.PixelType.Bulb };

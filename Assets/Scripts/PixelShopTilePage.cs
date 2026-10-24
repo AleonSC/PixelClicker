@@ -391,7 +391,7 @@ public partial class PixelShop
 
             PackCost cost = costs[i];
             int t = string.IsNullOrEmpty(cost.minigameCurrency) ? clicker.IndexOf(cost.type) : -1;
-            strip.swatches[i].color = t >= 0 ? clicker.Tiers[t].UIColor : new Color(0.6f, 0.6f, 0.65f, 1f);   // (minigame currencies: grey)
+            strip.swatches[i].color = t >= 0 ? clicker.Tiers[t].UIColor : PixelMaterials.CostColor(cost.minigameCurrency);   // (materials: their colour; minigame counters: grey)
             string text = PixelClicker.FormatNumberShort(cost.amount);
             if (strip.withNames) text += " " + ShortCostName(cost);
             if (i == shown - 1 && costs.Length > shown) text += " +" + (costs.Length - shown);   // (more than fit: '+n')

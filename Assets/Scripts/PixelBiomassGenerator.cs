@@ -43,7 +43,7 @@ public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHu
 
     [Header("Fuel")]
     [Min(0f)]
-    [Tooltip("How many wood husks' worth of charge one CHARCOAL husk (from the Kiln) gives. 0 = Charcoal is not burnt.")]
+    [Tooltip("How many wood husks' worth of charge one CHARCOAL husk (from the Charcoal pixel) gives. 0 = Charcoal is not burnt.")]
     [SerializeField] private float charcoalFuel = 3f;
     [Min(0f)]
     [Tooltip("How many wood husks' worth of charge one WOOD CHIPS husk (from the Wood Chipper) gives. 0 = Wood Chips are not burnt.")]

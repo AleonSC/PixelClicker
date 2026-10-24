@@ -15,7 +15,7 @@ using System.Collections.Generic;
 public class GameState
 {
     /// <summary>The systems whose progress lives here (they must not register restart resets for it: tools/compile-check/rules.sh checks it). Add a system's class name when it moves.</summary>
-    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab", "PixelBaitBucket", "PixelCubieBill", "PixelCombo", "PixelHints", "PixelRobotWorker", "PixelPets", "PixelAchievements", "PixelConsumables", "PixelSkills", "PixelMinigame", "PixelShop", "PixelClicker" };
+    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab", "PixelBaitBucket", "PixelCubieBill", "PixelCombo", "PixelHints", "PixelRobotWorker", "PixelPets", "PixelAchievements", "PixelConsumables", "PixelSkills", "PixelMinigame", "PixelShop", "PixelClicker", "PixelMaterials" };
 
     public BankState bank = new BankState();
     public StatsState stats = new StatsState();
@@ -35,6 +35,7 @@ public class GameState
     public MinigamesState minigames = new MinigamesState();
     public ShopState shop = new ShopState();
     public ClickerState clicker = new ClickerState();
+    public MaterialsState materials = new MaterialsState();
 
     /// <summary>Fills in sub-states missing from an older save file (JsonUtility leaves a part the file lacks null in some cases).</summary>
     public void Repair()
@@ -65,10 +66,44 @@ public class GameState
         shop.Repair();
         if (clicker == null) clicker = new ClickerState();
         clicker.Repair();
+        if (materials == null) materials = new MaterialsState();
+        materials.Repair();
         baitBucket.Repair();
         cubieBill.Repair();
         bank.Repair();
         stats.Repair();
+    }
+}
+
+/// <summary>Materials the player holds (PixelMaterials): amounts by material id ("charcoal"...). Not pixel currency: machines make them, shop prices can ask for them.</summary>
+[Serializable]
+public class MaterialsState
+{
+    [Serializable]
+    public class Entry
+    {
+        public string id;
+        public double amount;
+    }
+
+    public List<Entry> held = new List<Entry>();
+
+    public void Repair()
+    {
+        if (held == null) held = new List<Entry>();
+        held.RemoveAll(e => e == null || string.IsNullOrEmpty(e.id));
+    }
+
+    public double Get(string id)
+    {
+        for (int i = 0; i < held.Count; i++) if (held[i].id == id) return held[i].amount;
+        return 0d;
+    }
+
+    public void Set(string id, double amount)
+    {
+        for (int i = 0; i < held.Count; i++) if (held[i].id == id) { held[i].amount = amount; return; }
+        held.Add(new Entry { id = id, amount = amount });
     }
 }
 

@@ -101,7 +101,7 @@ public partial class PixelClicker
         Bottle = 73,      // Fishing's special block: a message in a bottle (breaking it gives a treasure map)
         Whale = 74,       // Fishing's special block: a whale that fights the line
         Mold = 75,        // one of Foraging's two hazard blocks (with the Toadstool): see PixelMold.cs
-        Charcoal = 81,    // made by the Kiln (PixelKiln): a standalone block that only exists as an old pixel
+        Charcoal = 81,    // the Charcoal pixel: bought in the shop with the Kiln's charcoal MATERIAL (PixelMaterials); its husks are Biomass Generator fuel
         GodSlifer = 82,   // the three Egyptian God Cubes (PixelGodFind.cs): the rarest drops in the game, only one of each can be held
         GodRa = 83,
         GodObelisk = 84,
@@ -129,7 +129,7 @@ public partial class PixelClicker
         GoldenSnitch = 101,   // a very rare drop that sprouts wings and flies off the cube: catch it (PixelGoldenSnitch.cs)
     }
 
-    /// <summary>The Firemaking skill pack's blocks (Fire, Tinder, Kindling, Firewood, Flint, Ember, Charcoal, the filler Ash; Wildfire is its hazard).</summary>
+    /// <summary>The Firemaking skill pack's blocks (Fire, Tinder, Kindling, Firewood, Flint, Ember, the filler Ash; Wildfire is its hazard).</summary>
     public static bool IsFireBlock(PixelType type) => PixelBlockTags.Has(type, PixelTag.Firemaking);   // (the tag table in PixelBlockTags.cs)
 
     /// <summary>The Fishing skill pack's blocks: Fish, Seaweed, Shell, Pearl and the filler Driftwood (the Jellyfish is its hazard).</summary>

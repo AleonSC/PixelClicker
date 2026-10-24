@@ -179,22 +179,18 @@ public partial class PixelShop
         return true;
     }
 
-    /// <summary>Can the player pay this one line of a price (a pixel type, or a minigame counter like bomb parts)?</summary>
+    /// <summary>Can the player pay this one line of a price (a pixel type, a material like Charcoal, or a minigame counter like bomb parts)?</summary>
     private bool CanAffordCost(PackCost cost)
     {
         if (string.IsNullOrEmpty(cost.minigameCurrency)) return clicker.CanAfford(cost.type, cost.amount);
-        if (PixelClicker.InfiniteResources) return true;
-        PixelMinigame m = PixelMinigame.Find(cost.minigameCurrency);
-        return m != null && m.HasTracker && m.SpendableCount >= cost.amount;
+        return PixelMaterials.CostAffordable(cost.minigameCurrency, cost.amount);
     }
 
     /// <summary>Pays one line of a price.</summary>
     private void SpendCost(PackCost cost)
     {
         if (string.IsNullOrEmpty(cost.minigameCurrency)) { clicker.TrySpend(cost.type, cost.amount); return; }
-        if (PixelClicker.InfiniteResources) return;
-        PixelMinigame m = PixelMinigame.Find(cost.minigameCurrency);
-        if (m != null) m.TrySpendTracker(cost.amount);
+        PixelMaterials.CostSpend(cost.minigameCurrency, cost.amount);
     }
 
     /// <summary>True once the Shop button is showing (its required pixel is unlocked).</summary>
@@ -238,7 +234,7 @@ public partial class PixelShop
                 {
                     double held = string.IsNullOrEmpty(cost.minigameCurrency)
                         ? clicker.GetCount(cost.type)
-                        : (PixelMinigame.Find(cost.minigameCurrency)?.SpendableCount ?? 0d);
+                        : PixelMaterials.CostHeld(cost.minigameCurrency);
                     if (PixelClicker.InfiniteResources) held = cost.amount;
                     have += Math.Min(Math.Max(0d, held), cost.amount);
                     need += cost.amount;
@@ -253,14 +249,10 @@ public partial class PixelShop
         return false;
     }
 
-    /// <summary>Name of what a price line is paid in (a pixel's name, or the minigame counter's title).</summary>
+    /// <summary>Name of what a price line is paid in (a pixel's name, a material's name, or the minigame counter's title).</summary>
     private string CostName(PackCost cost)
     {
-        if (!string.IsNullOrEmpty(cost.minigameCurrency))
-        {
-            PixelMinigame m = PixelMinigame.Find(cost.minigameCurrency);
-            return m != null && !string.IsNullOrEmpty(m.TrackerTitle) ? m.TrackerTitle : cost.minigameCurrency;
-        }
+        if (!string.IsNullOrEmpty(cost.minigameCurrency)) return PixelMaterials.CostName(cost.minigameCurrency);
         int tierIndex = clicker.IndexOf(cost.type);
         return tierIndex >= 0 ? clicker.Tiers[tierIndex].displayName : cost.type.ToString();
     }

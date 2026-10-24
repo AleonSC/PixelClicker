@@ -235,14 +235,13 @@ public partial class PixelUI
         rt.sizeDelta = new Vector2(-panelPadding * 2f, LinePitch);
     }
 
-    /// <summary>Lays out the Materials tab: one line per minigame material you hold.</summary>
+    /// <summary>Lays out the Materials tab: one line per material you hold (PixelMaterials: Charcoal...) and per minigame material (Bomb Parts...).</summary>
     private float RefreshMaterials(float top)
     {
         float y = top;
         int shown = 0;
-        foreach (PixelMinigame m in PixelMinigame.All)
+        void Line(string name, double amount, Color colour)
         {
-            if (m == null || string.IsNullOrEmpty(m.MaterialName) || m.MaterialAmount <= 0d) continue;
             while (materialLabels.Count <= shown)
             {
                 TMP_Text made = MakeText(ListParent, "Material " + materialLabels.Count, "", fontSize, consumableAlign, FontStyles.Normal, textColor);
@@ -252,9 +251,19 @@ public partial class PixelUI
             TMP_Text label = materialLabels[shown];
             label.gameObject.SetActive(true);
             label.rectTransform.anchoredPosition = new Vector2(0f, -y);
-            SetRow(label, m.MaterialName, FormatAmount(m.MaterialAmount), m.MaterialColor);
+            SetRow(label, name, FormatAmount(amount), colour);
             y += LinePitch;
             shown++;
+        }
+        foreach (PixelMaterials.MaterialDef d in PixelMaterials.All())
+        {
+            double held = d != null ? PixelMaterials.Amount(d.id) : 0d;
+            if (held > 0d) Line(d.displayName, held, d.color);
+        }
+        foreach (PixelMinigame m in PixelMinigame.All)
+        {
+            if (m == null || string.IsNullOrEmpty(m.MaterialName) || m.MaterialAmount <= 0d) continue;
+            Line(m.MaterialName, m.MaterialAmount, m.MaterialColor);
         }
         for (int i = shown; i < materialLabels.Count; i++) materialLabels[i].gameObject.SetActive(false);
 
