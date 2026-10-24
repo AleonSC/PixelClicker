@@ -80,6 +80,30 @@ public partial class PixelSkybox
                 return c;
             }
 
+            case SkyPattern.RingedPlanet:
+            case SkyPattern.SpiralGalaxy:
+            case SkyPattern.BlackHole:
+            case SkyPattern.TwinSuns:
+                return ShadeExtraSpace(s, dir, sun, d, x, y, sinLat, res);
+
+            case SkyPattern.CubeDay:
+            case SkyPattern.CubeNight:
+            case SkyPattern.CubeEmber:
+            case SkyPattern.CubeVoid:
+            case SkyPattern.EyeVoid:
+            case SkyPattern.TestGrid:
+            case SkyPattern.Starfield:
+            case SkyPattern.Underwater:
+                return ShadeExtraCubeAndMore(s, dir, sun, d, x, y, sinLat, res);
+        }
+        return Gradient(s, dir.y, 0.5f);
+    }
+
+    /// <summary>Part of ShadeExtra (one group of skies): RingedPlanet to TwinSuns (4 patterns).</summary>
+    private static Color ShadeExtraSpace(SkyStyle s, Vector3 dir, Vector3 sun, float d, int x, int y, float sinLat, float res)
+    {
+        switch (s.pattern)
+        {
             // ---------------- space ----------------
             case SkyPattern.RingedPlanet:
             {
@@ -170,7 +194,15 @@ public partial class PixelSkybox
                 c = Disc(c, s.accentA * 1.4f, d2, s.sunSize * 0.6f);
                 return Clouds(c, s, dir, sun, Vector2.one, 0.35f);
             }
+        }
+        return Gradient(s, dir.y, 0.5f);
+    }
 
+    /// <summary>Part of ShadeExtra (one group of skies): CubeDay to Underwater (8 patterns).</summary>
+    private static Color ShadeExtraCubeAndMore(SkyStyle s, Vector3 dir, Vector3 sun, float d, int x, int y, float sinLat, float res)
+    {
+        switch (s.pattern)
+        {
             // ---------------- cube world ----------------
             case SkyPattern.CubeDay:
             {
@@ -568,8 +600,13 @@ public partial class PixelSkybox
             topColor = new Color(0.18f, 0.02f, 0.02f), horizonColor = new Color(0.75f, 0.22f, 0.06f), groundColor = new Color(0.2f, 0.04f, 0.02f),
             accentA = new Color(1f, 0.55f, 0.1f), rotateSpeed = 0.3f
         };
-        
 
+        foreach (SkyStyle more in MoreExtraStyles()) yield return more;
+    }
+
+    /// <summary>Part of ExtraStyles: space variants, under the sea, the watcher and the test grid, in menu order.</summary>
+    private static IEnumerable<SkyStyle> MoreExtraStyles()
+    {
         // ---- space variants (no objects: they survive the mirror) ----
         yield return new SkyStyle
         {

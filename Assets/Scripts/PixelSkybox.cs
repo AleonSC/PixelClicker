@@ -446,6 +446,10 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
     private static float shadeTime;
     private float skyClock, animTimer;
 
+    /// <summary>A fresh play-mode start (domain reload off) begins the animated skies' clock at 0 again.</summary>
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { shadeTime = 0f; }
+
     /// <summary>
     /// A small square picture of the sky for the menu icons: a wide-angle view looking towards the sun and tilted a little upwards (so the
     /// sun / planet / moon, the horizon and the sky above it are all in it), instead of a crop of the panorama that missed most details.
@@ -633,6 +637,19 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
                 }
             }
 
+            case SkyPattern.PixelClouds:
+            case SkyPattern.Storm:
+            case SkyPattern.AlienWorld:
+                return ShadeLater(s, dir, sun, sinLat, x, y, w, d, res);
+        }
+        return ShadeExtra(s, dir, sun, d, x, y, sinLat, res);
+    }
+
+    /// <summary>Part of Shade (the rest of the first skies; 'dir' is already mirrored, 'd' and 'res' worked out by Shade): PixelClouds to AlienWorld (3 patterns).</summary>
+    private static Color ShadeLater(SkyStyle s, Vector3 dir, Vector3 sun, float sinLat, int x, int y, int w, float d, float res)
+    {
+        switch (s.pattern)
+        {
             case SkyPattern.PixelClouds:
             {
                 // Banded gradient (a few flat steps), a square sun and blocky clouds.
