@@ -47,7 +47,7 @@ Why it works:
 **Built (2026-10-16, after testing):** the filler run shrinks with the level - 12-30 filler blocks between trees at level 1, down to 3-10 by level 20 (`PixelTreeMode` minFillerAtLevel1 / maxFillerAtLevel1, minFillerAtTop / maxFillerAtTop, fillerLevelSpan). Trees came far too often at low levels with a fixed 3-10.
 
 - During the filler rotation each click has a growing chance to start a tree: a few filler blocks always come first (minimum 3), then the chance climbs until a tree is guaranteed (by about 10). Inspector data: `minFiller`, `maxFiller` (or a chance curve).
-- Levels shorten the filler stretch a little (more trees per hour), so the share of junk falls as you level - replacing today's filler fade (75% -> 25% over 20 levels).
+- Levels shorten the filler stretch a little (more trees per hour), so the share of junk falls as you level - replacing today's filler fade (85% -> 25% over 20 levels; the start was raised from 75% on 2026-10-24).
 - The species is a weighted pick among the unlocked ones; acorns on the floor add weight to the Great Oak.
 
 ## Tree shapes
@@ -66,7 +66,7 @@ A species is an ordered **slot list**. A slot is one of:
 
 | Species | Unlock | Shape | Character |
 |---|---|---|---|
-| **Oak** | 1 | `Leaf, Leaf, Wood x3-6, [Sap 30% / Wood], Acorn?, [Heartwood 20% / Wood], (Hive)` (Sap from level 2, Acorn from 3, Heartwood from 6; before that those slots are Wood) | The all-rounder; feeds the Great Oak through acorns. |
+| **Oak** | 1 | `Leaf, Leaf, Bark, Wood x3-6, [Sap 30% / Wood], Acorn?, [Heartwood 20% / Wood], (Hive)` (Sap from level 2, Acorn from 3, Heartwood from 6; before that those slots are Wood) | The all-rounder; feeds the Great Oak through acorns. |
 | **Pine** | 4 | `Leaf, Pinecone, Wood x4-8, Pinecone, Wood x1-2, (Hive)` | Tall: a long log run with cones. |
 | **Birch** | 8 | `Leaf, Bark, Wood x2-3, Bark, (Hive)` | Short and quick: Timber after Timber. |
 | **Maple** | 12 | `Leaf, Wood x2-4, Sap, Sap, Wood x1-3, [Heartwood 25% / Sap], (Hive)` | Sticky and well paid. |
@@ -295,3 +295,5 @@ Wood goods today only sell to the Lumberjack. Proposed sinks, to decide later: M
 - Should the auto clicker be able to fell whole trees, or stop at the core so heartwood is always hand-chopped?
 
 **Tree mode is the normal Woodcutting (2026-10-16):** `PixelTreeMode.requireTestPack` (off) - trees play whenever Woodcutting is in play, no hidden pack needed.
+
+**Bark fix (2026-10-24):** Bark had no source once tree mode became how Woodcutting plays (it was only planned for the Birch at level 8), yet the Wood Chipper (150 Bark) and the Evil Tree pack (250 Bark) cost it. It now joins the filler rotation from level 1 and every Oak has a Bark block at the top of its trunk (`PixelTreeMode` speciesVersion 2). The pack's `fillerStartShare` (85% since 2026-10-24) only applies when tree mode is off; in tree mode the filler stretch between trees is `minFillerAtLevel1` / `maxFillerAtLevel1` (12-30 blocks).
