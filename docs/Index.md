@@ -79,6 +79,7 @@ One line per script / system: what it is and where its details are. Search it (`
 | `PixelVisitorMinigame.cs` / `PixelTinkererMinigame.cs` / `PixelWizardMinigame.cs` / `PixelEntrepreneurMinigame.cs` / `PixelFarmerMinigame.cs` | Visitor minigames (no shop packs any more - started by PixelGuideVendor; | `docs/systems/PixelVisitorMinigame.md` |
 | `PixelProspectorVendor.cs` | The Prospector (id prospector, 'Pip the Prospector'; | in the header comment of `PixelProspectorVendor.cs` |
 | `PixelLumberjackVendor.cs` | The Lumberjack (id lumberjack, 'Big Tim the Lumberjack'; | in the header comment of `PixelLumberjackVendor.cs` |
+| `PixelMarket.cs` | The shared vendor price rule (value ladder + market saturation): what any vendor pays in pure currency for goods - worth the clicks they took x 1.2 (products 2x, orders 3x later), less as his market for that good fills up, recovering over time. | in the header comment of `PixelMarket.cs` |
 | `PixelEggMinigame.cs` / `PixelBeanMinigame.cs` | Two very rare cat visitors (ids egg, bean; | `docs/systems/PixelEggMinigame.md` |
 | `PixelEggHatch.cs` | The egg's hatching show: the screen darkens, the egg shakes and cracks open, the new pet hops out and into the backpack icon (drawn by a hidden studio camera). | `PixelEggHatch.cs` (class summary) |
 | `PixelOvercharge.cs` / `PixelElectricLinks.cs` / `PixelBolts.cs` | Electric pixel abilities (both components added by PixelClicker.Awake). | `docs/systems/PixelOvercharge.md` |

@@ -8,7 +8,8 @@
 //     Name: ...           Description: ... (one line; write \n for a line break)
 //     Price: 75 White, 50 Green          (amount + pixel type, comma separated; K / M / B allowed: 1.5K; '@bomb' = a minigame's counter)
 //     Price L1: ... / Price L2: ...      (upgrade packs: one line per level)
-//   Pixel types are written by their code name (White, HornetNest...); display names work too.
+//   Pixel types are written by their code name (White, HornetNest...); display names work too. Gathering skill packs (ShopPack.skillLadder)
+//   get their price from the shop's skill pack ladder, so their Price line is ignored.
 //   In the Editor the file is created on the first play if it is missing, and items it doesn't list yet are appended at the end
 //   (never overwriting what is there). Potions and seeds are priced from their pixel at run time, so they are not in the file.
 //   Renaming an item changes the name the save file stores it under (saves match packs / devices by name).

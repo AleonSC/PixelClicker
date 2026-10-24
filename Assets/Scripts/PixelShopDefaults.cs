@@ -690,6 +690,7 @@ public partial class PixelShop
         };
         return new ShopPack
         {
+            skillLadder = true,   // (price from the skill pack ladder: PixelShop.LadderCosts)
             displayName = "Prospector's Pack",
             tab = ShopTab.Pixels,
             description = "Adds the Mining skill and ten ore pixels (Copper, Tin, Iron, Lead, Zinc, Nickel, Silver, Gold, Obsidian and Bedrock): rocks that crack and shed chips as you hit them, break in a shower of nuggets and are sometimes a glittering rich vein that pays big. Obsidian and Bedrock take 15-20 clicks but pay a lot. The ores only spawn while Mining is the skill in play (Skills window), plus plain Stone as filler and a Gas Pocket to watch out for.",
@@ -735,6 +736,7 @@ public partial class PixelShop
         };
         return new ShopPack
         {
+            skillLadder = true,   // (price from the skill pack ladder: PixelShop.LadderCosts)
             displayName = "Lumberjack's Pack",
             tab = ShopTab.Pixels,
             description = "Adds the Woodcutting skill and the wood blocks: Wood, Bark, Sap, Leaf, Heartwood (rare) and the fillers Twig, Pinecone and Moss, plus a Termite Hive to watch out for and a Whetstone (hold it with Block Hold and your clicks count for more). They only spawn while Woodcutting is the pack in play (Skills window). The fillers are useless and most of what you see at first; as your woodcutting level rises it gets rarer and the other blocks show up more.",
@@ -776,6 +778,7 @@ public partial class PixelShop
         };
         return new ShopPack
         {
+            skillLadder = true,   // (price from the skill pack ladder: PixelShop.LadderCosts)
             displayName = "Forager's Pack",
             tab = ShopTab.Pixels,
             description = "Adds the Foraging skill and five foraged blocks: Berry, Mushroom, Herb, Truffle (rare) and Weeds, in a truly random rotation, plus two hazards (Mold and Toadstool: one right click clears them, one left click sets them off). They only spawn while Foraging is the pack in play (Skills window). Weeds are a useless filler that is most of what you see at first; as your foraging level rises they get rarer and the good finds show up more.",
@@ -816,6 +819,7 @@ public partial class PixelShop
         };
         return new ShopPack
         {
+            skillLadder = true,   // (price from the skill pack ladder: PixelShop.LadderCosts)
             displayName = "Angler's Pack",
             tab = ShopTab.Pixels,
             description = "Adds the Fishing skill: Water (very common), Seaweed, Shell, rare Pearl and rare Fish, plus a stinging Jellyfish to watch out for, and two special finds: a message in a bottle (a treasure map!) and a mighty whale. They only spawn while Fishing is the pack in play (Skills window). Clicking a Fish starts a Weak Spots round: hit every spot to catch it, miss and it gets away. Water is a plain filler that gets rarer as your fishing level rises.",
@@ -854,6 +858,7 @@ public partial class PixelShop
         };
         return new ShopPack
         {
+            skillLadder = true,   // (price from the skill pack ladder: PixelShop.LadderCosts)
             displayName = "Farmer's Pack",
             tab = ShopTab.Pixels,
             description = "Adds the Farming skill and eight farm blocks: Dirt, Seed, Water, Fertilizer, Pollen, Wheat, Weevil and Golden Fruit. They only spawn while Farming is the pack in play (Skills window) and are a farm in themselves: seeds grow sprouts, water, dirt and fertilizer speed them up, pollen doubles a sprout's pixel, wheat pays more the busier your field is, and weevils eat sprouts until you click them.",

@@ -440,7 +440,7 @@ vendors take goods (orders) and buy skill currency and products for pure currenc
 **Tier 0 - the buildup to Tier 1 (agreed 2026-10-24, numbers to tune)**
 - **0-10 min:** as built - the pure colours, Cubie's Recycler, the shop, the Auto Clicker.
 - **10-20 min:** the first skill (Woodcutting stays the cheap, nudged one).
-- **20-60 min:** every other gathering skill is ALREADY on sale, on a price ladder (each pack ~2-3x the last: the second affordable at ~25-30
+- **20-60 min (ladder BUILT 2026-10-24: 250 / 630 / 1.6K / 3.9K of each pure colour, by purchase order, Woodcutting fixed first - `PixelShop.LadderCosts`):** every other gathering skill is ALREADY on sale, on a price ladder (each pack ~2-3x the last: the second affordable at ~25-30
   min, the third ~45, the fourth ~70) - the player's first real choice between skills happens here.
 - **~60 min:** Cubie's bill - now there is a target: 25K of every pure colour.
 - **60-90+ min:** the juggle - pay the bill by clicking pure blocks, or train skills and SELL their goods for pure currency; level Standard,
@@ -466,10 +466,14 @@ vendors take goods (orders) and buy skill currency and products for pure currenc
   Tier 0); Tier 2 Biomass Generators, Solar Panel, Power Bank, Quantum Organizer + the Fire / Nuclear packs; Tier 3 the Treasure
   pack. Potions and cosmetics are not tiered yet. Vendors still sell their own wares whatever the tier (they are the 'peddlers').
 
-**Where the pure money comes from - the value ladder (agreed, not built):** training a skill replaces the basic cubes, so skills must pay
+**Where the pure money comes from - the value ladder (agreed; raw goods + saturation BUILT 2026-10-24: `PixelMarket`, products / orders not yet):** training a skill replaces the basic cubes, so skills must pay
 back in pure currency, and MORE effort must pay MORE: clicking pure pixels 1x; selling raw skill currency to vendors ~1.2x (today 0.8x of the
 rarity rate - too low); selling products ~2x; vendor orders ~3x but limited. Markets SATURATE (a vendor's price for a good drops as you sell
 a lot and recovers over time) instead of hard caps. Husks still never become currency except through the lossy Recycler.
+- **As built:** "1x" = the pure currency one click earns on pure blocks right now (the six colours count as equal units); a good is worth the
+  clicks it took (clicks to collect / pay per click, multipliers included), so selling raw skill currency pays 1.2x what the same clicks on pure
+  blocks would have. Saturation per vendor + good: price x 1 / (1 + clicks-worth sold / 900), floor 25%, half wears off every 10 real minutes;
+  shown in the sell window. Lumberjack and Prospector use it. Gap: Foraging, Fishing and Farming have no buyer yet.
 
 **Prestige** (Q2, details still open): settling the bill resets the run with Cubie's Goodwill (a lasting bonus) and a new, bigger bill.
 

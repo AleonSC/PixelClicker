@@ -165,6 +165,9 @@ public partial class PixelShop
         [Tooltip("Owning this pack turns on TREE MODE for Woodcutting (PixelTreeMode: filler rotation + trees in a designed order). Test pack.")]
         public bool unlocksTreeMode = false;
 
+        [Tooltip("A gathering skill pack on the shop's price ladder (PixelShop 'Skill pack price ladder'): its price is worked out from how many skill packs you own, not typed here (the costs above are ignored).")]
+        public bool skillLadder = false;
+
         [Tooltip("Left out of the shop (never listed). It still exists and works: unlock or relock it with the Dev Tools 'Shop unlocks' widget. Used for the testing packs.")]
         public bool hideInShop = false;
 
