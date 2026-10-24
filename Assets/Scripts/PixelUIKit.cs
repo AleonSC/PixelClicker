@@ -809,15 +809,16 @@ public static partial class PixelUIKit
     }
 
     /// <summary>
-    /// Makes a button HOLD-TO-USE (Notice Back / Skip, the Shop's '?'): a white see-through fill grows across it while it is held
-    /// (above its face, under its label) and 'onHeld' runs once it is full (the progress is reset first, so it can be held again).
+    /// Makes a button HOLD-TO-USE (Notice Back / Skip, the Shop's '?', Cubie's and the visitors' Back, overwriting a save): a white see-through
+    /// fill ('fillAlpha') grows across it while it is held (above its face, under its label) and 'onHeld' runs once it is full (the progress is
+    /// reset first, so it can be held again).
     /// </summary>
-    public static PixelHoldButton AddHoldAction(Button button, float holdSeconds, System.Action onHeld)
+    public static PixelHoldButton AddHoldAction(Button button, float holdSeconds, System.Action onHeld, float fillAlpha = 0.45f)
     {
         GameObject fillGo = new GameObject("Hold Fill", typeof(RectTransform), typeof(Image));
         fillGo.transform.SetParent(button.transform, false);
         Image fillImage = fillGo.GetComponent<Image>();
-        fillImage.color = new Color(1f, 1f, 1f, 0.45f);
+        fillImage.color = new Color(1f, 1f, 1f, fillAlpha);
         fillImage.raycastTarget = false;
         RectTransform fillRect = fillGo.GetComponent<RectTransform>();
         fillRect.anchorMin = Vector2.zero;

@@ -788,10 +788,6 @@ public class PixelToggles : MonoBehaviour
     }
 
     private PixelShop shopRef;
-#pragma warning disable 0414   // (no longer read: beside the shop the window mirrors the Currency panel's gap, PixelUIKit.FitBesideShop; kept so the Inspector value stays)
-    [Tooltip("Not used at the moment: beside the shop this window uses the Currency panel's gap (mirroring it).")]
-    [SerializeField] private float gapToShop = 8f;
-#pragma warning restore 0414
 
     /// <summary>With the shop open the window is as tall as it and as wide as the Currency panel, flush against the shop (the shared PixelUIKit.FitBesideShop).</summary>
     private void FitBesideShop()

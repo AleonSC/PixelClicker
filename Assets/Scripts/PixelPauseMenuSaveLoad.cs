@@ -160,23 +160,13 @@ public partial class PixelPauseMenu
         TMP_Text confirmLabel = confirm.GetComponentInChildren<TMP_Text>();
         confirmLabel.text = !string.IsNullOrEmpty(overwriteHoldText) ? overwriteHoldText : "Hold to overwrite";
         confirmLabel.transform.SetAsLastSibling();
-        GameObject holdFill = new GameObject("Hold Fill", typeof(RectTransform), typeof(Image));
-        holdFill.transform.SetParent(confirm.transform, false);
-        holdFill.transform.SetSiblingIndex(1);   // above the button's face, under its label
-        Image holdImage = holdFill.GetComponent<Image>();
-        holdImage.color = new Color(1f, 1f, 1f, 0.4f);
-        holdImage.raycastTarget = false;
-        RectTransform holdRect = holdFill.GetComponent<RectTransform>();
-        holdRect.anchorMin = Vector2.zero; holdRect.anchorMax = new Vector2(0f, 1f); holdRect.offsetMin = holdRect.offsetMax = Vector2.zero;
-        overwriteHold = confirm.gameObject.AddComponent<PixelHoldButton>();
-        overwriteHold.Setup(holdRect, overwriteHoldSeconds > 0.01f ? overwriteHoldSeconds : 0.6f, () =>
+        overwriteHold = PixelUIKit.AddHoldAction(confirm, overwriteHoldSeconds > 0.01f ? overwriteHoldSeconds : 0.6f, () =>
         {
-            overwriteHold.ResetProgress();
             overwriteOverlay.SetActive(false);
             bool saved = saveGame.SaveToSlot(selectedSlot, false);
             RefreshSlots();
             ShowResult(saved ? string.Format(savedResultFormat, SlotRef(selectedSlot)) : saveFailedResultText);
-        });
+        }, 0.4f);
         cancel.onClick.AddListener(() => overwriteOverlay.SetActive(false));
 
         overwriteOverlay.SetActive(false);

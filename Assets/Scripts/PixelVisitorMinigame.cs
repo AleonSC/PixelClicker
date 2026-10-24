@@ -1151,17 +1151,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             bkr.anchorMin = bkr.anchorMax = Vector2.zero;
             bkr.pivot = Vector2.zero;
             bkr.anchoredPosition = new Vector2(24f, 40f);
-            GameObject fillGo = new GameObject("Hold Fill", typeof(RectTransform), typeof(Image));
-            fillGo.transform.SetParent(back.transform, false);
-            fillGo.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.45f);
-            fillGo.GetComponent<Image>().raycastTarget = false;
-            RectTransform fillRect = fillGo.GetComponent<RectTransform>();
-            fillRect.anchorMin = Vector2.zero;
-            fillRect.anchorMax = new Vector2(0f, 1f);
-            fillRect.offsetMin = fillRect.offsetMax = Vector2.zero;
-            fillRect.SetSiblingIndex(1);
-            PixelHoldButton hold = back.gameObject.AddComponent<PixelHoldButton>();
-            hold.Setup(fillRect, 0.6f, () => { hold.ResetProgress(); asideBack = true; });
+            PixelUIKit.AddHoldAction(back, 0.6f, () => asideBack = true);
             asidePanel.gameObject.SetActive(false);
         }
     }
