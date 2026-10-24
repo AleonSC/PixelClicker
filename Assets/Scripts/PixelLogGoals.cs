@@ -334,6 +334,12 @@ public partial class PixelLog
             });
         }
 
+        // Running delivery jobs (PixelDeliveryJobs): the vendor, what his crate still needs, the time left.
+        deliveryLines.Clear();
+        PixelDeliveryJobs.AddGoalLines(deliveryLines);
+        foreach (PixelDeliveryJobs.GoalLine d in deliveryLines)
+            goals.Add(new Goal { title = d.title, description = d.description, count = d.count, goal = d.goal, skinTier = -1, iconColor = d.color });
+
         foreach (PixelMinigame m in PixelMinigame.All)
         {
             if (m == null || !m.HasTracker || !(m.Running || m.TrackerCount > 0d)) continue;
@@ -347,6 +353,7 @@ public partial class PixelLog
     }
 
     private readonly List<PixelGoals.GoalDef> tableGoals = new List<PixelGoals.GoalDef>();
+    private readonly List<PixelDeliveryJobs.GoalLine> deliveryLines = new List<PixelDeliveryJobs.GoalLine>();
 
     /// <summary>Adds the PixelGoals rows that are showing now (appeared, not done - or just done) to the Goals tab's list.</summary>
     private void AddTableGoals(List<Goal> goals)

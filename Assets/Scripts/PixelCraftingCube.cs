@@ -365,21 +365,7 @@ public class PixelCraftingCube : MonoBehaviour, IPixelSocketDevice, IPixelHuskFi
     }
 
     /// <summary>Is the pointer on the cube or its book (nothing nearer in the way: the clicker cube, a husk)?</summary>
-    private bool PointerOnThis()
-    {
-        Camera cam = clicker.ViewCamera;
-        if (cam == null || PixelInput.PointerOverUI()) return false;
-        Ray ray = cam.ScreenPointToRay(PixelInput.PointerPosition());
-        float best = float.MaxValue;
-        foreach (Collider c in body) if (c != null && c.Raycast(ray, out RaycastHit hit, 500f)) best = Mathf.Min(best, hit.distance);
-        if (best == float.MaxValue) return false;
-        foreach (RaycastHit h in Physics.RaycastAll(ray, best, ~0, QueryTriggerInteraction.Ignore))
-        {
-            if (clicker.PixelTransform != null && h.transform.IsChildOf(clicker.PixelTransform)) return false;
-            if (h.collider.GetComponentInParent<OldPixelInfo>() != null) return false;
-        }
-        return true;
-    }
+    private bool PointerOnThis() => PixelPointerClaim.PointerOn(clicker, body);   // (the shared test)
 
     // ---------------- saving (PixelFeatureTester) ----------------
 

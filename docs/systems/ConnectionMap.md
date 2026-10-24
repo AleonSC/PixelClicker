@@ -78,6 +78,7 @@ Keep this map current: when a system gets a new link (or loses one), change its 
 | Kiln | husks | Charcoal husks (Biomass fuel x3, sold to the Lumberjack) | despawn | ? | Built (tester) |
 | Trash Can | loose husks | deletes them | space | ? | Built (tester) |
 | Sweeper | husks close to fading | into the nearest crate / hopper / Recycler with room | despawn, space | Standard 5 (motor: Electrician, planned) | Built |
+| Delivery crate (a vendor's job, on his dock) | the job's husk types (belt / hose through its In coupling, or dropped in) | pure currency (2x of the clicks behind the husks) + rapport + sometimes an item, to the vendor who posted it | despawn, a reason to build (the factory's customer) | Vendors (every skill's buyer) | Built 2026-10-24 |
 
 ### Hands (first person)
 

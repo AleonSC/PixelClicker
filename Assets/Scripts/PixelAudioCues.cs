@@ -5,7 +5,7 @@
 //   in play), Night (the day / night cycle is in deep night), FirstPerson, UfoRide (riding the UFO), TitleScreen, Manual (code calls PixelAudio.SetMusicCue(name, on): the God Cube shows and the Dragon wish do).
 //   Every 0.25 s the highest-priority cue whose condition is true wins (the later one on a tie); a cue with neither a clip nor a track number is ignored. While a cue plays the normal playlist fades to silence and is PAUSED
 //   where it was (cueHoldsPlaylist) and fades back in, resuming, when no cue is wanted; a change from one cue to another fades the first out (its fade out), then the second in (its fade in). A cue that does not loop and
-//   ends by itself hands back to the playlist and is not restarted until its condition has gone false once. GameStart = the song you choose to play right after the clicker loads in (give the built-in "After load" cue a clip; Loop off = it plays once, then the playlist carries on; the param may be a number of seconds to cap it). Built-in cues (addDefaultCues: After load, Night, Bomb, Black hole, Evil tree, Ghost hunt, UFO ride, God find, Dragon wish)
+//   ends by itself hands back to the playlist and is not restarted until its condition has gone false once. GameStart = the song you choose to play right after the clicker loads in (give the built-in "After load" cue a clip; Loop off = it plays once, then the playlist carries on; the param may be a number of seconds to cap it). Built-in cues (addDefaultCues: After load, Night, Bomb, Black hole, Evil tree, Ghost hunt, UFO ride, God find, Dragon wish, Cubie - while he is on screen)
 //   are added to the list by name when missing, WITHOUT clips: drop a clip (or a playlist track number) into the ones you want. disableCues turns the whole thing off. Mute / music volume apply to cues too.
 // ----------------------
 using System;
@@ -86,6 +86,7 @@ public partial class PixelAudio
             Cue("UFO ride", CueTrigger.UfoRide, "", 3),
             Cue("God find", CueTrigger.Manual, "", 10, 0.6f, 2f),
             Cue("Dragon wish", CueTrigger.Manual, "", 10, 0.6f, 2f),
+            Cue("Cubie", CueTrigger.Manual, "", 8, 0.8f, 1.5f),   // while Cubie is on screen (PixelGuideVendor.SyncMusicCue)
             Cue("After load", CueTrigger.GameStart, "", 1, 3f, 3f, false),
         };
         foreach (MusicCue d in defaults)

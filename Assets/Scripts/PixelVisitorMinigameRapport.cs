@@ -5,11 +5,12 @@
 //     PixelRapport.DealPointsPerVisit), and gifts from the Sell view (GiveGift: only PixelRapport.GiftsPerVisit count a visit).
 //   - Gifts: the Sell view's Gift button gives the picked good (a gift = PixelRapport.GiftClicks of effort, at least 1). His LOVES (PixelRapport's
 //     vendor data) count much more; a loved good he doesn't buy is listed too, as 'gift only' (AddGiftOnlyGoods).
-//   - The RAPPORT METER (BuildRapportMeter, UI map N21.4): a sunken card in his greeting box and in the wares / Sell window - his step in its
+//   - The RAPPORT BADGE (AddRapportBadge, UI map N21.4): a small heart button in the header of his greeting box and his wares / Sell window
+//     (the title is just his name). Hovering it (or clicking it) shows the RAPPORT CARD under the header as a tooltip - his step in its
 //     colour ('♥ Regular') and the progress ('42 / 80 to Friend') on one line, a bar of rounded segments (one per step after Stranger, each
 //     filling in its step's colour, PixelRapport Step.color) and the step names under them. It refreshes whenever points come in.
 //   - What his step gives here: NextVisitWait (more visits), RapportExtraWares / RapportExtraStock (bigger stock), RapportRareChance (the
-//     Farmer's Dragon Seed), his step line in the greeting and the step in the greeting box title (RapportTitle). Sale prices and market
+//     Farmer's Dragon Seed), his step line in the greeting and the heart badge in the box headers (coloured by his step). Sale prices and market
 //     recovery are PixelMarket's (PriceFactor / RecoverySpeed).
 // ---------------------------------------------------
 using System;
@@ -28,7 +29,7 @@ public abstract partial class PixelVisitorMinigame
     /// <summary>A new visit: the per-visit caps start again.</summary>
     private void RapportVisitStart()
     {
-        rapportDealThisVisit = 0d; giftsThisVisit = 0; rapportMeters.Clear();
+        rapportDealThisVisit = 0d; giftsThisVisit = 0; rapportMeters.Clear(); rapportHearts.Clear();
         PixelRapport r = PixelRapport.Instance;
         if (r != null) r.GrantReward(Id, RapportName);   // (his relic, if your step already earned it)
     }
@@ -63,24 +64,57 @@ public abstract partial class PixelVisitorMinigame
         public TMP_Text[] names;
     }
     private readonly List<RapportMeter> rapportMeters = new List<RapportMeter>();
+    private readonly List<TMP_Text> rapportHearts = new List<TMP_Text>();   // the header badges' hearts (coloured by his step)
 
     /// <summary>The meter card's height in a dialog box (canvas units).</summary>
     private const float RapportMeterHeight = 84f;
 
+    /// <summary>The rapport card's width (canvas units).</summary>
+    private const float RapportCardWidth = 560f;
+
     /// <summary>
-    /// Builds a rapport meter card along the bottom of 'parent', 'bottom' up from its bottom edge (nothing without PixelRapport): a sunken card
-    /// with his step on the left in its colour ('♥ Regular') and the progress on the right ('42 / 80 to Friend'), a bar of rounded segments
-    /// (one per step after Stranger, each filling as you get there) and the step names under the segments.
+    /// Adds the rapport BADGE to a dialog box's header: a small heart button (coloured by his step) in the top-right slot. Hovering it - or
+    /// clicking it - shows the rapport card just under the header, over the box (nothing without PixelRapport).
     /// </summary>
-    private void BuildRapportMeter(RectTransform parent, float bottom, float sideInset)
+    private void AddRapportBadge(PixelWindowParts box)
     {
         PixelRapport r = PixelRapport.Instance;
-        if (r == null || parent == null) return;
+        if (r == null || box == null) return;
+        Button heart = box.AddHeaderButton("Rapport", "\u2665", false, new Color(0.14f, 0.13f, 0.2f, 1f));
+        TMP_Text mark = heart.GetComponentInChildren<TMP_Text>(true);
+        if (mark != null) rapportHearts.Add(mark);
+
+        RectTransform card = BuildRapportCard(box.Rect);
+        card.anchorMin = card.anchorMax = card.pivot = new Vector2(1f, 1f);
+        card.sizeDelta = new Vector2(RapportCardWidth, RapportMeterHeight);
+        card.anchoredPosition = new Vector2(-12f, -(box.HeaderHeight + 4f));
+        card.gameObject.SetActive(false);
+        void Show(bool on)
+        {
+            if (card == null) return;
+            if (on) { RefreshRapportMeters(); card.SetAsLastSibling(); }   // (drawn over the box's text)
+            card.gameObject.SetActive(on);
+        }
+        PixelHoverTip tip = heart.gameObject.AddComponent<PixelHoverTip>();
+        tip.onEnter = () => Show(true);
+        tip.onExit = () => Show(false);
+        heart.onClick.AddListener(() => Show(card != null && !card.gameObject.activeSelf));   // (a click toggles it too)
+        RefreshRapportMeters();
+    }
+
+    /// <summary>
+    /// Builds the rapport CARD (the badge's tooltip; place it yourself): his step on the left in its colour ('♥ Regular') and the progress on
+    /// the right ('42 / 80 to Friend'), a bar of rounded segments (one per step after Stranger, each filling as you get there) and the step names under them.
+    /// </summary>
+    private RectTransform BuildRapportCard(RectTransform parent)
+    {
+        PixelRapport r = PixelRapport.Instance;
         TMP_FontAsset font = Font;
 
-        RectTransform card = MeterBox(parent, "Rapport Meter", new Color(0.06f, 0.06f, 0.1f, 0.95f), true);
-        card.anchorMin = new Vector2(0f, 0f); card.anchorMax = new Vector2(1f, 0f); card.pivot = new Vector2(0.5f, 0f);
-        card.offsetMin = new Vector2(sideInset, bottom); card.offsetMax = new Vector2(-sideInset, bottom + RapportMeterHeight);
+        RectTransform card = MeterBox(parent, "Rapport Card", new Color(0.06f, 0.06f, 0.1f, 0.98f), false);
+        Shadow shadow = card.gameObject.AddComponent<Shadow>();
+        shadow.effectColor = new Color(0f, 0f, 0f, 0.55f);
+        shadow.effectDistance = new Vector2(0f, -4f);
         GameObject innerGo = new GameObject("Inner", typeof(RectTransform));
         innerGo.transform.SetParent(card, false);
         RectTransform inner = innerGo.GetComponent<RectTransform>();
@@ -112,7 +146,7 @@ public abstract partial class PixelVisitorMinigame
             PixelUIKit.SetText(m.names[i], r.StepNameAt(i + 1));
         }
         rapportMeters.Add(m);
-        RefreshRapportMeters();
+        return card;
     }
 
     /// <summary>A rounded box (sunken or raised, PixelUIKit.StyleBox) that takes no clicks.</summary>
@@ -140,8 +174,9 @@ public abstract partial class PixelVisitorMinigame
     private void RefreshRapportMeters()
     {
         PixelRapport r = PixelRapport.Instance;
-        if (r == null || rapportMeters.Count == 0) return;
+        if (r == null) return;
         int step = r.StepIndex(Id);
+        foreach (TMP_Text h in rapportHearts) if (h != null) h.color = r.StepColorAt(step);   // (the header badge shows his step's colour)
         int last = r.StepCount - 1;
         double points = r.Points(Id);
         Color now = r.StepColorAt(step);
@@ -181,16 +216,6 @@ public abstract partial class PixelVisitorMinigame
 
     /// <summary>x his chance to bring a rare ware (the Farmer's Dragon Seed).</summary>
     protected float RapportRareChance { get { PixelRapport r = PixelRapport.Instance; return r != null ? r.RareChance(Id) : 1f; } }
-
-    /// <summary>The greeting box title: his name and his step ("Big Tim  ·  Regular").</summary>
-    private string RapportTitle
-    {
-        get
-        {
-            PixelRapport r = PixelRapport.Instance;
-            return r != null ? RapportName + "  ·  " + r.StepName(Id) : RapportName;
-        }
-    }
 
     /// <summary>His line for the step he is at ("" = none).</summary>
     private string RapportLine { get { PixelRapport r = PixelRapport.Instance; return r != null ? r.StepLine(Id) : ""; } }

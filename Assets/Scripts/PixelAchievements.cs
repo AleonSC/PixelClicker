@@ -7,7 +7,7 @@
 //   black hole (PixelBlackholeMinigame.PixelSwallowed event -> PixelStats.SingularitiesFed); "Potion Taster" = every buyable potion
 //   drunk once, "Gadgeteer" = every device kind placed once; progress from PixelStats PotionsUsed / FansUsed / VacuumDevicesUsed). Achievements have tiers (tiers[], earnedTiers); defaults per pixel type: tiered "Collect" (lifetime value,
 //   totalCollected: 10, 100, 1K, 10K, 100K, 1M) and tiered "Click" (PixelTier.timesCollected, saved: 10, 50, 250, 1K, 5K, 25K;
-//   Kind.ClickPixelType). The unlock POPUP sits at the MIDDLE RIGHT of the screen by default (DefaultPopupPosition, popupRightMargin), drawn at popupScale (0.68) open
+//   Kind.ClickPixelType). The unlock POPUP sits at the MIDDLE LEFT of the screen by default (DefaultPopupPosition, popupOnLeft - off = middle right, popupRightMargin = the edge gap), drawn at popupScale (0.68) open
 //   and collapsed, and starts expanded (pref AchievementPopupCollapsed2); hold the left mouse button on it (popupHoldSeconds 0.5, a ring fills round the cursor,
 //   PixelHold with useLeft) to pick it up, click to PIN it anywhere; the thin button on its far right collapses it to the icon box and expands it again with a shorter hold (popupCollapseHoldSeconds 0.3, saved);
 //   Settings > 'Reset achievement popup position' (ResetPopupPin) forgets the pin. The pinned position is the popup's LEFT edge; the pin is saved PER SAVE (PlayerPrefs PixelClicker.Setting.AchievementPopupX/Y declared with PixelPrefs.DeclarePerSave, inside the black margins: a new game starts with it in the default place, ReloadPopupPin on a settings load), right-click to put it back. Saved as "id:tiers". Unlocks quietly/with popup, ids saved by PixelSaveGame. Auto-added by PixelLog.
@@ -176,8 +176,11 @@ public class PixelAchievements : MonoBehaviour, IPixelDatabaseSource
     [Tooltip("Size of the whole popup (open and collapsed) - 1 = the sizes above as they are.")]
     [SerializeField] private float popupScale = 0.68f;
 
+    [Tooltip("The popup's default spot (until the player pins it somewhere): on = the middle of the LEFT edge, off = the middle of the right edge.")]
+    [SerializeField] private bool popupOnLeft = true;
+
     [Min(0f)]
-    [Tooltip("Gap between the popup and the right edge of the screen in its default spot (middle right).")]
+    [Tooltip("Gap between the popup and the screen edge in its default spot (the left or right edge, see 'Popup On Left').")]
     [SerializeField] private float popupRightMargin = 24f;
 
     [Min(120f)]
@@ -847,11 +850,13 @@ public class PixelAchievements : MonoBehaviour, IPixelDatabaseSource
 
     private float Scale => Mathf.Clamp(popupScale, 0.4f, 1.5f);
 
-    /// <summary>The standard spot: the MIDDLE RIGHT of the screen, its right edge popupRightMargin from the edge (it follows the width as it collapses /
-    /// opens, so the right edge stays put). Positions are the popup's left edge / middle height, in canvas units from the middle of the screen.</summary>
+    /// <summary>The standard spot: the MIDDLE LEFT of the screen (popupOnLeft; else the middle right), popupRightMargin from that edge (on the right it
+    /// follows the width as it collapses / opens, so the right edge stays put). Positions are the popup's left edge / middle height, in canvas units
+    /// from the middle of the screen.</summary>
     private Vector2 DefaultPopupPosition()
     {
         float width = popupCanvasRect != null && popupCanvasRect.rect.width > 10f ? popupCanvasRect.rect.width : 1920f;
+        if (popupOnLeft) return new Vector2(-width * 0.5f + popupRightMargin, 0f);
         return new Vector2(width * 0.5f - popupRightMargin - popupWidth * Scale, 0f);
     }
 

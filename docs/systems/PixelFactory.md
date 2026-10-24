@@ -37,3 +37,6 @@ Both were deleted once couplings existed: a belt ends at a coupling or starts at
 
 ## Corner joints
 `PixelConveyorJoint.cs`: belts chained at an angle get a corner filler (slab + outer rails) on the outside of the turn, built automatically by each belt every 0.5 s (see the file header).
+
+## Delivery crates (2026-10-24: PixelDeliveryJobs.cs, PixelDeliveryCrate.cs)
+The factory's customer. A vendor's delivery job drops a CRATE on his own fixed DOCK at the floor's edge (the same spot every time, so a belt line built to it keeps paying off). The crate has one In SOCKET on its front, towards the floor's centre: a belt ending there gets its coupling fitted by itself (`PixelCouplings.AutoFitAll`), also when a later job's crate lands on the same dock, and a Container Hose can end there too. Its open top takes husks thrown or dropped in. It takes only the job's types (`IPixelHuskFilter`: other types are thrown on by the belt, never queued; dropped ones bounce back out) and only as many as it still needs (`IPixelHuskRoom`). A section per type, a big label ('Bark 18 / 30', time left), the shared device card on hover / right tap (no Remove: it can't be moved or removed while the job runs). Full = it seals and floats away on a balloon (pay, rapport, maybe an item); out of time = the husks pop back out. Design and numbers: `docs/systems/PixelRules.md` 'Delivery jobs'.

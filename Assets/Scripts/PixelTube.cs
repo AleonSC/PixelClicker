@@ -1,7 +1,8 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelTube.cs
 //   Static PixelTube.Build(points, radius, sides, mesh): smooth round tube mesh along any 3D path (rotation-minimising frames, no
-//   caps). Used by the bank hose.
+//   caps). Used by the bank hose. Optional radiusOf(ring) = a radius multiplier per ring (a corrugated hose, a flared bell);
+//   Helix(points, radius, turnLength, into) = points of a spiral round the same path (the Container Hose's reinforcing wire).
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -19,7 +20,8 @@ public static class PixelTube
 
     /// <summary>Fills (or creates) a mesh with a tube of 'radius' along 'points' (in the mesh's local space).</summary>
     /// <param name="colorOf">Optional vertex colours: called with (ring index, vertex position, vertex normal); use it with an unlit vertex-colour material to fade the tube out.</param>
-    public static Mesh Build(Vector3[] points, float radius, int sides, Mesh reuse, System.Func<int, Vector3, Vector3, Color> colorOf = null)
+    /// <param name="radiusOf">Optional radius multiplier per ring (ring index -> x radius): ribs, a flare.</param>
+    public static Mesh Build(Vector3[] points, float radius, int sides, Mesh reuse, System.Func<int, Vector3, Vector3, Color> colorOf = null, System.Func<int, float> radiusOf = null)
     {
         Mesh mesh = reuse != null ? reuse : new Mesh { name = "Tube" };
         mesh.Clear();
@@ -35,26 +37,14 @@ public static class PixelTube
         Vector3 normal = Vector3.zero;
         for (int i = 0; i < n; i++)
         {
-            Vector3 tangent = (points[Mathf.Min(i + 1, n - 1)] - points[Mathf.Max(i - 1, 0)]).normalized;
-            if (tangent.sqrMagnitude < 0.0001f) tangent = Vector3.right;
-
-            if (i == 0)
-            {
-                normal = Vector3.Cross(tangent, Mathf.Abs(tangent.y) < 0.9f ? Vector3.up : Vector3.right).normalized;
-            }
-            else
-            {
-                normal -= tangent * Vector3.Dot(normal, tangent);
-                if (normal.sqrMagnitude < 0.0001f) normal = Vector3.Cross(tangent, Vector3.up);
-                normal.Normalize();
-            }
-            Vector3 binormal = Vector3.Cross(tangent, normal);
+            NextFrame(points, i, ref normal, out Vector3 binormal);
+            float r = radiusOf != null ? radius * radiusOf(i) : radius;
 
             for (int j = 0; j < sides; j++)
             {
                 float a = Mathf.PI * 2f * j / sides;
                 Vector3 dir = normal * Mathf.Cos(a) + binormal * Mathf.Sin(a);
-                vertices.Add(points[i] + dir * radius);
+                vertices.Add(points[i] + dir * r);
                 normals.Add(dir);
                 if (colorOf != null) colors.Add(colorOf(i, vertices[vertices.Count - 1], dir));
             }
@@ -77,6 +67,39 @@ public static class PixelTube
         mesh.SetTriangles(triangles, 0);
         mesh.RecalculateBounds();
         return mesh;
+    }
+
+    /// <summary>The frame at point i (rotation-minimising: 'normal' carries over from the point before; pass Vector3.zero for i = 0).</summary>
+    private static void NextFrame(Vector3[] points, int i, ref Vector3 normal, out Vector3 binormal)
+    {
+        int n = points.Length;
+        Vector3 tangent = (points[Mathf.Min(i + 1, n - 1)] - points[Mathf.Max(i - 1, 0)]).normalized;
+        if (tangent.sqrMagnitude < 0.0001f) tangent = Vector3.right;
+        if (i == 0) normal = Vector3.Cross(tangent, Mathf.Abs(tangent.y) < 0.9f ? Vector3.up : Vector3.right).normalized;
+        else
+        {
+            normal -= tangent * Vector3.Dot(normal, tangent);
+            if (normal.sqrMagnitude < 0.0001f) normal = Vector3.Cross(tangent, Vector3.up);
+            normal.Normalize();
+        }
+        binormal = Vector3.Cross(tangent, normal);
+    }
+
+    /// <summary>A spiral round the path at 'radius' from it, one full turn every 'turnLength' along it (the same frames as the tube, so it hugs it).
+    /// The path should be dense (several points per turn). Fills 'into' (cleared first).</summary>
+    public static void Helix(Vector3[] points, float radius, float turnLength, List<Vector3> into)
+    {
+        into.Clear();
+        if (points == null || points.Length < 2 || turnLength <= 0f) return;
+        Vector3 normal = Vector3.zero;
+        float along = 0f;
+        for (int i = 0; i < points.Length; i++)
+        {
+            if (i > 0) along += Vector3.Distance(points[i - 1], points[i]);
+            NextFrame(points, i, ref normal, out Vector3 binormal);
+            float a = Mathf.PI * 2f * along / turnLength;
+            into.Add(points[i] + (normal * Mathf.Cos(a) + binormal * Mathf.Sin(a)) * radius);
+        }
     }
 
     // Adds a triangle wound so it faces the way its vertex normals point.

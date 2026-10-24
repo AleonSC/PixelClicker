@@ -22,6 +22,11 @@
 //   normally combine friction by Minimum so corners never caught). EndThrownGrip puts the original back (time over, or grabbed again).
 //   Tags: OldPixelInfo.heldByPlayer / lastHeldTime / RecentlyHeld(seconds) = 'recently held by the player' (held now, or let go within recentlyHeldSeconds 0 = 6, Inspector); the Storage Crate
 //   stores a tagged pixel that lands in its footprint from any height.
+//   DRAG MODES (2026-10-24, free cam drags felt random in depth): the mode is picked ONCE at the grab from the camera's tilt (levelDrag: looking down more
+//   than LevelDragMinDown = slide over the floor at the grab height; else = a camera-facing plane dragDepth in front of the camera, rebuilt every step so
+//   it follows a moving / turning free cam). It used to be picked every step from the POINTER ray, so moving the mouse up the screen flipped modes and
+//   the depth jumped, and the camera plane stayed where the camera was at the grab. A big tilt while holding switches mode with hysteresis, re-anchored
+//   on the husk (Anchor). Floor sliding stops at maxLevelDragReach (0 = 3x the grab distance) along the pointer line near the horizon.
 //   GROUND CLAMP (2026-10-16): a held husk is never pushed into the surface under it (TryGroundUnder: highest still collider straight below, husks skipped);
 //   lowering it with the scroll wheel stops at the ground (it used to sink in, crawl after the mouse and replay the landing sound).
 //   Accessibility 'Drop guide for held pixels' (Settings, PixelDisplaySettings.DropGuide, on by default): while holding a pixel LateUpdate / UpdateDropGuide draws a faint line straight down
@@ -161,7 +166,6 @@ public class PixelGrab : MonoBehaviour
     private Rigidbody held;
     private OldPixelDespawn heldDespawn;
     private ScaledGravity heldGravity;
-    private Plane dragPlane;
     private Vector3 grabOffset;
     private Camera cam;
 
@@ -349,14 +353,11 @@ public class PixelGrab : MonoBehaviour
         heldGravity = body.GetComponent<ScaledGravity>();
         if (heldGravity != null) heldGravity.enabled = false;
 
-        // Drag on the plane facing the camera that passes through the pixel.
-        dragPlane = new Plane(-cam.transform.forward, body.position);
-        grabOffset = dragPlane.Raycast(ray, out float enter) ? body.position - ray.GetPoint(enter) : Vector3.zero;
-        // A tilted camera (orbital, free cam) drags on the HORIZONTAL plane through the pixel instead, so moving the mouse slides it over the floor rather than up / down through the world.
-        dragLevelY = body.position.y;
-        Plane level = new Plane(Vector3.up, new Vector3(0f, dragLevelY, 0f));
-        levelOffset = level.Raycast(ray, out float enterLevel) ? body.position - ray.GetPoint(enterLevel) : Vector3.zero;
-        levelOffset.y = 0f;
+        // How it is dragged is decided ONCE here from the camera's tilt (not per frame from where the pointer is), and kept for the whole drag:
+        // a camera looking down (top down, orbital, a tilted free cam) slides it over the floor at its height; a level camera moves it on a
+        // screen-facing plane at a fixed distance in front of the camera. Anchor() stores the offsets so the husk doesn't jump when grabbed.
+        levelDrag = -cam.transform.forward.y > LevelDragMinDown;
+        Anchor(ray, body.position);
 
         heldShatter = body.GetComponent<OldPixelShatter>();
         if (heldShatter != null) heldShatter.Grabbed(); // can't break while carried
@@ -383,9 +384,35 @@ public class PixelGrab : MonoBehaviour
     private OldPixelShatter heldShatter;
     private float dragLevelY;
     private Vector3 levelOffset;
+    private bool levelDrag;      // true = sliding over the floor at dragLevelY; false = on the camera-facing plane at dragDepth
+    private float dragDepth;     // how far in front of the camera (along its view) the held husk is kept in camera-plane mode
 
     /// <summary>Drag on the floor-parallel plane when the camera looks down at more than about 20 degrees (top down and orbital views); near the horizon the camera-facing plane is steadier.</summary>
     private const float LevelDragMinDown = 0.35f;
+    /// <summary>How far past LevelDragMinDown the camera's tilt must go before a drag switches mode (so a free cam hovering near the edge doesn't flip back and forth).</summary>
+    private const float LevelDragHysteresis = 0.1f;
+
+    [Min(0f)]
+    [Tooltip("While sliding a held husk over the floor, the farthest it may be from the camera, as a multiple of how far it was when grabbed (pointing near the horizon used to fling it far away). 0 = the coded default (3).")]
+    [SerializeField] private float maxLevelDragReach = 0f;
+
+    /// <summary>The camera-facing drag plane: through the point dragDepth in front of the camera, so it follows a moving / turning camera (free cam) and the husk keeps its distance.</summary>
+    private Plane DepthPlane() => new Plane(-cam.transform.forward, cam.transform.position + cam.transform.forward * dragDepth);
+
+    /// <summary>Re-anchors the drag on the husk's current spot (grab, or a mode switch): the pointer ray maps to exactly 'at' now, so nothing jumps.</summary>
+    private void Anchor(Ray ray, Vector3 at)
+    {
+        Vector3 rest = at - Vector3.up * liftOffset;   // (the wheel's lift is added on top again each step)
+        dragDepth = Mathf.Max(0.05f, Vector3.Dot(at - cam.transform.position, cam.transform.forward));
+        grabOffset = DepthPlane().Raycast(ray, out float enter) ? rest - ray.GetPoint(enter) : Vector3.zero;
+        dragLevelY = rest.y;
+        Plane level = new Plane(Vector3.up, new Vector3(0f, dragLevelY, 0f));
+        levelOffset = level.Raycast(ray, out float enterLevel) ? rest - ray.GetPoint(enterLevel) : Vector3.zero;
+        levelOffset.y = 0f;
+        levelReach = Vector3.Distance(cam.transform.position, at) * (maxLevelDragReach > 0f ? maxLevelDragReach : 3f);
+    }
+
+    private float levelReach;
 
     // ---- Gentle collisions: a carried / thrown pixel is light, and anything it hits is kept from flying far ----
     private readonly System.Collections.Generic.Dictionary<Rigidbody, float> normalMass = new System.Collections.Generic.Dictionary<Rigidbody, float>();
@@ -520,17 +547,28 @@ public class PixelGrab : MonoBehaviour
         if (cam == null) { Release(); return; }
 
         Ray ray = cam.ScreenPointToRay(PointerPosition());
-        Vector3 target;
-        if (-ray.direction.y > LevelDragMinDown)
+
+        // The camera tilted a lot while holding (free cam): switch drag mode, re-anchored on where the husk is, so it doesn't jump.
+        float down = -cam.transform.forward.y;
+        if (levelDrag ? down < LevelDragMinDown - LevelDragHysteresis : down > LevelDragMinDown + LevelDragHysteresis)
         {
+            levelDrag = !levelDrag;
+            Anchor(ray, held.position);
+        }
+
+        Vector3 target;
+        if (levelDrag)
+        {
+            // Slide over the floor at the grab height. Pointing near (or above) the horizon would hit that plane very far away (or never):
+            // the husk stops at levelReach along the pointer's line instead of shooting off.
             Plane level = new Plane(Vector3.up, new Vector3(0f, dragLevelY, 0f));
-            if (!level.Raycast(ray, out float enterLevel)) return;
-            target = ray.GetPoint(enterLevel) + levelOffset + Vector3.up * liftOffset;
+            Vector3 hit = level.Raycast(ray, out float enterLevel) && enterLevel <= levelReach ? ray.GetPoint(enterLevel) : ray.GetPoint(levelReach);
+            target = hit + levelOffset;
             target.y = dragLevelY + liftOffset;
         }
         else
         {
-            if (!dragPlane.Raycast(ray, out float enter)) return;
+            if (!DepthPlane().Raycast(ray, out float enter)) return;
             target = ray.GetPoint(enter) + grabOffset + Vector3.up * liftOffset;
         }
 

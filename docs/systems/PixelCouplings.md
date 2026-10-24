@@ -130,3 +130,6 @@ after building (and `PixelCoupling.RemoveAll(this)` before a rebuild). If it tak
 pull, `IPixelHuskSource` (+ `IPixelHuskPicker`). Nothing else: auto-fit, the port plates, the device panel rows, saving, snapping and the belt system pick it up.
 
 **Link rules (2026-10-20, conveyor audit).** One reach for every link check: `PixelCouplings.LinkReach` (1.3 husk widths, flat): a belt end hands in to a coupling (`HandIn`) and a coupling finds the belt ending / starting at it (`BeltEndingAt` / `BeltStartingAt`, nearest wins) at the same distance, so a belt that shows as joined really is. `Emit` never puts a husk on a FULL belt (it returns false); devices that must not drop it ask `OutputHasRoom` first and hold it (Kiln, Wood Chipper, Belt Jump landing queue, Funnel, Junction Box, Husk Source, Storage Crate). The Belt Sorter lets a husk ride on when the belt off its chute is full.
+
+## Hose adapter (2026-10-24)
+When a Container Hose ends on a coupling, the coupling grows a form-fitting HOSE ADAPTER (`PixelCoupling.SetHoseFitting`): a rubber sleeve over the collar, a steel bell flaring out to the hose's width and a clamp band; the belt lip and the dark opening hide under it. The hose starts in the bell's mouth (`PixelCoupling.HoseMouthWorld`) and runs straight out before it bends. The adapter goes when the last hose on that coupling is removed.

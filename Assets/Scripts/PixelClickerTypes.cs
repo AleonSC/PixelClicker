@@ -435,7 +435,7 @@ public partial class PixelClicker
             {
                 if (spawnSwitch == SpawnSwitch.Switchable) return true;
                 if (spawnSwitch == SpawnSwitch.AlwaysOn) return false;
-                if (type == PixelType.Glass || type == PixelType.Luminescent) return true;   // extra pixels: a spawn switch in Toggles, on by default
+                if (PixelBlockTags.Has(type, PixelTag.Toggleable)) return true;   // extra pixels (Glass, Luminescent, Charcoal: the Toggleable tag on their block cards): a spawn switch in Toggles, on by default
                 return IsSpecialType(type);
             }
         }

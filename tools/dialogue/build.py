@@ -83,7 +83,7 @@ common = [("accept button", field_default(base, "acceptText")), ("reject button"
 def prop(code, name):
     m = re.search(r'override string ' + name + r'\s*=>\s*', code)
     return string_expr(code, m.end()) if m else None
-visitors = [("PixelTinkererMinigame.cs", []), ("PixelWizardMinigame.cs", []), ("PixelEntrepreneurMinigame.cs", []),
+visitors = [("PixelTinkererMinigame.cs", []), ("PixelWizardMinigame.cs", [("intro greeting", "introGreeting"), ("intro aside", "introAside"), ("intro accept button", "introAccept"), ("intro reject button", "introReject")]), ("PixelEntrepreneurMinigame.cs", []),
             ("PixelFarmerMinigame.cs", [("dragon aside", "dragonAsideText")]), ("PixelProspectorVendor.cs", []), ("PixelLumberjackVendor.cs", []),
             ("PixelForagerVendor.cs", []), ("PixelAnglerVendor.cs", []),
             ("PixelEggMinigame.cs", [("farewell", "farewellText"), ("gift farewell", "giftFarewellText")]),

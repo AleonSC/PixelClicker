@@ -25,7 +25,7 @@ public interface IPixelPanelSubject
 {
     /// <summary>Still there (the panel closes when it goes)?</summary>
     bool PanelAlive { get; }
-    /// <summary>Fill the panel's sheet (info.Full is true).</summary>
+    /// <summary>Fill the sheet: info.Full = the right-click panel; false = the hover card (only for subjects that call PixelDeviceCard.HoverSubject).</summary>
     void BuildPanelInfo(PixelDeviceInfo info);
     /// <summary>The panel's Remove button (after its 'Sure?').</summary>
     void PanelRemove();
@@ -52,8 +52,10 @@ public sealed class PixelDeviceInfo
     public string ProgressLabel = "";
     /// <summary>True for the right-click panel (all the stats), false for the hover card (the essentials only).</summary>
     public bool Full;
+    /// <summary>The panel shows no Remove button (and no 'hold to remove' hint): something that can't be removed now (a delivery crate while its job runs).</summary>
+    public bool NoRemove;
 
-    public void Clear() { Title = ""; Lines.Clear(); Progress = -1f; ProgressLabel = ""; Actions.Clear(); Steppers.Clear(); Toggles.Clear(); }
+    public void Clear() { Title = ""; Lines.Clear(); Progress = -1f; ProgressLabel = ""; NoRemove = false; Actions.Clear(); Steppers.Clear(); Toggles.Clear(); }
 
     /// <summary>A tick box row in the right-click panel (e.g. a Sorting Hopper output on / off). Label may be rich text.</summary>
     public struct DeviceToggle { public string Label; public bool On; public System.Action<bool> OnChange; }
