@@ -1633,3 +1633,4 @@
 [2026-10-24 11:04 UTC] Rebuilt the Code Map and Code Health pages for the delivery jobs scripts.
 [2026-10-24 11:03 UTC] Vendors' boxes no longer show the rapport meter or the step in the title: the title is just their name, with a small heart button in the corner (in their step's colour) that shows the rapport card when you hover or click it.
 [2026-10-24 11:03 UTC] Vendors' boxes no longer show the rapport meter or the step in the title: the title is just their name, with a small heart button in the corner (in their step's colour) that shows the rapport card when you hover or click it.
+[2026-10-24 11:14 UTC] Delivery docks now sit inside the usable floor (the circle husks are kept inside, where the floor fades out) instead of out at the floor mesh's far edge.

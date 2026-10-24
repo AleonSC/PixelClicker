@@ -4,7 +4,7 @@
 //   itself; a vendor buying husks in a job is a trade (like selling skill goods), limited by balance: one running job per vendor, at most
 //   jobsPerHour jobs taken per play hour.
 //   - DOCKS: every vendor has his own FIXED spot at the floor's edge (the 'docks' table: an angle round the floor's centre, at rimFraction of the
-//     floor's half width). The player can't move it - the point is to route husks to it, and a line built to Big Tim's dock pays off on every later
+//     usable floor's radius: PixelFloor.TryGetEdgeCircle, the circle husks are kept inside - never closer than edgeClearanceHusks to its edge). The player can't move it - the point is to route husks to it, and a line built to Big Tim's dock pays off on every later
 //     job. A faint DOCK MARKER (a disc + ring in his colour with his initial) shows on the floor once he has POSTED a job (offered one at a visit),
 //     so lines can be planned before accepting.
 //   - THE OFFER (PixelVisitorMinigameJobs.cs): during a visit, beside his wares / Sell view, a 'Delivery job' button opens the offer (RollOffer):
@@ -76,8 +76,11 @@ public class PixelDeliveryJobs : MonoBehaviour
     [Tooltip("Each vendor's dock and the husks he asks for. Missing built-in vendors are added back at start.")]
     [SerializeField] private List<Dock> docks = new List<Dock>();
     [Range(0.3f, 1f)]
-    [Tooltip("How far out the docks are: this fraction of the floor's half width (1 = right at the edge).")]
-    [SerializeField] private float rimFraction = 0.82f;
+    [Tooltip("How far out the docks are: this fraction of the usable floor's radius (the circle husks are kept inside, where the floor fades out; 1 = right at its edge).")]
+    [SerializeField] private float rimFraction = 0.8f;
+    [Min(0f)]
+    [Tooltip("A dock is never closer than this to the usable floor's edge, in husk widths (so the whole crate and its In coupling stay on the floor).")]
+    [SerializeField] private float edgeClearanceHusks = 3f;
     [Range(0f, 1f)]
     [Tooltip("How see-through a dock marker is (0 = invisible).")]
     [SerializeField] private float markerOpacity = 0.28f;
@@ -211,17 +214,21 @@ public class PixelDeliveryJobs : MonoBehaviour
         point = Vector3.zero; facing = Quaternion.identity;
         Dock d = DockOf(vendor);
         if (d == null) return false;
+        // (2026-10-24) The usable floor is the circle husks are kept inside (where the floor fades out: PixelFloor.TryGetEdgeCircle, the same one
+        // PixelViewBounds uses), NOT the floor mesh's bounds - the mesh reaches far past what is shown, so docks there were off the floor.
         PixelFloor floor = PixelFloor.Instance;
         Vector3 centre = Vector3.zero;
-        float half = 12f;
-        if (floor != null && floor.FloorRenderer != null)
+        float radius = 12f;
+        if (floor != null && !floor.TryGetEdgeCircle(out centre, out radius) && floor.FloorRenderer != null)
         {
             Bounds b = floor.FloorRenderer.bounds;
             centre = b.center;
-            half = Mathf.Min(b.extents.x, b.extents.z);
+            radius = Mathf.Min(b.extents.x, b.extents.z);
         }
+        float u = Mathf.Max(0.05f, clicker != null ? clicker.OldPixelWorldSize : 0.5f);
+        float dist = Mathf.Max(0f, Mathf.Min(radius * rimFraction, radius - edgeClearanceHusks * u));   // (the whole crate stays inside the circle)
         Vector3 dir = Quaternion.Euler(0f, d.angle, 0f) * Vector3.forward;
-        point = centre + dir * half * rimFraction;
+        point = centre + dir * dist;
         point.y = PixelConveyor.FloorY(clicker);
         facing = Quaternion.LookRotation(-dir, Vector3.up);   // (its front, with the In coupling, faces the centre)
         return true;
