@@ -120,20 +120,16 @@ public class PixelHints : MonoBehaviour
     [SerializeField] private float introDelay = 0.8f;
 
     [TextArea(2, 5)]
-    [Tooltip("Tip shown with the Log open.")]
-    [SerializeField] private string introLogMessage = "This is your Log. It tracks your achievements and your goals - what to work towards next. (Your click counts per pixel are in Settings > Stats.) Open it any time with the Log button at the bottom left.";
+    [Tooltip("The new game's one intro tip, shown with the Log open: clicking earns pixels, the goals are in the Log. The tier guide (\"Click X more...\") appears once it is closed.")]
+    [SerializeField] private string introLogMessage = "Click the cube to earn pixels: they're your money. Your goals are in the Log (bottom left). The first one brings a visitor.";
 
     [TextArea(2, 5)]
-    [Tooltip("Third new-game intro tip (after the Log and Inventory ones): how you earn currency. Empty = the built-in text. The tier guide (\"Click X more...\") appears once this box is closed.")]
-    [SerializeField] private string introEarnText = "Clicking the pixel is the main way to earn currency. As you play, upgrades, minigames and managing the husks that fall to the floor will open up other ways to earn.";
-
-    [TextArea(2, 5)]
-    [Tooltip("Fourth new-game intro tip, right after the one about clicking: the right click (Block Hold and its stake). Empty = the built-in text.")]
+    [Tooltip("Second new-game intro tip, right after the Log one (only once Block Hold is unlocked, e.g. on a replay): the right click (Block Hold and its stake). Empty = the built-in text.")]
     [SerializeField] private string introRightClickText = "Try the right mouse button too: HOLD it on the block on the cube. It's each block's second action. On the pure pixels (black, gray, white, red, green and blue) it puts a stake on the block - the longer you hold (watch the meter by your cursor), the more it is worth when it comes round again, but the stake can also go bad and pay nothing. Skill blocks you meet later do their own thing when held.";
 
     [TextArea(2, 5)]
-    [Tooltip("Tip shown with the Inventory open.")]
-    [SerializeField] private string introInventoryText = "This is your Inventory. Currency shows how many of each pixel you hold - you spend them in the shop. Consumables holds your potions and devices. Open it any time with the Inventory button at the top left.";
+    [Tooltip("Shown once right after Cubie's first visit (he hands over the Recycler), with the Inventory open on its Consumables tab (ShowInventoryIntro).")]
+    [SerializeField] private string introInventoryText = "Your Inventory: devices like this Recycler live in Consumables. Right-click one to place it.";
 
     [Tooltip("Add the built-in tips that are missing from the list below.")]
     [SerializeField] private bool addDefaultHints = true;
@@ -382,7 +378,6 @@ public class PixelHints : MonoBehaviour
         }
         f.Apply("Intro tips", "log", ref introLogMessage);
         f.Apply("Intro tips", "inventory", ref introInventoryText);
-        f.Apply("Intro tips", "earn", ref introEarnText);
         f.Apply("Intro tips", "right click", ref introRightClickText);
         f.Flush();
     }
@@ -480,7 +475,7 @@ public class PixelHints : MonoBehaviour
         if (instance != null) instance.queue.Clear();
     }
 
-    /// <summary>Settings > Replay tutorial: forgets the shown tips and plays the intro tips (Log, Inventory) again.</summary>
+    /// <summary>Settings > Replay tutorial: forgets the shown tips and plays the intro tip (Log) again.</summary>
     public static void ReplayTutorial()
     {
         ResetSeen();
@@ -501,6 +496,7 @@ public class PixelHints : MonoBehaviour
                 foreach (Hint h in instance.hints)
                     if (h != null && !string.IsNullOrEmpty(h.id)) PixelPrefs.DeleteKey(PrefPrefix + h.id);
             PixelPrefs.DeleteKey(PrefPrefix + "intro_log");
+            PixelPrefs.DeleteKey(PrefPrefix + "intro_inventory");
             PixelPrefs.DeleteKey(PrefPrefix + "shop_tutorial");
             PixelPrefs.DeleteKey(PrefPrefix + "BlackHole");
             PixelPrefs.Save();
@@ -883,7 +879,7 @@ public class PixelHints : MonoBehaviour
     private bool introRunning;
     private float introIdle;
 
-    /// <summary>True from the start of a new game until the intro tips (Log, Inventory) have been closed: the "Click 100 more..." guide stays hidden meanwhile.</summary>
+    /// <summary>True from the start of a new game until the intro tip (Log) has been closed: the "Click 100 more..." guide stays hidden meanwhile.</summary>
     /// <summary>Are tips waiting to show (or the new-game intro still running)? Vendors don't walk in over them.</summary>
     public static bool TipsPending => instance != null && (instance.queue.Count > 0 || IntroHoldsGuide);
 
@@ -950,39 +946,40 @@ public class PixelHints : MonoBehaviour
         introRunning = true;
         introIdle = 0f;
         PixelLog.SetLogOpen(true);
+        // 2026-10-24: ONE box before the first click (it used to be Log, Inventory and 'how to earn'). The Inventory tip now comes after
+        // Cubie's first visit, when there is something in it (ShowInventoryIntro).
         PixelNotice.Show(introLogMessage, 0f, compact: true, beside: PixelLog.WindowRect, besideBottom: true, onClosed: () =>
         {
             PixelLog.SetLogOpen(false);
-            int pinnedBefore = PixelUI.CompactMode;   // a game reset can leave the pinned (compact) view on: the intro always shows the full window
-            PixelUI.CompactMode = 0;
-            PixelUI.SetInventoryOpen(true);
-            PixelNotice.Show(introInventoryText, 0f, compact: true, beside: PixelUI.WindowRect, onClosed: () =>
+            System.Action finish = () =>
             {
-                PixelUI.SetInventoryOpen(false, true);
-                PixelUI.CompactMode = pinnedBefore;
-                // Third tip: how currency is earned. The tier guide ("Click X more...") shows once it is closed.
-                string earn = string.IsNullOrEmpty(introEarnText)
-                    ? "Clicking the pixel is the main way to earn currency. As you play, upgrades, minigames and managing the husks that fall to the floor will open up other ways to earn."
-                    : introEarnText;
-                PixelNotice.Show(earn, 0f, compact: true, onClosed: () =>
-                {
-                    System.Action finish = () =>
-                    {
-                        introRunning = false; // the tier guide may show now (and the cube can be clicked: PixelClicker.ExternalClickBlock)
-                        MarkSeen("intro_log"); // only counts once the player has been through all the tips
-                        if (replay) ShowEventLogTip(); // the tutorial's last step: what the event log is
-                    };
-                    PixelBlockHold hold = PixelFind.Cached<PixelBlockHold>();
-                    if (hold == null || !hold.Active) { finish(); return; }   // Block Hold comes from the Standard skill tree now: no right-click tip until it is unlocked
-                    // Fourth tip, right after the one about clicking: the right click (Block Hold + stake).
-                    string right = string.IsNullOrEmpty(introRightClickText)
-                        ? "Try the right mouse button too: HOLD it on the block on the cube. It's each block's second action. On the pure pixels (black, gray, white, red, green and blue) it puts a stake on the block - the longer you hold (watch the meter by your cursor), the more it is worth when it comes round again, but the stake can also go bad and pay nothing. Skill blocks you meet later do their own thing when held."
-                        : introRightClickText;
-                    MarkSeen("stake_intro");   // (the later 25-click reminder is not needed now)
-                    PixelNotice.Show(right, 0f, compact: true, onClosed: () => finish());
-                });
-            });
+                introRunning = false; // the tier guide may show now (and the cube can be clicked: PixelClicker.ExternalClickBlock)
+                MarkSeen("intro_log"); // only counts once the player has been through all the tips
+                if (replay) ShowEventLogTip(); // the tutorial's last step: what the event log is
+            };
+            PixelBlockHold hold = PixelFind.Cached<PixelBlockHold>();
+            if (hold == null || !hold.Active) { finish(); return; }   // Block Hold comes from the Standard skill tree now: no right-click tip until it is unlocked
+            // Second tip (only once Block Hold is unlocked): the right click (Block Hold + stake).
+            string right = string.IsNullOrEmpty(introRightClickText)
+                ? "Try the right mouse button too: HOLD it on the block on the cube. It's each block's second action. On the pure pixels (black, gray, white, red, green and blue) it puts a stake on the block - the longer you hold (watch the meter by your cursor), the more it is worth when it comes round again, but the stake can also go bad and pay nothing. Skill blocks you meet later do their own thing when held."
+                : introRightClickText;
+            MarkSeen("stake_intro");   // (the later 25-click reminder is not needed now)
+            PixelNotice.Show(right, 0f, compact: true, onClosed: () => finish());
         });
+    }
+
+    /// <summary>
+    /// The Inventory tip, once, right after Cubie's first visit (he has just handed over the Recycler): opens the Inventory on its Consumables
+    /// tab and explains that devices live there and are placed with a right click. The Inventory stays open so the Recycler can be placed.
+    /// </summary>
+    public static void ShowInventoryIntro()
+    {
+        if (instance == null || !instance.hintsEnabled || !TipsEnabled || Seen("intro_inventory") || string.IsNullOrEmpty(instance.introInventoryText)) return;
+        MarkSeen("intro_inventory");
+        PixelUI.CompactMode = 0;   // (the full window, so the Consumables tab shows)
+        PixelUI.SetInventoryOpen(true);
+        PixelUI.ShowInventoryTab(1);
+        PixelNotice.Show(instance.introInventoryText, 0f, compact: true, beside: PixelUI.WindowRect);
     }
 
     /// <summary>Shows the event log (bottom left) and the small tip beside it explaining it.</summary>

@@ -4,8 +4,8 @@
 //   done, DoneKey, so the tutorials waiting for it carry on; Cubie's shop hold no longer starts it). With autoStart on (old behaviour): the first time the Shop button is available (PixelShop.ShopAvailable) and the screen is calm
 //   (title screen over, PixelHints.IntroHoldsGuide false, no other tip, no takeover minigame, not paused; startDelay 2 s) a series of
 //   small "Got it" boxes (PixelNotice.Show(small: true, beside: shop.PanelRect), 440 wide, just right of the shop window) walks
-//   through the shop, each step opening its tab via PixelShop.TutorialOpen(tab, subTab): the currency list + overview, Pixels,
-//   Upgrades > Features, Upgrades > Value, Operation, Consumables, Minigames, closing hint. Before the first box the screen fades
+//   through the shop, each step opening its tab via PixelShop.TutorialOpen(tab, subTab): 5 steps since 2026-10-24 - the currency list +
+//   greyed-out note, Pixels, Upgrades (Features / Value / Operation in one box), Consumables, Minigames. Before the first box the screen fades
 //   darker and the game pauses (BeginRun: a click-blocking black overlay on canvas 600, below the tip boxes, dimAmount 0 = 0.4 /
 //   dimSeconds 0 = 0.7; time is restored and the overlay fades out at the end) and PixelShopTutorial.Active makes the Shop button (and
 //   its key) ignore clicks until the tutorial is over. Steps are an Inspector list (steps, empty = the built-in ones, enableTutorial);
@@ -52,6 +52,7 @@ public class PixelShopTutorial : MonoBehaviour
 
     [Tooltip("The steps, in order. Each shows its text in a small box beside the shop and opens its tab. Empty = the built-in steps.")]
     [SerializeField] private List<Step> steps = new List<Step>();
+    [SerializeField, HideInInspector] private int stepsVersion;   // 1 = the 5-step tutorial (2026-10-24) replaced saved step lists once
 
     [Header("Dim and pause")]
     [Range(0f, 1f)]
@@ -86,7 +87,7 @@ public class PixelShopTutorial : MonoBehaviour
             BeginRun();
         });
         instance = this;
-        if (steps == null || steps.Count == 0) steps = DefaultSteps();
+        if (steps == null || steps.Count == 0 || stepsVersion < 1) { steps = DefaultSteps(); stepsVersion = 1; }   // (2026-10-24: 8 steps cut to 5)
         PixelDialogue.Steps("Tutorial: Shop", steps, st => st.text, (st, t) => st.text = t);   // (the user's texts: Assets/Resources/Dialogue.txt)
         PixelDialogue.File.Flush();
         shop = GetComponent<PixelShop>();
@@ -100,14 +101,11 @@ public class PixelShopTutorial : MonoBehaviour
     {
         return new List<Step>
         {
-            new Step { tab = PixelShop.ShopTab.Pixels, text = "Welcome to the Shop! The list on the left shows every pixel you hold - prices are paid in those pixels. The tabs along the top split up what is for sale." },
-            new Step { tab = PixelShop.ShopTab.Pixels, text = "Pixels: packs that unlock new pixel types. Every new type is its own currency, and some need goals from the minigames before you can buy them." },
-            new Step { tab = PixelShop.ShopTab.Upgrades, subTab = 0, text = "Upgrades - Features: one-time unlocks such as the Auto Clicker, Pixel Grabbing, Time Stop and the Pixel Bank, plus upgrades for them." },
-            new Step { tab = PixelShop.ShopTab.Upgrades, subTab = 1, text = "Upgrades - Value: makes a pixel type pay more, paid in that same pixel. Each level costs a little more than the last. Shift-click buys as many levels as you can afford." },
-            new Step { tab = PixelShop.ShopTab.Upgrades, subTab = 2, text = "Upgrades - Operation: improves your consumables. Each one has a spinning picture and an orange arrow that opens its upgrades: longer lasting, bigger reach, more uses, more storage." },
-            new Step { tab = PixelShop.ShopTab.Consumables, text = "Consumables: things with a one-time use - potions, devices, seeds and supplies. Buy them here, then use them from the Consumables tab of your Inventory." },
-            new Step { tab = PixelShop.ShopTab.Minigames, text = "Minigames: events that start on their own once you buy them, from ghosts and meteors to Snake and Breakout. They pay rewards and unlock rare pixels. Every minigame can be switched on or off in the Toggles window, so you can customize your gameplay experience." },
-            new Step { tab = PixelShop.ShopTab.Pixels, text = "Anything greyed out shows what it still needs. Open the Shop again any time with the Shop button at the top right." },
+            new Step { tab = PixelShop.ShopTab.Pixels, text = "Welcome to the Shop! Prices are paid in the pixels listed on the left. Anything greyed out shows what it still needs." },
+            new Step { tab = PixelShop.ShopTab.Pixels, text = "Pixels: packs that unlock new pixel types. Every new type is its own currency, and some need goals from the minigames first." },
+            new Step { tab = PixelShop.ShopTab.Upgrades, subTab = 0, text = "Upgrades: Features are one-time unlocks like the Auto Clicker and Time Stop. Value makes a pixel type pay more (Shift-click buys every level you can afford). Operation improves your consumables." },
+            new Step { tab = PixelShop.ShopTab.Consumables, text = "Consumables: potions, devices, seeds and supplies. Buy them here, then use them from your Inventory." },
+            new Step { tab = PixelShop.ShopTab.Minigames, text = "Minigames: events that start on their own once bought. They pay rewards and unlock rare pixels. Switch any of them off in the Toggles window." },
         };
     }
 
