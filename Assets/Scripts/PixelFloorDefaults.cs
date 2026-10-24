@@ -14,15 +14,18 @@ public partial class PixelFloor
     private void EnsureDefaultStyles()
     {
         // Saved lists get the built-in fixes once each (before the missing defaults are added, so nothing is duplicated), then the missing defaults.
+        UpgradeSavedStylesTo3();
+        UpgradeSavedStylesTo4();
         UpgradeSavedStylesTo6();
+        UpgradeSavedStylesTo10();
         UpgradeSavedStylesTo16();
 
         foreach (FloorStyle def in DefaultStyles())
             if (!styles.Exists(s => s.name == def.name)) styles.Add(def);
     }
 
-    /// <summary>Part of EnsureDefaultStyles: the built-in style fixes 1 to 6 (each runs once, in order).</summary>
-    private void UpgradeSavedStylesTo6()
+    /// <summary>Part of EnsureDefaultStyles: defaultsVersion steps 1, 2, 3 (in this order): saved sizes, Pac-Man mazes, fit to view.</summary>
+    private void UpgradeSavedStylesTo3()
     {
         // Sizes changed after these styles first shipped (they looked too zoomed in): bring saved copies up to date once.
         if (defaultsVersion < 1)
@@ -56,7 +59,11 @@ public partial class PixelFloor
                     st.fitToView = true;
             defaultsVersion = 3;
         }
+    }
 
+    /// <summary>Part of EnsureDefaultStyles: defaultsVersion step 4: renamed, removed and regrouped styles.</summary>
+    private void UpgradeSavedStylesTo4()
+    {
         // Renamed, removed and regrouped styles: bring saved lists up to date once (before the missing defaults are added, so nothing is duplicated).
         if (defaultsVersion < 4)
         {
@@ -84,7 +91,11 @@ public partial class PixelFloor
                     if (def.name.StartsWith("Neon ") && !styles.Exists(x => x != null && x.name == def.name)) styles.Insert(++neonAt, def);
             defaultsVersion = 4;
         }
+    }
 
+    /// <summary>Part of EnsureDefaultStyles: defaultsVersion steps 5, 6 (in this order): more renames / removals, the battle crater, Circuit Flow.</summary>
+    private void UpgradeSavedStylesTo6()
+    {
         // Renames, removals and the reworked battle crater.
         if (defaultsVersion < 5)
         {
@@ -113,8 +124,8 @@ public partial class PixelFloor
         }
     }
 
-    /// <summary>Part of EnsureDefaultStyles: the built-in style fixes 7 to 16 (each runs once, in order).</summary>
-    private void UpgradeSavedStylesTo16()
+    /// <summary>Part of EnsureDefaultStyles: defaultsVersion steps 7, 8, 9, 10 (in this order): Circuit Flow, layout numbers, reworked and removed styles.</summary>
+    private void UpgradeSavedStylesTo10()
     {
         // Circuit Flow with its sparks was heavy: a smaller texture redrawn a little less often.
         if (defaultsVersion < 7)
@@ -169,7 +180,11 @@ public partial class PixelFloor
             }
             defaultsVersion = 10;
         }
+    }
 
+    /// <summary>Part of EnsureDefaultStyles: defaultsVersion steps 11, 12, 13, 14, 15, 16 (in this order): ground-shader styles, Data Streams, Moon / Mars, laser floors, Coral Reef.</summary>
+    private void UpgradeSavedStylesTo16()
+    {
         // Lava, Marble, Ice and Deep Space are drawn by the world-space ground shader in the game (their menu pictures stay painted).
         if (defaultsVersion < 11)
         {

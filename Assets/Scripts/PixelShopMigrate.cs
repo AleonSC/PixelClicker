@@ -73,27 +73,7 @@ public partial class PixelShop
             for (int i = packs.Length - 1; i >= 0; i--)
             {
                 ShopPack pack = packs[i];
-                bool pong = pack != null && (string.Equals(pack.displayName, "Pong", StringComparison.OrdinalIgnoreCase)
-                                             || string.Equals(pack.unlocksMinigame, "pong", StringComparison.OrdinalIgnoreCase)
-                                             // The visitors (Wizard, Tinkerer, Pixel Entrepreneur) are no longer bought: Cubie's guide starts them.
-                                             || string.Equals(pack.unlocksMinigame, "wizard", StringComparison.OrdinalIgnoreCase)
-                                             || string.Equals(pack.unlocksMinigame, "tinkerer", StringComparison.OrdinalIgnoreCase)
-                                             || string.Equals(pack.unlocksMinigame, "entrepreneur", StringComparison.OrdinalIgnoreCase)
-                                             // Seed and Water are part of the Farmer's Pack (Farming skill) now, no longer sold on their own.
-                                             || (pack.rewardTiers != null && pack.rewardTiers.Length == 1
-                                                 && (pack.rewardTiers[0].type == PixelClicker.PixelType.Seed || pack.rewardTiers[0].type == PixelClicker.PixelType.Water))
-                                             // Pixel Grabbing is unlocked from the start now (it keeps its switch in the Toggles window).
-                                             || pack.unlocksGrabbing
-                                             // Old Pixel Capacity is no longer sold: it will come back as a Standard skill reward (see the to-do list).
-                                             || pack.upgradeEffect == UpgradeEffect.OldPixelCap
-                                             // Crafting comes with the Glass pixel now (a standalone Crafting pack has no reward pixels).
-                                             || (pack.unlocksCrafting && (pack.rewardTiers == null || pack.rewardTiers.Length == 0))
-                                             // Stone (the old Rock block) is Mining's filler now: it comes with the Prospector's Pack, no longer sold on its own.
-                                             || (pack.rewardTiers != null && pack.rewardTiers.Length == 1 && pack.rewardTiers[0].type == PixelClicker.PixelType.Rock)
-                                             // Electric is part of the Electrician's Pack now, no longer sold on its own.
-                                             || (pack.rewardTiers != null && pack.rewardTiers.Length == 1 && pack.rewardTiers[0].type == PixelClicker.PixelType.Electric
-                                                 && string.IsNullOrEmpty(pack.skillId)));
-                if (!pong) continue;
+                if (!IsRetiredPack(pack)) continue;
                 System.Collections.Generic.List<ShopPack> kept = new System.Collections.Generic.List<ShopPack>(packs);
                 kept.RemoveAt(i);
                 packs = kept.ToArray();
@@ -116,6 +96,31 @@ public partial class PixelShop
             }
         }
         return renamed;
+    }
+
+    /// <summary>Part of MigrateRenamedAndRetiredPacks: true for a saved pack that is no longer sold and leaves the list (Pong, the visitors, single Seed / Water / Rock / Electric packs, Grabbing, Old Pixel Capacity, a standalone Crafting pack).</summary>
+    private static bool IsRetiredPack(ShopPack pack)
+    {
+        return pack != null && (string.Equals(pack.displayName, "Pong", StringComparison.OrdinalIgnoreCase)
+                                || string.Equals(pack.unlocksMinigame, "pong", StringComparison.OrdinalIgnoreCase)
+                                // The visitors (Wizard, Tinkerer, Pixel Entrepreneur) are no longer bought: Cubie's guide starts them.
+                                || string.Equals(pack.unlocksMinigame, "wizard", StringComparison.OrdinalIgnoreCase)
+                                || string.Equals(pack.unlocksMinigame, "tinkerer", StringComparison.OrdinalIgnoreCase)
+                                || string.Equals(pack.unlocksMinigame, "entrepreneur", StringComparison.OrdinalIgnoreCase)
+                                // Seed and Water are part of the Farmer's Pack (Farming skill) now, no longer sold on their own.
+                                || (pack.rewardTiers != null && pack.rewardTiers.Length == 1
+                                    && (pack.rewardTiers[0].type == PixelClicker.PixelType.Seed || pack.rewardTiers[0].type == PixelClicker.PixelType.Water))
+                                // Pixel Grabbing is unlocked from the start now (it keeps its switch in the Toggles window).
+                                || pack.unlocksGrabbing
+                                // Old Pixel Capacity is no longer sold: it will come back as a Standard skill reward (see the to-do list).
+                                || pack.upgradeEffect == UpgradeEffect.OldPixelCap
+                                // Crafting comes with the Glass pixel now (a standalone Crafting pack has no reward pixels).
+                                || (pack.unlocksCrafting && (pack.rewardTiers == null || pack.rewardTiers.Length == 0))
+                                // Stone (the old Rock block) is Mining's filler now: it comes with the Prospector's Pack, no longer sold on its own.
+                                || (pack.rewardTiers != null && pack.rewardTiers.Length == 1 && pack.rewardTiers[0].type == PixelClicker.PixelType.Rock)
+                                // Electric is part of the Electrician's Pack now, no longer sold on its own.
+                                || (pack.rewardTiers != null && pack.rewardTiers.Length == 1 && pack.rewardTiers[0].type == PixelClicker.PixelType.Electric
+                                    && string.IsNullOrEmpty(pack.skillId)));
     }
 
     /// <summary>Step 2 of MigrateOldPackData: the Electrician's Pack's pixels / price / requirement (and the Mirror needing it) and the Glass pack unlocking Crafting. Returns true if anything changed.</summary>
@@ -175,6 +180,15 @@ public partial class PixelShop
     private bool MigrateOldPackNumbers()
     {
         bool renamed = false;
+        renamed |= MigratePackDataTo3();
+        renamed |= MigratePackDataTo5();
+        return renamed;
+    }
+
+    /// <summary>Part of MigrateOldPackNumbers: packDataVersion steps 1, 2, 3 (in this order): Obsidian's pay, Singularity's spawn weight and the Electric payout. Returns true if anything changed.</summary>
+    private bool MigratePackDataTo3()
+    {
+        bool renamed = false;
         // Obsidian now pays +7 per 5 clicks (it was +5); only changes the old default, not a value you typed.
         if (packDataVersion < 1)
         {
@@ -221,7 +235,13 @@ public partial class PixelShop
             packDataVersion = 3;
             renamed = true;
         }
+        return renamed;
+    }
 
+    /// <summary>Part of MigrateOldPackNumbers: packDataVersion steps 4, 5 (in this order): the Electric pixel's price, requirement and place in the list. Returns true if anything changed.</summary>
+    private bool MigratePackDataTo5()
+    {
+        bool renamed = false;
         // The Electric pixel is a proper pack now (it was a 10 White test pack): real price, needs the Luminescent pack, rarer.
         // Only the old test values are replaced, not anything you typed.
         if (packDataVersion < 4)

@@ -81,6 +81,15 @@ public partial class PixelShop
     private bool UpgradeSeedAndPackOrder()
     {
         bool changed = false;
+        changed |= UpgradePackDataTo8();
+        changed |= UpgradePackDataTo10();
+        return changed;
+    }
+
+    /// <summary>Part of UpgradeSeedAndPackOrder: packDataVersion steps 6, 7, 8 (in this order): the Mirror / Seed list order and the first Seed shell. Returns true if anything changed.</summary>
+    private bool UpgradePackDataTo8()
+    {
+        bool changed = false;
         // The Mirror pixel is listed after Electric and before Vacuum: move it there once in lists that got it appended at the end.
         if (packDataVersion < 6)
         {
@@ -117,6 +126,13 @@ public partial class PixelShop
                 changed = true;
             }
         }
+        return changed;
+    }
+
+    /// <summary>Part of UpgradeSeedAndPackOrder: packDataVersion steps 9, 10 (in this order): the 8-click Seed shell and the Water list order. Returns true if anything changed.</summary>
+    private bool UpgradePackDataTo10()
+    {
+        bool changed = false;
         // The Seed shell now takes 8 clicks and pays 15 (it was 3 and 6): only the previous defaults are changed.
         if (packDataVersion < 9 && packs != null)
         {
@@ -148,6 +164,15 @@ public partial class PixelShop
 
     /// <summary>Step 3 of EnsureDefaultPacks (pack data 11-15): spawn weights, the Meteor rock, Rock / hazard blocks and the Farmer's Pack blocks. Returns true if anything changed.</summary>
     private bool UpgradeBlockStats()
+    {
+        bool changed = false;
+        changed |= UpgradePackDataTo12();
+        changed |= UpgradePackDataTo15();
+        return changed;
+    }
+
+    /// <summary>Part of UpgradeBlockStats: packDataVersion steps 11, 12 (in this order): Vacuum / Electric spawn weights and the Meteor rock. Returns true if anything changed.</summary>
+    private bool UpgradePackDataTo12()
     {
         bool changed = false;
         // Vacuum (0.2 -> 0.28) and Electric (0.15 -> 0.2) pixels are slightly more common; only the old defaults are changed, not a value you typed.
@@ -197,6 +222,13 @@ public partial class PixelShop
             packDataVersion = Mathf.Max(packDataVersion, 12);
             changed = true;
         }
+        return changed;
+    }
+
+    /// <summary>Part of UpgradeBlockStats: packDataVersion steps 13, 14, 15 (in this order): Rock, the hazard blocks and the Farmer's Pack blocks. Returns true if anything changed.</summary>
+    private bool UpgradePackDataTo15()
+    {
+        bool changed = false;
         // Stone (the old Rock block) is Mining's filler: one click, tiny pay, and part of the Prospector's Pack.
         if (packDataVersion < 13)
         {
@@ -271,6 +303,15 @@ public partial class PixelShop
     private bool UpgradeSkillPacks()
     {
         bool changed = false;
+        changed |= UpgradePackDataTo18();
+        changed |= UpgradePackDataTo19();
+        return changed;
+    }
+
+    /// <summary>Part of UpgradeSkillPacks: packDataVersion steps 16, 17, 18 (in this order): Combo Meter order, the Lumberjack's and Forager's Packs. Returns true if anything changed.</summary>
+    private bool UpgradePackDataTo18()
+    {
+        bool changed = false;
         if (packDataVersion < 16)
         {
             // The Combo Meter is listed right above the Auto Clicker (the intro goals lead from one to the other).
@@ -319,7 +360,13 @@ public partial class PixelShop
             packDataVersion = Mathf.Max(packDataVersion, 18);
             changed = true;
         }
+        return changed;
+    }
 
+    /// <summary>Part of UpgradeSkillPacks: packDataVersion step 19: the Angler's Pack and the Prospector's ores. Returns true if anything changed.</summary>
+    private bool UpgradePackDataTo19()
+    {
+        bool changed = false;
         if (packDataVersion < 19)
         {
             // New Angler's Pack (Fishing skill), and the Prospector's Pack changes its ores: Lead / Zinc / Nickel are out, Silver / Gold / Obsidian / Bedrock are in.
@@ -381,6 +428,16 @@ public partial class PixelShop
     private bool UpgradeMiningAndFishingBlocks()
     {
         bool changed = false;
+        changed |= UpgradePackDataTo21();
+        changed |= UpgradePackDataTo23();
+        changed |= UpgradePackDataTo25();
+        return changed;
+    }
+
+    /// <summary>Part of UpgradeMiningAndFishingBlocks: packDataVersion steps 20, 21 (in this order): Bedrock's clicks, Water / Fish in the Angler's Pack. Returns true if anything changed.</summary>
+    private bool UpgradePackDataTo21()
+    {
+        bool changed = false;
         if (packDataVersion < 20)
         {
             // Bedrock needs a random 20-30 clicks now.
@@ -431,7 +488,13 @@ public partial class PixelShop
             packDataVersion = Mathf.Max(packDataVersion, 21);
             changed = true;
         }
+        return changed;
+    }
 
+    /// <summary>Part of UpgradeMiningAndFishingBlocks: packDataVersion steps 22, 23 (in this order): Jellyfish, Bait, Bottle and Whale. Returns true if anything changed.</summary>
+    private bool UpgradePackDataTo23()
+    {
+        bool changed = false;
         if (packDataVersion < 22)
         {
             // Fishing: the Jellyfish takes 9 clicks and the Bait block joins the pack.
@@ -484,7 +547,13 @@ public partial class PixelShop
             packDataVersion = Mathf.Max(packDataVersion, 23);
             changed = true;
         }
+        return changed;
+    }
 
+    /// <summary>Part of UpgradeMiningAndFishingBlocks: packDataVersion steps 24, 25 (in this order): Driftwood back and the Whale's clicks. Returns true if anything changed.</summary>
+    private bool UpgradePackDataTo25()
+    {
+        bool changed = false;
         if (packDataVersion < 24)
         {
             // Fishing's fixed spawn table brings Driftwood back (5% of the pixels) as a second filler.
@@ -520,6 +589,16 @@ public partial class PixelShop
 
     /// <summary>Step 6 of EnsureDefaultPacks (pack data 26-33): Foraging / Woodcutting blocks, the Multi-Click cap and the testing packs leaving the shop. Returns true if anything changed.</summary>
     private bool UpgradeGatheringBlocks()
+    {
+        bool changed = false;
+        changed |= UpgradePackDataTo28();
+        changed |= UpgradePackDataTo30();
+        changed |= UpgradePackDataTo33();
+        return changed;
+    }
+
+    /// <summary>Part of UpgradeGatheringBlocks: packDataVersion steps 26, 27, 28 (in this order): Mold, Whetstone and Acorn join their packs. Returns true if anything changed.</summary>
+    private bool UpgradePackDataTo28()
     {
         bool changed = false;
         if (packDataVersion < 26)
@@ -569,7 +648,13 @@ public partial class PixelShop
             packDataVersion = Mathf.Max(packDataVersion, 28);
             changed = true;
         }
+        return changed;
+    }
 
+    /// <summary>Part of UpgradeGatheringBlocks: packDataVersion steps 29, 30 (in this order): the Multi-Click cap and the Pesticide. Returns true if anything changed.</summary>
+    private bool UpgradePackDataTo30()
+    {
+        bool changed = false;
         if (packDataVersion < 29)
         {
             // The auto clicker's Multi-Click tops out at 3x for now: cut the levels above it (a saved level is clamped when the save loads).
@@ -600,7 +685,13 @@ public partial class PixelShop
             packDataVersion = Mathf.Max(packDataVersion, 30);
             changed = true;
         }
+        return changed;
+    }
 
+    /// <summary>Part of UpgradeGatheringBlocks: packDataVersion steps 31, 32, 33 (in this order): Pinecone / Moss, the Termite Hive and the testing packs leaving the shop. Returns true if anything changed.</summary>
+    private bool UpgradePackDataTo33()
+    {
+        bool changed = false;
         if (packDataVersion < 31)
         {
             // Woodcutting: Pinecone and Moss (the other two fillers) join the Lumberjack's Pack, and the Hornet Nest became the Termite Hive.
@@ -646,6 +737,16 @@ public partial class PixelShop
 
     /// <summary>Step 7 of EnsureDefaultPacks (pack data 34-40, applied in this order: 35, 40, 39, 38, 37, 36, 34): prices, names, descriptions and colours. Returns true if anything changed.</summary>
     private bool UpgradePackPricesAndNames()
+    {
+        bool changed = false;
+        changed |= UpgradeSoldSkillPacksAndCharcoal();
+        changed |= UpgradeRgbAndLumberjackTexts();
+        changed |= UpgradeColoursAndDevPacks();
+        return changed;
+    }
+
+    /// <summary>Part of UpgradePackPricesAndNames: packDataVersion steps 35, 42, 41 (in this order): skill packs sold for real, the Firemaker's Pack and Charcoal. Returns true if anything changed.</summary>
+    private bool UpgradeSoldSkillPacksAndCharcoal()
     {
         bool changed = false;
         if (packDataVersion < 35)
@@ -711,7 +812,13 @@ public partial class PixelShop
             packDataVersion = Mathf.Max(packDataVersion, 41);
             changed = true;
         }
+        return changed;
+    }
 
+    /// <summary>Part of UpgradePackPricesAndNames: packDataVersion steps 40, 39, 38 (in this order): the RGB unlock and Auto Clicker price, Skills-window wording, the Lumberjack's Pack name and price. Returns true if anything changed.</summary>
+    private bool UpgradeRgbAndLumberjackTexts()
+    {
+        bool changed = false;
         if (packDataVersion < 40)
         {
             // RGB is an unlock now (2026-10-16): Cubie's second visit gives the RGB Pack (hidden from the shop), the shop opens with it, and the Auto
@@ -754,7 +861,13 @@ public partial class PixelShop
             packDataVersion = Mathf.Max(packDataVersion, 38);
             changed = true;
         }
+        return changed;
+    }
 
+    /// <summary>Part of UpgradePackPricesAndNames: packDataVersion steps 37, 36, 34 (in this order): Mold / Truffle colours, the Lumberjack's Pack price and the Prospector's Pack out of the shop. Returns true if anything changed.</summary>
+    private bool UpgradeColoursAndDevPacks()
+    {
+        bool changed = false;
         if (packDataVersion < 37)
         {
             // Mold and Truffle got clearly different colours (their Inventory swatches too): Mold pale blue-green, Truffle near-black.

@@ -5,7 +5,7 @@
 //   scene saved before a look existed still gets it. They run in order on every Play until the scene is saved with the new number (the
 //   scene's data is old, so in practice they run each time). New look changes add the next step at the END with the next number.
 //   The steps are grouped into RunLookFixupsTo<N>() methods (called in order from RunLookFixups) only to keep each method short: a new step goes at
-//   the end of the last group (start a new group, called last, when that one passes ~130 lines).
+//   the end of the last group (start a new group, called last, when that one passes ~130 lines or ~35 branches: about 5 steps).
 //   Split out of Awake in PixelClicker.cs (no behaviour change).
 // ---------------------------------------------------
 using System;
@@ -25,16 +25,22 @@ public partial class PixelClicker
     private void RunLookFixups()
     {
         // (the steps, in version order, split into groups so each method stays short; every step still checks looksVersion itself)
+        RunLookFixupsTo8();
         RunLookFixupsTo14();
+        RunLookFixupsTo18();
         RunLookFixupsTo23();
+        RunLookFixupsTo28();
         RunLookFixupsTo34();
+        RunLookFixupsTo40();
         RunLookFixupsTo45();
+        RunLookFixupsTo50();
         RunLookFixupsTo55();
+        RunLookFixupsTo60();
         RunLookFixupsTo65();
     }
 
-    /// <summary>Look fix-up steps 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 (in this order; part of RunLookFixups).</summary>
-    private void RunLookFixupsTo14()
+    /// <summary>Look fix-up steps 3, 4, 5, 6, 7, 8 (in this order; part of RunLookFixups).</summary>
+    private void RunLookFixupsTo8()
     {
         if (looksVersion < 3)
         {
@@ -105,6 +111,11 @@ public partial class PixelClicker
             if (singularityLook != null && !singularityLook.gravityWell) singularityLook.gravityWell = true;
             looksVersion = 8;
         }
+    }
+
+    /// <summary>Look fix-up steps 9, 10, 11, 12, 13, 14 (in this order; part of RunLookFixups).</summary>
+    private void RunLookFixupsTo14()
+    {
         if (looksVersion < 9)
         {
             // The Electric look (a cube of crackling lightning) is new: add it to lists saved before it existed.
@@ -177,8 +188,8 @@ public partial class PixelClicker
         }
     }
 
-    /// <summary>Look fix-up steps 15, 16, 17, 18, 19, 20, 21, 22, 23 (in this order; part of RunLookFixups).</summary>
-    private void RunLookFixupsTo23()
+    /// <summary>Look fix-up steps 15, 16, 17, 18 (in this order; part of RunLookFixups).</summary>
+    private void RunLookFixupsTo18()
     {
         if (looksVersion < 15)
         {
@@ -235,6 +246,11 @@ public partial class PixelClicker
             }
             looksVersion = 18;
         }
+    }
+
+    /// <summary>Look fix-up steps 19, 20, 21, 22, 23 (in this order; part of RunLookFixups).</summary>
+    private void RunLookFixupsTo23()
+    {
         if (looksVersion < 19)
         {
             // The basic pixels' rims became a flat solid bevel (the glowing neon halo looked like a blurry frame): switch it on where the rim is still the shaded default.
@@ -320,8 +336,8 @@ public partial class PixelClicker
         }
     }
 
-    /// <summary>Look fix-up steps 24, 25, 26, 27, 28, 29, 31, 30, 34 (in this order; part of RunLookFixups).</summary>
-    private void RunLookFixupsTo34()
+    /// <summary>Look fix-up steps 24, 25, 26, 27, 28 (in this order; part of RunLookFixups).</summary>
+    private void RunLookFixupsTo28()
     {
         if (looksVersion < 24)
         {
@@ -392,7 +408,11 @@ public partial class PixelClicker
             looks = list28.ToArray();
             looksVersion = 28;
         }
+    }
 
+    /// <summary>Look fix-up steps 29, 31, 30, 34 (in this order; part of RunLookFixups).</summary>
+    private void RunLookFixupsTo34()
+    {
         if (looksVersion < 29)
         {
             // The farming looks got bevelled rims and ambient particles: new ones are replaced by the fancier defaults, Seed / Water only gain the particles.
@@ -453,8 +473,8 @@ public partial class PixelClicker
         }
     }
 
-    /// <summary>Look fix-up steps 35, 36, 38, 39, 40, 41, 42, 43, 44, 45 (in this order; part of RunLookFixups).</summary>
-    private void RunLookFixupsTo45()
+    /// <summary>Look fix-up steps 35, 36, 38, 39, 40 (in this order; part of RunLookFixups).</summary>
+    private void RunLookFixupsTo40()
     {
         if (looksVersion < 35)
         {
@@ -525,7 +545,11 @@ public partial class PixelClicker
             looks = list37.ToArray();
             looksVersion = 40;
         }
+    }
 
+    /// <summary>Look fix-up steps 41, 42, 43, 44, 45 (in this order; part of RunLookFixups).</summary>
+    private void RunLookFixupsTo45()
+    {
         if (looksVersion < 41)
         {
             // Wood and Stone look more natural (bark, fractured rock) and the Seed became a ridged seed pod.
@@ -596,8 +620,8 @@ public partial class PixelClicker
         }
     }
 
-    /// <summary>Look fix-up steps 46, 47, 48, 49, 50, 51, 52, 53, 54, 55 (in this order; part of RunLookFixups).</summary>
-    private void RunLookFixupsTo55()
+    /// <summary>Look fix-up steps 46, 47, 48, 49, 50 (in this order; part of RunLookFixups).</summary>
+    private void RunLookFixupsTo50()
     {
         if (looksVersion < 46)
         {
@@ -667,7 +691,11 @@ public partial class PixelClicker
             looks = list50.ToArray();
             looksVersion = 50;
         }
+    }
 
+    /// <summary>Look fix-up steps 51, 52, 53, 54, 55 (in this order; part of RunLookFixups).</summary>
+    private void RunLookFixupsTo55()
+    {
         if (looksVersion < 51)
         {
             // The Message in a Bottle became a clear glass cube with a map inside: replace the saved look.
@@ -720,8 +748,8 @@ public partial class PixelClicker
         }
     }
 
-    /// <summary>Look fix-up steps 56, 57, 58, 59, 60, 61, 62, 63, 64, 65 (in this order; part of RunLookFixups).</summary>
-    private void RunLookFixupsTo65()
+    /// <summary>Look fix-up steps 56, 57, 58, 59, 60 (in this order; part of RunLookFixups).</summary>
+    private void RunLookFixupsTo60()
     {
         if (looksVersion < 56)
         {
@@ -784,7 +812,11 @@ public partial class PixelClicker
             looks = list60.ToArray();
             looksVersion = 60;
         }
+    }
 
+    /// <summary>Look fix-up steps 61, 62, 63, 64, 65 (in this order; part of RunLookFixups).</summary>
+    private void RunLookFixupsTo65()
+    {
         if (looksVersion < 61)
         {
             // Twig, Leaf and the Termite Hive got new looks (replacing the saved ones); Pinecone and Moss got theirs.
