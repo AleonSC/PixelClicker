@@ -275,9 +275,6 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Mouse wheel / trackpad scroll speed.")]
     [SerializeField] private float scrollSpeed = 60f;
 
-    [Tooltip("Width of the scrollbar (it hides when the list fits).")]
-    [SerializeField] private float scrollbarWidth = 24f;
-
     [Tooltip("Draw scroll bars in the shop's lists (off = the lists still scroll with the mouse wheel, there is just no bar).")]
     [SerializeField] private bool showScrollBars = false;
 
@@ -369,9 +366,6 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Label of the Supplies category button (Combo Fuel, Ghost Bait, Pet Treat).")]
     [SerializeField] private string suppliesCardTitle = "Supplies";
 
-    [Min(0f)]
-    [Tooltip("Gap between the category buttons, the tile grid and the buy bar.")]
-    [SerializeField] private float cardGap = 20f;
 
     [Min(1)]
     [Tooltip("The most of one item you can buy in one go.")]
