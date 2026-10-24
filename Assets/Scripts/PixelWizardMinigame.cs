@@ -4,9 +4,24 @@ using UnityEngine;
 /// The Wizard (id "wizard", Minigames tab, cheap): a visitor who stops time and sells POTIONS at a big discount (every potion whose
 /// pixel type you have unlocked; combo potions can only be crafted). All the behaviour is in <see cref="PixelVisitorMinigame"/>.
 /// Sell tab (the shared Sell view): he buys Ectoplasm, Magic Wood and Stardust as specialty goods (PixelMarket) and TRADES them (see trades: 20 Ectoplasm -> Ghost Bait, 5 Stardust -> 1 Ultra pixel).
+/// FIRST MEETING (Dialogue 'Visitor: wizard' intro lines): Cubie calls him 'my friend' (his visit 2), so the Wizard's first greeting scoffs at
+/// that - he owes Cubie a fortune - and, once you hear him out, the second box is him realising you got a bill too: you're in the same boat.
+/// It shows until you open one of his visits (TracksMeeting + RecordMeetingOnAccept: the stat 'wizard.met').
 /// </summary>
 public class PixelWizardMinigame : PixelVisitorMinigame
 {
+    [Header("First meeting (Cubie calls him 'my friend')")]
+    [TextArea(3, 6)]
+    [Tooltip("His greeting on his first visit, instead of the normal one: he scoffs at being called Cubie's friend.")]
+    [SerializeField] private string introGreeting = "A FRIEND? Cubie called me his FRIEND? Ha! Hahaha! Friends don't send friends an invoice for every bottle they ever borrowed. I owe that teal cube more pixels than there are stars in the sky, with interest on the interest. 'My friend', he says...";
+    [TextArea(3, 6)]
+    [Tooltip("The second box after you hear him out on his first visit: he realises you owe Cubie too.")]
+    [SerializeField] private string introAside = "...Wait. You've got that look. The squint of someone who has seen the bill. He sent you one too, didn't he? Ha! Then we're in the same boat, you and I, bailing it out with a teaspoon. Tell you what: anyone in debt to that cube gets my potions cheap. Let's see what I've got.";
+    [Tooltip("The accept button on his first visit.")]
+    [SerializeField] private string introAccept = "He billed me too...";
+    [Tooltip("The reject button on his first visit (he'll tell you next time).")]
+    [SerializeField] private string introReject = "Not now";
+
     [Header("Stock")]
     [Min(1)]
     [Tooltip("How many different potions he brings each visit (a random selection of the ones he could sell).")]
@@ -115,10 +130,27 @@ public class PixelWizardMinigame : PixelVisitorMinigame
 
     protected override void ModifyWares(System.Collections.Generic.List<int> wares)
     {
+        if (FirstVisitNow) AsideText = introAside;   // (his first meeting: 'we're in the same boat')
         int g = GauntletItem();
         if (!PixelInfinity.ShouldOfferGauntlet(clicker, consumables, g)) return;
         wares.Insert(0, g);
-        AsideText = PixelInfinity.WizardAside;
+        if (!FirstVisitNow) AsideText = PixelInfinity.WizardAside;
+    }
+
+    // ---- First meeting ----
+
+    protected override bool TracksMeeting => true;
+    protected override bool RecordMeetingOnAccept => true;   // (ignore him or say 'Not now' and he tells you next time)
+    protected override string SpecialGreeting => FirstVisitNow ? introGreeting : null;
+    protected override string AcceptLabel => FirstVisitNow ? introAccept : base.AcceptLabel;
+    protected override string RejectLabel => FirstVisitNow ? introReject : base.RejectLabel;
+
+    protected override void ApplyDialogue(PixelTextFile f, string section)
+    {
+        f.Apply(section, "intro greeting", ref introGreeting);
+        f.Apply(section, "intro aside", ref introAside);
+        f.Apply(section, "intro accept button", ref introAccept);
+        f.Apply(section, "intro reject button", ref introReject);
     }
 
     protected override bool Highlighted(int item) => item >= 0 && item == GauntletItem();

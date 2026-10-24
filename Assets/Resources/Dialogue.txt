@@ -440,6 +440,10 @@ peek bubble: Psst! {0} is here. Click me to see what I've got!
 missed log: {0} stopped by and left.
 gauntlet aside: Six cubes! In one pocket! Well, well, well... I have a little thing here, a Gauntlet, golden and rather shiny. Set them in its faces and something very small and very powerful will come out. For a fee, naturally.
 job offer: A commission, apprentice! My crystal ball needs feeding. Fill my crate before the stars move on.
+intro greeting: A FRIEND? Cubie called me his FRIEND? Ha! Hahaha! Friends don't send friends an invoice for every bottle they ever borrowed. I owe that teal cube more pixels than there are stars in the sky, with interest on the interest. 'My friend', he says...
+intro aside: ...Wait. You've got that look. The squint of someone who has seen the bill. He sent you one too, didn't he? Ha! Then we're in the same boat, you and I, bailing it out with a teaspoon. Tell you what: anyone in debt to that cube gets my potions cheap. Let's see what I've got.
+intro accept button: He billed me too...
+intro reject button: Not now
 
 [Visitor: entrepreneur]
 name: Pixel Entrepreneur

@@ -137,6 +137,12 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
     protected virtual void OnGift() { }
     /// <summary>True for a visitor who remembers having met you: the first real visit is recorded in the counter '&lt;id&gt;.met' (<see cref="FirstVisitNow"/> tells which visit this is).</summary>
     protected virtual bool TracksMeeting => false;
+
+    /// <summary>True = the meeting is only recorded once you OPEN the visit (the Wizard's first-meeting talk isn't lost if you ignore or turn him away); false = recorded as soon as he comes.</summary>
+    protected virtual bool RecordMeetingOnAccept => false;
+
+    /// <summary>A one-off greeting that replaces the normal one for this visit (no step line, no jab at Cubie): the Wizard's first meeting. Null = the normal greeting.</summary>
+    protected virtual string SpecialGreeting => null;
     /// <summary>True during the visitor's first visit ever (only meaningful for visitors that track meeting you).</summary>
     protected bool FirstVisitNow { get; private set; }
 
@@ -261,6 +267,8 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
     /// <summary>The greeting, sometimes followed by a jab at Cubie (only once his shop is open: visit 2 done).</summary>
     private string GreetingWithJab()
     {
+        string special = SpecialGreeting;
+        if (!string.IsNullOrEmpty(special)) return special;   // (a one-off talk: no step line, no jab)
         string text = string.Format(Pick(greeting, DefaultGreeting), Mathf.RoundToInt(discountFraction * 100f));
         string line = RapportLine;   // what he says at your rapport step (PixelRapport)
         if (!string.IsNullOrEmpty(line)) text += "\n\n<size=85%>" + line + "</size>";
@@ -465,7 +473,7 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
     private IEnumerator VisitRoutine(bool dev)
     {
         FirstVisitNow = !HasMet;
-        if (TracksMeeting && !dev) PixelStats.Best(Id + ".met", 1d);   // remembered, whatever you decide
+        if (TracksMeeting && !dev && !RecordMeetingOnAccept) PixelStats.Best(Id + ".met", 1d);   // remembered, whatever you decide
         visiting = true;
         anyVisiting = true;
         decision = 0;
@@ -582,6 +590,7 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
         } while (again);
 
         if (decision == 1) RapportVisitAccepted();   // (opening the visit counts towards his rapport)
+        if (decision == 1 && TracksMeeting && !dev && RecordMeetingOnAccept) PixelStats.Best(Id + ".met", 1d);   // (met once you have heard him out)
         if (decision == 1 && IsGift) OnGift();
         if (decision == 1 && !IsGift)
         {
