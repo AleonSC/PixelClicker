@@ -14,7 +14,7 @@ using System.Collections.Generic;
 public class GameState
 {
     /// <summary>The systems whose progress lives here (they must not implement IPixelSaved or register restart resets: tools/compile-check/rules.sh checks it). Add a system's class name when it moves.</summary>
-    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab", "PixelBaitBucket", "PixelCubieBill", "PixelCombo", "PixelHints", "PixelRobotWorker", "PixelPets", "PixelAchievements", "PixelConsumables" };
+    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab", "PixelBaitBucket", "PixelCubieBill", "PixelCombo", "PixelHints", "PixelRobotWorker", "PixelPets", "PixelAchievements", "PixelConsumables", "PixelSkills" };
 
     public BankState bank = new BankState();
     public StatsState stats = new StatsState();
@@ -30,6 +30,7 @@ public class GameState
     public PetsState pets = new PetsState();
     public AchievementsState achievements = new AchievementsState();
     public InventoryState inventory = new InventoryState();
+    public SkillsState skills = new SkillsState();
 
     /// <summary>Fills in sub-states missing from an older save file (JsonUtility leaves a part the file lacks null in some cases).</summary>
     public void Repair()
@@ -52,6 +53,8 @@ public class GameState
         achievements.Repair();
         if (inventory == null) inventory = new InventoryState();
         inventory.Repair();
+        if (skills == null) skills = new SkillsState();
+        skills.Repair();
         baitBucket.Repair();
         cubieBill.Repair();
         bank.Repair();
@@ -415,4 +418,22 @@ public class InventoryState
     public void SetOwned(string key, int value) { Held h = Find(key, value != 0); if (h != null) h.owned = value; }
     public int BonusOf(string key) { Held h = Find(key, false); return h != null ? h.bonus : 0; }
     public void SetBonus(string key, int value) { Held h = Find(key, value != 0); if (h != null) h.bonus = value; }
+}
+
+/// <summary>The skill choices of this save (PixelSkills): the pack in play, the guest blocks switched on, the offline task. Skill XP, bought
+/// tree nodes, the bonus XP bank and Mastery are StatsState counters (PixelStats.Count / Total with the skill's keys), so they are in the GameState too.</summary>
+[Serializable]
+public class SkillsState
+{
+    public string activePack = "";        // the pack the player chose to train ('' / 'standard' = the usual rotation)
+    public List<string> guests = new List<string>();   // guest blocks switched on (pixel type names) - a tree node / perk unlocks the switch
+    public string offlineTask = "";       // what your character does while the game is closed ('' = Standard)
+
+    public void Repair()
+    {
+        if (activePack == null) activePack = "";
+        if (offlineTask == null) offlineTask = "";
+        if (guests == null) guests = new List<string>();
+        guests.RemoveAll(string.IsNullOrEmpty);
+    }
 }

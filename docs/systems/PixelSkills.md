@@ -1,5 +1,7 @@
 # PixelSkills
 
+**Progress (2026-10-24):** the pack in play, the guest blocks switched on and the offline task live in the GameState (`PixelGameState.Current.skills`, `SkillsState`; no longer per-save settings). Skill XP, nodes, the bonus bank and Mastery are `StatsState` counters. Overrides older wording below.
+
 Moved from CLAUDE.md. The script header comments and `CLAUDE.md` index point here.
 
 ## PixelSkills.cs / PixelSkillsWindow.cs

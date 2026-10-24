@@ -204,8 +204,8 @@ public partial class PixelSkills : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
-        penaltyLevels.Clear(); penaltyEnds.Clear(); Instance = null; packCache = null; guestCache = null;
-        PixelStatics.ResetOnRestart(OnSceneUnloaded);
+        penaltyLevels.Clear(); penaltyEnds.Clear(); Instance = null;
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);   // restart-reset-not-progress: hazard penalties of the old game (never saved)
     }
 
     // (Restart reloads the scene but statics survive it: a hazard penalty of the old game must not run on in the new one)
@@ -239,6 +239,7 @@ public partial class PixelSkills : MonoBehaviour
     private void Awake()
     {
         Instance = this;
+        PixelGameState.Loaded += OnLoaded;
         EnsureDefaults();
         ApplyDialogueFile();
         // Perk popups and the skills tutorial take their turn in the one tip queue (PixelTipQueue).
@@ -268,6 +269,7 @@ public partial class PixelSkills : MonoBehaviour
     private void OnDestroy()
     {
         PixelTipQueue.Unregister(this);
+        PixelGameState.Loaded -= OnLoaded;
         if (Instance == this) Instance = null;
         if (clicker != null) clicker.PixelCollected -= OnCollected;
     }
@@ -758,18 +760,14 @@ public partial class PixelSkills : MonoBehaviour
         }
     }
 
-    private const string PackPref = "PixelClicker.Setting.SkillPack";
-    private static string packCache;
+    // ---- progress: the skill choices live in the GameState (PixelGameState.Current.skills); XP / nodes / Mastery are its StatsState counters ----
+    private static SkillsState S => PixelGameState.Current.skills;
 
-    /// <summary>The pixel pack the player chose (saved per save file; '' / 'standard' = the usual rotation).</summary>
+    /// <summary>The pixel pack the player chose (progress in the GameState; '' / 'standard' = the usual rotation).</summary>
     public static string PackSetting
     {
-        get
-        {
-            if (packCache == null) packCache = PixelPrefs.GetString(PackPref, "");
-            return packCache;
-        }
-        set { packCache = value ?? ""; PixelPrefs.SetString(PackPref, packCache); }
+        get => S.activePack;
+        set => S.activePack = value ?? "";
     }
 
     // ---- Preview (PixelBalanceReport only): pretend a pack is in play at a skill level, with all of its pixels unlocked. Always set / cleared in a try-finally. ----
@@ -1001,21 +999,7 @@ public partial class PixelSkills : MonoBehaviour
 
     // ---- Guests: skill-only blocks a skill tree node lets the player switch on for other rotations ----
 
-    private const string GuestPref = "PixelClicker.Setting.SkillGuests";
-    private static System.Collections.Generic.HashSet<string> guestCache;
-
-    private static System.Collections.Generic.HashSet<string> GuestSet
-    {
-        get
-        {
-            if (guestCache == null)
-            {
-                guestCache = new System.Collections.Generic.HashSet<string>();
-                foreach (string part in PixelPrefs.GetString(GuestPref, "").Split(',')) if (part.Length > 0) guestCache.Add(part);
-            }
-            return guestCache;
-        }
-    }
+    // (the switched-on guest blocks are the state's list: a handful of names, a plain Contains is fine)
 
     /// <summary>Has a skill tree node that unlocks this block as a toggle been bought?</summary>
     public bool GuestUnlocked(PixelClicker.PixelType type)
@@ -1033,12 +1017,13 @@ public partial class PixelSkills : MonoBehaviour
     }
 
     /// <summary>Is the guest block unlocked and switched on (it spawns in every rotation)?</summary>
-    public bool GuestOn(PixelClicker.PixelType type) => GuestSet.Contains(PixelClicker.TypeName(type)) && GuestUnlocked(type);
+    public bool GuestOn(PixelClicker.PixelType type) => S.guests.Contains(PixelClicker.TypeName(type)) && GuestUnlocked(type);
 
     public void SetGuest(PixelClicker.PixelType type, bool on)
     {
-        if (on) GuestSet.Add(type.ToString()); else GuestSet.Remove(type.ToString());
-        PixelPrefs.SetString(GuestPref, string.Join(",", GuestSet));
+        string name = PixelClicker.TypeName(type);
+        if (on) { if (!S.guests.Contains(name)) S.guests.Add(name); }
+        else S.guests.Remove(name);
         Changed?.Invoke();
     }
 
@@ -1068,7 +1053,6 @@ public partial class PixelSkills : MonoBehaviour
 
     // ---- Offline Progression mode: you play with some pack's pixels but only the Offline Progression skill earns XP ----
 
-    private const string OfflineTaskPref = "PixelClicker.Setting.SkillOfflineTask";
 
     /// <summary>
     /// What your character does while the game is closed: the skill that gets a little XP from offline progress (picked on Offline Progression's card;
@@ -1076,8 +1060,8 @@ public partial class PixelSkills : MonoBehaviour
     /// </summary>
     public static string OfflineTask
     {
-        get => PixelPrefs.GetString(OfflineTaskPref, "");
-        set => PixelPrefs.SetString(OfflineTaskPref, value ?? "");
+        get => S.offlineTask;
+        set => S.offlineTask = value ?? "";
     }
 
     /// <summary>The offline task's pack (Standard when none / not available).</summary>
@@ -1108,8 +1092,8 @@ public partial class PixelSkills : MonoBehaviour
         return xp;
     }
 
-    /// <summary>A save file with its own settings was loaded: read the switch again.</summary>
-    public static void ReloadSettingsFromPrefs() { packCache = null; guestCache = null; }
+    // A save was loaded: its skill choices are in the state now - everything that shows the pack in play redraws.
+    private void OnLoaded() => Changed?.Invoke();
 
     /// <summary>The skill that earns the XP right now: the pack in play (Offline Progression is passive since 2026-10-16: it only gets XP from offline progress, AddOfflineXp).</summary>
     public string TrainingId => ActiveId;
