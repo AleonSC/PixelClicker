@@ -12,3 +12,4 @@ Rebuild it after changes (each rebuild whose score changed adds a point to `hist
 - It reads the code as text (no Unity), so a finding is a place to look, not proof. "Every frame" = inside Update / LateUpdate /
   FixedUpdate / OnGUI only; one-time setup guarded by `if (x == null)` is not counted; cached shared assets in statics are fine.
 - Areas and descriptions come from the code map (`tools/code-map/build.py`, `docs/Index.md`).
+- Published page: https://claude.ai/artifact/SvWtYz7Y1c3Ja3BsNTNTHr (republish `CodeHealth.html` to that link after a rebuild). `tools/rebuild-code-pages.sh` rebuilds this and the code map together.

@@ -1560,3 +1560,4 @@
 [2026-10-24 00:59 UTC] To-do: the GameState move is marked done; a follow-up line lists retiring the old save registry and checking the remaining restart resets.
 [2026-10-24 01:05 UTC] Code cleanup: the old per-system save parts are retired - PixelSaveRegistry.cs (IPixelSaved) is deleted and the save file no longer has a 'parts' list; the GameState docs now give the steps for adding a NEW system's progress.
 [2026-10-24 01:06 UTC] Rebuilt the Code Health report from today's code (overall 92.7) and republished its page.
+[2026-10-24 01:08 UTC] Tools: tools/rebuild-code-pages.sh rebuilds the Code Map and the Code Health report in one go; their published links are written in their READMEs and CLAUDE.md; both pages rebuilt and republished.
