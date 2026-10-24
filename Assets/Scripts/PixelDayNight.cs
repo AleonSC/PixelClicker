@@ -48,6 +48,7 @@ public class PixelDayNight : MonoBehaviour
 
     [Tooltip("Colour of the sun at night (moonlight) and at dawn / dusk.")]
     [SerializeField] private Color moonColor = new Color(0.55f, 0.65f, 1f, 1f);
+    [Tooltip("Sunlight colour at dusk and dawn (blended in towards evening).")]
     [SerializeField] private Color duskSunColor = new Color(1f, 0.6f, 0.35f, 1f);
 
     private const string PrefOn = "PixelClicker.Setting.DayNight", PrefLength = "PixelClicker.Setting.DayNightLength";

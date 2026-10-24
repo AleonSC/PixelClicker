@@ -18,7 +18,7 @@ public static class PixelFx
     {
         material = null;
         OnRestart();
-        PixelStatics.ResetOnRestart(OnRestart);
+        PixelStatics.ResetOnRestart(OnRestart);   // restart-reset-not-progress: the fire-burst effect pool
     }
 
     // (Restart reloads the scene: the pooled bursts and the runner go with it)

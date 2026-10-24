@@ -337,6 +337,28 @@ public class PixelElectricLinks : MonoBehaviour
         foreach (PixelPlacedDevice d in PixelPlacedDevice.All)
             if (d != null && !d.IsEnding && d.Armed) devices.Add(d);
 
+        CollectNodes();
+
+        Dictionary<Rigidbody, Link> previous = new Dictionary<Rigidbody, Link>(links); // last scan's partners: kept while still in reach
+        links.Clear();
+        chainSeeds.Clear();
+        if (scratch.Count == 0) { PetConnected = false; PruneCredits(); return; }
+
+        float range = linkRange * Mathf.Max(0.1f, clicker.PixelBaseSize);
+        float rangeSqr = range * range;
+
+        List<Rigidbody> unlinked = new List<Rigidbody>(scratch);
+        ChainFromDevices(devices, unlinked, previous, rangeSqr);
+        ChainLoosePixels(unlinked, previous, rangeSqr);
+
+        PetConnected = petBody != null && (links.ContainsKey(petBody) || chainSeeds.Contains(petBody));
+        EvictOldest();
+        PruneCredits();
+    }
+
+    // Scan step: the electric husks lying around in view (not flying away, not vanishing) and the Electric pet go into 'scratch'.
+    private void CollectNodes()
+    {
         // Electric old pixels lying around (not flying away, not vanishing).
         scratch.Clear();
         petBody = null;
@@ -359,18 +381,13 @@ public class PixelElectricLinks : MonoBehaviour
             Vector3 pv = cam != null ? cam.WorldToViewportPoint(petBody.position) : new Vector3(0.5f, 0.5f, 1f);
             if (pv.z > 0f && pv.x >= 0f && pv.x <= 1f && pv.y >= 0f && pv.y <= 1f) scratch.Add(petBody);
         }
+    }
 
-        Dictionary<Rigidbody, Link> previous = new Dictionary<Rigidbody, Link>(links); // last scan's partners: kept while still in reach
-        links.Clear();
-        chainSeeds.Clear();
-        if (scratch.Count == 0) { PetConnected = false; PruneCredits(); return; }
-
-        float range = linkRange * Mathf.Max(0.1f, clicker.PixelBaseSize);
-        float rangeSqr = range * range;
-
+    // Scan step: chains that start from the working devices.
+    private void ChainFromDevices(List<PixelPlacedDevice> devices, List<Rigidbody> unlinked, Dictionary<Rigidbody, Link> previous, float rangeSqr)
+    {
         // Daisy chains: from each device a chain runs pixel to pixel (every pixel links to the nearest unlinked one in reach, then that
         // one to the next...), and a new chain starts from the device while more pixels are in reach.
-        List<Rigidbody> unlinked = new List<Rigidbody>(scratch);
         foreach (PixelPlacedDevice device in devices)
         {
             while (unlinked.Count > 0 && links.Count < ScanCeiling)
@@ -392,7 +409,11 @@ public class PixelElectricLinks : MonoBehaviour
                 }
             }
         }
+    }
 
+    // Scan step: the pixels left over chain to each other.
+    private void ChainLoosePixels(List<Rigidbody> unlinked, Dictionary<Rigidbody, Link> previous, float rangeSqr)
+    {
         // Electric pixels out of reach of any device still daisy-chain to each other: a chain grows from both of its ends.
         while (unlinked.Count > 0 && links.Count < ScanCeiling)
         {
@@ -412,10 +433,6 @@ public class PixelElectricLinks : MonoBehaviour
             }
             if (length >= 2) { chainSeeds.Add(seed); Register(seed); }   // a lone pixel is not a chain
         }
-
-        PetConnected = petBody != null && (links.ContainsKey(petBody) || chainSeeds.Contains(petBody));
-        EvictOldest();
-        PruneCredits();
     }
 
     /// <summary>The nearest unlinked pixel to 'from' within reach (a pixel keeps its old partner while that is still in reach), or -1.</summary>

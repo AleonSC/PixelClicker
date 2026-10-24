@@ -28,6 +28,10 @@ public partial class PixelFloor
     /// <summary>Where the craters' big crater goes (texture coordinates): the part of the floor the camera looks at.</summary>
     private static Vector2 craterFocus = new Vector2(0.5f, 0.56f);
 
+    /// <summary>A fresh play-mode start (domain reload off) begins with no detail scale, no crater / radar layout and no layer buffers.</summary>
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetLayerStatics() { shadeDetail = 1; shadeBase = false; craters = null; radarDots = null; ClearLayers(); }
+
     private static void BeginShade(FloorStyle s, float time)
     {
         shadeTime = time;
@@ -81,7 +85,7 @@ public partial class PixelFloor
     private static string BuildStamp()
     {
 #if UNITY_EDITOR
-        try { return System.IO.File.GetLastWriteTimeUtc(typeof(PixelFloor).Assembly.Location).Ticks.ToString(); } catch (System.Exception) { return "editor"; }
+        try { return System.IO.File.GetLastWriteTimeUtc(System.IO.Path.Combine(Application.dataPath, "../Library/ScriptAssemblies/Assembly-CSharp.dll")).Ticks.ToString(); } catch (System.Exception) { return "editor"; }
 #else
         return Application.version + "|" + Application.buildGUID;
 #endif

@@ -97,7 +97,7 @@ public partial class PixelClicker
             System.Text.StringBuilder sb = new System.Text.StringBuilder("Vacuum: re-collected " + count + " husks worth " + total + " (");
             for (int i = 0; i < tiers.Length; i++)
                 if (perTier[i] > 0d) sb.Append(tiers[i].displayName).Append(" +").Append(perTier[i]).Append("  ");
-            Debug.Log(sb.Append(")").ToString(), this);
+            PixelDebug.Info(sb.Append(")").ToString(), this);
         }
 
         for (int i = 0; i < huskCounts.Length; i++)
@@ -502,6 +502,9 @@ public partial class PixelClicker
     private static readonly ProfilerMarker spawnCopyMarker = new ProfilerMarker("Pixel.SpawnFallingCopy");
     private static readonly ProfilerMarker materializeMarker = new ProfilerMarker("Pixel.Materialize");
     private static MaterialPropertyBlock spawnBlock;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetHuskStatics() => spawnBlock = null;   // (the reused block is made again on the next husk; play mode may skip the domain reload)
     private Collider[] liveColliders;
 
     private void SpawnFallingCopy(int tierIndex, double amount, bool stored = false, Vector3 storedPosition = default,
@@ -537,6 +540,83 @@ public partial class PixelClicker
         // Copy only the visuals (mesh + material) so we don't duplicate this script.
         MeshFilter srcFilter = pixelRenderer != null ? pixelRenderer.GetComponent<MeshFilter>() : null;
         Mesh copyMesh = MeshFor(IsValidTier(tierIndex) ? LookOf(tiers[tierIndex]) : null);
+        CopyHuskVisuals(copy, tierIndex, stored, flyType, srcFilter, copyMesh);
+
+        // Collider with a physics material so bounce/friction are tweakable.
+        BoxCollider box = copy.AddComponent<BoxCollider>();
+        PixelLook oldLook = IsValidTier(tierIndex) ? LookOf(tiers[tierIndex]) : null;
+        bool custom = oldLook != null && oldLook.customPhysics;
+        ApplyHuskPhysics(box, oldLook);
+
+        // Keep the old pixel from colliding with / bumping the live one if requested.
+        if (!collideWithLivePixel)
+        {
+            if (liveColliders == null) liveColliders = pixelTransform.GetComponentsInChildren<Collider>();
+            foreach (Collider live in liveColliders)
+                if (live != null) Physics.IgnoreCollision(box, live);
+        }
+
+        Rigidbody rb = copy.GetComponent<Rigidbody>();
+        if (rb == null) rb = copy.AddComponent<Rigidbody>();
+        rb.mass = Mathf.Max(0.0001f, fallingCopyMass);
+        rb.useGravity = false; // gravity applied by ScaledGravity so gravityScale works
+        rb.collisionDetectionMode = collisionDetection;
+        if (huskSleepThreshold > 0f) rb.sleepThreshold = huskSleepThreshold;   // resting husks go still quickly (heaps cost nothing)
+#if UNITY_6000_0_OR_NEWER
+        rb.linearDamping = fallingCopyDrag;
+        rb.angularDamping = fallingCopyAngularDrag;
+#else
+        rb.drag = fallingCopyDrag;
+        rb.angularDrag = fallingCopyAngularDrag;
+#endif
+        bool fly = tierIndex >= 0 && tierIndex < tiers.Length && tiers[tierIndex].flyAway;
+        if (fly)
+        {
+            LaunchFlyAwayHusk(copy, rb, box, tierIndex);
+        }
+        else if (gravityScale > 0f)
+            copy.AddComponent<ScaledGravity>().scale = gravityScale * (custom ? oldLook.gravityMultiplier : 1f);
+
+        if (!fly) copy.AddComponent<OldPixelImpact>().Setup(landMinSpeed, landFullVolumeSpeed, landCooldown, BounceSoundId(tierIndex));
+        AddHuskLookExtras(copy, tierIndex, stored, fly, srcFilter, copyMesh);
+
+        if (fly)
+        {
+            AddDespawn(copy, flyLifetime);
+            OldPixelInfo flyInfo = copy.AddComponent<OldPixelInfo>();
+        flyInfo.bornTime = Time.unscaledTime;
+            flyInfo.tierIndex = tierIndex;
+            flyInfo.amount = amount;
+            oldPixels.Add(rb);
+            return;
+        }
+
+        if (routed)
+        {
+            rb.AddForce(routedVelocity, ForceMode.VelocityChange);
+            rb.AddTorque(UnityEngine.Random.onUnitSphere * UnityEngine.Random.Range(popSpinRange.x, popSpinRange.y),
+                         ForceMode.VelocityChange);
+            AddDespawn(copy, FallingCopyLifetime * LifetimeFactor(tierIndex));
+            OldPixelInfo routedInfo = copy.AddComponent<OldPixelInfo>();
+        routedInfo.bornTime = Time.unscaledTime;
+            routedInfo.tierIndex = tierIndex;
+            routedInfo.amount = amount;
+            oldPixels.Add(rb);
+            while (CopyCap > 0 && oldPixels.Count > CopyCap)
+            {
+                Rigidbody oldest = oldPixels[0];
+                oldPixels.RemoveAt(0);
+                if (oldest != null) { DespawnOldPixel(oldest.gameObject); PixelStats.Count("old.capped"); }   // (removed by the floor cap: counted for the session recorder)
+            }
+            return;
+        }
+
+        LaunchClickedHusk(copy, rb, box, tierIndex, amount);
+    }
+
+    /// <summary>SpawnFallingCopyInner step: the husk's mesh and material (a stored husk looks like its own type, a clicked one like the cube), extra glow for bright husks.</summary>
+    private void CopyHuskVisuals(GameObject copy, int tierIndex, bool stored, bool flyType, MeshFilter srcFilter, Mesh copyMesh)
+    {
         if (srcFilter != null && pixelRenderer != null)
         {
             MeshFilter copyFilter = copy.GetComponent<MeshFilter>();
@@ -579,100 +659,74 @@ public partial class PixelClicker
             }
             mr.SetPropertyBlock(block);
         }
+    }
 
-        // Collider with a physics material so bounce/friction are tweakable.
-        BoxCollider box = copy.AddComponent<BoxCollider>();
-        PixelLook oldLook = IsValidTier(tierIndex) ? LookOf(tiers[tierIndex]) : null;
-        bool custom = oldLook != null && oldLook.customPhysics;
-        ApplyHuskPhysics(box, oldLook);
-
-        // Keep the old pixel from colliding with / bumping the live one if requested.
-        if (!collideWithLivePixel)
+    /// <summary>SpawnFallingCopyInner step: a fly-away (Meteor) husk shoots off in one straight camera-relative direction, with its wake and trail.</summary>
+    private void LaunchFlyAwayHusk(GameObject copy, Rigidbody rb, BoxCollider box, int tierIndex)
+    {
+        // Meteor-style: no gravity, no collisions, one straight direction (camera-relative), with a trail.
+        // The collider stays as a trigger so a slowed-down meteor can still be picked up (see LandFlyingPixel).
+        box.isTrigger = true;
+        copy.AddComponent<OldPixelFlight>();
+        Camera fc = targetCamera != null ? targetCamera : Camera.main;
+        Vector2 d = tiers[tierIndex].flyDirection;
+        if (tiers[tierIndex].flyRandomDirection)
         {
-            if (liveColliders == null) liveColliders = pixelTransform.GetComponentsInChildren<Collider>();
-            foreach (Collider live in liveColliders)
-                if (live != null) Physics.IgnoreCollision(box, live);
+            Vector2 range = tiers[tierIndex].flyAngleRange;
+            float angle = UnityEngine.Random.Range(Mathf.Min(range.x, range.y), Mathf.Max(range.x, range.y)) * Mathf.Deg2Rad;
+            d = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)); // always on the upper half of the screen
         }
-
-        Rigidbody rb = copy.GetComponent<Rigidbody>();
-        if (rb == null) rb = copy.AddComponent<Rigidbody>();
-        rb.mass = Mathf.Max(0.0001f, fallingCopyMass);
-        rb.useGravity = false; // gravity applied by ScaledGravity so gravityScale works
-        rb.collisionDetectionMode = collisionDetection;
-        if (huskSleepThreshold > 0f) rb.sleepThreshold = huskSleepThreshold;   // resting husks go still quickly (heaps cost nothing)
+        if (d.sqrMagnitude < 0.0001f) d = Vector2.right;
+        d.Normalize();
+        Vector3 dir = fc != null ? fc.transform.right * d.x + fc.transform.up * d.y : new Vector3(d.x, d.y, 0f);
+        dir = Quaternion.AngleAxis(UnityEngine.Random.Range(-flySpreadDegrees, flySpreadDegrees),
+                                   fc != null ? fc.transform.forward : Vector3.forward) * dir;
 #if UNITY_6000_0_OR_NEWER
-        rb.linearDamping = fallingCopyDrag;
-        rb.angularDamping = fallingCopyAngularDrag;
+        rb.linearDamping = 0f;
+        rb.angularDamping = 0f;
 #else
-        rb.drag = fallingCopyDrag;
-        rb.angularDrag = fallingCopyAngularDrag;
+        rb.drag = 0f;
+        rb.angularDrag = 0f;
 #endif
-        bool fly = tierIndex >= 0 && tierIndex < tiers.Length && tiers[tierIndex].flyAway;
-        if (fly)
+        rb.AddForce(dir.normalized * tiers[tierIndex].flySpeed, ForceMode.VelocityChange);
+        FlyAwayLaunched?.Invoke(copy.transform.position);
+        rb.AddTorque(UnityEngine.Random.onUnitSphere * UnityEngine.Random.Range(popSpinRange.x, popSpinRange.y),
+                     ForceMode.VelocityChange);
+
+        PixelLook flyLook = LookOf(tiers[tierIndex]);
+        if (flyLook != null && flyLook.cometTail && !disableMeteorFx) PixelCometFx.AttachWake(copy.transform, copy.transform.lossyScale.x);
+
+        if (flyTrailSeconds > 0f)
         {
-            // Meteor-style: no gravity, no collisions, one straight direction (camera-relative), with a trail.
-            // The collider stays as a trigger so a slowed-down meteor can still be picked up (see LandFlyingPixel).
-            box.isTrigger = true;
-            copy.AddComponent<OldPixelFlight>();
-            Camera fc = targetCamera != null ? targetCamera : Camera.main;
-            Vector2 d = tiers[tierIndex].flyDirection;
-            if (tiers[tierIndex].flyRandomDirection)
+            TrailRenderer trail = copy.AddComponent<TrailRenderer>();
+            trail.time = flyTrailSeconds;
+            trail.startWidth = copy.transform.lossyScale.x;
+            trail.endWidth = 0f;
+            Color tc = tiers[tierIndex].color;
+            trail.sharedMaterial = TrailMaterialFor(tierIndex, tc);
+            // Smooth: a gently curved taper, an eased fade, rounded ends, and many short segments.
+            trail.alignment = LineAlignment.View;
+            trail.minVertexDistance = 0.02f;
+            trail.numCapVertices = 6;
+            trail.numCornerVertices = 4;
+            trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            if (flyTrailCurve == null) flyTrailCurve = new AnimationCurve(new Keyframe(0f, 1f, 0f, -0.6f), new Keyframe(0.35f, 0.62f), new Keyframe(1f, 0f, -1.2f, 0f));
+            trail.widthCurve = flyTrailCurve;
+            if (!flyTrailGradients.TryGetValue(tc, out Gradient fade))
             {
-                Vector2 range = tiers[tierIndex].flyAngleRange;
-                float angle = UnityEngine.Random.Range(Mathf.Min(range.x, range.y), Mathf.Max(range.x, range.y)) * Mathf.Deg2Rad;
-                d = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)); // always on the upper half of the screen
+                fade = new Gradient();
+                fade.SetKeys(
+                    new[] { new GradientColorKey(Color.Lerp(tc, Color.white, 0.25f), 0f), new GradientColorKey(tc, 0.4f), new GradientColorKey(tc, 1f) },
+                    new[] { new GradientAlphaKey(0.85f, 0f), new GradientAlphaKey(0.5f, 0.35f), new GradientAlphaKey(0.18f, 0.7f), new GradientAlphaKey(0f, 1f) });
+                flyTrailGradients[tc] = fade;
             }
-            if (d.sqrMagnitude < 0.0001f) d = Vector2.right;
-            d.Normalize();
-            Vector3 dir = fc != null ? fc.transform.right * d.x + fc.transform.up * d.y : new Vector3(d.x, d.y, 0f);
-            dir = Quaternion.AngleAxis(UnityEngine.Random.Range(-flySpreadDegrees, flySpreadDegrees),
-                                       fc != null ? fc.transform.forward : Vector3.forward) * dir;
-#if UNITY_6000_0_OR_NEWER
-            rb.linearDamping = 0f;
-            rb.angularDamping = 0f;
-#else
-            rb.drag = 0f;
-            rb.angularDrag = 0f;
-#endif
-            rb.AddForce(dir.normalized * tiers[tierIndex].flySpeed, ForceMode.VelocityChange);
-            FlyAwayLaunched?.Invoke(copy.transform.position);
-            rb.AddTorque(UnityEngine.Random.onUnitSphere * UnityEngine.Random.Range(popSpinRange.x, popSpinRange.y),
-                         ForceMode.VelocityChange);
-
-            PixelLook flyLook = LookOf(tiers[tierIndex]);
-            if (flyLook != null && flyLook.cometTail && !disableMeteorFx) PixelCometFx.AttachWake(copy.transform, copy.transform.lossyScale.x);
-
-            if (flyTrailSeconds > 0f)
-            {
-                TrailRenderer trail = copy.AddComponent<TrailRenderer>();
-                trail.time = flyTrailSeconds;
-                trail.startWidth = copy.transform.lossyScale.x;
-                trail.endWidth = 0f;
-                Color tc = tiers[tierIndex].color;
-                trail.sharedMaterial = TrailMaterialFor(tierIndex, tc);
-                // Smooth: a gently curved taper, an eased fade, rounded ends, and many short segments.
-                trail.alignment = LineAlignment.View;
-                trail.minVertexDistance = 0.02f;
-                trail.numCapVertices = 6;
-                trail.numCornerVertices = 4;
-                trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                if (flyTrailCurve == null) flyTrailCurve = new AnimationCurve(new Keyframe(0f, 1f, 0f, -0.6f), new Keyframe(0.35f, 0.62f), new Keyframe(1f, 0f, -1.2f, 0f));
-                trail.widthCurve = flyTrailCurve;
-                if (!flyTrailGradients.TryGetValue(tc, out Gradient fade))
-                {
-                    fade = new Gradient();
-                    fade.SetKeys(
-                        new[] { new GradientColorKey(Color.Lerp(tc, Color.white, 0.25f), 0f), new GradientColorKey(tc, 0.4f), new GradientColorKey(tc, 1f) },
-                        new[] { new GradientAlphaKey(0.85f, 0f), new GradientAlphaKey(0.5f, 0.35f), new GradientAlphaKey(0.18f, 0.7f), new GradientAlphaKey(0f, 1f) });
-                    flyTrailGradients[tc] = fade;
-                }
-                trail.colorGradient = fade;
-            }
+            trail.colorGradient = fade;
         }
-        else if (gravityScale > 0f)
-            copy.AddComponent<ScaledGravity>().scale = gravityScale * (custom ? oldLook.gravityMultiplier : 1f);
+    }
 
-        if (!fly) copy.AddComponent<OldPixelImpact>().Setup(landMinSpeed, landFullVolumeSpeed, landCooldown, BounceSoundId(tierIndex));
+    /// <summary>SpawnFallingCopyInner step: the look's extras on the husk (outline / core, wobble, vacuum contents, gravity well, flutter, float, splash, sun, radiation, burn, shatter), its light trail and glow shell / halo.</summary>
+    private void AddHuskLookExtras(GameObject copy, int tierIndex, bool stored, bool fly, MeshFilter srcFilter, Mesh copyMesh)
+    {
         if (!fly && IsValidTier(tierIndex) && srcFilter != null)
         {
             // Look extras: neon outline / dark-matter core, and shattering for glass.
@@ -722,38 +776,11 @@ public partial class PixelClicker
             if (WantsGlowHalo(glowTier, glowLook))
                 PixelLooks.AddGlowHalo(copy.transform, GlowShellColor(glowTier), GlowShellAlpha(glowTier, bright ? 1.3f : 1f), hdr, bright ? 2.4f : 1f);
         }
+    }
 
-        if (fly)
-        {
-            AddDespawn(copy, flyLifetime);
-            OldPixelInfo flyInfo = copy.AddComponent<OldPixelInfo>();
-        flyInfo.bornTime = Time.unscaledTime;
-            flyInfo.tierIndex = tierIndex;
-            flyInfo.amount = amount;
-            oldPixels.Add(rb);
-            return;
-        }
-
-        if (routed)
-        {
-            rb.AddForce(routedVelocity, ForceMode.VelocityChange);
-            rb.AddTorque(UnityEngine.Random.onUnitSphere * UnityEngine.Random.Range(popSpinRange.x, popSpinRange.y),
-                         ForceMode.VelocityChange);
-            AddDespawn(copy, FallingCopyLifetime * LifetimeFactor(tierIndex));
-            OldPixelInfo routedInfo = copy.AddComponent<OldPixelInfo>();
-        routedInfo.bornTime = Time.unscaledTime;
-            routedInfo.tierIndex = tierIndex;
-            routedInfo.amount = amount;
-            oldPixels.Add(rb);
-            while (CopyCap > 0 && oldPixels.Count > CopyCap)
-            {
-                Rigidbody oldest = oldPixels[0];
-                oldPixels.RemoveAt(0);
-                if (oldest != null) { DespawnOldPixel(oldest.gameObject); PixelStats.Count("old.capped"); }   // (removed by the floor cap: counted for the session recorder)
-            }
-            return;
-        }
-
+    /// <summary>SpawnFallingCopyInner step: a clicked husk pops out of a side of the cube (or aimed / burst), then gets its pop-in, despawn timer and info, and the floor cap is kept.</summary>
+    private void LaunchClickedHusk(GameObject copy, Rigidbody rb, BoxCollider box, int tierIndex, double amount)
+    {
         // Random direction: random heading on the ground plane, random vertical component - or AIMED by where a manual click hit the cube (PixelBurstPop).
         Vector2 flat = UnityEngine.Random.insideUnitCircle;
         if (flat.sqrMagnitude < 0.0001f) flat = Vector2.right;

@@ -608,7 +608,7 @@ public class PixelBringToFront : MonoBehaviour, IPointerDownHandler
 public class PixelHubTabHandle : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     public PixelDevHub hub;
-    public PixelDevHub.Tab tab;
+    [System.NonSerialized] public PixelDevHub.Tab tab;   // (set in code at run time; never saved)
     public void OnBeginDrag(PointerEventData e) { hub.TabBeginDrag(tab); }
     public void OnDrag(PointerEventData e) { hub.TabDrag(tab, e.delta); }
     public void OnEndDrag(PointerEventData e) { hub.TabEndDrag(tab, e.position); }

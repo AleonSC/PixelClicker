@@ -71,21 +71,34 @@ public class PixelStudioIntro : MonoBehaviour
     [SerializeField, Min(0f), Tooltip("Most seconds it waits (on black) at the start for the game's loading hitches to settle before it begins.")] private float maxSettleTime = 0.6f;
 
     [Header("Space colours")]
+    [Tooltip("Studio intro planet: ocean colour.")]
     [SerializeField] private Color oceanColor = new Color(0.07f, 0.22f, 0.55f, 1f);
+    [Tooltip("Studio intro planet: land colour.")]
     [SerializeField] private Color landColor = new Color(0.2f, 0.55f, 0.22f, 1f);
+    [Tooltip("Studio intro planet: desert colour.")]
     [SerializeField] private Color desertColor = new Color(0.72f, 0.62f, 0.38f, 1f);
+    [Tooltip("Studio intro planet: ice cap colour.")]
     [SerializeField] private Color iceColor = new Color(0.92f, 0.95f, 1f, 1f);
+    [Tooltip("Studio intro planet: cloud colour (alpha = how thick).")]
     [SerializeField] private Color cloudColor = new Color(1f, 1f, 1f, 0.75f);
+    [Tooltip("Studio intro planet: atmosphere glow colour (alpha = how strong).")]
     [SerializeField] private Color atmosphereColor = new Color(0.35f, 0.65f, 1f, 0.8f);
     [SerializeField, Tooltip("Colour of Earth's night side (alpha = how dark it gets).")] private Color nightColor = new Color(0.01f, 0.02f, 0.08f, 0.85f);
+    [Tooltip("Studio intro: the moon's colour.")]
     [SerializeField] private Color moonColor = new Color(0.72f, 0.72f, 0.75f, 1f);
+    [Tooltip("Studio intro: the sun's colour.")]
     [SerializeField] private Color sunColor = new Color(1f, 0.93f, 0.75f, 1f);
+    [Tooltip("Studio intro galaxy: colour of its bright core.")]
     [SerializeField] private Color galaxyCoreColor = new Color(1f, 0.88f, 0.65f, 1f);
+    [Tooltip("Studio intro galaxy: colour of its spiral arms.")]
     [SerializeField] private Color galaxyArmColor = new Color(0.55f, 0.65f, 1f, 1f);
     [SerializeField, Tooltip("The bright pink star-forming clumps along the galaxy's arms.")] private Color galaxyClumpColor = new Color(1f, 0.45f, 0.75f, 1f);
     [SerializeField, Tooltip("Nebula clouds behind the galaxy and the cabinet (alpha = how strong).")] private Color nebulaColorA = new Color(0.55f, 0.2f, 0.85f, 0.28f);
+    [Tooltip("Second nebula cloud colour (alpha = how strong).")]
     [SerializeField] private Color nebulaColorB = new Color(0.1f, 0.6f, 0.75f, 0.22f);
+    [Tooltip("Third nebula cloud colour (alpha = how strong).")]
     [SerializeField] private Color nebulaColorC = new Color(0.95f, 0.3f, 0.5f, 0.18f);
+    [Tooltip("Colour of the arcade screen's GAME OVER text.")]
     [SerializeField] private Color gameOverColor = new Color(1f, 0.25f, 0.3f, 1f);
     [SerializeField, Tooltip("The other half of GAME OVER's RGB split.")] private Color gameOverSplitColor = new Color(0.2f, 0.9f, 1f, 0.55f);
     [SerializeField, Tooltip("Colour of the score line, INSERT COIN and CREDIT.")] private Color screenTextColor = new Color(1f, 0.85f, 0.3f, 1f);
@@ -93,19 +106,29 @@ public class PixelStudioIntro : MonoBehaviour
     [SerializeField, Range(0, 4000), Tooltip("Far background stars behind Earth and the galaxy.")] private int backgroundStars = 1600;
 
     [Header("Arcade colours")]
+    [Tooltip("Arcade cabinet body colour.")]
     [SerializeField] private Color cabinetColor = new Color(0.16f, 0.1f, 0.35f, 1f);
+    [Tooltip("Arcade cabinet trim colour.")]
     [SerializeField] private Color cabinetTrimColor = new Color(1f, 0.3f, 0.75f, 1f);
+    [Tooltip("Colour of the cabinet's lit marquee sign.")]
     [SerializeField] private Color marqueeColor = new Color(1f, 0.75f, 0.2f, 1f);
+    [Tooltip("Colour of the marquee sign's text.")]
     [SerializeField] private Color marqueeTextColor = new Color(0.12f, 0.05f, 0.25f, 1f);
+    [Tooltip("Colour of the frame around the arcade screen.")]
     [SerializeField] private Color bezelColor = new Color(0.05f, 0.05f, 0.07f, 1f);
     [SerializeField, Tooltip("The neon frame round the screen and the side art.")] private Color neonColor = new Color(0.2f, 0.95f, 1f, 1f);
     [SerializeField, Tooltip("The chasing bulbs round the marquee.")] private Color bulbColor = new Color(1f, 0.95f, 0.7f, 1f);
     [SerializeField, Range(0.5f, 3f), Tooltip("Size of the alien (1 = a small cube a third of the cabinet's height).")] private float alienSize = 1.75f;
     [SerializeField, Tooltip("Where the alien stands, relative to the cabinet's foot (x = left / right, z = in front; the control panel ends at z -0.47).")] private Vector3 alienPosition = new Vector3(-0.3f, 0f, -0.75f);
+    [Tooltip("Colour of the alien at the arcade cabinet.")]
     [SerializeField] private Color alienColor = new Color(0.35f, 0.9f, 0.35f, 1f);
+    [Tooltip("Arcade cabinet: first button colour.")]
     [SerializeField] private Color buttonColorA = new Color(1f, 0.2f, 0.25f, 1f);
+    [Tooltip("Arcade cabinet: second button colour.")]
     [SerializeField] private Color buttonColorB = new Color(0.2f, 0.6f, 1f, 1f);
+    [Tooltip("Arcade cabinet: third button colour.")]
     [SerializeField] private Color buttonColorC = new Color(1f, 0.85f, 0.15f, 1f);
+    [Tooltip("Colour of the coin dropped into the arcade cabinet.")]
     [SerializeField] private Color coinColor = new Color(1f, 0.8f, 0.25f, 1f);
     [SerializeField, Range(0, 40), Tooltip("Little pixel cubes tumbling in space round the cabinet.")] private int floatingCubes = 18;
     [SerializeField, Range(0, 2000), Tooltip("Stars behind the floating cabinet.")] private int arcadeStars = 700;

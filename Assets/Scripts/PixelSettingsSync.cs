@@ -58,7 +58,7 @@ public static class PixelSettingsSync
         }) known.Add(new Known("PixelClicker.Setting." + k, 0));
         // Floats and strings (they used to be listed as ints, which stored 0 and wiped the picked glow colour, the hues and the skill pack on every load).
         foreach (string k in new[] { "ViewBaseZoom", "ViewAutoSpeed", "FilterStrength" }) known.Add(new Known("PixelClicker.Setting." + k, 1));
-        foreach (string k in new[] { "SkillPack", "SkillOfflineTask", "SkillGuests", "MyWindow", "PetOutfits", "CustomKeys" }) known.Add(new Known("PixelClicker.Setting." + k, 2));
+        foreach (string k in new[] { "MyWindow", "PetOutfits", "CustomKeys" })   // (SkillPack / SkillOfflineTask / SkillGuests: progress in the GameState since 2026-10-24) known.Add(new Known("PixelClicker.Setting." + k, 2));
         // Volumes.
         known.Add(new Known("PixelAudio.Master", 1));
         known.Add(new Known("PixelAudio.Effects", 1));
@@ -174,7 +174,6 @@ public static class PixelSettingsSync
         PixelHud.ReloadGlowFromPrefs();
         PixelUIKit.ReloadColorFromPrefs();
         PixelUIKit.ReloadButtonColorFromPrefs();
-        PixelSkills.ReloadSettingsFromPrefs();
         PixelBasicFx.ReloadFromPrefs();
         PixelMyWindow.ReloadFromPrefs();
         PixelPets.ReloadOutfitsFromPrefs();

@@ -6,7 +6,7 @@
 //   (PixelConveyor.SetHighlight), so you see what you are editing.
 //   The sheet: how many pieces and how long, the speed, the lane count (Electrician), husks riding, stopped by a lever or not, and a STATUS line
 //   (PixelConveyor.EndStatus: running, feeding a machine, waiting for a full / busy machine, or spilling and why - nothing attached, another height, head-on). A SPEED stepper
-//   (- / +, speedStep cube widths a second, the whole section), a SIZE stepper (lanes 1..the Electrician maximum: PixelConveyor.SetLanes), actions REVERSE (every piece of the section turns round) and REMOVE THIS PIECE, and the
+//   (- / +, speedStep cube widths a second, the whole section), a SIZE stepper (lanes 1..the Electrician maximum: PixelConveyor.SetLanes), actions REVERSE (every piece of the section turns round) and REMOVE THIS PIECE (hovering it makes only that piece glow, red), and the
 //   panel's own Remove button takes the WHOLE SECTION away (asks once). A right HOLD on a belt still removes just that piece (PixelFeatureTester).
 //   Not a MonoBehaviour: one small object per opened panel (the settings below are constants for now).
 // ---------------------------------------------------
@@ -21,6 +21,7 @@ public sealed class PixelConveyorPanel : IPixelPanelSubject
     private readonly PixelConveyor clicked;
     private readonly List<PixelConveyor> section = new List<PixelConveyor>();
     private readonly List<PixelConveyor> lit = new List<PixelConveyor>();
+    private bool pieceHover;   // the pointer is on 'Remove this piece': only that piece glows, red
 
     private PixelConveyorPanel(PixelConveyor belt) { clicked = belt; }
 
@@ -41,7 +42,13 @@ public sealed class PixelConveyorPanel : IPixelPanelSubject
             if (section.Count > 0) { PixelConveyor any = section[0]; any.CollectSection(section); }
         }
         foreach (PixelConveyor b in lit) if (b != null && !section.Contains(b)) b.SetHighlight(false);
-        foreach (PixelConveyor b in section) if (b != null) b.SetHighlight(true);
+        foreach (PixelConveyor b in section)
+        {
+            if (b == null) continue;
+            if (!pieceHover) b.SetHighlight(true);
+            else if (b == clicked) b.SetHighlight(true, true);
+            else b.SetHighlight(false);
+        }
         lit.Clear();
         lit.AddRange(section);
     }
@@ -54,6 +61,7 @@ public sealed class PixelConveyorPanel : IPixelPanelSubject
 
     public void PanelClosed()
     {
+        pieceHover = false;
         foreach (PixelConveyor b in lit) if (b != null) b.SetHighlight(false);
         lit.Clear();
     }
@@ -104,7 +112,7 @@ public sealed class PixelConveyorPanel : IPixelPanelSubject
                         lanes > 1 ? () => SetLanes(lanes - 1) : (System.Action)null,
                         lanes < max ? () => SetLanes(lanes + 1) : (System.Action)null);
         info.AddAction("Reverse", Reverse, ButtonRole.Primary);
-        if (pieces > 1 && clicked != null) info.AddAction("Remove this piece", RemovePiece, ButtonRole.Danger);
+        if (pieces > 1 && clicked != null) info.AddAction("Remove this piece", RemovePiece, ButtonRole.Danger, HoverRemovePiece);
     }
 
     private static float Round(float v) => Mathf.Round(v / SpeedStep) * SpeedStep;
@@ -129,8 +137,17 @@ public sealed class PixelConveyorPanel : IPixelPanelSubject
         foreach (PixelConveyor b in section) if (b != null) b.Flip();
     }
 
+    /// <summary>The pointer on 'Remove this piece': only the clicked piece glows (red) so you see which one goes; off it, the whole section glows again.</summary>
+    private void HoverRemovePiece(bool on)
+    {
+        if (pieceHover == on) return;
+        pieceHover = on;
+        Refresh();
+    }
+
     private void RemovePiece()
     {
+        pieceHover = false;
         if (clicked == null) return;
         clicked.SetHighlight(false);
         PixelFeatureTester.RemovePlaced(clicked.gameObject);

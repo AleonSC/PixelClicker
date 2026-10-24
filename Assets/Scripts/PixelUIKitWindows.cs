@@ -16,6 +16,7 @@
 //   registers with PixelWindows (Escape) and builds its own content below HeaderHeight. Dialogs that close with their own
 //   Done / Continue / Next button pass closeButton: false (no X).
 //   Windows moved onto it so far: View (PixelViewWindow).
+//   FitBesideShop(window, shop, aloneSize): docks a right-edge window beside the open shop, mirroring the Currency panel (Pixel Guide, Toggles).
 // ---------------------------------------------------
 using TMPro;
 using UnityEngine;
@@ -112,6 +113,13 @@ public static partial class PixelUIKit
     // Titles made by CreateWindow, recoloured live when the theme's title colour changes (a title given its own colour afterwards is left alone).
     private static readonly System.Collections.Generic.List<TMP_Text> titles = new System.Collections.Generic.List<TMP_Text>();
     private static Color titleColorShown = Color.white;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetTitleStatics()   // (a fresh play mode start: no titles yet, the start colour; play mode may skip the domain reload)
+    {
+        titles.Clear();
+        titleColorShown = Color.white;
+    }
 
     /// <summary>Re-applies PixelUITheme's title colour to every window title still in the theme colour.</summary>
     public static void RefreshTitles()
@@ -216,5 +224,35 @@ public static partial class PixelUIKit
         }
         w.FitTitle();
         return w;
+    }
+
+    /// <summary>
+    /// Docks a right-edge window BESIDE THE OPEN SHOP (Pixel Guide, Toggles): as tall as the shop and as wide as the Currency panel, flush against
+    /// the shop's right side with the Currency panel's gap (mirroring it). With the shop closed (or 'shop' null) the window gets 'aloneSize' at the
+    /// right edge, just in from the HUD's side bar. The window must be anchored at the middle of the right edge. Returns true when it is beside the shop.
+    /// </summary>
+    public static bool FitBesideShop(RectTransform window, PixelShop shop, Vector2 aloneSize)
+    {
+        RectTransform shopRect = shop != null ? shop.PanelRect : null;
+        Canvas canvas = window.GetComponentInParent<Canvas>();
+        float scale = canvas != null ? Mathf.Max(0.01f, canvas.rootCanvas.scaleFactor) : 1f;
+        PixelHud hud = PixelHud.Instance;
+        float inset = hud != null ? hud.SideShownInset : 0f;
+
+        if (shopRect == null || !shopRect.gameObject.activeInHierarchy)
+        {
+            window.sizeDelta = aloneSize;
+            window.anchoredPosition = new Vector2(-inset, 0f);
+            return false;
+        }
+        Vector3[] c = new Vector3[4];
+        shopRect.GetWorldCorners(c);   // screen pixels (overlay canvas)
+        float shopRight = c[2].x, shopTop = c[2].y, shopBottom = c[0].y;
+        float width = shop.CurrencyPanelWidth;
+        float gap = shop.CurrencyPanelGap;
+        float rightEdge = (Screen.width - shopRight) / scale - gap - width;
+        window.sizeDelta = new Vector2(width, (shopTop - shopBottom) / scale);
+        window.anchoredPosition = new Vector2(-Mathf.Max(0f, rightEdge), ((shopTop + shopBottom) * 0.5f - Screen.height * 0.5f) / scale);
+        return true;
     }
 }

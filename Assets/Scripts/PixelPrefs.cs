@@ -50,7 +50,7 @@ public static class PixelPrefs
     public static bool GetBool(string key, bool fallback) => GetInt(key, fallback ? 1 : 0) != 0;
     public static void SetBool(string key, bool value) => SetInt(key, value ? 1 : 0);
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG
     private static readonly Dictionary<string, Kind> seen = new Dictionary<string, Kind>();
     private static readonly HashSet<string> warned = new HashSet<string>();
 
@@ -61,7 +61,7 @@ public static class PixelPrefs
     /// <summary>Editor / dev builds: remembers each key's type and warns once when a key is used as a different type.</summary>
     private static void Note(string key, Kind kind)
     {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG
         if (string.IsNullOrEmpty(key)) return;
         if (!seen.TryGetValue(key, out Kind was)) { seen[key] = kind; return; }
         if (was != kind && warned.Add(key))

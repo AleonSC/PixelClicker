@@ -111,6 +111,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, tr:focus-visibl
   </section>
 
   <section class="panel">
+    <h2>Hot spots (changed most in the last <span id="churnDays">30</span> days, weighted by findings)</h2>
+    <div class="fix" id="hot"></div>
+  </section>
+
+  <section class="panel">
     <h2>Every script by area (size = lines, colour = score; click one)</h2>
     <svg id="tree" role="img" aria-label="Treemap of scripts by area, coloured by health score"></svg>
     <div class="legend"><span><i style="background:var(--bad)"></i>below 60</span><span><i style="background:var(--warn)"></i>60-84</span><span><i style="background:var(--good)"></i>85+</span></div>
@@ -207,6 +212,14 @@ const DATA = /*__DATA__*/null;
     return `<button data-file="${esc(s.file)}"><span class="pill" style="background:${tone(s.score)}">${s.score.toFixed(0)}</span><span><div class="fname">${esc(s.file)}</div><div class="fwhy">${fmt(s.lines)} lines · ${esc(main)}</div></span></button>`;
   }).join('');
   document.querySelectorAll('#fix button').forEach(b => b.onclick = () => openFile(b.dataset.file));
+
+  // ---- hot spots: scripts that change often AND carry findings are where bugs come from ----
+  document.getElementById('churnDays').textContent = DATA.churnDays || 30;
+  const hotList = S.filter(s => s.churn).map(s => ({ s, w: s.churn * (1 + s.n) })).sort((a, b) => b.w - a.w).slice(0, 10);
+  document.getElementById('hot').innerHTML = hotList.length ? hotList.map(({ s }) =>
+    `<button data-file="${esc(s.file)}"><span class="pill" style="background:${tone(s.score)}">${s.score.toFixed(0)}</span><span><div class="fname">${esc(s.file)}</div><div class="fwhy">changed ${s.churn}× · ${s.n} finding${s.n === 1 ? '' : 's'} · ${fmt(s.lines)} lines</div></span></button>`).join('')
+    : '<p class="fwhy">No git history found.</p>';
+  document.querySelectorAll('#hot button').forEach(b => b.onclick = () => openFile(b.dataset.file));
 
   // ---- treemap ----
   function drawTree() {

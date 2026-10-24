@@ -8,11 +8,20 @@
 //   trained) via PixelSkills.AddXp (so the XP popup shows too); defaults in DefaultSkillXp by id (meteor 1, black hole 1 per swallowed
 //   pixel, pad 6, stardust 8, ghost 12, dash 15, bomb 20, snake / sort / breakout 25, others 5); per minigame skillXpReward (0 =
 //   default) and disableSkillXp in the Inspector. A minigame can name its own skill with SkillXpTarget (meteor = Mining, evil tree = Woodcutting): its XP then always goes there, whatever is in training (nothing if that skill is not bought). Bought minigames get an on/off row in the Toggles window
-//   (PixelMinigame.UserDisabled, saved per minigame; the shop never auto-starts a disabled one). Shop packs refer to minigames by id
+//   (PixelMinigame.UserDisabled, progress per minigame in the GameState - MinigamesState, with the goal counters: SavedCount / SavedExtra, 2026-10-24; the shop never auto-starts a disabled one). Shop packs refer to minigames by id
 //   (unlocksMinigame; goals via a PackRequirement of kind MinigameGoal); the shop shows tracker rows and the save system stores counts
 //   generically - a new minigame needs no changes to PixelShop or PixelSaveGame. For the dev tools' Despawn button a minigame must
 //   call Track(go) on everything it puts in the scene (roots, messages, effects) and override OnDespawned() to reset its busy flag /
 //   spawn timer (DespawnNow() stops its coroutines and destroys the tracked objects).
+//   ROUND SCHEDULE: a minigame that comes back on a timer derives from PixelScheduledMinigame (startRunning / running / firstRoundDelay /
+//   minInterval..maxInterval, Running / Activate / Deactivate, StartSchedule, ScheduleNext) instead of writing them again.
+//   SPAWN STEP: a subclass's Update counts its spawn timer with SpawnDue(ref spawnTimer, blocked) - due + PixelMinigameLimits.AllowAnother + its own
+//   'blocked' reason, else the limits' retry time (2026-10-24: was a copied block in 13 minigames). The Visitor rolls its own way.
+//   RESULT TEXT: ResultShownLong(ref resultTimer, roundRunning, uiRoot) says when a round's result text should go (Blink, Dash, Evade, Traffic).
+//   CUBE ROUNDS (Blink, Dash, Evade, Traffic - rounds played on the clickable cube): shared steps HookCubeClicks / UnhookCubeClicks (Awake /
+//   OnDestroy), PrepareCubeRound (TryStart: camera, round pixel, forced spawn tier), ReleaseCubeRound + PayCubeRoundBonus (EndRound),
+//   DropRoundUi, RandomBetween (2026-10-24: were copied blocks). Moving the cube on screen: PixelCubeScreenSpot.Place.
+//   Takeover rounds' bystander husks (shrink away during the round): PixelBystanders.
 //   TakeoverActive, AutoClickerPaused and the floor area claims are cleared on every scene unload (Settings > Restart).
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -40,7 +49,7 @@ public abstract class PixelMinigame : MonoBehaviour
         AutoClickerPaused = false;
         claims.Clear();
         registry.Clear();
-        PixelStatics.ResetOnRestart(OnSceneUnloaded);
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);   // restart-reset-not-progress: a running round's takeover / auto-clicker pause / floor claims
     }
 
     // Settings > Restart reloads the scene but statics survive it: a round cut short left TakeoverActive / AutoClickerPaused on, and a
@@ -265,8 +274,138 @@ public abstract class PixelMinigame : MonoBehaviour
     /// <summary>Reset the 'something is on screen' state (busy flag, next-spawn timer, effects) after <see cref="DespawnNow"/>.</summary>
     protected virtual void OnDespawned() { }
 
-    /// <summary>The player switched this (bought) minigame off in the shop. Saved. The shop won't start it while this is true.</summary>
-    public bool UserDisabled { get; set; }
+    // ---- progress: each minigame's switch, goal counter and second number live in the GameState (PixelGameState.Current.minigames, by Id) ----
+    private MinigamesState.Entry Saved(bool create) => PixelGameState.Current.minigames.Find(Id, create);
+
+    /// <summary>The player switched this (bought) minigame off in the shop. Saved (GameState). The shop won't start it while this is true.</summary>
+    public bool UserDisabled
+    {
+        get { MinigamesState.Entry e = Saved(false); return e != null && e.disabled; }
+        set { MinigamesState.Entry e = Saved(value); if (e != null) e.disabled = value; }
+    }
+
+    /// <summary>A subclass's goal counter, kept in the GameState (a subclass keeps its counter in a property over this, not a field).</summary>
+    protected double SavedCount
+    {
+        get { MinigamesState.Entry e = Saved(false); return e != null ? e.count : 0d; }
+        set { MinigamesState.Entry e = Saved(value != 0d); if (e != null) e.count = value; }
+    }
+
+    /// <summary>A subclass's second saved number (bomb parts held, ectoplasm), kept in the GameState.</summary>
+    protected double SavedExtra
+    {
+        get { MinigamesState.Entry e = Saved(false); return e != null ? e.extra : 0d; }
+        set { MinigamesState.Entry e = Saved(value != 0d); if (e != null) e.extra = value; }
+    }
+
+    /// <summary>A save was loaded (its counters are in the GameState now): a switched-off minigame stops; a subclass fixes up what follows from its counter (OnProgressLoaded).</summary>
+    private void OnGameLoaded()
+    {
+        if (UserDisabled) Deactivate();
+        OnProgressLoaded();
+    }
+
+    /// <summary>After a load: e.g. a goal already reached is not announced again.</summary>
+    protected virtual void OnProgressLoaded() { }
+
+    /// <summary>The shared result-text step: counts a round's result timer down (real time) and says when its text should go -
+    /// the timer just ran out, no new round started and the text is still there. The subclass then destroys its UI.</summary>
+    protected static bool ResultShownLong(ref float timer, bool roundRunning, GameObject ui)
+    {
+        if (timer <= 0f) return false;
+        timer -= Time.unscaledDeltaTime;
+        return timer <= 0f && !roundRunning && ui != null;
+    }
+
+    /// <summary>The shared spawn step for a subclass's Update: counts the timer down and says whether a round may start NOW.
+    /// When it is due but PixelMinigameLimits says no (or 'blocked' - the subclass's own reason, like the pause menu or a takeover),
+    /// the timer is set to the limits' retry time and it returns false. On true the subclass starts its round and sets the next timer.</summary>
+    protected bool SpawnDue(ref float timer, bool blocked = false)
+    {
+        timer -= Time.deltaTime;
+        if (timer > 0f) return false;
+        if (blocked || !PixelMinigameLimits.AllowAnother(this)) { timer = PixelMinigameLimits.RetrySeconds; return false; }
+        return true;
+    }
+
+    // ---- Cube rounds: shared steps of the minigames played on the clickable cube itself (Blink, Dash, Evade, Traffic) ----
+
+    /// <summary>Awake step of a cube round: finds the PixelClicker when the field is empty and listens to its clicks.
+    /// False (an error logged and this component switched off) when there is no PixelClicker in the scene.</summary>
+    protected bool HookCubeClicks(ref PixelClicker clicker, System.Action<int, double, bool> onCollected, System.Action<int, int, int, bool> onHit)
+    {
+        if (clicker == null) clicker = PixelFind.First<PixelClicker>();
+        if (clicker == null)
+        {
+            Debug.LogError(GetType().Name + ": no PixelClicker found in the scene.", this);
+            enabled = false;
+            return false;
+        }
+        clicker.PixelCollected += onCollected;
+        clicker.PixelHit += onHit;
+        return true;
+    }
+
+    /// <summary>OnDestroy step of a cube round: stops listening to the clicker's clicks (HookCubeClicks' other half).</summary>
+    protected static void UnhookCubeClicks(PixelClicker clicker, System.Action<int, double, bool> onCollected, System.Action<int, int, int, bool> onHit)
+    {
+        if (clicker == null) return;
+        clicker.PixelCollected -= onCollected;
+        clicker.PixelHit -= onHit;
+    }
+
+    /// <summary>A random wait between two Inspector values (either may be the bigger one), e.g. the next round's spawn timer.</summary>
+    protected static float RandomBetween(float a, float b) => Random.Range(Mathf.Min(a, b), Mathf.Max(a, b));
+
+    /// <summary>Destroys a round's UI (when it is still there) and forgets it and its status label.</summary>
+    protected static void DropRoundUi(ref GameObject uiRoot, ref TMPro.TMP_Text statusLabel)
+    {
+        if (uiRoot == null) return;
+        Destroy(uiRoot);
+        uiRoot = null;
+        statusLabel = null;
+    }
+
+    /// <summary>TryStart step of a cube round: takes the camera, picks the round's pixel (the one on the cube; never a Dragon Cube /
+    /// meteor - then White) and keeps the cube that pixel for the whole round (unless a running potion already does). False = no round now.</summary>
+    protected static bool PrepareCubeRound(PixelClicker clicker, ref Camera cam, ref int tierIndex, ref bool forcedByMe)
+    {
+        cam = clicker.ViewCamera;
+        if (cam == null || clicker.PixelTransform == null) return false;
+
+        tierIndex = clicker.CurrentClickTierIndex;
+        if (tierIndex < 0 || tierIndex >= clicker.Tiers.Length) return false;
+        if (clicker.Tiers[tierIndex].rareDrop || clicker.Tiers[tierIndex].flyAway)
+        {
+            tierIndex = clicker.IndexOf(PixelClicker.PixelType.White);   // never a Dragon Cube / meteor
+            if (tierIndex < 0) return false;
+        }
+
+        // The cube stays this pixel for the whole round (a running potion already does the same by itself).
+        PixelConsumables potions = PixelFind.First<PixelConsumables>();
+        forcedByMe = potions == null || !potions.IsActive;
+        if (forcedByMe) clicker.SetForcedSpawnTier(clicker.Tiers[tierIndex].type);
+        return true;
+    }
+
+    /// <summary>EndRound step of a cube round (PrepareCubeRound's other half): the auto clicker works again and the cube's forced pixel is let go.</summary>
+    protected static void ReleaseCubeRound(PixelClicker clicker, ref bool forcedByMe)
+    {
+        AutoClickerPaused = false;
+        if (forcedByMe) clicker.ClearForcedSpawnTier();
+        forcedByMe = false;
+    }
+
+    /// <summary>EndRound step of a cube round: pays the bonus - count x rewardMultiplier x the round pixel's worth per click -
+    /// and returns it (for the result line).</summary>
+    protected static double PayCubeRoundBonus(PixelClicker clicker, int tierIndex, int count, float rewardMultiplier)
+    {
+        PixelClicker.PixelTier tier = clicker.Tiers[tierIndex];
+        double perClick = tier.amountPerClick * clicker.PayoutMultiplier(tierIndex) * clicker.ClickMultiplier / Mathf.Max(1, tier.clicksToCollect);
+        double bonus = count * rewardMultiplier * perClick;
+        if (bonus > 0d) clicker.AddCurrency(tierIndex, bonus);
+        return bonus;
+    }
 
     /// <summary>False = the player can't switch this one off (no switch in the Toggles window; e.g. the very rare cat visitors).</summary>
     public virtual bool CanSwitchOff => true;
@@ -339,11 +478,13 @@ public abstract class PixelMinigame : MonoBehaviour
     protected virtual void Awake()
     {
         if (!registry.Contains(this)) registry.Add(this);
+        PixelGameState.Loaded += OnGameLoaded;
     }
 
     protected virtual void OnDestroy()
     {
         registry.Remove(this);
+        PixelGameState.Loaded -= OnGameLoaded;
     }
 
     /// <summary>

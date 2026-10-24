@@ -395,15 +395,15 @@ public class PixelCardBoard
 /// <summary>Runs a card board's per-frame checks (the right-hold for a favorite, the search flash); the board itself is a plain class.</summary>
 public class PixelCardBoardDriver : MonoBehaviour
 {
-    public PixelCardBoard board;
+    [System.NonSerialized] public PixelCardBoard board;   // (set in code at run time; never saved)
     private void Update() { if (board != null && gameObject.activeInHierarchy) board.Tick(); }
 }
 
 /// <summary>A card's header strip (and the Dev Hub's side grip): dragging it slides the card up or down.</summary>
 public class PixelCardGrip : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
-    public PixelCardBoard board;
-    public PixelCardBoard.Card card;
+    [System.NonSerialized] public PixelCardBoard board;   // (set in code at run time; never saved)
+    [System.NonSerialized] public PixelCardBoard.Card card;
     public void OnBeginDrag(PointerEventData e) { board.BeginDrag(card); }
     public void OnDrag(PointerEventData e) { board.Drag(card, e.delta.y); }
     public void OnEndDrag(PointerEventData e) { board.EndDrag(card); }

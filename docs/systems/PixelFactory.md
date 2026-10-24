@@ -3,13 +3,14 @@
 Both are Dev Hub > Tester features (PixelFeatureTester), built from primitives in code with `PixelFactoryKit` (shared materials / boxes / cylinders / ghost versions). Not saved.
 
 ## Conveyor belt (PixelConveyor.cs)
-- Place: click a point, click another: a belt between them; the second point starts the next piece (short pieces = a curve); right click ends the chain, right click again (or Esc) stops. Clicks near a belt end snap to it (`PixelConveyor.Snap`). Two-point features are `RegisterLine` in the tester (marker ghost, then a preview piece).
+- Place: click a point, click another: a belt between them; the second point starts the next piece (short pieces = a curve); right click (or Esc) stops placing; the pieces already laid stay. Clicks near a belt end snap to it (`PixelConveyor.Snap`). Two-point features are `RegisterLine` in the tester (marker ghost, then a preview piece).
 - Quick right click a placed belt (not while placing): opens the BELT PANEL on its section (`PixelConveyorPanel`: speed, lanes, status, Reverse, Remove); a right HOLD removes that piece (`PixelFeatureTester`).
 - `PixelConveyorSystem.FixedUpdate` LOCKS every husk that lands on a belt (not held, not kinematic, not glued into a build, not flying, room for it) onto the belt and carries it along by position at `beltSpeedCubes` (0 = 1.6 cubes/s), no physics (like the Storage Crate). At the end it is handed to a belt that starts there, otherwise (an end is detected) it is ejected with physics back on, flying on in the belt direction. Riders keep a gap (queue when blocked). Flipping a belt flips its riders; grabbing one frees it.
 
 ## Kiln (PixelKiln.cs)
-- Anything inside the mouth zone (in front of the +X door) burns: `ClaimOldPixel`, drawn in while it shrinks, then `charcoalPerPixel` Charcoal husks (`PixelType.Charcoal 81`, `EnsureCharcoalTier`, standalone, look migration looksVersion 58) leave the back chute after `charcoalDelaySeconds`, one per `charcoalGapSeconds`. Fire light, embers, smoke (thicker while it burns).
-- A belt can lead into the mouth and another can carry the charcoal away - through couplings on its 'mouth' (In) and 'chute' (Out) sockets.
+- Anything inside the mouth zone (in front of the +X door) burns: `ClaimOldPixel`, drawn in while it shrinks, then after `charcoalDelaySeconds` it gives `charcoalPerPixel` CHARCOAL, one per `charcoalGapSeconds`, as a MATERIAL (2026-10-24): `PixelMaterials.Add("charcoal")`, a "+1 Charcoal" popup over the kiln (`PixelUI.ShowWorldText`), shown in the Inventory's Materials tab. Fire light, embers, smoke (thicker while it burns).
+- Charcoal buys the **Charcoal Pixel** in the shop (Pixels tab: 50 Charcoal + 1,500 Gray + 1,500 Black, needs the RGB pack); that pixel spawns on the cube and its husks are the most efficient Biomass Generator fuel (`charcoalFuel` 8 wood husks; Wood Chips 4). Before 2026-10-24 the kiln spat Charcoal husks out of a back chute and Charcoal was a Firemaking block.
+- A belt can lead into the mouth through a coupling on its 'mouth' (In) socket (the old 'chute' Out socket is gone).
 
 ## Wood Chipper discharge arrow and chute socket
 While placing, the ghost chipper shows a flat arrow from its chute outwards (PixelWoodChipper.BuildArrow; the chips shoot out along it). The chute is an Out SOCKET on the floor in front of the outlet: with a coupling there, its Wood Chips blocks go straight onto the belt that starts at it (see `docs/systems/PixelCouplings.md`). (The old placing latch onto a belt opening is gone.)

@@ -2,6 +2,8 @@
 
 Moved from CLAUDE.md. The script header comments and `CLAUDE.md` index point here.
 
+**Inventory progress (2026-10-24):** what you hold (`Potion.owned` / `bonusCap`, `Device.owned`) lives in the GameState (`InventoryState`, by key; see `docs/systems/PixelGameState.md`); placed devices and the running potion copy themselves in on `PixelGameState.Saving` and are rebuilt on `Loaded`. Overrides older save wording below.
+
 **Device models (2026-10-24):** each device builds its own look in its own script: `PixelFanDevice.BuildModel` (+ `WedgeMesh`), `PixelVacuumDevice`, `PixelMagnetDevice`, `PixelSprinklerDevice`, `PixelLightningRod`, `PixelChargeBooster`, `PixelQuantumDevice`, `PixelStorageCrate` (all `BuildModel(clicker, root, device, isPreview, previewOpacity)`). `BuildDeviceObject` here only picks one and adds the shared range disc, suction point and timer. A NEW device's model goes in its own script the same way (the newer machines already use `CreateGhost` / `CreateDisplay` / `Place`).
 
 ## Attuned devices (PixelConsumables.AppendAttunedDevices, PixelCrafting.FindAttuneRecipe)

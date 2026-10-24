@@ -21,7 +21,7 @@ public static class PixelWindows
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
     {
         entries.Clear();
-        PixelStatics.ResetOnRestart(OnSceneUnloaded);
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);   // restart-reset-not-progress: Escape registrations of destroyed windows
     }
 
     // Restart reloads the scene: windows whose owner was destroyed without Unregister would stay listed, and an open-check that reads

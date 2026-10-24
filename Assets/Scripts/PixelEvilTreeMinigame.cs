@@ -1,6 +1,6 @@
 // ---- System notes ----
 // PixelEvilTreeMinigame.cs
-//   Evil Tree minigame (id eviltree, pack unlocksMinigame = "eviltree", Minigames tab, needs the Lumberjack's Pack; extends PixelMinigame): now and then (firstDelay 60 s, then minInterval 150 ..
+//   Evil Tree minigame (id eviltree, pack unlocksMinigame = "eviltree", Minigames tab, needs the Lumberjack's Pack; extends PixelMinigame): now and then (firstRoundDelay 60 s, then minInterval 150 ..
 //   maxInterval 300 s, PixelMinigameLimits.AllowAnother) a sapling sprouts on the floor near the cube (PixelBait.FindGround, kept inside the view) and GROWS over growSeconds (14) into a giant tree
 //   (heightInCubes 5 cubes tall) with glowing eyes and a jagged mouth. It FLAILS so it is hard to click: the whole tree leans and jerks to new spots (the click colliders move with it), its arms
 //   whip about, and it flails harder as it grows. It has a HEALTH BAR (health 40, each manual click on it does damagePerClick 1; the auto clicker never hits it): at 0 it topples over and pays
@@ -14,24 +14,17 @@ using TMPro;
 using UnityEngine;
 using static PixelInput;
 
-public class PixelEvilTreeMinigame : PixelMinigame
+public class PixelEvilTreeMinigame : PixelScheduledMinigame
 {
     [Header("References")]
     [Tooltip("The PixelClicker (camera, cube position, floor). Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
 
-    [Header("State")]
-    [Tooltip("Run from the start without buying it in the shop (for testing).")]
-    [SerializeField] private bool startRunning = false;
-    [Tooltip("Is the minigame running? (The shop turns this on when the Evil Tree pack is bought.)")]
-    [SerializeField] private bool running = false;
-
     [Header("Magic wood (the material it gives)")]
     [Min(1)]
     [Tooltip("The tracker's goal (nothing requires it yet; it only fills the bar in the shop).")]
     [SerializeField] private double woodGoal = 100;
-    [Tooltip("Runtime: magic wood held (saved with the game).")]
-    [SerializeField] private double magicWood = 0;
+    private double magicWood { get => SavedCount; set => SavedCount = value; }   // (progress: the GameState)
     [Min(1)]
     [Tooltip("Least magic wood a felled tree pays.")]
     [SerializeField] private int minWood = 6;
@@ -45,17 +38,6 @@ public class PixelEvilTreeMinigame : PixelMinigame
     [SerializeField] private string trackerDescription = "Fell the evil tree when it sprouts. It pays Magic Wood and Woodcutting XP.";
     [Tooltip("Text on a locked shop pack that needs the goal. {0} = wood held, {1} = goal.")]
     [SerializeField] private string requirementFormat = "Requires: {0} / {1} magic wood";
-
-    [Header("When it appears")]
-    [Min(0f)]
-    [Tooltip("Seconds after the minigame starts before the first tree.")]
-    [SerializeField] private float firstDelay = 60f;
-    [Min(1f)]
-    [Tooltip("Shortest wait between trees (seconds).")]
-    [SerializeField] private float minInterval = 150f;
-    [Min(1f)]
-    [Tooltip("Longest wait between trees (seconds).")]
-    [SerializeField] private float maxInterval = 300f;
 
     [Header("The tree")]
     [Min(1f)]
@@ -93,13 +75,19 @@ public class PixelEvilTreeMinigame : PixelMinigame
     [Tooltip("Colour of the eyes and mouth glow.")]
     [SerializeField] private Color eyeColor = new Color(1f, 0.25f, 0.2f, 1f);
 
-    private float spawnTimer;
     private bool treeActive;
     private float lastHitTime;
 
+    // This minigame's own defaults for the shared round schedule (PixelScheduledMinigame; a scene's values override them).
+    public PixelEvilTreeMinigame()
+    {
+        firstRoundDelay = 60f;
+        minInterval = 150f;
+        maxInterval = 300f;
+    }
+
     public override string Id => "eviltree";
     public override string DisplayName => "Evil Tree";
-    public override bool Running => running;
     public override bool Busy => treeActive;
     protected override string SkillXpTarget => PixelSkills.WoodcuttingId;
 
@@ -117,7 +105,7 @@ public class PixelEvilTreeMinigame : PixelMinigame
     protected override void OnDespawned()
     {
         treeActive = false;
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
     }
 
     protected override void Awake()
@@ -125,18 +113,8 @@ public class PixelEvilTreeMinigame : PixelMinigame
         base.Awake();
         clicker = clicker != null ? clicker : PixelFind.First<PixelClicker>();
         if (clicker == null) { enabled = false; return; }
-        if (startRunning) running = true;
-        spawnTimer = firstDelay;
+        StartSchedule();
     }
-
-    public override void Activate()
-    {
-        if (running) return;
-        running = true;
-        spawnTimer = firstDelay;
-    }
-
-    public override void Deactivate() => running = false;
 
     [ContextMenu("Sprout Evil Tree Now")]
     public override void SpawnNow()
@@ -147,10 +125,7 @@ public class PixelEvilTreeMinigame : PixelMinigame
     private void Update()
     {
         if (!running || treeActive || UserDisabled) return;
-        spawnTimer -= Time.deltaTime;
-        if (spawnTimer > 0f) return;
-        if (PixelMinigameLimits.AllowAnother(this) && !PixelCalm.InMenu && !TakeoverActive) StartCoroutine(TreeRoutine());
-        else spawnTimer = PixelMinigameLimits.RetrySeconds;
+        if (SpawnDue(ref spawnTimer, PixelCalm.InMenu || TakeoverActive)) StartCoroutine(TreeRoutine());
     }
 
     // ------------------------------------------------------------------
@@ -204,6 +179,37 @@ public class PixelEvilTreeMinigame : PixelMinigame
         return g.transform;
     }
 
+    /// <summary>The tree's body under 'root' (unit size: 1 tall): trunk, canopy, the glowing face ('eyeL' / 'eyeR' blink) and four whipping branch arms (added to 'arms').</summary>
+    private Transform BuildTreeBody(Transform root, Material bark, Material leaf, Material glow, Material dark, List<Arm> arms, out Transform eyeL, out Transform eyeR)
+    {
+        Transform body = new GameObject("Body").transform;
+        body.SetParent(root, false);
+        Part(body, PrimitiveType.Cylinder, "Trunk", new Vector3(0f, 0.32f, 0f), new Vector3(0.26f, 0.32f, 0.26f), bark, true);
+        Part(body, PrimitiveType.Sphere, "Canopy", new Vector3(0f, 0.78f, 0f), new Vector3(0.62f, 0.5f, 0.62f), leaf, true);
+        Part(body, PrimitiveType.Sphere, "Canopy Left", new Vector3(-0.26f, 0.66f, 0f), new Vector3(0.38f, 0.32f, 0.38f), leaf, false);
+        Part(body, PrimitiveType.Sphere, "Canopy Right", new Vector3(0.27f, 0.7f, 0.04f), new Vector3(0.36f, 0.3f, 0.36f), leaf, false);
+        // Face on the trunk (towards the camera side, set each frame by turning the body).
+        eyeL = Part(body, PrimitiveType.Sphere, "Eye L", new Vector3(-0.07f, 0.46f, -0.125f), new Vector3(0.07f, 0.045f, 0.03f), glow, false);
+        eyeR = Part(body, PrimitiveType.Sphere, "Eye R", new Vector3(0.07f, 0.46f, -0.125f), new Vector3(0.07f, 0.045f, 0.03f), glow, false);
+        Part(body, PrimitiveType.Cube, "Mouth", new Vector3(0f, 0.3f, -0.128f), new Vector3(0.13f, 0.035f, 0.02f), dark, false);
+        Part(body, PrimitiveType.Cube, "Fang L", new Vector3(-0.04f, 0.285f, -0.13f), new Vector3(0.016f, 0.03f, 0.02f), glow, false);
+        Part(body, PrimitiveType.Cube, "Fang R", new Vector3(0.04f, 0.285f, -0.13f), new Vector3(0.016f, 0.03f, 0.02f), glow, false);
+
+        // Arms: branches that whip about from pivots on the trunk.
+        for (int i = 0; i < 4; i++)
+        {
+            Transform pivot = new GameObject("Arm " + i).transform;
+            pivot.SetParent(body, false);
+            float side = i % 2 == 0 ? -1f : 1f;
+            pivot.localPosition = new Vector3(0f, 0.42f + 0.07f * (i / 2), 0f);
+            pivot.localRotation = Quaternion.Euler(0f, i < 2 ? 0f : 90f, 0f);
+            Part(pivot, PrimitiveType.Cylinder, "Branch", new Vector3(side * 0.22f, 0f, 0f), new Vector3(0.035f, 0.22f, 0.035f), bark, false).localRotation = Quaternion.Euler(0f, 0f, 90f);
+            Part(pivot, PrimitiveType.Sphere, "Twig Leaves", new Vector3(side * 0.45f, 0f, 0f), new Vector3(0.14f, 0.1f, 0.14f), leaf, false);
+            arms.Add(new Arm { pivot = pivot, speed = Random.Range(3f, 6f), phase = Random.value * 6.28f, reach = side });
+        }
+        return body;
+    }
+
     private IEnumerator TreeRoutine()
     {
         treeActive = true;
@@ -223,32 +229,8 @@ public class PixelEvilTreeMinigame : PixelMinigame
         Material glow = Flat(eyeColor);
         Material dark = Flat(new Color(0.05f, 0.02f, 0.05f, 1f));
 
-        Transform body = new GameObject("Body").transform;
-        body.SetParent(root.transform, false);
-        Part(body, PrimitiveType.Cylinder, "Trunk", new Vector3(0f, 0.32f, 0f), new Vector3(0.26f, 0.32f, 0.26f), bark, true);
-        Part(body, PrimitiveType.Sphere, "Canopy", new Vector3(0f, 0.78f, 0f), new Vector3(0.62f, 0.5f, 0.62f), leaf, true);
-        Part(body, PrimitiveType.Sphere, "Canopy Left", new Vector3(-0.26f, 0.66f, 0f), new Vector3(0.38f, 0.32f, 0.38f), leaf, false);
-        Part(body, PrimitiveType.Sphere, "Canopy Right", new Vector3(0.27f, 0.7f, 0.04f), new Vector3(0.36f, 0.3f, 0.36f), leaf, false);
-        // Face on the trunk (towards the camera side, set each frame by turning the body).
-        Transform eyeL = Part(body, PrimitiveType.Sphere, "Eye L", new Vector3(-0.07f, 0.46f, -0.125f), new Vector3(0.07f, 0.045f, 0.03f), glow, false);
-        Transform eyeR = Part(body, PrimitiveType.Sphere, "Eye R", new Vector3(0.07f, 0.46f, -0.125f), new Vector3(0.07f, 0.045f, 0.03f), glow, false);
-        Part(body, PrimitiveType.Cube, "Mouth", new Vector3(0f, 0.3f, -0.128f), new Vector3(0.13f, 0.035f, 0.02f), dark, false);
-        Part(body, PrimitiveType.Cube, "Fang L", new Vector3(-0.04f, 0.285f, -0.13f), new Vector3(0.016f, 0.03f, 0.02f), glow, false);
-        Part(body, PrimitiveType.Cube, "Fang R", new Vector3(0.04f, 0.285f, -0.13f), new Vector3(0.016f, 0.03f, 0.02f), glow, false);
-
-        // Arms: branches that whip about from pivots on the trunk.
         List<Arm> arms = new List<Arm>();
-        for (int i = 0; i < 4; i++)
-        {
-            Transform pivot = new GameObject("Arm " + i).transform;
-            pivot.SetParent(body, false);
-            float side = i % 2 == 0 ? -1f : 1f;
-            pivot.localPosition = new Vector3(0f, 0.42f + 0.07f * (i / 2), 0f);
-            pivot.localRotation = Quaternion.Euler(0f, i < 2 ? 0f : 90f, 0f);
-            Part(pivot, PrimitiveType.Cylinder, "Branch", new Vector3(side * 0.22f, 0f, 0f), new Vector3(0.035f, 0.22f, 0.035f), bark, false).localRotation = Quaternion.Euler(0f, 0f, 90f);
-            Part(pivot, PrimitiveType.Sphere, "Twig Leaves", new Vector3(side * 0.45f, 0f, 0f), new Vector3(0.14f, 0.1f, 0.14f), leaf, false);
-            arms.Add(new Arm { pivot = pivot, speed = Random.Range(3f, 6f), phase = Random.value * 6.28f, reach = side });
-        }
+        Transform body = BuildTreeBody(root.transform, bark, leaf, glow, dark, arms, out Transform eyeL, out Transform eyeR);
 
         // Health bar: a flat bar above the tree that always faces the camera.
         GameObject barRoot = new GameObject("Evil Tree Health");
@@ -363,7 +345,7 @@ public class PixelEvilTreeMinigame : PixelMinigame
         Destroy(root);
         Destroy(barRoot);
         foreach (Material m in new[] { bark, leaf, glow, dark, barBackMat, fillMat }) if (m != null) Destroy(m);   // (this tree's own materials)
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
         treeActive = false;
     }
 

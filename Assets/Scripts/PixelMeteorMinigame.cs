@@ -23,7 +23,7 @@ using static PixelInput;
 ///
 /// Add this to any GameObject (e.g. the cube). PixelShop adds it automatically if it is missing.
 /// </summary>
-public class PixelMeteorMinigame : PixelMinigame
+public class PixelMeteorMinigame : PixelScheduledMinigame
 {
     /// <summary>The meteor only trains Mining, whatever skill is in training.</summary>
     protected override string SkillXpTarget => PixelSkills.MiningId;
@@ -32,20 +32,11 @@ public class PixelMeteorMinigame : PixelMinigame
     [Tooltip("The PixelClicker (for the camera and the cube's position). Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
 
-    [Header("State")]
-    [Tooltip("Run from the start without buying it in the shop (for testing).")]
-    [SerializeField] private bool startRunning = false;
-
-    [Tooltip("Is the minigame running? (The shop turns this on when Meteor Strike is bought.)")]
-    [SerializeField] private bool running = false;
-
     [Header("Meteor Chunks (goal)")]
     [Min(1)]
     [Tooltip("Chunks you need in total before the Meteor Pixel can be bought. The count keeps going afterwards.")]
     [SerializeField] private double chunkGoal = 1000;
-
-    [Tooltip("Runtime: chunks collected so far (saved with the game). You can type a number to test the unlock.")]
-    [SerializeField] private double chunks = 0;
+    private double chunks { get => SavedCount; set => SavedCount = value; }   // (progress: the GameState)
 
     [Min(1)]
     [Tooltip("Chunks gained by each click on the meteor.")]
@@ -66,19 +57,6 @@ public class PixelMeteorMinigame : PixelMinigame
 
     [Tooltip("Text on a locked shop pack that needs the goal. {0} = chunks collected, {1} = goal.")]
     [SerializeField] private string requirementFormat = "Requires: {0} / {1} meteor chunks";
-
-    [Header("When it appears")]
-    [Min(0f)]
-    [Tooltip("Seconds after the minigame starts before the first meteor.")]
-    [SerializeField] private float firstMeteorDelay = 10f;
-
-    [Min(1f)]
-    [Tooltip("Shortest wait between meteors (seconds).")]
-    [SerializeField] private float minInterval = 60f;
-
-    [Min(1f)]
-    [Tooltip("Longest wait between meteors (seconds). Each wait is random between shortest and longest.")]
-    [SerializeField] private float maxInterval = 120f;
 
     [Header("Movement")]
     [Min(2f)]
@@ -212,8 +190,15 @@ public class PixelMeteorMinigame : PixelMinigame
     [Tooltip("Fired once, when the chunk count first reaches the goal.")]
     public UnityEvent onThresholdReached;
 
-    private float spawnTimer;
     private bool meteorActive;
+
+    // This minigame's own defaults for the shared round schedule (PixelScheduledMinigame; a scene's values override them).
+    public PixelMeteorMinigame()
+    {
+        firstRoundDelay = 10f;
+        minInterval = 60f;
+        maxInterval = 120f;
+    }
 
     public override bool Busy => meteorActive;
 
@@ -221,14 +206,13 @@ public class PixelMeteorMinigame : PixelMinigame
     {
         PixelAudio.StopLoop("meteor_rumble");
         meteorActive = false;
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
     }
     private bool thresholdAnnounced;
     private AudioSource audioSource;
 
     public override string DisplayName => "Meteor Strike";
     public override string Id => "meteor";
-    public override bool Running => running;
 
     // --- Tracker: meteor chunks (see PixelMinigame) ---
     public override bool HasTracker => true;
@@ -248,6 +232,9 @@ public class PixelMeteorMinigame : PixelMinigame
         thresholdAnnounced = chunks >= chunkGoal;
     }
 
+    // A save was loaded: a goal it had already reached is not announced again.
+    protected override void OnProgressLoaded() => thresholdAnnounced = chunks >= chunkGoal;
+
     protected override void Awake()
     {
         base.Awake();
@@ -259,8 +246,7 @@ public class PixelMeteorMinigame : PixelMinigame
             return;
         }
 
-        if (startRunning) running = true;
-        spawnTimer = firstMeteorDelay;
+        StartSchedule();
         thresholdAnnounced = chunks >= chunkGoal;
     }
 
@@ -268,22 +254,8 @@ public class PixelMeteorMinigame : PixelMinigame
     {
         if (!running || meteorActive) return;
 
-        spawnTimer -= Time.deltaTime;
-        if (spawnTimer <= 0f)
-        {
-            if (PixelMinigameLimits.AllowAnother(this)) StartCoroutine(MeteorRoutine());
-            else spawnTimer = PixelMinigameLimits.RetrySeconds; // too many minigames running right now
-        }
+        if (SpawnDue(ref spawnTimer)) StartCoroutine(MeteorRoutine());
     }
-
-    public override void Activate()
-    {
-        if (running) return;
-        running = true;
-        spawnTimer = firstMeteorDelay;
-    }
-
-    public override void Deactivate() => running = false;
 
     /// <summary>Sends a meteor right now (right-click the component &gt; Send Meteor Now).</summary>
     [ContextMenu("Send Meteor Now")]
@@ -321,114 +293,17 @@ public class PixelMeteorMinigame : PixelMinigame
         // ---- Build it: lumpy rock, glowing heat, fiery tail, light.
         GameObject root = new GameObject("Meteor");
         Track(root);
-        GameObject rock = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        rock.name = "Rock";
-        rock.transform.SetParent(root.transform, false);
-        SphereCollider hit = rock.GetComponent<SphereCollider>();
-        hit.isTrigger = true; // never pushes old pixels around
-        hit.radius = 0.5f * clickSizeMultiplier;
-        Mesh lumpy = BuildLumpyRock(rock.GetComponent<MeshFilter>().sharedMesh);
-        if (lumpy != null) rock.GetComponent<MeshFilter>().sharedMesh = lumpy;
+        GameObject rock = BuildRock(root, out SphereCollider hit, out Material rockMat);
 
-        // Dark rock with glowing lava cracks (the cracks are the emission).
-        Material rockMat = clicker.CreateVisualMaterial(lavaCracks ? Color.white : rockColor, false);
-        if (rockMat != null)
-        {
-            if (lavaCracks)
-            {
-                EnsureRockTextures();
-                rockMat.SetTexture("_BaseMap", rockAlbedo);
-                rockMat.SetTexture("_MainTex", rockAlbedo);
-                rockMat.SetTexture("_EmissionMap", rockEmission);
-                rockMat.SetColor("_EmissionColor", flameColor * glowIntensity * 1.6f);
-            }
-            else rockMat.SetColor("_EmissionColor", flameColor * glowIntensity * 0.35f);
-            rockMat.EnableKeyword("_EMISSION");
-            if (rockMat.HasProperty("_Smoothness")) rockMat.SetFloat("_Smoothness", 0.15f);
-            if (rockMat.HasProperty("_Glossiness")) rockMat.SetFloat("_Glossiness", 0.15f);
-            if (rockMat.HasProperty("_Metallic")) rockMat.SetFloat("_Metallic", 0f);
-            rock.GetComponent<Renderer>().sharedMaterial = rockMat;
-
-            // The lava cracks again as an unlit overlay: emission switched on from code is stripped from builds, this is not.
-            if (lavaCracks)
-                PixelLooks.AddGlowShell(rock.transform, rock.GetComponent<MeshFilter>().sharedMesh, Color.white, 0.95f, 1.004f, rockLavaOverlay);
-        }
-        else
-        {
-            rock.GetComponent<Renderer>().material.color = rockColor;
-        }
-
-        // Smooth tapering tail: one trail renderer that fades from flame colour to transparent.
-        TrailRenderer trail = root.AddComponent<TrailRenderer>();
-        trail.time = tailSeconds;
-        trail.startWidth = meteorSize * tailWidth;
-        trail.endWidth = 0f;
-        trail.minVertexDistance = 0.015f; // many short segments = a smooth curve
-        trail.numCapVertices = 8;
-        trail.numCornerVertices = 6;
-        trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        trail.widthCurve = new AnimationCurve(new Keyframe(0f, 1f, 0f, -0.5f), new Keyframe(0.3f, 0.66f), new Keyframe(1f, 0f, -1.3f, 0f)); // gently curved taper
-        trail.alignment = LineAlignment.View;
-        Shader trailShader = PixelShaders.SpriteDefault();
-        if (trailMaterial == null) trailMaterial = trailShader != null ? new Material(trailShader) : clicker.CreateVisualMaterial(flameColor, true);   // (one for every meteor: the colours come from the gradient)
-        trail.sharedMaterial = trailMaterial;
-        Gradient gradient = new Gradient();
-        gradient.SetKeys(
-            new[] { new GradientColorKey(Color.Lerp(flameColor, Color.white, 0.4f), 0f), new GradientColorKey(flameColor, 0.35f), new GradientColorKey(new Color(flameColor.r * 0.6f, 0.1f, 0.05f), 1f) },
-            new[] { new GradientAlphaKey(0.9f, 0f), new GradientAlphaKey(0.6f, 0.2f), new GradientAlphaKey(0.3f, 0.5f), new GradientAlphaKey(0.1f, 0.8f), new GradientAlphaKey(0f, 1f) }); // eased fade
-        trail.colorGradient = gradient;
-
-        // A thin white-hot core inside the tail.
-        if (hotCoreTail)
-        {
-            GameObject coreGo = new GameObject("Core Trail");
-            coreGo.transform.SetParent(root.transform, false);
-            TrailRenderer core = coreGo.AddComponent<TrailRenderer>();
-            core.time = tailSeconds * 0.55f;
-            core.startWidth = meteorSize * tailWidth * 0.32f;
-            core.endWidth = 0f;
-            core.minVertexDistance = 0.015f;
-            core.numCapVertices = 8;
-            core.numCornerVertices = 6;
-            core.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            core.widthCurve = new AnimationCurve(new Keyframe(0f, 1f, 0f, -0.5f), new Keyframe(0.3f, 0.66f), new Keyframe(1f, 0f, -1.3f, 0f));
-            core.alignment = LineAlignment.View;
-            core.sharedMaterial = trail.sharedMaterial;
-            Gradient coreGradient = new Gradient();
-            coreGradient.SetKeys(
-                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.Lerp(flameColor, Color.white, 0.6f), 1f) },
-                new[] { new GradientAlphaKey(0.95f, 0f), new GradientAlphaKey(0f, 1f) });
-            core.colorGradient = coreGradient;
-        }
+        BuildTail(root);
 
         // Soft fiery glow around the rock (a camera-facing sprite).
-        SpriteRenderer halo = null;
-        if (haloOpacity > 0f)
-        {
-            if (haloSprite == null) haloSprite = BuildSoftSprite();
-            GameObject haloGo = new GameObject("Halo");
-            haloGo.transform.SetParent(root.transform, false);
-            haloGo.transform.localScale = Vector3.one * meteorSize * haloSize;
-            halo = haloGo.AddComponent<SpriteRenderer>();
-            halo.sprite = haloSprite;
-            halo.sortingOrder = -1;
-        }
+        SpriteRenderer halo = BuildHalo(root);
 
         // Embers drifting off the meteor (world space, so they stay behind as it moves on).
         if (embersPerSecond > 0f) BuildEmbers(root.transform);
 
-        Light glow = null;
-        if (castLight)
-        {
-            GameObject lightGo = new GameObject("Light");
-            lightGo.transform.SetParent(root.transform, false);
-            glow = lightGo.AddComponent<Light>();
-            glow.type = LightType.Point;
-            glow.color = flameColor;
-            glow.range = meteorSize * 5f;
-            glow.intensity = glowIntensity * 2f;
-            glow.shadows = LightShadows.None;
-        }
+        Light glow = BuildGlowLight(root);
 
         // Mining effects thrown off where it is clicked, and the rumble while it crosses.
         ParticleSystem sparkFx = null, chipFx = null, dustFx = null;
@@ -491,8 +366,132 @@ public class PixelMeteorMinigame : PixelMinigame
         PixelAudio.StopLoop("meteor_rumble");
         Destroy(root);
         if (rockMat != null) Destroy(rockMat);
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
         meteorActive = false;
+    }
+
+    /// <summary>The meteor's lumpy rock under 'root': its click trigger ('hit') and its rock material ('rockMat', with the lava cracks or the plain glow; null if none could be made).</summary>
+    private GameObject BuildRock(GameObject root, out SphereCollider hit, out Material rockMat)
+    {
+        GameObject rock = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        rock.name = "Rock";
+        rock.transform.SetParent(root.transform, false);
+        hit = rock.GetComponent<SphereCollider>();
+        hit.isTrigger = true; // never pushes old pixels around
+        hit.radius = 0.5f * clickSizeMultiplier;
+        Mesh lumpy = BuildLumpyRock(rock.GetComponent<MeshFilter>().sharedMesh);
+        if (lumpy != null) rock.GetComponent<MeshFilter>().sharedMesh = lumpy;
+
+        // Dark rock with glowing lava cracks (the cracks are the emission).
+        rockMat = clicker.CreateVisualMaterial(lavaCracks ? Color.white : rockColor, false);
+        if (rockMat != null)
+        {
+            if (lavaCracks)
+            {
+                EnsureRockTextures();
+                rockMat.SetTexture("_BaseMap", rockAlbedo);
+                rockMat.SetTexture("_MainTex", rockAlbedo);
+                rockMat.SetTexture("_EmissionMap", rockEmission);
+                rockMat.SetColor("_EmissionColor", flameColor * glowIntensity * 1.6f);
+            }
+            else rockMat.SetColor("_EmissionColor", flameColor * glowIntensity * 0.35f);
+            rockMat.EnableKeyword("_EMISSION");
+            if (rockMat.HasProperty("_Smoothness")) rockMat.SetFloat("_Smoothness", 0.15f);
+            if (rockMat.HasProperty("_Glossiness")) rockMat.SetFloat("_Glossiness", 0.15f);
+            if (rockMat.HasProperty("_Metallic")) rockMat.SetFloat("_Metallic", 0f);
+            rock.GetComponent<Renderer>().sharedMaterial = rockMat;
+
+            // The lava cracks again as an unlit overlay: emission switched on from code is stripped from builds, this is not.
+            if (lavaCracks)
+                PixelLooks.AddGlowShell(rock.transform, rock.GetComponent<MeshFilter>().sharedMesh, Color.white, 0.95f, 1.004f, rockLavaOverlay);
+        }
+        else
+        {
+            rock.GetComponent<Renderer>().material.color = rockColor;
+        }
+        return rock;
+    }
+
+    /// <summary>The meteor's tails under 'root': the smooth tapering flame trail and (hotCoreTail) the thin white-hot core inside it.</summary>
+    private void BuildTail(GameObject root)
+    {
+        // Smooth tapering tail: one trail renderer that fades from flame colour to transparent.
+        TrailRenderer trail = root.AddComponent<TrailRenderer>();
+        trail.time = tailSeconds;
+        trail.startWidth = meteorSize * tailWidth;
+        trail.endWidth = 0f;
+        trail.minVertexDistance = 0.015f; // many short segments = a smooth curve
+        trail.numCapVertices = 8;
+        trail.numCornerVertices = 6;
+        trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        trail.widthCurve = new AnimationCurve(new Keyframe(0f, 1f, 0f, -0.5f), new Keyframe(0.3f, 0.66f), new Keyframe(1f, 0f, -1.3f, 0f)); // gently curved taper
+        trail.alignment = LineAlignment.View;
+        Shader trailShader = PixelShaders.SpriteDefault();
+        if (trailMaterial == null) trailMaterial = trailShader != null ? new Material(trailShader) : clicker.CreateVisualMaterial(flameColor, true);   // (one for every meteor: the colours come from the gradient)
+        trail.sharedMaterial = trailMaterial;
+        Gradient gradient = new Gradient();
+        gradient.SetKeys(
+            new[] { new GradientColorKey(Color.Lerp(flameColor, Color.white, 0.4f), 0f), new GradientColorKey(flameColor, 0.35f), new GradientColorKey(new Color(flameColor.r * 0.6f, 0.1f, 0.05f), 1f) },
+            new[] { new GradientAlphaKey(0.9f, 0f), new GradientAlphaKey(0.6f, 0.2f), new GradientAlphaKey(0.3f, 0.5f), new GradientAlphaKey(0.1f, 0.8f), new GradientAlphaKey(0f, 1f) }); // eased fade
+        trail.colorGradient = gradient;
+
+        // A thin white-hot core inside the tail.
+        if (hotCoreTail)
+        {
+            GameObject coreGo = new GameObject("Core Trail");
+            coreGo.transform.SetParent(root.transform, false);
+            TrailRenderer core = coreGo.AddComponent<TrailRenderer>();
+            core.time = tailSeconds * 0.55f;
+            core.startWidth = meteorSize * tailWidth * 0.32f;
+            core.endWidth = 0f;
+            core.minVertexDistance = 0.015f;
+            core.numCapVertices = 8;
+            core.numCornerVertices = 6;
+            core.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            core.widthCurve = new AnimationCurve(new Keyframe(0f, 1f, 0f, -0.5f), new Keyframe(0.3f, 0.66f), new Keyframe(1f, 0f, -1.3f, 0f));
+            core.alignment = LineAlignment.View;
+            core.sharedMaterial = trail.sharedMaterial;
+            Gradient coreGradient = new Gradient();
+            coreGradient.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.Lerp(flameColor, Color.white, 0.6f), 1f) },
+                new[] { new GradientAlphaKey(0.95f, 0f), new GradientAlphaKey(0f, 1f) });
+            core.colorGradient = coreGradient;
+        }
+    }
+
+    /// <summary>The soft fiery glow around the rock (a camera-facing sprite under 'root'); null when haloOpacity is 0.</summary>
+    private SpriteRenderer BuildHalo(GameObject root)
+    {
+        SpriteRenderer halo = null;
+        if (haloOpacity > 0f)
+        {
+            if (haloSprite == null) haloSprite = BuildSoftSprite();
+            GameObject haloGo = new GameObject("Halo");
+            haloGo.transform.SetParent(root.transform, false);
+            haloGo.transform.localScale = Vector3.one * meteorSize * haloSize;
+            halo = haloGo.AddComponent<SpriteRenderer>();
+            halo.sprite = haloSprite;
+            halo.sortingOrder = -1;
+        }
+        return halo;
+    }
+
+    /// <summary>The meteor's flickering point light under 'root'; null when castLight is off.</summary>
+    private Light BuildGlowLight(GameObject root)
+    {
+        Light glow = null;
+        if (castLight)
+        {
+            GameObject lightGo = new GameObject("Light");
+            lightGo.transform.SetParent(root.transform, false);
+            glow = lightGo.AddComponent<Light>();
+            glow.type = LightType.Point;
+            glow.color = flameColor;
+            glow.range = meteorSize * 5f;
+            glow.intensity = glowIntensity * 2f;
+            glow.shadows = LightShadows.None;
+        }
+        return glow;
     }
 
     // ------------------------------------------------------------------

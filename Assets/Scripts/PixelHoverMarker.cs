@@ -91,6 +91,9 @@ public class PixelHoverMarker : MonoBehaviour
     private static Mesh arrowMesh;
     private static float arrowMeshU = -1f;
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { arrowMeshU = -1f; }   // (a fresh play-mode start builds the arrow mesh again)
+
     /// <summary>A flat arrow pointing down (tip at y = 0), 'u' sized, with front, back and side faces (shared by every marker of that size).</summary>
     private static Mesh ArrowMesh(float u)
     {

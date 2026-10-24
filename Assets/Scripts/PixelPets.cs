@@ -765,10 +765,20 @@ public partial class PixelPets : MonoBehaviour
         p.hopTimer = Random.Range(hopInterval.x, hopInterval.y);
     }
 
+    private GameObject heldRbOf;   // (the held pet's body whose Rigidbody is remembered in heldRb)
+    private Rigidbody heldRb;
+
+    /// <summary>The held pet body's Rigidbody, looked up again only when the held body changes.</summary>
+    private Rigidbody HeldBody()
+    {
+        if (held.body != heldRbOf) { heldRbOf = held.body; heldRb = held.body.GetComponent<Rigidbody>(); }
+        return heldRb;
+    }
+
     private void FixedUpdate()
     {
         if (held == null || held.body == null || dragCamera == null) return;
-        Rigidbody rb = held.body.GetComponent<Rigidbody>();
+        Rigidbody rb = HeldBody();
         if (rb == null) return;
         if (rb.isKinematic) { held.planted = false; rb.isKinematic = false; } // a planted Seed pet is uprooted the moment it is picked up
         Ray ray = dragCamera.ScreenPointToRay(PointerPosition());
@@ -992,22 +1002,8 @@ public partial class PixelPets : MonoBehaviour
         p.mound = m;
     }
 
-    /// <summary>The floor straight below 'from' (not the clicker cube, not old pixels): where the Seed pet sprouts up.</summary>
-    private bool FindGround(Vector3 from, float size, out Vector3 point)
-    {
-        point = default;
-        RaycastHit[] hits = Physics.RaycastAll(from + Vector3.up * size * 4f, Vector3.down, size * 60f, ~0, QueryTriggerInteraction.Ignore);
-        float best = float.MaxValue;
-        bool found = false;
-        foreach (RaycastHit h in hits)
-        {
-            if (h.collider == null || h.normal.y < 0.7f) continue;
-            if (clicker.PixelTransform != null && h.collider.transform.IsChildOf(clicker.PixelTransform)) continue;
-            if (h.collider.GetComponentInParent<OldPixelInfo>() != null) continue;
-            if (h.distance < best) { best = h.distance; point = h.point; found = true; }
-        }
-        return found;
-    }
+    /// <summary>The floor straight below 'from' (not the clicker cube, not husks): where the Seed pet sprouts up. Shared ground probe: <see cref="PixelBait.FindGround"/>.</summary>
+    private bool FindGround(Vector3 from, float size, out Vector3 point) { return PixelBait.FindGround(clicker, from, size, out point); }
 
     private void Uproot(Pet p, Rigidbody rb)
     {

@@ -81,21 +81,35 @@ public partial class PixelRobotWorker : MonoBehaviour
     [SerializeField] private float beamRadius = 0.9f;
 
     [Header("Colours")]
+    [Tooltip("UFO body colour.")]
     [SerializeField] private Color bodyColor = new Color(0.62f, 0.66f, 0.74f, 1f);
+    [Tooltip("UFO accent colour (trim and lights).")]
     [SerializeField] private Color accentColor = new Color(1f, 0.55f, 0.12f, 1f);
+    [Tooltip("Colour of the UFO's glowing eye / window.")]
     [SerializeField] private Color eyeColor = new Color(0.3f, 0.95f, 1f, 1f);
+    [Tooltip("Dark colour for the UFO's underside and details.")]
     [SerializeField] private Color darkColor = new Color(0.12f, 0.13f, 0.18f, 1f);
+    [Tooltip("Colour of the little alien pilot.")]
     [SerializeField] private Color alienColor = new Color(0.45f, 0.85f, 0.35f, 1f);
+    [Tooltip("Colour of the abduction beam.")]
     [SerializeField] private Color beamColor = new Color(0.55f, 1f, 0.7f, 1f);
 
     [Header("Texts")]
+    [Tooltip("Title of the UFO Helper's window.")]
     [SerializeField] private string ufoTitle = "UFO Helper";
+    [Tooltip("The UFO's question when you pick a device job.")]
     [SerializeField] private string askText = "Which device should I keep running? Pick one, then choose where it goes.";
+    [Tooltip("Shown when you own no devices for the UFO to run.")]
     [SerializeField] private string noDevicesText = "You have no devices to work with yet.";
+    [Tooltip("Button that stops the UFO's current job.")]
     [SerializeField] private string clearJobText = "Stop working";
+    [Tooltip("Message after choosing a device job. {0} = the device's name.")]
     [SerializeField] private string ufoJobSetFormat = "The UFO will keep a {0} running there";
+    [Tooltip("Button for the 'abduct a pixel into the bank' job.")]
     [SerializeField] private string bankPixelsText = "Abduct a pixel into the bank";
+    [Tooltip("The UFO's question when you pick which pixel to bank.")]
     [SerializeField] private string pickPixelText = "Which pixel should I abduct and put in your Pixel Bank?";
+    [Tooltip("Message after choosing a bank job. {0} = the pixel type.")]
     [SerializeField] private string ufoBankJobFormat = "The UFO will abduct {0} and bank them";
 
     private PixelClicker clicker;

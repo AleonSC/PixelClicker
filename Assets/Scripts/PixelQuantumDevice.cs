@@ -441,19 +441,8 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
         Color wallColor = new Color(d.color.r, d.color.g, d.color.b, opacity);
         Color rimColor = new Color(0.6f, 1f, 1f, opacity);
 
-        GameObject Part(string name, Vector3 pos, Vector3 scale, Color color)
-        {
-            GameObject g = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            g.name = name;
-            Destroy(g.GetComponent<Collider>());
-            g.transform.SetParent(root.transform, false);
-            g.transform.localPosition = pos;
-            g.transform.localScale = scale;
-            Material m = clicker.CreateVisualMaterial(color, isPreview);
-            if (m != null) g.GetComponent<Renderer>().sharedMaterial = m;
-            g.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            return g;
-        }
+        GameObject Part(string name, Vector3 pos, Vector3 scale, Color color) =>
+            PixelFactoryKit.ModelPart(clicker, PrimitiveType.Cube, name, root.transform, pos, scale, color, isPreview);
 
         Part("Base", new Vector3(0f, 0.025f, 0f), new Vector3(D + wall * 2f + 0.1f, 0.05f, D + wall * 2f + 0.1f), baseColor);
         Part("Pad", new Vector3(0f, 0.06f, 0f), new Vector3(D, 0.02f, D), padColor);

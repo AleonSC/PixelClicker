@@ -120,6 +120,7 @@ public class PixelFilters : MonoBehaviour
     private Image tintImage;
     private RawImage vignetteImage, maskImage, scanImage, noiseImage, dustImage, bandImage;
     private RectTransform bandRect;
+    private RectTransform canvasRect;   // canvasRoot's RectTransform (looked up once when the overlay is built)
     private float nextNoise, nextDust, nextCameraCheck;
     private Preset active;
 
@@ -199,7 +200,7 @@ public class PixelFilters : MonoBehaviour
             if (bandImage != null && bandRect != null && active.band > 0f)
             {
                 float f = (time / 6.5f) % 1f;
-                float h = canvasRoot.GetComponent<RectTransform>().rect.height;
+                float h = canvasRect.rect.height;
                 bandRect.anchoredPosition = new Vector2(0f, Mathf.Lerp(h * 0.5f + 80f, -h * 0.5f - 80f, f));
                 Color c = bandImage.color; c.a = active.band * k * (0.7f + 0.3f * Mathf.Sin(time * 31f)); bandImage.color = c;
             }
@@ -273,7 +274,7 @@ public class PixelFilters : MonoBehaviour
         lensFx.intensity.value = p.lens * k;
         bloomFx.intensity.value = p.bloom * k;
         EnableCameras();
-        Debug.Log("PixelFilters: URP post-processing volume active for '" + p.name + "' (strength " + k.ToString("0.00") + "). If the picture shows no bulge / grain, check the Universal Renderer asset has Post-processing enabled and the camera's Post Processing box is ticked.", this);
+        PixelDebug.Info("PixelFilters: URP post-processing volume active for '" + p.name + "' (strength " + k.ToString("0.00") + "). If the picture shows no bulge / grain, check the Universal Renderer asset has Post-processing enabled and the camera's Post Processing box is ticked.", this);
     }
 #else
     private void ApplyVolume(Preset p, float k) { if (p != null) Debug.LogWarning("PixelFilters: PIXEL_URP is not defined, so only the overlay part of the filter works (no bulge, grain, colour grading).", this); }
@@ -485,6 +486,7 @@ public class PixelFilters : MonoBehaviour
     private void BuildOverlay()
     {
         canvasRoot = PixelUIKit.CreateCanvas("Screen Filters", overlaySortingOrder, new Vector2(1920f, 1080f), false, false);
+        canvasRect = canvasRoot.GetComponent<RectTransform>();
 
         GameObject t = new GameObject("Tint", typeof(RectTransform), typeof(Image));
         t.transform.SetParent(canvasRoot.transform, false);

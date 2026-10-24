@@ -92,50 +92,17 @@ public class PixelTermiteSwarm : MonoBehaviour
         s.origin = at;
         s.unit = Mathf.Max(0.01f, owner.OldPixelWorldSize);
         s.half = s.unit * 0.05f;
-        s.floorY = GroundY(owner, at);
+        s.floorY = PixelSwarmKit.GroundY(owner, at);
         s.bodyMat = s.Mat(new Color(0.88f, 0.78f, 0.58f, 1f));
         s.headMat = s.Mat(new Color(0.5f, 0.33f, 0.16f, 1f));
         s.legMat = s.Mat(new Color(0.62f, 0.52f, 0.36f, 1f));
         return s;
     }
 
-    private static float GroundY(PixelClicker owner, Vector3 at)
-    {
-        float size = Mathf.Max(0.01f, owner.PixelBaseSize);
-        float best = at.y - size * 1.5f;
-        float lowest = float.MaxValue;
-        RaycastHit[] hits = Physics.RaycastAll(at + Vector3.up * size, Vector3.down, size * 60f, ~0, QueryTriggerInteraction.Ignore);
-        foreach (RaycastHit h in hits)
-            if (h.rigidbody == null && h.point.y < lowest) lowest = h.point.y;
-        return lowest < float.MaxValue ? lowest : best;
-    }
+    private Material Mat(Color c) => PixelSwarmKit.Material(clicker, c);
 
-    private Material Mat(Color c)
-    {
-        Material m = clicker != null ? clicker.CreateVisualMaterial(c, false) : null;
-        if (m == null)
-        {
-            Shader sh = PixelShaders.SpriteDefault();
-            m = sh != null ? new Material(sh) : new Material(Shader.Find("Standard"));
-            m.color = c;
-        }
-        return m;
-    }
-
-    private Transform Part(Transform parent, string name, Vector3 localPos, Vector3 localScale, Material mat, Vector3 euler = default)
-    {
-        GameObject g = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        g.name = name;
-        Destroy(g.GetComponent<Collider>());
-        g.transform.SetParent(parent, false);
-        g.transform.localPosition = localPos * unit;
-        g.transform.localScale = localScale * unit;
-        g.transform.localRotation = Quaternion.Euler(euler);
-        Renderer r = g.GetComponent<Renderer>();
-        r.sharedMaterial = mat;
-        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        return g.transform;
-    }
+    private Transform Part(Transform parent, string name, Vector3 localPos, Vector3 localScale, Material mat, Vector3 euler = default) =>
+        PixelSwarmKit.Part(parent, name, localPos, localScale, unit, mat, euler);
 
     private Termite Spawn(Vector3 at, int index)
     {
@@ -302,6 +269,22 @@ public class PixelTermiteSwarm : MonoBehaviour
         if (barBack != null) Destroy(barBack);
     }
 
+    private readonly HashSet<Rigidbody> existingHusks = new HashSet<Rigidbody>();   // (reused by FreeGoneTargets)
+
+    /// <summary>Husks that went away some other way (despawned, vacuumed) end their target; one picked up by the player is saved.</summary>
+    private void FreeGoneTargets()
+    {
+        existingHusks.Clear();
+        existingHusks.UnionWith(clicker.OldPixels);
+        foreach (Target tg in targets)
+        {
+            if (tg.done) continue;
+            OldPixelInfo info = tg.rb != null ? tg.rb.GetComponent<OldPixelInfo>() : null;
+            if (tg.rb == null || !existingHusks.Contains(tg.rb)) EndTarget(tg);
+            else if (info != null && info.heldByPlayer) Save(tg);   // (picked up: safe)
+        }
+    }
+
     private void Update()
     {
         float dt = Time.deltaTime;
@@ -316,14 +299,7 @@ public class PixelTermiteSwarm : MonoBehaviour
         if (hunting && checkTimer <= 0f)
         {
             checkTimer = 0.4f;
-            HashSet<Rigidbody> existing = new HashSet<Rigidbody>(clicker.OldPixels);
-            foreach (Target tg in targets)
-            {
-                if (tg.done) continue;
-                OldPixelInfo info = tg.rb != null ? tg.rb.GetComponent<OldPixelInfo>() : null;
-                if (tg.rb == null || !existing.Contains(tg.rb)) EndTarget(tg);
-                else if (info != null && info.heldByPlayer) Save(tg);   // (picked up: safe)
-            }
+            FreeGoneTargets();
         }
 
         for (int i = termites.Count - 1; i >= 0; i--)

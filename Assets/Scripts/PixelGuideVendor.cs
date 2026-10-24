@@ -220,7 +220,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
     private static void ResetStatics()
     {
         instance = null; PointOverride = null; ShopHold = false;
-        PixelStatics.ResetOnRestart(OnSceneUnloaded);
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);   // restart-reset-not-progress: Cubie's pointer override / shop hold of this run (his visit stages are Stats counters in the GameState)
     }
 
     // (Restart reloads the scene: a tutorial's pointer callback into the destroyed old scene, or a shop hold, must not carry over)
@@ -541,7 +541,11 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
         return why;
     }
 
-    private bool ShopThere => (shop != null ? shop : (shop = PixelFind.First<PixelShop>())) != null && shop.ShopAvailable;
+    private bool ShopThere => (shop != null ? shop : (shop = PixelFind.Cached<PixelShop>())) != null && shop.ShopAvailable;
+
+    /// <summary>The debug line for 'visit 1 is waiting' (built only when the reason changes, see lastBlocker in Update).</summary>
+    private string Visit1WaitReason() =>
+        PixelGoals.GrantsVisit(1) ? "Cubie visit 1 waits for its goal (PixelGoals)" : "Cubie visit 1 waits for " + visitOneAfterWhiteClicks + " White pixel clicks";
 
     private void Update()
     {
@@ -551,8 +555,8 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
         if (ShopHold) UpdateHold();
         if (ShopHold && !peeking && !disableGuide && !visiting && !narrating) StartCoroutine(PeekRoutine());
         if (disableGuide || clicker == null || visiting) { if (disableGuide && lastBlocker != "disabled") { lastBlocker = "disabled"; PixelDebug.Info("Cubie is off: disableGuide is ticked", this); } return; }
-        if (shop == null) shop = PixelFind.First<PixelShop>();
-        if (stats == null) stats = PixelFind.First<PixelStats>();
+        if (shop == null) shop = PixelFind.Cached<PixelShop>();
+        if (stats == null) stats = PixelFind.Cached<PixelStats>();
         if (stats == null) return; // progress is kept in the stat counters, so nothing happens without them
 
         if (!Calm()) { calmTimer = 0f; return; }
@@ -560,35 +564,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
         if (calmTimer < calmSeconds) return;
 
         bool s1 = PixelStats.Total(Stage1Key) >= 1d, s2 = PixelStats.Total(Stage2Key) >= 1d;
-        if (!s2)
-        {
-            if (ShopThere && !s1 && !replaying)
-            {
-                // A save that already reached the shop: no visits, no gift - just the vendors from now on.
-                PixelDebug.Info("Cubie skips both visits: the Shop button is already available (required pixel unlocked)", this);
-                PixelStats.Best(Stage1Key, 1d);
-                PixelStats.Best(Stage2Key, 1d);
-                PixelStats.Best(PixelShopTutorial.DoneKey, 1d);   // an older save: no tutorial
-                StartVendors(true);
-            }
-            else if (!PixelHints.TipsEnabled && !replaying)
-            {
-                PixelDebug.Info("Cubie skips his visits: Show first-time tips is off", this);
-                // 'Show first-time tips' is off: Cubie does not turn up with his intros. The game carries on as if they had happened, and the starter gift still arrives once the shop is there.
-                if (!s1 && Visit1Ready) { PixelStats.Best(Stage1Key, 1d); GiveRecycler(); }   // (no visit, but the Recycler still arrives: the 'Recycle 20 husks' goal needs it)
-                if (Visit2Due)
-                {
-                    PixelStats.Best(Stage2Key, 1d);
-                    GiveGift();
-                    StartVendors(false);
-                }
-            }
-            else if (Visit2Due) StartCoroutine(Visit(2, Pages(visitTwoPages, DefaultTwo)));
-            else if (!s1 && !Visit1Ready) { if (lastBlocker != "clicks") { lastBlocker = "clicks"; PixelDebug.Info(PixelGoals.GrantsVisit(1) ? "Cubie visit 1 waits for its goal (PixelGoals)" : "Cubie visit 1 waits for " + visitOneAfterWhiteClicks + " White pixel clicks", this); } }
-            else if (!s1) { PixelDebug.Info("Cubie starts visit 1", this); StartCoroutine(Visit(1, Pages(visitOnePages, DefaultOne))); }
-            else if (lastBlocker != "s1done") { lastBlocker = "s1done"; PixelDebug.Info("Cubie visit 1 is already recorded (guide.stage1) - he waits for the shop", this); }
-            return;
-        }
+        if (!s2) { UpdateFirstVisits(s1); return; }
 
         // Cubie's bill (PixelCubieBill): the reveal visit once its goal is done, then a short talk whenever a trust tier opens.
         if (PixelCubieBill.RevealDue) { StartCoroutine(Visit(3, Pages(visitThreePages, DefaultThree))); return; }
@@ -600,6 +576,36 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
             vendorTimer = 3f;
             StartVendors(false);
         }
+    }
+
+    // Update step before the shop (stage 2) is reached: Cubie's first two visits, or skipping them (shop already there / tips off).
+    private void UpdateFirstVisits(bool s1)
+    {
+        if (ShopThere && !s1 && !replaying)
+        {
+            // A save that already reached the shop: no visits, no gift - just the vendors from now on.
+            PixelDebug.Info("Cubie skips both visits: the Shop button is already available (required pixel unlocked)", this);
+            PixelStats.Best(Stage1Key, 1d);
+            PixelStats.Best(Stage2Key, 1d);
+            PixelStats.Best(PixelShopTutorial.DoneKey, 1d);   // an older save: no tutorial
+            StartVendors(true);
+        }
+        else if (!PixelHints.TipsEnabled && !replaying)
+        {
+            PixelDebug.Info("Cubie skips his visits: Show first-time tips is off", this);
+            // 'Show first-time tips' is off: Cubie does not turn up with his intros. The game carries on as if they had happened, and the starter gift still arrives once the shop is there.
+            if (!s1 && Visit1Ready) { PixelStats.Best(Stage1Key, 1d); GiveRecycler(); }   // (no visit, but the Recycler still arrives: the 'Recycle 20 husks' goal needs it)
+            if (Visit2Due)
+            {
+                PixelStats.Best(Stage2Key, 1d);
+                GiveGift();
+                StartVendors(false);
+            }
+        }
+        else if (Visit2Due) StartCoroutine(Visit(2, Pages(visitTwoPages, DefaultTwo)));
+        else if (!s1 && !Visit1Ready) { if (lastBlocker != "clicks") { lastBlocker = "clicks"; PixelDebug.Info(Visit1WaitReason(), this); } }
+        else if (!s1) { PixelDebug.Info("Cubie starts visit 1", this); StartCoroutine(Visit(1, Pages(visitOnePages, DefaultOne))); }
+        else if (lastBlocker != "s1done") { lastBlocker = "s1done"; PixelDebug.Info("Cubie visit 1 is already recorded (guide.stage1) - he waits for the shop", this); }
     }
 
     // ------------------------------------------------------------------
@@ -935,42 +941,16 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
     // Drawing
     // ------------------------------------------------------------------
 
-    private static RectTransform Block(Transform parent, string name, Color color, Vector2 size, Vector2 pos, float rotation = 0f)
-    {
-        GameObject g = new GameObject(name, typeof(RectTransform), typeof(Image));
-        g.transform.SetParent(parent, false);
-        Image im = g.GetComponent<Image>();
-        im.color = color;
-        im.raycastTarget = false;
-        RectTransform r = g.GetComponent<RectTransform>();
-        r.anchorMin = r.anchorMax = new Vector2(0.5f, 0f);
-        r.pivot = new Vector2(0.5f, 0.5f);
-        r.sizeDelta = size;
-        r.anchoredPosition = pos;
-        r.localRotation = Quaternion.Euler(0f, 0f, rotation);
-        return r;
-    }
+    private static RectTransform Block(Transform parent, string name, Color color, Vector2 size, Vector2 pos, float rotation = 0f) =>
+        PixelBlockArt.Block(parent, name, color, size, pos, rotation, PixelBlockArt.BottomCentre);
 
     /// <summary>Draws Cubie (for a menu to walk about) under 'parent' at the given height: a holder anchored at the bottom centre with his art as the first child.</summary>
     public RectTransform BuildWalker(Transform parent, float height)
     {
-        GameObject holder = new GameObject("Cubie Walker", typeof(RectTransform));
-        holder.transform.SetParent(parent, false);
-        RectTransform r = holder.GetComponent<RectTransform>();
-        float scale = height / 400f;
-        r.anchorMin = r.anchorMax = new Vector2(0.5f, 0f);
-        r.pivot = new Vector2(0.5f, 0f);
-        r.sizeDelta = new Vector2(300f * scale, 400f * scale);
-        GameObject art = new GameObject("Art", typeof(RectTransform));
-        art.transform.SetParent(holder.transform, false);
-        RectTransform ar = art.GetComponent<RectTransform>();
-        ar.anchorMin = ar.anchorMax = new Vector2(0.5f, 0f);
-        ar.pivot = new Vector2(0.5f, 0f);
-        ar.sizeDelta = new Vector2(300f, 400f);
-        ar.localScale = Vector3.one * scale;
+        RectTransform r = PixelBlockArt.WalkerHolder(parent, "Cubie Walker", height, out Transform art);
         // DrawCharacter fills the visit's own references (pupils, arm, gift...): keep those as they were.
         RectTransform sArm = armL, sPointer = pointer, sGift = giftBox, sPL = pupilL, sPR = pupilR;
-        DrawCharacter(art.transform);
+        DrawCharacter(art);
         armL = sArm; pointer = sPointer; giftBox = sGift; pupilL = sPL; pupilR = sPR;
         return r;
     }
@@ -1048,17 +1028,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
         bkr.anchorMin = bkr.anchorMax = new Vector2(0f, 0f);
         bkr.pivot = new Vector2(0f, 0f);
         bkr.anchoredPosition = new Vector2(30f, 42f);
-        GameObject fillGo = new GameObject("Hold Fill", typeof(RectTransform), typeof(Image));
-        fillGo.transform.SetParent(backButton.transform, false);
-        fillGo.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.45f);
-        fillGo.GetComponent<Image>().raycastTarget = false;
-        RectTransform fillRect = fillGo.GetComponent<RectTransform>();
-        fillRect.anchorMin = Vector2.zero;
-        fillRect.anchorMax = new Vector2(0f, 1f);
-        fillRect.offsetMin = fillRect.offsetMax = Vector2.zero;
-        fillRect.SetSiblingIndex(1);
-        PixelHoldButton hold = backButton.gameObject.AddComponent<PixelHoldButton>();
-        hold.Setup(fillRect, 0.6f, () => { hold.ResetProgress(); wantBack = true; advance++; });
+        PixelUIKit.AddHoldAction(backButton, 0.6f, () => { wantBack = true; advance++; });
         PixelTalk.AddMuteButton(Font, panel, new Vector2(56f, 56f), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(104f, 42f), new Color(0.15f, 0.4f, 0.4f, 1f));   // mutes the talking blips
         panel.gameObject.SetActive(false);
     }

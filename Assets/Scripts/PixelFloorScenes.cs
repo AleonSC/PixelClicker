@@ -207,6 +207,10 @@ public partial class PixelFloor
     private static float[] circuitNoise;
     private static int circuitNoiseN, circuitNoiseSeed;
 
+    /// <summary>A fresh play-mode start (domain reload off) drops the cached circuit noise and the sparks' state.</summary>
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetSceneStatics() { circuitNoise = null; circuitNoiseN = 0; circuitNoiseSeed = 0; sparkNear = null; sparkCount = 0; }
+
     private static float CircuitGround(float u, float v, int n, int seed)
     {
         if (shadeBase) return Fbm(u, v, 5, 3, seed);   // (the still picture is drawn once, a frame at a time: no big cache to build in one go)

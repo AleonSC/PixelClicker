@@ -10,7 +10,7 @@
 //   can be grabbed with the mouse (potionGrabRadius, kinematic follow, throw on release); a semi-transparent pixel-art backpack icon
 //   (bottom right above the bar, backpackSize/Margin/Alpha) shows while it falls; releasing over the icon keeps the potion
 //   (KeepPotion, PixelConsumables.AddKept, no shatter, no buff) and, if that potion is already at its limit, raises that potion's
-//   bonusCap by one (permanent, saved as PotionSave.bonus; ItemCapacity(item) = maxPotionsHeld + bonus drives
+//   bonusCap by one (permanent, progress in the GameState: InventoryState bonus; ItemCapacity(item) = maxPotionsHeld + bonus drives
 //   ItemRoom/ClampHeld(index, n)/the shop's Full text), so e.g. 16 held can be used down to 6 and re-bought to 16.
 // ---------------------------------------------------
 using System.Collections;
@@ -35,7 +35,7 @@ using static PixelInput;
 /// Everything is adjustable: how often it appears, how fast it crosses, how see-through it is, how it wobbles.
 /// Add this to any GameObject (e.g. the cube). PixelShop adds it automatically if it is missing.
 /// </summary>
-public class PixelGhostMinigame : PixelMinigame
+public class PixelGhostMinigame : PixelScheduledMinigame
 {
     [Header("References")]
     [Tooltip("The PixelClicker (for the camera and the cube's position). Found automatically if left empty.")]
@@ -43,26 +43,6 @@ public class PixelGhostMinigame : PixelMinigame
 
     [Tooltip("Gives the buff. Found automatically (or added) if left empty.")]
     [SerializeField] private PixelConsumables consumables;
-
-    [Header("State")]
-    [Tooltip("Run from the start without buying it in the shop (for testing).")]
-    [SerializeField] private bool startRunning = false;
-
-    [Tooltip("Is the minigame running? (The shop turns this on when the Ghost Hunt is bought.)")]
-    [SerializeField] private bool running = false;
-
-    [Header("When it appears")]
-    [Min(0f)]
-    [Tooltip("Seconds after the minigame starts before the first ghost can appear.")]
-    [SerializeField] private float firstGhostDelay = 10f;
-
-    [Min(1f)]
-    [Tooltip("Shortest wait between ghosts (seconds).")]
-    [SerializeField] private float minInterval = 45f;
-
-    [Min(1f)]
-    [Tooltip("Longest wait between ghosts (seconds). Each wait is random between the shortest and longest.")]
-    [SerializeField] private float maxInterval = 90f;
 
     [Header("Movement")]
     [Min(0.5f)]
@@ -218,9 +198,7 @@ public class PixelGhostMinigame : PixelMinigame
     [Min(1)]
     [Tooltip("Ghosts that must be caught in total before the Ghost Pixel can be bought. The count keeps going afterwards.")]
     [SerializeField] private double ghostThreshold = 10;
-
-    [Tooltip("Runtime: ghosts caught so far (saved with the game). You can type a number to test the unlock.")]
-    [SerializeField] private double ghostsCaught = 0;
+    private double ghostsCaught { get => SavedCount; set => SavedCount = value; }   // (progress: the GameState)
 
     [Tooltip("Title of this minigame's tracker row in the shop.")]
     [SerializeField] private string trackerTitle = "Ghosts Caught";
@@ -252,7 +230,6 @@ public class PixelGhostMinigame : PixelMinigame
     [Tooltip("Fired once, when the number of ghosts caught first reaches the threshold.")]
     public UnityEvent onThresholdReached;
 
-    private float spawnTimer;
     private bool ghostActive;
     /// <summary>How many ghosts a Ghost Bait calls before any Operation upgrade.</summary>
     public int BaitGhostCount => baitGhosts;
@@ -289,21 +266,27 @@ public class PixelGhostMinigame : PixelMinigame
         return true;
     }
 
+    // This minigame's own defaults for the shared round schedule (PixelScheduledMinigame; a scene's values override them).
+    public PixelGhostMinigame()
+    {
+        firstRoundDelay = 10f;
+        minInterval = 45f;
+        maxInterval = 90f;
+    }
+
     public override bool Busy => ghostActive;
 
     protected override void OnDespawned()
     {
         ghostActive = false;
         baitGhostsLeft = 0;
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
     }
     private Material ghostMaterial;
     private AudioSource audioSource;
 
     public override string DisplayName => "Ghost Hunt";
     public override string Id => "ghost";
-
-    public override bool Running => running;
 
     // --- Tracker: ghosts caught (see PixelMinigame) ---
     public override bool HasTracker => true;
@@ -321,9 +304,7 @@ public class PixelGhostMinigame : PixelMinigame
 
     [Tooltip("Most ectoplasm a caught ghost leaves.")]
     [SerializeField] private int ectoplasmMax = 4;
-
-    [Tooltip("Ectoplasm held (a minigame material, shown in the Inventory's Materials tab).")]
-    [SerializeField] private double ectoplasm = 0;
+    private double ectoplasm { get => SavedExtra; set => SavedExtra = value; }   // (progress: the GameState)
 
     public override string MaterialName => "Ectoplasm";
     public override double MaterialAmount => ectoplasm;
@@ -359,33 +340,18 @@ public class PixelGhostMinigame : PixelMinigame
             consumables = PixelFind.First<PixelConsumables>();
         }
 
-        if (startRunning) running = true;
-        spawnTimer = firstGhostDelay;
+        StartSchedule();
     }
 
     private void Update()
     {
         if (!running || ghostActive) return;
 
-        spawnTimer -= Time.deltaTime;
-        if (spawnTimer <= 0f)
-        {
-            if (PixelMinigameLimits.AllowAnother(this)) StartCoroutine(GhostRoutine());
-            else spawnTimer = PixelMinigameLimits.RetrySeconds; // too many minigames running right now
-        }
+        if (SpawnDue(ref spawnTimer)) StartCoroutine(GhostRoutine());
     }
 
     /// <summary>Starts the minigame (the shop calls this when it is bought). Safe to call more than once.</summary>
-    public override void Activate()
-    {
-        if (running) return;
-        running = true;
-        spawnTimer = firstGhostDelay;
-    }
-
     /// <summary>Stops the minigame.</summary>
-    public override void Deactivate() => running = false;
-
     /// <summary>Makes a ghost appear right now (handy for testing: right-click the component &gt; Spawn Ghost Now).</summary>
     [ContextMenu("Spawn Ghost Now")]
     public override void SpawnNow()

@@ -158,6 +158,7 @@ public class PixelDeviceCard : MonoBehaviour
 
     private void ClosePanel()
     {
+        SetHoveredAction(-1);
         panelDevice = null;
         if (panelSubject != null) { IPixelPanelSubject was = panelSubject; panelSubject = null; was.PanelClosed(); }
         if (panel != null) PixelPop.Hide(panel.Root);
@@ -175,6 +176,39 @@ public class PixelDeviceCard : MonoBehaviour
         }
         if (removeArmedUntil > 0f && Time.unscaledTime > removeArmedUntil) { removeArmedUntil = 0f; removeText.text = removeLabel; }
         if (Time.unscaledTime >= nextPanelRefresh) RefreshPanel();
+        SetHoveredAction(ActionUnderPointer());
+    }
+
+    private int hoveredAction = -1;
+    private string hoveredLabel;
+    private System.Action<bool> hoveredHover;   // (kept: the panel's action list is rebuilt on every refresh)
+
+    /// <summary>Which of the device's own buttons the pointer is on (-1 = none).</summary>
+    private int ActionUnderPointer()
+    {
+        Vector2 pointer = PixelInput.PointerPosition();
+        for (int i = 0; i < panelActions.Count && i < actionButtons.Count; i++)
+        {
+            Button b = actionButtons[i];
+            if (b.gameObject.activeInHierarchy && RectTransformUtility.RectangleContainsScreenPoint((RectTransform)b.transform, pointer, null)) return i;
+        }
+        return -1;
+    }
+
+    /// <summary>Tells the actions with an OnHover when the pointer goes onto / off them (DeviceAction.OnHover).</summary>
+    private void SetHoveredAction(int index)
+    {
+        if (index == hoveredAction) return;
+        System.Action<bool> was = hoveredHover;
+        hoveredAction = index;
+        hoveredLabel = null; hoveredHover = null;
+        was?.Invoke(false);
+        if (index >= 0 && index < panelActions.Count)
+        {
+            hoveredLabel = panelActions[index].Label;
+            hoveredHover = panelActions[index].OnHover;
+            hoveredHover?.Invoke(true);
+        }
     }
 
     private void RefreshPanel()
@@ -216,6 +250,8 @@ public class PixelDeviceCard : MonoBehaviour
     {
         panelActions.Clear();
         panelActions.AddRange(info.Actions);
+        // (the same button at the same place stays hovered - no flicker on every refresh; a different one there lets go of the old one)
+        if (hoveredAction >= 0 && (hoveredAction >= panelActions.Count || panelActions[hoveredAction].Label != hoveredLabel)) SetHoveredAction(-1);
         float bw = (w - 12f) * 0.5f;
         for (int i = 0; i < panelActions.Count; i++)
         {

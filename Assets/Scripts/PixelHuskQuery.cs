@@ -35,7 +35,7 @@ public static class PixelHuskQuery
     private static readonly Dictionary<int, Husk> cache = new Dictionary<int, Husk>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { cache.Clear(); PixelStatics.ResetOnRestart(OnRestart); }
+    private static void ResetStatics() { cache.Clear(); PixelStatics.ResetOnRestart(OnRestart); }   // restart-reset-not-progress: the husk lookup cache
     private static void OnRestart() { cache.Clear(); insertsSincePrune = 0; }
 
     private static int insertsSincePrune;

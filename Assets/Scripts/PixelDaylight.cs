@@ -46,6 +46,7 @@ public class PixelDaylight : MonoBehaviour
     private CanvasGroup group;
     private RectTransform panel, fill;
     private TMP_Text percent;
+    private int shownPercent = -1;   // what the percent label shows (it is only rewritten when this changes)
     private bool built;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -78,7 +79,7 @@ public class PixelDaylight : MonoBehaviour
 
     private void Update()
     {
-        if (clicker == null) clicker = PixelFind.First<PixelClicker>();
+        clicker = PixelFind.Cached<PixelClicker>();
         if (level > 0f && Time.timeScale > 0f) level = Mathf.Max(0f, level - (decayPerSecond > 0f ? decayPerSecond : 0.012f) * Time.deltaTime);
         if (hideBar || Off || clicker == null) { if (group != null) group.alpha = 0f; return; }
         if (!built) Build();
@@ -90,7 +91,15 @@ public class PixelDaylight : MonoBehaviour
         float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
         panel.anchoredPosition = new Vector2(-20f, -(bar + 14f));
         fill.anchorMax = new Vector2(Mathf.Clamp01(level), 1f);
-        PixelUIKit.SetText(percent, Mathf.RoundToInt(level * 100f) + "%");
+        int pct = Mathf.RoundToInt(level * 100f);
+        if (pct != shownPercent) ShowPercent(pct);
+    }
+
+    /// <summary>Rewrites the percent label (only when the whole percent changed, so Update makes no garbage).</summary>
+    private void ShowPercent(int pct)
+    {
+        shownPercent = pct;
+        PixelUIKit.SetText(percent, pct + "%");
     }
 
     private void Build()

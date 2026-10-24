@@ -82,6 +82,13 @@ public class PixelToadstoolDaze : MonoBehaviour
         if (target.magnitude > maxDistance * unit) target = target.normalized * maxDistance * unit;
     }
 
+    /// <summary>Shows the seconds left on the status line.</summary>
+    private void ShowLeft(int left)
+    {
+        shownLeft = left;
+        PixelStatusLines.Set("toadstool", "Dizzy from toadstool spores: " + left + " s", new Color(0.85f, 0.55f, 1f, 1f));
+    }
+
     private void Update()
     {
         if (clicker == null) return;
@@ -96,7 +103,7 @@ public class PixelToadstoolDaze : MonoBehaviour
         {
             target = Vector3.MoveTowards(target, Vector3.zero, returnSpeed * Mathf.Max(0.1f, clicker.PixelBaseSize) * dt);   // drifts back home slowly
             int left = Mathf.CeilToInt(until - Time.time);
-            if (left != shownLeft) { shownLeft = left; PixelStatusLines.Set("toadstool", "Dizzy from toadstool spores: " + left + " s", new Color(0.85f, 0.55f, 1f, 1f)); }
+            if (left != shownLeft) ShowLeft(left);   // (the line is only rebuilt when the seconds change)
         }
         else target = Vector3.zero;
         offset = Vector3.Lerp(offset, target, 1f - Mathf.Exp(-jumpSpeed * dt));

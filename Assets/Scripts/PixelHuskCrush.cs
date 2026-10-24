@@ -244,7 +244,7 @@ public class PixelHuskCrush : MonoBehaviour
     private readonly List<Rigidbody> chain = new List<Rigidbody>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { instance = null; bestStreak = 0; PixelStatics.ResetOnRestart(() => bestStreak = 0); }
+    private static void ResetStatics() { instance = null; bestStreak = 0; PixelStatics.ResetOnRestart(() => bestStreak = 0); }   // restart-reset-not-progress: the crush streak's best per recording (session recorder)
 
     // ---- Crush streak (CrushXp) ----
     private float lastCrushTime = -99f;

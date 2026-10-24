@@ -50,7 +50,6 @@ public class PixelEggHatch : MonoBehaviour
     [Tooltip("Text under the heading once the pet is out. {0} = the pet's name.")]
     [SerializeField] private string petFormat = "A new friend: {0}";
 
-    private struct Spark { public RectTransform rect; public Image image; public Vector2 pos, vel; public float life, maxLife, size, spin; public bool alive; }
     private class ChipBody { public Transform t; public Vector3 vel, spin; }
 
     private static PixelEggHatch instance;
@@ -64,9 +63,7 @@ public class PixelEggHatch : MonoBehaviour
     private RectTransform backpackRect;
     private RawImage picture;
     private TMP_Text title, subtitle;
-    private Spark[] sparks;
-    private Sprite sparkSprite;
-    private float emitCarry;
+    private readonly PixelUISparks sparkles = new PixelUISparks();   // the gold screen sparkles
 
     private GameObject studioRoot;
     private Camera studioCam;
@@ -143,16 +140,7 @@ public class PixelEggHatch : MonoBehaviour
 
         // Hop targets for the jump around.
         int hops = Mathf.Max(2, Mathf.RoundToInt(jumpT / 0.55f));
-        float reach = Mathf.Min(size.x / 200f * 0.6f, 6.5f);
-        List<Vector2> spots = new List<Vector2>();
-        float sideSign = Random.value < 0.5f ? -1f : 1f;
-        float minX = S * 0.5f + P * 0.5f + 0.3f;   // never land on the shell
-        reach = Mathf.Max(reach, minX + 0.6f);
-        for (int i = 0; i < hops; i++)
-        {
-            spots.Add(new Vector2(centre.x + sideSign * Mathf.Lerp(minX, reach, Random.value), groundY));
-            sideSign = -sideSign;
-        }
+        List<Vector2> spots = HopSpots(hops, size, centre, groundY, S, P);
 
         float t = 0f, bump = 0f, flashAmt = 0f;
         bool popped = false, stashed = false, named = false;
@@ -177,22 +165,7 @@ public class PixelEggHatch : MonoBehaviour
 
             if (t < tPop)
             {
-                // Egg: zooms in, then shakes with growing force while the cracks fill with light.
-                float zk = Smooth(t / zoomT);
-                float sk = Mathf.Clamp01((t - zoomT) / shakeT);
-                Vector2 pos = Vector2.Lerp(start, centre, EaseOut(t / zoomT));
-                float scale = Mathf.Lerp(0.25f, 1f, EaseOut(t / zoomT));
-                float amp = sk * sk;
-                eggRoot.position = studioRoot.transform.position + new Vector3(pos.x + Mathf.Sin(t * 57f) * 0.07f * amp * S, pos.y + Mathf.Abs(Mathf.Sin(t * 33f)) * 0.05f * amp * S, 0f);
-                eggRoot.localScale = Vector3.one * scale * (1f + 0.03f * Mathf.Sin(t * 20f) * amp);
-                eggRoot.localRotation = Quaternion.Euler(Mathf.Sin(t * 29f) * 5f * amp, 0f, Mathf.Sin(t * 41f) * 9f * amp + Mathf.Sin(t * 5f) * 3f * sk);
-                int visible = Mathf.RoundToInt(cracks.Count * Mathf.Clamp01(sk * 1.15f));
-                for (int i = 0; i < cracks.Count; i++) cracks[i].gameObject.SetActive(i < visible);
-                darkAmount = Smooth(t / (zoomT * 0.9f));
-                textAlpha = Smooth((t - zoomT * 0.5f) / 0.5f) * (1f - Smooth((t - tPop + 0.3f) / 0.3f));
-                packAlpha = 0f;
-                if (sk > 0.5f && Random.value < dt * 14f * sk) ThrowChip(eggRoot.position, S * 0.05f);
-                if (sk > 0.3f && Random.value < dt * 9f * sk) PixelAudio.Play("hit");
+                EggPhase(t, dt, zoomT, shakeT, tPop, start, centre, S, out darkAmount, out textAlpha, out packAlpha);
                 petPos = inside; petScale = 0f;
             }
             else
@@ -201,18 +174,7 @@ public class PixelEggHatch : MonoBehaviour
                 {
                     popped = true;
                     flashAmt = 1f;
-                    PixelAudio.Play("achievement");
-                    // The lid flies off, shell chips burst out, the pet is revealed.
-                    wholePart.gameObject.SetActive(false);
-                    shellPart.gameObject.SetActive(true);
-                    lidMesh.gameObject.SetActive(true);
-                    lidPart.SetParent(studioRoot.transform, true);
-                    lidVel = new Vector3(Random.Range(-1.5f, 1.5f), 9f, -1f);
-                    lidSpin = new Vector3(Random.Range(-200f, 200f), Random.Range(-120f, 120f), Random.Range(-260f, 260f));
-                    for (int i = 0; i < 14; i++) ThrowChip(eggRoot.position + new Vector3(0f, rim, 0f), S * 0.12f, true);
-                    eggRoot.localRotation = Quaternion.identity;
-                    for (int i = 0; i < cracks.Count; i++) cracks[i].gameObject.SetActive(true);
-                    Burst(CanvasOf(centre + new Vector2(0f, S * 0.3f), size), 60, 160f, 600f, 1f);
+                    PopEgg(rim, S, centre, size, out lidVel, out lidSpin);
                 }
                 darkAmount = 1f; packAlpha = 1f; textAlpha = 1f;
                 eggRoot.position = studioRoot.transform.position + new Vector3(centre.x, centre.y, 0f);
@@ -239,7 +201,7 @@ public class PixelEggHatch : MonoBehaviour
                     petScale = P;
                     float stretch = 1f + 0.12f * Mathf.Sin(k * Mathf.PI);
                     petEuler = new Vector3(0f, 360f * k + hi * 40f, Mathf.Sin(k * Mathf.PI * 2f) * 10f);
-                    Emit(CanvasOf(petPos, size), petScale * 100f, dt);
+                    sparkles.Emit(CanvasOf(petPos, size), petScale * 100f, sparklesPerSecond, dt);
                     modelScale = new Vector3(1f / Mathf.Sqrt(stretch), stretch, 1f / Mathf.Sqrt(stretch));
                     if (!named) { named = true; subtitle.text = string.Format(petFormat, petName); }
                     lastPetPos = petPos;
@@ -252,12 +214,12 @@ public class PixelEggHatch : MonoBehaviour
                     petPos = Vector2.Lerp(from, pack, k) + new Vector2(0f, Mathf.Sin(k * Mathf.PI) * size.y / 100f * 0.14f);
                     petScale = Mathf.Lerp(P, backpackSize / 100f * 0.35f, k);
                     petEuler = new Vector3(20f * k, 360f * k + 90f, 0f);
-                    Emit(CanvasOf(petPos, size), petScale * 80f, dt);
+                    sparkles.Emit(CanvasOf(petPos, size), petScale * 80f, sparklesPerSecond, dt);
                     lastPetPos = petPos;
                 }
                 else
                 {
-                    if (!stashed) { stashed = true; Burst(packC, 40, 90f, 380f, 0.8f); PixelAudio.Play("dragon_stash"); bump = 1f; }
+                    if (!stashed) { stashed = true; sparkles.Burst(packC, 40, 90f, 380f, 0.8f); PixelAudio.Play("dragon_stash"); bump = 1f; }
                     float f = (t - tEnd) / fadeT;
                     darkAmount = 1f - Smooth(f); packAlpha = 1f - Smooth(f * 1.2f); textAlpha = 1f - Smooth(f * 1.6f);
                     petScale = 0f;
@@ -265,16 +227,7 @@ public class PixelEggHatch : MonoBehaviour
                 if (petModel != null) petModel.localScale = modelScale;
                 ApplyPet(petPos, petScale, petEuler);
             }
-            if (popped && shellPart != null && t >= tHop)
-            {
-                float crumble = Mathf.Clamp01((t - tHop) / 0.35f);   // the empty shell shrinks away as the pet hops out
-                shellPart.localScale = new Vector3(S, S * 0.55f, S) * (1f - Smooth(crumble));
-                if (crumble >= 1f && shellPart.gameObject.activeSelf)
-                {
-                    shellPart.gameObject.SetActive(false);
-                    foreach (Transform crack in cracks) if (crack != null && crack.parent == eggRoot) crack.gameObject.SetActive(false);   // the cracks went with it
-                }
-            }
+            if (popped && shellPart != null && t >= tHop) CrumbleShell(t, tHop, S);
             AnimateDebris(dt, ref lidVel, lidSpin, popped);
             bump = Mathf.Max(0f, bump - dt * 3.5f);
             flashAmt = Mathf.Max(0f, flashAmt - dt * 3.5f);
@@ -284,15 +237,81 @@ public class PixelEggHatch : MonoBehaviour
             backpackRect.localScale = Vector3.one * (1f + 0.35f * bump);
             title.alpha = textAlpha; subtitle.alpha = textAlpha;
             studioCam.Render();
-            UpdateSparks(dt);
+            sparkles.Tick(dt);
             yield return null;
         }
 
         float tail = 0.5f;
-        while (tail > 0f) { tail -= Time.unscaledDeltaTime; UpdateSparks(Time.unscaledDeltaTime); yield return null; }
+        while (tail > 0f) { tail -= Time.unscaledDeltaTime; sparkles.Tick(Time.unscaledDeltaTime); yield return null; }
         Cleanup();
         playing = false;
         onDone?.Invoke();
+    }
+
+    /// <summary>Where the pet lands on each of its 'hops' (left and right of the egg in turn, never on the shell).</summary>
+    private static List<Vector2> HopSpots(int hops, Vector2 size, Vector2 centre, float groundY, float S, float P)
+    {
+        float reach = Mathf.Min(size.x / 200f * 0.6f, 6.5f);
+        List<Vector2> spots = new List<Vector2>();
+        float sideSign = Random.value < 0.5f ? -1f : 1f;
+        float minX = S * 0.5f + P * 0.5f + 0.3f;   // never land on the shell
+        reach = Mathf.Max(reach, minX + 0.6f);
+        for (int i = 0; i < hops; i++)
+        {
+            spots.Add(new Vector2(centre.x + sideSign * Mathf.Lerp(minX, reach, Random.value), groundY));
+            sideSign = -sideSign;
+        }
+        return spots;
+    }
+
+    /// <summary>One frame of the egg before it pops ('t' &lt; tPop): it zooms in, then shakes with growing force while the cracks fill with light (chips and taps as it shakes).</summary>
+    private void EggPhase(float t, float dt, float zoomT, float shakeT, float tPop, Vector2 start, Vector2 centre, float S, out float darkAmount, out float textAlpha, out float packAlpha)
+    {
+        // Egg: zooms in, then shakes with growing force while the cracks fill with light.
+        float zk = Smooth(t / zoomT);
+        float sk = Mathf.Clamp01((t - zoomT) / shakeT);
+        Vector2 pos = Vector2.Lerp(start, centre, EaseOut(t / zoomT));
+        float scale = Mathf.Lerp(0.25f, 1f, EaseOut(t / zoomT));
+        float amp = sk * sk;
+        eggRoot.position = studioRoot.transform.position + new Vector3(pos.x + Mathf.Sin(t * 57f) * 0.07f * amp * S, pos.y + Mathf.Abs(Mathf.Sin(t * 33f)) * 0.05f * amp * S, 0f);
+        eggRoot.localScale = Vector3.one * scale * (1f + 0.03f * Mathf.Sin(t * 20f) * amp);
+        eggRoot.localRotation = Quaternion.Euler(Mathf.Sin(t * 29f) * 5f * amp, 0f, Mathf.Sin(t * 41f) * 9f * amp + Mathf.Sin(t * 5f) * 3f * sk);
+        int visible = Mathf.RoundToInt(cracks.Count * Mathf.Clamp01(sk * 1.15f));
+        for (int i = 0; i < cracks.Count; i++) cracks[i].gameObject.SetActive(i < visible);
+        darkAmount = Smooth(t / (zoomT * 0.9f));
+        textAlpha = Smooth((t - zoomT * 0.5f) / 0.5f) * (1f - Smooth((t - tPop + 0.3f) / 0.3f));
+        packAlpha = 0f;
+        if (sk > 0.5f && Random.value < dt * 14f * sk) ThrowChip(eggRoot.position, S * 0.05f);
+        if (sk > 0.3f && Random.value < dt * 9f * sk) PixelAudio.Play("hit");
+    }
+
+    /// <summary>The egg pops: the lid flies off ('lidVel' / 'lidSpin'), shell chips burst out, the cracks all show and the pet is revealed.</summary>
+    private void PopEgg(float rim, float S, Vector2 centre, Vector2 size, out Vector3 lidVel, out Vector3 lidSpin)
+    {
+        PixelAudio.Play("achievement");
+        // The lid flies off, shell chips burst out, the pet is revealed.
+        wholePart.gameObject.SetActive(false);
+        shellPart.gameObject.SetActive(true);
+        lidMesh.gameObject.SetActive(true);
+        lidPart.SetParent(studioRoot.transform, true);
+        lidVel = new Vector3(Random.Range(-1.5f, 1.5f), 9f, -1f);
+        lidSpin = new Vector3(Random.Range(-200f, 200f), Random.Range(-120f, 120f), Random.Range(-260f, 260f));
+        for (int i = 0; i < 14; i++) ThrowChip(eggRoot.position + new Vector3(0f, rim, 0f), S * 0.12f, true);
+        eggRoot.localRotation = Quaternion.identity;
+        for (int i = 0; i < cracks.Count; i++) cracks[i].gameObject.SetActive(true);
+        sparkles.Burst(CanvasOf(centre + new Vector2(0f, S * 0.3f), size), 60, 160f, 600f, 1f);
+    }
+
+    /// <summary>The empty shell shrinks away as the pet hops out (and is hidden, with its cracks, once gone).</summary>
+    private void CrumbleShell(float t, float tHop, float S)
+    {
+        float crumble = Mathf.Clamp01((t - tHop) / 0.35f);   // the empty shell shrinks away as the pet hops out
+        shellPart.localScale = new Vector3(S, S * 0.55f, S) * (1f - Smooth(crumble));
+        if (crumble >= 1f && shellPart.gameObject.activeSelf)
+        {
+            shellPart.gameObject.SetActive(false);
+            foreach (Transform crack in cracks) if (crack != null && crack.parent == eggRoot) crack.gameObject.SetActive(false);   // the cracks went with it
+        }
     }
 
     private Vector2 CanvasOf(Vector2 studio, Vector2 size) => studio * 100f + size * 0.5f;
@@ -358,94 +377,7 @@ public class PixelEggHatch : MonoBehaviour
         if (lidPart != null) lidPart.gameObject.SetActive(false);
     }
 
-    // ---- sparkles ----
-
-    private void Emit(Vector2 at, float pixels, float dt)
-    {
-        emitCarry += sparklesPerSecond * dt;
-        while (emitCarry >= 1f)
-        {
-            emitCarry -= 1f;
-            Vector2 dir = Random.insideUnitCircle;
-            SpawnSpark(at + dir * pixels * 0.5f, dir.normalized * Random.Range(30f, 150f) + Vector2.up * Random.Range(10f, 60f), Random.Range(0.5f, 1.2f), Random.Range(14f, 34f));
-        }
-    }
-
-    private void Burst(Vector2 at, int count, float minSpeed, float maxSpeed, float sizeScale)
-    {
-        for (int i = 0; i < count; i++)
-        {
-            Vector2 dir = Random.insideUnitCircle.normalized;
-            SpawnSpark(at, dir * Random.Range(minSpeed, maxSpeed), Random.Range(0.6f, 1.4f), Random.Range(16f, 44f) * sizeScale);
-        }
-    }
-
-    private void SpawnSpark(Vector2 pos, Vector2 vel, float life, float size)
-    {
-        if (sparks == null) return;
-        for (int i = 0; i < sparks.Length; i++)
-        {
-            if (sparks[i].alive) continue;
-            sparks[i].alive = true;
-            sparks[i].pos = pos; sparks[i].vel = vel;
-            sparks[i].life = sparks[i].maxLife = life;
-            sparks[i].size = size;
-            sparks[i].spin = Random.Range(-180f, 180f);
-            sparks[i].image.color = Color.Lerp(sparkleColor, Color.white, Random.value * 0.6f);
-            sparks[i].rect.gameObject.SetActive(true);
-            return;
-        }
-    }
-
-    private void UpdateSparks(float dt)
-    {
-        if (sparks == null) return;
-        for (int i = 0; i < sparks.Length; i++)
-        {
-            if (!sparks[i].alive) continue;
-            sparks[i].life -= dt;
-            if (sparks[i].life <= 0f) { sparks[i].alive = false; sparks[i].rect.gameObject.SetActive(false); continue; }
-            sparks[i].vel *= 1f - Mathf.Min(1f, dt * 1.6f);
-            sparks[i].vel += Vector2.down * 40f * dt;
-            sparks[i].pos += sparks[i].vel * dt;
-            float k = sparks[i].life / sparks[i].maxLife;
-            float s = sparks[i].size * Mathf.Sin(Mathf.Clamp01(k) * Mathf.PI * 0.5f + 0.2f);
-            sparks[i].rect.anchoredPosition = sparks[i].pos;
-            sparks[i].rect.sizeDelta = new Vector2(s, s);
-            sparks[i].rect.localRotation = Quaternion.Euler(0f, 0f, (1f - k) * sparks[i].spin);
-            Color col = sparks[i].image.color; col.a = Mathf.Clamp01(k * 1.6f); sparks[i].image.color = col;
-        }
-    }
-
-    private static Sprite BuildSparkSprite()
-    {
-        const int n = 32;
-        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
-        float c = (n - 1) * 0.5f;
-        for (int y = 0; y < n; y++)
-            for (int x = 0; x < n; x++)
-            {
-                float dx = (x - c) / c, dy = (y - c) / c;
-                float r = Mathf.Sqrt(dx * dx + dy * dy);
-                float glow = Mathf.Clamp01(1f - r) * Mathf.Clamp01(1f - r);
-                float cross = Mathf.Clamp01(1f - Mathf.Min(Mathf.Abs(dx), Mathf.Abs(dy)) * 7f) * Mathf.Clamp01(1f - r);
-                tex.SetPixel(x, y, new Color(1f, 1f, 1f, Mathf.Clamp01(glow * 0.6f + cross)));
-            }
-        tex.Apply(false, true);
-        return Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
-    }
-
     // ---- building ----
-
-    private static Image NewImage(string name, Transform parent, Color color)
-    {
-        GameObject go = new GameObject(name, typeof(RectTransform), typeof(Image));
-        go.transform.SetParent(parent, false);
-        Image img = go.GetComponent<Image>();
-        img.color = color;
-        img.raycastTarget = false;
-        return img;
-    }
 
     private void Build(int petTier)
     {
@@ -454,17 +386,8 @@ public class PixelEggHatch : MonoBehaviour
         canvasRoot = PixelUIKit.CreateCanvas("Egg Hatch", 691, new Vector2(1920f, 1080f), true);
         canvasRect = canvasRoot.GetComponent<RectTransform>();
 
-        dim = NewImage("Dark", canvasRoot.transform, new Color(0f, 0f, 0f, 0f));
-        PixelUIKit.Stretch(dim.rectTransform);
-        dim.raycastTarget = true;   // blocks clicks while it plays
-
-        backpack = NewImage("Backpack", canvasRoot.transform, new Color(1f, 1f, 1f, 0f));
-        backpack.sprite = PixelGhostMinigame.BuildBackpackSprite();
-        backpack.preserveAspect = true;
+        PixelShowScreen.DimAndBackpack(canvasRoot.transform, backpackSize, out dim, out backpack);   // the click-blocking dark layer + the backpack
         backpackRect = backpack.rectTransform;
-        backpackRect.anchorMin = backpackRect.anchorMax = new Vector2(0f, 0f);
-        backpackRect.pivot = new Vector2(0.5f, 0.5f);
-        backpackRect.sizeDelta = new Vector2(backpackSize, backpackSize);
 
         GameObject raw = new GameObject("Studio Picture", typeof(RectTransform), typeof(RawImage));
         raw.transform.SetParent(canvasRoot.transform, false);
@@ -473,62 +396,19 @@ public class PixelEggHatch : MonoBehaviour
         picture.enabled = false;
         PixelUIKit.Stretch(raw.GetComponent<RectTransform>());
 
-        flash = NewImage("Flash", canvasRoot.transform, new Color(1f, 1f, 0.9f, 0f));
+        flash = PixelShowScreen.NewImage("Flash", canvasRoot.transform, new Color(1f, 1f, 0.9f, 0f));
         PixelUIKit.Stretch(flash.rectTransform);
 
-        float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        title = PixelUIKit.CreateText(font, canvasRoot.transform, "Title", "", 64f, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 0.92f, 0.6f, 1f));
-        PixelUIKit.Caps(title);
-        RectTransform tr = title.rectTransform;
-        tr.anchorMin = new Vector2(0f, 1f); tr.anchorMax = new Vector2(1f, 1f); tr.pivot = new Vector2(0.5f, 1f);
-        tr.sizeDelta = new Vector2(0f, 100f); tr.anchoredPosition = new Vector2(0f, -(bar + 40f));
-        subtitle = PixelUIKit.CreateText(font, canvasRoot.transform, "Subtitle", "", 40f, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
-        RectTransform sr = subtitle.rectTransform;
-        sr.anchorMin = new Vector2(0f, 1f); sr.anchorMax = new Vector2(1f, 1f); sr.pivot = new Vector2(0.5f, 1f);
-        sr.sizeDelta = new Vector2(0f, 70f); sr.anchoredPosition = new Vector2(0f, -(bar + 140f));
+        PixelShowScreen.Titles(font, canvasRoot.transform, new Color(1f, 0.92f, 0.6f, 1f), out title, out subtitle);
 
-        if (sparkSprite == null) sparkSprite = BuildSparkSprite();
-        sparks = new Spark[160];
-        for (int i = 0; i < sparks.Length; i++)
-        {
-            Image img = NewImage("Spark", canvasRoot.transform, Color.white);
-            img.sprite = sparkSprite;
-            RectTransform r = img.rectTransform;
-            r.anchorMin = r.anchorMax = new Vector2(0f, 0f);
-            r.pivot = new Vector2(0.5f, 0.5f);
-            img.gameObject.SetActive(false);
-            sparks[i] = new Spark { rect = r, image = img };
-        }
-        emitCarry = 0f;
+        sparkles.Build(canvasRoot.transform, 160, sparkleColor);
         BuildStudio(petTier);
     }
 
     private void BuildStudio(int petTier)
     {
         float S = eggSize / 100f, P = petSize / 100f;
-        studioRoot = new GameObject("Egg Hatch Studio");
-        studioRoot.transform.position = new Vector3(0f, -4500f, 0f);
-
-        GameObject camGo = new GameObject("Camera");
-        camGo.transform.SetParent(studioRoot.transform, false);
-        camGo.transform.localPosition = new Vector3(0f, 0f, -14f);
-        studioCam = camGo.AddComponent<Camera>();
-        studioCam.enabled = false;
-        studioCam.clearFlags = CameraClearFlags.SolidColor;
-        studioCam.backgroundColor = new Color(0f, 0f, 0f, 0f);
-        studioCam.orthographic = true;
-        studioCam.nearClipPlane = 0.1f;
-        studioCam.farClipPlane = 40f;
-        studioCam.allowHDR = false;
-
-        GameObject lightGo = new GameObject("Light");
-        lightGo.transform.SetParent(studioRoot.transform, false);
-        lightGo.transform.localPosition = new Vector3(2f, 4f, -10f);
-        Light light = lightGo.AddComponent<Light>();
-        light.type = LightType.Point;
-        light.range = 80f;
-        light.intensity = 22f;
-        light.shadows = LightShadows.None;
+        studioRoot = PixelShowStudio.Create("Egg Hatch Studio", -4500f, 14f, 40f, new Vector3(2f, 4f, -10f), 80f, 22f, out studioCam);
 
         // Egg: a lower shell and a lid, both rounded cubes, with glowing cracks on the front.
         eggRoot = new GameObject("Egg").transform;
@@ -590,9 +470,8 @@ public class PixelEggHatch : MonoBehaviour
     private void Cleanup()
     {
         if (canvasRoot != null) Destroy(canvasRoot);
-        if (studioRoot != null) Destroy(studioRoot);
-        if (rt != null) { rt.Release(); Destroy(rt); }
-        canvasRoot = null; studioRoot = null; rt = null; sparks = null; picture = null;
+        PixelShowStudio.Release(ref studioRoot, ref rt);
+        canvasRoot = null; sparkles.Drop(); picture = null;
         cracks.Clear(); chips.Clear();
     }
 }

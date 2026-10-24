@@ -143,7 +143,7 @@ public static class PixelSaveShots
     private static void ResetStatics()
     {
         screenCopy = thumb = null; haveThumb = false; thumbJpg = null; runner = null; textures.Clear();
-        PixelStatics.ResetOnRestart(OnSceneUnloaded);
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);   // restart-reset-not-progress: the save-screenshot thumbnail of this run
     }
 
     // (Restart reloads the scene: a save made while paused must not get the old game's last picture; the runner lives on, DontDestroyOnLoad)
@@ -319,6 +319,7 @@ public class PixelAutosaveWindow : MonoBehaviour
     private TMP_FontAsset font;
     private GameObject root, tip, listBar;
     private RectTransform listContent, tipImageRect;
+    private RectTransform rootRect, tipRect;   // (the canvas's and the tooltip's RectTransforms, kept when they are built)
     private ScrollRect scroll;
     private TMP_Text statusLabel, emptyLabel, tipLabel;
     private RawImage tipImage;
@@ -337,6 +338,7 @@ public class PixelAutosaveWindow : MonoBehaviour
         PixelUIKit.EnsureEventSystem();
         root = PixelUIKit.CreateCanvas("Autosave Window Canvas", 520, new Vector2(1920f, 1080f), true);   // above the pause menu (500)
         root.transform.SetParent(transform, false);
+        rootRect = root.GetComponent<RectTransform>();
 
         GameObject dim = new GameObject("Dim", typeof(RectTransform), typeof(Image));
         dim.transform.SetParent(root.transform, false);
@@ -391,6 +393,7 @@ public class PixelAutosaveWindow : MonoBehaviour
         // The hover tooltip: the screenshot above the details.
         tip = new GameObject("Tip", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
         tip.transform.SetParent(root.transform, false);
+        tipRect = tip.GetComponent<RectTransform>();
         tip.GetComponent<CanvasGroup>().blocksRaycasts = false;
         Image tbg = tip.GetComponent<Image>();
         tbg.color = new Color(0.07f, 0.09f, 0.13f, 0.97f);
@@ -507,12 +510,12 @@ public class PixelAutosaveWindow : MonoBehaviour
         float textH = Mathf.Ceil(tipLabel.GetPreferredValues(text, w - 32f, 0f).y);
         lr.sizeDelta = new Vector2(-32f, textH);
         lr.anchoredPosition = new Vector2(0f, -(imgH + (shot != null ? 24f : 12f)));
-        RectTransform rt = tip.GetComponent<RectTransform>();
+        RectTransform rt = tipRect;
         rt.sizeDelta = new Vector2(w, imgH + textH + (shot != null ? 36f : 24f));
         if (!tip.activeSelf) tip.SetActive(true);
         tip.transform.SetAsLastSibling();
 
-        RectTransform canvasRect = root.GetComponent<RectTransform>();
+        RectTransform canvasRect = rootRect;
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
         if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local)) return;
         bool rightHalf = local.x > 0f;

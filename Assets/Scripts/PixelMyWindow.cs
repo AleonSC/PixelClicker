@@ -30,6 +30,7 @@
 //   Header buttons (LayoutHeaderButtons): Info sits in the first right slot after the X and the chrome's '-' (one slot further in while the chrome's undock arrow shows), Edit
 //   (hidden, no Edit mode) after it; the title stays centred clear of them. Layout reruns when the chrome minimizes / docks (its StateChanged event). The corner grip still
 //   changes the window's WIDTH / HEIGHT (ResizeBy -> PixelWindowParts.SetHeight), not its scale.
+//   Part files (partial class): PixelMyWindowCards.cs (the Pinned board of cards + the picker), PixelMyWindowRows.cs (the row builders per type).
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -48,7 +49,7 @@ using UnityEngine.UI;
 /// (PlayerPrefs <c>PixelClicker.Setting.MyWindow</c>, synced by <see cref="PixelSettingsSync"/>); the window's place, size and open state are
 /// global.
 /// </summary>
-public class PixelMyWindow : MonoBehaviour
+public partial class PixelMyWindow : MonoBehaviour
 {
     [Header("Pocket")]
     [Tooltip("Show the docked 'Pocket' button from the start. Off = it appears once two pixel types are unlocked (like the Pixel Guide).")]
@@ -67,9 +68,12 @@ public class PixelMyWindow : MonoBehaviour
     [Tooltip("Seconds between value refreshes. 0 = the coded default (0.4).")]
     [SerializeField] private float refreshSeconds = 0f;
 
+    [Tooltip("Background colour of each row card in the window.")]
     [SerializeField] private Color rowColor = new Color(0.16f, 0.2f, 0.3f, 0.9f);
     private Color textColor => PixelUITheme.TextColor;   // (the theme: PixelUITheme)
+    [Tooltip("Colour of the dim detail text (row details, empty-list notes).")]
     [SerializeField] private Color dimTextColor = new Color(0.7f, 0.76f, 0.88f, 1f);
+    [Tooltip("Fill colour of the progress bars (unfinished ones; finished bars turn gold).")]
     [SerializeField] private Color barColor = new Color(0.3f, 0.8f, 0.45f, 1f);
 
     // ------------------------------------------------------------------
@@ -596,6 +600,29 @@ public class PixelMyWindow : MonoBehaviour
         bool hoverMini = HoverDocked && minimized;   // minimized: the small card (block + name) hangs just under the header
         float hoverH = hoverOn ? Mathf.Max(hoverShownH, 64f) + 8f : 0f;   // the pinned hover card (or its hint) sits under the header / tabs
         hoverLaidH = hoverShownH;
+        LayoutHoverSlot(hoverOn, hoverMini, hoverH, tabs);
+        float top = HeaderHeight + 4f + tabs + hoverH + (editing && !logTab && !keysTab ? 170f : 0f);
+        scroll.gameObject.SetActive(!minimized && !logTab && !keysTab);
+        if (pickerRoot != null && !scroll.gameObject.activeSelf) pickerRoot.SetActive(false);
+        if (logScroll != null) logScroll.gameObject.SetActive(!minimized && logTab);
+        LayoutTabs(docked, logTab, keysTab, tabs);
+        if (resizeHandleObject != null) resizeHandleObject.SetActive(!minimized);
+        RectTransform vr = scroll.GetComponent<RectTransform>();
+        vr.anchorMin = Vector2.zero;
+        vr.anchorMax = Vector2.one;
+        vr.offsetMin = new Vector2(12f, 34f);
+        vr.offsetMax = new Vector2(-12f, -top);
+        LayoutLogArea(top, logTab);
+        addBar.anchoredPosition = new Vector2(0f, -(HeaderHeight + 4f + tabs + hoverH));
+        addBar.gameObject.SetActive(editing && !minimized && !logTab && !keysTab);
+        if (editLabel != null) PixelUIKit.SetText(editLabel, editing ? "Done" : "Edit");
+        LayoutHeaderButtons();
+        UpdateContentHeight();
+    }
+
+    // Layout step: the pinned hover card's slot under the header / tabs, and the pin button's colour.
+    private void LayoutHoverSlot(bool hoverOn, bool hoverMini, float hoverH, float tabs)
+    {
         if (hoverSlot != null)
         {
             hoverSlot.gameObject.SetActive(hoverOn || hoverMini);
@@ -608,10 +635,11 @@ public class PixelMyWindow : MonoBehaviour
             shownHoverDocked = HoverDocked;
             PixelUIKit.SetRole(hoverDockImage, HoverDocked ? ButtonRole.Success : ButtonRole.Neutral);
         }
-        float top = HeaderHeight + 4f + tabs + hoverH + (editing && !logTab && !keysTab ? 170f : 0f);
-        scroll.gameObject.SetActive(!minimized && !logTab && !keysTab);
-        if (pickerRoot != null && !scroll.gameObject.activeSelf) pickerRoot.SetActive(false);
-        if (logScroll != null) logScroll.gameObject.SetActive(!minimized && logTab);
+    }
+
+    // Layout step: the tab bar, its three tabs (Pinned / Event log / Keys) and the Keys tab's page.
+    private void LayoutTabs(bool docked, bool logTab, bool keysTab, float tabs)
+    {
         if (tabBar != null) tabBar.SetActive(!minimized);
         if (tabLogButton != null) tabLogButton.gameObject.SetActive(docked);
         SetTabAnchors(tabPinnedButton, 0f, docked ? 1f / 3f : 0.5f);
@@ -632,12 +660,11 @@ public class PixelMyWindow : MonoBehaviour
             PixelUIKit.SetRole(tabLogImage, tabNow == 1 ? ButtonRole.Selected : ButtonRole.Neutral);
             PixelUIKit.SetRole(tabKeysImage, tabNow == 2 ? ButtonRole.Selected : ButtonRole.Neutral);
         }
-        if (resizeHandleObject != null) resizeHandleObject.SetActive(!minimized);
-        RectTransform vr = scroll.GetComponent<RectTransform>();
-        vr.anchorMin = Vector2.zero;
-        vr.anchorMax = Vector2.one;
-        vr.offsetMin = new Vector2(12f, 34f);
-        vr.offsetMax = new Vector2(-12f, -top);
+    }
+
+    // Layout step: the docked event log's list and its 'show on screen' button ('top' = where the lists start under the header).
+    private void LayoutLogArea(float top, bool logTab)
+    {
         if (logScroll != null)
         {
             RectTransform lr = logScroll.GetComponent<RectTransform>();
@@ -652,11 +679,6 @@ public class PixelMyWindow : MonoBehaviour
             br.offsetMin = new Vector2(12f, -(top + 44f)); br.offsetMax = new Vector2(-12f, -top);
             if (logTab) UpdateScreenLogLabel();
         }
-        addBar.anchoredPosition = new Vector2(0f, -(HeaderHeight + 4f + tabs + hoverH));
-        addBar.gameObject.SetActive(editing && !minimized && !logTab && !keysTab);
-        if (editLabel != null) PixelUIKit.SetText(editLabel, editing ? "Done" : "Edit");
-        LayoutHeaderButtons();
-        UpdateContentHeight();
     }
 
     /// <summary>The docked event log: every line of PixelHints' history, oldest at the top and the newest at the bottom (the list opens scrolled to it); a click shows the line's full tip.</summary>
@@ -740,649 +762,6 @@ public class PixelMyWindow : MonoBehaviour
         }
         else subs.Add("");
         return subs;
-    }
-
-    // ------------------------------------------------------------------
-    // The Pinned tab as a board of WIDGETS (cards): each pinned thing is a card with a header you drag by, a '-' to fold it up and a small x you HOLD to remove it; a blank card with a +
-    // under the last one opens a search to pin something new. (Same look and moves as the Dev Hub's widgets.)
-    // ------------------------------------------------------------------
-
-    // The cards themselves (drag to reorder, fold, layout) are the shared PixelCardBoard (the Dev Hub's widgets use it too); a Pocket card adds
-    // its entry, its rows and the hold-to-remove x. The order and the folds are saved in the entries (per save file), not by the board.
-    private class Card
-    {
-        public Entry entry;
-        public PixelCardBoard.Card card;
-        public RectTransform rect, xRect;
-        public Image bg;
-        public readonly List<Row> rows = new List<Row>();
-    }
-
-    private readonly List<Card> cards = new List<Card>();
-    private RectTransform plusCard;
-    private PixelCardBoard board;
-    private const float CardHeader = 34f, CardGap = 8f, PlusHeight = 78f, RemoveHoldSeconds = 0.6f;
-    private static readonly Color CardColor = new Color(0.07f, 0.09f, 0.16f, 0.9f), CardRed = new Color(0.75f, 0.12f, 0.1f, 0.95f);
-
-    private void RebuildRows()
-    {
-        if (listContent == null) return;
-        foreach (Card c in cards) if (c.rect != null) Destroy(c.rect.gameObject);
-        foreach (Row r in rows) if (r.rt != null) Destroy(r.rt.gameObject);   // (rows not yet inside a card)
-        if (plusCard != null) Destroy(plusCard.gameObject);
-        cards.Clear(); rows.Clear(); plusCard = null;
-        if (board == null)
-            board = new PixelCardBoard(listContent, new PixelCardBoard.Style
-            {
-                headerHeight = CardHeader, topPad = 4f, gap = CardGap, handleAlpha = 0.03f, titleLeft = 40f, titleRight = 78f,
-                foldPos = new Vector2(-38f, -5f), titleColor = new Color(0.85f, 0.9f, 1f, 0.92f), cardColor = CardColor,
-            }, OnBoardHeight)
-            {
-                OrderChanged = OnCardsReordered,
-                FoldChanged = c => { if (c.tag is Card pc) { pc.entry.min = c.folded; SaveEntries(); } },
-            };
-        board.Clear();
-        for (int i = 0; i < blob.entries.Count; i++)
-        {
-            Entry e = blob.entries[i];
-            List<string> subs = Expand(e);
-            List<Row> made = new List<Row>();
-            for (int s = 0; s < subs.Count; s++)
-            {
-                Row row = BuildRow(e, subs[s], s == 0, i);
-                if (row != null) made.Add(row);
-            }
-            if (made.Count == 0) continue;
-            cards.Add(BuildCard(e, made));
-        }
-        BuildPlusCard();
-        rowSignature = Signature();
-        board.Finish();   // (lays the cards out; OnBoardHeight puts the blank card under the last one)
-        RefreshValues();
-    }
-
-    private string TitleFor(Entry e)
-    {
-        switch (e.type)
-        {
-            case "currency":
-            {
-                if (System.Enum.TryParse(e.key, out PixelClicker.PixelType t) && clicker != null)
-                {
-                    int ti = clicker.IndexOf(t);
-                    if (ti >= 0) { string n = clicker.Tiers[ti].displayName; return n.EndsWith(" Pixels") ? n.Substring(0, n.Length - 7) : n; }
-                }
-                return "Currency";
-            }
-            case "skill":
-            {
-                if (e.key == "training") return "Skill in training";
-                if (e.key == "all") return "All skills";
-                PixelSkills sk = PixelSkills.Instance;
-                if (sk != null) foreach (PixelSkills.SkillPack p in sk.Packs) if (p.id == e.key) return p.displayName;
-                return "Skill";
-            }
-            case "goal":
-            {
-                if (e.key == "next") return "Next goal";
-                if (e.key == "all") return "Goals";
-                if (e.key.StartsWith("mg:")) { PixelMinigame m = PixelMinigame.Find(e.key.Substring(3)); if (m != null) return m.TrackerTitle; }
-                return "Goal";
-            }
-            case "achievement":
-            {
-                PixelAchievements ach = PixelFind.First<PixelAchievements>();
-                if (ach != null) for (int i = 0; i < ach.Count; i++) if (ach.GetId(i) == e.key) return ach.GetTitle(i);
-                return "Achievement";
-            }
-            case "fav":
-            {
-                if (e.key.StartsWith("tool:") && TryGetTool(e.key.Substring(5), out string tn, out _)) return tn;
-                return e.key.StartsWith("item:") ? e.key.Substring(5) : e.key;
-            }
-        }
-        return "Note";
-    }
-
-    private Card BuildCard(Entry e, List<Row> made)
-    {
-        Card c = new Card { entry = e };
-        GameObject go = new GameObject("Widget", typeof(RectTransform), typeof(Image));
-        go.transform.SetParent(listContent, false);
-        c.bg = go.GetComponent<Image>();
-        c.bg.color = CardColor;
-        PixelUIKit.StyleBox(c.bg);
-        c.rect = go.GetComponent<RectTransform>();
-        c.rect.anchorMin = new Vector2(0f, 1f); c.rect.anchorMax = new Vector2(1f, 1f); c.rect.pivot = new Vector2(0.5f, 1f);
-
-        // The body: the entry's rows, one under the other.
-        float y = CardHeader + 2f;
-        foreach (Row r in made)
-        {
-            r.rt.SetParent(c.rect, false);
-            r.rt.anchorMin = new Vector2(0f, 1f); r.rt.anchorMax = new Vector2(1f, 1f); r.rt.pivot = new Vector2(0.5f, 1f);
-            r.rt.sizeDelta = new Vector2(-12f, r.height);
-            r.rt.anchoredPosition = new Vector2(0f, -y);
-            y += r.height + 4f;
-            c.rows.Add(r);
-            rows.Add(r);
-        }
-        c.rect.sizeDelta = new Vector2(-6f, y + 4f);
-
-        // The header (drag strip, grip, title, '-' fold) comes from the board; Pocket adds the small x you hold to remove the card.
-        c.card = board.Add(e.type + ":" + e.key, c.rect, y + 4f, TitleFor(e));
-        c.card.tag = c;
-        Button x = PixelUIKit.CreateButton(Font, c.rect, "Remove (hold)", "x", new Vector2(26f, 24f), ButtonRole.Danger, 18f);
-        c.xRect = x.GetComponent<RectTransform>();
-        c.xRect.anchorMin = c.xRect.anchorMax = c.xRect.pivot = new Vector2(1f, 1f);
-        c.xRect.anchoredPosition = new Vector2(-6f, -5f);
-        board.KeepInHeader(c.card, x.gameObject);
-        board.SetFolded(c.card, e.min, false);
-        return c;
-    }
-
-    private void BuildPlusCard()
-    {
-        GameObject go = new GameObject("Blank Widget", typeof(RectTransform), typeof(Image));
-        go.transform.SetParent(listContent, false);
-        Image bg = go.GetComponent<Image>();
-        bg.color = new Color(1f, 1f, 1f, 0.05f);
-        PixelUIKit.StyleBox(bg, true);
-        plusCard = go.GetComponent<RectTransform>();
-        plusCard.anchorMin = new Vector2(0f, 1f); plusCard.anchorMax = new Vector2(1f, 1f); plusCard.pivot = new Vector2(0.5f, 1f);
-        plusCard.sizeDelta = new Vector2(-6f, PlusHeight);
-        TMP_Text plus = Text(plusCard, "Plus", "+", 56f, TextAlignmentOptions.Center, new Color(1f, 1f, 1f, 0.55f), FontStyles.Bold);
-        plus.raycastTarget = false;
-        PixelUIKit.Stretch(plus.rectTransform);
-        PixelUIKit.MakeClickable(go, OpenPicker);
-    }
-
-    // The board laid the cards out: the blank card goes under the last one and the scroll content follows.
-    private void OnBoardHeight(float total)
-    {
-        if (plusCard != null) plusCard.anchoredPosition = new Vector2(0f, -total);
-        contentHeight = total + PlusHeight + 8f;
-        if (scroll != null) UpdateContentHeight();
-    }
-
-    // A card was dragged to a new place: the saved order (the entries) follows the cards.
-    private void OnCardsReordered()
-    {
-        List<Entry> ordered = new List<Entry>();
-        foreach (PixelCardBoard.Card k in board.Cards) if (k.tag is Card pc && !ordered.Contains(pc.entry)) ordered.Add(pc.entry);
-        foreach (Entry e in blob.entries) if (!ordered.Contains(e)) ordered.Add(e);
-        blob.entries = ordered;
-        SaveEntries();
-        rowSignature = Signature();
-    }
-
-    /// <summary>Hold the LEFT button on a card's small x to remove it: a ring fills round the cursor and the card turns red.</summary>
-    private void UpdateRemoveHold()
-    {
-        Card hot = null;
-        if (cards.Count > 0 && scroll != null && scroll.gameObject.activeInHierarchy && !minimized)
-        {
-            Vector2 p = PixelInput.PointerPosition();
-            foreach (Card c in cards)
-                if (c.xRect != null && c.xRect.gameObject.activeInHierarchy && RectTransformUtility.RectangleContainsScreenPoint(c.xRect, p, null)) { hot = c; break; }
-        }
-        bool done = PixelHold.Update(this, hot, RemoveHoldSeconds, "", new Color(1f, 0.3f, 0.25f, 1f), true, "remove_buildup", true);
-        foreach (Card c in cards)
-            if (c.bg != null) c.bg.color = c == hot ? Color.Lerp(CardColor, CardRed, PixelHold.ProgressOf(c)) : CardColor;
-        if (done && hot != null)
-        {
-            blob.entries.Remove(hot.entry);
-            SaveEntries();
-            PixelAudio.Play("device_remove");
-            RebuildRows();   // (with no widget left, the blank one with the + is all that shows)
-        }
-    }
-
-    // ---- the picker: search for what to pin ----
-
-    private struct Option { public string label, type, key; }
-    private GameObject pickerRoot;
-    private TMP_InputField pickerSearch;
-    private RectTransform pickerContent;
-    private ScrollRect pickerScroll;
-    private GameObject pickerBar;
-    private string pickerText = "";
-
-    private List<Option> AllOptions()
-    {
-        List<Option> list = new List<Option>();
-        if (clicker == null) return list;
-        foreach (PixelClicker.PixelTier t in clicker.Tiers)
-        {
-            if (!t.unlocked && t.count <= 0d) continue;
-            string n = t.displayName.EndsWith(" Pixels") ? t.displayName.Substring(0, t.displayName.Length - 7) : t.displayName;
-            list.Add(new Option { label = n, type = "currency", key = t.type.ToString() });
-        }
-        list.Add(new Option { label = "Skill in training (follows)", type = "skill", key = "training" });
-        list.Add(new Option { label = "All skills", type = "skill", key = "all" });
-        PixelSkills skills = PixelSkills.Instance;
-        if (skills != null) foreach (PixelSkills.SkillPack p in skills.Packs) if (skills.IsAvailable(p)) list.Add(new Option { label = "Skill: " + p.displayName, type = "skill", key = p.id });
-        list.Add(new Option { label = "Next goal", type = "goal", key = "next" });
-        list.Add(new Option { label = "All current goals", type = "goal", key = "all" });
-        foreach (PixelMinigame m in PixelMinigame.All)
-            if (m != null && !(m is PixelVisitorMinigame) && m.HasTracker) list.Add(new Option { label = "Goal: " + m.TrackerTitle, type = "goal", key = "mg:" + m.Id });
-        foreach (var tool in Tools) list.Add(new Option { label = "Tool: " + tool.name, type = "fav", key = "tool:" + tool.id });
-        PixelConsumables consumables = PixelFind.First<PixelConsumables>();
-        if (consumables != null)
-            for (int i = 0; i < consumables.ItemCount; i++)
-                if (consumables.ItemListable(i)) list.Add(new Option { label = consumables.ItemName(i), type = "fav", key = "item:" + consumables.ItemName(i) });
-        PixelAchievements ach = PixelFind.First<PixelAchievements>();
-        if (ach != null) for (int i = 0; i < ach.Count; i++) list.Add(new Option { label = "Achievement: " + ach.GetTitle(i), type = "achievement", key = ach.GetId(i) });
-        list.Add(new Option { label = "A note", type = "note", key = "" });
-        return list;
-    }
-
-    private void OpenPicker()
-    {
-        if (pickerRoot == null) BuildPicker();
-        RectTransform sr = scroll.GetComponent<RectTransform>();
-        RectTransform pr = pickerRoot.GetComponent<RectTransform>();
-        pr.anchorMin = sr.anchorMin; pr.anchorMax = sr.anchorMax; pr.offsetMin = sr.offsetMin; pr.offsetMax = sr.offsetMax;
-        pickerRoot.SetActive(true);
-        pickerRoot.transform.SetAsLastSibling();
-        pickerText = "";
-        pickerSearch.SetTextWithoutNotify("");
-        FillPicker();
-        pickerSearch.ActivateInputField();
-    }
-
-    private void ClosePicker() { if (pickerRoot != null) pickerRoot.SetActive(false); }
-
-    private void BuildPicker()
-    {
-        pickerRoot = new GameObject("Pocket Picker", typeof(RectTransform), typeof(Image));
-        pickerRoot.transform.SetParent(windowObject.transform, false);
-        pickerRoot.GetComponent<Image>().color = new Color(0.08f, 0.1f, 0.17f, 0.98f);
-        PixelUIKit.StyleBox(pickerRoot.GetComponent<Image>());
-        RectTransform root = pickerRoot.GetComponent<RectTransform>();
-
-        pickerSearch = PixelUIKit.CreateInputField(Font, root, "Search", new Vector2(100f, 44f), new Color(0.12f, 0.15f, 0.22f, 1f), Color.white, 22f, "Search for something to pin...");
-        RectTransform sf = pickerSearch.GetComponent<RectTransform>();
-        sf.anchorMin = new Vector2(0f, 1f); sf.anchorMax = new Vector2(1f, 1f); sf.pivot = new Vector2(0.5f, 1f);
-        sf.offsetMin = new Vector2(8f, -56f); sf.offsetMax = new Vector2(-72f, -10f);
-        PixelUIKit.AddSearchIcon(pickerSearch);
-        pickerSearch.onValueChanged.AddListener(v => { pickerText = (v ?? "").Trim().ToLowerInvariant(); FillPicker(); });
-        Button close = PixelUIKit.CreateButton(Font, root, "Cancel", "X", new Vector2(54f, 44f), ButtonRole.Danger, 24f);
-        RectTransform cr = close.GetComponent<RectTransform>();
-        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
-        cr.anchoredPosition = new Vector2(-8f, -10f);
-        close.onClick.AddListener(ClosePicker);
-
-        pickerScroll = PixelUIKit.CreateScrollView(root, "Options", new Color(1f, 1f, 1f, 0.35f), 12f, 60f, out pickerContent, out pickerBar);
-        RectTransform ps = pickerScroll.GetComponent<RectTransform>();
-        ps.anchorMin = Vector2.zero; ps.anchorMax = Vector2.one;
-        ps.offsetMin = new Vector2(6f, 6f); ps.offsetMax = new Vector2(-6f, -66f);
-    }
-
-    private void FillPicker()
-    {
-        for (int i = pickerContent.childCount - 1; i >= 0; i--) Destroy(pickerContent.GetChild(i).gameObject);
-        float y = 2f;
-        int shown = 0;
-        foreach (Option o in AllOptions())
-        {
-            if (pickerText.Length > 0 && !o.label.ToLowerInvariant().Contains(pickerText)) continue;
-            if (shown >= 70) break;
-            shown++;
-            bool already = o.type != "note" && blob.entries.Exists(e => e.type == o.type && e.key == o.key);
-            Option opt = o;
-            Button b = PixelUIKit.CreateButton(Font, pickerContent, "Option", o.label + (already ? "   (pinned)" : ""), new Vector2(100f, 42f), already ? ButtonRole.Neutral : ButtonRole.Primary, 21f);
-            RectTransform r = b.GetComponent<RectTransform>();
-            r.anchorMin = new Vector2(0f, 1f); r.anchorMax = new Vector2(1f, 1f); r.pivot = new Vector2(0.5f, 1f);
-            r.offsetMin = new Vector2(4f, -(y + 42f)); r.offsetMax = new Vector2(-4f, -y);
-            TMP_Text lbl = b.GetComponentInChildren<TMP_Text>();
-            lbl.alignment = TextAlignmentOptions.MidlineLeft; lbl.enableAutoSizing = true; lbl.fontSizeMax = 21f; lbl.fontSizeMin = 11f; lbl.textWrappingMode = TextWrappingModes.NoWrap;
-            lbl.rectTransform.offsetMin = new Vector2(12f, 0f);
-            b.interactable = !already;
-            b.onClick.AddListener(() => { blob.entries.Add(new Entry { type = opt.type, key = opt.key }); SaveEntries(); ClosePicker(); RebuildRows(); scroll.verticalNormalizedPosition = 0f; });
-            y += 46f;
-        }
-        if (shown == 0)
-        {
-            TMP_Text none = Text(pickerContent, "None", "Nothing matches.", 22f, TextAlignmentOptions.Center, dimTextColor, FontStyles.Italic);
-            none.rectTransform.anchorMin = new Vector2(0f, 1f); none.rectTransform.anchorMax = new Vector2(1f, 1f); none.rectTransform.pivot = new Vector2(0.5f, 1f);
-            none.rectTransform.sizeDelta = new Vector2(0f, 50f); none.rectTransform.anchoredPosition = new Vector2(0f, -10f);
-            y = 60f;
-        }
-        Canvas.ForceUpdateCanvases();
-        PixelUIKit.UpdateScrollView(pickerScroll, pickerBar, y + 4f, pickerScroll.GetComponent<RectTransform>().rect.height);
-    }
-
-    private RectTransform NewRow(float height)
-    {
-        GameObject go = new GameObject("Row", typeof(RectTransform), typeof(Image));
-        go.transform.SetParent(listContent, false);
-        Image bg = go.GetComponent<Image>();
-        bg.color = rowColor;
-        PixelUIKit.StyleBox(bg);
-        RectTransform rt = go.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0f, 1f);
-        rt.anchorMax = new Vector2(1f, 1f);
-        rt.pivot = new Vector2(0.5f, 1f);
-        rt.sizeDelta = new Vector2(-6f, height);
-        return rt;
-    }
-
-    private TMP_Text Text(Transform parent, string name, string text, float size, TextAlignmentOptions align, Color color, FontStyles style = FontStyles.Normal)
-    {
-        TMP_Text t = PixelUIKit.CreateText(Font, parent, name, text, size, align, style, color);
-        t.textWrappingMode = TextWrappingModes.NoWrap;
-        t.overflowMode = TextOverflowModes.Ellipsis;
-        return t;
-    }
-
-    private static void Stretch(RectTransform rt, float x, float y)
-    {
-        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
-        rt.offsetMin = new Vector2(x, y); rt.offsetMax = new Vector2(-x, -y);
-    }
-
-    private Row BuildRow(Entry e, string sub, bool first, int entryIndex)
-    {
-        Row row = null;
-        switch (e.type)
-        {
-            case "currency": row = BuildCurrency(e); break;
-            case "skill": row = BuildSkill(e, sub); break;
-            case "goal": row = BuildGoal(e, sub); break;
-            case "achievement": row = BuildAchievement(e); break;
-            case "note": row = BuildNote(e); break;
-            case "fav": row = BuildFavorite(e); break;
-        }
-        if (row == null) return null;
-        row.entry = e;
-        row.sub = sub;
-        row.first = first;
-        if (editing && first) AddEditButtons(row, entryIndex);
-        return row;
-    }
-
-    private void AddEditButtons(Row row, int index)
-    {
-        // Right end of the row: up, down, remove (and the rate toggle for a currency).
-        float x = -6f;
-        Button remove = MiniButton(row.rt, "x", ref x, ButtonRole.Danger);
-        remove.onClick.AddListener(() => { blob.entries.Remove(row.entry); SaveEntries(); RebuildRows(); });
-        Button down = MiniButton(row.rt, "v", ref x, ButtonRole.Neutral);
-        down.onClick.AddListener(() => MoveEntry(row.entry, 1));
-        Button up = MiniButton(row.rt, "^", ref x, ButtonRole.Neutral);
-        up.onClick.AddListener(() => MoveEntry(row.entry, -1));
-        if (row.entry.type == "currency")
-        {
-            Button rate = MiniButton(row.rt, "/min", ref x, ButtonRole.Neutral, 62f);
-            rate.onClick.AddListener(() => { row.entry.flag = !row.entry.flag; SaveEntries(); RefreshValues(); });
-        }
-        // Make room: the row's own texts stop before the buttons.
-        foreach (TMP_Text t in row.rt.GetComponentsInChildren<TMP_Text>())
-            if (t.name == "Amount" || t.name == "Detail") t.rectTransform.offsetMax = new Vector2(x - 4f, t.rectTransform.offsetMax.y);
-    }
-
-    private Button MiniButton(RectTransform parent, string label, ref float x, ButtonRole role, float width = 34f)
-    {
-        Button b = PixelUIKit.CreateButton(Font, parent, "Edit " + label, label, new Vector2(width, 34f), role, 18f);
-        RectTransform r = b.GetComponent<RectTransform>();
-        r.anchorMin = r.anchorMax = r.pivot = new Vector2(1f, 0.5f);
-        r.anchoredPosition = new Vector2(x, 0f);
-        x -= width + 4f;
-        return b;
-    }
-
-    private void MoveEntry(Entry e, int delta)
-    {
-        int i = blob.entries.IndexOf(e);
-        int j = Mathf.Clamp(i + delta, 0, blob.entries.Count - 1);
-        if (i < 0 || i == j) return;
-        blob.entries.RemoveAt(i);
-        blob.entries.Insert(j, e);
-        SaveEntries();
-        RebuildRows();
-    }
-
-    private (Image fill, RectTransform bar) MakeBar(RectTransform parent, float bottom, float height)
-    {
-        GameObject track = new GameObject("Bar", typeof(RectTransform), typeof(Image));
-        track.transform.SetParent(parent, false);
-        track.GetComponent<Image>().color = new Color(0.04f, 0.05f, 0.08f, 1f);
-        PixelUIKit.StyleBox(track.GetComponent<Image>(), true);
-        RectTransform tr = track.GetComponent<RectTransform>();
-        tr.anchorMin = new Vector2(0f, 0f); tr.anchorMax = new Vector2(1f, 0f); tr.pivot = new Vector2(0.5f, 0f);
-        tr.offsetMin = new Vector2(10f, bottom); tr.offsetMax = new Vector2(-10f, bottom + height);
-        GameObject fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
-        fill.transform.SetParent(track.transform, false);
-        Image fi = fill.GetComponent<Image>();
-        fi.color = barColor;
-        RectTransform fr = fill.GetComponent<RectTransform>();
-        fr.anchorMin = Vector2.zero; fr.anchorMax = new Vector2(0f, 1f);
-        fr.offsetMin = new Vector2(2f, 2f); fr.offsetMax = new Vector2(-2f, -2f);
-        return (fi, fr);
-    }
-
-    private static void SetFill(RectTransform fill, float fraction) => fill.anchorMax = new Vector2(Mathf.Clamp01(fraction), 1f);
-
-    // ---- Currency ----
-    private Row BuildCurrency(Entry e)
-    {
-        int tierIndex = -1;
-        if (Enum.TryParse(e.key, out PixelClicker.PixelType type)) tierIndex = clicker.IndexOf(type);
-        if (tierIndex < 0) return null;
-        Row row = new Row { height = 46f, rt = NewRow(46f) };
-        PixelClicker.PixelTier tier = clicker.Tiers[tierIndex];
-
-        GameObject swatch = new GameObject("Swatch", typeof(RectTransform), typeof(Image));
-        swatch.transform.SetParent(row.rt, false);
-        swatch.GetComponent<Image>().color = tier.UIColor;
-        RectTransform sr = swatch.GetComponent<RectTransform>();
-        sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0f, 0.5f);
-        sr.sizeDelta = new Vector2(26f, 26f);
-        sr.anchoredPosition = new Vector2(12f, 0f);
-
-        string name = tier.displayName.EndsWith(" Pixels") ? tier.displayName.Substring(0, tier.displayName.Length - 7) : tier.displayName;
-        TMP_Text label = Text(row.rt, "Name", name, 22f, TextAlignmentOptions.MidlineLeft, textColor);
-        Stretch(label.rectTransform, 48f, 4f);
-        label.rectTransform.offsetMax = new Vector2(-150f, -4f);
-        TMP_Text amount = Text(row.rt, "Amount", "", 24f, TextAlignmentOptions.MidlineRight, textColor, FontStyles.Bold);
-        Stretch(amount.rectTransform, 12f, 2f);
-        amount.rectTransform.offsetMin = new Vector2(150f, 2f);
-        row.refresh = () =>
-        {
-            string text = PixelClicker.FormatNumber(Math.Floor(tier.count));
-            if (e.flag) text += "  <size=70%><color=#9fd8ff>" + RateText(tierIndex) + "</color></size>";
-            PixelUIKit.SetText(amount, text);
-        };
-        return row;
-    }
-
-    private readonly Dictionary<int, List<(float t, double c)>> rateSamples = new Dictionary<int, List<(float, double)>>();
-    private float sampleTimer;
-
-    private void SampleRates()
-    {
-        foreach (Entry e in blob.entries)
-        {
-            if (e.type != "currency" || !e.flag || !Enum.TryParse(e.key, out PixelClicker.PixelType type)) continue;
-            int i = clicker.IndexOf(type);
-            if (i < 0) continue;
-            if (!rateSamples.TryGetValue(i, out var list)) rateSamples[i] = list = new List<(float, double)>();
-            list.Add((Time.unscaledTime, clicker.Tiers[i].count));
-            while (list.Count > 0 && Time.unscaledTime - list[0].t > 60f) list.RemoveAt(0);
-        }
-    }
-
-    private string RateText(int tierIndex)
-    {
-        if (!rateSamples.TryGetValue(tierIndex, out var list) || list.Count < 3) return "...";
-        float dt = list[list.Count - 1].t - list[0].t;
-        if (dt < 5f) return "...";
-        double perMinute = (list[list.Count - 1].c - list[0].c) / dt * 60d;
-        return (perMinute >= 0 ? "+" : "-") + PixelClicker.FormatNumber(Math.Abs(perMinute)) + "/min";
-    }
-
-    // ---- Skill ----
-    private Row BuildSkill(Entry e, string sub)
-    {
-        PixelSkills skills = PixelSkills.Instance;
-        if (skills == null) return null;
-        Row row = new Row { height = 66f, rt = NewRow(66f) };
-        TMP_Text name = Text(row.rt, "Name", "", 22f, TextAlignmentOptions.TopLeft, textColor, FontStyles.Bold);
-        name.rectTransform.anchorMin = new Vector2(0f, 1f); name.rectTransform.anchorMax = new Vector2(1f, 1f); name.rectTransform.pivot = new Vector2(0.5f, 1f);
-        name.rectTransform.offsetMin = new Vector2(12f, -34f); name.rectTransform.offsetMax = new Vector2(-150f, -5f);
-        TMP_Text detail = Text(row.rt, "Detail", "", 20f, TextAlignmentOptions.TopRight, dimTextColor);
-        detail.rectTransform.anchorMin = new Vector2(0f, 1f); detail.rectTransform.anchorMax = new Vector2(1f, 1f); detail.rectTransform.pivot = new Vector2(0.5f, 1f);
-        detail.rectTransform.offsetMin = new Vector2(150f, -34f); detail.rectTransform.offsetMax = new Vector2(-12f, -5f);
-        var bar = MakeBar(row.rt, 8f, 16f);
-        string id = !string.IsNullOrEmpty(sub) ? sub : e.key;
-        row.refresh = () =>
-        {
-            PixelSkills.SkillPack pack = id == "training" ? skills.Find(skills.TrainingId) : skills.Find(id);
-            if (pack == null) { PixelUIKit.SetText(name, "?"); return; }
-            int level = skills.LevelOf(pack, out double into, out double need);
-            bool training = pack.id == skills.TrainingId;
-            PixelUIKit.SetText(name, pack.displayName + (training && id != "training" ? "  (training)" : id == "training" ? "  (training)" : ""));
-            PixelUIKit.SetText(detail, "Lv " + level + "   " + PixelClicker.FormatNumber(Math.Floor(into)) + " / " + PixelClicker.FormatNumber(Math.Ceiling(need)));
-            bar.fill.color = pack.accent;
-            SetFill(bar.bar, (float)(into / Math.Max(1d, need)));
-        };
-        return row;
-    }
-
-    // ---- Goals ----
-    private Row BuildGoal(Entry e, string sub)
-    {
-        Row row = new Row { height = 66f, rt = NewRow(66f) };
-        TMP_Text name = Text(row.rt, "Name", "", 21f, TextAlignmentOptions.TopLeft, textColor, FontStyles.Bold);
-        name.rectTransform.anchorMin = new Vector2(0f, 1f); name.rectTransform.anchorMax = new Vector2(1f, 1f); name.rectTransform.pivot = new Vector2(0.5f, 1f);
-        name.rectTransform.offsetMin = new Vector2(12f, -34f); name.rectTransform.offsetMax = new Vector2(-150f, -5f);
-        TMP_Text detail = Text(row.rt, "Detail", "", 20f, TextAlignmentOptions.TopRight, dimTextColor);
-        detail.rectTransform.anchorMin = new Vector2(0f, 1f); detail.rectTransform.anchorMax = new Vector2(1f, 1f); detail.rectTransform.pivot = new Vector2(0.5f, 1f);
-        detail.rectTransform.offsetMin = new Vector2(150f, -34f); detail.rectTransform.offsetMax = new Vector2(-12f, -5f);
-        var bar = MakeBar(row.rt, 8f, 16f);
-        string key = !string.IsNullOrEmpty(sub) ? sub : e.key;
-        row.refresh = () =>
-        {
-            string title = "?";
-            double count = 0d, goal = 1d;
-            if (key.StartsWith("mg:"))
-            {
-                PixelMinigame m = PixelMinigame.Find(key.Substring(3));
-                if (m != null && m.HasTracker) { title = m.TrackerTitle; count = m.TrackerCount; goal = Math.Max(1d, m.TrackerGoal); }
-            }
-            else
-            {
-                PixelLog log = PixelFind.First<PixelLog>();
-                List<(string title, double count, double goal)> goals = log != null ? log.CurrentGoals() : null;
-                int index = key == "next" ? 0 : key.StartsWith("g") && int.TryParse(key.Substring(1), out int gi) ? gi : -1;
-                if (goals != null && index >= 0 && index < goals.Count) { title = goals[index].title; count = goals[index].count; goal = Math.Max(1d, goals[index].goal); }
-                else if (goals != null && key == "next") title = "No goal right now";
-            }
-            bool done = count >= goal;
-            PixelUIKit.SetText(name, title);
-            PixelUIKit.SetText(detail, done ? "Done" : PixelClicker.FormatNumber(Math.Floor(count)) + " / " + PixelClicker.FormatNumber(goal));
-            bar.fill.color = done ? new Color(1f, 0.85f, 0.3f, 1f) : barColor;
-            SetFill(bar.bar, (float)(count / goal));
-        };
-        return row;
-    }
-
-    // ---- Achievement ----
-    private Row BuildAchievement(Entry e)
-    {
-        PixelAchievements ach = PixelFind.First<PixelAchievements>();
-        if (ach == null) return null;
-        int index = -1;
-        for (int i = 0; i < ach.Count; i++) if (ach.GetId(i) == e.key) { index = i; break; }
-        if (index < 0) return null;
-        Row row = new Row { height = 66f, rt = NewRow(66f) };
-        TMP_Text name = Text(row.rt, "Name", ach.GetTitle(index), 21f, TextAlignmentOptions.TopLeft, textColor, FontStyles.Bold);
-        name.rectTransform.anchorMin = new Vector2(0f, 1f); name.rectTransform.anchorMax = new Vector2(1f, 1f); name.rectTransform.pivot = new Vector2(0.5f, 1f);
-        name.rectTransform.offsetMin = new Vector2(12f, -34f); name.rectTransform.offsetMax = new Vector2(-150f, -5f);
-        TMP_Text detail = Text(row.rt, "Detail", "", 20f, TextAlignmentOptions.TopRight, dimTextColor);
-        detail.rectTransform.anchorMin = new Vector2(0f, 1f); detail.rectTransform.anchorMax = new Vector2(1f, 1f); detail.rectTransform.pivot = new Vector2(0.5f, 1f);
-        detail.rectTransform.offsetMin = new Vector2(150f, -34f); detail.rectTransform.offsetMax = new Vector2(-12f, -5f);
-        var bar = MakeBar(row.rt, 8f, 16f);
-        row.refresh = () =>
-        {
-            bool complete = ach.IsComplete(index);
-            double target = ach.GetCurrentTarget(index);
-            PixelUIKit.SetText(detail, complete ? "Complete" : PixelClicker.FormatNumber(Math.Floor(ach.GetProgress(index))) + " / " + PixelClicker.FormatNumber(target));
-            bar.fill.color = complete ? new Color(1f, 0.85f, 0.3f, 1f) : barColor;
-            SetFill(bar.bar, complete ? 1f : ach.GetFraction(index));
-        };
-        return row;
-    }
-
-    // ---- Note ----
-    private Row BuildNote(Entry e)
-    {
-        Row row = new Row { height = 60f, rt = NewRow(60f) };
-        TMP_InputField field = PixelUIKit.CreateInputField(Font, row.rt, "Note", new Vector2(200f, 44f), new Color(0.08f, 0.1f, 0.16f, 1f), textColor, 21f, "Write a note...");
-        RectTransform fr = field.GetComponent<RectTransform>();
-        fr.anchorMin = Vector2.zero; fr.anchorMax = Vector2.one;
-        fr.offsetMin = new Vector2(8f, 8f);
-        fr.offsetMax = new Vector2(editing ? -128f : -8f, -8f);
-        field.SetTextWithoutNotify(e.text);
-        field.onEndEdit.AddListener(s => { e.text = s; SaveEntries(); });
-        return row;
-    }
-
-    // ---- Favorites ----
-    private Row BuildFavorite(Entry e)
-    {
-        bool tool = e.key.StartsWith("tool:");
-        Row row = new Row { height = 54f, rt = NewRow(54f) };
-        Button button = PixelUIKit.CreateButton(Font, row.rt, "Use", "", new Vector2(200f, 40f), ButtonRole.Primary, 22f);
-        RectTransform br = button.GetComponent<RectTransform>();
-        br.anchorMin = Vector2.zero; br.anchorMax = Vector2.one;
-        br.offsetMin = new Vector2(8f, 7f);
-        br.offsetMax = new Vector2(editing ? -128f : -8f, -7f);
-        TMP_Text label = button.GetComponentInChildren<TMP_Text>();
-        label.textWrappingMode = TextWrappingModes.NoWrap;
-        label.enableAutoSizing = true;
-        label.fontSizeMax = 22f;
-        label.fontSizeMin = 11f;
-        Image image = button.GetComponent<Image>();
-        ButtonRole shownRole = ButtonRole.Primary;   // (refresh runs every few tenths of a second: only re-role on a change)
-        void ShowRole(ButtonRole role) { if (role != shownRole) { shownRole = role; PixelUIKit.SetRole(image, role); } }
-
-        if (tool)
-        {
-            string id = e.key.Substring(5);
-            var def = Array.Find(Tools, t => t.id == id);
-            if (def.id == null) return null;
-            button.onClick.AddListener(() =>
-            {
-                if (id == "hose") { PixelBank bank = PixelFind.First<PixelBank>(); if (bank != null) bank.ToggleHose(); }
-                else PixelMenuKeys.Click(def.action);
-            });
-            row.refresh = () =>
-            {
-                bool hose = id == "hose";
-                bool available = hose ? PixelFind.First<PixelBank>() != null : PixelMenuKeys.CanClick(def.action);
-                bool on = hose && PixelBank.HoseOn;
-                PixelUIKit.SetText(label, def.name + (on ? "  (on)" : ""));
-                ShowRole(on ? ButtonRole.Success : available ? ButtonRole.Primary : ButtonRole.Neutral);
-            };
-            return row;
-        }
-
-        PixelConsumables consumables = PixelFind.First<PixelConsumables>();
-        if (consumables == null) return null;
-        string itemName = e.key.StartsWith("item:") ? e.key.Substring(5) : e.key;
-        int item = -1;
-        for (int i = 0; i < consumables.ItemCount; i++) if (consumables.ItemName(i) == itemName) { item = i; break; }
-        if (item < 0) return null;
-        button.onClick.AddListener(() => { consumables.TryUseItem(item); RefreshValues(); });
-        row.refresh = () =>
-        {
-            int owned = consumables.ItemOwned(item);
-            PixelUIKit.SetText(label, itemName + "   x" + PixelConsumables.OwnedText(owned));
-            ShowRole(owned > 0 ? ButtonRole.Primary : ButtonRole.Neutral);
-        };
-        return row;
     }
 
     // ------------------------------------------------------------------

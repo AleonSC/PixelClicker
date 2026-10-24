@@ -34,7 +34,7 @@ public static class PixelDevProbe
             File.WriteAllText(path, text);
             if (screenshot) ScreenCapture.CaptureScreenshot(Path.Combine(dir, prefix + "_" + stamp + ".png"));
             GUIUtility.systemCopyBuffer = text;
-            Debug.Log(prefix + " saved (and copied to the clipboard): " + path);
+            PixelDebug.Info(prefix + " saved (and copied to the clipboard): " + path);
             return path;
         }
         catch (System.Exception e) { Debug.LogWarning(prefix + " failed: " + e.Message); return null; }
@@ -213,7 +213,7 @@ public static class PixelDevProbe
         }
 
         GUIUtility.systemCopyBuffer = sb.ToString();
-        Debug.Log(sb.ToString());
+        PixelDebug.Info(sb.ToString());
         PixelNotice.Show("Copied: " + headline, ToastSeconds, null, true, true);
     }
 

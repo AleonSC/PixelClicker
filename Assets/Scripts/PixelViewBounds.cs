@@ -155,49 +155,9 @@ public class PixelViewBounds : MonoBehaviour
                 ? Vector3.Scale(entry.box.size, new Vector3(Mathf.Abs(lossy.x), Mathf.Abs(lossy.y), Mathf.Abs(lossy.z))) * 0.5f
                 : Vector3.one * (Mathf.Max(Mathf.Abs(lossy.x), Mathf.Max(Mathf.Abs(lossy.y), Mathf.Abs(lossy.z))) * 0.5f);
 
-            if (useCircle)
-            {
-                // The circle: a vertical cylinder round the floor's middle. The pixel's own horizontal reach keeps its outer surface (not its centre) inside it.
-                float dx = position.x - circleCenter.x, dz = position.z - circleCenter.z;
-                float dist = Mathf.Sqrt(dx * dx + dz * dz);
-                float reachC = Mathf.Max(half.x, Mathf.Max(half.y, half.z)) + extraEdgeMargin;
-                float maxDist = Mathf.Max(0.1f, circleRadius - reachC);
-                if (dist > maxDist && dist > 0.0001f)
-                {
-                    Vector3 outward = new Vector3(dx / dist, 0f, dz / dist);   // points out of the circle
-                    position.x = circleCenter.x + outward.x * maxDist;
-                    position.z = circleCenter.z + outward.z * maxDist;
-                    float outSpeed = Vector3.Dot(velocity, outward);
-                    if (outSpeed > 0f)
-                    {
-                        Vector3 tangent = velocity - outward * outSpeed;
-                        velocity = tangent * (1f - friction) - outward * outSpeed * bounciness;
-                    }
-                    changed = true;
-                }
-            }
+            if (useCircle && PushInsideCircle(ref position, ref velocity, half, circleCenter, circleRadius)) changed = true;
 
-            for (int p = 0; p < planes.Length; p++)
-            {
-                if (!used[p] || (useCircle && p < 4)) continue;   // (the circle replaces the four screen edges; the near limit stays)
-                float distance = planes[p].GetDistanceToPoint(position);
-                Vector3 normal = planes[p].normal; // points into the view
-                // How far a box of this size and rotation reaches towards the edge from its centre (exact for a box), so the pixel's
-                // outer surface - not its centre - is what meets the edge of the view.
-                float reach = Mathf.Abs(Vector3.Dot(normal, tr.right)) * half.x + Mathf.Abs(Vector3.Dot(normal, tr.up)) * half.y
-                            + Mathf.Abs(Vector3.Dot(normal, tr.forward)) * half.z + extraEdgeMargin;
-                if (distance >= reach) continue;
-
-                position += normal * (reach - distance);
-
-                float into = Vector3.Dot(velocity, normal);
-                if (into < 0f)
-                {
-                    Vector3 along = velocity - normal * into;
-                    velocity = along * (1f - friction) - normal * into * bounciness;
-                }
-                changed = true;
-            }
+            if (PushInsidePlanes(ref position, ref velocity, tr, half, useCircle)) changed = true;
 
             if (changed)
             {
@@ -205,6 +165,58 @@ public class PixelViewBounds : MonoBehaviour
                 PixelBody.Steer(body, velocity);
             }
         }
+    }
+
+    // FixedUpdate step: keeps a husk (half size 'half') inside the circle round the floor's middle; true = it was moved.
+    private bool PushInsideCircle(ref Vector3 position, ref Vector3 velocity, Vector3 half, Vector3 circleCenter, float circleRadius)
+    {
+        // The circle: a vertical cylinder round the floor's middle. The pixel's own horizontal reach keeps its outer surface (not its centre) inside it.
+        float dx = position.x - circleCenter.x, dz = position.z - circleCenter.z;
+        float dist = Mathf.Sqrt(dx * dx + dz * dz);
+        float reachC = Mathf.Max(half.x, Mathf.Max(half.y, half.z)) + extraEdgeMargin;
+        float maxDist = Mathf.Max(0.1f, circleRadius - reachC);
+        if (dist > maxDist && dist > 0.0001f)
+        {
+            Vector3 outward = new Vector3(dx / dist, 0f, dz / dist);   // points out of the circle
+            position.x = circleCenter.x + outward.x * maxDist;
+            position.z = circleCenter.z + outward.z * maxDist;
+            float outSpeed = Vector3.Dot(velocity, outward);
+            if (outSpeed > 0f)
+            {
+                Vector3 tangent = velocity - outward * outSpeed;
+                velocity = tangent * (1f - friction) - outward * outSpeed * bounciness;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    // FixedUpdate step: keeps a husk's outer surface inside the view's edge planes (the circle, when used, replaces the four screen edges); true = it was moved.
+    private bool PushInsidePlanes(ref Vector3 position, ref Vector3 velocity, Transform tr, Vector3 half, bool useCircle)
+    {
+        bool changed = false;
+        for (int p = 0; p < planes.Length; p++)
+        {
+            if (!used[p] || (useCircle && p < 4)) continue;   // (the circle replaces the four screen edges; the near limit stays)
+            float distance = planes[p].GetDistanceToPoint(position);
+            Vector3 normal = planes[p].normal; // points into the view
+            // How far a box of this size and rotation reaches towards the edge from its centre (exact for a box), so the pixel's
+            // outer surface - not its centre - is what meets the edge of the view.
+            float reach = Mathf.Abs(Vector3.Dot(normal, tr.right)) * half.x + Mathf.Abs(Vector3.Dot(normal, tr.up)) * half.y
+                        + Mathf.Abs(Vector3.Dot(normal, tr.forward)) * half.z + extraEdgeMargin;
+            if (distance >= reach) continue;
+
+            position += normal * (reach - distance);
+
+            float into = Vector3.Dot(velocity, normal);
+            if (into < 0f)
+            {
+                Vector3 along = velocity - normal * into;
+                velocity = along * (1f - friction) - normal * into * bounciness;
+            }
+            changed = true;
+        }
+        return changed;
     }
 
     /// <summary>Writes this component's settings and its current five planes (point on plane = normal * -distance) for the bounds snapshot tool.</summary>

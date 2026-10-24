@@ -215,21 +215,8 @@ public class PixelCubiePeek : MonoBehaviour
 
     // ---- drawing: Cubie's head (teal cube, narrowed eyes, brows, smirk, hat), centred on the holder ----
 
-    private static RectTransform Block(Transform parent, string name, Color color, Vector2 size, Vector2 pos, float rotation = 0f)
-    {
-        GameObject g = new GameObject(name, typeof(RectTransform), typeof(Image));
-        g.transform.SetParent(parent, false);
-        Image im = g.GetComponent<Image>();
-        im.color = color;
-        im.raycastTarget = false;
-        RectTransform r = g.GetComponent<RectTransform>();
-        r.anchorMin = r.anchorMax = new Vector2(0.5f, 0.5f);
-        r.pivot = new Vector2(0.5f, 0.5f);
-        r.sizeDelta = size;
-        r.anchoredPosition = pos;
-        r.localRotation = Quaternion.Euler(0f, 0f, rotation);
-        return r;
-    }
+    private static RectTransform Block(Transform parent, string name, Color color, Vector2 size, Vector2 pos, float rotation = 0f) =>
+        PixelBlockArt.Block(parent, name, color, size, pos, rotation, PixelBlockArt.Middle);
 
     private void DrawHead(Transform a)
     {

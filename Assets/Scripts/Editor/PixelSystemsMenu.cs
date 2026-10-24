@@ -2,7 +2,7 @@
 // Editor/PixelSystemsMenu.cs
 //   Editor-only menu for the game's system components (the list is PixelSystems.All):
 //   - Pixel Clicker > Add Missing Systems To Scene: every system that is not in the open scene yet is added to a 'Pixel Systems' object,
-//     on a child per group (UI, Core, Skills, Rares and Shows, Characters, Camera, World). Then they exist in EDIT mode, so their Inspector
+//     on a child per group (UI, Core, Skills, Rares and Shows, Characters, Camera, World, Shop, Minigames). Then they exist in EDIT mode, so their Inspector
 //     values can be changed and saved with the scene (before, most were only added when Play started, and every change was lost when it
 //     stopped). Systems already in the scene, wherever they are, are left alone.
 //   - Pixel Clicker > Move Systems Off The Clicker: every system found ANYWHERE in the scene outside 'Pixel Systems' (the clicker, its children,

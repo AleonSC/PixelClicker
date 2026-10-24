@@ -204,22 +204,8 @@ public partial class PixelClicker
                 if (list[i].rareDrop) { insertAt = i; break; }
         list.Insert(insertAt, copy);
         tiers = list.ToArray();
+        copy.MakeLive();   // (its progress is the GameState's from now on; a type a loaded save already has keeps the saved values)
         return insertAt;
-    }
-
-    /// <summary>The Charcoal tier (made on first use; the Kiln spits it out as old pixels, it never spawns on the cube). Returns its index.</summary>
-    public int EnsureCharcoalTier()
-    {
-        return EnsureTier(new PixelTier
-        {
-            type = PixelType.Charcoal,
-            displayName = "Charcoal",
-            color = new Color(0.14f, 0.14f, 0.16f, 1f),
-            amountPerClick = 1,
-            spawnWeight = 0f,
-            spawnSwitch = SpawnSwitch.AlwaysOn,
-            unlockMode = TierUnlockMode.ShopOnly,
-        });
     }
 
     /// <summary>The Wood Chips tier (made on first use; never spawns on the cube, the Wood Chipper spits them out as old pixels). Returns its index.</summary>

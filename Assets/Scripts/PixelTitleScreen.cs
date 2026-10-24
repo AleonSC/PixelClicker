@@ -26,7 +26,7 @@ public partial class PixelTitleScreen : MonoBehaviour
         PlayTime = 0f;
         PlayedOnce = false;
         NewGameStarted = false;
-        PixelStatics.ResetOnRestart(OnSceneUnloaded);
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);   // restart-reset-not-progress: 'played once this launch' / 'new game started' flags
     }
 
     // (a reloaded scene has not been played yet: a New Game from its title can start at once instead of reloading again)
@@ -236,6 +236,8 @@ public partial class PixelTitleScreen : MonoBehaviour
     private readonly List<RectTransform> shrinkRects = new List<RectTransform>();
     private readonly List<Button> buttons = new List<Button>();
     private Button playButton;
+    private TMP_Text playLabel;          // (the Play button's label, found once when the button is built)
+    private RectTransform canvasRootRect; // (the title canvas's RectTransform, kept when the canvas is built)
 
     /// <summary>One of the small floor / sky pickers beside Play.</summary>
     private class LookPicker
@@ -419,7 +421,6 @@ public partial class PixelTitleScreen : MonoBehaviour
         if (!PlayedOnce) { title.OnPlay(); return; }
         // The game has been played already: reload the scene fresh, the title presses Play by itself.
         PixelHints.ResetSeen();
-        PixelAchievements.ResetOnNextStart = true;
         PixelCrashLog.EndSessionCleanly();
         UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
     }
@@ -435,11 +436,10 @@ public partial class PixelTitleScreen : MonoBehaviour
             if (Time.unscaledTime >= nextSaveCheck)
             {
                 nextSaveCheck = Time.unscaledTime + 1f;
-                if (saveGame == null) saveGame = PixelFind.First<PixelSaveGame>();
+                saveGame = PixelFind.Cached<PixelSaveGame>();
                 anySave = saveGame != null && saveGame.TryGetMostRecentSlot(out int _);
             }
             string want = PixelSaveGame.HasLoadedSave ? playText : anySave ? continueText : string.IsNullOrEmpty(newGameText) ? playText : newGameText;
-            TMP_Text playLabel = playButton.GetComponentInChildren<TMP_Text>();
             if (playLabel != null) PixelUIKit.SetText(playLabel, want);
         }
         if (bar != null && titleBarVersion != PixelHud.BarColorVersion) { titleBarVersion = PixelHud.BarColorVersion; bar.color = PixelHud.BarTint(barColor); }
@@ -457,7 +457,7 @@ public partial class PixelTitleScreen : MonoBehaviour
         {
             // The logo must end above the middle bar: at a big UI scale the canvas is shorter, so it shrinks to fit.
             float top = logoTopMargin;
-            RectTransform canvasRect = canvasRoot != null ? canvasRoot.GetComponent<RectTransform>() : null;
+            RectTransform canvasRect = canvasRoot != null ? canvasRootRect : null;
             float canvasH = canvasRect != null ? canvasRect.rect.height : 0f;
             float natural = logoWidth * logoAspect;
             if (canvasH > 100f)
@@ -478,12 +478,15 @@ public partial class PixelTitleScreen : MonoBehaviour
         framesShown++;
         if (framesShown < 2) return;
         try { UpdateBlur(); }
-        catch (System.Exception e)
-        {
-            Debug.LogWarning("PixelTitleScreen: could not make the blurred background (" + e.Message + ").", this);
-            enabled = false;
-            if (!pictureReady) cover.color = new Color(0f, 0f, 0f, 0.85f);
-        }
+        catch (System.Exception e) { BlurFailed(e); }
+    }
+
+    /// <summary>The blurred background could not be made: warn once, stop updating it and darken the cover instead.</summary>
+    private void BlurFailed(System.Exception e)
+    {
+        Debug.LogWarning("PixelTitleScreen: could not make the blurred background (" + e.Message + ").", this);
+        enabled = false;
+        if (!pictureReady) cover.color = new Color(0f, 0f, 0f, 0.85f);
     }
 
     // ------------------------------------------------------------------
@@ -520,6 +523,7 @@ public partial class PixelTitleScreen : MonoBehaviour
         canvasRoot = PixelUIKit.CreateCanvas("Pixel Title Screen", sortingOrder, new Vector2(1920f, 1080f), true);
         canvasRoot.transform.SetParent(transform, false);
         canvas = canvasRoot.GetComponent<Canvas>();
+        canvasRootRect = canvasRoot.GetComponent<RectTransform>();
 
         // Opaque cover until the blurred picture is ready (so the sharp game never flashes).
         GameObject coverGo = new GameObject("Cover", typeof(RectTransform), typeof(Image));
@@ -582,6 +586,7 @@ public partial class PixelTitleScreen : MonoBehaviour
         float firstX = -iconStep * (iconCount - 1) * 0.5f;
 
         playButton = MakeButton(font, "Play Button", playText, buttonSize, ButtonRole.Success, playFontSize, centre, new Vector2(0f, playY), OnPlay);
+        playLabel = playButton.GetComponentInChildren<TMP_Text>();
         MakeIconButton(font, "Load Button", PixelMenuIcons.Floppy, loadText, iconSize, ButtonRole.Neutral, centre, new Vector2(firstX, smallY), OnLoad);
         MakeIconButton(font, "Settings Button", PixelMenuIcons.Cog, settingsText, iconSize, ButtonRole.Neutral, centre, new Vector2(firstX + iconStep, smallY), OnSettings);
         if (showQuit) MakeIconButton(font, "Quit Button", PixelMenuIcons.Door, quitText, iconSize, ButtonRole.Danger, centre, new Vector2(firstX + iconStep * 2f, smallY), OnQuit);

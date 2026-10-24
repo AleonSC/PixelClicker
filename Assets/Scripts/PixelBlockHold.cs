@@ -266,7 +266,7 @@ public class PixelBlockHold : MonoBehaviour
 
     private void Update()
     {
-        if (clicker == null) clicker = PixelFind.First<PixelClicker>();
+        if (clicker == null) clicker = PixelFind.Cached<PixelClicker>();
         if (!Active || clicker == null) { if (canvasRoot != null && canvasRoot.activeSelf) canvasRoot.SetActive(false); return; }
         if (PixelCalm.InMenu)
         {
@@ -651,6 +651,26 @@ public class PixelBlockHold : MonoBehaviour
         if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local))
             panel.anchoredPosition = local + new Vector2(-22f, 0f);   // (the arc sits on the right of the panel, ~30-90 px right of the cursor)
 
+        UpdateMeterTexts(full);
+
+        // The drawn fill glides to the real value (smooth drain and recharge).
+        shown = Mathf.MoveTowards(shown, Mathf.Clamp01(meter), dt * 3.5f + Mathf.Abs(shown - meter) * 8f * dt);
+        float k = Mathf.Clamp01(shown);
+        float sweep = Mathf.Lerp(90f - ArcHalfDegrees, 90f + ArcHalfDegrees, k);   // degrees from the bottom (the arc sprite shows 35..145 degrees)
+        float endDeg = -90f + sweep;   // the fill runs from the bottom end of the arc up to the current level, round at both ends
+        fill.EndDegrees = endDeg;
+        if (glow != null) glow.EndDegrees = endDeg;
+
+        bool flashing = flash > 0f;
+        float pulse = flashing ? 0.5f + 0.5f * Mathf.Sin(time * 22f) : 0f;
+        Color c = MeterColour(k, time, flashing, pulse);
+        PaintMeterBody(c, k, flashing, pulse);
+        PaintMeterExtras(c, k, sweep, time);
+    }
+
+    // UpdateMeter step: the bonus / stake label and the big readout (percentage + what the meter is doing) beside the cursor.
+    private void UpdateMeterTexts(bool full)
+    {
         PixelBlockRules.HoldRule bonus = holding ? PixelBlockRules.ActiveHold : null;
         string labelText = bonus != null && !string.IsNullOrEmpty(bonus.label) ? bonus.label : null;
         if (labelText == null && holding && StakeEligible() && Time.unscaledTime - holdStartedAt >= StakeMin)
@@ -681,17 +701,11 @@ public class PixelBlockHold : MonoBehaviour
             if (readout.text != text) readout.text = text;
             if (caption.text != state) caption.text = state;
         }
+    }
 
-        // The drawn fill glides to the real value (smooth drain and recharge).
-        shown = Mathf.MoveTowards(shown, Mathf.Clamp01(meter), dt * 3.5f + Mathf.Abs(shown - meter) * 8f * dt);
-        float k = Mathf.Clamp01(shown);
-        float sweep = Mathf.Lerp(90f - ArcHalfDegrees, 90f + ArcHalfDegrees, k);   // degrees from the bottom (the arc sprite shows 35..145 degrees)
-        float endDeg = -90f + sweep;   // the fill runs from the bottom end of the arc up to the current level, round at both ends
-        fill.EndDegrees = endDeg;
-        if (glow != null) glow.EndDegrees = endDeg;
-
-        bool flashing = flash > 0f;
-        float pulse = flashing ? 0.5f + 0.5f * Mathf.Sin(time * 22f) : 0f;
+    // UpdateMeter step: the fill's colour (k = the drawn fill level 0..1).
+    private Color MeterColour(float k, float time, bool flashing, float pulse)
+    {
         // Colour: cool blue when plenty is left, amber then red as it runs out (while holding), a calm dim blue while recharging.
         Color c = meterColor;
         if (holding) c = k > 0.5f ? meterColor : Color.Lerp(new Color(1f, 0.55f, 0.15f, 1f), meterColor, (k - 0.25f) / 0.25f);
@@ -702,11 +716,21 @@ public class PixelBlockHold : MonoBehaviour
         if (holding && Stalled) c = Color.Lerp(c, new Color(0.75f, 0.95f, 1f, 1f), 0.65f);   // frozen: an icy white-blue
         if (!holding && !flashing) c = Color.Lerp(c, new Color(0.35f, 0.5f, 0.75f, 1f), 0.45f);   // recharging: subdued
         if (!holding && cooldown > 0f && !flashing) c.a = 0.6f;   // waiting for the recharge to begin
+        return c;
+    }
+
+    // UpdateMeter step: the fill, the readout's colours and the track behind the arc.
+    private void PaintMeterBody(Color c, float k, bool flashing, float pulse)
+    {
         fill.color = c;
         if (k < 0.01f) { Color none = c; none.a = 0f; fill.color = none; }   // empty: no stub at the bottom end
         if (readout != null) { Color rc2 = Color.Lerp(c, Color.white, 0.55f); rc2.a = 1f; readout.color = rc2; Color cc = c; cc.a = 1f; caption.color = cc; if (pill != null) pill.color = flashing ? Color.Lerp(new Color(0.04f, 0.05f, 0.09f, 0.78f), new Color(0.45f, 0f, 0f, 0.85f), pulse) : new Color(0.04f, 0.05f, 0.09f, 0.78f); }
         back.color = flashing ? Color.Lerp(new Color(0f, 0f, 0f, 0.6f), new Color(0.55f, 0f, 0f, 0.85f), pulse) : new Color(0f, 0f, 0f, 0.6f);
+    }
 
+    // UpdateMeter step: the glow, the bright tip, the quarter marks and the "ready" pop.
+    private void PaintMeterExtras(Color c, float k, float sweep, float time)
+    {
         // The soft glow behind the fill, pulsing while held.
         if (glow != null)
         {

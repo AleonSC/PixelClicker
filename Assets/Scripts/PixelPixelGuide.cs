@@ -193,23 +193,7 @@ public class PixelPixelGuide : MonoBehaviour
 
     private void BuildTip()
     {
-        GameObject go = new GameObject("Pixel Guide Tip", typeof(RectTransform), typeof(Image));
-        go.transform.SetParent(canvasRoot.transform, false);
-        Image bg = go.GetComponent<Image>();
-        bg.color = new Color(0.05f, 0.05f, 0.08f, 0.97f);
-        bg.raycastTarget = false;
-        PixelUIKit.StyleBox(bg);
-        tipRect = go.GetComponent<RectTransform>();
-        tipRect.anchorMin = tipRect.anchorMax = new Vector2(0.5f, 0.5f);
-        tipRect.pivot = new Vector2(0f, 1f);
-        tipText = PixelUIKit.CreateText(Font, go.transform, "Text", "", 22f, TextAlignmentOptions.TopLeft, FontStyles.Normal, textColor);
-        tipText.richText = true;
-        tipText.raycastTarget = false;
-        RectTransform t = tipText.rectTransform;
-        t.anchorMin = t.anchorMax = new Vector2(0f, 1f);
-        t.pivot = new Vector2(0f, 1f);
-        t.anchoredPosition = new Vector2(14f, -10f);
-        go.SetActive(false);
+        tipRect = PixelUIKit.CreateTipBox(Font, canvasRoot.transform, "Pixel Guide Tip", textColor, out tipText);
     }
 
     private void UpdateTip()
@@ -444,27 +428,7 @@ public class PixelPixelGuide : MonoBehaviour
     /// <summary>With the shop open the window is as tall as it and as wide as the Currency panel, on its right (mirrors the Toggles window).</summary>
     private void FitBesideShop()
     {
-        RectTransform wr = windowObject.GetComponent<RectTransform>();
         if (shopRef == null) shopRef = PixelFind.First<PixelShop>();
-        RectTransform shopRect = shopRef != null ? shopRef.PanelRect : null;
-        Canvas canvas = windowObject.GetComponentInParent<Canvas>();
-        float scale = canvas != null ? Mathf.Max(0.01f, canvas.rootCanvas.scaleFactor) : 1f;
-        PixelHud hud = PixelHud.Instance;
-        float inset = hud != null ? hud.SideShownInset : 0f;
-
-        if (shopRect == null || !shopRect.gameObject.activeInHierarchy)
-        {
-            wr.sizeDelta = windowSize;
-            wr.anchoredPosition = new Vector2(-inset, 0f);
-            return;
-        }
-        Vector3[] c = new Vector3[4];
-        shopRect.GetWorldCorners(c);
-        float shopRight = c[2].x, shopTop = c[2].y, shopBottom = c[0].y;
-        float width = shopRef.CurrencyPanelWidth;
-        float gap = shopRef.CurrencyPanelGap;
-        float rightEdge = (Screen.width - shopRight) / scale - gap - width;
-        wr.sizeDelta = new Vector2(width, (shopTop - shopBottom) / scale);
-        wr.anchoredPosition = new Vector2(-Mathf.Max(0f, rightEdge), ((shopTop + shopBottom) * 0.5f - Screen.height * 0.5f) / scale);
+        PixelUIKit.FitBesideShop(windowObject.GetComponent<RectTransform>(), shopRef, windowSize);
     }
 }

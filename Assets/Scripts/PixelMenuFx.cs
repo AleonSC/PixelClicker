@@ -463,40 +463,43 @@ public class PixelMenuTitleLine : MonoBehaviour
         return haloSprite;
     }
 
+    /// <summary>Builds the moving piece once (the neon spot with its halo and core, or the plain segment).</summary>
+    private void BuildSegment()
+    {
+        line = GetComponent<Image>();
+        if (neon)
+        {
+            GameObject root = new GameObject("Neon Spot", typeof(RectTransform));
+            root.transform.SetParent(transform, false);
+            seg = root.GetComponent<RectTransform>();
+            seg.anchorMin = seg.anchorMax = new Vector2(0f, 0.5f); seg.pivot = new Vector2(0.5f, 0.5f);
+            seg.sizeDelta = Vector2.zero;
+            GameObject halo = new GameObject("Halo", typeof(RectTransform), typeof(Image));
+            halo.transform.SetParent(root.transform, false);
+            Image hi = halo.GetComponent<Image>();
+            hi.sprite = HaloSprite(); hi.color = new Color(0.2f, 0.85f, 1f, 0.95f); hi.raycastTarget = false;
+            halo.GetComponent<RectTransform>().sizeDelta = new Vector2(260f, 34f);
+            GameObject core = new GameObject("Core", typeof(RectTransform), typeof(Image));
+            core.transform.SetParent(root.transform, false);
+            Image ci = core.GetComponent<Image>();
+            ci.sprite = HaloSprite(); ci.color = new Color(0.9f, 1f, 1f, 1f); ci.raycastTarget = false;
+            core.GetComponent<RectTransform>().sizeDelta = new Vector2(110f, 9f);
+        }
+        else
+        {
+            GameObject s = new GameObject("Segment", typeof(RectTransform), typeof(Image));
+            s.transform.SetParent(transform, false);
+            s.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.85f);
+            s.GetComponent<Image>().raycastTarget = false;
+            seg = s.GetComponent<RectTransform>();
+            seg.anchorMin = new Vector2(0f, 0f); seg.anchorMax = new Vector2(0f, 1f); seg.pivot = new Vector2(0.5f, 0.5f);
+            seg.sizeDelta = new Vector2(90f, 0f);
+        }
+    }
+
     private void Update()
     {
-        if (seg == null)
-        {
-            line = GetComponent<Image>();
-            if (neon)
-            {
-                GameObject root = new GameObject("Neon Spot", typeof(RectTransform));
-                root.transform.SetParent(transform, false);
-                seg = root.GetComponent<RectTransform>();
-                seg.anchorMin = seg.anchorMax = new Vector2(0f, 0.5f); seg.pivot = new Vector2(0.5f, 0.5f);
-                seg.sizeDelta = Vector2.zero;
-                GameObject halo = new GameObject("Halo", typeof(RectTransform), typeof(Image));
-                halo.transform.SetParent(root.transform, false);
-                Image hi = halo.GetComponent<Image>();
-                hi.sprite = HaloSprite(); hi.color = new Color(0.2f, 0.85f, 1f, 0.95f); hi.raycastTarget = false;
-                halo.GetComponent<RectTransform>().sizeDelta = new Vector2(260f, 34f);
-                GameObject core = new GameObject("Core", typeof(RectTransform), typeof(Image));
-                core.transform.SetParent(root.transform, false);
-                Image ci = core.GetComponent<Image>();
-                ci.sprite = HaloSprite(); ci.color = new Color(0.9f, 1f, 1f, 1f); ci.raycastTarget = false;
-                core.GetComponent<RectTransform>().sizeDelta = new Vector2(110f, 9f);
-            }
-            else
-            {
-                GameObject s = new GameObject("Segment", typeof(RectTransform), typeof(Image));
-                s.transform.SetParent(transform, false);
-                s.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.85f);
-                s.GetComponent<Image>().raycastTarget = false;
-                seg = s.GetComponent<RectTransform>();
-                seg.anchorMin = new Vector2(0f, 0f); seg.anchorMax = new Vector2(0f, 1f); seg.pivot = new Vector2(0.5f, 0.5f);
-                seg.sizeDelta = new Vector2(90f, 0f);
-            }
-        }
+        if (seg == null) BuildSegment();
         bool on = PixelMenuFx.Enabled;
         if (line.enabled != on) { line.enabled = on; seg.gameObject.SetActive(on); }
         if (!on) return;

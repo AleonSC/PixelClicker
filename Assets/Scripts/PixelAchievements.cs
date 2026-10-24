@@ -27,7 +27,7 @@ using UnityEngine.UI;
 ///    TIERS (targets). "Collect" achievements have six tiers: 10, 100, 1K, 10K, 100K and 1M.
 ///  - Progress is measured by <see cref="GetProgress"/>; each tier is earned the moment progress reaches its target,
 ///    and the achievement then moves on to the next tier.
-///  - Unlocked achievements are saved by PixelSaveGame and listed in the Log's Achievements tab.
+///  - Earned tiers are progress in the GameState (PixelGameState.Current.achievements, by id) and listed in the Log's Achievements tab.
 ///  - A small popup announces each new achievement.
 ///
 /// ADDING MORE
@@ -38,14 +38,9 @@ using UnityEngine.UI;
 /// Titles and descriptions may use {pixel} (the pixel type), {target} (the tier being worked on) and {tier} (its roman numeral).
 /// Add this to any GameObject (e.g. the cube). PixelLog adds it automatically if it is missing.
 /// </summary>
-public class PixelAchievements : MonoBehaviour, IPixelSaved, IPixelDatabaseSource
+public class PixelAchievements : MonoBehaviour, IPixelDatabaseSource
 {
-    // ---- save: this system writes its own part of the save file (PixelSaveRegistry) ----
-    [System.Serializable] private class SaveState { public string[] earned; }
-    string IPixelSaved.SaveId => "achievements";
-    int IPixelSaved.SaveOrder => 310;
-    string IPixelSaved.Export() => PixelSaveRegistry.ToJson(new SaveState { earned = GetSaveState() });
-    void IPixelSaved.Import(string data) { SaveState s = PixelSaveRegistry.FromJson<SaveState>(data); SetSaveState(s != null ? s.earned : null); }
+    // ---- progress: the earned tiers live in the GameState (PixelGameState.Current.achievements, by id); the list here is the Inspector config ----
 
     /// <summary>What an achievement measures. Add new kinds here, then handle them in GetProgress.</summary>
     public enum Kind
@@ -89,22 +84,33 @@ public class PixelAchievements : MonoBehaviour, IPixelSaved, IPixelDatabaseSourc
         [Tooltip("Colour of the spinning cube icon when the kind has no pixel type (e.g. Collect Any Pixel).")]
         public Color iconColor = Color.white;
 
-        [Min(0)]
-        [Tooltip("Runtime: how many tiers have been earned. (Saved with the game.)")]
-        public int earnedTiers = 0;
-
-        /// <summary>Runtime: when each tier was earned (UTC ticks; 0 = not recorded, e.g. earned before dates were kept). Saved with the game.</summary>
-        [NonSerialized] public long[] earnedAt;
+        /// <summary>How many tiers have been earned (progress: the GameState's entry for this id; see the Pixel Game State component to test).</summary>
+        public int earnedTiers
+        {
+            get { AchievementsState.Entry e = PixelGameState.Current.achievements.Find(id, false); return e != null ? e.tiers : 0; }
+            set
+            {
+                AchievementsState.Entry e = PixelGameState.Current.achievements.Find(id, value > 0);   // (no entry is made for 0; an achievement without an id keeps nothing)
+                if (e != null) e.tiers = Mathf.Max(0, value);
+            }
+        }
 
         /// <summary>When a tier was earned (UTC ticks, 0 = unknown).</summary>
-        public long EarnedAtOf(int tier) => earnedAt != null && tier >= 0 && tier < earnedAt.Length ? earnedAt[tier] : 0L;
+        public long EarnedAtOf(int tier)
+        {
+            AchievementsState.Entry e = PixelGameState.Current.achievements.Find(id, false);
+            return e != null && tier >= 0 && tier < e.earnedAt.Count ? e.earnedAt[tier] : 0L;
+        }
 
         /// <summary>Records when a tier was earned.</summary>
         public void StampTier(int tier, long ticks)
         {
             if (tier < 0) return;
-            if (earnedAt == null || earnedAt.Length <= tier) System.Array.Resize(ref earnedAt, Mathf.Max(tier + 1, TierCount));
-            earnedAt[tier] = ticks;
+            AchievementsState.Entry e = PixelGameState.Current.achievements.Find(id, true);
+            if (e == null) return;
+            List<long> at = e.earnedAt;
+            while (at.Count <= tier) at.Add(0L);
+            at[tier] = ticks;
         }
 
         /// <summary>Number of tiers (1 for a single-target achievement).</summary>
@@ -412,7 +418,7 @@ public class PixelAchievements : MonoBehaviour, IPixelSaved, IPixelDatabaseSourc
 
     private void Awake()
     {
-        PixelSaveRegistry.Register(this);
+        PixelGameState.Loaded += OnLoaded;
         if (clicker == null)
         {
             clicker = PixelFind.First<PixelClicker>();
@@ -428,22 +434,14 @@ public class PixelAchievements : MonoBehaviour, IPixelSaved, IPixelDatabaseSourc
         EnsureDefaultAchievements();
     }
 
-    /// <summary>Set by the Restart button: the next scene start clears every earned tier, whatever else is stored.</summary>
-    public static bool ResetOnNextStart;
+    /// <summary>Forgets every earned tier. (Restart / New Game need nothing: a new game's GameState starts with none.)</summary>
+    public void ResetAll() => PixelGameState.Current.achievements.Clear();
 
-    /// <summary>Forgets every earned tier.</summary>
-    public void ResetAll()
-    {
-        foreach (Achievement a in achievements) { a.earnedTiers = 0; a.earnedAt = null; }
-    }
+    // A save was loaded: its earned tiers are in the state now - anything already reached is granted quietly (as the old load did).
+    private void OnLoaded() => Evaluate(true);
 
     private void Start()
     {
-        if (ResetOnNextStart)
-        {
-            ResetOnNextStart = false;
-            ResetAll();
-        }
         RegisterUsageAchievements();
         RegisterPetAchievements();
         BuildPopup();
@@ -464,7 +462,7 @@ public class PixelAchievements : MonoBehaviour, IPixelSaved, IPixelDatabaseSourc
 
     private void OnDestroy()
     {
-        PixelSaveRegistry.Unregister(this);
+        PixelGameState.Loaded -= OnLoaded;
         if (popupCanvas != null) Destroy(popupCanvas);
     }
 
@@ -725,51 +723,7 @@ public class PixelAchievements : MonoBehaviour, IPixelSaved, IPixelDatabaseSourc
     // ------------------------------------------------------------------
     // Saving
     // ------------------------------------------------------------------
-
-    /// <summary>Earned tiers as "id:tiers" entries (for the save file).</summary>
-    public string[] GetSaveState()
-    {
-        List<string> entries = new List<string>();
-        foreach (Achievement a in achievements)
-            if (a.earnedTiers > 0)
-            {
-                // "id:tiers:ticks,ticks,..." (the dates of the tiers; older saves have only "id:tiers")
-                List<string> times = new List<string>();
-                for (int t = 0; t < a.earnedTiers; t++) times.Add(a.EarnedAtOf(t).ToString());
-                entries.Add(a.id + ":" + a.earnedTiers + ":" + string.Join(",", times));
-            }
-        return entries.ToArray();
-    }
-
-    /// <summary>
-    /// Restores earned tiers from a save. Because progress comes from the saved totals, anything already
-    /// reached is re-earned quietly anyway (this also upgrades saves from before tiers existed).
-    /// </summary>
-    public void SetSaveState(string[] entries)
-    {
-        foreach (Achievement a in achievements)
-        {
-            a.earnedTiers = 0;
-            a.earnedAt = null;
-            if (entries == null) continue;
-
-            foreach (string entry in entries)
-            {
-                string[] parts = entry.Split(':');
-                if (parts.Length >= 2 && parts[0] == a.id && int.TryParse(parts[1], out int tiers))
-                {
-                    a.earnedTiers = Mathf.Clamp(tiers, 0, a.TierCount);
-                    if (parts.Length >= 3)
-                    {
-                        string[] times = parts[2].Split(',');
-                        for (int t = 0; t < times.Length && t < a.earnedTiers; t++)
-                            if (long.TryParse(times[t], out long ticks) && ticks > 0L) a.StampTier(t, ticks);
-                    }
-                }
-            }
-        }
-        Evaluate(true);
-    }
+    // (Earned tiers are saved with the GameState - AchievementsState - since 2026-10-24.)
 
     // ------------------------------------------------------------------
     // Popup

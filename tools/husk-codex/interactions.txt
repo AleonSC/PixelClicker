@@ -1,0 +1,82 @@
+# HUSK CODEX - INTERACTIONS (hand-written; tools/husk-codex/build.py reads this file)
+# Who acts on whom. One line each:  from | to | kind | text
+#   from / to = a pixel type's code name (as in PixelTexts.txt, e.g. Leaf, HornetNest) or a THING id from the list below.
+#   kind = boost (helps), harm, feeds, creates (makes), hold, link, reads (counts), converts, consume (collects).
+#   'allhusks' on the FROM side means 'every husk can do this' (shown on every block's panel); 'woodhusks' = every Woodcutting husk.
+# Lines starting with # are notes. Keep a line per real game rule; when a block or machine changes, fix its line here and rebuild.
+
+# ---- THINGS (id = name shown on the page) ----
+@sprouts = Growing sprouts & Seed pets
+@devices = Timed devices
+@allhusks = Every husk on the floor
+@nearhusks = Husks nearby
+@woodhusks = Woodcutting husks
+@recycler = Recycler
+@crush = Husk Crush
+@chipper = Wood Chipper
+@biomass = Biomass Generators
+@bucket = Bait Bucket
+@booster = Charge Booster
+@rod = Lightning Rod
+@kiln = Kiln
+@fish = Fish spawns
+@potions = Potions & Bank upgrade
+@stardust = Stardust
+@greatoak = Great Oak chance
+@nextclick = Your next click
+@autoclick = Auto clicks (Overcharge)
+@conductors = Old conductor pixels
+@meteors = Flying meteors
+@sap = Sap circle
+
+# ---- INTERACTIONS ----
+Vacuum | allhusks | consume | Clicking it sucks up every husk lying around and pays their stored value at once.
+Singularity | nearhusks | hold | Its husk drags up to 20 nearby husks in and keeps them from despawning for 5 minutes.
+Singularity | meteors | hold | Captures Meteor husks that fly close.
+Nuclear | nearhusks | harm | Its husk ages every other husk within ~4 widths 40x faster, so they vanish unpaid.
+Sap | woodhusks | boost | Woodcutting husks entering its yellow circle last 5 s longer (once); the Sap gains 1 s for each.
+Water | sprouts | boost | Its husk splashes on first landing and gives sprouts nearby an instant growth jump.
+Solar | sprouts | boost | Solar clicks raise Daylight: seeds and Seed pets grow faster.
+Solar | Solar | hold | Five touching Solar husks never despawn and glow with a yellow aura.
+Pollen | sprouts | boost | A Pollen husk beside a sprout when it pops doubles the pay of the pixel it grows.
+Dirt | sprouts | boost | Dirt husks lying near a growing sprout make it grow faster.
+Fertilizer | sprouts | boost | Clicking it gives every growing sprout and Seed pet an instant growth jump.
+Wheat | sprouts | reads | Pays more for every sprout currently growing (up to a cap).
+Seed | sprouts | creates | Cracking it plants three sprouts that each grow a random unlocked pixel.
+Weevil | sprouts | harm | While it sits on the cube it eats a growing sprout every few seconds.
+Pest | sprouts | harm | Breaking it releases bugs that eat your growing sprouts.
+GoldenFruit | sprouts | creates | A growing sprout has a 3% chance to grow one instead of a normal pixel.
+Electric | devices | boost | Linked Electric husks power timed devices (their countdown pauses) and never age while linked.
+Electric | autoclick | boost | Clicking it triggers Overcharge: a burst of auto clicks.
+Electric | booster | feeds | Electric husks that link to a Charge Booster fill its meter and are used up.
+Wire | conductors | link | Wire husks carry the arcs that link devices and other conductors.
+Battery | devices | boost | Linked Battery husks power timed devices.
+Battery | autoclick | boost | Clicking it also sets off an Overcharge.
+Resistor | conductors | link | Resistor husks link into the electric network like Electric pixels.
+Bulb | conductors | reads | Pays 10% more per old conductor pixel lying around (up to 30).
+Transistor | nextclick | boost | Clicking it makes the next pixel you collect pay double.
+Mirror | nextclick | reads | Repeats the last payout of the previous different pixel you clicked.
+rod | allhusks | converts | Lightning strikes turn every husk around the rod into an Electric pixel.
+Meteor | stardust | creates | Every Meteor husk that streaks off may knock a star (Stardust) down beside the cube.
+Glass | potions | feeds | Glass is the material for potions and the Pixel Bank storage upgrade.
+Treasure | allhusks | creates | Opening it pours out 2 + one per hit (up to 24) random unlocked pixels.
+Acorn | greatoak | boost | Every Acorn husk on the field raises the chance a wood block turns into a Great Oak.
+Pesticide | HornetNest | harm | Held with Block Hold it gives 3 charges; each clears the next Termite Hive safely.
+HornetNest | allhusks | harm | Breaking it sends one termite per husk on the floor to chew them up unless you click to save them.
+GasPocket | nearhusks | harm | Breaking it blows away the husks around the cube.
+Jellyfish | nearhusks | harm | Breaking it wipes out the husks near the cube.
+Jellyfish | Bait | harm | Its discharge fries every bait pellet.
+Wildfire | nearhusks | harm | Breaking it spreads fire that burns up the husks around the cube.
+Mold | allhusks | harm | Bursting it covers every husk in mold; moldy husks die unless shaken clean.
+Bait | fish | boost | Each bait pellet it drops makes Fish 35% more common for about a minute.
+Fish | bucket | feeds | Fish (and Water) husks stored in a Bait Bucket keep their value and make fish come up more often.
+Water | bucket | feeds | Water husks can be stored in the Bait Bucket too.
+Wood | chipper | feeds | Wood husks dropped into the chipper give Woodcutting XP and make Wood Chips.
+chipper | WoodChips | creates | Every few shredded Wood husks make a Wood Chips block.
+woodhusks | biomass | feeds | Woodcutting husks are burned for power; devices in the ring stop their timers.
+Charcoal | biomass | feeds | Charcoal and Wood Chips burn longer in a Biomass Generator.
+WoodChips | biomass | feeds | Wood Chips burn longer in a Biomass Generator.
+kiln | Charcoal | creates | The Kiln burns what enters its mouth into Charcoal material, which buys the Charcoal Pixel in the shop.
+allhusks | recycler | feeds | Any husk in a Recycler becomes half its value as currency; same colour in a row builds a streak.
+allhusks | crush | feeds | Right-click a husk to crush it for its own skill's XP (half a click's).
+Capacitor | nextclick | reads | Every other click stores a charge (up to 40); clicking it pays +15% per charge.

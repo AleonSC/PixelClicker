@@ -26,35 +26,6 @@ public class PixelSaveGame : MonoBehaviour
     // Save data (what ends up in the JSON file)
     // ------------------------------------------------------------------
 
-    [Serializable]
-    private class TierSave
-    {
-        public int type;
-        public double count;
-        public double total;
-        public bool unlocked;
-        public bool spawnDisabled;
-        public long timesCollected;
-        public int ultraLevel;
-        public int valueLevel;
-    }
-
-    [Serializable]
-    private class PackSave
-    {
-        public string name;
-        public bool purchased;
-        public int level;
-    }
-
-    [Serializable]
-    private class MinigameSave
-    {
-        public string id;
-        public double value;
-        public bool disabled; // switched off by the player in the shop
-        public double extra;  // a second number some minigames keep (the bomb's parts held)
-    }
 
     [Serializable]
     private class SaveData
@@ -64,12 +35,8 @@ public class PixelSaveGame : MonoBehaviour
         public string slotName = "";   // the save's own name (Save / Load window > Rename): lives in the file, so it travels with it
         public long savedAtTicks;   // UTC, used for offline progress
         public double playSeconds;  // time played, for the slot list's summary (the stats part keeps the real one)
-        public TierSave[] tiers;
-        public long ultraPixels;   // Ultra pixels held
-        public PackSave[] packs;
-        public MinigameSave[] minigames;
+        public double totalPixels;  // everything ever collected, for the slot list's summary (the GameState keeps the real numbers)
         public GameState state;   // the player's progress for the systems moved to GameState (PixelGameState; GameState.MovedSystems lists them)
-        public PixelSaveRegistry.Part[] parts;   // every system that still saves itself (IPixelSaved: inventory, achievements, pets, toggles...)
         public PixelFeatureTester.TesterSave[] testerObjects;   // the Dev Hub tester machines (Wood Chipper, belts + their riders, Kiln, Solar Panels)
         public PixelClicker.OldPixelState[] oldPixels;   // where the old pixels lie
         public PixelSettingsSync.Entry[] settings;       // the settings / dev tool choices of this save file
@@ -228,7 +195,7 @@ public class PixelSaveGame : MonoBehaviour
             if (data == null) return false;
             savedAt = data.savedAt;
             playSeconds = data.playSeconds;
-            if (data.tiers != null) foreach (TierSave t in data.tiers) totalPixels += t.total;
+            totalPixels = data.totalPixels;
             return true;
         }
         catch (Exception)
@@ -324,7 +291,7 @@ public class PixelSaveGame : MonoBehaviour
             PixelSaveShots.Forget(thumb);
             PixelPrefs.DeleteKey(PendingNamePref + slot);
             PixelPrefs.Save();
-            if (logToConsole) Debug.Log("PixelSaveGame: deleted the save in slot " + slot + ".", this);
+            if (logToConsole) PixelDebug.Info("PixelSaveGame: deleted the save in slot " + slot + ".", this);
             return true;
         }
         catch (Exception e)
@@ -405,7 +372,7 @@ public class PixelSaveGame : MonoBehaviour
         }
 
         BuildMessageUI();
-        if (logToConsole) Debug.Log("PixelSaveGame: slot " + CurrentSlot + " is " + FilePath, this);
+        if (logToConsole) PixelDebug.Info("PixelSaveGame: slot " + CurrentSlot + " is " + FilePath, this);
 
         // One frame later, so every other script has finished its own startup first.
         yield return null;
@@ -557,44 +524,14 @@ public class PixelSaveGame : MonoBehaviour
             SaveData data = new SaveData { savedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), savedAtTicks = DateTime.UtcNow.Ticks };
             if (slot > 0) data.slotName = GetSlotName(slot);   // the save keeps its own name (a name waiting from a rename of an empty slot, or the one already in the file)
 
-            PixelClicker.PixelTier[] tiers = clicker.Tiers;
-            data.tiers = new TierSave[tiers.Length];
-            data.ultraPixels = clicker.TotalUltra;
-            for (int i = 0; i < tiers.Length; i++)
-                data.tiers[i] = new TierSave
-                {
-                    type = (int)tiers[i].type,
-                    count = tiers[i].count,
-                    total = tiers[i].totalCollected,
-                    unlocked = tiers[i].unlocked,
-                    spawnDisabled = tiers[i].spawnDisabled,
-                    timesCollected = tiers[i].timesCollected,
-                    ultraLevel = tiers[i].ultraLevel,
-                    valueLevel = tiers[i].valueLevel,
-                };
 
-            if (shop != null)
-            {
-                data.packs = new PackSave[shop.PackCount];
-                for (int i = 0; i < data.packs.Length; i++)
-                    data.packs[i] = new PackSave
-                    {
-                        name = shop.GetPackName(i),
-                        purchased = shop.GetPackPurchased(i),
-                        level = shop.GetPackLevel(i),
-                    };
-            }
 
             data.testerObjects = PixelFeatureTester.ExportAll();
 
-            // Every minigame with a goal counter saves its count under its id.
-            System.Collections.Generic.List<MinigameSave> minigameSaves = new System.Collections.Generic.List<MinigameSave>();
-            foreach (PixelMinigame m in PixelMinigame.All)
-                if (m != null) minigameSaves.Add(new MinigameSave { id = m.Id, value = m.HasTracker ? m.TrackerCount : 0d, disabled = m.UserDisabled, extra = m.ExtraValue });
-            data.minigames = minigameSaves.ToArray();
+            PixelGameState.RaiseSaving();   // (world objects - placed devices, the running potion - copy themselves into the state first)
             data.state = PixelGameState.Current;   // (the moved systems' progress, whole)
             data.playSeconds = data.state.stats.playSeconds;
-            data.parts = PixelSaveRegistry.ExportAll();   // (inventory, achievements, pets, UFO, toggles, event log...: each system's own part)
+            data.totalPixels = data.state.clicker.TotalCollected;
             // A minigame that moved the old pixels around (Breakout, Sorting Race...) is running: their positions aren't real now.
             if (!PixelMinigame.TakeoverActive) data.oldPixels = clicker.GetOldPixelStates().ToArray();
             data.settings = PixelSettingsSync.Collect();
@@ -622,8 +559,7 @@ public class PixelSaveGame : MonoBehaviour
             }
             else
             {
-                double totalPixels = 0d;
-                if (data.tiers != null) foreach (TierSave ts in data.tiers) totalPixels += ts.total;
+                double totalPixels = data.totalPixels;
                 string autoShot = PixelAutosaves.Add(json, new PixelAutosaves.Meta { savedAt = data.savedAt, totalPixels = totalPixels, playSeconds = data.playSeconds },
                                                      keepAutosaveHistory ? autosaveHistorySize : 1);
                 if (autoShot != null) shots.Add(autoShot);
@@ -632,7 +568,7 @@ public class PixelSaveGame : MonoBehaviour
             HasLoadedSave = true;
             PixelSaveShots.Request(shots);
 
-            if (logToConsole) Debug.Log("PixelSaveGame: saved (" + (fileOverride != null ? fileOverride : slot > 0 ? "slot " + slot : "autosave") + ").", this);
+            if (logToConsole) PixelDebug.Info("PixelSaveGame: saved (" + (fileOverride != null ? fileOverride : slot > 0 ? "slot " + slot : "autosave") + ").", this);
             if (showMessage) { if (fileOverride != null) ShowMessage("Saved"); else if (slot == 0) ShowAutoNote(); else ShowMessage("Saved to slot " + slot); }
             return true;
         }
@@ -686,47 +622,20 @@ public class PixelSaveGame : MonoBehaviour
         try
         {
             SaveData data = JsonUtility.FromJson<SaveData>(File.ReadAllText(pathOverride ?? FilePath));
-            if (data == null || data.tiers == null) throw new Exception("the file is empty or damaged");
+            if (data == null || data.state == null) throw new Exception("the file is empty or damaged");
 
             // The moved systems' progress goes in first, whole (GameState); their views refresh at the end (PixelGameState.Loaded).
             PixelGameState.Replace(data.state);
 
-            // Pixels. Anything the save doesn't mention goes back to nothing / locked.
-            foreach (PixelClicker.PixelTier tier in clicker.Tiers)
-                clicker.LoadTierState(tier.type, 0d, 0d, false);
-            foreach (TierSave t in data.tiers)
-                clicker.LoadTierState((PixelClicker.PixelType)t.type, t.count, t.total, t.unlocked, t.spawnDisabled, t.timesCollected, t.ultraLevel, t.valueLevel);
-            clicker.RestoreUltra(data.ultraPixels);
+            // Pixels: the currencies are in the GameState now (a type the save never had: nothing held, locked); the clicker settles them FIRST.
+            clicker.ApplyLoadedTiers();
 
-            // Shop: match packs by name.
-            if (shop != null)
-            {
-                for (int i = 0; i < shop.PackCount; i++)
-                {
-                    PackSave saved = data.packs != null
-                        ? Array.Find(data.packs, p => p.name == shop.GetPackName(i) || (p.name == "Robot Worker" && shop.GetPackName(i) == "UFO Helper")) : null;
-                    shop.SetPackState(i, saved != null && saved.purchased, saved != null ? saved.level : 0);
-                }
-            }
+            // Shop: the packs bought are in the GameState; their effects are switched on / off HERE, before the rest of the load (a fixed core step).
+            if (shop != null) shop.ApplyLoadedPackStates();
 
-            // The systems that save themselves (PixelSaveRegistry), in bands around the core steps below.
-            PixelSaveRegistry.ImportRange(data.parts, int.MinValue, PixelSaveRegistry.SettingsBand);   // (toggles, auto clicker, pets, UFO, event log)
+            // (Every system's progress is in the GameState - Replace above; the old per-system save parts were retired 2026-10-24.)
             if (!skipSettingsOnce) PixelSettingsSync.Apply(data.settings);   // (the profile's settings; Continue from the main menu keeps the ones it already showed)
 
-            PixelSaveRegistry.ImportRange(data.parts, PixelSaveRegistry.SettingsBand, PixelSaveRegistry.MinigamesBand);   // (potion / device inventory)
-
-            foreach (PixelMinigame m in PixelMinigame.All)
-            {
-                if (m == null) continue;
-
-                MinigameSave saved = data.minigames != null ? Array.Find(data.minigames, x => x.id == m.Id) : null;
-                m.UserDisabled = saved != null && saved.disabled;
-                if (m.UserDisabled) m.Deactivate();
-                if (!m.HasTracker) continue;
-                m.SetTrackerCount(saved != null ? saved.value : 0d);
-                if (saved != null) m.SetExtraValue(saved.extra);
-            }
-            PixelSaveRegistry.ImportRange(data.parts, PixelSaveRegistry.MinigamesBand, PixelSaveRegistry.WorldBand);   // (achievements, stats)
 
             // Time away: only when the game has just started (loading by hand mid-game must not pay it again).
             if (grantOffline && data.savedAtTicks > 0)
@@ -741,11 +650,10 @@ public class PixelSaveGame : MonoBehaviour
             if (PixelFloor.Instance != null && !PixelTitleScreen.Showing) PixelFloor.Instance.PropsFadeIn();   // pixels and devices fade in after a load
             if (data.oldPixels != null) clicker.RestoreOldPixels(data.oldPixels); // older saves leave the pixels alone
 
-            PixelSaveRegistry.ImportRange(data.parts, PixelSaveRegistry.WorldBand, int.MaxValue);   // (after the husks are back: Bank, placed devices + the running potion)
+            PixelGameState.RaiseLoaded();   // (the moved systems' views refresh and their world objects - placed devices... - are rebuilt, BEFORE the tester machines)
             PixelFeatureTester.ImportAll(data.testerObjects);   // after the devices (a solar panel links to one) and the old pixels (belt riders are made again)
-            PixelGameState.RaiseLoaded();   // (everything is back: the moved systems' views refresh)
 
-            if (logToConsole) Debug.Log("PixelSaveGame: loaded the save from " + data.savedAt + ".", this);
+            if (logToConsole) PixelDebug.Info("PixelSaveGame: loaded the save from " + data.savedAt + ".", this);
             if (showMessage) ShowMessage("Loaded slot " + CurrentSlot);
             return true;
         }
@@ -765,7 +673,7 @@ public class PixelSaveGame : MonoBehaviour
         {
             PixelAutosaves.DeleteAll();   // (Restart: the autosaves of the old game go; manual saves in the slots stay)
             HasLoadedSave = false;
-            if (logToConsole) Debug.Log("PixelSaveGame: save deleted.", this);
+            if (logToConsole) PixelDebug.Info("PixelSaveGame: save deleted.", this);
         }
         catch (Exception e)
         {

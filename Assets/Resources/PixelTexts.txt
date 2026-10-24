@@ -396,8 +396,8 @@ husk:
 
 [Charcoal]
 name: Charcoal
-guide: Charcoal: made by the Kiln, and a Firemaking block.
-husk: 
+guide: A lump of charcoal. The Kiln turns burnt husks into Charcoal (a material); spend it in the shop to add this pixel to the spawn pool.
+husk: is the best fuel there is: in a Biomass Generator one burns as long as 8 wood husks.
 
 [GodSlifer]
 name: Slifer the Sky Dragon

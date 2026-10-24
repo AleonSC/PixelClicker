@@ -27,7 +27,7 @@ public class PixelShopNudge : MonoBehaviour
     private void Update()
     {
         bool want = !disableNudge && PixelGuideVendor.ShopHold;
-        if (want && shop == null) shop = PixelFind.First<PixelShop>();
+        if (want && shop == null) shop = PixelFind.Cached<PixelShop>();
         RectTransform button = want && shop != null ? shop.ShopButtonRect : null;
         if (button != null) PixelHighlight.Set(this, button, glowColor);
         else PixelHighlight.Clear(this);

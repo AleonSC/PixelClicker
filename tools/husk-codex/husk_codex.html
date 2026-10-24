@@ -1,0 +1,673 @@
+<title>Husk Codex</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a field guide - header, three views (catalogue grid + specimen panel, interaction map, fall lab), all from one dataset. */
+:root{
+  --bg:#eef2ee; --surface:#f9fbf8; --sunk:#e2e8e2; --line:#c9d3ca; --fg:#17211b; --muted:#5a6b60;
+  --accent:#2e7a48; --accent-ink:#ffffff; --floor:#4c8f3d; --floor-dark:#3d7731; --sky:#d9ecf4;
+  --boost:#2c8a4f; --harm:#c23b32; --feeds:#b57914; --creates:#2f66c4; --hold:#7a4fc0; --link:#13889a; --reads:#6b7570; --converts:#c2448a; --consume:#d0661c;
+  --display:"Pixelify Sans", "Courier New", monospace;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --radius:6px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#101612; --surface:#18201b; --sunk:#0c110e; --line:#2b3830; --fg:#e4ece6; --muted:#93a59a;
+  --accent:#6fcf8e; --accent-ink:#0b130e; --floor:#2f5f27; --floor-dark:#264f20; --sky:#16232b;
+  --boost:#5fd08a; --harm:#f0776d; --feeds:#e8b04a; --creates:#7aa7f5; --hold:#b592f2; --link:#4cc7d8; --reads:#9aa7a0; --converts:#f07ab8; --consume:#f39a55;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101612; --surface:#18201b; --sunk:#0c110e; --line:#2b3830; --fg:#e4ece6; --muted:#93a59a;
+  --accent:#6fcf8e; --accent-ink:#0b130e; --floor:#2f5f27; --floor-dark:#264f20; --sky:#16232b;
+  --boost:#5fd08a; --harm:#f0776d; --feeds:#e8b04a; --creates:#7aa7f5; --hold:#b592f2; --link:#4cc7d8; --reads:#9aa7a0; --converts:#f07ab8; --consume:#f39a55;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:0 48px}
+.wrap{max-width:1240px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);font-weight:700;text-wrap:balance;margin:0;letter-spacing:.01em}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* ---- header ---- */
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 32px;padding-block:28px 18px;border-bottom:2px solid var(--fg)}
+.brand{display:flex;gap:16px;align-items:center;min-width:0}
+.brand h1{font-size:clamp(34px,6vw,54px);line-height:1}
+.brand p{margin:4px 0 0;color:var(--muted);max-width:56ch}
+.counts{display:flex;gap:22px;flex-wrap:wrap}
+.counts div{display:flex;flex-direction:column}
+.counts b{font-family:var(--display);font-size:26px;line-height:1.1}
+.counts span{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+nav.views{display:flex;gap:4px;margin-top:18px;border-bottom:1px solid var(--line);overflow-x:auto}
+nav.views button{background:none;border:0;padding:10px 16px;cursor:pointer;font-family:var(--display);font-size:18px;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px;white-space:nowrap}
+nav.views button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+
+/* ---- cubes ---- */
+[hidden]{display:none!important}
+.iso{width:var(--w,38px);height:auto;flex:none;display:block;overflow:visible}
+.iso.husk{--w:18px}
+.iso polygon{stroke:rgba(0,0,0,.28);stroke-width:1;stroke-linejoin:round}
+.cube-dark .iso polygon{stroke:rgba(255,255,255,.3)}
+
+/* ---- catalogue ---- */
+.catalogue{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:24px;margin-top:20px;align-items:start}
+.tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.search{flex:1 1 220px;min-width:0;padding:9px 12px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+.tools select{padding:9px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 11px;cursor:pointer;font-size:13px;display:inline-flex;gap:6px;align-items:center}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chip small{font-family:var(--mono);opacity:.7}
+.chip.haz[aria-pressed="true"]{background:var(--harm);border-color:var(--harm);color:#fff}
+.family-block{margin-bottom:22px}
+.family-block h2{font-size:20px;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;margin-bottom:10px}
+.family-block h2 small{font-family:var(--body);font-weight:400;font-size:13px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.tile{display:flex;gap:10px;align-items:center;padding:10px;border:1px solid var(--line);background:var(--surface);border-radius:var(--radius);cursor:pointer;text-align:left;min-width:0;position:relative}
+.tile:hover{border-color:var(--muted)}
+.tile[aria-current="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
+.tile .iso{--w:34px}
+.tile .nm{font-weight:700;font-size:14px;line-height:1.25;overflow-wrap:anywhere}
+.tile .sub{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.tile .flag{position:absolute;top:6px;right:7px;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--harm);letter-spacing:.05em}
+.tile .dots{display:flex;gap:3px;margin-top:3px}
+.tile .dots span{width:6px;height:6px;border-radius:1px;background:var(--line)}
+.tile .dots span.on{background:var(--accent)}
+.empty{padding:30px;border:1px dashed var(--line);border-radius:var(--radius);color:var(--muted);text-align:center}
+
+/* specimen panel */
+.panel{position:sticky;top:12px;border:1px solid var(--line);background:var(--surface);border-radius:8px;overflow:hidden;max-height:calc(100vh - 24px);overflow-y:auto}
+.panel .stage{background:linear-gradient(var(--sky),var(--sky) 62%,var(--floor) 62%,var(--floor-dark));height:170px;display:grid;place-items:center;perspective:700px;position:relative}
+.cube3d{--z:44px;width:88px;height:88px;position:relative;transform-style:preserve-3d;animation:spin 14s linear infinite;transform:rotateX(-24deg) rotateY(35deg)}
+.cube3d div{position:absolute;inset:0;border:1px solid rgba(0,0,0,.18)}
+.cube3d .f1{transform:translateZ(var(--z));background:var(--cl)}.cube3d .f2{transform:rotateY(180deg) translateZ(var(--z));background:var(--cl)}
+.cube3d .f3{transform:rotateY(90deg) translateZ(var(--z));background:var(--cr)}.cube3d .f4{transform:rotateY(-90deg) translateZ(var(--z));background:var(--cr)}
+.cube3d .f5{transform:rotateX(90deg) translateZ(var(--z));background:var(--ct)}.cube3d .f6{transform:rotateX(-90deg) translateZ(var(--z));background:var(--cb)}
+@keyframes spin{from{transform:rotateX(-24deg) rotateY(0deg)}to{transform:rotateX(-24deg) rotateY(360deg)}}
+.stage .husk-mini{position:absolute;right:26px;bottom:18px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.stage .num{position:absolute;left:12px;top:10px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.pbody{padding:16px 18px 20px;display:flex;flex-direction:column;gap:16px}
+.pbody h2{font-size:26px;line-height:1.1}
+.fam{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap}
+.fam .hz{color:var(--harm);font-weight:700}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.stats div{background:var(--bg);padding:8px 10px;display:flex;flex-direction:column;min-width:0}
+.stats b{font-family:var(--mono);font-size:16px}
+.stats span{font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.sect h3{font-family:var(--body);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.sect p{margin:0}
+.husk-text{border-left:3px solid var(--accent);padding-left:10px}
+.husk-text.plain{border-left-color:var(--line);color:var(--muted)}
+.meters{display:grid;gap:7px}
+.meter{display:grid;grid-template-columns:70px 1fr 42px;gap:8px;align-items:center;font-size:13px}
+.meter .bar{height:8px;background:var(--sunk);border-radius:2px;overflow:hidden}
+.meter .bar i{display:block;height:100%;background:var(--accent)}
+.meter .mono{font-size:12px;text-align:right}
+.tagrow{display:flex;flex-wrap:wrap;gap:5px}
+.tag{font-size:12px;padding:2px 8px;border-radius:3px;background:var(--sunk);border:1px solid var(--line)}
+.ix{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.ix li{display:grid;grid-template-columns:auto 1fr;gap:8px;font-size:13.5px;align-items:start}
+.kind{font-family:var(--mono);font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding:1px 6px;border-radius:3px;color:var(--k);border:1px solid var(--k);white-space:nowrap;margin-top:2px}
+.ix a{color:var(--fg);font-weight:700;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:2px;cursor:pointer}
+.ix a:hover{text-decoration-color:var(--accent)}
+.ghostbtn{align-self:flex-start;background:var(--accent);color:var(--accent-ink);border:0;border-radius:var(--radius);padding:8px 14px;cursor:pointer;font-weight:700}
+
+/* ---- interaction map ---- */
+.mapwrap{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;margin-top:20px;align-items:start}
+.mapbox{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.mapbox svg{display:block;width:100%;min-width:640px;height:auto}
+.mapbox text{font-family:var(--body);fill:var(--fg)}
+.edge{fill:none;stroke-width:1.4;opacity:.55;transition:opacity .15s}
+.dim .edge{opacity:.06}.dim .edge.hot{opacity:1;stroke-width:2.4}
+.node{cursor:pointer}
+.dim .node{opacity:.25}.dim .node.hot{opacity:1}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.legend .chip{font-family:var(--mono);font-size:11.5px;text-transform:uppercase}
+.legend .chip::before{content:"";width:10px;height:3px;background:var(--k);display:inline-block}
+.caption{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:14px 16px;position:sticky;top:12px}
+.caption h3{font-size:20px;margin-bottom:6px}
+.caption p{margin:0 0 10px;color:var(--muted);font-size:14px}
+
+/* ---- fall lab ---- */
+.lab{margin-top:20px;display:grid;gap:14px}
+.lab .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.lab canvas{width:100%;height:auto;display:block;border-radius:8px;border:1px solid var(--line);background:var(--sky);touch-action:manipulation}
+.picker{display:flex;flex-wrap:wrap;gap:6px}
+.pick{display:inline-flex;gap:6px;align-items:center;padding:3px 9px 3px 4px;border:1px solid var(--line);border-radius:4px;background:var(--surface);cursor:pointer;font-size:13px}
+.pick i{width:14px;height:14px;border-radius:2px;background:var(--c);box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}
+.pick[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius);padding:8px 14px;cursor:pointer;font-weight:700}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.note{color:var(--muted);font-size:13.5px;max-width:80ch;margin:0}
+.labhint{font-family:var(--mono);font-size:12px;color:var(--muted)}
+
+@media (max-width:900px){
+  .catalogue,.mapwrap{grid-template-columns:minmax(0,1fr)}
+  .panel{position:static;max-height:none}
+  .caption{position:static}
+}
+@media (max-width:480px){
+  .counts{gap:14px}.counts b{font-size:20px}.counts span{font-size:10.5px}
+  .brand{align-items:flex-start}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stats{grid-template-columns:repeat(2,1fr)}
+}
+@media (prefers-reduced-motion:reduce){.cube3d{animation:none}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span id="brandCube" style="--w:62px;display:block"></span>
+      <div>
+        <h1>Husk Codex</h1>
+        <p>Every block in Pixel Clicker: what a click on it does, what its husk does once it drops, and which other husks, sprouts and machines it touches.</p>
+      </div>
+    </div>
+    <div class="counts">
+      <div><b class="mono" id="cBlocks">0</b><span>Blocks</span></div>
+      <div><b class="mono" id="cOdd">0</b><span>Unusual husks</span></div>
+      <div><b class="mono" id="cLinks">0</b><span>Interactions</span></div>
+      <div><b class="mono" id="cHaz">0</b><span>Hazards</span></div>
+    </div>
+  </header>
+
+  <nav class="views" role="tablist" aria-label="Views">
+    <button role="tab" id="tab-catalogue" aria-selected="true" data-view="catalogue">Catalogue</button>
+    <button role="tab" id="tab-web" aria-selected="false" data-view="web">Interaction map</button>
+    <button role="tab" id="tab-lab" aria-selected="false" data-view="lab">Fall lab</button>
+  </nav>
+
+  <!-- CATALOGUE -->
+  <section id="view-catalogue" class="catalogue" role="tabpanel" aria-labelledby="tab-catalogue">
+    <div style="min-width:0">
+      <div class="tools">
+        <input id="q" class="search" type="search" placeholder="Search blocks and husk texts (try 'sprout', 'float', 'termite')" aria-label="Search">
+        <select id="sort" aria-label="Sort">
+          <option value="n">Game order</option>
+          <option value="pay">Highest pay</option>
+          <option value="rare">Rarest first</option>
+          <option value="hits">Toughest first</option>
+          <option value="name">A to Z</option>
+        </select>
+      </div>
+      <div class="chips" id="famChips"></div>
+      <div id="groups"></div>
+    </div>
+    <aside class="panel" id="panel" aria-live="polite"></aside>
+  </section>
+
+  <!-- INTERACTION MAP -->
+  <section id="view-web" class="mapwrap" role="tabpanel" aria-labelledby="tab-web" hidden>
+    <div style="min-width:0">
+      <div class="legend" id="kindChips"></div>
+      <div class="mapbox"><svg id="map" viewBox="0 0 1000 1000" role="img" aria-label="Map of husk interactions"></svg></div>
+    </div>
+    <div class="caption" id="mapCaption"></div>
+  </section>
+
+  <!-- FALL LAB -->
+  <section id="view-lab" class="lab" role="tabpanel" aria-labelledby="tab-lab" hidden>
+    <p class="note">Husks drop off the cube with the bounce, grip and gravity their look gives them in the game, plus their special behaviour: Leaf swings down, Ghost floats off after a few bounces, Glass shatters, Water splashes, Meteor streaks away, Fire burns out, Solar hovers, a Singularity pulls the others in, Nuclear makes its neighbours fade. Pick husks, then drop them. Click the floor to drop the picked ones there.</p>
+    <div class="bar">
+      <button class="btn primary" id="dropBtn">Drop picked</button>
+      <button class="btn" id="randBtn">Drop 12 random</button>
+      <button class="btn" id="clearBtn">Clear floor</button>
+      <span class="labhint" id="labCount"></span>
+    </div>
+    <div class="picker" id="picker"></div>
+    <canvas id="lab" width="1200" height="460" aria-label="Fall lab: husks dropping onto a grass floor"></canvas>
+  </section>
+</div>
+
+<script>
+const DATA = {"pixels":[{"id":"White","n":0,"name":"White Pixels","family":"core","tags":[],"hazard":false,"color":[1,1,1],"pay":1.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":null,"guide":"A plain pixel: one click, one payout. Nothing special happens.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Gray","n":1,"name":"Gray Pixels","family":"core","tags":[],"hazard":false,"color":[0.5,0.5,0.5],"pay":1.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":null,"guide":"A plain pixel: one click, one payout. Nothing special happens.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Black","n":2,"name":"Black Pixels","family":"core","tags":[],"hazard":false,"color":[0,0,0],"pay":1.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":null,"guide":"A plain pixel: one click, one payout. Nothing special happens.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Red","n":3,"name":"Red Pixels","family":"core","tags":[],"hazard":false,"color":[1,0,0],"pay":1.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":1.0,"guide":"One of the RGB pixels: one click, one payout. In Bomb Defusal the right wire to cut is the colour of the RGB pixel you hold the most of.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Green","n":4,"name":"Green Pixels","family":"core","tags":[],"hazard":false,"color":[0,1,0],"pay":1.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":1.0,"guide":"One of the RGB pixels: one click, one payout. In Bomb Defusal the right wire to cut is the colour of the RGB pixel you hold the most of.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Blue","n":5,"name":"Blue Pixels","family":"core","tags":[],"hazard":false,"color":[0,0,1],"pay":1.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":1.0,"guide":"One of the RGB pixels: one click, one payout. In Bomb Defusal the right wire to cut is the colour of the RGB pixel you hold the most of.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Glass","n":6,"name":"Glass Pixels","family":"special","tags":[],"hazard":false,"color":[0.7,0.92,1.0],"pay":1.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.5,"guide":"A see-through pixel. It is also the material for potions and the Pixel Bank's storage upgrade.","husk":"shatters when it lands on the ground and is gone (set it down gently with Pixel Grabbing and it survives).","huskDefault":false,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Vacuum","n":7,"name":"Vacuum Pixels","family":"special","tags":[],"hazard":false,"color":[0.65,0.3,0.95],"pay":1.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.28,"guide":"Clicking it sucks up every husk lying around: they swirl into it and their stored value is paid out at once. The old Vacuum pixel then keeps those pixels floating inside its glass body. While a Vacuum potion is running only every 10th click vacuums.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Obsidian","n":8,"name":"Obsidian Pixels","family":"mining","tags":[],"hazard":false,"color":[0.22,0.1,0.35],"pay":80.0,"hits":15,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.15,"guide":"A Mining ore: black volcanic glass that takes 15 clicks and cracks more with every hit, but pays a lot; the click sound rises in pitch as it breaks. Breaking it throws dust and glass shards.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Luminescent","n":9,"name":"Luminescent Pixels","family":"special","tags":[],"hazard":false,"color":[0.4,1.0,0.7],"pay":3.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.5,"guide":"A glowing pixel. Its husk stays bright as it falls and leaves a fading trail of light.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":["glow"],"surface":null,"soundAs":null,"fxAs":null},{"id":"Singularity","n":10,"name":"Singularity Pixels","family":"special","tags":[],"hazard":false,"color":[0.25,0.05,0.4],"pay":25.0,"hits":3,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.08,"guide":"Rare. Its husk becomes a gravity well: for 5 minutes it drags up to 20 nearby husks toward it, keeps them from despawning, and captures meteors that fly close. Wells packed close together starve each other, so space them out. Feeding one to a black hole counts toward the Event Horizon achievement.","husk":"becomes a gravity well that holds up to 20 other husks for 5 minutes.","huskDefault":false,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":["glow"],"surface":null,"soundAs":null,"fxAs":null},{"id":"Ghost","n":11,"name":"Ghost Pixels","family":"special","tags":[],"hazard":false,"color":[0.85,0.95,1.0],"pay":8.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.3,"guide":"A gray, gelatinous blob. Clicking it is just a payout; its husk is the one that drifts away.","husk":"bounces slowly a few times, then floats up and drifts off the screen.","huskDefault":false,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Meteor","n":12,"name":"Meteor Pixels","family":"special","tags":[],"hazard":false,"color":[0.9,0.4,0.1],"pay":null,"hits":3,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.25,"guide":"A cratered rock that needs 3 hits; the lava cracks glow brighter with each one. Its husk shoots off across the screen, and every one that does has a chance of knocking a star (Stardust) down beside the cube.","husk":"streaks away across the screen in a fiery trail instead of falling.","huskDefault":false,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":["flyAway"],"surface":null,"soundAs":null,"fxAs":null},{"id":"Solar","n":13,"name":"Solar Pixels","family":"special","tags":[],"hazard":false,"color":[1.0,0.82,0.2],"pay":25.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.2,"guide":"A blazing sun. Every Solar click raises <b>Daylight<\/b> (it fades slowly): the higher it is, the faster seeds and Seed pets grow and the more hovering Solar pixels pay. Old Solar pixels hover and pay 8% of their value every 4 seconds; five touching ones never despawn and glow with a yellow aura.","husk":"hovers above the floor, lasts 1.6 times longer than other husks and pays a small trickle.","huskDefault":false,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":["glow"],"surface":null,"soundAs":null,"fxAs":null},{"id":"Electric","n":14,"name":"Electric Pixels","family":"electric","tags":[],"hazard":false,"color":[0.4,0.85,1.0],"pay":8.0,"hits":1,"rmin":null,"rmax":null,"pmin":1.0,"pmax":15.0,"weight":null,"guide":"Pays a random whole amount (1-15). Clicking it triggers <b>Overcharge<\/b>: a burst of auto clicks (needs the Auto Clicker bought). Old Electric pixels link to each other and to placed devices with arcs, power timed devices (their countdown pauses) and never age while linked.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":["glow"],"surface":null,"soundAs":null,"fxAs":null},{"id":"DragonCube1","n":15,"name":"Dragon Cube (1)","family":"rare","tags":["DragonCube"],"hazard":false,"color":[1,0.62,0.12],"pay":1,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.0001,"guide":"A very rare drop (roughly 1 in 70,000 pixels). It pays 1 of itself and is kept in your backpack. Collect all seven stars and you can Summon the Dragon and make a wish.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"DragonCube2","n":16,"name":"Dragon Cube (2)","family":"rare","tags":["DragonCube"],"hazard":false,"color":[1,0.62,0.12],"pay":1,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.0001,"guide":"A very rare drop (roughly 1 in 70,000 pixels). It pays 1 of itself and is kept in your backpack. Collect all seven stars and you can Summon the Dragon and make a wish.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"DragonCube3","n":17,"name":"Dragon Cube (3)","family":"rare","tags":["DragonCube"],"hazard":false,"color":[1,0.62,0.12],"pay":1,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.0001,"guide":"A very rare drop (roughly 1 in 70,000 pixels). It pays 1 of itself and is kept in your backpack. Collect all seven stars and you can Summon the Dragon and make a wish.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"DragonCube4","n":18,"name":"Dragon Cube (4)","family":"rare","tags":["DragonCube"],"hazard":false,"color":[1,0.62,0.12],"pay":1,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.0001,"guide":"A very rare drop (roughly 1 in 70,000 pixels). It pays 1 of itself and is kept in your backpack. Collect all seven stars and you can Summon the Dragon and make a wish.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"DragonCube5","n":19,"name":"Dragon Cube (5)","family":"rare","tags":["DragonCube"],"hazard":false,"color":[1,0.62,0.12],"pay":1,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.0001,"guide":"A very rare drop (roughly 1 in 70,000 pixels). It pays 1 of itself and is kept in your backpack. Collect all seven stars and you can Summon the Dragon and make a wish.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"DragonCube6","n":20,"name":"Dragon Cube (6)","family":"rare","tags":["DragonCube"],"hazard":false,"color":[1,0.62,0.12],"pay":1,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.0001,"guide":"A very rare drop (roughly 1 in 70,000 pixels). It pays 1 of itself and is kept in your backpack. Collect all seven stars and you can Summon the Dragon and make a wish.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"DragonCube7","n":21,"name":"Dragon Cube (7)","family":"rare","tags":["DragonCube"],"hazard":false,"color":[1,0.62,0.12],"pay":1,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.0001,"guide":"A very rare drop (roughly 1 in 70,000 pixels). It pays 1 of itself and is kept in your backpack. Collect all seven stars and you can Summon the Dragon and make a wish.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Mirror","n":22,"name":"Mirror Pixels","family":"special","tags":[],"hazard":false,"color":[0.88,0.92,1.0],"pay":4.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.2,"guide":"A chrome pixel. Clicking it pays its own value and then repeats the last payout of the previous different pixel you clicked.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Seed","n":23,"name":"Seed Pixels","family":"farming","tags":["Farm"],"hazard":false,"color":[0.55,0.38,0.18],"pay":15.0,"hits":8,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.3,"guide":"A shell you dig open. Every hit throws dirt; the click that cracks it pays and plants three sprouts. Each sprout grows a random unlocked pixel over about 6 seconds (rarer types are likelier; never Vacuum or Singularity) and then pops off as a husk.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Water","n":24,"name":"Water Pixels","family":"farming","tags":["Farm"],"hazard":false,"color":[0.3,0.62,1.0],"pay":3.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.4,"guide":"A wobbly blue jelly. Its husk splashes the first time it lands, paying nothing, and instantly speeds up every growing sprout and planted Seed pet within about 5 pixel-widths (each only accepts water every 0.75 seconds).","husk":"splashes the first time it lands (no payout) and speeds up growing sprouts nearby.","huskDefault":false,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Fire","n":25,"name":"Fire Pixels","family":"fire","tags":["Firemaking","Standalone"],"hazard":false,"color":[1.0,0.45,0.1],"pay":6.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.5,"guide":"Firemaking block: a flaming pixel. Clicking it blasts a ring of flames outward from the cube.","husk":"burns away slowly over about 6 seconds without paying.","huskDefault":false,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Copper","n":26,"name":"Copper Ore","family":"mining","tags":["Ore","Standalone"],"hazard":false,"color":[0.86,0.46,0.26],"pay":3.0,"hits":2,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":1.0,"guide":"A tough ore that chips with every hit (cracks spread, rock and metal flecks fly). There is an 8% chance a fresh ore is a <b>rich vein<\/b>: it glitters and pays 5 times as much. Ores only come up while Mining is the skill pack in play.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Tin","n":27,"name":"Tin Ore","family":"mining","tags":["Ore","Standalone"],"hazard":false,"color":[0.75,0.8,0.84],"pay":3.0,"hits":2,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.9,"guide":"A tough ore that chips with every hit (cracks spread, rock and metal flecks fly). There is an 8% chance a fresh ore is a <b>rich vein<\/b>: it glitters and pays 5 times as much. Ores only come up while Mining is the skill pack in play.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Iron","n":28,"name":"Iron Ore","family":"mining","tags":["Ore","Standalone"],"hazard":false,"color":[0.62,0.36,0.3],"pay":5.0,"hits":3,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.8,"guide":"A tough ore that chips with every hit (cracks spread, rock and metal flecks fly). There is an 8% chance a fresh ore is a <b>rich vein<\/b>: it glitters and pays 5 times as much. Ores only come up while Mining is the skill pack in play.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Lead","n":29,"name":"Lead Ore","family":"mining","tags":["Ore","Standalone"],"hazard":false,"color":[0.42,0.44,0.5],"pay":5,"hits":3,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.7,"guide":"A tough ore that chips with every hit (cracks spread, rock and metal flecks fly). There is an 8% chance a fresh ore is a <b>rich vein<\/b>: it glitters and pays 5 times as much. Ores only come up while Mining is the skill pack in play.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Zinc","n":30,"name":"Zinc Ore","family":"mining","tags":["Ore","Standalone"],"hazard":false,"color":[0.7,0.74,0.76],"pay":6,"hits":3,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.65,"guide":"A tough ore that chips with every hit (cracks spread, rock and metal flecks fly). There is an 8% chance a fresh ore is a <b>rich vein<\/b>: it glitters and pays 5 times as much. Ores only come up while Mining is the skill pack in play.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Nickel","n":31,"name":"Nickel Ore","family":"mining","tags":["Ore","Standalone"],"hazard":false,"color":[0.6,0.62,0.52],"pay":8,"hits":4,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.55,"guide":"A tough ore that chips with every hit (cracks spread, rock and metal flecks fly). There is an 8% chance a fresh ore is a <b>rich vein<\/b>: it glitters and pays 5 times as much. Ores only come up while Mining is the skill pack in play.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Treasure","n":32,"name":"Treasure Pixels","family":"special","tags":["Standalone"],"hazard":false,"color":[1.0,0.78,0.22],"pay":4.0,"hits":10,"rmin":1.0,"rmax":20.0,"pmin":null,"pmax":null,"weight":0.1,"guide":"A chest that needs a random 1-20 hits, decided when it appears. Opening it pays the pixel's value x the hits x (1 + 0.15 x hits) and pours out a pile of random unlocked pixels at once: 2 plus one per hit, up to 24.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Nuclear","n":33,"name":"Nuclear Pixels","family":"special","tags":["Standalone"],"hazard":false,"color":[0.5,1.0,0.2],"pay":8.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.3,"guide":"A radioactive pixel with a toxic glow. Its husk ages every other husk within about 4 pixel-widths 40 times faster, so they disappear without paying - clear space before it lands.","husk":"radiates: other husks near it age 40 times faster and vanish.","huskDefault":false,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":["glow"],"surface":null,"soundAs":null,"fxAs":null},{"id":"Wood","n":34,"name":"Wood Pixels","family":"wood","tags":["Wood","Standalone"],"hazard":false,"color":[0.6,0.4,0.22],"pay":3.0,"hits":2,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":1.0,"guide":"Woodcutting block: a solid log. A couple of chops and it pays a fair amount.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Rock","n":35,"name":"Rock Pixels","family":"mining","tags":["Standalone"],"hazard":false,"color":[0.55,0.55,0.58],"pay":1.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":1.0,"guide":"Rock: Mining's filler block. One click, almost no pay. At low mining level it is most of what appears; as you level up it gets rarer and the ores show up more.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Dirt","n":36,"name":"Dirt Pixels","family":"farming","tags":["Farm","Standalone"],"hazard":false,"color":[0.42,0.28,0.16],"pay":1.0,"hits":3,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":1.0,"guide":"Farming's filler block: it takes a few digs (shrinking each time, with digging noises) and pays almost nothing. At low farming level it is most of what appears; as you level up it gets rarer and the other farm blocks show up more. Old Dirt pixels lying near a growing sprout also make it grow faster.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Fertilizer","n":37,"name":"Fertilizer Pixels","family":"farming","tags":["Farm","Standalone"],"hazard":false,"color":[0.5,0.66,0.25],"pay":2.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.5,"guide":"Farming block. Clicking it gives every growing sprout and Seed pet on the field an instant jump in growth.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Pollen","n":38,"name":"Pollen Pixels","family":"farming","tags":["Farm","Standalone","Plant"],"hazard":false,"color":[1.0,0.9,0.3],"pay":2.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.4,"guide":"Farming block that floats. An old Pollen pixel close to a sprout when it pops doubles the pay of the pixel that sprout grows.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Wheat","n":39,"name":"Wheat Pixels","family":"farming","tags":["Farm","Standalone","Plant"],"hazard":false,"color":[0.93,0.76,0.3],"pay":4.0,"hits":2,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.5,"guide":"Farming block. It pays more for every sprout currently growing on the field (up to a cap).","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Weevil","n":40,"name":"Weevil Pixels","family":"farming","tags":["Farm","Standalone"],"hazard":false,"color":[0.22,0.15,0.11],"pay":3.0,"hits":2,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.4,"guide":"Farming pest. While a Weevil sits on the cube it eats one growing sprout every few seconds until you click it away.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"GoldenFruit","n":41,"name":"Golden Fruit Pixels","family":"farming","tags":["Farm","Standalone","Plant"],"hazard":false,"color":[1.0,0.82,0.22],"pay":40.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.03,"guide":"Farming prize. A growing sprout has a 3% chance to produce one instead of a normal pixel; it pays a lot.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Wire","n":42,"name":"Wire Pixels","family":"electric","tags":["Standalone","Electrical"],"hazard":false,"color":[0.86,0.5,0.26],"pay":2.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":1.0,"guide":"A copper wire, and a <b>conductor<\/b>: old Wire pixels carry the arcs that link devices and other conductors.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Battery","n":43,"name":"Battery Pixels","family":"electric","tags":["Standalone","Electrical"],"hazard":false,"color":[0.5,0.9,0.3],"pay":12.0,"hits":3,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.4,"guide":"A conductor that takes 3 clicks and also sets off an Overcharge when you click it. Linked old Batteries power timed devices.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Capacitor","n":44,"name":"Capacitor Pixels","family":"electric","tags":["Standalone","Electrical"],"hazard":false,"color":[0.3,0.55,0.95],"pay":6.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.35,"guide":"Every other click you make stores one charge in it (up to 40). When you click the Capacitor it pays its value x (1 + 0.15 per stored charge), then the charge resets.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Resistor","n":45,"name":"Resistor Pixels","family":"electric","tags":["Standalone","Electrical"],"hazard":false,"color":[0.82,0.68,0.45],"pay":5.0,"hits":2,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.6,"guide":"A conductor that takes 2 clicks. Old Resistors link into the electric network like Electric pixels.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Transistor","n":46,"name":"Transistor Pixels","family":"electric","tags":["Standalone","Electrical"],"hazard":false,"color":[0.3,0.34,0.45],"pay":5.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.4,"guide":"Clicking it makes the NEXT pixel you collect pay double.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Fuse","n":47,"name":"Fuse Pixels","family":"electric","tags":["Standalone","Electrical"],"hazard":false,"color":[0.95,0.45,0.2],"pay":5.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.4,"guide":"Pays 3 times as much if you collect it within 3 seconds of it appearing, and only 0.3 times as much if you are slower.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Bulb","n":48,"name":"Bulb Pixels","family":"electric","tags":["Standalone","Electrical"],"hazard":false,"color":[1.0,0.95,0.6],"pay":6.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.3,"guide":"Pays 10% more for every old conductor pixel (Electric, Wire, Battery, Resistor) lying around, up to 30 of them.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Pest","n":49,"name":"Pest","family":"farming","tags":["Hazard","Standalone"],"hazard":true,"color":[0.4,0.45,0.14],"pay":0.0,"hits":6,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.05,"guide":"A HAZARD. Never worth clicking: hit it 6 times and a swarm of bugs pours out and eats the sprouts you have growing (the more bugs on a sprout, the faster it goes), and Farming XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it flies off by itself after a few seconds. The auto clicker never touches it. Right-click it to clear it safely: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your farming level rises.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"GasPocket","n":50,"name":"Gas Pocket","family":"mining","tags":["Hazard","Standalone"],"hazard":true,"color":[0.78,0.85,0.25],"pay":0.0,"hits":5,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.05,"guide":"A HAZARD. Never worth clicking: hit it 5 times and the gas explodes, blowing away the husks around the cube, and Mining XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Right-click it to clear it safely: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your mining level rises.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Bark","n":51,"name":"Bark Pixels","family":"wood","tags":["Wood","Standalone"],"hazard":false,"color":[0.42,0.32,0.24],"pay":2.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.8,"guide":"Woodcutting block: rough bark. One chop, pays a little.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Sap","n":52,"name":"Sap Pixels","family":"wood","tags":["Wood","Standalone"],"hazard":false,"color":[1.0,0.72,0.2],"pay":4.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.5,"guide":"Woodcutting block: a blob of sticky sap. It pays well for one chop. A Sap husk doesn't bounce, and it keeps the woodcutting husks around it fresh: each one that comes inside its yellow circle lasts 5 s longer (once), and the sap gains 1 s for each of them.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Leaf","n":53,"name":"Leaf Pixels","family":"wood","tags":["Wood","Standalone"],"hazard":false,"color":[0.35,0.78,0.3],"pay":1.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.9,"guide":"Woodcutting block: a flat green leaf with a pale midrib. One chop, pays little. An old Leaf pixel drifts down slowly instead of dropping.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Heartwood","n":54,"name":"Heartwood Pixels","family":"wood","tags":["Wood","Standalone"],"hazard":false,"color":[0.78,0.35,0.28],"pay":25.0,"hits":4,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.1,"guide":"Woodcutting block, rare: the glowing red core of a tree. It takes 4 chops but pays a lot.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Twig","n":55,"name":"Twig Pixels","family":"wood","tags":["Wood","Standalone"],"hazard":false,"color":[0.82,0.72,0.52],"pay":1.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":1.0,"guide":"Woodcutting filler block: a tangle of thin twigs. One click, almost no pay. Pinecone and Moss are its two siblings and share its spot: at low woodcutting level it is most of what appears; as you level up it gets rarer and the other wood blocks show up more.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"HornetNest","n":56,"name":"Termite Hive","family":"wood","tags":["Hazard","Standalone"],"hazard":true,"color":[0.85,0.78,0.5],"pay":0.0,"hits":4,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.05,"guide":"The TERMITE HIVE, a HAZARD. Never worth clicking: break it (4 hits) and the termites pour out, one for every husk lying on the floor. Each one runs to a husk, and a small bar over the pixel counts down while it chews - click the pixel before the bar runs out to save it, or it is eaten for good. Breaking it also drops Woodcutting XP 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Hold a Pesticide with Block Hold and one left click clears it at once, safely, like the beehive. Right-click works it away instead: 10 right clicks clear it safely, it is collected as currency and drops as a husk (breaking it with left clicks pays nothing). They are rare (about half as common as other hazards) and get a bit more common as your woodcutting level rises.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Berry","n":57,"name":"Berry Pixels","family":"forage","tags":["Forage","Standalone"],"hazard":false,"color":[0.75,0.15,0.35],"pay":3.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":1.0,"guide":"Foraging block: a juicy berry. One pick, pays a little. It squelches.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Mushroom","n":58,"name":"Mushroom Pixels","family":"forage","tags":["Forage","Standalone"],"hazard":false,"color":[0.82,0.4,0.3],"pay":4.0,"hits":2,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.6,"guide":"Foraging block: a mushroom. It takes 2 picks and releases a puff of spores.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Herb","n":59,"name":"Herb Pixels","family":"forage","tags":["Forage","Standalone"],"hazard":false,"color":[0.3,0.7,0.35],"pay":2.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.9,"guide":"Foraging block that is light and leafy. One pick, pays little. An old Herb pixel drifts down slowly instead of dropping.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Truffle","n":60,"name":"Truffle Pixels","family":"forage","tags":["Forage","Standalone"],"hazard":false,"color":[0.16,0.1,0.07],"pay":30.0,"hits":3,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.1,"guide":"Foraging block, rare: a buried treasure. It takes 3 digs but pays a lot.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Weeds","n":61,"name":"Weeds","family":"forage","tags":["Forage","Standalone"],"hazard":false,"color":[0.55,0.62,0.35],"pay":1.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":1.0,"guide":"Foraging's filler block. One click, almost no pay. At low foraging level it is most of what appears; as you level up it gets rarer and the good finds show up more.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Toadstool","n":62,"name":"Toadstool","family":"forage","tags":["Hazard","Standalone"],"hazard":true,"color":[0.62,0.25,0.65],"pay":0.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.05,"guide":"A Foraging HAZARD. One left click sets it off: its spores make you dizzy and the cube jerks away from your cursor after every click for a while (and Foraging XP drops 10% for a minute). One RIGHT click clears it safely - be quick.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Silver","n":63,"name":"Silver Ore","family":"mining","tags":["Ore","Standalone"],"hazard":false,"color":[0.88,0.9,0.95],"pay":9.0,"hits":4,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.5,"guide":"A tough ore that chips with every hit (cracks spread, rock and metal flecks fly). There is an 8% chance a fresh ore is a <b>rich vein<\/b>: it glitters and pays 5 times as much. Ores only come up while Mining is the skill pack in play.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Gold","n":64,"name":"Gold Ore","family":"mining","tags":["Ore","Standalone"],"hazard":false,"color":[1.0,0.82,0.25],"pay":14.0,"hits":5,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.35,"guide":"A tough ore that chips with every hit (cracks spread, rock and metal flecks fly). There is an 8% chance a fresh ore is a <b>rich vein<\/b>: it glitters and pays 5 times as much. Ores only come up while Mining is the skill pack in play.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Bedrock","n":65,"name":"Bedrock","family":"mining","tags":["Ore","Standalone"],"hazard":false,"color":[0.32,0.33,0.4],"pay":150.0,"hits":25,"rmin":20.0,"rmax":30.0,"pmin":null,"pmax":null,"weight":0.08,"guide":"The toughest rock: it takes a random 20-30 clicks to break (decided when it appears), but it pays a big chunk of currency and skill XP. Like the other ores it can be a glittering rich vein (5x).","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Fish","n":66,"name":"Fish Pixels","family":"fish","tags":["Fish","Standalone"],"hazard":false,"color":[0.45,0.65,0.85],"pay":12.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.15,"guide":"Fishing block, rare: a silvery fish. Clicking it starts a Weak Spots round (the camera zooms in and time slows): hit every spot to catch it and get paid, miss one and it gets away. The auto clicker leaves fish for you. Bait pellets on the floor (and fish and water in a Bait Bucket) make fish come up more often. With the Weak Spots minigame switched off in Toggles, a fish takes a random 7-25 clicks to reel in instead.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Seaweed","n":67,"name":"Seaweed Pixels","family":"fish","tags":["Fish","Standalone"],"hazard":false,"color":[0.2,0.6,0.4],"pay":2.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.9,"guide":"Fishing block: see-through seaweed. One click, pays little. An old Seaweed pixel sinks slowly instead of dropping.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Shell","n":68,"name":"Shell Pixels","family":"fish","tags":["Fish","Standalone"],"hazard":false,"color":[0.95,0.7,0.75],"pay":4.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.6,"guide":"Fishing block: a glossy shell. One click, pays a fair amount.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Pearl","n":69,"name":"Pearl Pixels","family":"fish","tags":["Fish","Standalone"],"hazard":false,"color":[0.97,0.97,1.0],"pay":35.0,"hits":4,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.08,"guide":"Fishing block, rare: a shining pearl. It takes 4 clicks but pays a lot.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Driftwood","n":70,"name":"Driftwood Pixels","family":"fish","tags":["Fish","Standalone"],"hazard":false,"color":[0.62,0.58,0.5],"pay":1.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.05,"guide":"Fishing's filler block. One click, almost no pay. At low fishing level it is most of what appears; as you level up it gets rarer and the good catches show up more.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Jellyfish","n":71,"name":"Jellyfish","family":"fish","tags":["Hazard","Standalone"],"hazard":true,"color":[0.9,0.45,0.8],"pay":0.0,"hits":9,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.05,"guide":"A HAZARD, and an electric one. Never worth clicking: hit it 9 times and it discharges, stinging everything around it (a wide blast that wipes out the husks near the cube), frying every bait pellet, and Fishing XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Right-click it to clear it safely: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your fishing level rises.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Bait","n":72,"name":"Bait Pixels","family":"fish","tags":["Fish","Standalone"],"hazard":false,"color":[0.8,0.55,0.28],"pay":1.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.5,"guide":"Fishing block: a lump of bait. One click, pays a little, and drops 6 bait pellets round the cube. While pellets lie there Fish show up much more often (+35% each). They rot away after about 60 seconds, and a Jellyfish going off fries every one of them.","husk":"falls beside the cube like any other and does nothing more itself. It is the 6 pellets it dropped when you collected it that attract fish: each one makes Fish +35% more common while it lies there (about 60 seconds).","huskDefault":false,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Bottle","n":73,"name":"Message in a Bottle","family":"fish","tags":["Fish","Standalone"],"hazard":false,"color":[0.4,0.75,0.65],"pay":8.0,"hits":4,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.05,"guide":"Fishing SPECIAL block, rare: a message in a bottle. It takes 4 clicks to break. When the glass breaks a scroll flies out and unrolls into a <b>treasure map<\/b>, then an <b>X<\/b> appears on the ground somewhere in view: click it several times to dig up the buried treasure, a haul of good fishing pixels (mostly bait). <b>Right-click the bottle<\/b> to let it drift away instead, if you don't want to bother with the map.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Whale","n":74,"name":"Whale","family":"fish","tags":["Fish","Standalone"],"hazard":false,"color":[0.3,0.5,0.75],"pay":20.0,"hits":33,"rmin":15.0,"rmax":50.0,"pmin":null,"pmax":null,"weight":0.015,"guide":"Fishing SPECIAL block, very rare: a whale. Click it once and you hook it: it yanks the line and swims fast away from your mouse, dashing about the screen, while you chase it and click. It needs a random 15-50 clicks, and the more it took the more it pays (pay x clicks x (1 + clicks x 0.05)). A thin fishing line is drawn from your cursor to the whale; it is invisible within a pixel of the cursor and fades in beyond that. Take too long (about 80 seconds) and it breaks the line and swims away. The auto clicker waits while a whale is fighting.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Mold","n":75,"name":"Mold","family":"forage","tags":["Hazard","Standalone"],"hazard":true,"color":[0.62,0.92,0.78],"pay":0.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.05,"guide":"A Foraging HAZARD. One left click bursts it and the mold covers EVERY husk on the field; moldy husks die after a while unless you shake them clean (grab one and shake it). One RIGHT click clears it safely - be quick.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"WoodChips","n":76,"name":"Wood Chips","family":"wood","tags":["Standalone"],"hazard":false,"color":[0.82,0.62,0.36],"pay":1.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.0,"guide":"","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"GreatOak","n":77,"name":"Great Oak","family":"wood","tags":["Wood","Standalone"],"hazard":false,"color":[0.36,0.26,0.15],"pay":150.0,"hits":100,"rmin":50.0,"rmax":100.0,"pmin":null,"pmax":null,"weight":0.0,"guide":"Woodcutting block, very rare: a mighty oak. It takes a random 50-100 clicks, but pays a huge amount. Every hit has a chance to shake a bird nest out of the tree onto the ground round the cube: click the nest before it disappears (about 9 seconds) for bonus Woodcutting XP.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Whetstone","n":78,"name":"Whetstone","family":"wood","tags":["Standalone"],"hazard":false,"color":[0.62,0.68,0.76],"pay":2.0,"hits":3,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.35,"guide":"Woodcutting block: a hard grey stone for sharpening. It takes 3 clicks and pays a little - but do not just break it: grab it with Block Hold while it is on the cube (a partly broken one can be held too). While you hold it every click fires off a rapid burst of extra clicks.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Acorn","n":79,"name":"Acorn","family":"wood","tags":["Standalone"],"hazard":false,"color":[0.68,0.46,0.22],"pay":1.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.5,"guide":"Woodcutting block: an acorn. One click, pays a little. The trick is its HUSK: every acorn lying on the field raises the chance that a wood block turns into a Great Oak (they only have to be there - no gathering). With enough of them out the chance is far higher. Acorns despawn like other husks, so keep them coming.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Pesticide","n":80,"name":"Pesticide","family":"wood","tags":["Standalone"],"hazard":false,"color":[0.72,0.88,0.22],"pay":2.0,"hits":3,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.25,"guide":"Woodcutting block: a canister of pesticide. It takes 3 clicks and pays a little - grab it with Block Hold instead. Held for a second, it is used up (it shrinks to husk size and pops off as a husk, no currency) and gives 3 Pesticide charges. Each charge clears the next Termite Hive automatically, safely (no termites, no XP penalty). Letting go early keeps the charges you already got, but the canister is still used up.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Charcoal","n":81,"name":"Charcoal","family":"fire","tags":[],"hazard":false,"color":[0.16,0.15,0.15],"pay":6.0,"hits":2,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.3,"guide":"A lump of charcoal. The Kiln turns burnt husks into Charcoal (a material); spend it in the shop to add this pixel to the spawn pool.","husk":"is the best fuel there is: in a Biomass Generator one burns as long as 8 wood husks.","huskDefault":false,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"GodSlifer","n":82,"name":"Slifer the Sky Dragon","family":"rare","tags":["RareCollectible"],"hazard":false,"color":[0.92,0.12,0.1],"pay":1,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":1e-06,"guide":"One of the three Egyptian God Cubes: Slifer the Sky Dragon, a red cube held together by storm lightning. The rarest kind of drop in the game (roughly 1 in 7 million pixels). It pays 1 of itself and you can only ever hold one.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"GodRa","n":83,"name":"Ra the Winged Dragon","family":"rare","tags":["RareCollectible"],"hazard":false,"color":[1,0.82,0.15],"pay":1,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":1e-06,"guide":"One of the three Egyptian God Cubes: Ra the Winged Dragon, a blazing golden cube wrapped in a sun's corona. The rarest kind of drop in the game (roughly 1 in 7 million pixels). It pays 1 of itself and you can only ever hold one.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"GodObelisk","n":84,"name":"Obelisk the Tormentor","family":"rare","tags":["RareCollectible"],"hazard":false,"color":[0.2,0.38,0.95],"pay":1,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":1e-06,"guide":"One of the three Egyptian God Cubes: Obelisk the Tormentor, a deep blue stone cube that sheds dust. The rarest kind of drop in the game (roughly 1 in 7 million pixels). It pays 1 of itself and you can only ever hold one.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"StoneSpace","n":85,"name":"Space Cube","family":"rare","tags":["RareCollectible","PrimeCube"],"hazard":false,"color":[0.2,0.45,1],"pay":1,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":1e-06,"guide":"One of the six Prime Cubes, an extremely rare drop (like the God Cubes, roughly 1 in 7 million pixels). It pays 1 of itself and you can only ever hold one of each. Hold all six and the Wizard will offer you a Gauntlet to bind them.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"StoneMind","n":86,"name":"Mind Cube","family":"rare","tags":["RareCollectible","PrimeCube"],"hazard":false,"color":[1,0.85,0.15],"pay":1,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":1e-06,"guide":"One of the six Prime Cubes, an extremely rare drop (like the God Cubes, roughly 1 in 7 million pixels). It pays 1 of itself and you can only ever hold one of each. Hold all six and the Wizard will offer you a Gauntlet to bind them.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"StoneReality","n":87,"name":"Reality Cube","family":"rare","tags":["RareCollectible","PrimeCube"],"hazard":false,"color":[0.95,0.1,0.1],"pay":1,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":1e-06,"guide":"One of the six Prime Cubes, an extremely rare drop (like the God Cubes, roughly 1 in 7 million pixels). It pays 1 of itself and you can only ever hold one of each. Hold all six and the Wizard will offer you a Gauntlet to bind them.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"StonePower","n":88,"name":"Power Cube","family":"rare","tags":["RareCollectible","PrimeCube"],"hazard":false,"color":[0.68,0.22,0.95],"pay":1,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":1e-06,"guide":"One of the six Prime Cubes, an extremely rare drop (like the God Cubes, roughly 1 in 7 million pixels). It pays 1 of itself and you can only ever hold one of each. Hold all six and the Wizard will offer you a Gauntlet to bind them.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"StoneTime","n":89,"name":"Time Cube","family":"rare","tags":["RareCollectible","PrimeCube"],"hazard":false,"color":[0.2,0.9,0.35],"pay":1,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":1e-06,"guide":"One of the six Prime Cubes, an extremely rare drop (like the God Cubes, roughly 1 in 7 million pixels). It pays 1 of itself and you can only ever hold one of each. Hold all six and the Wizard will offer you a Gauntlet to bind them.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"StoneSoul","n":90,"name":"Soul Cube","family":"rare","tags":["RareCollectible","PrimeCube"],"hazard":false,"color":[1,0.55,0.1],"pay":1,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":1e-06,"guide":"One of the six Prime Cubes, an extremely rare drop (like the God Cubes, roughly 1 in 7 million pixels). It pays 1 of itself and you can only ever hold one of each. Hold all six and the Wizard will offer you a Gauntlet to bind them.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"InfinityCubelette","n":91,"name":"Prime Cubelette","family":"rare","tags":["RareCollectible"],"hazard":false,"color":[1.0,0.9,0.55],"pay":1.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.0,"guide":"Forged with the Prime Gauntlet from all six Prime Cubes. It never drops and only one can exist.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":["glow"],"surface":null,"soundAs":null,"fxAs":null},{"id":"Pinecone","n":92,"name":"Pinecone Pixels","family":"wood","tags":["Wood","Standalone"],"hazard":false,"color":[0.6,0.4,0.24],"pay":1.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.0,"guide":"Woodcutting filler block: a scaly pinecone. One click, almost no pay. It shares the filler's spot with Twig and Moss, so it comes up a lot at low woodcutting level and less as you level up.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":"Twig","fxAs":"Twig"},{"id":"Moss","n":93,"name":"Moss Pixels","family":"wood","tags":["Wood","Standalone"],"hazard":false,"color":[0.36,0.6,0.24],"pay":1.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.0,"guide":"Woodcutting filler block: a soft cushion of moss. One click, almost no pay. It shares the filler's spot with Twig and Pinecone, so it comes up a lot at low woodcutting level and less as you level up.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":"Leaf","fxAs":"Leaf"},{"id":"Tinder","n":94,"name":"Tinder Pixels","family":"fire","tags":["Firemaking","Standalone"],"hazard":false,"color":[0.86,0.76,0.46],"pay":2.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":1.0,"guide":"Firemaking block: a tuft of dry grass and fluff. (Firemaking is a test skill: its mechanics are still to come.)","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Kindling","n":95,"name":"Kindling Pixels","family":"fire","tags":["Firemaking","Standalone"],"hazard":false,"color":[0.62,0.44,0.24],"pay":3.0,"hits":2,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.9,"guide":"Firemaking block: a bundle of thin, dry sticks.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Firewood","n":96,"name":"Firewood Pixels","family":"fire","tags":["Firemaking","Standalone"],"hazard":false,"color":[0.48,0.3,0.16],"pay":5.0,"hits":3,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.7,"guide":"Firemaking block: a split log, ready for the fire. It takes 3 hits.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Flint","n":97,"name":"Flint Pixels","family":"fire","tags":["Firemaking","Standalone"],"hazard":false,"color":[0.32,0.33,0.38],"pay":4.0,"hits":2,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.6,"guide":"Firemaking block: a hard striker stone that throws sparks.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Ember","n":98,"name":"Ember Pixels","family":"fire","tags":["Firemaking","Standalone"],"hazard":false,"color":[1.0,0.38,0.12],"pay":6.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.4,"guide":"Firemaking block: a glowing coal, still hot.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Ash","n":99,"name":"Ash","family":"fire","tags":["Firemaking","Standalone"],"hazard":false,"color":[0.62,0.6,0.58],"pay":1.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":1.0,"guide":"Firemaking's filler block: grey ash. One click, almost no pay.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"Wildfire","n":100,"name":"Wildfire","family":"fire","tags":["Firemaking","Hazard","Standalone"],"hazard":true,"color":[1.0,0.25,0.05],"pay":0.0,"hits":5,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":0.05,"guide":"A Firemaking HAZARD. Hit it 5 times and the fire spreads, burning up the husks around the cube, and Firemaking XP drops 10% for a minute. Right-click it to put it out safely.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":[],"surface":null,"soundAs":null,"fxAs":null},{"id":"GoldenSnitch","n":101,"name":"Golden Snitch","family":"rare","tags":["Standalone"],"hazard":false,"color":[1.0,0.78,0.22],"pay":1.0,"hits":1,"rmin":null,"rmax":null,"pmin":null,"pmax":null,"weight":1e-06,"guide":"An extremely rare drop. It never stays on the cube: it sprouts wings and darts round the screen. Keep your mouse on it to charge the bar (it does not charge while your mouse is off it), then click when the closing white ring meets the gold one. Catch it for a huge reward - 400 clicks' worth of your best pixel and maybe an Ultra pixel. Miss three times, or wait too long, and it escapes.","husk":"falls beside the cube and lies there for a while before it despawns.","huskDefault":true,"phys":{"bounce":0.08,"friction":0.65,"gravity":1.0},"beh":["glow"],"surface":null,"soundAs":null,"fxAs":null}],"systems":{"sprouts":"Growing sprouts & Seed pets","devices":"Timed devices","allhusks":"Every husk on the floor","nearhusks":"Husks nearby","woodhusks":"Woodcutting husks","recycler":"Recycler","crush":"Husk Crush","chipper":"Wood Chipper","biomass":"Biomass Generators","bucket":"Bait Bucket","booster":"Charge Booster","rod":"Lightning Rod","kiln":"Kiln","fish":"Fish spawns","potions":"Potions & Bank upgrade","stardust":"Stardust","greatoak":"Great Oak chance","nextclick":"Your next click","autoclick":"Auto clicks (Overcharge)","conductors":"Old conductor pixels","meteors":"Flying meteors","sap":"Sap circle"},"links":[{"from":"Vacuum","to":"allhusks","kind":"consume","text":"Clicking it sucks up every husk lying around and pays their stored value at once."},{"from":"Singularity","to":"nearhusks","kind":"hold","text":"Its husk drags up to 20 nearby husks in and keeps them from despawning for 5 minutes."},{"from":"Singularity","to":"meteors","kind":"hold","text":"Captures Meteor husks that fly close."},{"from":"Nuclear","to":"nearhusks","kind":"harm","text":"Its husk ages every other husk within ~4 widths 40x faster, so they vanish unpaid."},{"from":"Sap","to":"woodhusks","kind":"boost","text":"Woodcutting husks entering its yellow circle last 5 s longer (once); the Sap gains 1 s for each."},{"from":"Water","to":"sprouts","kind":"boost","text":"Its husk splashes on first landing and gives sprouts nearby an instant growth jump."},{"from":"Solar","to":"sprouts","kind":"boost","text":"Solar clicks raise Daylight: seeds and Seed pets grow faster."},{"from":"Solar","to":"Solar","kind":"hold","text":"Five touching Solar husks never despawn and glow with a yellow aura."},{"from":"Pollen","to":"sprouts","kind":"boost","text":"A Pollen husk beside a sprout when it pops doubles the pay of the pixel it grows."},{"from":"Dirt","to":"sprouts","kind":"boost","text":"Dirt husks lying near a growing sprout make it grow faster."},{"from":"Fertilizer","to":"sprouts","kind":"boost","text":"Clicking it gives every growing sprout and Seed pet an instant growth jump."},{"from":"Wheat","to":"sprouts","kind":"reads","text":"Pays more for every sprout currently growing (up to a cap)."},{"from":"Seed","to":"sprouts","kind":"creates","text":"Cracking it plants three sprouts that each grow a random unlocked pixel."},{"from":"Weevil","to":"sprouts","kind":"harm","text":"While it sits on the cube it eats a growing sprout every few seconds."},{"from":"Pest","to":"sprouts","kind":"harm","text":"Breaking it releases bugs that eat your growing sprouts."},{"from":"GoldenFruit","to":"sprouts","kind":"creates","text":"A growing sprout has a 3% chance to grow one instead of a normal pixel."},{"from":"Electric","to":"devices","kind":"boost","text":"Linked Electric husks power timed devices (their countdown pauses) and never age while linked."},{"from":"Electric","to":"autoclick","kind":"boost","text":"Clicking it triggers Overcharge: a burst of auto clicks."},{"from":"Electric","to":"booster","kind":"feeds","text":"Electric husks that link to a Charge Booster fill its meter and are used up."},{"from":"Wire","to":"conductors","kind":"link","text":"Wire husks carry the arcs that link devices and other conductors."},{"from":"Battery","to":"devices","kind":"boost","text":"Linked Battery husks power timed devices."},{"from":"Battery","to":"autoclick","kind":"boost","text":"Clicking it also sets off an Overcharge."},{"from":"Resistor","to":"conductors","kind":"link","text":"Resistor husks link into the electric network like Electric pixels."},{"from":"Bulb","to":"conductors","kind":"reads","text":"Pays 10% more per old conductor pixel lying around (up to 30)."},{"from":"Transistor","to":"nextclick","kind":"boost","text":"Clicking it makes the next pixel you collect pay double."},{"from":"Mirror","to":"nextclick","kind":"reads","text":"Repeats the last payout of the previous different pixel you clicked."},{"from":"rod","to":"allhusks","kind":"converts","text":"Lightning strikes turn every husk around the rod into an Electric pixel."},{"from":"Meteor","to":"stardust","kind":"creates","text":"Every Meteor husk that streaks off may knock a star (Stardust) down beside the cube."},{"from":"Glass","to":"potions","kind":"feeds","text":"Glass is the material for potions and the Pixel Bank storage upgrade."},{"from":"Treasure","to":"allhusks","kind":"creates","text":"Opening it pours out 2 + one per hit (up to 24) random unlocked pixels."},{"from":"Acorn","to":"greatoak","kind":"boost","text":"Every Acorn husk on the field raises the chance a wood block turns into a Great Oak."},{"from":"Pesticide","to":"HornetNest","kind":"harm","text":"Held with Block Hold it gives 3 charges; each clears the next Termite Hive safely."},{"from":"HornetNest","to":"allhusks","kind":"harm","text":"Breaking it sends one termite per husk on the floor to chew them up unless you click to save them."},{"from":"GasPocket","to":"nearhusks","kind":"harm","text":"Breaking it blows away the husks around the cube."},{"from":"Jellyfish","to":"nearhusks","kind":"harm","text":"Breaking it wipes out the husks near the cube."},{"from":"Jellyfish","to":"Bait","kind":"harm","text":"Its discharge fries every bait pellet."},{"from":"Wildfire","to":"nearhusks","kind":"harm","text":"Breaking it spreads fire that burns up the husks around the cube."},{"from":"Mold","to":"allhusks","kind":"harm","text":"Bursting it covers every husk in mold; moldy husks die unless shaken clean."},{"from":"Bait","to":"fish","kind":"boost","text":"Each bait pellet it drops makes Fish 35% more common for about a minute."},{"from":"Fish","to":"bucket","kind":"feeds","text":"Fish (and Water) husks stored in a Bait Bucket keep their value and make fish come up more often."},{"from":"Water","to":"bucket","kind":"feeds","text":"Water husks can be stored in the Bait Bucket too."},{"from":"Wood","to":"chipper","kind":"feeds","text":"Wood husks dropped into the chipper give Woodcutting XP and make Wood Chips."},{"from":"chipper","to":"WoodChips","kind":"creates","text":"Every few shredded Wood husks make a Wood Chips block."},{"from":"woodhusks","to":"biomass","kind":"feeds","text":"Woodcutting husks are burned for power; devices in the ring stop their timers."},{"from":"Charcoal","to":"biomass","kind":"feeds","text":"Charcoal and Wood Chips burn longer in a Biomass Generator."},{"from":"WoodChips","to":"biomass","kind":"feeds","text":"Wood Chips burn longer in a Biomass Generator."},{"from":"kiln","to":"Charcoal","kind":"creates","text":"The Kiln burns what enters its mouth into Charcoal material, which buys the Charcoal Pixel in the shop."},{"from":"allhusks","to":"recycler","kind":"feeds","text":"Any husk in a Recycler becomes half its value as currency; same colour in a row builds a streak."},{"from":"allhusks","to":"crush","kind":"feeds","text":"Right-click a husk to crush it for its own skill's XP (half a click's)."},{"from":"Capacitor","to":"nextclick","kind":"reads","text":"Every other click stores a charge (up to 40); clicking it pays +15% per charge."}]};
+
+const FAMILIES = [
+  ['core','Core colours','White to Blue: the plain blocks everything starts with.'],
+  ['special','Specials','Shop and event blocks with a trick of their own.'],
+  ['wood','Woodcutting','Logs, leaves, sap and the Termite Hive.'],
+  ['forage','Foraging','Berries, mushrooms, herbs and two nasty hazards.'],
+  ['fish','Fishing','Fish, bait and the very rare Whale.'],
+  ['farming','Farming','Seeds, water and everything that feeds sprouts.'],
+  ['mining','Mining','Ores that crack, rich veins and the Gas Pocket.'],
+  ['electric','Electrician','Conductors that link devices with arcs.'],
+  ['fire','Firemaking','The test skill: tinder, flint, embers and Wildfire.'],
+  ['rare','Rares','Dragon, God and Prime Cubes, the Cubelette and the Golden Snitch.'],
+];
+const FAMNAME = Object.fromEntries(FAMILIES.map(f=>[f[0],f[1]]));
+const KINDS = {
+  boost:['Helps','--boost'], harm:['Harms','--harm'], feeds:['Feeds','--feeds'], creates:['Makes','--creates'],
+  hold:['Holds','--hold'], link:['Links','--link'], reads:['Counts','--reads'], converts:['Converts','--converts'], consume:['Collects','--consume']
+};
+const BEH = {
+  flutter:'Swings down like a leaf', splash:'Splashes on landing', shatter:'Shatters on landing', floatAway:'Floats off the screen',
+  gravityWell:'Gravity well', radiation:'Radioactive', burn:'Burns away', sunFx:'Hovers and pays a trickle', wobble:'Jelly wobble',
+  jagged:'Chipped edges', blob:'Soft blob shape', shine:'Shiny sweep', cometTail:'Comet tail', flyAway:'Streaks across the screen', glow:'Glows'
+};
+const MOTION_BEH = ['flutter','splash','shatter','floatAway','gravityWell','radiation','burn','sunFx','flyAway'];
+const px = DATA.pixels, byId = Object.fromEntries(px.map(p=>[p.id,p]));
+const SYS = DATA.systems, LINKS = DATA.links;
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// The game's texts carry a little rich text (<b>, <i>); keep those two, escape everything else.
+const rich = s => esc(s).replace(/&lt;(\/?)(b|i)&gt;/g,'<$1$2>');
+const hex = c => '#'+c.map(v=>Math.round(Math.max(0,Math.min(1,v))*255).toString(16).padStart(2,'0')).join('');
+const shade = (c,f) => hex(c.map(v=> f>=1 ? v+(1-v)*(f-1) : v*f));
+const lum = c => .2126*c[0]+.7152*c[1]+.0722*c[2];
+function cubeVars(c){ return `--ct:${shade(c,1.28)};--cl:${hex(c)};--cr:${shade(c,.72)};--cb:${shade(c,.55)}`; }
+function iso(c, cls=''){
+  return `<svg class="iso ${cls}" viewBox="0 0 40 46" aria-hidden="true"><polygon points="20,2 38,12 20,22 2,12" fill="${shade(c,1.28)}"/><polygon points="2,12 20,22 20,44 2,34" fill="${hex(c)}"/><polygon points="38,12 20,22 20,44 38,34" fill="${shade(c,.72)}"/></svg>`;
+}
+const fmt = v => v==null ? '—' : (v>=1000 ? Math.round(v).toLocaleString('en') : (Number.isInteger(v) ? String(v) : v.toFixed(v<1?2:1)));
+function hitsLabel(p){ return p.rmin ? `${fmt(p.rmin)}-${fmt(p.rmax)}` : fmt(p.hits); }
+function payLabel(p){ return p.pmin ? `${fmt(p.pmin)}-${fmt(p.pmax)}` : fmt(p.pay); }
+function rarity(p){
+  const w = p.weight;
+  if (w==null) return {label:'—',dots:0};
+  if (w===0) return {label:'Never rolled',dots:0};
+  if (w>=0.8) return {label:'Common',dots:5};
+  if (w>=0.4) return {label:'Regular',dots:4};
+  if (w>=0.15) return {label:'Uncommon',dots:3};
+  if (w>=0.03) return {label:'Rare',dots:2};
+  if (w>=0.001) return {label:'Very rare',dots:1};
+  return {label:'Legendary',dots:1};
+}
+const isOdd = p => p.beh.some(b=>MOTION_BEH.includes(b)) || !p.huskDefault || p.phys.gravity!==1 || p.phys.bounce>0.3;
+function sysName(id){ return SYS[id] || (byId[id] ? byId[id].name : id); }
+function nodeLink(id){ return byId[id] ? `<a data-go="${id}">${esc(byId[id].name)}</a>` : `<b>${esc(SYS[id])}</b>`; }
+
+/* links that touch one pixel, including the group ones (every husk, wood husks...) */
+function linksFor(p){
+  const own = LINKS.filter(l=>l.from===p.id || l.to===p.id);
+  const group = LINKS.filter(l=>{
+    const g = [l.from,l.to];
+    if (g.includes(p.id)) return false;
+    if (l.from==='allhusks') return true;                       // every husk can go to these
+    if (g.includes('woodhusks')) return p.family==='wood';      // and every Woodcutting husk to these
+    return false;
+  });
+  return {own, group};
+}
+
+/* ---------- counts ---------- */
+document.getElementById('brandCube').innerHTML = iso([.3,.6,.21]);
+$('#cBlocks').textContent = px.length;
+$('#cOdd').textContent = px.filter(isOdd).length;
+$('#cLinks').textContent = LINKS.length;
+$('#cHaz').textContent = px.filter(p=>p.hazard).length;
+
+/* ---------- catalogue ---------- */
+const state = { fam:new Set(), haz:false, q:'', sort:'n', sel:'Leaf' };
+try { const s = localStorage.getItem('huskcodex.sort'); if (s) state.sort = s; } catch(e){}
+$('#sort').value = state.sort;
+
+function famChips(){
+  const box = $('#famChips');
+  let h = `<button class="chip" data-fam="*" aria-pressed="${state.fam.size===0}">All <small>${px.length}</small></button>`;
+  for (const [id,label] of FAMILIES){
+    const n = px.filter(p=>p.family===id).length;
+    h += `<button class="chip" data-fam="${id}" aria-pressed="${state.fam.has(id)}">${label} <small>${n}</small></button>`;
+  }
+  h += `<button class="chip haz" data-haz aria-pressed="${state.haz}">Hazards only <small>${px.filter(p=>p.hazard).length}</small></button>`;
+  box.innerHTML = h;
+}
+$('#famChips').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.hasAttribute('data-haz')) state.haz = !state.haz;
+  else if (b.dataset.fam==='*') state.fam.clear();
+  else { const f=b.dataset.fam; state.fam.has(f) ? state.fam.delete(f) : state.fam.add(f); }
+  famChips(); renderGrid();
+});
+$('#q').addEventListener('input', e=>{ state.q = e.target.value.trim().toLowerCase(); renderGrid(); });
+$('#sort').addEventListener('change', e=>{ state.sort = e.target.value; try{localStorage.setItem('huskcodex.sort',state.sort)}catch(_){} renderGrid(); });
+
+function matches(p){
+  if (state.fam.size && !state.fam.has(p.family)) return false;
+  if (state.haz && !p.hazard) return false;
+  if (!state.q) return true;
+  const hay = (p.name+' '+p.id+' '+p.guide+' '+p.husk+' '+FAMNAME[p.family]+' '+p.beh.map(b=>BEH[b]).join(' ')).toLowerCase();
+  return state.q.split(/\s+/).every(w=>hay.includes(w));
+}
+function sorter(a,b){
+  switch(state.sort){
+    case 'pay': return (b.pay??-1)-(a.pay??-1);
+    case 'rare': return (a.weight??9)-(b.weight??9);
+    case 'hits': return (b.rmax||b.hits)-(a.rmax||a.hits);
+    case 'name': return a.name.localeCompare(b.name);
+    default: return (a.n??999)-(b.n??999);
+  }
+}
+function tile(p){
+  const r = rarity(p);
+  const dots = [1,2,3,4,5].map(i=>`<span class="${i<=r.dots?'on':''}"></span>`).join('');
+  const dark = lum(p.color)<0.12 ? ' cube-dark' : '';
+  return `<button class="tile${dark}" data-id="${p.id}" aria-current="${p.id===state.sel}">
+    ${p.hazard?'<span class="flag">HAZARD</span>':''}
+    ${iso(p.color)}
+    <span style="min-width:0"><span class="nm">${esc(p.name.replace(/ Pixels$/,''))}</span>
+    <span class="sub" style="display:block">pays ${payLabel(p)} · ${hitsLabel(p)} hit${p.hits>1||p.rmin?'s':''}</span>
+    <span class="dots" title="${r.label}">${dots}</span></span></button>`;
+}
+function renderGrid(){
+  const list = px.filter(matches).sort(sorter);
+  const out = $('#groups');
+  if (!list.length){ out.innerHTML = `<div class="empty">No block matches "${esc(state.q)}". Clear the search or pick another family.</div>`; return; }
+  if (state.sort!=='n'){ out.innerHTML = `<div class="grid">${list.map(tile).join('')}</div>`; return; }
+  let h='';
+  for (const [id,label,blurb] of FAMILIES){
+    const g = list.filter(p=>p.family===id); if (!g.length) continue;
+    h += `<div class="family-block"><h2>${label} <small>${blurb}</small></h2><div class="grid">${g.map(tile).join('')}</div></div>`;
+  }
+  out.innerHTML = h;
+}
+$('#groups').addEventListener('click', e=>{ const t=e.target.closest('.tile'); if (t) select(t.dataset.id, true); });
+
+function meter(label, v, max, txt){
+  const pct = Math.max(2, Math.min(100, v/max*100));
+  return `<div class="meter"><span>${label}</span><span class="bar"><i style="width:${pct}%"></i></span><span class="mono">${txt}</span></div>`;
+}
+function renderPanel(){
+  const p = byId[state.sel]; if (!p) return;
+  const r = rarity(p);
+  const {own, group} = linksFor(p);
+  const li = l => {
+    const [kl,kv] = KINDS[l.kind];
+    const other = l.from===p.id ? l.to : l.from;
+    const dir = l.from===p.id ? '' : (l.to===p.id ? '' : '');
+    return `<li><span class="kind" style="--k:var(${kv})">${kl}</span><span>${l.from===p.id && l.to===p.id ? '' : (l.from===p.id ? '→ ' : '← ')}${nodeLink(other)}: ${esc(l.text)}</span></li>`;
+  };
+  const beh = p.beh.map(b=>`<span class="tag">${BEH[b]||b}</span>`).join('');
+  const custom = p.phys.gravity!==1 || p.phys.bounce!==0.08 || p.phys.friction!==0.65;
+  $('#panel').innerHTML = `
+    <div class="stage" style="${cubeVars(p.color)}">
+      <span class="num">#${p.n}</span>
+      <div class="cube3d"><div class="f1"></div><div class="f2"></div><div class="f3"></div><div class="f4"></div><div class="f5"></div><div class="f6"></div></div>
+      <span class="husk-mini">${iso(p.color,'husk')}husk</span>
+    </div>
+    <div class="pbody">
+      <div><h2>${esc(p.name)}</h2>
+        <div class="fam"><span>${FAMNAME[p.family]}</span>${p.hazard?'<span class="hz">Hazard</span>':''}<span>${r.label}</span></div></div>
+      <div class="stats">
+        <div><b>${payLabel(p)}</b><span>Pays</span></div>
+        <div><b>${hitsLabel(p)}</b><span>Clicks</span></div>
+        <div><b>${p.weight==null?'—':fmt(p.weight)}</b><span>Spawn weight</span></div>
+      </div>
+      <div class="sect"><h3>On the cube</h3><p>${rich(p.guide)||'<span style="color:var(--muted)">No guide text yet.</span>'}</p></div>
+      <div class="sect"><h3>Its husk</h3><p class="husk-text ${p.huskDefault?'plain':''}">${p.huskDefault?'An ordinary husk: it ':'It '}${rich(p.husk)}</p></div>
+      <div class="sect"><h3>How the husk falls${custom?'':' (the shared defaults)'}</h3>
+        <div class="meters">
+          ${meter('Bounce', p.phys.bounce, 1, fmt(p.phys.bounce))}
+          ${meter('Grip', p.phys.friction, 1.4, fmt(p.phys.friction))}
+          ${meter('Gravity', p.phys.gravity, 1, p.phys.gravity===0?'none':'×'+fmt(p.phys.gravity))}
+        </div>
+        ${beh?`<div class="tagrow" style="margin-top:10px">${beh}</div>`:''}
+      </div>
+      <div class="sect"><h3>Interactions</h3>
+        ${own.length?`<ul class="ix">${own.map(li).join('')}</ul>`:'<p style="color:var(--muted);font-size:14px">Nothing special of its own.</p>'}
+        ${group.length?`<p style="color:var(--muted);font-size:13px;margin-top:10px">Like ${p.family==='wood'?'every Woodcutting husk':'every husk'}: ${group.map(l=>esc(l.text.replace(/\.$/,''))).join('; ')}.</p>`:''}
+      </div>
+      <button class="ghostbtn" data-drop="${p.id}">Drop it in the fall lab</button>
+    </div>`;
+}
+$('#panel').addEventListener('click', e=>{
+  const a = e.target.closest('[data-go]'); if (a){ select(a.dataset.go, true); return; }
+  const d = e.target.closest('[data-drop]'); if (d){ showView('lab'); lab.picked = new Set([d.dataset.drop]); renderPicker(); lab.dropPicked(); }
+});
+function select(id, scroll){
+  if (!byId[id]) return;
+  state.sel = id;
+  document.querySelectorAll('.tile').forEach(t=>t.setAttribute('aria-current', t.dataset.id===id));
+  renderPanel();
+  if (scroll && window.matchMedia('(max-width:900px)').matches) $('#panel').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+/* ---------- views ---------- */
+function showView(v){
+  document.querySelectorAll('nav.views button').forEach(b=>b.setAttribute('aria-selected', b.dataset.view===v));
+  for (const k of ['catalogue','web','lab']) $('#view-'+k).hidden = k!==v;
+  if (v==='lab'){ lab.resize(); if (!lab.started) lab.start(); }
+}
+document.querySelector('nav.views').addEventListener('click', e=>{ const b=e.target.closest('button'); if (b) showView(b.dataset.view); });
+
+/* ---------- interaction map ---------- */
+const mapState = { kinds:new Set(Object.keys(KINDS)), focus:null };
+function kindChips(){
+  $('#kindChips').innerHTML = Object.entries(KINDS).map(([k,[l,v]])=>{
+    const n = LINKS.filter(x=>x.kind===k).length;
+    return `<button class="chip" data-kind="${k}" style="--k:var(${v})" aria-pressed="${mapState.kinds.has(k)}">${l} <small>${n}</small></button>`;
+  }).join('');
+}
+$('#kindChips').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; const k=b.dataset.kind; mapState.kinds.has(k)?mapState.kinds.delete(k):mapState.kinds.add(k); kindChips(); drawMap(); });
+
+function drawMap(){
+  const svg = $('#map'), C = 500;
+  const shown = LINKS.filter(l=>mapState.kinds.has(l.kind));
+  const ids = new Set(); shown.forEach(l=>{ids.add(l.from); ids.add(l.to);});
+  const sysIds = [...ids].filter(i=>SYS[i]);
+  const pxIds = [...ids].filter(i=>byId[i]).sort((a,b)=>{
+    const fa = FAMILIES.findIndex(f=>f[0]===byId[a].family), fb = FAMILIES.findIndex(f=>f[0]===byId[b].family);
+    return fa-fb || byId[a].n-byId[b].n;
+  });
+  const pos = {};
+  pxIds.forEach((id,i)=>{ const a = -Math.PI/2 + i/pxIds.length*Math.PI*2; pos[id] = {x:C+Math.cos(a)*360, y:C+Math.sin(a)*360, a}; });
+  // things acted on sit in two columns in the middle, each beside the blocks that reach it (fewer crossing lines)
+  const mean = id => { const ps = shown.filter(l=>l.from===id||l.to===id).map(l=>pos[l.from===id?l.to:l.from]).filter(Boolean);
+    return ps.length ? {x:ps.reduce((s,q)=>s+q.x,0)/ps.length, y:ps.reduce((s,q)=>s+q.y,0)/ps.length} : {x:C,y:C}; };
+  const m = Object.fromEntries(sysIds.map(id=>[id,mean(id)]));
+  const cols = [sysIds.filter(id=>m[id].x<C), sysIds.filter(id=>m[id].x>=C)];
+  while (Math.abs(cols[0].length-cols[1].length)>1){ const [big,small] = cols[0].length>cols[1].length?[0,1]:[1,0];
+    cols[big].sort((a,b)=>Math.abs(m[a].x-C)-Math.abs(m[b].x-C)); cols[small].push(cols[big].shift()); }
+  cols.forEach((col,ci)=>{ col.sort((a,b)=>m[a].y-m[b].y); const n=col.length, top=C-(n-1)*20;
+    col.forEach((id,i)=>{ pos[id] = {x:C+(ci?95:-95), y:top+i*40, a:0, side:ci?1:-1}; }); });
+  let h = '<g class="edges">';
+  shown.forEach((l,i)=>{
+    let A = pos[l.from], B = pos[l.to]; if (!A||!B||l.from===l.to) return;
+    const edgeOf = (P,Q) => P.side ? {x:P.x + (Q.x<P.x?-88:88), y:P.y} : P;
+    A = edgeOf(A,B); B = edgeOf(B,A);
+    const mx=(A.x+B.x)/2, my=(A.y+B.y)/2, cx = C+(mx-C)*.35, cy = C+(my-C)*.35;
+    h += `<path class="edge" data-i="${i}" data-a="${l.from}" data-b="${l.to}" d="M${A.x.toFixed(1)},${A.y.toFixed(1)} Q${cx.toFixed(1)},${cy.toFixed(1)} ${B.x.toFixed(1)},${B.y.toFixed(1)}" stroke="var(${KINDS[l.kind][1]})"/>`;
+  });
+  h += '</g><g class="nodes">';
+  for (const id of sysIds){
+    const P = pos[id], label = SYS[id], w = 176;
+    h += `<g class="node" data-id="${id}" tabindex="0" transform="translate(${P.x.toFixed(1)},${P.y.toFixed(1)})">
+      <rect x="${-w/2}" y="-13" width="${w}" height="26" rx="4" fill="var(--bg)" stroke="var(--fg)" stroke-width="1.2"/>
+      <text text-anchor="middle" y="4.5" font-size="${label.length>24?11:12.5}" font-weight="700">${esc(label)}</text></g>`;
+  }
+  for (const id of pxIds){
+    const P = pos[id], p = byId[id], deg = P.a*180/Math.PI, flip = Math.cos(P.a)<0;
+    const rot = flip ? deg+180 : deg, anchor = flip ? 'end':'start', dx = flip ? -14 : 14;
+    h += `<g class="node" data-id="${id}" tabindex="0" transform="translate(${P.x.toFixed(1)},${P.y.toFixed(1)})">
+      <rect x="-7" y="-7" width="14" height="14" fill="${hex(p.color)}" stroke="var(--fg)" stroke-width="1" transform="rotate(45)"/>
+      <text transform="rotate(${rot.toFixed(1)})" x="${dx}" y="4" text-anchor="${anchor}" font-size="13">${esc(p.name.replace(/ Pixels$/,''))}</text></g>`;
+  }
+  h += '</g>';
+  svg.innerHTML = h;
+  svg.classList.toggle('dim', !!mapState.focus);
+  if (mapState.focus) focusNode(mapState.focus);
+  else caption(null);
+}
+function focusNode(id){
+  mapState.focus = id;
+  const svg = $('#map'); svg.classList.add('dim');
+  svg.querySelectorAll('.edge').forEach(e=>e.classList.toggle('hot', e.dataset.a===id || e.dataset.b===id));
+  const near = new Set([id]); svg.querySelectorAll('.edge.hot').forEach(e=>{near.add(e.dataset.a); near.add(e.dataset.b);});
+  svg.querySelectorAll('.node').forEach(n=>n.classList.toggle('hot', near.has(n.dataset.id)));
+  caption(id);
+}
+function caption(id){
+  const box = $('#mapCaption');
+  if (!id){
+    box.innerHTML = `<h3>How husks reach each other</h3><p>Blocks sit on the outer ring, coloured as they are in the game; the things they act on (sprouts, devices, machines, groups of husks) sit inside. Pick a dot or a box to follow its lines.</p><p>The busiest corners: Farming feeds sprouts, Electrician links devices, and the hazards all go after the husks lying round the cube.</p>`;
+    return;
+  }
+  const ls = LINKS.filter(l=>(l.from===id||l.to===id) && mapState.kinds.has(l.kind));
+  const name = sysName(id);
+  box.innerHTML = `<h3>${esc(name)}</h3>
+    ${byId[id]?`<p><a class="mono" style="color:var(--accent);cursor:pointer" data-open="${id}">Open in the catalogue</a></p>`:''}
+    <ul class="ix">${ls.map(l=>`<li><span class="kind" style="--k:var(${KINDS[l.kind][1]})">${KINDS[l.kind][0]}</span><span>${nodeLink(l.from)} → ${nodeLink(l.to)}: ${esc(l.text)}</span></li>`).join('')}</ul>
+    <p style="margin-top:12px"><button class="btn" data-clear>Show everything</button></p>`;
+}
+$('#map').addEventListener('click', e=>{ const n=e.target.closest('.node'); if (n) focusNode(n.dataset.id); else { mapState.focus=null; drawMap(); } });
+$('#map').addEventListener('keydown', e=>{ if ((e.key==='Enter'||e.key===' ') && e.target.closest('.node')){ e.preventDefault(); focusNode(e.target.closest('.node').dataset.id); }});
+$('#mapCaption').addEventListener('click', e=>{
+  if (e.target.closest('[data-clear]')){ mapState.focus=null; drawMap(); return; }
+  const o = e.target.closest('[data-open]'); if (o){ showView('catalogue'); select(o.dataset.open, true); return; }
+  const g = e.target.closest('[data-go]'); if (g){ focusNode(g.dataset.go); }
+});
+
+/* ---------- fall lab ---------- */
+const lab = (()=>{
+  const cv = $('#lab'), ctx = cv.getContext('2d');
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let W=1200, H=460, floorY=H-56, S=22, items=[], parts=[], last=0, running=false;
+  const picked = new Set(['Leaf','Glass','Water','Ghost','Solar','Wood']);
+  const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  function resize(){
+    const r = cv.getBoundingClientRect(); if (!r.width) return;
+    const dpr = Math.min(2, window.devicePixelRatio||1);
+    W = r.width; H = Math.max(300, Math.min(520, r.width*0.42)); cv.style.height = H+'px';
+    cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); ctx.setTransform(dpr,0,0,dpr,0,0);
+    floorY = H-50; S = Math.max(14, Math.min(24, W/50));
+    draw();
+  }
+  function spawn(p, x){
+    const cubeX = x ?? W/2, b = p.beh;
+    const it = { p, x:cubeX+(Math.random()-.5)*S, y:96, vx:(Math.random()-.5)*220, vy:-120-Math.random()*120, a:0, va:(Math.random()-.5)*6,
+      bounces:0, landed:false, age:0, alpha:1, size:S, dead:false, phase:Math.random()*6.28, heading:Math.random()<.5?-1:1 };
+    if (b.includes('flyAway')){ const ang = (20+Math.random()*140)*Math.PI/180; it.vx = Math.cos(ang)*520; it.vy = -Math.sin(ang)*520; it.fly=true; it.trail=[]; }
+    if (b.includes('flutter')){ it.flutter=true; it.vx*=.4; it.vy=0; }
+    items.push(it);
+    if (items.length>60) items.shift();
+  }
+  function burst(x,y,col,n,spd,life,grav=900,sz=4){
+    for (let i=0;i<n;i++){ const a=Math.random()*Math.PI*2, s=spd*(.4+Math.random()*.8); parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-spd*.5,life,max:life,col,grav,sz}); }
+  }
+  function step(dt){
+    const g0 = 1300;
+    for (const it of items){
+      if (it.dead) continue;
+      const p = it.p, ph = p.phys, b = p.beh; it.age += dt;
+      if (it.fly){ it.trail.push([it.x,it.y]); if (it.trail.length>18) it.trail.shift(); it.x+=it.vx*dt; it.y+=it.vy*dt; it.a+=it.va*dt;
+        if (it.x<-60||it.x>W+60||it.y<-60) it.dead=true; continue; }
+      if (it.flutter && !it.landed){
+        const w = Math.PI*2/1.6, t = it.age*w + it.phase, c = Math.cos(t);
+        const tvx = it.heading*1.6*S*w*c, tvy = 2.2*S*(1.6*c*c-.15);
+        const k = 1-Math.exp(-8*dt); it.vx += (tvx-it.vx)*k; it.vy += (tvy-it.vy)*k; it.a = -0.6*c*it.heading;
+      } else if (b.includes('sunFx')){
+        const hover = floorY - S*2.2 + Math.sin(it.age*2+it.phase)*5;
+        it.vy += (hover-it.y)*6*dt - it.vy*3*dt; it.vx *= (1-2*dt); it.a += .4*dt;
+      } else if (it.floating){
+        it.vy -= 160*dt; it.vx += it.heading*40*dt; if (it.y < -40) it.dead=true;
+      } else {
+        it.vy += g0*ph.gravity*dt;
+      }
+      // gravity well pulls loose neighbours
+      if (b.includes('gravityWell') && it.landed){
+        for (const o of items){ if (o===it||o.dead||o.fly||o.p.beh.includes('gravityWell')) continue;
+          const dx=it.x-o.x, d=Math.abs(dx); if (d<S*9 && d>S*.9){ o.vx += Math.sign(dx)*500*dt; } }
+      }
+      if (b.includes('radiation') && it.landed){
+        for (const o of items){ if (o===it||o.dead||o.p.beh.includes('radiation')) continue;
+          if (Math.hypot(it.x-o.x,it.y-o.y) < S*4) { o.alpha -= dt*.9; if (o.alpha<=0) o.dead=true; } }
+      }
+      it.x += it.vx*dt; it.y += it.vy*dt; it.a += it.va*dt;
+      const bottom = floorY - it.size/2;
+      if (it.y >= bottom && it.vy>0 && !b.includes('sunFx')){
+        const speed = it.vy; it.y = bottom;
+        if (b.includes('shatter') && speed>200){ burst(it.x,bottom,p.color,10,260,.9,1400,5); it.dead=true; continue; }
+        if (b.includes('splash') && !it.splashed){ it.splashed=true; burst(it.x,bottom,[.55,.8,1],16,300,.8,1300,3);
+          for (let k=0;k<4;k++) parts.push({x:it.x,y:bottom,vx:(k-1.5)*120,vy:-260-Math.random()*80,life:.9,max:.9,col:p.color,grav:1300,sz:S*.4,cube:true}); it.dead=true; continue; }
+        it.landed = true; it.flutter = false;
+        const e = Math.min(.9, ph.bounce);
+        it.vy = speed>60 ? -speed*e : 0; it.bounces++;
+        it.vx *= (1-Math.min(.9, ph.friction*.6)); it.va *= .5;
+        if (b.includes('floatAway') && it.bounces>=2){ it.floating=true; }
+      }
+      if (it.landed && it.y>=bottom-0.5){ it.vx *= Math.max(0,1-ph.friction*6*dt); it.va *= Math.max(0,1-8*dt); it.a += (Math.round(it.a/(Math.PI/2))*(Math.PI/2)-it.a)*Math.min(1,10*dt); }
+      if (b.includes('burn') && it.landed){ it.size -= S/6*dt; if (Math.random()<.5) parts.push({x:it.x+(Math.random()-.5)*it.size,y:it.y-it.size/2,vx:0,vy:-60,life:.6,max:.6,col:[1,.5,.1],grav:-100,sz:3}); if (it.size<3) it.dead=true; }
+      if (it.x < it.size/2){ it.x=it.size/2; it.vx=Math.abs(it.vx)*.4; }
+      if (it.x > W-it.size/2){ it.x=W-it.size/2; it.vx=-Math.abs(it.vx)*.4; }
+    }
+    // simple husk-on-husk stacking along the floor: push overlapping resting husks apart sideways and up
+    for (let i=0;i<items.length;i++) for (let j=i+1;j<items.length;j++){
+      const A=items[i], B=items[j]; if (A.dead||B.dead||A.fly||B.fly||A.floating||B.floating) continue;
+      const dx=B.x-A.x, dy=B.y-A.y, min=(A.size+B.size)/2*.95;
+      if (Math.abs(dx)<min && Math.abs(dy)<min){
+        if (Math.abs(dy) > Math.abs(dx)*.6){ const top = dy<0?B:A, low = dy<0?A:B; top.y = low.y - min; if (top.vy>0) top.vy=0; top.landed=true; top.flutter=false; }
+        else { const push=(min-Math.abs(dx))/2*Math.sign(dx||1); A.x-=push; B.x+=push; }
+      }
+    }
+    items = items.filter(i=>!i.dead);
+    for (const q of parts){ q.life-=dt; q.vy+=q.grav*dt; q.x+=q.vx*dt; q.y+=q.vy*dt; if (q.y>floorY-q.sz/2 && q.grav>0){ q.y=floorY-q.sz/2; q.vy*=-.3; q.vx*=.7; } }
+    parts = parts.filter(q=>q.life>0);
+  }
+  function drawCube(x,y,s,a,col,alpha){
+    ctx.save(); ctx.translate(x,y); ctx.rotate(a); ctx.globalAlpha=alpha;
+    ctx.fillStyle = hex(col); ctx.fillRect(-s/2,-s/2,s,s);
+    ctx.fillStyle = shade(col,1.3); ctx.fillRect(-s/2,-s/2,s,s*.22);
+    ctx.fillStyle = shade(col,.7); ctx.fillRect(-s/2,s*.28,s,s*.22);
+    ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth=1; ctx.strokeRect(-s/2+.5,-s/2+.5,s-1,s-1);
+    ctx.restore();
+  }
+  function draw(){
+    const sky = cssVar('--sky'), floor = cssVar('--floor'), floorD = cssVar('--floor-dark');
+    ctx.globalAlpha=1; ctx.fillStyle = sky; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = floor; ctx.fillRect(0,floorY,W,H-floorY);
+    ctx.fillStyle = floorD; for (let x=0;x<W;x+=24) for (let y=floorY;y<H;y+=24) if (((x/24)+(y/24|0))%3===0) ctx.fillRect(x,y,12,12);
+    // the clicker cube
+    const cs = S*2.6, cx = W/2, cy = 60;
+    ctx.fillStyle = cssVar('--fg'); ctx.globalAlpha=.08; ctx.fillRect(cx-cs/2+4,cy-cs/2+4,cs,cs); ctx.globalAlpha=1;
+    drawCube(cx,cy,cs,0,[.95,.95,.95],1);
+    for (const it of items){
+      if (it.fly && it.trail){ for (let k=0;k<it.trail.length;k++){ const [tx,ty]=it.trail[k]; ctx.globalAlpha=k/it.trail.length*.5; ctx.fillStyle=k%2?'#ff9a3a':hex(it.p.color); ctx.fillRect(tx-it.size*k/36,ty-it.size*k/36,it.size*k/18,it.size*k/18);} }
+      const b = it.p.beh;
+      if (b.includes('gravityWell') && it.landed){ ctx.globalAlpha=.25; ctx.strokeStyle=hex(it.p.color); ctx.lineWidth=2; ctx.beginPath(); ctx.arc(it.x,it.y,S*(4+Math.sin(it.age*3)),0,6.28); ctx.stroke(); }
+      if (b.includes('radiation') && it.landed){ ctx.globalAlpha=.2+.1*Math.sin(it.age*5); ctx.strokeStyle='#7dff5a'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(it.x,it.y,S*4,0,6.28); ctx.stroke(); }
+      if (b.includes('glow')||b.includes('sunFx')){ const gr=ctx.createRadialGradient(it.x,it.y,0,it.x,it.y,it.size*1.8); gr.addColorStop(0,'rgba(255,240,170,.55)'); gr.addColorStop(1,'rgba(255,240,170,0)'); ctx.globalAlpha=1; ctx.fillStyle=gr; ctx.fillRect(it.x-it.size*2,it.y-it.size*2,it.size*4,it.size*4); }
+      drawCube(it.x,it.y,it.size,it.a,it.p.color,Math.max(0,it.alpha)*(b.includes('floatAway')?.8:1));
+    }
+    for (const q of parts){ ctx.globalAlpha=Math.max(0,q.life/q.max); ctx.fillStyle=hex(q.col); ctx.fillRect(q.x-q.sz/2,q.y-q.sz/2,q.sz,q.sz); }
+    ctx.globalAlpha=1;
+    $('#labCount').textContent = `${items.length} husk${items.length===1?'':'s'} on the floor`;
+  }
+  function loop(t){
+    const dt = Math.min(.033,(t-last)/1000||0); last=t;
+    if (!$('#view-lab').hidden){ step(dt); draw(); }
+    requestAnimationFrame(loop);
+  }
+  function settle(){ for (let i=0;i<400;i++) step(1/60); }
+  function dropPicked(x){ const list=[...picked].map(id=>byId[id]).filter(Boolean); list.forEach((p,i)=>setTimeout(()=>spawn(p,x),i*140)); if (reduce) setTimeout(()=>{settle();draw();}, list.length*140+20); }
+  cv.addEventListener('click', e=>{ const r=cv.getBoundingClientRect(); dropPicked(e.clientX-r.left); });
+  $('#dropBtn').addEventListener('click', ()=>dropPicked());
+  $('#randBtn').addEventListener('click', ()=>{ const pool = px.filter(p=>p.family!=='rare'); for (let i=0;i<12;i++) setTimeout(()=>spawn(pool[Math.random()*pool.length|0]), i*110); if (reduce) setTimeout(()=>{settle();draw();},1500); });
+  $('#clearBtn').addEventListener('click', ()=>{ items=[]; parts=[]; draw(); });
+  window.addEventListener('resize', resize);
+  let started=false;
+  return { resize, dropPicked, get started(){ return started; },
+           start(){ started=true; [...picked].forEach((id,i)=>spawn(byId[id], W*(.2+i*.12))); settle(); draw(); requestAnimationFrame(loop); },
+           set picked(v){ picked.clear(); v.forEach(x=>picked.add(x)); }, get picked(){ return picked; } };
+})();
+function renderPicker(){
+  const sorted = [...px].filter(p=>p.family!=='rare').sort((a,b)=>(isOdd(b)-isOdd(a)) || a.n-b.n);
+  $('#picker').innerHTML = sorted.map(p=>`<button class="pick" data-id="${p.id}" style="--c:${hex(p.color)}" aria-pressed="${lab.picked.has(p.id)}"><i></i>${esc(p.name.replace(/ Pixels$/,''))}</button>`).join('');
+}
+$('#picker').addEventListener('click', e=>{ const b=e.target.closest('.pick'); if(!b) return; const id=b.dataset.id; lab.picked.has(id)?lab.picked.delete(id):lab.picked.add(id); b.setAttribute('aria-pressed', lab.picked.has(id)); });
+
+/* ---------- start ---------- */
+famChips(); renderGrid();
+const fromHash = decodeURIComponent((location.hash||'').slice(1));
+if (fromHash==='map') showView('web');
+if (byId[fromHash]) state.sel = fromHash;
+select(state.sel, false);
+kindChips(); drawMap(); renderPicker();
+if (fromHash==='lab') showView('lab');
+</script>

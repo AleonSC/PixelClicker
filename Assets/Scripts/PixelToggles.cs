@@ -267,7 +267,7 @@ public class PixelToggles : MonoBehaviour
     {
         if (built && openObject != null)
         {
-            if (autoClicker == null) autoClicker = PixelFind.First<PixelAutoClicker>();
+            if (autoClicker == null) autoClicker = PixelFind.Cached<PixelAutoClicker>();
             bool show = !hideUntilAutoClicker || (autoClicker != null && (autoClicker.Running || autoClicker.UserDisabled))
                         || (PixelPets.Instance != null && PixelPets.Instance.OwnedCount > 0) // a pet also opens the window
                         || (PixelSkills.Instance != null && PixelSkills.Instance.AnyPackAvailable) // so do the skill pack switches
@@ -641,6 +641,53 @@ public class PixelToggles : MonoBehaviour
             Refresh();
         });
 
+        BuildGroupTabs(groupLabels, y, tabH, sidePad);   // the same choice as tab buttons
+        // --- The search bar under the tabs: looks through every group.
+        float searchH = 52f;
+        searchField = PixelUIKit.CreateInputField(font, windowObject.transform, "Toggle Search", new Vector2(0f, searchH), groupColor, textColor, fontSize * 0.8f, searchPlaceholder);
+        PixelUIKit.AddSearchIcon(searchField);
+        RectTransform sbr = searchField.GetComponent<RectTransform>();
+        sbr.anchorMin = new Vector2(0f, 1f); sbr.anchorMax = new Vector2(1f, 1f); sbr.pivot = new Vector2(0.5f, 1f);
+        sbr.offsetMin = new Vector2(sidePad, -(listTop - 2f + searchH)); sbr.offsetMax = new Vector2(-sidePad, -(listTop - 2f));
+        searchField.onValueChanged.AddListener(text =>
+        {
+            searchText = (text ?? "").Trim().ToLowerInvariant();
+            content.anchoredPosition = Vector2.zero;
+            Refresh();
+        });
+        y = listTop + searchH + 6f;   // the list starts under the search bar
+
+        // --- The list of switches.
+        scroll = PixelUIKit.CreateScrollView(windowObject.transform, "Toggle List", scrollbarColor, 12f, rowHeight, out content, out bar);
+        PixelScrollBarFade barFade = bar != null ? bar.GetComponent<PixelScrollBarFade>() : null;
+        if (barFade != null) barFade.hideBar = true;   // no visible scroll bar here (the list still scrolls with the wheel, and fades at the bottom)
+        RectTransform vr = scroll.GetComponent<RectTransform>();
+        vr.anchorMin = new Vector2(0f, 0f);
+        vr.anchorMax = new Vector2(1f, 1f);
+        vr.offsetMin = new Vector2(sidePad, sidePad);
+        vr.offsetMax = new Vector2(-sidePad, -y);
+
+        TMP_Text empty = PixelUIKit.CreateText(font, windowObject.transform, "Empty", emptyText.ToUpperInvariant(), fontSize * 0.9f,
+                                               TextAlignmentOptions.Center, FontStyles.Bold,
+                                               new Color(textColor.r, textColor.g, textColor.b, 0.6f));
+        OneLine(empty, fontSize * 0.9f, 8f);
+        RectTransform er = empty.rectTransform; // capitals, centred over the whole list area
+        er.anchorMin = Vector2.zero;
+        er.anchorMax = Vector2.one;
+        er.offsetMin = new Vector2(sidePad, sidePad);
+        er.offsetMax = new Vector2(-sidePad, -y);
+        emptyObject = empty.gameObject;
+        emptyLabel = empty;
+
+        BuildHint(hud);   // the hint box, where the window would be
+
+        windowObject.SetActive(false);
+        PixelWindows.Register(this, 15, () => windowObject != null && PixelPop.IsOpen(windowObject), Close);
+    }
+
+    // BuildUI, step: the group tab buttons (one per group, a pixel-art icon each) under the header.
+    private void BuildGroupTabs(List<string> groupLabels, float y, float tabH, float sidePad)
+    {
         // The same choice as tab buttons: used while the window stands alone (the drop-down is for beside the shop).
         groupImages = new Image[GroupCount];
         litGroup = -1;
@@ -682,43 +729,11 @@ public class PixelToggles : MonoBehaviour
                 Refresh();
             });
         }
-        // --- The search bar under the tabs: looks through every group.
-        float searchH = 52f;
-        searchField = PixelUIKit.CreateInputField(font, windowObject.transform, "Toggle Search", new Vector2(0f, searchH), groupColor, textColor, fontSize * 0.8f, searchPlaceholder);
-        PixelUIKit.AddSearchIcon(searchField);
-        RectTransform sbr = searchField.GetComponent<RectTransform>();
-        sbr.anchorMin = new Vector2(0f, 1f); sbr.anchorMax = new Vector2(1f, 1f); sbr.pivot = new Vector2(0.5f, 1f);
-        sbr.offsetMin = new Vector2(sidePad, -(listTop - 2f + searchH)); sbr.offsetMax = new Vector2(-sidePad, -(listTop - 2f));
-        searchField.onValueChanged.AddListener(text =>
-        {
-            searchText = (text ?? "").Trim().ToLowerInvariant();
-            content.anchoredPosition = Vector2.zero;
-            Refresh();
-        });
-        y = listTop + searchH + 6f;   // the list starts under the search bar
+    }
 
-        // --- The list of switches.
-        scroll = PixelUIKit.CreateScrollView(windowObject.transform, "Toggle List", scrollbarColor, 12f, rowHeight, out content, out bar);
-        PixelScrollBarFade barFade = bar != null ? bar.GetComponent<PixelScrollBarFade>() : null;
-        if (barFade != null) barFade.hideBar = true;   // no visible scroll bar here (the list still scrolls with the wheel, and fades at the bottom)
-        RectTransform vr = scroll.GetComponent<RectTransform>();
-        vr.anchorMin = new Vector2(0f, 0f);
-        vr.anchorMax = new Vector2(1f, 1f);
-        vr.offsetMin = new Vector2(sidePad, sidePad);
-        vr.offsetMax = new Vector2(-sidePad, -y);
-
-        TMP_Text empty = PixelUIKit.CreateText(font, windowObject.transform, "Empty", emptyText.ToUpperInvariant(), fontSize * 0.9f,
-                                               TextAlignmentOptions.Center, FontStyles.Bold,
-                                               new Color(textColor.r, textColor.g, textColor.b, 0.6f));
-        OneLine(empty, fontSize * 0.9f, 8f);
-        RectTransform er = empty.rectTransform; // capitals, centred over the whole list area
-        er.anchorMin = Vector2.zero;
-        er.anchorMax = Vector2.one;
-        er.offsetMin = new Vector2(sidePad, sidePad);
-        er.offsetMax = new Vector2(-sidePad, -y);
-        emptyObject = empty.gameObject;
-        emptyLabel = empty;
-
+    // BuildUI, step: the hint box - sits where the window would, next to the slid-out tab.
+    private void BuildHint(PixelHud hud)
+    {
         // --- The hint box: sits where the window would, next to the slid-out tab.
         hintObject = new GameObject("Toggles Hint", typeof(RectTransform), typeof(Image));
         hintObject.transform.SetParent(canvasRoot.transform, false);
@@ -742,9 +757,6 @@ public class PixelToggles : MonoBehaviour
         okr.anchoredPosition = new Vector2(0f, 20f);
         ok.onClick.AddListener(CloseHint);
         hintObject.SetActive(false);
-
-        windowObject.SetActive(false);
-        PixelWindows.Register(this, 15, () => windowObject != null && PixelPop.IsOpen(windowObject), Close);
     }
 
     private void Toggle()
@@ -776,38 +788,12 @@ public class PixelToggles : MonoBehaviour
     }
 
     private PixelShop shopRef;
-    [Tooltip("Gap between the shop window and this window when both are open.")]
-    [SerializeField] private float gapToShop = 8f;
 
-    /// <summary>With the shop open the window is as tall as it and fills the space between it and the screen's right edge.</summary>
+    /// <summary>With the shop open the window is as tall as it and as wide as the Currency panel, flush against the shop (the shared PixelUIKit.FitBesideShop).</summary>
     private void FitBesideShop()
     {
-        RectTransform wr = windowObject.GetComponent<RectTransform>();
         if (shopRef == null) shopRef = PixelFind.First<PixelShop>();
-        RectTransform shopRect = shopRef != null ? shopRef.PanelRect : null;
-        Canvas canvas = windowObject.GetComponentInParent<Canvas>();
-        float scale = canvas != null ? Mathf.Max(0.01f, canvas.rootCanvas.scaleFactor) : 1f;
-        PixelHud hud = PixelHud.Instance;
-        float inset = hud != null ? hud.SideShownInset : 0f;
-
-        if (shopRect == null || !shopRect.gameObject.activeInHierarchy)
-        {
-            wr.sizeDelta = windowSize;
-            wr.anchoredPosition = new Vector2(-inset, 0f);
-            SetBesideShop(false);
-            return;
-        }
-        SetBesideShop(true);
-        Vector3[] c = new Vector3[4];
-        shopRect.GetWorldCorners(c); // screen pixels (overlay canvas)
-        float shopRight = c[2].x, shopTop = c[2].y, shopBottom = c[0].y;
-        float width = (Screen.width - shopRight) / scale - gapToShop - inset;
-        // Same width as the Currency panel on the shop's other side, mirrored (same gap).
-        if (shopRef != null) width = shopRef.CurrencyPanelWidth;
-        float gap = shopRef != null ? shopRef.CurrencyPanelGap : gapToShop;
-        float rightEdgeFromScreenRight = (Screen.width - shopRight) / scale - gap - width; // flush against the shop, mirroring the currency panel
-        wr.sizeDelta = new Vector2(width, (shopTop - shopBottom) / scale);
-        wr.anchoredPosition = new Vector2(-Mathf.Max(0f, rightEdgeFromScreenRight), ((shopTop + shopBottom) * 0.5f - Screen.height * 0.5f) / scale);
+        SetBesideShop(PixelUIKit.FitBesideShop(windowObject.GetComponent<RectTransform>(), shopRef, windowSize));
     }
 
     private void SetBesideShop(bool value)

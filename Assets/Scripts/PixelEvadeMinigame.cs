@@ -19,31 +19,11 @@ using UnityEngine;
 /// kept slow enough to follow, so you can corner it and click. The auto clicker is off meanwhile: only your own clicks count. When the round ends you
 /// are paid a bonus of <see cref="rewardMultiplier"/> x the pixel's worth for every click you landed (the clicks still pay as usual).
 /// </summary>
-public class PixelEvadeMinigame : PixelMinigame
+public class PixelEvadeMinigame : PixelScheduledMinigame
 {
     [Header("References")]
     [Tooltip("The PixelClicker (camera, cube, payouts). Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
-
-    [Header("State")]
-    [Tooltip("Run from the start without buying it in the shop (for testing).")]
-    [SerializeField] private bool startRunning = false;
-
-    [Tooltip("Is the minigame running? (The shop turns this on when Cube Evasion is bought.)")]
-    [SerializeField] private bool running = false;
-
-    [Header("When it starts")]
-    [Min(0f)]
-    [Tooltip("Seconds after the minigame is switched on before the first round can start.")]
-    [SerializeField] private float firstRoundDelay = 90f;
-
-    [Min(1f)]
-    [Tooltip("Shortest wait between rounds (seconds).")]
-    [SerializeField] private float minInterval = 150f;
-
-    [Min(1f)]
-    [Tooltip("Longest wait between rounds (seconds).")]
-    [SerializeField] private float maxInterval = 300f;
 
     [Header("Rules")]
     [Min(5f)]
@@ -98,7 +78,7 @@ public class PixelEvadeMinigame : PixelMinigame
     [Tooltip("How long the result stays on screen (seconds).")]
     [SerializeField] private float resultSeconds = 3f;
 
-    private float spawnTimer, timeLeft, resultTimer, returnT;
+    private float timeLeft, resultTimer, returnT;
     private bool activeRound, forcedByMe, returning;
     private int clicks, tierIndex;
     private Vector2 pos, vel, returnFrom, home;   // viewport coordinates
@@ -106,57 +86,44 @@ public class PixelEvadeMinigame : PixelMinigame
     private GameObject uiRoot;
     private TMP_Text statusLabel;
 
+    // This minigame's own defaults for the shared round schedule (PixelScheduledMinigame; a scene's values override them).
+    public PixelEvadeMinigame()
+    {
+        firstRoundDelay = 90f;
+        minInterval = 150f;
+        maxInterval = 300f;
+    }
+
     public override string Id => "evade";
     public override string DisplayName => "Cube Evasion";
-    public override bool Running => running;
     public override bool Busy => activeRound;
     public override bool Takeover => true;   // no other minigame starts while it runs (the cube itself stays clickable: TakeoverActive is not set)
 
-    public override void Activate()
-    {
-        if (running) return;
-        running = true;
-        spawnTimer = firstRoundDelay;
-    }
-
     public override void Deactivate()
     {
-        running = false;
+        base.Deactivate();
         if (activeRound) EndRound(false);
     }
 
     protected override void Awake()
     {
         base.Awake();
-        if (clicker == null) clicker = PixelFind.First<PixelClicker>();
-        if (clicker == null)
-        {
-            Debug.LogError("PixelEvadeMinigame: no PixelClicker found in the scene.", this);
-            enabled = false;
-            return;
-        }
-        clicker.PixelCollected += OnCollected;
-        clicker.PixelHit += OnHit;
-        if (startRunning) running = true;
-        spawnTimer = firstRoundDelay;
+        if (!HookCubeClicks(ref clicker, OnCollected, OnHit)) return;
+        StartSchedule();
     }
 
     protected override void OnDestroy()
     {
         base.OnDestroy();
-        if (clicker != null)
-        {
-            clicker.PixelCollected -= OnCollected;
-            clicker.PixelHit -= OnHit;
-        }
+        UnhookCubeClicks(clicker, OnCollected, OnHit);
         if (activeRound) EndRound(false);
     }
 
     protected override void OnDespawned()
     {
         if (activeRound) EndRound(false);
-        if (uiRoot != null) { Destroy(uiRoot); uiRoot = null; statusLabel = null; }
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        DropRoundUi(ref uiRoot, ref statusLabel);
+        ScheduleNext();
     }
 
     [ContextMenu("Start An Evasion Round Now")]
@@ -177,18 +144,11 @@ public class PixelEvadeMinigame : PixelMinigame
 
     private void Update()
     {
-        if (resultTimer > 0f)
-        {
-            resultTimer -= Time.unscaledDeltaTime;
-            if (resultTimer <= 0f && !activeRound && uiRoot != null) { Destroy(uiRoot); uiRoot = null; statusLabel = null; }
-        }
+        if (ResultShownLong(ref resultTimer, activeRound, uiRoot)) DropRoundUi(ref uiRoot, ref statusLabel);
         if (activeRound) { Tick(Time.deltaTime); return; }
         if (!running || UserDisabled) return;
 
-        spawnTimer -= Time.deltaTime;
-        if (spawnTimer > 0f) return;
-        if (!PixelMinigameLimits.AllowAnother(this) || PixelPauseMenu.IsPaused || clicker.CubeHidden || TakeoverActive) { spawnTimer = PixelMinigameLimits.RetrySeconds; return; }
-        if (!TryStart()) spawnTimer = 12f;
+        if (SpawnDue(ref spawnTimer, PixelPauseMenu.IsPaused || clicker.CubeHidden || TakeoverActive) && !TryStart()) spawnTimer = 12f;
     }
 
     // ------------------------------------------------------------------
@@ -197,21 +157,7 @@ public class PixelEvadeMinigame : PixelMinigame
 
     private bool TryStart()
     {
-        cam = clicker.ViewCamera;
-        if (cam == null || clicker.PixelTransform == null) return false;
-
-        tierIndex = clicker.CurrentClickTierIndex;
-        if (tierIndex < 0 || tierIndex >= clicker.Tiers.Length) return false;
-        if (clicker.Tiers[tierIndex].rareDrop || clicker.Tiers[tierIndex].flyAway)
-        {
-            tierIndex = clicker.IndexOf(PixelClicker.PixelType.White);   // never a Dragon Cube / meteor
-            if (tierIndex < 0) return false;
-        }
-
-        // The cube stays this pixel for the whole round (a running potion already does the same by itself).
-        PixelConsumables potions = PixelFind.First<PixelConsumables>();
-        forcedByMe = potions == null || !potions.IsActive;
-        if (forcedByMe) clicker.SetForcedSpawnTier(clicker.Tiers[tierIndex].type);
+        if (!PrepareCubeRound(clicker, ref cam, ref tierIndex, ref forcedByMe)) return false;
 
         clicks = 0;
         timeLeft = roundSeconds;
@@ -310,31 +256,21 @@ public class PixelEvadeMinigame : PixelMinigame
     }
 
     /// <summary>Puts the cube at the viewport spot (the same distance from the camera, so it keeps its size).</summary>
-    private void Place()
-    {
-        Vector3 basePos = clicker.CubeBasePosition;
-        float depth = Vector3.Dot(basePos - cam.transform.position, cam.transform.forward);
-        Vector3 world = cam.ViewportToWorldPoint(new Vector3(pos.x, pos.y, depth));
-        clicker.SetCubeOffset(world - basePos);
-    }
+    private void Place() => PixelCubeScreenSpot.Place(clicker, cam, pos);
 
     private void EndRound(bool paid)
     {
         if (!activeRound) return;
         activeRound = false;
         returning = false;
-        PixelMinigame.AutoClickerPaused = false;
+        ReleaseCubeRound(clicker, ref forcedByMe);
         clicker.SetCubeOffset(null);
-        if (forcedByMe) clicker.ClearForcedSpawnTier();
-        forcedByMe = false;
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
 
-        if (!paid) { if (uiRoot != null) { Destroy(uiRoot); uiRoot = null; statusLabel = null; } return; }
+        if (!paid) { DropRoundUi(ref uiRoot, ref statusLabel); return; }
 
+        double bonus = PayCubeRoundBonus(clicker, tierIndex, clicks, rewardMultiplier);
         PixelClicker.PixelTier tier = clicker.Tiers[tierIndex];
-        double perClick = tier.amountPerClick * clicker.PayoutMultiplier(tierIndex) * clicker.ClickMultiplier / Mathf.Max(1, tier.clicksToCollect);
-        double bonus = clicks * rewardMultiplier * perClick;
-        if (bonus > 0d) clicker.AddCurrency(tierIndex, bonus);
 
         PixelStats.Count("evade.clicks", clicks);
         PixelStats.Best("evade.best", clicks);

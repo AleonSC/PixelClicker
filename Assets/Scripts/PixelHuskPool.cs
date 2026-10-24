@@ -42,7 +42,7 @@ public static class PixelHuskPool
     private static void ResetStatics()
     {
         pooled.Clear(); root = null; Reused = 0; HuskReleasing = null;
-        PixelStatics.ResetOnRestart(OnRestart);
+        PixelStatics.ResetOnRestart(OnRestart);   // restart-reset-not-progress: the pooled husk objects
     }
 
     // (Restart reloads the scene: the pooled objects go with it. The event's listeners unsubscribe themselves in OnDisable.)

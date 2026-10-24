@@ -313,21 +313,8 @@ public class PixelDragonWish : MonoBehaviour, IPixelDatabaseSource
         return im;
     }
 
-    private RectTransform Sq(Transform parent, string name, Color color, Vector2 size, Vector2 pos, float rotation = 0f)
-    {
-        GameObject g = new GameObject(name, typeof(RectTransform), typeof(Image));
-        g.transform.SetParent(parent, false);
-        Image im = g.GetComponent<Image>();
-        im.color = color;
-        im.raycastTarget = false;
-        RectTransform r = g.GetComponent<RectTransform>();
-        r.anchorMin = r.anchorMax = new Vector2(0.5f, 0.5f);
-        r.pivot = new Vector2(0.5f, 0.5f);
-        r.sizeDelta = size;
-        r.anchoredPosition = pos;
-        r.localRotation = Quaternion.Euler(0f, 0f, rotation);
-        return r;
-    }
+    private RectTransform Sq(Transform parent, string name, Color color, Vector2 size, Vector2 pos, float rotation = 0f) =>
+        PixelBlockArt.Block(parent, name, color, size, pos, rotation, PixelBlockArt.Middle);
 
     /// <summary>A Dragon Cube drawn with blocks: a glassy orange square with 1-7 dark orange small squares laid out like dragon-ball stars.</summary>
     private RectTransform MakeDragonCube(Transform parent, int stars, float size)

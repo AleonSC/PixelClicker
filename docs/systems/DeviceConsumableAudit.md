@@ -12,7 +12,7 @@ Three read-only passes: device code, consumable code, and game design. The desig
 | B2 | Inventory save part (order 210) vs Operation levels (in PixelStats, order 320) | Held counts are clamped to their caps BEFORE the Storage upgrade levels load. 5 Combo Fuel with +2 Storage loads as 3. | Don't clamp on Import, or clamp again after the stats load. | S |
 | B3 | Potion / combo / attuned names, `Describe` | Enum names show to players ("HornetNest Potion" for the Termite Hive, other CamelCase names). | Use the tier's `displayName` everywhere. | S |
 | B4 | `PixelVacuumDevice` (:57), `PixelWoodChipper` (:224), `PixelFanDevice` (:62) + hand-copied subsets in MagnetSorter, Quantum, TrashCan, Kiln, Funnel, VacuumCleaner | They break the "one owner per husk" rule. The Vacuum absorbs husks in the player's hand or reserved by the Hopper / Sweeper; the Chipper claims reserved ones; the Fan pushes held ones. | Use `PixelHuskHolder.Takeable` everywhere (with an allow-held option where needed). | S |
-| B5 | `PixelMagnetSorterDevice` | Its stored stock is lost when it ends (no `Ended` handler); Crate / Quantum / Hopper release theirs. | Release the stock on end. | S |
+| B5 | PixelMagnetSorterDevice (since removed with the Magnetized Sorter) | Its stored stock is lost when it ends (no `Ended` handler); Crate / Quantum / Hopper release theirs. | Release the stock on end. | S |
 | B6 | `PixelBiomassGenerator.PowerAround` | Also "powers" permanent and disarmed devices (energy bar shows, counted, nothing to pause). | Skip `Permanent` / `!Armed`. | S |
 | B7 | `PixelJunctionBox.dropsSeen`, `PixelConveyorCombiner.waiting`, `PixelRobotWorker.bankTarget` | They keep husk references with no HuskReleasing listener (pooled husks can come back). | Listen to HuskReleasing. | S |
 | B8 | `RobotPlace` / `PlaceDeviceNow` | Never disarm and skip `onDevicePlaced`. `RobotPlace` uses up a Funnel even when it only moves it. | Route through the normal place path. | S |
@@ -30,7 +30,7 @@ Three read-only passes: device code, consumable code, and game design. The desig
 - **Pointer check:** cache `DeviceUnderPointer` once per frame (it runs 2-3 times per frame).
 - **Naming:**
   - rename `PixelChipperDevice` (the generic permanent stub) to `PixelPermanentDevice`;
-  - merge `IsDying` / `IsEnding` / `IsRemoving`;
+  - merge IsDying / `IsEnding` / IsRemoving (done: one `IsEnding`);
   - one shared velocity get/set helper (13 private copies).
 - **Range markers:** replace the "Range" / "Blow Area" magic strings (matched in 3 files) with a marker component.
 

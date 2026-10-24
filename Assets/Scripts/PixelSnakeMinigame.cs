@@ -34,32 +34,13 @@ using UnityEngine.InputSystem;
 /// until you turn. Everything is sized relative to the old pixels, so it works at any cube size. Add this to any GameObject
 /// (PixelShop adds it automatically if it is missing).
 /// </summary>
-public class PixelSnakeMinigame : PixelMinigame
+public class PixelSnakeMinigame : PixelScheduledMinigame
 {
     [Header("References")]
     [Tooltip("The PixelClicker (camera, husks, payouts). Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
 
-    [Header("State")]
-    [Tooltip("Run from the start without buying it in the shop (for testing).")]
-    [SerializeField] private bool startRunning = false;
-
-    [Tooltip("Is the minigame running? (The shop turns this on when Snake is bought.)")]
-    [SerializeField] private bool running = false;
-
     [Header("When it starts")]
-    [Min(0f)]
-    [Tooltip("Seconds after the minigame is switched on before the first snake round can start.")]
-    [SerializeField] private float firstRoundDelay = 60f;
-
-    [Min(1f)]
-    [Tooltip("Shortest wait between rounds (seconds).")]
-    [SerializeField] private float minInterval = 120f;
-
-    [Min(1f)]
-    [Tooltip("Longest wait between rounds (seconds).")]
-    [SerializeField] private float maxInterval = 240f;
-
     [Min(2)]
     [Tooltip("A round only starts when at least this many husks are lying around.")]
     [SerializeField] private int minPixels = 8;
@@ -180,7 +161,6 @@ public class PixelSnakeMinigame : PixelMinigame
     private readonly List<Piece> bodyPieces = new List<Piece>();
     private readonly List<Vector3> trail = new List<Vector3>();
 
-    private float spawnTimer;
     private bool activeRound;
     private Camera cam;
     private GameObject head;
@@ -194,22 +174,22 @@ public class PixelSnakeMinigame : PixelMinigame
     private TMP_Text statusLabel;
     private bool setBlock;
 
+    // This minigame's own defaults for the shared round schedule (PixelScheduledMinigame; a scene's values override them).
+    public PixelSnakeMinigame()
+    {
+        firstRoundDelay = 60f;
+        minInterval = 120f;
+        maxInterval = 240f;
+    }
+
     public override string Id => "snake";
     public override string DisplayName => "Snake";
-    public override bool Running => running;
     public override bool Busy => activeRound;
     public override bool Takeover => true;
 
-    public override void Activate()
-    {
-        if (running) return;
-        running = true;
-        spawnTimer = firstRoundDelay;
-    }
-
     public override void Deactivate()
     {
-        running = false;
+        base.Deactivate();
         if (activeRound) EndRound(false, null);
     }
 
@@ -224,8 +204,7 @@ public class PixelSnakeMinigame : PixelMinigame
             enabled = false;
             return;
         }
-        if (startRunning) running = true;
-        spawnTimer = firstRoundDelay;
+        StartSchedule();
     }
 
     protected override void OnDestroy()
@@ -233,8 +212,7 @@ public class PixelSnakeMinigame : PixelMinigame
         base.OnDestroy();
         PixelHuskPool.HuskReleasing -= OnHuskReleasing;
         if (activeRound) EndRound(false, null);
-        bystanderFactor = 1f;
-        UpdateBystanders();
+        bystanders.Restore();   // put the other husks back at once
     }
 
     // (PixelHuskPool: the husk is going away and may be reused - let go of it, as if it had been destroyed; the round-end restore skips it)
@@ -242,14 +220,14 @@ public class PixelSnakeMinigame : PixelMinigame
     {
         foreach (Piece p in targets) if (p.body == body) { p.body = null; p.tf = null; p.despawn = null; }   // (dropped from the targets in the next step, like a destroyed one)
         foreach (Piece p in bodyPieces) if (p.body == body) { p.body = null; p.tf = null; p.despawn = null; }
-        for (int i = bystanders.Count - 1; i >= 0; i--) if (bystanders[i].body == body) bystanders.RemoveAt(i);
+        bystanders.Forget(body);
     }
 
     protected override void OnDespawned()
     {
         // The dev tools' Despawn: end the round quietly (everything goes back to normal).
         if (activeRound) EndRound(false, null);
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
     }
 
     [ContextMenu("Start A Snake Round Now")]
@@ -258,72 +236,24 @@ public class PixelSnakeMinigame : PixelMinigame
         if (Application.isPlaying && !activeRound) TryStart(true);
     }
 
-    // The old pixels that are not part of the round shrink away while it runs and grow back afterwards, so every pixel you can
+    // The husks that are not part of the round shrink away while it runs and grow back afterwards, so every husk you can
     // still see is one you can eat.
-    private class Bystander { public Rigidbody body; public Transform tf; public Vector3 baseScale; public Collider[] colliders; public Behaviour[] paused; }
-    private readonly List<Bystander> bystanders = new List<Bystander>();
-    private float bystanderFactor = 1f;
+    private readonly PixelBystanders bystanders = new PixelBystanders();   // the husks not in the round shrink away while it runs
 
     private void ShrinkBystanders()
     {
-        bystanders.Clear();
-        bystanderFactor = 1f;
         var inRound = new HashSet<Rigidbody>();
         foreach (Piece t in targets) inRound.Add(t.body);
-        var all = clicker.OldPixels;
-        for (int i = 0; i < all.Count; i++)
-        {
-            Rigidbody rb = all[i];
-            if (rb == null || inRound.Contains(rb) || clicker.IsFlyingPixel(rb)) continue;
-            OldPixelDespawn d = rb.GetComponent<OldPixelDespawn>();
-            if (d != null && (d.IsDespawning || d.Held)) continue;
-            bystanders.Add(new Bystander
-            {
-                body = rb, tf = rb.transform, baseScale = rb.transform.localScale,
-                colliders = rb.GetComponents<Collider>(),
-                paused = new Behaviour[] { rb.GetComponent<OldPixelGravityWell>(), rb.GetComponent<OldPixelFloat>() },
-            });
-        }
-        foreach (Bystander b in bystanders)
-        {
-            SetVelocities(b.body, Vector3.zero);
-            b.body.isKinematic = true;
-            foreach (Collider c in b.colliders) if (c != null) c.enabled = false;
-            foreach (Behaviour x in b.paused) if (x != null) x.enabled = false;
-        }
-    }
-
-    private void UpdateBystanders()
-    {
-        if (bystanders.Count == 0) return;
-        bystanderFactor = Mathf.MoveTowards(bystanderFactor, activeRound ? 0f : 1f, Time.unscaledDeltaTime / 0.6f);
-        bool done = !activeRound && bystanderFactor >= 1f;
-        for (int i = bystanders.Count - 1; i >= 0; i--)
-        {
-            Bystander b = bystanders[i];
-            if (b.body == null || b.tf == null) { bystanders.RemoveAt(i); continue; }
-            b.tf.localScale = b.baseScale * Mathf.Max(0.001f, bystanderFactor);
-            if (done)
-            {
-                foreach (Collider c in b.colliders) if (c != null) c.enabled = true;
-                foreach (Behaviour x in b.paused) if (x != null) x.enabled = true;
-                b.body.isKinematic = false;
-            }
-        }
-        if (done) bystanders.Clear();
+        bystanders.Shrink(clicker, inRound);
     }
 
     private void Update()
     {
-        UpdateBystanders();
+        bystanders.Tick(activeRound, 0.6f);
         if (activeRound) { Tick(Time.deltaTime); return; }
         if (!running) return;
 
-        spawnTimer -= Time.deltaTime;
-        if (spawnTimer > 0f) return;
-        if (!PixelMinigameLimits.AllowAnother(this)) { spawnTimer = PixelMinigameLimits.RetrySeconds; return; }
-        if (!TryStart(false)) spawnTimer = 12f; // not enough pixels lying around yet
-        else spawnTimer = 0f;
+        if (SpawnDue(ref spawnTimer)) spawnTimer = TryStart(false) ? 0f : 12f; // 12 s: not enough pixels lying around yet
     }
 
     // ------------------------------------------------------------------
@@ -425,7 +355,7 @@ public class PixelSnakeMinigame : PixelMinigame
         ShrinkBystanders();
         foreach (Piece p in targets)
         {
-            SetVelocities(p.body, Vector3.zero);
+            PixelBody.Steer(p.body, Vector3.zero, true);
             p.body.isKinematic = true;
             foreach (Behaviour b in p.paused) if (b != null) b.enabled = false;
         }
@@ -643,7 +573,7 @@ public class PixelSnakeMinigame : PixelMinigame
             else
             {
                 // They simply drop and age normally again.
-                SetVelocities(p.body, Vector3.zero);
+                PixelBody.Steer(p.body, Vector3.zero, true);
                 if (p.despawn != null) p.despawn.AddLifetime(3f);
             }
         }
@@ -666,7 +596,7 @@ public class PixelSnakeMinigame : PixelMinigame
         uiRoot = null;
         statusLabel = null;
 
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
 
         if (win)
         {
@@ -689,29 +619,13 @@ public class PixelSnakeMinigame : PixelMinigame
 
     private IEnumerator MessageRoutine(Vector3 start, Camera c, string message)
     {
-        GameObject go = new GameObject("Snake Message");
-        Track(go);
-        TextMeshPro text = go.AddComponent<TextMeshPro>();
-        text.text = message;
-        text.fontSize = messageTextSize;
-        text.fontStyle = FontStyles.Bold;
-        text.alignment = TextAlignmentOptions.Center;
-        text.outlineWidth = 0.2f;
-        text.outlineColor = new Color32(0, 0, 0, 255);
-        if (clicker.UIFont != null) text.font = clicker.UIFont;
-        text.rectTransform.sizeDelta = new Vector2(14f, 4f);
-
-        float t = 0f;
-        while (t < messageSeconds)
+        TextMeshPro text = PixelRisingText.Create("Snake Message", message, messageTextSize, clicker.UIFont, new Vector2(14f, 4f));
+        Track(text.gameObject);
+        return PixelRisingText.Fade(text, messageSeconds, (tx, k) =>
         {
-            t += Time.unscaledDeltaTime;
-            float k = Mathf.Clamp01(t / messageSeconds);
-            go.transform.position = PixelUIKit.KeepOnScreen(c, text, start + Vector3.up * (1.2f + k * 1.2f));
-            go.transform.rotation = c.transform.rotation;
-            text.alpha = 1f - k * k;
-            yield return null;
-        }
-        Destroy(go);
+            tx.transform.position = PixelUIKit.KeepOnScreen(c, tx, start + Vector3.up * (1.2f + k * 1.2f));
+            tx.transform.rotation = c.transform.rotation;
+        });
     }
 
     // ------------------------------------------------------------------
@@ -766,14 +680,4 @@ public class PixelSnakeMinigame : PixelMinigame
 
     // ------------------------------------------------------------------
 
-    private static void SetVelocities(Rigidbody rb, Vector3 v)
-    {
-        if (rb == null || rb.isKinematic) return;
-#if UNITY_6000_0_OR_NEWER
-        rb.linearVelocity = v;
-#else
-        rb.velocity = v;
-#endif
-        rb.angularVelocity = Vector3.zero;
-    }
 }

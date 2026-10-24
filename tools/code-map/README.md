@@ -11,3 +11,4 @@ Open `CodeMap.html` in a browser (it loads d3 from the web). Rebuild it after ad
 - The page layout is `template.html`; `build.py` fills in the data.
 - Areas come from the `GROUPS` table at the top of `build.py` (first matching rule wins) - add a rule when a new script lands in the wrong area.
 - Descriptions come from `docs/Index.md`, else the script's header comment.
+- Published page: https://claude.ai/artifact/9KCRYHzzmGrNWNFTuqqz7w (republish `CodeMap.html` to that link after a rebuild). `tools/rebuild-code-pages.sh` rebuilds this and the Code Health report together.

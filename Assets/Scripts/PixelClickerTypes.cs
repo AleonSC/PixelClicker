@@ -101,7 +101,7 @@ public partial class PixelClicker
         Bottle = 73,      // Fishing's special block: a message in a bottle (breaking it gives a treasure map)
         Whale = 74,       // Fishing's special block: a whale that fights the line
         Mold = 75,        // one of Foraging's two hazard blocks (with the Toadstool): see PixelMold.cs
-        Charcoal = 81,    // made by the Kiln (PixelKiln): a standalone block that only exists as an old pixel
+        Charcoal = 81,    // the Charcoal pixel: bought in the shop with the Kiln's charcoal MATERIAL (PixelMaterials); its husks are Biomass Generator fuel
         GodSlifer = 82,   // the three Egyptian God Cubes (PixelGodFind.cs): the rarest drops in the game, only one of each can be held
         GodRa = 83,
         GodObelisk = 84,
@@ -129,7 +129,7 @@ public partial class PixelClicker
         GoldenSnitch = 101,   // a very rare drop that sprouts wings and flies off the cube: catch it (PixelGoldenSnitch.cs)
     }
 
-    /// <summary>The Firemaking skill pack's blocks (Fire, Tinder, Kindling, Firewood, Flint, Ember, Charcoal, the filler Ash; Wildfire is its hazard).</summary>
+    /// <summary>The Firemaking skill pack's blocks (Fire, Tinder, Kindling, Firewood, Flint, Ember, the filler Ash; Wildfire is its hazard).</summary>
     public static bool IsFireBlock(PixelType type) => PixelBlockTags.Has(type, PixelTag.Firemaking);   // (the tag table in PixelBlockTags.cs)
 
     /// <summary>The Fishing skill pack's blocks: Fish, Seaweed, Shell, Pearl and the filler Driftwood (the Jellyfish is its hazard).</summary>
@@ -208,9 +208,6 @@ public partial class PixelClicker
 
     /// <summary>How many small cubes (1-7) a Dragon Cube carries; 0 for every other pixel type.</summary>
     public static int DragonCubeStars(PixelType type) => IsDragonCube(type) ? (int)type - (int)PixelType.DragonCube1 + 1 : 0;
-
-    /// <summary>Extra payout multiplier from outside effects (a dragon wish's Golden Hour); 1 normally.</summary>
-    public static float WishMultiplier = 1f;
 
     /// <summary>Can the player switch this pixel's spawning off (tick box in the inventory)?</summary>
     public enum SpawnSwitch
@@ -346,31 +343,83 @@ public partial class PixelClicker
         [Tooltip("Can the player switch this pixel's spawning off with a tick box in the inventory? Auto = only the special pixels (Vacuum, Obsidian, Singularity, Ghost, Meteor).")]
         public SpawnSwitch spawnSwitch = SpawnSwitch.Auto;
 
-        [Header("Runtime State")]
-        [Tooltip("Current spendable amount.")]
-        public double count;
+        // ---- Progress (2026-10-24: in the GameState - PixelGameState.Current.clicker - for the clicker's LIVE tiers; see the Pixel Game State
+        //      component (State > Clicker) to read or type values while playing). A tier that is only a definition (a shop pack's reward tier, a
+        //      copy) keeps these in its own fields instead, until the clicker takes it in (MakeLive). ----
 
-        [Tooltip("Total ever collected (never decreases when spending). Used for unlock thresholds, achievements and stats.")]
-        public double totalCollected;
+        /// <summary>Current spendable amount.</summary>
+        public double count { get { ClickerState.Tier e = E; return e != null ? e.count : localCount; } set { ClickerState.Tier e = E; if (e != null) e.count = value; else localCount = value; } }
 
-        [Tooltip("Runtime: how many times the player has spent Ultra pixels to boost this pixel type's payout (saved). See the shop's Upgrades > Pixel tab.")]
-        public int ultraLevel;
+        /// <summary>Total ever collected (never decreases when spending). Used for unlock thresholds, achievements and stats.</summary>
+        public double totalCollected { get { ClickerState.Tier e = E; return e != null ? e.total : localTotal; } set { ClickerState.Tier e = E; if (e != null) e.total = value; else localTotal = value; } }
 
-        [Tooltip("Runtime: Value upgrade level of this pixel type, bought with its own currency (saved). Raises its payout. See the shop's Upgrades > Value tab.")]
-        public int valueLevel;
+        /// <summary>How many times Ultra pixels were spent to boost this type's payout (the shop's Upgrades > Pixel tab).</summary>
+        public int ultraLevel { get { ClickerState.Tier e = E; return e != null ? e.ultraLevel : localUltraLevel; } set { ClickerState.Tier e = E; if (e != null) e.ultraLevel = value; else localUltraLevel = value; } }
 
+        /// <summary>Value upgrade level, bought with its own currency (the shop's Upgrades > Value tab). Raises its payout.</summary>
+        public int valueLevel { get { ClickerState.Tier e = E; return e != null ? e.valueLevel : localValueLevel; } set { ClickerState.Tier e = E; if (e != null) e.valueLevel = value; else localValueLevel = value; } }
 
-        [Tooltip("How many pixels of this type have been collected (one per payout, whatever it paid). Used by the 'times clicked' achievements.")]
-        public long timesCollected;
+        /// <summary>How many pixels of this type have been collected (one per payout, whatever it paid). Used by the 'times clicked' achievements.</summary>
+        public long timesCollected { get { ClickerState.Tier e = E; return e != null ? e.timesCollected : localTimes; } set { ClickerState.Tier e = E; if (e != null) e.timesCollected = value; else localTimes = value; } }
 
-        [Tooltip("Has this tier been unlocked?")]
-        public bool unlocked;
+        /// <summary>Has this tier been unlocked?</summary>
+        public bool unlocked { get { ClickerState.Tier e = E; return e != null ? e.unlocked : localUnlocked; } set { ClickerState.Tier e = E; if (e != null) e.unlocked = value; else localUnlocked = value; } }
 
         [Tooltip("A rare drop: spawns even though it was never 'unlocked', stays out of the unlock chain, the Value upgrades, potions, pets and achievements, and only shows in the inventory once you hold one (the seven Dragon Cubes).")]
         public bool rareDrop = false;
 
-        [Tooltip("Runtime: the player switched this pixel's spawning off (saved).")]
-        public bool spawnDisabled;
+        /// <summary>The player switched this pixel's spawning off.</summary>
+        public bool spawnDisabled { get { ClickerState.Tier e = E; return e != null ? e.spawnDisabled : localSpawnDisabled; } set { ClickerState.Tier e = E; if (e != null) e.spawnDisabled = value; else localSpawnDisabled = value; } }
+
+        // The binding to the GameState (never serialized: a load swaps the state, and the next read binds to the new one by itself).
+        [NonSerialized] private bool live;
+        [NonSerialized] private GameState boundTo;
+        [NonSerialized] private ClickerState.Tier entry;
+        [NonSerialized] private double localCount, localTotal;
+        [NonSerialized] private int localUltraLevel, localValueLevel;
+        [NonSerialized] private long localTimes;
+        [NonSerialized] private bool localUnlocked, localSpawnDisabled;
+
+        /// <summary>Is this one of the clicker's own tiers (its progress is the GameState's)?</summary>
+        public bool IsLive => live;
+
+        private ClickerState.Tier E
+        {
+            get
+            {
+                if (!live) return null;
+                GameState g = PixelGameState.Current;
+                if (boundTo != g || entry == null || entry.type != (int)type) Bind(g, false);
+                return entry;
+            }
+        }
+
+        /// <summary>The clicker takes this tier in: from now on its progress is the GameState's. A type the state has no entry for yet starts from this
+        /// tier's own values (a starting amount, a new shop tier locked).</summary>
+        public void MakeLive()
+        {
+            if (live) return;
+            live = true;
+            Bind(PixelGameState.Current, true);
+        }
+
+        private void Bind(GameState g, bool fromOwnValues)
+        {
+            ClickerState cs = g.clicker;
+            ClickerState.Tier e = cs.Find((int)type, false);
+            if (e == null)
+            {
+                e = cs.Find((int)type, true);
+                if (fromOwnValues)
+                {
+                    e.count = localCount; e.total = localTotal; e.unlocked = localUnlocked; e.spawnDisabled = localSpawnDisabled;
+                    e.timesCollected = localTimes; e.ultraLevel = localUltraLevel; e.valueLevel = localValueLevel;
+                }
+                else e.unlocked = unlockedAtStart;   // (a loaded save that never had this type: nothing held, locked unless it starts unlocked)
+            }
+            entry = e;
+            boundTo = g;
+        }
 
         /// <summary>True for the special pixels (Vacuum, Obsidian, Singularity, Ghost, Meteor, Electric, Mirror, Seed) that can have their spawning switched off.</summary>
         public static bool IsSpecialType(PixelType t) =>
@@ -395,7 +444,17 @@ public partial class PixelClicker
         /// <summary>The tier colour with full opacity, for text and icons (a glass tier's colour is see-through).</summary>
         public Color UIColor => new Color(color.r, color.g, color.b, 1f);
 
-        /// <summary>Shallow copy (used by the shop to add its reward tiers).</summary>
-        public PixelTier Clone() => (PixelTier)MemberwiseClone();
+        /// <summary>Shallow copy (used by the shop to add its reward tiers). A copy is never live: it keeps the values it had as its own until a clicker takes it in.</summary>
+        public PixelTier Clone()
+        {
+            PixelTier c = (PixelTier)MemberwiseClone();
+            if (live)
+            {
+                c.localCount = count; c.localTotal = totalCollected; c.localUnlocked = unlocked; c.localSpawnDisabled = spawnDisabled;
+                c.localTimes = timesCollected; c.localUltraLevel = ultraLevel; c.localValueLevel = valueLevel;
+            }
+            c.live = false; c.boundTo = null; c.entry = null;
+            return c;
+        }
     }
 }

@@ -95,8 +95,7 @@ public sealed class PixelEnergyBar : MonoBehaviour
         Transform parent = transform.parent;
         float s = parent != null ? Mathf.Max(0.05f, parent.lossyScale.x) : 1f;
         transform.localScale = Vector3.one / s;   // (its own size on a scaled device)
-        PixelClicker clicker = PixelFind.Cached<PixelClicker>();
-        Camera cam = clicker != null ? clicker.ViewCamera : Camera.main;
+        Camera cam = PixelClicker.ViewCameraOf(PixelFind.Cached<PixelClicker>());
         if (cam != null) transform.rotation = cam.transform.rotation;   // (faces the camera, like the device timers)
     }
 }

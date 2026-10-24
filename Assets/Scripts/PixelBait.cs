@@ -79,6 +79,8 @@ public static class PixelBait
         pellets.Clear();
     }
 
+    /// <summary>The floor straight below 'from' (not the clicker cube, not husks; nearest upward-facing hit). The shared ground probe: also used by
+    /// the Seed pet (PixelPets), the Evil Tree and the Treasure Map.</summary>
     internal static bool FindGround(PixelClicker clicker, Vector3 from, float size, out Vector3 point)
     {
         point = default;

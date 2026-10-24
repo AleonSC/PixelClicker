@@ -12,7 +12,7 @@ public static class PixelProspector
     private static void ResetStatics()
     {
         richAnnounced = false;
-        PixelStatics.ResetOnRestart(OnSceneUnloaded);
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);   // restart-reset-not-progress: the 'first rich vein this session' announcement
     }
 
     private static void OnSceneUnloaded() { richAnnounced = false; }   // (a Restart is a new session)

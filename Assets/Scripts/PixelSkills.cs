@@ -4,7 +4,8 @@ using UnityEngine;
 
 /// <summary>
 /// SHELL of the skill system: skill packs replace the standard base cubes (monochrome and RGB) with a different set, and you train
-/// the skill that belongs to the pack you play with. This file holds the data and the rules; the window is in PixelSkillsWindow.cs.
+/// the skill that belongs to the pack you play with. This file holds the data and the rules; the window is in PixelSkillsWindow.cs and the
+/// saved-pack fix-ups EnsureDefaults runs (FixSavedPackContents / FixSavedPackTexts) are in PixelSkillsSavedPacks.cs.
 ///
 /// What works now: the pack list (Standard + Mining, built on the Prospector pack), the active pack (Mining = Prospector mode, one source of truth),
 /// XP and levels per pack (saved through the generic stat counters, nothing extra in the save file), level-up announcements and the Skills window.
@@ -165,7 +166,7 @@ public partial class PixelSkills : MonoBehaviour
     private static PixelClicker.PixelType[] FiremakingTypes() => new[]
     {
         PixelClicker.PixelType.Tinder, PixelClicker.PixelType.Kindling, PixelClicker.PixelType.Firewood, PixelClicker.PixelType.Flint, PixelClicker.PixelType.Ember,
-        PixelClicker.PixelType.Fire, PixelClicker.PixelType.Charcoal, PixelClicker.PixelType.Ash, PixelClicker.PixelType.Wildfire
+        PixelClicker.PixelType.Fire, PixelClicker.PixelType.Ash, PixelClicker.PixelType.Wildfire   // (Charcoal left 2026-10-24: it is its own shop pixel, bought with Kiln charcoal)
     };
 
     public const string MiningId = "mining";
@@ -188,6 +189,9 @@ public partial class PixelSkills : MonoBehaviour
     [Tooltip("Share of the XP an automatic (auto clicker) click gives compared with a manual click.")]
     [SerializeField] private float autoXpFactor = 0.25f;
 
+    [Tooltip("Data version of the skill packs' XP curves (1 = 2026-10-24: every skill pack levels at Standard's pace - baseXp 600, xpGrowth 1.5; Offline Progression keeps its own; 2 = Woodcutting's filler starts at 85%). Raised by code; lower it to apply the change again.")]
+    [SerializeField] private int skillPaceVersion = 0;
+
     [Tooltip("Turn the whole skill system (and its Skills tab) off.")]
     [SerializeField] private bool disableSkills = false;
 
@@ -204,8 +208,8 @@ public partial class PixelSkills : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
-        penaltyLevels.Clear(); penaltyEnds.Clear(); Instance = null; packCache = null; guestCache = null;
-        PixelStatics.ResetOnRestart(OnSceneUnloaded);
+        penaltyLevels.Clear(); penaltyEnds.Clear(); Instance = null;
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);   // restart-reset-not-progress: hazard penalties of the old game (never saved)
     }
 
     // (Restart reloads the scene but statics survive it: a hazard penalty of the old game must not run on in the new one)
@@ -239,6 +243,7 @@ public partial class PixelSkills : MonoBehaviour
     private void Awake()
     {
         Instance = this;
+        PixelGameState.Loaded += OnLoaded;
         EnsureDefaults();
         ApplyDialogueFile();
         // Perk popups and the skills tutorial take their turn in the one tip queue (PixelTipQueue).
@@ -268,6 +273,7 @@ public partial class PixelSkills : MonoBehaviour
     private void OnDestroy()
     {
         PixelTipQueue.Unregister(this);
+        PixelGameState.Loaded -= OnLoaded;
         if (Instance == this) Instance = null;
         if (clicker != null) clicker.PixelCollected -= OnCollected;
     }
@@ -283,6 +289,44 @@ public partial class PixelSkills : MonoBehaviour
 
     /// <summary>Adds the built-in packs that are missing from the serialized list (by id).</summary>
     private void EnsureDefaults()
+    {
+        AddMissingGatheringPacks();
+        AddMissingOtherPacks();
+        foreach (SkillPack pack in packs) FixSavedPackContents(pack);
+
+        // Texts saved in older scenes still say the skill packs replace Glass and Luminescent too.
+        foreach (SkillPack pack in packs) FixSavedPackTexts(pack);
+
+        perkWindowVersion = Mathf.Max(perkWindowVersion, 1);
+
+        // Every skill pack levels at Standard's pace (2026-10-24, the developer's call): the gathering / dev packs had much quicker curves
+        // (Woodcutting, Foraging, Fishing 60 x 1.45 = level 2 after 120 XP). Offline Progression keeps its own (its XP only comes from offline clicks).
+        if (skillPaceVersion < 1)
+        {
+            foreach (SkillPack pack in packs)
+                if (pack != null && pack.id != StandardId && pack.id != OfflineId) { pack.baseXp = 600f; pack.xpGrowth = 1.5f; }
+            skillPaceVersion = 1;
+        }
+        if (skillPaceVersion < 2)
+        {
+            // More Woodcutting filler early on (2026-10-24): twigs / pinecones / moss start at 85% of spawns (was 75%), still thinning to 25% by level 20.
+            SkillPack wood = Find(WoodcuttingId);
+            if (wood != null && Mathf.Approximately(wood.fillerStartShare, 0.75f)) wood.fillerStartShare = 0.85f;
+            skillPaceVersion = 2;
+        }
+
+        // Offline Progression is listed right under Standard.
+        int offlineAt = packs.FindIndex(p => p.id == OfflineId);
+        if (offlineAt > 1)
+        {
+            SkillPack offline = packs[offlineAt];
+            packs.RemoveAt(offlineAt);
+            packs.Insert(1, offline);
+        }
+    }
+
+    // EnsureDefaults, step 1: the built-in packs up to Firemaking (Standard, Woodcutting, Foraging, Fishing, Firemaking), each added when missing.
+    private void AddMissingGatheringPacks()
     {
         if (!packs.Exists(p => p.id == StandardId))
             packs.Insert(0, new SkillPack
@@ -300,10 +344,10 @@ public partial class PixelSkills : MonoBehaviour
                 replaces = "Monochrome, RGB", spawns = "Twig, Wood, Bark, Sap, Leaf, Heartwood",
                 xpFrom = "Collecting wood blocks",
                 unlockHint = "Buy the Lumberjack's Pack in the Shop",
-                baseXp = 60f, xpGrowth = 1.45f,
+                baseXp = 600f, xpGrowth = 1.5f,   // (2026-10-24: every skill pack levels at Standard's pace)
                 types = new[] { PixelClicker.PixelType.Wood, PixelClicker.PixelType.Bark, PixelClicker.PixelType.Sap, PixelClicker.PixelType.Leaf,
                                 PixelClicker.PixelType.Heartwood, PixelClicker.PixelType.Twig, PixelClicker.PixelType.Pinecone, PixelClicker.PixelType.Moss, PixelClicker.PixelType.HornetNest, PixelClicker.PixelType.GreatOak, PixelClicker.PixelType.Whetstone, PixelClicker.PixelType.Acorn, PixelClicker.PixelType.Pesticide },
-                fillerType = "Twig", extraFillerTypes = "Pinecone,Moss", fillerStartShare = 0.75f, fillerEndShare = 0.25f, hazardType = "HornetNest", hazardBaseShare = 0.015f, hazardPerLevelShare = 0.001f,
+                fillerType = "Twig", extraFillerTypes = "Pinecone,Moss", fillerStartShare = 0.85f, fillerEndShare = 0.25f, hazardType = "HornetNest", hazardBaseShare = 0.015f, hazardPerLevelShare = 0.001f,
                 perks = new[]
                 {
                     new Perk { level = 2, text = WoodChipperPerkText, implemented = true, noticeText = WoodChipperNotice },
@@ -321,7 +365,7 @@ public partial class PixelSkills : MonoBehaviour
                 replaces = "Monochrome, RGB", spawns = ForagingSpawns,
                 xpFrom = "Collecting foraged blocks",
                 unlockHint = "Buy the Forager's Pack in the Shop",
-                baseXp = 60f, xpGrowth = 1.45f,
+                baseXp = 600f, xpGrowth = 1.5f,   // (2026-10-24: every skill pack levels at Standard's pace)
                 types = new[] { PixelClicker.PixelType.Berry, PixelClicker.PixelType.Mushroom, PixelClicker.PixelType.Herb, PixelClicker.PixelType.Truffle,
                                 PixelClicker.PixelType.Weeds, PixelClicker.PixelType.Mold, PixelClicker.PixelType.Toadstool },
                 fillerType = "Weeds", hazardType = "Mold,Toadstool", uniformRotation = true,
@@ -340,7 +384,7 @@ public partial class PixelSkills : MonoBehaviour
                 replaces = "Monochrome, RGB", spawns = "Water, Fish, Seaweed, Shell, Pearl, Bait, Bottle, Whale",
                 xpFrom = "Collecting fished blocks",
                 unlockHint = "Buy the Angler's Pack in the Shop",
-                baseXp = 60f, xpGrowth = 1.45f,
+                baseXp = 600f, xpGrowth = 1.5f,   // (2026-10-24: every skill pack levels at Standard's pace)
                 types = new[] { PixelClicker.PixelType.Fish, PixelClicker.PixelType.Seaweed, PixelClicker.PixelType.Shell, PixelClicker.PixelType.Pearl,
                                 PixelClicker.PixelType.Water, PixelClicker.PixelType.Driftwood, PixelClicker.PixelType.Bait, PixelClicker.PixelType.Jellyfish,
                                 PixelClicker.PixelType.Bottle, PixelClicker.PixelType.Whale },
@@ -356,14 +400,19 @@ public partial class PixelSkills : MonoBehaviour
             packs.Add(new SkillPack
             {
                 id = FiremakingId, displayName = "Firemaking", accent = new Color(0.95f, 0.45f, 0.12f),
-                description = "TEST SKILL (Dev Tools only for now; its mechanics are still to come): swap the basic cubes for fire goods - tinder, kindling, firewood, flint, embers, flames and charcoal - with plain ash as the filler. Watch out for the wildfire hazard.",
-                replaces = "Monochrome, RGB", spawns = "Ash, Tinder, Kindling, Firewood, Flint, Ember, Fire, Charcoal", xpFrom = "Collecting fire blocks",
+                description = "TEST SKILL (Dev Tools only for now; its mechanics are still to come): swap the basic cubes for fire goods - tinder, kindling, firewood, flint, embers and flames - with plain ash as the filler. Watch out for the wildfire hazard.",
+                replaces = "Monochrome, RGB", spawns = "Ash, Tinder, Kindling, Firewood, Flint, Ember, Fire", xpFrom = "Collecting fire blocks",
                 unlockHint = "Dev Tools only (Shop unlocks: Firemaker's Pack)",
-                baseXp = 80f, xpGrowth = 1.5f,
+                baseXp = 600f, xpGrowth = 1.5f,   // (2026-10-24: every skill pack levels at Standard's pace)
                 types = FiremakingTypes(),
                 fillerType = "Ash", hazardType = "Wildfire",
                 perks = new[] { new Perk { level = 2, text = "Coming soon" } },
             });
+    }
+
+    // EnsureDefaults, step 2: the rest of the built-in packs (Mining, Farming, Electrician, Offline Progression), each added when missing.
+    private void AddMissingOtherPacks()
+    {
         if (!packs.Exists(p => p.id == MiningId))
             packs.Add(new SkillPack
             {
@@ -371,7 +420,7 @@ public partial class PixelSkills : MonoBehaviour
                 description = MiningDescription,
                 replaces = "Monochrome, RGB", spawns = MiningSpawns, xpFrom = "Breaking ore pixels",
                 unlockHint = "Buy Prospector's Pack in the Shop",
-                baseXp = 100f, xpGrowth = 1.6f,
+                baseXp = 600f, xpGrowth = 1.5f,   // (2026-10-24: every skill pack levels at Standard's pace)
                 types = MiningTypes(),
                 fillerType = "Rock", hazardType = "GasPocket",
                 perks = new[]
@@ -391,7 +440,7 @@ public partial class PixelSkills : MonoBehaviour
                 replaces = "Monochrome, RGB", spawns = "Dirt, Seed, Water, Fertilizer, Pollen, Wheat, Weevil, Golden Fruit",
                 xpFrom = "Collecting farm blocks and growing sprouts",
                 unlockHint = "Buy Farmer's Pack in the Shop",
-                baseXp = 100f, xpGrowth = 1.6f,
+                baseXp = 600f, xpGrowth = 1.5f,   // (2026-10-24: every skill pack levels at Standard's pace)
                 types = new[] { PixelClicker.PixelType.Dirt, PixelClicker.PixelType.Seed, PixelClicker.PixelType.Water, PixelClicker.PixelType.Fertilizer,
                                 PixelClicker.PixelType.Pollen, PixelClicker.PixelType.Wheat, PixelClicker.PixelType.Weevil, PixelClicker.PixelType.GoldenFruit, PixelClicker.PixelType.Pest },
                 fillerType = "Dirt", hazardType = "Pest",
@@ -409,7 +458,7 @@ public partial class PixelSkills : MonoBehaviour
                 replaces = "Monochrome, RGB", spawns = "Electric, Wire, Battery, Capacitor, Resistor, Transistor, Fuse, Bulb",
                 xpFrom = "Collecting electrical pixels",
                 unlockHint = "Buy the Electrician's Pack in the Shop",
-                baseXp = 100f, xpGrowth = 1.6f,
+                baseXp = 600f, xpGrowth = 1.5f,   // (2026-10-24: every skill pack levels at Standard's pace)
                 types = new[] { PixelClicker.PixelType.Electric, PixelClicker.PixelType.Wire, PixelClicker.PixelType.Battery, PixelClicker.PixelType.Capacitor, PixelClicker.PixelType.Resistor, PixelClicker.PixelType.Transistor, PixelClicker.PixelType.Fuse, PixelClicker.PixelType.Bulb },
                 perks = new[]
                 {
@@ -433,213 +482,6 @@ public partial class PixelSkills : MonoBehaviour
                     new Perk { level = 5, text = "Long sleeper: a longer time away counts" },
                 },
             });
-        foreach (SkillPack pack in packs)
-        {
-            if (pack.id == ElectricianId && (pack.types == null || pack.types.Length < 8))   // a saved pack from when Electric was its only pixel
-            {
-                pack.types = new[] { PixelClicker.PixelType.Electric, PixelClicker.PixelType.Wire, PixelClicker.PixelType.Battery, PixelClicker.PixelType.Capacitor, PixelClicker.PixelType.Resistor, PixelClicker.PixelType.Transistor, PixelClicker.PixelType.Fuse, PixelClicker.PixelType.Bulb };
-                pack.spawns = "Electric, Wire, Battery, Capacitor, Resistor, Transistor, Fuse, Bulb";
-                pack.xpFrom = "Collecting electrical pixels";
-            }
-            if (pack.id == MiningId && (pack.types == null || pack.types.Length == 0))
-                pack.types = new[] { PixelClicker.PixelType.Copper, PixelClicker.PixelType.Tin, PixelClicker.PixelType.Iron, PixelClicker.PixelType.Lead, PixelClicker.PixelType.Zinc, PixelClicker.PixelType.Nickel };
-            // Stone (the old Rock block) is Mining's filler; Dirt is Farming's.
-            if (pack.id == MiningId)
-            {
-                if (System.Array.IndexOf(pack.types, PixelClicker.PixelType.Rock) < 0)
-                {
-                    System.Collections.Generic.List<PixelClicker.PixelType> withStone = new System.Collections.Generic.List<PixelClicker.PixelType>(pack.types) { PixelClicker.PixelType.Rock };
-                    pack.types = withStone.ToArray();
-                }
-                if (string.IsNullOrEmpty(pack.fillerType)) pack.fillerType = PixelClicker.PixelType.Rock.ToString();
-                if (pack.spawns != null && !pack.spawns.Contains("Rock")) pack.spawns = "Rock, " + pack.spawns;
-            }
-            if (pack.id == FarmingId && string.IsNullOrEmpty(pack.fillerType)) pack.fillerType = PixelClicker.PixelType.Dirt.ToString();
-            if (pack.id == FarmingId)
-            {
-                // A saved Farming pack could lack a farm block (Seed and Water used to be sold on their own): make sure every one is in the rotation.
-                System.Collections.Generic.List<PixelClicker.PixelType> farm = new System.Collections.Generic.List<PixelClicker.PixelType>(pack.types ?? new PixelClicker.PixelType[0]);
-                foreach (PixelClicker.PixelType t in new[] { PixelClicker.PixelType.Dirt, PixelClicker.PixelType.Seed, PixelClicker.PixelType.Water, PixelClicker.PixelType.Fertilizer,
-                                                             PixelClicker.PixelType.Pollen, PixelClicker.PixelType.Wheat, PixelClicker.PixelType.Weevil, PixelClicker.PixelType.GoldenFruit })
-                    if (!farm.Contains(t)) farm.Add(t);
-                pack.types = farm.ToArray();
-            }
-            // Hazard blocks: Farming's Pest, Mining's Gas Pocket and Woodcutting's Hornet Nest (part of their packs' pixel lists).
-            if (pack.id == WoodcuttingId)
-            {
-                // A saved Woodcutting pack could lack a block: make sure every one is in the rotation.
-                System.Collections.Generic.List<PixelClicker.PixelType> wood = new System.Collections.Generic.List<PixelClicker.PixelType>(pack.types ?? new PixelClicker.PixelType[0]);
-                foreach (PixelClicker.PixelType t in new[] { PixelClicker.PixelType.Wood, PixelClicker.PixelType.Bark, PixelClicker.PixelType.Sap, PixelClicker.PixelType.Leaf,
-                                                             PixelClicker.PixelType.Heartwood, PixelClicker.PixelType.Twig, PixelClicker.PixelType.Pinecone, PixelClicker.PixelType.Moss, PixelClicker.PixelType.HornetNest, PixelClicker.PixelType.GreatOak, PixelClicker.PixelType.Whetstone, PixelClicker.PixelType.Acorn, PixelClicker.PixelType.Pesticide })
-                    if (!wood.Contains(t)) wood.Add(t);
-                pack.types = wood.ToArray();
-                if (string.IsNullOrEmpty(pack.fillerType)) pack.fillerType = PixelClicker.PixelType.Twig.ToString();
-                if (string.IsNullOrEmpty(pack.extraFillerTypes)) pack.extraFillerTypes = "Pinecone,Moss";   // the filler family
-                if (pack.fillerStartShare <= 0f && pack.fillerEndShare <= 0f) { pack.fillerStartShare = 0.75f; pack.fillerEndShare = 0.25f; }   // the fillers show up a little more (was 60% -> 10%)
-                if (string.IsNullOrEmpty(pack.hazardType)) pack.hazardType = PixelClicker.PixelType.HornetNest.ToString();
-                if (pack.hazardBaseShare <= 0f && pack.hazardPerLevelShare <= 0f) { pack.hazardBaseShare = 0.015f; pack.hazardPerLevelShare = 0.001f; }   // the Termite Hive: half as common as before (3% + 0.2%/level)
-                // Perks: the old 'Sharp axe' level 2 perk becomes the Wood Chipper unlock; level 3 is new (a saved pack keeps any text you edited).
-                System.Collections.Generic.List<Perk> woodPerks = new System.Collections.Generic.List<Perk>(pack.perks ?? new Perk[0]);
-                woodPerks.RemoveAll(pk => pk != null && pk.text != null && pk.text.StartsWith("Sharp axe"));
-                if (!woodPerks.Exists(pk => pk != null && pk.level == 2)) woodPerks.Add(new Perk { level = 2, text = WoodChipperPerkText, implemented = true, noticeText = WoodChipperNotice });
-                if (!woodPerks.Exists(pk => pk != null && pk.level == 3)) woodPerks.Add(new Perk { level = 3, text = WoodLifespanPerkText, implemented = true, noticeText = WoodLifespanNotice });
-                foreach (Perk pk in woodPerks) if (pk != null && pk.level == 2 && pk.text == WoodChipperPerkText) { pk.implemented = true; if (string.IsNullOrEmpty(pk.noticeText)) pk.noticeText = WoodChipperNotice; }
-                foreach (Perk pk in woodPerks) if (pk != null && pk.level == 3 && pk.text == WoodLifespanPerkText) { pk.implemented = true; if (string.IsNullOrEmpty(pk.noticeText)) pk.noticeText = WoodLifespanNotice; }
-                if (!woodPerks.Exists(pk => pk != null && pk.guestType == "Wood")) woodPerks.Add(new Perk { level = 5, text = WoodGuestPerkText, implemented = true, noticeText = WoodGuestNotice, guestType = "Wood" });
-                woodPerks.Sort((a, b) => a.level.CompareTo(b.level));
-                pack.perks = woodPerks.ToArray();
-            }
-            if (pack.id == ElectricianId)
-            {
-                // Level 5: the Conveyor Belt Kit goes on sale in the shop (PixelConsumables DeviceKind.ConveyorBelt, shopSkillId electrician / level 5).
-                System.Collections.Generic.List<Perk> elPerks = new System.Collections.Generic.List<Perk>(pack.perks ?? new Perk[0]);
-                bool changedPerks = false;
-                if (!elPerks.Exists(pk => pk != null && pk.level == 5)) { elPerks.Add(new Perk { level = 5, text = ConveyorPerkText, implemented = true, noticeText = ConveyorNotice }); changedPerks = true; }
-                if (!elPerks.Exists(pk => pk != null && pk.level == 10)) { elPerks.Add(new Perk { level = 10, text = ConveyorWidePerkText, implemented = true, noticeText = ConveyorWideNotice }); changedPerks = true; }
-                if (!elPerks.Exists(pk => pk != null && pk.level == 20)) { elPerks.Add(new Perk { level = 20, text = ConveyorWidestPerkText, implemented = true, noticeText = ConveyorWidestNotice }); changedPerks = true; }
-                if (changedPerks)
-                {
-                    elPerks.Sort((a, b) => a.level.CompareTo(b.level));
-                    pack.perks = elPerks.ToArray();
-                }
-            }
-            if (pack.id == FishingId)
-            {
-                System.Collections.Generic.List<PixelClicker.PixelType> fish = new System.Collections.Generic.List<PixelClicker.PixelType>(pack.types ?? new PixelClicker.PixelType[0]);
-                foreach (PixelClicker.PixelType t in new[] { PixelClicker.PixelType.Fish, PixelClicker.PixelType.Seaweed, PixelClicker.PixelType.Shell,
-                                                             PixelClicker.PixelType.Pearl, PixelClicker.PixelType.Water, PixelClicker.PixelType.Driftwood, PixelClicker.PixelType.Bait, PixelClicker.PixelType.Jellyfish,
-                                                             PixelClicker.PixelType.Bottle, PixelClicker.PixelType.Whale })
-                    if (!fish.Contains(t)) fish.Add(t);
-                pack.types = fish.ToArray();
-                if (string.IsNullOrEmpty(pack.fillerType) || pack.fillerType == PixelClicker.PixelType.Driftwood.ToString())
-                {
-                    pack.fillerType = PixelClicker.PixelType.Water.ToString();
-                    pack.fillerStartShare = 0.75f; pack.fillerEndShare = 0.5f;
-                    pack.spawns = "Water, Fish, Seaweed, Shell, Pearl";
-                    pack.description = "Swap the basic cubes for fished goods: very common Water, seaweed, shells, rare pearls and rare fish. Click a fish and a Weak Spots round starts: hit every spot to catch it, miss and it gets away. Water is a plain filler that gets rarer as your fishing level rises. Watch out for the stinging jellyfish. A cheap early skill that leads on towards cooking.";
-                }
-                if (string.IsNullOrEmpty(pack.hazardType)) pack.hazardType = PixelClicker.PixelType.Jellyfish.ToString();
-            }
-            if (pack.id == MiningId && pack.types != null)
-            {
-                // Every ore is in: Lead / Zinc / Nickel are back alongside Silver / Gold / Obsidian / Bedrock; the filler is called Rock.
-                System.Collections.Generic.List<PixelClicker.PixelType> mine = new System.Collections.Generic.List<PixelClicker.PixelType>(pack.types);
-                mine.RemoveAll(PixelClicker.IsRetiredOre);
-                foreach (PixelClicker.PixelType t in MiningTypes())
-                    if (!mine.Contains(t)) mine.Add(t);
-                pack.types = mine.ToArray();
-                pack.spawns = MiningSpawns;
-                pack.description = MiningDescription;
-            }
-            if (pack.id == ForagingId)
-            {
-                System.Collections.Generic.List<PixelClicker.PixelType> forage = new System.Collections.Generic.List<PixelClicker.PixelType>(pack.types ?? new PixelClicker.PixelType[0]);
-                foreach (PixelClicker.PixelType t in new[] { PixelClicker.PixelType.Berry, PixelClicker.PixelType.Mushroom, PixelClicker.PixelType.Herb,
-                                                             PixelClicker.PixelType.Truffle, PixelClicker.PixelType.Weeds, PixelClicker.PixelType.Mold, PixelClicker.PixelType.Toadstool })
-                    if (!forage.Contains(t)) forage.Add(t);   // (the Toadstool is back beside the Mold)
-                pack.types = forage.ToArray();
-                if (string.IsNullOrEmpty(pack.fillerType)) pack.fillerType = PixelClicker.PixelType.Weeds.ToString();
-                pack.hazardType = "Mold,Toadstool";
-                pack.uniformRotation = true;   // a truly random rotation: a pure reaction check
-                pack.description = ForagingDescription;
-                pack.spawns = ForagingSpawns;
-            }
-            if (pack.id == FiremakingId && (pack.types == null || pack.types.Length == 0)) pack.types = FiremakingTypes();
-            if (pack.id == MiningId || pack.id == FarmingId)
-            {
-                PixelClicker.PixelType hazard = pack.id == MiningId ? PixelClicker.PixelType.GasPocket : PixelClicker.PixelType.Pest;
-                if (pack.types != null && System.Array.IndexOf(pack.types, hazard) < 0)
-                {
-                    System.Collections.Generic.List<PixelClicker.PixelType> withHazard = new System.Collections.Generic.List<PixelClicker.PixelType>(pack.types) { hazard };
-                    pack.types = withHazard.ToArray();
-                }
-                if (string.IsNullOrEmpty(pack.hazardType)) pack.hazardType = hazard.ToString();
-            }
-            // Built-in trees: add any default node the saved pack is missing (ones you edited are kept).
-            if (pack.id != MiningId && pack.id != OfflineId && pack.id != FarmingId && pack.id != ElectricianId && pack.id != WoodcuttingId && pack.id != StandardId) continue;
-            System.Collections.Generic.List<TreeNode> merged = new System.Collections.Generic.List<TreeNode>(pack.nodes ?? new TreeNode[0]);
-            foreach (TreeNode def in DefaultNodes(pack.id))
-                if (!merged.Exists(n => n.id == def.id)) merged.Add(def);
-                else if (def.id == "hold" && pack.id == StandardId) { TreeNode saved = merged.Find(n => n.id == def.id); if (saved.description != null && saved.description.Contains("Holding a basic block puts a stake")) saved.description = def.description; }   // (2026-10-16: right-hold is each block's second action)
-            pack.nodes = merged.ToArray();
-        }
-
-        // Texts saved in older scenes still say the skill packs replace Glass and Luminescent too.
-        foreach (SkillPack pack in packs)
-        {
-            if (pack.unlockHint != null) pack.unlockHint = pack.unlockHint.Replace("Woodcutter's Pack", "Lumberjack's Pack");   // (renamed pack)
-            if (pack.description != null) pack.description = pack.description.Replace("Woodcutter's Pack", "Lumberjack's Pack");
-            if (pack.replaces != null) pack.replaces = pack.replaces.Replace("Monochrome, RGB, Glass, Luminescent", "Monochrome, RGB");
-            if (pack.id == OfflineId)
-            {
-                if (pack.description != null && (pack.description.StartsWith("Pick this skill") || pack.description.StartsWith("A PASSIVE skill: it never trains while you play. While")))   // (2026-10-16: offline XP only comes from offline progress)
-                { pack.description = "A PASSIVE skill: it never trains while you play. Pick what your character does while the game is closed: your Auto Clicker keeps working (offline progress), every offline click gives Offline Progression XP and a little XP to the skill you picked, shown in the Welcome back window. Its levels will make your time away pay more."; pack.replaces = "Nothing (passive)"; pack.spawns = "Nothing (passive)"; pack.xpFrom = "Offline progress only: each offline Auto Clicker click while the game is closed"; }
-                if (pack.description != null && pack.description.Contains("You earn no XP for that pack"))
-                    pack.description = "Pick this skill, then pick which pack's pixels you play with. Every click trains Offline Progression, which will improve what you earn while you are away. The pack you assign still earns 50% of its normal XP. With no skill pack assigned (Standard), Offline Progression earns +50% XP.";
-                if (pack.xpFrom == "Every click, whichever pack is in play")
-                    pack.xpFrom = "Every click (the assigned pack earns 50%; +50% for itself with no pack assigned)";
-            }
-            if (pack.id == StandardId)
-            {
-                if (pack.perks == null || pack.perks.Length == 0) pack.perks = StandardPerks();
-                if (Mathf.Approximately(pack.baseXp, 80f)) pack.baseXp = 380f;
-                if (Mathf.Approximately(pack.baseXp, 380f)) pack.baseXp = 600f;   // (2026-10-17: the Recycler's streak XP + Husk Crush levelled Standard ~2x too fast - level 4 at 8:21 in the 10:50 report)
-                if (pack.perks != null && !System.Array.Exists(pack.perks, pk => pk != null && pk.text != null && pk.text.StartsWith("Steady grip")))
-                {
-                    // The grip perks (Block Hold starts at half length; level 3 and level 5 each add 10% of it): added to a saved Standard pack, kept in level order.
-                    System.Collections.Generic.List<Perk> withGrip = new System.Collections.Generic.List<Perk>(pack.perks);
-                    foreach (Perk def in StandardPerks())
-                        if (def.text.StartsWith("Steady grip") || def.text.StartsWith("Firm grip")) withGrip.Add(def);
-                    withGrip.Sort((x, y) => (x != null ? x.level : 0).CompareTo(y != null ? y.level : 0));
-                    pack.perks = withGrip.ToArray();
-                }   // level 2 now takes the 380 XP level 4 used to (the whole curve x4.75, growth stays 1.5)
-                if (pack.perks != null)
-                {
-                    // Perks added later (2026-10-18: the crush refund perks, Double floor): any missing one is added to a saved Standard pack, kept in level order.
-                    foreach (Perk pk in pack.perks)   // (the first wording of Double floor, 2026-10-18, was about the husk limit)
-                        if (pk != null && pk.text == "Double floor: the floor holds twice as many husks") pk.text = DoubleFloorPerk;
-                    System.Collections.Generic.List<Perk> withLater = new System.Collections.Generic.List<Perk>(pack.perks);
-                    bool added = false;
-                    foreach (Perk def in StandardPerks())
-                        if ((def.text == CrushPerkPower || def.text == CrushPerkGrip || def.text == CrushPerkRhythm || def.text == DoubleFloorPerk)
-                            && !withLater.Exists(pk => pk != null && pk.text == def.text)) { withLater.Add(def); added = true; }
-                    if (added)
-                    {
-                        withLater.Sort((x, y) => (x != null ? x.level : 0).CompareTo(y != null ? y.level : 0));
-                        pack.perks = withLater.ToArray();
-                    }
-                }
-                if (pack.perks != null)   // the level 2 popup that introduces the skill
-                    foreach (Perk perk in pack.perks)
-                        if (perk != null && perk.level == 2 && (string.IsNullOrEmpty(perk.noticeText) || perk.noticeText.Contains("Every pixel you click gives Standard XP") || perk.noticeText.Contains("every level unlocks a perk.\n\nYour first perk") || perk.noticeText.Contains("Later points take the other one and branch further.") || perk.noticeText.StartsWith("Standard level 2! Surprise"))) perk.noticeText = StandardLevel2Notice;
-                if (pack.perks != null)   // the level 3 popup: the second point is a choice - the skipped move or Aimed Clicks (2026-10-17)
-                    foreach (Perk perk in pack.perks)
-                        if (perk != null && perk.level == 3 && string.IsNullOrEmpty(perk.noticeText) && perk.text != null && perk.text.StartsWith("Steady grip")) { perk.noticeText = StandardLevel3Notice; perk.noticeInWindow = true; }
-                if (perkWindowVersion < 1 && pack.perks != null)   // the level 2 popup opens the Skills window and frames the Standard card
-                    foreach (Perk perk in pack.perks)
-                        if (perk != null && perk.level == 2) perk.noticeInWindow = true;
-                if (pack.perks != null)
-                    foreach (Perk perk in pack.perks)
-                        if (perk != null && perk.text != null && perk.text.Contains("last 2 seconds longer")) perk.text = perk.text.Replace("last 2 seconds longer", "last 5 seconds longer");
-                if (pack.description != null && pack.description.Contains("No skill is trained")) pack.description = StandardDescription;
-                if (pack.xpFrom == "Nothing") pack.xpFrom = "1 XP for every block you collect, whatever skill is trained";
-                if (pack.description != null && pack.description.StartsWith("The usual rotation: monochrome, RGB, Glass and Luminescent"))
-                    pack.description = "The usual rotation: the six monochrome and RGB pixels (Glass and Luminescent join in once bought, and have their own switches in Toggles). No skill is trained.";
-                if (pack.spawns == "White, Gray, Black, Red, Green, Blue, Glass, Luminescent")
-                    pack.spawns = "White, Gray, Black, Red, Green, Blue (+ Glass, Luminescent once bought)";
-            }
-        }
-
-        perkWindowVersion = Mathf.Max(perkWindowVersion, 1);
-
-        // Offline Progression is listed right under Standard.
-        int offlineAt = packs.FindIndex(p => p.id == OfflineId);
-        if (offlineAt > 1)
-        {
-            SkillPack offline = packs[offlineAt];
-            packs.RemoveAt(offlineAt);
-            packs.Insert(1, offline);
-        }
     }
 
     private static TreeNode[] DefaultNodes(string id)
@@ -758,18 +600,14 @@ public partial class PixelSkills : MonoBehaviour
         }
     }
 
-    private const string PackPref = "PixelClicker.Setting.SkillPack";
-    private static string packCache;
+    // ---- progress: the skill choices live in the GameState (PixelGameState.Current.skills); XP / nodes / Mastery are its StatsState counters ----
+    private static SkillsState S => PixelGameState.Current.skills;
 
-    /// <summary>The pixel pack the player chose (saved per save file; '' / 'standard' = the usual rotation).</summary>
+    /// <summary>The pixel pack the player chose (progress in the GameState; '' / 'standard' = the usual rotation).</summary>
     public static string PackSetting
     {
-        get
-        {
-            if (packCache == null) packCache = PixelPrefs.GetString(PackPref, "");
-            return packCache;
-        }
-        set { packCache = value ?? ""; PixelPrefs.SetString(PackPref, packCache); }
+        get => S.activePack;
+        set => S.activePack = value ?? "";
     }
 
     // ---- Preview (PixelBalanceReport only): pretend a pack is in play at a skill level, with all of its pixels unlocked. Always set / cleared in a try-finally. ----
@@ -1001,21 +839,7 @@ public partial class PixelSkills : MonoBehaviour
 
     // ---- Guests: skill-only blocks a skill tree node lets the player switch on for other rotations ----
 
-    private const string GuestPref = "PixelClicker.Setting.SkillGuests";
-    private static System.Collections.Generic.HashSet<string> guestCache;
-
-    private static System.Collections.Generic.HashSet<string> GuestSet
-    {
-        get
-        {
-            if (guestCache == null)
-            {
-                guestCache = new System.Collections.Generic.HashSet<string>();
-                foreach (string part in PixelPrefs.GetString(GuestPref, "").Split(',')) if (part.Length > 0) guestCache.Add(part);
-            }
-            return guestCache;
-        }
-    }
+    // (the switched-on guest blocks are the state's list: a handful of names, a plain Contains is fine)
 
     /// <summary>Has a skill tree node that unlocks this block as a toggle been bought?</summary>
     public bool GuestUnlocked(PixelClicker.PixelType type)
@@ -1033,12 +857,13 @@ public partial class PixelSkills : MonoBehaviour
     }
 
     /// <summary>Is the guest block unlocked and switched on (it spawns in every rotation)?</summary>
-    public bool GuestOn(PixelClicker.PixelType type) => GuestSet.Contains(PixelClicker.TypeName(type)) && GuestUnlocked(type);
+    public bool GuestOn(PixelClicker.PixelType type) => S.guests.Contains(PixelClicker.TypeName(type)) && GuestUnlocked(type);
 
     public void SetGuest(PixelClicker.PixelType type, bool on)
     {
-        if (on) GuestSet.Add(type.ToString()); else GuestSet.Remove(type.ToString());
-        PixelPrefs.SetString(GuestPref, string.Join(",", GuestSet));
+        string name = PixelClicker.TypeName(type);
+        if (on) { if (!S.guests.Contains(name)) S.guests.Add(name); }
+        else S.guests.Remove(name);
         Changed?.Invoke();
     }
 
@@ -1068,7 +893,6 @@ public partial class PixelSkills : MonoBehaviour
 
     // ---- Offline Progression mode: you play with some pack's pixels but only the Offline Progression skill earns XP ----
 
-    private const string OfflineTaskPref = "PixelClicker.Setting.SkillOfflineTask";
 
     /// <summary>
     /// What your character does while the game is closed: the skill that gets a little XP from offline progress (picked on Offline Progression's card;
@@ -1076,8 +900,8 @@ public partial class PixelSkills : MonoBehaviour
     /// </summary>
     public static string OfflineTask
     {
-        get => PixelPrefs.GetString(OfflineTaskPref, "");
-        set => PixelPrefs.SetString(OfflineTaskPref, value ?? "");
+        get => S.offlineTask;
+        set => S.offlineTask = value ?? "";
     }
 
     /// <summary>The offline task's pack (Standard when none / not available).</summary>
@@ -1108,8 +932,8 @@ public partial class PixelSkills : MonoBehaviour
         return xp;
     }
 
-    /// <summary>A save file with its own settings was loaded: read the switch again.</summary>
-    public static void ReloadSettingsFromPrefs() { packCache = null; guestCache = null; }
+    // A save was loaded: its skill choices are in the state now - everything that shows the pack in play redraws.
+    private void OnLoaded() => Changed?.Invoke();
 
     /// <summary>The skill that earns the XP right now: the pack in play (Offline Progression is passive since 2026-10-16: it only gets XP from offline progress, AddOfflineXp).</summary>
     public string TrainingId => ActiveId;

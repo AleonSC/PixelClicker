@@ -677,123 +677,12 @@ public class PixelGodFind : MonoBehaviour
 
         switch (stone)
         {
-            case 0: // SPACE: a tesseract of two turning squares joined at the corners, a swirl of stars pulled in, rings that shrink to the cube.
-            {
-                float r = Mathf.Lerp(140f, 330f, arrive) * (1f - 0.35f * Smooth((t - 3.0f) / 0.4f));
-                for (int sq = 0; sq < 2; sq++)
-                {
-                    float rad = r * (sq == 0 ? 1f : 0.62f), rot = t * (sq == 0 ? 55f : -85f);
-                    for (int i = 0; i < 4; i++)
-                    {
-                        float a0 = (rot + i * 90f) * Mathf.Deg2Rad, a1 = (rot + (i + 1) * 90f) * Mathf.Deg2Rad;
-                        Line(centre + new Vector2(Mathf.Cos(a0), Mathf.Sin(a0)) * rad * 1.41f, centre + new Vector2(Mathf.Cos(a1), Mathf.Sin(a1)) * rad * 1.41f, 6f, new Color(bright.r, bright.g, bright.b, 0.9f * arrive));
-                    }
-                }
-                for (int i = 0; i < 4; i++)
-                {
-                    float a = (t * 55f + i * 90f) * Mathf.Deg2Rad, b = (-t * 85f + i * 90f) * Mathf.Deg2Rad;
-                    Line(centre + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r * 1.41f, centre + new Vector2(Mathf.Cos(b), Mathf.Sin(b)) * r * 0.62f * 1.41f, 4f, new Color(c.r, c.g, c.b, 0.7f * arrive));
-                }
-                if (t < 3.2f && Random.value < dt * 70f)
-                {
-                    float a = Random.value * 6.283f; Vector2 dir = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
-                    SpawnBit(softSprite, centre + dir * 620f, -dir * 380f + new Vector2(-dir.y, dir.x) * 170f, 1.5f, Random.Range(10f, 26f), Color.Lerp(c, Color.white, Random.value * 0.7f), 0f);
-                }
-                if (t < 3.0f && Random.value < dt * 2.5f) SpawnRing(centre, 1000f, 240f, 1.2f, new Color(c.r, c.g, c.b, 0.8f));
-                break;
-            }
-            case 1: // MIND: thought-bolts crackle in from the screen's edges, rings pulse out in time, a bright scalar sparkle.
-            {
-                if (t > 0.6f && t < 3.2f && Random.value < dt * 9f)
-                {
-                    System.Random r = new System.Random(Random.Range(0, 99999));
-                    float a = Random.value * 6.283f;
-                    Bolt(centre + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * size.x * 0.55f, centre + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 160f, 9, 40f, 7f, new Color(1f, 1f, 0.85f, 1f), new Color(c.r, c.g, c.b, 0.5f), r);
-                }
-                float beat = Mathf.Repeat(t * 1.8f, 1f);
-                if (beat < dt * 1.8f && t > 0.4f && t < 3.4f) SpawnRing(centre, 200f, 900f, 1.0f, new Color(c.r, c.g, c.b, 0.7f));
-                if (t > 0.8f && Random.value < dt * 30f) SpawnBit(softSprite, centre + Random.insideUnitCircle * 220f, Random.insideUnitCircle * 60f, 0.9f, 22f, bright, 0f);
-                break;
-            }
-            case 2: // REALITY: shapes tear loose and tumble, the screen warps (shaking harder), red and white flickers, a wobbling ring of squares.
-            {
-                shake = Mathf.Max(shake, 2f + 8f * build);
-                if (Random.value < dt * 45f && t < 3.4f)
-                {
-                    Vector2 p = new Vector2(Random.Range(0.1f, 0.9f) * size.x, Random.Range(0.1f, 0.9f) * size.y);
-                    SpawnBit(squareSprite, p, (centre - p) * 0.25f + Random.insideUnitCircle * 80f, Random.Range(0.8f, 1.6f), Random.Range(14f, 60f), Random.value < 0.3f ? Color.white : c, 0f);
-                }
-                if (Random.value < dt * 3f && t < 3.2f) flash = Mathf.Max(flash, 0.35f);
-                for (int i = 0; i < 12; i++)
-                {
-                    float a = i / 12f * 6.283f + t * 1.4f; float rad = 300f + 40f * Mathf.Sin(t * 5f + i * 1.7f);
-                    Put(feathers[i], centre + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * rad, new Vector2(40f, 40f), a * Mathf.Rad2Deg + t * 90f, new Color(c.r, c.g, c.b, 0.85f * arrive));
-                    feathers[i].sprite = squareSprite;
-                }
-                break;
-            }
-            case 3: // POWER: energy converges along rays, the shaking grows, then everything detonates.
-            {
-                shake = Mathf.Max(shake, 2f + 16f * build * build);
-                if (t < 3.2f)
-                {
-                    int rays = 14;
-                    for (int i = 0; i < rays; i++)
-                    {
-                        float a = i / (float)rays * 6.283f + t * 0.5f;
-                        Vector2 dir = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
-                        float head = Mathf.Repeat(t * 1.5f + i * 0.37f, 1f);
-                        Line(centre + dir * Mathf.Lerp(800f, 150f, head), centre + dir * Mathf.Lerp(800f, 150f, Mathf.Min(1f, head + 0.12f)), 5f + 8f * build, new Color(bright.r, bright.g, bright.b, 0.4f + 0.5f * build));
-                    }
-                }
-                break;
-            }
-            case 4: // TIME: a clock face whose hands run backwards, then forwards, with ticks, and sand flowing the wrong way.
-            {
-                float rad = Mathf.Lerp(200f, 380f, arrive);
-                for (int i = 0; i < 24; i++)
-                {
-                    float a = i / 24f * 6.283f;
-                    Vector2 d = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
-                    float len = i % 6 == 0 ? 36f : 18f;
-                    Line(centre + d * rad, centre + d * (rad - len), i % 6 == 0 ? 8f : 4f, new Color(bright.r, bright.g, bright.b, 0.85f * arrive));
-                }
-                float rev = t < 2.6f ? -1f : 1f;
-                float minuteDeg = t < 2.6f ? -t * 130f : -2.6f * 130f + (t - 2.6f) * 520f;   // backwards first, then a fast forward
-                float am = Mathf.Deg2Rad * (90f + minuteDeg);
-                float ah = Mathf.Deg2Rad * (90f + minuteDeg / 12f);
-                Line(centre, centre + new Vector2(Mathf.Cos(am), Mathf.Sin(am)) * rad * 0.85f, 8f, new Color(1f, 1f, 1f, 0.95f * arrive));
-                Line(centre, centre + new Vector2(Mathf.Cos(ah), Mathf.Sin(ah)) * rad * 0.55f, 12f, new Color(bright.r, bright.g, bright.b, 0.95f * arrive));
-                if (Random.value < dt * 50f && t < 3.4f)
-                {
-                    float a = Random.value * 6.283f; Vector2 d = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
-                    SpawnBit(softSprite, centre + d * Random.Range(rad * 0.4f, rad * 1.3f), -d * 90f * rev * -1f, 1.1f, Random.Range(8f, 18f), bright, 0f);
-                }
-                if (Random.value < dt * 2f && t < 2.6f) SpawnRing(centre, 120f, 700f, 1.2f, new Color(c.r, c.g, c.b, 0.6f));
-                break;
-            }
-            default: // SOUL: orange wisps rise from the bottom of the screen, two ribbons of light weave across, a halo of spirits circles the cube.
-            {
-                if (Random.value < dt * 55f && t < 3.6f)
-                    SpawnBit(softSprite, new Vector2(Random.value * size.x, -20f), new Vector2(Random.Range(-30f, 30f), Random.Range(240f, 460f)), Random.Range(1.4f, 2.4f), Random.Range(18f, 44f), new Color(c.r, c.g, c.b, 0.8f), 0f);
-                for (int rb = 0; rb < 2; rb++)
-                {
-                    Vector2 prev = Vector2.zero;
-                    for (int i = 0; i <= 22; i++)
-                    {
-                        float u = i / 22f;
-                        Vector2 p = new Vector2(u * size.x, centre.y + Mathf.Sin(u * 7f + t * 2.2f + rb * 3.1f) * 90f * Smooth(t / 1.0f) + (rb == 0 ? 60f : -60f));
-                        if (i > 0) Line(prev, p, rb == 0 ? 10f : 6f, new Color(bright.r, bright.g, bright.b, 0.55f * Smooth(t / 0.8f) * (1f - Smooth((t - 3.8f) / 0.8f))));
-                        prev = p;
-                    }
-                }
-                for (int i = 0; i < 6; i++)
-                {
-                    float a = t * 1.6f + i / 6f * 6.283f;
-                    Put(segs[i], centre + new Vector2(Mathf.Cos(a), Mathf.Sin(a) * 0.45f) * 330f, new Vector2(46f, 46f), 0f, new Color(1f, 0.9f, 0.7f, 0.8f * arrive));
-                }
-                break;
-            }
+            case 0: DrawSpaceStone(t, dt, size, centre, c, bright, arrive, build); break;
+            case 1: DrawMindStone(t, dt, size, centre, c, bright, arrive, build); break;
+            case 2: DrawRealityStone(t, dt, size, centre, c, bright, arrive, build); break;
+            case 3: DrawPowerStone(t, dt, size, centre, c, bright, arrive, build); break;
+            case 4: DrawTimeStone(t, dt, size, centre, c, bright, arrive, build); break;
+            default: DrawSoulStone(t, dt, size, centre, c, bright, arrive, build); break;
         }
 
         // The climax, the same shape for every stone: a flash, a burst of bits and two shock rings.
@@ -803,6 +692,129 @@ public class PixelGodFind : MonoBehaviour
             for (int i = 0; i < (stone == 3 ? 110 : 60); i++) SpawnBit(softSprite, centre, Random.insideUnitCircle.normalized * Random.Range(160f, stone == 3 ? 900f : 560f), Random.Range(0.7f, 1.5f), Random.Range(14f, 40f), Color.Lerp(c, Color.white, Random.value * 0.6f), 0f);
             SpawnRing(centre, 200f, 1500f, 0.9f, new Color(1f, 1f, 1f, 0.8f));
             SpawnRing(centre, 150f, 1000f, 1.2f, new Color(c.r, c.g, c.b, 0.9f));
+        }
+    }
+
+    // DrawStone, stone 0 - SPACE: a tesseract of two turning squares joined at the corners, a swirl of stars pulled in, rings that shrink to the cube.
+    private void DrawSpaceStone(float t, float dt, Vector2 size, Vector2 centre, Color c, Color bright, float arrive, float build)
+    {
+        float r = Mathf.Lerp(140f, 330f, arrive) * (1f - 0.35f * Smooth((t - 3.0f) / 0.4f));
+        for (int sq = 0; sq < 2; sq++)
+        {
+            float rad = r * (sq == 0 ? 1f : 0.62f), rot = t * (sq == 0 ? 55f : -85f);
+            for (int i = 0; i < 4; i++)
+            {
+                float a0 = (rot + i * 90f) * Mathf.Deg2Rad, a1 = (rot + (i + 1) * 90f) * Mathf.Deg2Rad;
+                Line(centre + new Vector2(Mathf.Cos(a0), Mathf.Sin(a0)) * rad * 1.41f, centre + new Vector2(Mathf.Cos(a1), Mathf.Sin(a1)) * rad * 1.41f, 6f, new Color(bright.r, bright.g, bright.b, 0.9f * arrive));
+            }
+        }
+        for (int i = 0; i < 4; i++)
+        {
+            float a = (t * 55f + i * 90f) * Mathf.Deg2Rad, b = (-t * 85f + i * 90f) * Mathf.Deg2Rad;
+            Line(centre + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r * 1.41f, centre + new Vector2(Mathf.Cos(b), Mathf.Sin(b)) * r * 0.62f * 1.41f, 4f, new Color(c.r, c.g, c.b, 0.7f * arrive));
+        }
+        if (t < 3.2f && Random.value < dt * 70f)
+        {
+            float a = Random.value * 6.283f; Vector2 dir = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+            SpawnBit(softSprite, centre + dir * 620f, -dir * 380f + new Vector2(-dir.y, dir.x) * 170f, 1.5f, Random.Range(10f, 26f), Color.Lerp(c, Color.white, Random.value * 0.7f), 0f);
+        }
+        if (t < 3.0f && Random.value < dt * 2.5f) SpawnRing(centre, 1000f, 240f, 1.2f, new Color(c.r, c.g, c.b, 0.8f));
+    }
+
+    // DrawStone, stone 1 - MIND: thought-bolts crackle in from the screen's edges, rings pulse out in time, a bright scalar sparkle.
+    private void DrawMindStone(float t, float dt, Vector2 size, Vector2 centre, Color c, Color bright, float arrive, float build)
+    {
+        if (t > 0.6f && t < 3.2f && Random.value < dt * 9f)
+        {
+            System.Random r = new System.Random(Random.Range(0, 99999));
+            float a = Random.value * 6.283f;
+            Bolt(centre + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * size.x * 0.55f, centre + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 160f, 9, 40f, 7f, new Color(1f, 1f, 0.85f, 1f), new Color(c.r, c.g, c.b, 0.5f), r);
+        }
+        float beat = Mathf.Repeat(t * 1.8f, 1f);
+        if (beat < dt * 1.8f && t > 0.4f && t < 3.4f) SpawnRing(centre, 200f, 900f, 1.0f, new Color(c.r, c.g, c.b, 0.7f));
+        if (t > 0.8f && Random.value < dt * 30f) SpawnBit(softSprite, centre + Random.insideUnitCircle * 220f, Random.insideUnitCircle * 60f, 0.9f, 22f, bright, 0f);
+    }
+
+    // DrawStone, stone 2 - REALITY: shapes tear loose and tumble, the screen warps (shaking harder), red and white flickers, a wobbling ring of squares.
+    private void DrawRealityStone(float t, float dt, Vector2 size, Vector2 centre, Color c, Color bright, float arrive, float build)
+    {
+        shake = Mathf.Max(shake, 2f + 8f * build);
+        if (Random.value < dt * 45f && t < 3.4f)
+        {
+            Vector2 p = new Vector2(Random.Range(0.1f, 0.9f) * size.x, Random.Range(0.1f, 0.9f) * size.y);
+            SpawnBit(squareSprite, p, (centre - p) * 0.25f + Random.insideUnitCircle * 80f, Random.Range(0.8f, 1.6f), Random.Range(14f, 60f), Random.value < 0.3f ? Color.white : c, 0f);
+        }
+        if (Random.value < dt * 3f && t < 3.2f) flash = Mathf.Max(flash, 0.35f);
+        for (int i = 0; i < 12; i++)
+        {
+            float a = i / 12f * 6.283f + t * 1.4f; float rad = 300f + 40f * Mathf.Sin(t * 5f + i * 1.7f);
+            Put(feathers[i], centre + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * rad, new Vector2(40f, 40f), a * Mathf.Rad2Deg + t * 90f, new Color(c.r, c.g, c.b, 0.85f * arrive));
+            feathers[i].sprite = squareSprite;
+        }
+    }
+
+    // DrawStone, stone 3 - POWER: energy converges along rays, the shaking grows, then everything detonates.
+    private void DrawPowerStone(float t, float dt, Vector2 size, Vector2 centre, Color c, Color bright, float arrive, float build)
+    {
+        shake = Mathf.Max(shake, 2f + 16f * build * build);
+        if (t < 3.2f)
+        {
+            int rays = 14;
+            for (int i = 0; i < rays; i++)
+            {
+                float a = i / (float)rays * 6.283f + t * 0.5f;
+                Vector2 dir = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+                float head = Mathf.Repeat(t * 1.5f + i * 0.37f, 1f);
+                Line(centre + dir * Mathf.Lerp(800f, 150f, head), centre + dir * Mathf.Lerp(800f, 150f, Mathf.Min(1f, head + 0.12f)), 5f + 8f * build, new Color(bright.r, bright.g, bright.b, 0.4f + 0.5f * build));
+            }
+        }
+    }
+
+    // DrawStone, stone 4 - TIME: a clock face whose hands run backwards, then forwards, with ticks, and sand flowing the wrong way.
+    private void DrawTimeStone(float t, float dt, Vector2 size, Vector2 centre, Color c, Color bright, float arrive, float build)
+    {
+        float rad = Mathf.Lerp(200f, 380f, arrive);
+        for (int i = 0; i < 24; i++)
+        {
+            float a = i / 24f * 6.283f;
+            Vector2 d = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+            float len = i % 6 == 0 ? 36f : 18f;
+            Line(centre + d * rad, centre + d * (rad - len), i % 6 == 0 ? 8f : 4f, new Color(bright.r, bright.g, bright.b, 0.85f * arrive));
+        }
+        float rev = t < 2.6f ? -1f : 1f;
+        float minuteDeg = t < 2.6f ? -t * 130f : -2.6f * 130f + (t - 2.6f) * 520f;   // backwards first, then a fast forward
+        float am = Mathf.Deg2Rad * (90f + minuteDeg);
+        float ah = Mathf.Deg2Rad * (90f + minuteDeg / 12f);
+        Line(centre, centre + new Vector2(Mathf.Cos(am), Mathf.Sin(am)) * rad * 0.85f, 8f, new Color(1f, 1f, 1f, 0.95f * arrive));
+        Line(centre, centre + new Vector2(Mathf.Cos(ah), Mathf.Sin(ah)) * rad * 0.55f, 12f, new Color(bright.r, bright.g, bright.b, 0.95f * arrive));
+        if (Random.value < dt * 50f && t < 3.4f)
+        {
+            float a = Random.value * 6.283f; Vector2 d = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+            SpawnBit(softSprite, centre + d * Random.Range(rad * 0.4f, rad * 1.3f), -d * 90f * rev * -1f, 1.1f, Random.Range(8f, 18f), bright, 0f);
+        }
+        if (Random.value < dt * 2f && t < 2.6f) SpawnRing(centre, 120f, 700f, 1.2f, new Color(c.r, c.g, c.b, 0.6f));
+    }
+
+    // DrawStone, stone 5+ (default) - SOUL: orange wisps rise from the bottom of the screen, two ribbons of light weave across, a halo of spirits circles the cube.
+    private void DrawSoulStone(float t, float dt, Vector2 size, Vector2 centre, Color c, Color bright, float arrive, float build)
+    {
+        if (Random.value < dt * 55f && t < 3.6f)
+            SpawnBit(softSprite, new Vector2(Random.value * size.x, -20f), new Vector2(Random.Range(-30f, 30f), Random.Range(240f, 460f)), Random.Range(1.4f, 2.4f), Random.Range(18f, 44f), new Color(c.r, c.g, c.b, 0.8f), 0f);
+        for (int rb = 0; rb < 2; rb++)
+        {
+            Vector2 prev = Vector2.zero;
+            for (int i = 0; i <= 22; i++)
+            {
+                float u = i / 22f;
+                Vector2 p = new Vector2(u * size.x, centre.y + Mathf.Sin(u * 7f + t * 2.2f + rb * 3.1f) * 90f * Smooth(t / 1.0f) + (rb == 0 ? 60f : -60f));
+                if (i > 0) Line(prev, p, rb == 0 ? 10f : 6f, new Color(bright.r, bright.g, bright.b, 0.55f * Smooth(t / 0.8f) * (1f - Smooth((t - 3.8f) / 0.8f))));
+                prev = p;
+            }
+        }
+        for (int i = 0; i < 6; i++)
+        {
+            float a = t * 1.6f + i / 6f * 6.283f;
+            Put(segs[i], centre + new Vector2(Mathf.Cos(a), Mathf.Sin(a) * 0.45f) * 330f, new Vector2(46f, 46f), 0f, new Color(1f, 0.9f, 0.7f, 0.8f * arrive));
         }
     }
 
@@ -990,51 +1002,18 @@ public class PixelGodFind : MonoBehaviour
 
     private void BuildStudio(int tierIndex)
     {
-        studioRoot = new GameObject("God Find Studio");
-        studioRoot.transform.position = new Vector3(0f, -4700f, 0f);
-        pivot = new GameObject("Pivot").transform;
-        pivot.SetParent(studioRoot.transform, false);
-        GameObject model = clicker.CreateDisplayPixel(tierIndex, pivot, 1f);
-        if (model == null)
-        {
-            model = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            Destroy(model.GetComponent<Collider>());
-            model.transform.SetParent(pivot, false);
-        }
-        foreach (Collider col in model.GetComponentsInChildren<Collider>()) Destroy(col);
-        model.transform.localPosition = Vector3.zero;
-
-        rt = new RenderTexture(512, 512, 24, RenderTextureFormat.ARGB32) { name = "God Find Picture" };
-        GameObject camGo = new GameObject("Camera");
-        camGo.transform.SetParent(studioRoot.transform, false);
-        studioCam = camGo.AddComponent<Camera>();
-        studioCam.enabled = false;
-        studioCam.clearFlags = CameraClearFlags.SolidColor;
-        studioCam.backgroundColor = new Color(0f, 0f, 0f, 0f);
-        studioCam.orthographic = true;
-        studioCam.orthographicSize = 0.98f;
-        studioCam.nearClipPlane = 0.1f;
-        studioCam.farClipPlane = 30f;
-        studioCam.allowHDR = false;
+        studioRoot = PixelShowStudio.Create("God Find Studio", -4700f, 6f, 30f, new Vector3(2.5f, 3f, -5f), 30f, 6f, out studioCam);
+        studioCam.orthographicSize = 0.98f;   // a cube's diagonal is 1.73, so it never clips while it turns
+        pivot = PixelShowStudio.AddPixelModel(clicker, tierIndex, studioRoot.transform);
+        rt = PixelShowStudio.Picture("God Find Picture");
         studioCam.targetTexture = rt;
-        camGo.transform.localPosition = new Vector3(0f, 0f, -6f);
-
-        GameObject lightGo = new GameObject("Light");
-        lightGo.transform.SetParent(studioRoot.transform, false);
-        lightGo.transform.localPosition = new Vector3(2.5f, 3f, -5f);
-        Light light = lightGo.AddComponent<Light>();
-        light.type = LightType.Point;
-        light.range = 30f;
-        light.intensity = 6f;
-        light.shadows = LightShadows.None;
     }
 
     private void Cleanup()
     {
         if (canvasRoot != null) Destroy(canvasRoot);
-        if (studioRoot != null) Destroy(studioRoot);
-        if (rt != null) { rt.Release(); Destroy(rt); }
-        canvasRoot = null; studioRoot = null; rt = null; bits = null; rings = null; lines = null; cubeImage = null;
+        PixelShowStudio.Release(ref studioRoot, ref rt);
+        canvasRoot = null; bits = null; rings = null; lines = null; cubeImage = null;
         clouds = segs = feathers = fist = null; sun = sphere = glowBehind = null;
     }
 }

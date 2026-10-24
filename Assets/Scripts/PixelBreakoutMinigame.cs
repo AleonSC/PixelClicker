@@ -29,32 +29,13 @@ using static PixelInput;
 /// balls, or run out of time, and nothing is lost. The court is drawn in a plane facing the camera. Add this to any GameObject
 /// (PixelShop adds it automatically if it is missing).
 /// </summary>
-public class PixelBreakoutMinigame : PixelMinigame
+public class PixelBreakoutMinigame : PixelScheduledMinigame
 {
     [Header("References")]
     [Tooltip("The PixelClicker (camera, husks, payouts). Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
 
-    [Header("State")]
-    [Tooltip("Run from the start without buying it in the shop (for testing).")]
-    [SerializeField] private bool startRunning = false;
-
-    [Tooltip("Is the minigame running? (The shop turns this on when Breakout is bought.)")]
-    [SerializeField] private bool running = false;
-
     [Header("When it starts")]
-    [Min(0f)]
-    [Tooltip("Seconds after the minigame is switched on before the first game can start.")]
-    [SerializeField] private float firstRoundDelay = 75f;
-
-    [Min(1f)]
-    [Tooltip("Shortest wait between games (seconds).")]
-    [SerializeField] private float minInterval = 150f;
-
-    [Min(1f)]
-    [Tooltip("Longest wait between games (seconds).")]
-    [SerializeField] private float maxInterval = 300f;
-
     [Min(1)]
     [Tooltip("A game only starts when at least this many husks are lying around: they become the bricks.")]
     [SerializeField] private int minPixels = 30;
@@ -159,7 +140,9 @@ public class PixelBreakoutMinigame : PixelMinigame
     [SerializeField] private bool disableUltra = false;
 
     [Header("Look")]
+    [Tooltip("Colour of the paddle.")]
     [SerializeField] private Color paddleColor = new Color(0.4f, 0.9f, 1f, 1f);
+    [Tooltip("Colour of the court's top and side walls (alpha = how see-through).")]
     [SerializeField] private Color lineColor = new Color(1f, 1f, 1f, 0.55f);
     [Tooltip("Colour of the court's background. It is always drawn fully solid (its alpha is ignored), so nothing shows through it.")]
     [SerializeField] private Color backColor = new Color(0f, 0f, 0f, 1f);
@@ -173,14 +156,19 @@ public class PixelBreakoutMinigame : PixelMinigame
     [Tooltip("Status line. {0} = bricks left, {1} = balls left, {2} = seconds left.")]
     [SerializeField] private string statusFormat = "BREAKOUT   bricks {0}   balls {1}   {2}s";
 
+    [Tooltip("Floating message when every brick is broken.")]
     [SerializeField] private string winFormat = "Cleared!";
+    [Tooltip("Floating message when the last ball is lost.")]
     [SerializeField] private string loseText = "Out of balls";
+    [Tooltip("Floating message when the round's time runs out.")]
     [SerializeField] private string timeoutText = "Time's up";
 
     [Min(10f)]
+    [Tooltip("Size of the floating win / lose message (world text size).")]
     [SerializeField] private float messageTextSize = 5f;
 
     [Min(0.5f)]
+    [Tooltip("How long the floating win / lose message rises and fades (seconds).")]
     [SerializeField] private float messageSeconds = 2.2f;
 
     private class Brick
@@ -191,13 +179,12 @@ public class PixelBreakoutMinigame : PixelMinigame
         public Vector2 pos; public bool alive;
     }
 
-    private class Bystander { public Rigidbody body; public Transform tf; public Vector3 baseScale; public Collider[] colliders; public Behaviour[] paused; }
-    private readonly System.Collections.Generic.List<Bystander> bystanders = new System.Collections.Generic.List<Bystander>();
-    private float bystanderFactor = 1f, slideT;
+    private readonly PixelBystanders bystanders = new PixelBystanders();   // the husks not in the round shrink away while it runs
+    private float slideT;
     private double earned;
     private float serveDelayExtra;
 
-    private float spawnTimer, timeLeft, serveTimer;
+    private float timeLeft, serveTimer;
     private bool activeRound, setBlock;
     private Camera cam;
     private GameObject root, uiRoot;
@@ -216,22 +203,22 @@ public class PixelBreakoutMinigame : PixelMinigame
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetBreakoutStatics() { Active = false; }
 
+    // This minigame's own defaults for the shared round schedule (PixelScheduledMinigame; a scene's values override them).
+    public PixelBreakoutMinigame()
+    {
+        firstRoundDelay = 75f;
+        minInterval = 150f;
+        maxInterval = 300f;
+    }
+
     public override string Id => "breakout";
     public override string DisplayName => "Breakout";
-    public override bool Running => running;
     public override bool Busy => activeRound;
     public override bool Takeover => true;
 
-    public override void Activate()
-    {
-        if (running) return;
-        running = true;
-        spawnTimer = firstRoundDelay;
-    }
-
     public override void Deactivate()
     {
-        running = false;
+        base.Deactivate();
         if (activeRound) EndRound(false, null);
     }
 
@@ -246,8 +233,7 @@ public class PixelBreakoutMinigame : PixelMinigame
             enabled = false;
             return;
         }
-        if (startRunning) running = true;
-        spawnTimer = firstRoundDelay;
+        StartSchedule();
     }
 
     protected override void OnDestroy()
@@ -255,8 +241,7 @@ public class PixelBreakoutMinigame : PixelMinigame
         base.OnDestroy();
         PixelHuskPool.HuskReleasing -= OnHuskReleasing;
         if (activeRound) EndRound(false, null);
-        bystanderFactor = 1f;
-        UpdateBystanders();
+        bystanders.Restore();   // put the other husks back at once
     }
 
     // (PixelHuskPool: the husk is going away and may be reused - let go of it, as if it had been destroyed; the round-end restore skips it)
@@ -268,13 +253,13 @@ public class PixelBreakoutMinigame : PixelMinigame
             if (br.alive) { br.alive = false; bricksLeft = Mathf.Max(0, bricksLeft - 1); }
             br.body = null; br.tf = null; br.despawn = null;
         }
-        for (int i = bystanders.Count - 1; i >= 0; i--) if (bystanders[i].body == body) bystanders.RemoveAt(i);
+        bystanders.Forget(body);
     }
 
     protected override void OnDespawned()
     {
         if (activeRound) EndRound(false, null);
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
     }
 
     [ContextMenu("Start A Breakout Game Now")]
@@ -283,74 +268,13 @@ public class PixelBreakoutMinigame : PixelMinigame
         if (Application.isPlaying && !activeRound) TryStart(true);
     }
 
-    private void ShrinkBystanders(System.Collections.Generic.HashSet<Rigidbody> inWall)
-    {
-        bystanders.Clear();
-        bystanderFactor = 1f;
-        var all = clicker.OldPixels;
-        for (int i = 0; i < all.Count; i++)
-        {
-            Rigidbody rb = all[i];
-            if (rb == null || inWall.Contains(rb) || clicker.IsFlyingPixel(rb)) continue;
-            OldPixelDespawn d = rb.GetComponent<OldPixelDespawn>();
-            if (d != null && (d.IsDespawning || d.Held)) continue;
-            bystanders.Add(new Bystander
-            {
-                body = rb, tf = rb.transform, baseScale = rb.transform.localScale,
-                colliders = rb.GetComponents<Collider>(),
-                paused = new Behaviour[] { rb.GetComponent<OldPixelGravityWell>(), rb.GetComponent<OldPixelFloat>() },
-            });
-        }
-        foreach (Bystander b in bystanders)
-        {
-            SetVelocities(b.body, Vector3.zero);
-            b.body.isKinematic = true;
-            foreach (Collider c in b.colliders) if (c != null) c.enabled = false;
-            foreach (Behaviour x in b.paused) if (x != null) x.enabled = false;
-        }
-    }
-
-    private void UpdateBystanders()
-    {
-        if (bystanders.Count == 0) return;
-        bystanderFactor = Mathf.MoveTowards(bystanderFactor, activeRound ? 0f : 1f, Time.unscaledDeltaTime / Mathf.Max(0.05f, bystanderSeconds));
-        bool done = !activeRound && bystanderFactor >= 1f;
-        for (int i = bystanders.Count - 1; i >= 0; i--)
-        {
-            Bystander b = bystanders[i];
-            if (b.body == null || b.tf == null) { bystanders.RemoveAt(i); continue; }
-            b.tf.localScale = b.baseScale * Mathf.Max(0.001f, bystanderFactor);
-            if (done)
-            {
-                foreach (Collider c in b.colliders) if (c != null) c.enabled = true;
-                foreach (Behaviour x in b.paused) if (x != null) x.enabled = true;
-                b.body.isKinematic = false;
-            }
-        }
-        if (done) bystanders.Clear();
-    }
-
-    private static void SetVelocities(Rigidbody rb, Vector3 v)
-    {
-        if (rb == null || rb.isKinematic) return;
-#if UNITY_6000_0_OR_NEWER
-        rb.linearVelocity = v;
-#else
-        rb.velocity = v;
-#endif
-        rb.angularVelocity = Vector3.zero;
-    }
-
     private void Update()
     {
-        UpdateBystanders();
+        bystanders.Tick(activeRound, bystanderSeconds);
         if (activeRound) { Tick(Time.deltaTime); return; }
         if (!running) return;
 
-        spawnTimer -= Time.deltaTime;
-        if (spawnTimer > 0f) return;
-        if (!PixelMinigameLimits.AllowAnother(this)) { spawnTimer = PixelMinigameLimits.RetrySeconds; return; }
-        spawnTimer = TryStart(false) ? 0f : 12f;
+        if (SpawnDue(ref spawnTimer)) spawnTimer = TryStart(false) ? 0f : 12f;
     }
 
     // ------------------------------------------------------------------
@@ -418,12 +342,12 @@ public class PixelBreakoutMinigame : PixelMinigame
         OldPixelDespawn.HoldAll = true;
         foreach (Brick br in bricks)
         {
-            SetVelocities(br.body, Vector3.zero);
+            PixelBody.Steer(br.body, Vector3.zero, true);
             br.body.isKinematic = true;
             foreach (Collider c in br.colliders) if (c != null) c.enabled = false;
             foreach (Behaviour x in br.paused) if (x != null) x.enabled = false;
         }
-        ShrinkBystanders(inWall);
+        bystanders.Shrink(clicker, inWall);
         slideT = 0f;
         earned = 0d;
 
@@ -698,7 +622,7 @@ public class PixelBreakoutMinigame : PixelMinigame
             foreach (Collider c in br.colliders) if (c != null) c.enabled = true;
             foreach (Behaviour x in br.paused) if (x != null) x.enabled = true;
             br.body.isKinematic = false;
-            SetVelocities(br.body, Vector3.zero);
+            PixelBody.Steer(br.body, Vector3.zero, true);
             if (br.despawn != null) br.despawn.AddLifetime(3f);
         }
         // Broken bricks: let go of physics only once they are gone (their despawn handles it).
@@ -711,7 +635,7 @@ public class PixelBreakoutMinigame : PixelMinigame
         if (uiRoot != null) Destroy(uiRoot);
         uiRoot = null;
         statusLabel = null;
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
 
         if (win)
         {
@@ -733,29 +657,13 @@ public class PixelBreakoutMinigame : PixelMinigame
 
     private IEnumerator MessageRoutine(Vector3 start, Quaternion rot, string message)
     {
-        GameObject go = new GameObject("Breakout Message");
-        Track(go);
-        TextMeshPro text = go.AddComponent<TextMeshPro>();
-        text.text = message;
-        text.fontSize = messageTextSize;
-        text.fontStyle = FontStyles.Bold;
-        text.alignment = TextAlignmentOptions.Center;
-        text.outlineWidth = 0.2f;
-        text.outlineColor = new Color32(0, 0, 0, 255);
-        if (clicker.UIFont != null) text.font = clicker.UIFont;
-        text.rectTransform.sizeDelta = new Vector2(14f, 4f);
-
-        float t = 0f;
-        while (t < messageSeconds)
+        TextMeshPro text = PixelRisingText.Create("Breakout Message", message, messageTextSize, clicker.UIFont, new Vector2(14f, 4f));
+        Track(text.gameObject);
+        return PixelRisingText.Fade(text, messageSeconds, (tx, k) =>
         {
-            t += Time.unscaledDeltaTime;
-            float k = Mathf.Clamp01(t / messageSeconds);
-            go.transform.position = PixelUIKit.KeepOnScreen(cam != null ? cam : Camera.main, text, start + rot * Vector3.up * (k * 0.8f));
-            go.transform.rotation = rot;
-            text.alpha = 1f - k * k;
-            yield return null;
-        }
-        Destroy(go);
+            tx.transform.position = PixelUIKit.KeepOnScreen(cam != null ? cam : Camera.main, tx, start + rot * Vector3.up * (k * 0.8f));
+            tx.transform.rotation = rot;
+        });
     }
 
     private void BuildUi()

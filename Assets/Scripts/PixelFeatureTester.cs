@@ -3,8 +3,7 @@
 //   The 'Tester' tab of the Dev Hub: a place to spawn and try things that are not part of the game yet (a consumable, a device, a machine...). Each testable thing is a Feature registered in
 //   Awake (Register(name, description, ghostBuilder, placeBuilder)): the tab lists them as cards with a 'Place' button. Place = a see-through GHOST follows the mouse over the floor
 //   (PixelConsumables.TryGetFloorPoint); left click puts a real one down (and keeps placing), Q / E turn it, right click or Escape stops (PixelWindows entry); 'Clear' removes the ones placed.
-//   LINE pieces (belts): while drawing a chain a right click takes the LAST piece of that chain back (lineChain, TakeBackLastPiece) and drawing
-//   carries on from its start; with nothing left to take back it ends the chain, and a further right click stops placing.
+//   LINE pieces (belts): a right click while drawing CANCELS placing (the ghost goes; the pieces already placed stay - remove one with a right hold).
 //   While placing, clicks on the cube are blocked (PixelClicker.ExternalClickBlock). Placed test objects ARE saved (see SAVING below). To add something to test: write a builder (see PixelWoodChipper:
 //   CreateGhost / Place) and add one Register line here.
 //   Two-point features (RegisterLine, a conveyor belt) use a marker ghost, then a preview piece between the first point and the mouse; every click builds a piece and the end starts the next.
@@ -58,7 +57,7 @@ public class PixelFeatureTester : MonoBehaviour
         public Func<PixelClicker, Vector3, Vector3, GameObject> placeLine;
         public Action<GameObject, Vector3, Vector3> updatePreview;
         public SnapFunc snap;
-        public Func<Vector3, Vector3, string> lineCheck;   // two-point features: why a piece from a to b can't be placed (null = it can) - the conveyor's turn limit
+        public Func<Vector3, Vector3, string> lineCheck;   // two-point features: why a piece from a to b can't be placed (null = it can) - the conveyor's turn limit and overlap check
         // Tall features (the Conveyor Elevator): after the base is clicked the mouse sets the HEIGHT, a second click confirms.
         public bool heightStage;
         // Scroll stage (the Belt Jump): stage 2 sets a value with the SCROLL WHEEL instead of the mouse height (stageValue / setStageValue, in stageStep steps
@@ -79,7 +78,7 @@ public class PixelFeatureTester : MonoBehaviour
     private static void ResetStatics()
     {
         instance = null; kept = null;
-        PixelStatics.ResetOnRestart(OnSceneUnloaded);
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);   // restart-reset-not-progress: tester machines kept from a load while the tester was off (they are saved with the save itself)
     }
 
     // (Restart reloads the scene: the old game's loaded test objects must not be written into the new game's saves)
@@ -157,10 +156,10 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].import = PixelWoodChipper.ImportState;
 
         RegisterLine("Conveyor Belt",
-                     "Click a point, then another: a belt is built between them (the second point starts the next piece, so short pieces make a curve; right click ends the chain, right click again stops). Clicks near a belt's end (or an elevator's top) snap to it, at its height. SCROLL the mouse wheel to raise or lower the point you are placing: the belt's supports grow and the belt slopes, so ramps and bridges are possible. Right click a placed belt to reverse it. Anything standing on a belt is carried along - drop things on it with Pixel Grabbing, or put it under a machine's outlet.",
+                     "Click a point, then another: a belt is built between them (the second point starts the next piece, so short pieces make a curve; right click stops placing - the pieces already laid stay). Clicks near a belt's end (or an elevator's top) snap to it, at its height. SCROLL the mouse wheel to raise or lower the point you are placing: the belt's supports grow and the belt slopes, so ramps and bridges are possible. Right click a placed belt to reverse it. Anything standing on a belt is carried along - drop things on it with Pixel Grabbing, or put it under a machine's outlet.",
                      c => PixelConveyor.CreateMarker(c), c => PixelConveyor.CreatePreview(c), (g, a, b) => PixelConveyor.UpdatePreview(g, a, b),
                      (c, a, b) => PixelConveyor.Place(c, a, b), PixelConveyor.Snap);
-        features[features.Count - 1].lineCheck = PixelConveyor.TurnProblem;
+        features[features.Count - 1].lineCheck = PixelConveyor.PlaceProblem;
         features[features.Count - 1].export = PixelConveyor.ExportState;
         features[features.Count - 1].import = PixelConveyor.ImportState;
         RegisterRoute("Container Hose",
@@ -242,7 +241,7 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].export = PixelHuskSource.ExportState;
         features[features.Count - 1].import = PixelHuskSource.ImportState;
         Register("Kiln",
-                 "A brick kiln with a glowing mouth on its front. Anything that goes into the mouth from the side burns (lead a conveyor belt into it, or throw things in): each burnt pixel makes a Charcoal husk that comes out of the chute at the back. Charcoal despawns like any husk, for now.",
+                 "A brick kiln with a glowing mouth on its front. Anything that goes into the mouth from the side burns (lead a conveyor belt into it, or throw things in): each burnt pixel gives you 1 Charcoal (a material, in the Inventory's Materials tab). Charcoal buys the Charcoal Pixel in the shop, whose husks are generator fuel.",
                  c => PixelKiln.CreateGhost(c), (c, p, yw) => PixelKiln.Place(c, p, yw));
         features[features.Count - 1].export = PixelKiln.ExportState;
         features[features.Count - 1].import = PixelKiln.ImportState;
@@ -329,7 +328,7 @@ public class PixelFeatureTester : MonoBehaviour
         }
         SetStatus(linkPanel != null ? "Click a device inside the blue ring to link the solar panel to it (right click skips)."
                 : placing == null ? "Pick 'Place' on a card to try it."
-                : placing.line ? "Placing " + placing.name + (hasStart ? ": left click the end point (it starts the next piece), right click ends the chain." : ": left click the first point.") + " Right click stops / Esc stops."
+                : placing.line ? "Placing " + placing.name + (hasStart ? ": left click the end point (it starts the next piece)." : ": left click the first point.") + " Right click or Esc stops."
                 : "Placing " + placing.name + ": left click puts one down, Q / E turn it, right click or Esc stops.");
     }
 
@@ -390,7 +389,6 @@ public class PixelFeatureTester : MonoBehaviour
 
     private void StopPlacing()
     {
-        ClearLineChain();
         PixelStatusLines.Clear(HudLineKey);
         gameplayPlacing = false;
         spendOne = null;
@@ -794,7 +792,7 @@ public class PixelFeatureTester : MonoBehaviour
         instance.StopPlacing();
         instance.linkPanel = panel;
         instance.placeStartFrame = Time.frameCount;
-        panel.GetComponent<PixelSolarPanel>()?.ShowRange(true);
+        ShowPanelRange(panel, true);
         instance.linkOnly = true;
         PixelClicker.ExternalClickBlock = true; instance.blocking = true;
         instance.Refresh();
@@ -802,9 +800,12 @@ public class PixelFeatureTester : MonoBehaviour
 
     private bool linkOnly;   // linking a placed panel without placing anything
 
+    /// <summary>Shows or hides a placed solar panel's blue link ring (nothing if the object is not a panel).</summary>
+    private static void ShowPanelRange(GameObject panel, bool on) { panel.GetComponent<PixelSolarPanel>()?.ShowRange(on); }
+
     private void EndLink(bool keepPlacing)
     {
-        if (linkPanel != null) linkPanel.GetComponent<PixelSolarPanel>()?.ShowRange(false);
+        if (linkPanel != null) ShowPanelRange(linkPanel, false);
         linkPanel = null;
         if (linkOnly) { linkOnly = false; if (blocking) { PixelClicker.ExternalClickBlock = false; blocking = false; } }
         Refresh();
@@ -847,7 +848,7 @@ public class PixelFeatureTester : MonoBehaviour
         if (placing.route) { UpdateRoute(hasPoint, p, snapped, groundY, unit); return; }
         if (hasStart) p = PixelConveyor.ClampEnd(lineStart, p);
         string problem = hasStart && hasPoint && placing.lineCheck != null ? placing.lineCheck(lineStart, p) : null;
-        string text = problem != null ? problem + " - pick a gentler angle" : "Scroll: raise / lower the belt supports. Height " + (lineElev / unit).ToString("0.0") + " cubes" + (snapped ? "  (snapped to an end)" : "");
+        string text = problem != null ? problem : "Scroll: raise / lower the belt supports. Height " + (lineElev / unit).ToString("0.0") + " cubes" + (snapped ? "  (snapped to an end)" : "");
         if (text != lastElevText) { SetStatus(text); lastElevText = text; }
         if (!hasStart)
         {
@@ -856,7 +857,7 @@ public class PixelFeatureTester : MonoBehaviour
         else
         {
             if (previewGhost != null && hasPoint && problem == null) { previewGhost.SetActive(true); placing.updatePreview(previewGhost, lineStart, p); }
-            else if (previewGhost != null) previewGhost.SetActive(false);   // (too sharp a turn: no preview, it can't be placed)
+            else if (previewGhost != null) previewGhost.SetActive(false);   // (too sharp a turn or overlapping a belt: no preview, it can't be placed)
         }
         if (Time.frameCount == placeStartFrame) return;
         if (hasPoint && PixelInput.LeftPressed())
@@ -866,7 +867,6 @@ public class PixelFeatureTester : MonoBehaviour
             {
                 hasStart = true;
                 lineStart = p;
-                ClearLineChain();
                 if (ghost != null) ghost.SetActive(false);
                 if (previewGhost == null) previewGhost = placing.preview(clicker);
                 Refresh();
@@ -875,49 +875,11 @@ public class PixelFeatureTester : MonoBehaviour
             else
             {
                 GameObject go = placing.placeLine(clicker, lineStart, p);
-                if (go != null) { placing.placed.Add(go); lineChain.Add(go); lineChainStarts.Add(lineStart); lineStart = p; }
+                if (go != null) { placing.placed.Add(go); lineStart = p; }
                 Refresh();
             }
         }
-        else if (PixelInput.RightPressed())
-        {
-            if (hasStart && TakeBackLastPiece()) Refresh();   // takes the last piece of this chain back (like the hose's last point)
-            else if (hasStart)
-            {
-                hasStart = false;                                   // nothing left to take back: ends the chain, the first point can be chosen again
-                ClearLineChain();
-                if (previewGhost != null) Destroy(previewGhost);
-                previewGhost = null;
-                Refresh();
-            }
-            else StopPlacing();
-        }
-    }
-
-    // The pieces placed in the chain being drawn now (and where each started), so a right click while placing takes the last one back.
-    private readonly List<GameObject> lineChain = new List<GameObject>();
-    private readonly List<Vector3> lineChainStarts = new List<Vector3>();
-
-    private void ClearLineChain() { lineChain.Clear(); lineChainStarts.Clear(); }
-
-    /// <summary>Removes the last piece of the current chain (the same way a right hold removes a piece) and carries on drawing from its start. False when there is none.</summary>
-    private bool TakeBackLastPiece()
-    {
-        while (lineChain.Count > 0)
-        {
-            int last = lineChain.Count - 1;
-            GameObject go = lineChain[last];
-            Vector3 start = lineChainStarts[last];
-            lineChain.RemoveAt(last);
-            lineChainStarts.RemoveAt(last);
-            if (go == null) continue;   // (already removed some other way)
-            foreach (Feature f in features) f.placed.Remove(go);
-            Destroy(go);   // (a belt's riders are let go by the belt system)
-            PixelAudio.Play("device_remove");
-            lineStart = start;
-            return true;
-        }
-        return false;
+        else if (PixelInput.RightPressed()) StopPlacing();   // (2026-10-24: a right click cancels the ghost; placed pieces stay)
     }
 
     // ---------------- routed placing (the Container Hose) ----------------
@@ -1102,7 +1064,7 @@ public class PixelFeatureTester : MonoBehaviour
             GameObject go = placing.place(clicker, point, useYaw);
             if (go != null) placing.placed.Add(go);
             if (go != null && AfterPlaced()) return;
-            if (go != null && placing.linkAfterPlace) { linkPanel = go; linkOnly = false; placeStartFrame = Time.frameCount; go.GetComponent<PixelSolarPanel>()?.ShowRange(true); }
+            if (go != null && placing.linkAfterPlace) { linkPanel = go; linkOnly = false; placeStartFrame = Time.frameCount; ShowPanelRange(go, true); }
             Refresh();
         }
         else if (PixelInput.RightPressed()) StopPlacing();

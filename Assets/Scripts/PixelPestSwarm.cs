@@ -90,51 +90,17 @@ public class PixelPestSwarm : MonoBehaviour
         s.origin = at;
         s.unit = Mathf.Max(0.01f, owner.OldPixelWorldSize);
         s.bugHalf = s.unit * 0.06f;
-        s.floorY = GroundY(owner, at);
+        s.floorY = PixelSwarmKit.GroundY(owner, at);
         s.darkMat = s.Mat(new Color(0.07f, 0.09f, 0.04f, 1f));
         s.redMat = s.Mat(new Color(1f, 0.15f, 0.05f, 1f));
         s.legMat = s.Mat(new Color(0.18f, 0.16f, 0.06f, 1f));
         return s;
     }
 
-    /// <summary>The floor under a point: the lowest surface that is not a rigid body (the cube and old pixels are higher).</summary>
-    private static float GroundY(PixelClicker owner, Vector3 at)
-    {
-        float size = Mathf.Max(0.01f, owner.PixelBaseSize);
-        float best = at.y - size * 1.5f;
-        float lowest = float.MaxValue;
-        RaycastHit[] hits = Physics.RaycastAll(at + Vector3.up * size, Vector3.down, size * 60f, ~0, QueryTriggerInteraction.Ignore);
-        foreach (RaycastHit h in hits)
-            if (h.rigidbody == null && h.point.y < lowest) lowest = h.point.y;
-        return lowest < float.MaxValue ? lowest : best;
-    }
+    private Material Mat(Color c) => PixelSwarmKit.Material(clicker, c);
 
-    private Material Mat(Color c)
-    {
-        Material m = clicker != null ? clicker.CreateVisualMaterial(c, false) : null;
-        if (m == null)
-        {
-            Shader sh = PixelShaders.SpriteDefault();
-            m = sh != null ? new Material(sh) : new Material(Shader.Find("Standard"));
-            m.color = c;
-        }
-        return m;
-    }
-
-    private Transform Part(Transform parent, string name, Vector3 localPos, Vector3 localScale, Material mat, Vector3 euler = default)
-    {
-        GameObject g = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        g.name = name;
-        Destroy(g.GetComponent<Collider>());
-        g.transform.SetParent(parent, false);
-        g.transform.localPosition = localPos * unit;
-        g.transform.localScale = localScale * unit;
-        g.transform.localRotation = Quaternion.Euler(euler);
-        Renderer r = g.GetComponent<Renderer>();
-        r.sharedMaterial = mat;
-        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        return g.transform;
-    }
+    private Transform Part(Transform parent, string name, Vector3 localPos, Vector3 localScale, Material mat, Vector3 euler = default) =>
+        PixelSwarmKit.Part(parent, name, localPos, localScale, unit, mat, euler);
 
     private Bug Spawn(Vector3 at, int index)
     {

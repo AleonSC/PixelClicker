@@ -36,15 +36,15 @@ if [ -n "$HITS" ]; then
 fi
 
 # Rule: a system whose progress moved into the GameState (listed in GameState.MovedSystems, docs/systems/PixelGameState.md) no longer
-# saves itself and needs no restart reset: its script must not implement IPixelSaved, register with PixelSaveRegistry or PixelStatics.ResetOnRestart.
+# needs no restart reset for it: its script must not use PixelStatics.ResetOnRestart (the old IPixelSaved / PixelSaveRegistry are gone since 2026-10-24).
 # A restart reset that clears something that is NOT progress (e.g. the old scene's event listeners) says so on its line:
 # '// restart-reset-not-progress: <what>'.
 MOVED=$(sed -n 's/.*MovedSystems = {\(.*\)};.*/\1/p' GameState.cs | tr -d ' "' | tr ',' ' ')
 for sys in $MOVED; do
   [ -f "$sys.cs" ] || { echo "GameState.cs: rule: GameState.MovedSystems names '$sys' but there is no $sys.cs"; FAIL=1; continue; }
-  BAD=$(grep -nE 'IPixelSaved|PixelSaveRegistry\.(Register|Unregister)|PixelStatics\.ResetOnRestart' "$sys.cs" | grep -vE '^[0-9]+:\s*//' | grep -v 'restart-reset-not-progress:' | cut -d: -f1)
+  BAD=$(grep -nE 'PixelStatics\.ResetOnRestart' "$sys.cs" | grep -vE '^[0-9]+:\s*//' | grep -v 'restart-reset-not-progress:' | cut -d: -f1)
   for n in $BAD; do
-    echo "$sys.cs:$n: rule: $sys moved to the GameState (GameState.MovedSystems) - its progress saves and resets with PixelGameState, so no IPixelSaved / PixelSaveRegistry / ResetOnRestart here"
+    echo "$sys.cs:$n: rule: $sys moved to the GameState (GameState.MovedSystems) - its progress saves and resets with PixelGameState, so no ResetOnRestart here"
     FAIL=1
   done
 done

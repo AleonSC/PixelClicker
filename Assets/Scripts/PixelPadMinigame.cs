@@ -14,18 +14,11 @@ using UnityEngine.Events;
 ///
 /// Add this to any GameObject (e.g. the cube). PixelShop adds it automatically if it is missing.
 /// </summary>
-public class PixelPadMinigame : PixelMinigame
+public class PixelPadMinigame : PixelScheduledMinigame
 {
     [Header("References")]
     [Tooltip("The PixelClicker (for the camera, the husks and the pixel counts). Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
-
-    [Header("State")]
-    [Tooltip("Run from the start without buying it in the shop (for testing).")]
-    [SerializeField] private bool startRunning = false;
-
-    [Tooltip("Is the minigame running? (The shop turns this on when the Ultra Pad is bought.)")]
-    [SerializeField] private bool running = false;
 
     [Header("Ultra Pixels")]
     [Range(0f, 1f)]
@@ -45,19 +38,6 @@ public class PixelPadMinigame : PixelMinigame
 
     [Tooltip("Text on a locked shop pack that needs the goal. {0} = Ultra pixels, {1} = goal.")]
     [SerializeField] private string requirementFormat = "Requires: {0} / {1} Ultra pixels";
-
-    [Header("When it appears")]
-    [Min(0f)]
-    [Tooltip("Seconds after the minigame starts before the first round.")]
-    [SerializeField] private float firstPadDelay = 15f;
-
-    [Min(1f)]
-    [Tooltip("Shortest wait between rounds (seconds), counted from when the last one ended.")]
-    [SerializeField] private float minInterval = 45f;
-
-    [Min(1f)]
-    [Tooltip("Longest wait between rounds (seconds).")]
-    [SerializeField] private float maxInterval = 90f;
 
     [Header("The Round")]
     [Tooltip("How long the four holes stay open (seconds). 0 = 45.")]
@@ -112,8 +92,11 @@ public class PixelPadMinigame : PixelMinigame
     [Tooltip("Text at the top of the screen while a round runs. {0} = seconds left, {1} = the wanted pixel.")]
     [SerializeField] private string hudFormat = "ULTRA HOLES   {0}s   -   {1}";
 
+    [Tooltip("Colour of the rising message when a husk goes into the right hole.")]
     [SerializeField] private Color correctColor = new Color(0.6f, 1f, 0.65f, 1f);
+    [Tooltip("Colour of the rising message when a drop also gives an Ultra pixel.")]
     [SerializeField] private Color ultraColor = new Color(1f, 0.85f, 0.25f, 1f);
+    [Tooltip("Colour of the rising message when a husk goes into a wrong hole.")]
     [SerializeField] private Color wrongColor = new Color(1f, 0.4f, 0.35f, 1f);
 
     [Min(0.5f)]
@@ -141,9 +124,16 @@ public class PixelPadMinigame : PixelMinigame
 
     private readonly List<Hole> holes = new List<Hole>();
     private readonly object[] claimOwners = { new object(), new object(), new object(), new object() };   // one area claim per hole, reused every round
-    private float spawnTimer;
     private bool padActive, pulling;
     private float holeRadius;
+
+    // This minigame's own defaults for the shared round schedule (PixelScheduledMinigame; a scene's values override them).
+    public PixelPadMinigame()
+    {
+        firstRoundDelay = 15f;
+        minInterval = 45f;
+        maxInterval = 90f;
+    }
 
     public override bool Busy => padActive;
 
@@ -153,12 +143,11 @@ public class PixelPadMinigame : PixelMinigame
         pulling = false;
         holes.Clear();
         foreach (object owner in claimOwners) ReleaseArea(owner);
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
     }
 
     public override string Id => "pad";
     public override string DisplayName => "Ultra Holes";
-    public override bool Running => running;
 
     // --- Tracker: Ultra pixels ever earned ---
     public override bool HasTracker => true;
@@ -179,29 +168,14 @@ public class PixelPadMinigame : PixelMinigame
             enabled = false;
             return;
         }
-        if (startRunning) running = true;
-        spawnTimer = firstPadDelay;
+        StartSchedule();
     }
 
     private void Update()
     {
         if (!running || padActive) return;
-        spawnTimer -= Time.deltaTime;
-        if (spawnTimer <= 0f)
-        {
-            if (PixelMinigameLimits.AllowAnother(this)) StartCoroutine(RoundRoutine());
-            else spawnTimer = PixelMinigameLimits.RetrySeconds;
-        }
+        if (SpawnDue(ref spawnTimer)) StartCoroutine(RoundRoutine());
     }
-
-    public override void Activate()
-    {
-        if (running) return;
-        running = true;
-        spawnTimer = firstPadDelay;
-    }
-
-    public override void Deactivate() => running = false;
 
     /// <summary>Opens the holes right now (right-click the component &gt; Spawn Pad Now).</summary>
     [ContextMenu("Spawn Pad Now")]
@@ -462,7 +436,7 @@ public class PixelPadMinigame : PixelMinigame
         Destroy(hudCanvas);
         if (dropped > 0) PixelHints.Announce("Ultra Holes: " + dropped + " correct" + (ultras > 0 ? ", " + ultras + " Ultra!" : "."));
 
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
         padActive = false;
         foreach (object owner in claimOwners) ReleaseArea(owner);
     }

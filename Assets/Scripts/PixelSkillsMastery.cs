@@ -89,31 +89,8 @@ public partial class PixelSkills
     /// <summary>Builds the bar along the bottom of the Skills window.</summary>
     private void BuildMasteryBar()
     {
-        GameObject track = new GameObject("Mastery Bar", typeof(RectTransform), typeof(Image));
-        track.transform.SetParent(windowObject.transform, false);
-        Image trackImage = track.GetComponent<Image>();
-        trackImage.color = new Color(0.05f, 0.05f, 0.08f, 1f);
-        trackImage.raycastTarget = false;
-        PixelUIKit.StyleBox(trackImage, true);
-        RectTransform tr = track.GetComponent<RectTransform>();
-        tr.anchorMin = new Vector2(0f, 0f);
-        tr.anchorMax = new Vector2(1f, 0f);
-        tr.pivot = new Vector2(0.5f, 0f);
-        tr.offsetMin = new Vector2(26f, 22f);
-        tr.offsetMax = new Vector2(-26f, 22f + 42f);
-
-        GameObject fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
-        fill.transform.SetParent(track.transform, false);
-        Image fillImage = fill.GetComponent<Image>();
-        fillImage.color = new Color(1f, 0.78f, 0.25f, 1f);
-        fillImage.raycastTarget = false;
-        masteryFill = fill.GetComponent<RectTransform>();
-        masteryFill.anchorMin = Vector2.zero;
-        masteryFill.anchorMax = new Vector2(0f, 1f);
-        masteryFill.pivot = new Vector2(0f, 0.5f);
-        masteryFill.offsetMin = new Vector2(3f, 3f);
-        masteryFill.offsetMax = new Vector2(-3f, -3f);
-
+        Image trackImage = PixelUIKit.CreateBottomBar(windowObject.transform, "Mastery Bar", new Color(1f, 0.78f, 0.25f, 1f), 26f, 22f, 42f, out masteryFill);
+        GameObject track = trackImage.gameObject;
         masteryLabel = PixelUIKit.CreateText(Font, track.transform, "Text", "", 26f, TextAlignmentOptions.Center, FontStyles.Bold, textColor);
         masteryLabel.raycastTarget = false;
         PixelUIKit.Caps(masteryLabel);

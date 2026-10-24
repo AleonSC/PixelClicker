@@ -28,32 +28,13 @@ using static PixelInput;
 /// Like Snake it takes over the old pixels, so the two never run at once (see <see cref="PixelMinigame.Takeover"/>).
 /// Add this to any GameObject (PixelShop adds it automatically if it is missing).
 /// </summary>
-public class PixelSortMinigame : PixelMinigame
+public class PixelSortMinigame : PixelScheduledMinigame
 {
     [Header("References")]
     [Tooltip("The PixelClicker (camera, husks, payouts). Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
 
-    [Header("State")]
-    [Tooltip("Run from the start without buying it in the shop (for testing).")]
-    [SerializeField] private bool startRunning = false;
-
-    [Tooltip("Is the minigame running? (The shop turns this on when the Sorting Race is bought.)")]
-    [SerializeField] private bool running = false;
-
     [Header("When it starts")]
-    [Min(0f)]
-    [Tooltip("Seconds after the minigame is switched on before the first race can start.")]
-    [SerializeField] private float firstRoundDelay = 90f;
-
-    [Min(1f)]
-    [Tooltip("Shortest wait between races (seconds).")]
-    [SerializeField] private float minInterval = 150f;
-
-    [Min(1f)]
-    [Tooltip("Longest wait between races (seconds).")]
-    [SerializeField] private float maxInterval = 300f;
-
     [Min(4)]
     [Tooltip("A race only starts when at least this many husks (of at least two different types) are lying around.")]
     [SerializeField] private int minPixels = 8;
@@ -176,29 +157,29 @@ public class PixelSortMinigame : PixelMinigame
     private Piece[] order;           // order[slot] = the piece standing in that grid slot
     private Vector3[] slots;
     private bool activeRound, arranging;
-    private float spawnTimer, timeLeft, groundY, unit;
+    private float timeLeft, groundY, unit;
     private int selected = -1, distinctTypes;
     private Camera cam;
     private GameObject uiRoot;
     private TMP_Text statusLabel;
     private bool setBlock;
 
+    // This minigame's own defaults for the shared round schedule (PixelScheduledMinigame; a scene's values override them).
+    public PixelSortMinigame()
+    {
+        firstRoundDelay = 90f;
+        minInterval = 150f;
+        maxInterval = 300f;
+    }
+
     public override string Id => "sort";
     public override string DisplayName => "Sorting Race";
-    public override bool Running => running;
     public override bool Busy => activeRound;
     public override bool Takeover => true;
 
-    public override void Activate()
-    {
-        if (running) return;
-        running = true;
-        spawnTimer = firstRoundDelay;
-    }
-
     public override void Deactivate()
     {
-        running = false;
+        base.Deactivate();
         if (activeRound) EndRound(false, null);
     }
 
@@ -213,8 +194,7 @@ public class PixelSortMinigame : PixelMinigame
             enabled = false;
             return;
         }
-        if (startRunning) running = true;
-        spawnTimer = firstRoundDelay;
+        StartSchedule();
     }
 
     protected override void OnDestroy()
@@ -223,8 +203,7 @@ public class PixelSortMinigame : PixelMinigame
         PixelHuskPool.HuskReleasing -= OnHuskReleasing;
         if (activeRound) EndRound(false, null);
         activeRound = false;
-        bystanderFactor = 1f;
-        UpdateBystanders(); // put the other old pixels back at once
+        bystanders.Restore();   // put the other husks back at once
     }
 
     // (PixelHuskPool: the husk is going away and may be reused - let go of it, as if it had been destroyed; the round-end restore skips it)
@@ -232,13 +211,13 @@ public class PixelSortMinigame : PixelMinigame
     {
         foreach (Piece p in pieces) if (p.body == body) { p.body = null; p.tf = null; p.despawn = null; }
         if (order != null && selected >= 0 && selected < order.Length && order[selected] != null && order[selected].tf == null) { selected = -1; ResetSelectedLook(); }   // (a picked piece that went can't be swapped)
-        for (int i = bystanders.Count - 1; i >= 0; i--) if (bystanders[i].body == body) bystanders.RemoveAt(i);
+        bystanders.Forget(body);
     }
 
     protected override void OnDespawned()
     {
         if (activeRound) EndRound(false, null);
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
     }
 
     [ContextMenu("Start A Sorting Race Now")]
@@ -247,68 +226,16 @@ public class PixelSortMinigame : PixelMinigame
         if (Application.isPlaying && !activeRound) TryStart(true);
     }
 
-    // The old pixels that are not part of the race shrink away while it runs and grow back afterwards.
-    private class Bystander { public Rigidbody body; public Transform tf; public Vector3 baseScale; public Collider[] colliders; public Behaviour[] paused; }
-    private readonly List<Bystander> bystanders = new List<Bystander>();
-    private float bystanderFactor = 1f;
-
-    private void ShrinkBystanders(HashSet<Rigidbody> inRace)
-    {
-        bystanders.Clear();
-        var all = clicker.OldPixels;
-        for (int i = 0; i < all.Count; i++)
-        {
-            Rigidbody rb = all[i];
-            if (rb == null || inRace.Contains(rb) || clicker.IsFlyingPixel(rb)) continue;
-            OldPixelDespawn d = rb.GetComponent<OldPixelDespawn>();
-            if (d != null && (d.IsDespawning || d.Held)) continue;
-            bystanders.Add(new Bystander
-            {
-                body = rb, tf = rb.transform, baseScale = rb.transform.localScale,
-                colliders = rb.GetComponents<Collider>(),
-                paused = new Behaviour[] { rb.GetComponent<OldPixelGravityWell>(), rb.GetComponent<OldPixelFloat>() },
-            });
-        }
-        foreach (Bystander b in bystanders)
-        {
-            SetVelocities(b.body, Vector3.zero);
-            b.body.isKinematic = true;
-            foreach (Collider c in b.colliders) if (c != null) c.enabled = false;
-            foreach (Behaviour x in b.paused) if (x != null) x.enabled = false;
-        }
-    }
-
-    private void UpdateBystanders()
-    {
-        if (bystanders.Count == 0) return;
-        float target = activeRound ? 0f : 1f;
-        bystanderFactor = Mathf.MoveTowards(bystanderFactor, target, Time.unscaledDeltaTime / Mathf.Max(0.05f, bystanderSeconds));
-        bool done = !activeRound && bystanderFactor >= 1f;
-        for (int i = bystanders.Count - 1; i >= 0; i--)
-        {
-            Bystander b = bystanders[i];
-            if (b.body == null || b.tf == null) { bystanders.RemoveAt(i); continue; }
-            b.tf.localScale = b.baseScale * Mathf.Max(0.001f, bystanderFactor);
-            if (done)
-            {
-                foreach (Collider c in b.colliders) if (c != null) c.enabled = true;
-                foreach (Behaviour x in b.paused) if (x != null) x.enabled = true;
-                b.body.isKinematic = false;
-            }
-        }
-        if (done) bystanders.Clear();
-    }
+    // The husks that are not part of the race shrink away while it runs and grow back afterwards.
+    private readonly PixelBystanders bystanders = new PixelBystanders();   // the husks not in the round shrink away while it runs
 
     private void Update()
     {
-        UpdateBystanders();
+        bystanders.Tick(activeRound, bystanderSeconds);
         if (activeRound) { Tick(Time.deltaTime); return; }
         if (!running) return;
 
-        spawnTimer -= Time.deltaTime;
-        if (spawnTimer > 0f) return;
-        if (!PixelMinigameLimits.AllowAnother(this)) { spawnTimer = PixelMinigameLimits.RetrySeconds; return; }
-        spawnTimer = TryStart(false) ? 0f : 12f; // not enough mixed pixels lying around yet
+        if (SpawnDue(ref spawnTimer)) spawnTimer = TryStart(false) ? 0f : 12f; // 12 s: not enough mixed pixels lying around yet
     }
 
     // ------------------------------------------------------------------
@@ -384,14 +311,14 @@ public class PixelSortMinigame : PixelMinigame
         OldPixelDespawn.HoldAll = true;
         foreach (Piece p in pieces)
         {
-            SetVelocities(p.body, Vector3.zero);
+            PixelBody.Steer(p.body, Vector3.zero, true);
             p.body.isKinematic = true;
             foreach (Behaviour b in p.paused) if (b != null) b.enabled = false;
         }
 
         HashSet<Rigidbody> inRace = new HashSet<Rigidbody>();
         foreach (Piece p in pieces) inRace.Add(p.body);
-        if (shrinkOthers) { ShrinkBystanders(inRace); bystanderFactor = 1f; }
+        if (shrinkOthers) bystanders.Shrink(clicker, inRace);
 
         BuildSlots(centroid);
 
@@ -617,7 +544,7 @@ public class PixelSortMinigame : PixelMinigame
             }
             else
             {
-                SetVelocities(p.body, Vector3.zero); // they just drop and age normally again
+                PixelBody.Steer(p.body, Vector3.zero, true); // they just drop and age normally again
                 if (p.despawn != null) p.despawn.AddLifetime(3f);
             }
         }
@@ -627,7 +554,7 @@ public class PixelSortMinigame : PixelMinigame
         if (uiRoot != null) Destroy(uiRoot);
         uiRoot = null;
         statusLabel = null;
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
 
         if (win)
         {
@@ -650,29 +577,13 @@ public class PixelSortMinigame : PixelMinigame
 
     private IEnumerator MessageRoutine(Vector3 start, Camera c, string message)
     {
-        GameObject go = new GameObject("Sort Message");
-        Track(go);
-        TextMeshPro text = go.AddComponent<TextMeshPro>();
-        text.text = message;
-        text.fontSize = messageTextSize;
-        text.fontStyle = FontStyles.Bold;
-        text.alignment = TextAlignmentOptions.Center;
-        text.outlineWidth = 0.2f;
-        text.outlineColor = new Color32(0, 0, 0, 255);
-        if (clicker.UIFont != null) text.font = clicker.UIFont;
-        text.rectTransform.sizeDelta = new Vector2(14f, 4f);
-
-        float t = 0f;
-        while (t < messageSeconds)
+        TextMeshPro text = PixelRisingText.Create("Sort Message", message, messageTextSize, clicker.UIFont, new Vector2(14f, 4f));
+        Track(text.gameObject);
+        return PixelRisingText.Fade(text, messageSeconds, (tx, k) =>
         {
-            t += Time.unscaledDeltaTime;
-            float k = Mathf.Clamp01(t / messageSeconds);
-            go.transform.position = PixelUIKit.KeepOnScreen(c, text, start + Vector3.up * (1.2f + k * 1.2f));
-            go.transform.rotation = c.transform.rotation;
-            text.alpha = 1f - k * k;
-            yield return null;
-        }
-        Destroy(go);
+            tx.transform.position = PixelUIKit.KeepOnScreen(c, tx, start + Vector3.up * (1.2f + k * 1.2f));
+            tx.transform.rotation = c.transform.rotation;
+        });
     }
 
     private void BuildUi()
@@ -683,14 +594,4 @@ public class PixelSortMinigame : PixelMinigame
         statusLabel = PixelStatusBox.Create(clicker.UIFont, uiRoot.transform, statusFontSize);   // slides out from under the top bar
     }
 
-    private static void SetVelocities(Rigidbody rb, Vector3 v)
-    {
-        if (rb == null || rb.isKinematic) return;
-#if UNITY_6000_0_OR_NEWER
-        rb.linearVelocity = v;
-#else
-        rb.velocity = v;
-#endif
-        rb.angularVelocity = Vector3.zero;
-    }
 }
