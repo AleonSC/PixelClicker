@@ -44,7 +44,6 @@ public partial class PixelShop
     private RectTransform contentRect;
     private ScrollRect scrollRect;
     private TMP_Text emptyLabel;
-    private Image[] tabImages;
     private ShopTab currentTab = ShopTab.Pixels;
     private GameObject subPanelObject;
     private RectTransform subContentRect;
@@ -115,8 +114,8 @@ public partial class PixelShop
         panelRect = parts.Rect;
         ShopButtonExtras(parts.Close);
         PixelNotice.FixedSize = tipBoxMatchesShop ? new Vector2(panelWidth, panelHeight) : Vector2.zero;
-        PixelNotice.SideAnchor = tipBoxMatchesShop && !hideCurrencyPanel ? panelRect : null; // tip boxes sit right of the shop
-        PixelNotice.SideWidth = CurrencyWidth;
+        PixelNotice.SideAnchor = tipBoxMatchesShop ? panelRect : null; // tip boxes sit right of the shop
+        PixelNotice.SideWidth = 0f;   // (no currency panel on the left any more: the amounts are a strip inside the window)
         PixelNotice.SideGap = currencyPanelGap;
 
         // The fancy menu look (Settings > Interface > Fancy pause menu): a colour-cycling glow behind the panel and a light segment sliding under the title.
@@ -153,31 +152,30 @@ public partial class PixelShop
         helpTip.onEnter = () => hoverTip = helpText;
         helpTip.onExit = () => { if (hoverTip == helpText) hoverTip = null; };
 
-        // The title keeps clear of the search box (left) and the IOU / ? buttons (right), with the same room on both sides so it stays centred.
-        RectTransform hr = iou.GetComponent<RectTransform>();   // (the IOU is the innermost right header button)
-        float titleRoom = Mathf.Max(panelPadding + Mathf.Max(120f, searchWidth), -hr.anchoredPosition.x + hr.sizeDelta.x) + 8f;
-        parts.Title.rectTransform.offsetMin = new Vector2(titleRoom, parts.Title.rectTransform.offsetMin.y);
-        parts.Title.rectTransform.offsetMax = new Vector2(-titleRoom, 0f);
+        // The title sits at the top LEFT (the catalog layout), the search box right after it.
+        const float titleWidth = 190f;
+        parts.Title.alignment = TextAlignmentOptions.MidlineLeft;
+        parts.Title.rectTransform.offsetMin = new Vector2(panelPadding + 4f, parts.Title.rectTransform.offsetMin.y);
+        parts.Title.rectTransform.offsetMax = new Vector2(-(panelWidth - panelPadding - 4f - titleWidth), 0f);
 
-        // Search box (top left): lists every matching pack from all tabs while it has text.
-        searchField = PixelUIKit.CreateInputField(font, panelObject.transform, "Search", new Vector2(Mathf.Max(120f, searchWidth), 70f),
-                                                  disabledColor, textColor, tabFontSize, searchPlaceholder);
+        // Search box (after the title): lists every match from every part of the shop while it has text (the catalog's search entry).
+        searchField = PixelUIKit.CreateInputField(font, panelObject.transform, "Search", new Vector2(Mathf.Max(120f, searchWidth), 64f),
+                                                  disabledColor, textColor, tabFontSize * 0.85f, searchPlaceholder);
         PixelUIKit.AddSearchIcon(searchField);
         RectTransform sr = searchField.GetComponent<RectTransform>();
         sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0f, 1f);
-        sr.anchoredPosition = new Vector2(panelPadding, -panelPadding * 0.5f - 5f);
+        sr.anchoredPosition = new Vector2(panelPadding + titleWidth + 16f, -(headerHeight - 64f) * 0.5f);
         searchField.onValueChanged.AddListener(text =>
         {
             shopSearch = (text ?? "").Trim().ToLowerInvariant();
-            if (contentRect != null) contentRect.anchoredPosition = Vector2.zero;
+            if (catalog != null) { catalog.content.anchoredPosition = Vector2.zero; catalog.selected[SearchEntry] = -1; }
             if (rows != null) RefreshRows();
         });
 
-        BuildTabs(panelObject.transform);
-        BuildScrollArea(panelObject.transform, headerHeight + tabsDrop + tabHeight + panelPadding * 0.5f,
-                        out contentRect, out scrollRect, out emptyLabel);
+        // (the old tab bar is not built; the scrolling list stays hidden behind the catalog - its rows serve the pack Upgrades window)
+        BuildScrollArea(panelObject.transform, CatalogTop, out contentRect, out scrollRect, out emptyLabel);
         BuildUpgradesWindow(parent);
-        BuildCurrencyPanel(panelObject.transform);
+        BuildCurrencyStrip(panelObject.transform);
 
         // Pack rows live inside the scrolling content.
         rows = new PackRow[packs.Length];
@@ -193,11 +191,9 @@ public partial class PixelShop
         // The two sub-tab buttons at the top of the Upgrades tab (normal upgrades | Pixel boosts).
         BuildSubTabs(contentRect);
 
-        // The Pixels and Consumables tabs are tile pages (chips, tile grid, buy bar), not part of the scrolling list.
-        float pageTop = headerHeight + tabsDrop + tabHeight + panelPadding * 0.5f;
-        BuildPixelsPage(panelObject.transform, pageTop);
-        BuildConsumablesArea(panelObject.transform, pageTop);
-        BuildSearchPage(panelObject.transform, pageTop);
+        // The catalog: category rail, Saving up for card, tile grid and detail panel (PixelShopCatalog.cs).
+        railEntry = Mathf.Max(0, EntryOf(currentTab, 0));
+        BuildCatalog(panelObject.transform);
 
         panelObject.SetActive(false);
         subPanelObject.SetActive(false);
@@ -432,50 +428,6 @@ public partial class PixelShop
 #endif
     }
 
-    /// <summary>The tab buttons, left to right.</summary>
-    private static readonly ShopTab[] TabOrder = { ShopTab.Pixels, ShopTab.Consumables, ShopTab.Upgrades, ShopTab.Minigames };
-
-    private void BuildTabs(Transform parent)
-    {
-        ShopTab[] tabs = TabOrder;
-        string[] names = new string[tabs.Length];
-        for (int i = 0; i < tabs.Length; i++)
-            names[i] = tabs[i] == ShopTab.Pixels ? pixelsTabText : tabs[i] == ShopTab.Consumables ? consumablesTabText : tabs[i] == ShopTab.Upgrades ? upgradesTabText : minigamesTabText;
-        tabImages = new Image[tabs.Length];
-
-        GameObject bar = new GameObject("Tabs", typeof(RectTransform));
-        bar.transform.SetParent(parent, false);
-        RectTransform barRect = bar.GetComponent<RectTransform>();
-        barRect.anchorMin = new Vector2(0f, 1f);
-        barRect.anchorMax = new Vector2(1f, 1f);
-        barRect.pivot = new Vector2(0.5f, 1f);
-        barRect.sizeDelta = new Vector2(-panelPadding * 2f, tabHeight);
-        barRect.anchoredPosition = new Vector2(0f, -(headerHeight + tabsDrop));
-
-        float slice = 1f / tabs.Length;
-        for (int i = 0; i < tabs.Length; i++)
-        {
-            Button tabButton = CreateButton(bar.transform, "Tab " + names[i], names[i], Vector2.zero,
-                                            ButtonRole.Neutral, textColor, tabFontSize, out TMP_Text tabLabel, out tabImages[i]);
-            PixelUIKit.Caps(tabButton);
-            // Four tabs share the width, so long names shrink to fit instead of overflowing.
-            tabLabel.enableAutoSizing = true;
-            tabLabel.fontSizeMax = tabFontSize;
-            tabLabel.fontSizeMin = Mathf.Min(14f, tabFontSize);
-            tabLabel.rectTransform.offsetMin = new Vector2(tabTextPadding, 4f);   // keep the text off the button's edges
-            tabLabel.rectTransform.offsetMax = new Vector2(-tabTextPadding, -4f);
-            RectTransform rt = tabButton.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(i * slice, 0f);
-            rt.anchorMax = new Vector2((i + 1) * slice, 1f);
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.offsetMin = new Vector2(i == 0 ? 0f : tabSpacing * 0.5f, 0f);
-            rt.offsetMax = new Vector2(i == tabs.Length - 1 ? 0f : -tabSpacing * 0.5f, 0f);
-
-            ShopTab captured = tabs[i];
-            tabButton.onClick.AddListener(() => SelectTab(captured));
-        }
-    }
-
     /// <summary>Builds a scrolling list (view, content, scrollbar, empty message) below 'top' units from the panel's top edge.</summary>
     private void BuildScrollArea(Transform parent, float top, out RectTransform content, out ScrollRect scroll, out TMP_Text empty)
     {
@@ -534,7 +486,7 @@ public partial class PixelShop
         // The standard Fixed window, the shop's size and centred like it; opaque: the shop behind must not show through.
         // It is still opened / closed with SetActive (PixelShopOperation opens it too): the builder's PixelPop grows it in when it opens
         // and fits it on screen like the shop; closing stays instant.
-        PixelWindowParts parts = PixelUIKit.CreateWindow(font, parent, "Upgrades Window", "", new Vector2(panelWidth, panelHeight), PixelUIKit.WindowKind.Fixed, CloseUpgradesWindow);
+        PixelWindowParts parts = PixelUIKit.CreateWindow(font, parent, "Upgrades Window", "", new Vector2(ClassicWidth, panelHeight), PixelUIKit.WindowKind.Fixed, CloseUpgradesWindow);
         subPanelObject = parts.Root;
         ShopButtonExtras(parts.Close);
 
@@ -613,7 +565,10 @@ public partial class PixelShop
     public bool WindowOpen => panelObject != null && PixelPop.IsOpen(panelObject);
 
     /// <summary>The shop window's size (width, height) from its settings, available before the window is built (the Crafting window copies it).</summary>
-    public Vector2 PanelSize => new Vector2(panelWidth, panelHeight);
+    public Vector2 PanelSize => new Vector2(ClassicWidth, panelHeight);
+
+    /// <summary>The older, narrower shop width (classicWindowWidth) the Crafting window and the pack Upgrades window keep.</summary>
+    private float ClassicWidth => Mathf.Clamp(classicWindowWidth, 600f, panelWidth);
 
     /// <summary>Shop tutorial: opens the shop on a tab (and, for Upgrades, a sub-tab: 0 = Features, 1 = Value).</summary>
     public void TutorialOpen(ShopTab tab, int subTab)
@@ -621,7 +576,7 @@ public partial class PixelShop
         if (panelObject == null || !builtOk) return;
         PixelPop.Show(panelObject);
         upgradesSubTab = Mathf.Clamp(subTab, 0, 2);
-        SelectTab(tab);
+        SelectRailEntry(Mathf.Max(0, EntryOf(tab == ShopTab.Automatic ? ShopTab.Pixels : tab, subTab)));
         RefreshCurrency();
     }
 
@@ -643,13 +598,13 @@ public partial class PixelShop
     /// <summary>Does this text match the search (case-insensitive substring)?</summary>
     private bool TextMatches(string text) => shopSearch.Length == 0 || (text ?? "").ToLowerInvariant().Contains(shopSearch);
 
+    /// <summary>Opens a tab's first rail entry (Pixels: Toggleables, Consumables: Utilities, Upgrades: Features, Minigames).</summary>
     public void SelectTab(ShopTab tab)
     {
         if (tab == ShopTab.Automatic) tab = ShopTab.Pixels;
+        if (catalog != null) { SelectRailEntry(Mathf.Max(0, EntryOf(tab, 0))); return; }
         if (shopSearch.Length > 0) { shopSearch = ""; if (searchField != null) searchField.SetTextWithoutNotify(""); }
         currentTab = tab;
-        if (contentRect != null) contentRect.anchoredPosition = Vector2.zero;
-        if (scrollRect != null) scrollRect.StopMovement();
         if (rows != null) RefreshRows();
     }
 
@@ -873,13 +828,7 @@ public partial class PixelShop
         float subY = 0f;   // upgrades window list
         int visibleCount = 0, subVisibleCount = 0;
 
-        // Tab buttons: highlight the open one.
         bool searching = shopSearch.Length > 0;
-        if (tabImages != null)
-        {
-            for (int t = 0; t < tabImages.Length; t++)
-                SetShopRole(tabImages[t], !searching && TabOrder[t] == currentTab ? ButtonRole.Selected : ButtonRole.Neutral);
-        }
 
         // The upgrades window only makes sense while its pack is owned.
         if (openParent >= 0 && !HasPack(openParent)) CloseUpgradesWindow();

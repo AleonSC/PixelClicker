@@ -335,10 +335,10 @@ inventory: Your Inventory: devices like this Recycler live in Consumables. Right
 right click: Try the right mouse button too: HOLD it on the block on the cube. It's each block's second action. On the pure pixels (black, gray, white, red, green and blue) it puts a stake on the block - the longer you hold (watch the meter by your cursor), the more it is worth when it comes round again, but the stake can also go bad and pay nothing. Skill blocks you meet later do their own thing when held.
 
 [Tutorial: Shop]
-step 1: Welcome to the Shop! Prices are paid in the pixels listed on the left. Anything greyed out shows what it still needs.
-step 2: Pixels: packs that unlock new pixel types. Every new type is its own currency, and some need goals from the minigames first.
-step 3: Upgrades: Features are one-time unlocks like the Auto Clicker and Time Stop. Value makes a pixel type pay more (Shift-click buys every level you can afford). Operation improves your consumables.
-step 4: Consumables: potions, devices, seeds and supplies. Buy them here, then use them from your Inventory.
+step 1: Welcome to the Shop! Your pixels are listed along the top: prices are paid in them. Pick a section on the left; anything greyed out shows what it still needs.
+step 2: Pixels: packs that unlock new pixel types. Every new type is its own currency. The card at the top shows what you are saving up for: pick any item and press Save up for this.
+step 3: Upgrades: Features are one-time unlocks like the Auto Clicker and Time Stop. Value makes a pixel type pay more; buy one level or x5, x10 or Max at once. Operation improves your consumables.
+step 4: Consumables: potions, devices, seeds and supplies. Choose how many with the amount buttons on the right, then use them from your Inventory.
 step 5: Minigames: events that start on their own once bought. They pay rewards and unlock rare pixels. Switch any of them off in the Toggles window.
 
 [Tutorial: Toggles]

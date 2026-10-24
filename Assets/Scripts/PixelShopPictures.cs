@@ -37,8 +37,6 @@ public partial class PixelShop
     [Tooltip("How much of the picture a pixel / potion cube fills: the camera's half-height in cube widths. Smaller = bigger cube (0.85 fits a spinning cube with its corners just touching the frame).")]
     [SerializeField] private float pictureCubeFraming = 0.85f;
 
-    [Tooltip("Size of the picture in the Consumables tab's buy bar.")]
-    [SerializeField] private float cardPictureSize = 112f;
 
     private class PictureSlot
     {

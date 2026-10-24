@@ -1,21 +1,26 @@
+// ---- System notes ----
+// PixelShopCurrency.cs
+//   Part of partial class PixelShop: the CURRENCY STRIP under the shop's header (since 2026-10-24; it replaced the slide-out Currency panel on the
+//   shop's left). One chip per pixel type you have unlocked or hold: a small spinning cube in its colour + the amount (abbreviated), left to right;
+//   when there are more than fit, the mouse wheel over the strip scrolls it sideways. Hover a chip: the pixel's name and the full amount.
+//   Also: CloseShopWindow, and the shop closing the Inventory / Log while it is open (and bringing them back after). Settings: PixelShop.cs
+//   "Currency strip" (hideCurrencyPanel, currencyStripHeight).
+// ---------------------------------------------------
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// The shop's currency panel: a scrolling list docked to the left side of the shop window (the shop itself stays where it is).
-/// Each unlocked pixel type shows a small spinning cube in its colour and the amount you hold, always abbreviated from 1K up.
-/// Hovering the number shows a tooltip with the pixel's name and the full amount. Part of <see cref="PixelShop"/>; its
-/// Inspector settings are in PixelShop.cs ("Currency Panel").
+/// The shop's currency strip: every pixel type you hold, as a small spinning cube and the amount, always visible under the header.
+/// Part of <see cref="PixelShop"/>; its Inspector settings are in PixelShop.cs ("Currency strip").
 /// </summary>
 public partial class PixelShop
 {
-    private class CurrencyRow
+    private class CurrencyChip
     {
         public RectTransform rect;
         public PixelCubeIcon icon;
         public TMP_Text amount;
-        public Image background;
     }
 
     /// <summary>Closes the shop window (the Inventory and Log call this when they open: the windows never show together).</summary>
@@ -25,19 +30,10 @@ public partial class PixelShop
         if (shop != null && shop.panelObject != null && PixelPop.IsOpen(shop.panelObject)) PixelPop.Hide(shop.panelObject);
     }
 
-    // ---- the arrow that pulls the currency panel out of the shop window's left edge (hidden by default; the choice is remembered) ----
-    private const string PrefCurrencyOut = "PixelClicker.Setting.ShopCurrencyOut";
-    private Button currencyArrow;
-    private Transform currencyArrowGlyph;
-    private bool currencyOut;
-    private float currencySlide;   // 0 = tucked away, 1 = fully out
-
-    private GameObject currencyPanel;
+    private GameObject currencyStrip;
     private RectTransform currencyContent;
     private ScrollRect currencyScroll;
-    private GameObject currencyScrollBar;
-    private CurrencyRow[] currencyRows;
-    private RectTransform currencyViewRect;
+    private CurrencyChip[] currencyChips;
     private RectTransform currencyTipRect;
     private string currencyTipShown;   // (the tip text last measured, so the box is only measured again when it changes)
     private bool currencyTipWasCard;
@@ -48,130 +44,80 @@ public partial class PixelShop
     private bool shopWasOpen;
     private bool reopenInventory, reopenLog; // which windows the shop closed when it opened, to bring back when it closes
 
-    private float CurrencyWidth => currencyPanelWidth > 40f ? currencyPanelWidth : 380f;
-    private float CurrencyRowHeight => currencyRowHeight > 20f ? currencyRowHeight : 84f;
-    private float CurrencyIconSize => currencyIconSize > 8f ? currencyIconSize : 60f;
-    private float CurrencyFontSize => currencyFontSize > 8f ? currencyFontSize : 34f;
+    private float CurrencyStripHeight => Mathf.Max(30f, currencyStripHeight);
+    private float CurrencyIconSize => CurrencyStripHeight * 0.55f;
+    private float CurrencyFontSize => CurrencyStripHeight * 0.46f;
 
-    private void BuildCurrencyPanel(Transform shopPanel)
+    /// <summary>The strip under the header: a sideways-scrolling row of chips (cube + amount), one per pixel type.</summary>
+    private void BuildCurrencyStrip(Transform shopPanel)
     {
-        if (hideCurrencyPanel || clicker == null) return;
-
+        if (clicker == null) return;
         currencyCanvasRect = canvasRoot.GetComponent<RectTransform>();
+        BuildCurrencyTooltip();
+        if (hideCurrencyPanel) return;
 
-        currencyPanel = new GameObject("Currency Panel", typeof(RectTransform), typeof(Image));
-        currencyPanel.transform.SetParent(shopPanel, false);
-        PixelUIKit.StyleWindow(currencyPanel.GetComponent<Image>(), WindowShade.Window);   // (the theme window colour, live)
-        RectTransform pr = currencyPanel.GetComponent<RectTransform>();
-        pr.anchorMin = pr.anchorMax = new Vector2(0f, 0.5f);
-        pr.pivot = new Vector2(1f, 0.5f);
-        pr.sizeDelta = new Vector2(CurrencyWidth, panelHeight);
-        pr.anchoredPosition = new Vector2(-Mathf.Max(0f, currencyPanelGap), 0f);
+        currencyStrip = new GameObject("Currency Strip", typeof(RectTransform), typeof(Image), typeof(RectMask2D), typeof(ScrollRect));
+        currencyStrip.transform.SetParent(shopPanel, false);
+        Image bg = currencyStrip.GetComponent<Image>();
+        bg.color = new Color(0.05f, 0.05f, 0.08f, 0.85f);
+        PixelUIKit.StyleBox(bg, true);
+        PlaceTopLeft(currencyStrip.GetComponent<RectTransform>(), panelPadding, headerHeight + 8f, panelWidth - panelPadding * 2f, CurrencyStripHeight);
 
-        TMP_Text title = CreateText(currencyPanel.transform, "Title", string.IsNullOrEmpty(currencyTitle) ? "Currency" : currencyTitle,
-                                    titleFontSize * 0.8f, TextAlignmentOptions.Center, FontStyles.Bold);
-        PixelUIKit.Caps(title);
-        RectTransform tr = title.rectTransform;
-        tr.anchorMin = new Vector2(0f, 1f);
-        tr.anchorMax = new Vector2(1f, 1f);
-        tr.pivot = new Vector2(0.5f, 1f);
-        tr.sizeDelta = new Vector2(-panelPadding * 2f, headerHeight);
-        tr.anchoredPosition = Vector2.zero;
-
-        currencyScroll = PixelUIKit.CreateScrollView(currencyPanel.transform, "Currency Scroll", scrollbarHandleColor, Mathf.Min(scrollbarWidth, 16f),
-                                                     scrollSpeed, out currencyContent, out currencyScrollBar);
-        HideBarGraphics(currencyScrollBar);
-        currencyViewRect = currencyScroll.GetComponent<RectTransform>();
-        currencyViewRect.anchorMin = Vector2.zero;
-        currencyViewRect.anchorMax = Vector2.one;
-        currencyViewRect.offsetMin = new Vector2(panelPadding, panelPadding);
-        currencyViewRect.offsetMax = new Vector2(-panelPadding, -headerHeight);
+        currencyContent = new GameObject("Chips", typeof(RectTransform)).GetComponent<RectTransform>();
+        currencyContent.SetParent(currencyStrip.transform, false);
+        currencyContent.anchorMin = currencyContent.anchorMax = currencyContent.pivot = new Vector2(0f, 0.5f);
+        currencyContent.sizeDelta = new Vector2(0f, CurrencyStripHeight);
+        currencyScroll = currencyStrip.GetComponent<ScrollRect>();
+        currencyScroll.content = currencyContent;
+        currencyScroll.viewport = currencyStrip.GetComponent<RectTransform>();
+        currencyScroll.horizontal = true;
+        currencyScroll.vertical = false;   // (the mouse wheel then scrolls it sideways)
+        currencyScroll.movementType = ScrollRect.MovementType.Clamped;
+        currencyScroll.scrollSensitivity = Mathf.Max(10f, scrollSpeed);
 
         var tiers = clicker.Tiers;
-        currencyRows = new CurrencyRow[tiers.Length];
+        currencyChips = new CurrencyChip[tiers.Length];
+        float icon = CurrencyIconSize;
         for (int i = 0; i < tiers.Length; i++)
         {
-            CurrencyRow row = new CurrencyRow();
+            CurrencyChip chip = new CurrencyChip();
             GameObject go = new GameObject("Currency " + i, typeof(RectTransform), typeof(Image));
             go.transform.SetParent(currencyContent, false);
-            row.background = go.GetComponent<Image>();
-            row.background.color = rowColor;
-            PixelUIKit.StyleBox(row.background);
-            row.background.raycastTarget = false;
-            row.rect = go.GetComponent<RectTransform>();
-            row.rect.anchorMin = new Vector2(0f, 1f);
-            row.rect.anchorMax = new Vector2(1f, 1f);
-            row.rect.pivot = new Vector2(0.5f, 1f);
-            row.rect.sizeDelta = new Vector2(0f, CurrencyRowHeight - 8f);
+            Image cb = go.GetComponent<Image>();
+            cb.color = rowColor;
+            PixelUIKit.StyleBox(cb);
+            chip.rect = go.GetComponent<RectTransform>();
+            chip.rect.anchorMin = chip.rect.anchorMax = chip.rect.pivot = new Vector2(0f, 0.5f);
 
-            // The pixel as a small spinning cube in its colour.
             GameObject iconGo = new GameObject("Icon", typeof(RectTransform), typeof(CanvasRenderer));
             iconGo.transform.SetParent(go.transform, false);
-            row.icon = iconGo.AddComponent<PixelCubeIcon>();
-            row.icon.spinDegreesPerSecond = 60f + (i % 5) * 8f; // not all in step
-            RectTransform ir = row.icon.rectTransform;
+            chip.icon = iconGo.AddComponent<PixelCubeIcon>();
+            chip.icon.spinDegreesPerSecond = 60f + (i % 5) * 8f; // not all in step
+            chip.icon.raycastTarget = false;
+            RectTransform ir = chip.icon.rectTransform;
             ir.anchorMin = ir.anchorMax = ir.pivot = new Vector2(0f, 0.5f);
-            ir.sizeDelta = new Vector2(CurrencyIconSize, CurrencyIconSize);
-            ir.anchoredPosition = new Vector2(10f, 0f);
+            ir.sizeDelta = new Vector2(icon, icon);
+            ir.anchoredPosition = new Vector2(8f, 0f);
 
-            row.amount = CreateText(go.transform, "Amount", "", CurrencyFontSize, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
-            row.amount.enableAutoSizing = true;
-            row.amount.fontSizeMax = CurrencyFontSize;
-            row.amount.fontSizeMin = 12f;
-            row.amount.overflowMode = TextOverflowModes.Overflow;
+            chip.amount = CreateText(go.transform, "Amount", "", CurrencyFontSize, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
+            chip.amount.overflowMode = TextOverflowModes.Overflow;
 #if UNITY_2023_1_OR_NEWER
-            row.amount.textWrappingMode = TextWrappingModes.NoWrap;
+            chip.amount.textWrappingMode = TextWrappingModes.NoWrap;
 #else
-            row.amount.enableWordWrapping = false;
+            chip.amount.enableWordWrapping = false;
 #endif
-            RectTransform ar = row.amount.rectTransform;
-            ar.anchorMin = Vector2.zero;
-            ar.anchorMax = Vector2.one;
-            ar.offsetMin = new Vector2(CurrencyIconSize + 24f, 0f);
-            ar.offsetMax = new Vector2(-8f, 0f);
+            chip.amount.raycastTarget = false;
+            RectTransform ar = chip.amount.rectTransform;
+            ar.anchorMin = ar.anchorMax = ar.pivot = new Vector2(0f, 0.5f);
+            ar.anchoredPosition = new Vector2(icon + 14f, 0f);
 
-            // Hover the number: name + the full amount.
-            row.amount.raycastTarget = true;
-            PixelHoverTip tip = row.amount.gameObject.AddComponent<PixelHoverTip>();
+            // Hover the chip: name + the full amount.
+            PixelHoverTip tip = go.AddComponent<PixelHoverTip>();
             int tier = i;
             tip.onEnter = () => currencyHover = tier;
             tip.onExit = () => { if (currencyHover == tier) currencyHover = -1; };
-
-            currencyRows[i] = row;
+            currencyChips[i] = chip;
         }
-
-        BuildCurrencyTooltip();
-
-        // The pull-out arrow sits at the top left of the shop window (it rides the left edge of the currency panel when that is out).
-        currencyOut = PixelPrefs.GetInt(PrefCurrencyOut, 0) != 0;
-        currencySlide = currencyOut ? 1f : 0f;
-        currencyArrow = PixelUIKit.CreateButton(font, shopPanel, "Currency Arrow", "", new Vector2(52f, 68f), ButtonRole.Neutral, 28f);
-        RectTransform ar2 = currencyArrow.GetComponent<RectTransform>();
-        ar2.anchorMin = ar2.anchorMax = new Vector2(0f, 1f);
-        ar2.pivot = new Vector2(1f, 1f);
-        PixelUIKit.UseArrowGlyph(currencyArrow, false);
-        currencyArrowGlyph = currencyArrow.transform.Find("Triangle");
-        currencyArrow.onClick.AddListener(() =>
-        {
-            currencyOut = !currencyOut;
-            PixelPrefs.SetInt(PrefCurrencyOut, currencyOut ? 1 : 0);
-            PixelAudio.Play("ui_click");
-        });
-        ApplyCurrencySlide();
-    }
-
-    /// <summary>Positions the currency panel (it grows out of the shop window's left edge) and the arrow for the current slide amount.</summary>
-    private void ApplyCurrencySlide()
-    {
-        if (currencyPanel == null || currencyArrow == null) return;
-        float ease = Mathf.SmoothStep(0f, 1f, currencySlide);
-        bool visible = currencySlide > 0.001f;
-        if (currencyPanel.activeSelf != visible) currencyPanel.SetActive(visible);
-        RectTransform pr = currencyPanel.GetComponent<RectTransform>();
-        pr.localScale = new Vector3(Mathf.Max(0.001f, ease), 1f, 1f);   // (pivot on its right edge: it unfolds leftwards out of the shop window)
-        float edge = Mathf.Max(0f, currencyPanelGap) + CurrencyWidth * ease;
-        currencyArrow.GetComponent<RectTransform>().anchoredPosition = new Vector2(-edge - 4f, -headerHeight * 0.25f);
-        if (currencyArrowGlyph != null) currencyArrowGlyph.localRotation = Quaternion.Euler(0f, 0f, currencyOut ? 0f : 180f);   // points left to pull it out, right to put it away
     }
 
     private void BuildCurrencyTooltip()
@@ -184,7 +130,7 @@ public partial class PixelShop
         currencyTipRect.anchorMin = currencyTipRect.anchorMax = new Vector2(0.5f, 0.5f);
         currencyTipRect.pivot = new Vector2(0f, 1f);
 
-        currencyTipText = CreateText(go.transform, "Text", "", CurrencyFontSize * 0.85f, TextAlignmentOptions.Left, FontStyles.Bold);
+        currencyTipText = CreateText(go.transform, "Text", "", 29f, TextAlignmentOptions.Left, FontStyles.Bold);
         currencyTipText.raycastTarget = false;
         RectTransform tr = currencyTipText.rectTransform;
         tr.anchorMin = tr.anchorMax = tr.pivot = new Vector2(0f, 1f);
@@ -198,42 +144,41 @@ public partial class PixelShop
         go.SetActive(false);
     }
 
-    /// <summary>Updates the amounts and which pixel types are listed (unlocked ones, or any you hold).</summary>
+    /// <summary>Updates the amounts and which pixel types are listed (unlocked ones, or any you hold), laid out left to right.</summary>
     private void RefreshCurrency()
     {
-        if (currencyPanel == null || currencyRows == null) return;
-
+        if (currencyStrip == null || currencyChips == null) return;
         var tiers = clicker.Tiers;
-        float y = 0f;
-        for (int i = 0; i < currencyRows.Length && i < tiers.Length; i++)
+        float x = 6f, gap = 8f, chipH = CurrencyStripHeight - 10f;
+        for (int i = 0; i < currencyChips.Length && i < tiers.Length; i++)
         {
-            CurrencyRow row = currencyRows[i];
+            CurrencyChip chip = currencyChips[i];
             PixelClicker.PixelTier tier = tiers[i];
             bool visible = tier.unlocked || tier.count > 0d;
-            if (row.rect.gameObject.activeSelf != visible) row.rect.gameObject.SetActive(visible);
+            if (chip.rect.gameObject.activeSelf != visible) chip.rect.gameObject.SetActive(visible);
             if (!visible) continue;
 
-            row.rect.anchoredPosition = new Vector2(0f, -y);
-            y += CurrencyRowHeight;
-            row.icon.color = tier.UIColor;
-            row.amount.color = tier.UIColor;
-            PixelUIKit.SetText(row.amount, PixelClicker.FormatNumberShort(tier.count));
+            chip.icon.color = tier.UIColor;
+            chip.amount.color = tier.UIColor;
+            string text = PixelClicker.FormatNumberShort(tier.count);
+            PixelUIKit.SetText(chip.amount, text);
+            float textW = chip.amount.GetPreferredValues(text).x + 4f;
+            chip.amount.rectTransform.sizeDelta = new Vector2(textW, chipH);
+            float w = CurrencyIconSize + 14f + textW + 12f;
+            chip.rect.sizeDelta = new Vector2(w, chipH);
+            chip.rect.anchoredPosition = new Vector2(x, 0f);
+            x += w + gap;
         }
-        PixelUIKit.UpdateScrollView(currencyScroll, currencyScrollBar, y, currencyViewRect.rect.height);
+        currencyContent.sizeDelta = new Vector2(x, CurrencyStripHeight);
     }
 
     /// <summary>Called every frame: tooltip position, and closing the Inventory / Log the moment the shop opens.</summary>
     private void UpdateCurrencyAndWindows()
     {
         bool open = panelObject != null && PixelPop.IsOpen(panelObject);
-        if (currencyArrow != null)
-        {
-            currencySlide = Mathf.MoveTowards(currencySlide, currencyOut ? 1f : 0f, Time.unscaledDeltaTime / 0.22f);
-            ApplyCurrencySlide();
-        }
         if (open && !shopWasOpen)
         {
-            // The shop replaces the Inventory and Log windows (its currency panel shows what they would).
+            // The shop replaces the Inventory and Log windows (its currency strip shows what they would).
             reopenInventory = PixelUI.InventoryOpen;
             reopenLog = PixelLog.LogOpen;
             PixelUI.SetInventoryOpen(false);
@@ -257,7 +202,7 @@ public partial class PixelShop
         if (currencyTipRect == null) return;
         string tipString = open && hoverTip != null ? hoverTip() : null;
         bool cardTip = !string.IsNullOrEmpty(tipString);
-        bool show = cardTip || (open && currencyHover >= 0 && currencyHover < clicker.Tiers.Length && currencyPanel != null);
+        bool show = cardTip || (open && currencyHover >= 0 && currencyHover < clicker.Tiers.Length && currencyStrip != null);
         if (currencyTipRect.gameObject.activeSelf != show) currencyTipRect.gameObject.SetActive(show);
         if (!show) return;
 

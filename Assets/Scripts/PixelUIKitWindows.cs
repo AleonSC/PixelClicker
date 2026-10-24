@@ -16,7 +16,7 @@
 //   registers with PixelWindows (Escape) and builds its own content below HeaderHeight. Dialogs that close with their own
 //   Done / Continue / Next button pass closeButton: false (no X).
 //   Windows moved onto it so far: View (PixelViewWindow).
-//   FitBesideShop(window, shop, aloneSize): docks a right-edge window beside the open shop, mirroring the Currency panel (Pixel Guide, Toggles).
+//   FitBesideShop(window, shop, aloneSize): docks a right-edge window beside the open shop, (Pixel Guide, Toggles), as wide as the shop's docked-window width or narrower when the screen has less room.
 // ---------------------------------------------------
 using TMPro;
 using UnityEngine;
@@ -248,8 +248,9 @@ public static partial class PixelUIKit
         Vector3[] c = new Vector3[4];
         shopRect.GetWorldCorners(c);   // screen pixels (overlay canvas)
         float shopRight = c[2].x, shopTop = c[2].y, shopBottom = c[0].y;
-        float width = shop.CurrencyPanelWidth;
         float gap = shop.CurrencyPanelGap;
+        float room = (Screen.width - shopRight) / scale - gap - inset;   // (the wide catalog shop leaves less room beside it: the window narrows to fit)
+        float width = Mathf.Max(220f, Mathf.Min(shop.CurrencyPanelWidth, room));
         float rightEdge = (Screen.width - shopRight) / scale - gap - width;
         window.sizeDelta = new Vector2(width, (shopTop - shopBottom) / scale);
         window.anchoredPosition = new Vector2(-Mathf.Max(0f, rightEdge), ((shopTop + shopBottom) * 0.5f - Screen.height * 0.5f) / scale);

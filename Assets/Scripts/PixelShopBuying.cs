@@ -396,12 +396,16 @@ public partial class PixelShop
     }
 
     /// <summary>Currency (of the pixel type itself) the next Value level of a pixel type costs.</summary>
-    public double ValueUpgradeCost(int tierIndex)
+    public double ValueUpgradeCost(int tierIndex) =>
+        clicker.IsValidTierIndex(tierIndex) ? ValueCostAtLevel(tierIndex, clicker.Tiers[tierIndex].valueLevel) : 0d;
+
+    /// <summary>What the Value level after 'level' costs (the shop's amount buttons add several up).</summary>
+    private double ValueCostAtLevel(int tierIndex, int level)
     {
         if (!clicker.IsValidTierIndex(tierIndex)) return 0d;
         PixelClicker.PixelTier tier = clicker.Tiers[tierIndex];
         // Scaled by the pixel's payout per collect but NOT by how often it spawns, so rarer pixels are deliberately slower to upgrade.
-        return Math.Ceiling(valueBaseCost * Math.Max(1d, tier.amountPerClick) * Math.Pow(valueCostGrowth, tier.valueLevel));
+        return Math.Ceiling(valueBaseCost * Math.Max(1d, tier.amountPerClick) * Math.Pow(valueCostGrowth, level));
     }
 
     /// <summary>True when a pixel type has reached its highest Value level (the absolute limit, valueMaxLevel).</summary>

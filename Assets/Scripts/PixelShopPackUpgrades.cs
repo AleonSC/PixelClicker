@@ -85,6 +85,16 @@ public partial class PixelShop
             tileLayoutVersion = 2;
             changed = true;
         }
+        if (tileLayoutVersion < 3)
+        {
+            // 2026-10-24: the catalog layout (PixelShopCatalog.cs): a wider window with a category rail and a detail panel, named tiles 4 to a row.
+            panelWidth = 1240f;
+            tileWidth = 140f;
+            tileHeight = 176f;
+            searchWidth = 420f;
+            tileLayoutVersion = 3;
+            changed = true;
+        }
         return changed;
     }
 

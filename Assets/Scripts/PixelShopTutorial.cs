@@ -52,7 +52,7 @@ public class PixelShopTutorial : MonoBehaviour
 
     [Tooltip("The steps, in order. Each shows its text in a small box beside the shop and opens its tab. Empty = the built-in steps.")]
     [SerializeField] private List<Step> steps = new List<Step>();
-    [SerializeField, HideInInspector] private int stepsVersion;   // 1 = the 5-step tutorial (2026-10-24) replaced saved step lists once
+    [SerializeField, HideInInspector] private int stepsVersion;   // 1 = the 5-step tutorial (2026-10-24), 2 = reworded for the catalog layout: each replaced saved step lists once
 
     [Header("Dim and pause")]
     [Range(0f, 1f)]
@@ -87,7 +87,7 @@ public class PixelShopTutorial : MonoBehaviour
             BeginRun();
         });
         instance = this;
-        if (steps == null || steps.Count == 0 || stepsVersion < 1) { steps = DefaultSteps(); stepsVersion = 1; }   // (2026-10-24: 8 steps cut to 5)
+        if (steps == null || steps.Count == 0 || stepsVersion < 2) { steps = DefaultSteps(); stepsVersion = 2; }   // (2026-10-24: 8 steps cut to 5; then reworded for the catalog layout)
         PixelDialogue.Steps("Tutorial: Shop", steps, st => st.text, (st, t) => st.text = t);   // (the user's texts: Assets/Resources/Dialogue.txt)
         PixelDialogue.File.Flush();
         shop = GetComponent<PixelShop>();
@@ -101,10 +101,10 @@ public class PixelShopTutorial : MonoBehaviour
     {
         return new List<Step>
         {
-            new Step { tab = PixelShop.ShopTab.Pixels, text = "Welcome to the Shop! Prices are paid in the pixels listed on the left. Anything greyed out shows what it still needs." },
-            new Step { tab = PixelShop.ShopTab.Pixels, text = "Pixels: packs that unlock new pixel types. Every new type is its own currency, and some need goals from the minigames first." },
-            new Step { tab = PixelShop.ShopTab.Upgrades, subTab = 0, text = "Upgrades: Features are one-time unlocks like the Auto Clicker and Time Stop. Value makes a pixel type pay more (Shift-click buys every level you can afford). Operation improves your consumables." },
-            new Step { tab = PixelShop.ShopTab.Consumables, text = "Consumables: potions, devices, seeds and supplies. Buy them here, then use them from your Inventory." },
+            new Step { tab = PixelShop.ShopTab.Pixels, text = "Welcome to the Shop! Your pixels are listed along the top: prices are paid in them. Pick a section on the left; anything greyed out shows what it still needs." },
+            new Step { tab = PixelShop.ShopTab.Pixels, text = "Pixels: packs that unlock new pixel types. Every new type is its own currency. The card at the top shows what you are saving up for: pick any item and press Save up for this." },
+            new Step { tab = PixelShop.ShopTab.Upgrades, subTab = 0, text = "Upgrades: Features are one-time unlocks like the Auto Clicker and Time Stop. Value makes a pixel type pay more; buy one level or x5, x10 or Max at once. Operation improves your consumables." },
+            new Step { tab = PixelShop.ShopTab.Consumables, text = "Consumables: potions, devices, seeds and supplies. Choose how many with the amount buttons on the right, then use them from your Inventory." },
             new Step { tab = PixelShop.ShopTab.Minigames, text = "Minigames: events that start on their own once bought. They pay rewards and unlock rare pixels. Switch any of them off in the Toggles window." },
         };
     }

@@ -1,7 +1,7 @@
 // ---- System notes ----
 // PixelShopPixels.cs
-//   Part of partial class PixelShop: the Pixels tab, a tile page (layout in PixelShopTilePage.cs) instead of the scrolling list.
-//   Chips: Toggleables (pixelsToggleablesTitle: the RGB pack first until bought, then single pixels - Glass, Luminescent...;
+//   Part of partial class PixelShop: what the pack tiles show (the catalog's Toggleables / Skill packs entries, PixelShopCatalog.cs; Features and
+//   Minigames packs use the same tiles). The two Pixels entries: Toggleables (pixelsToggleablesTitle: the RGB pack first until bought, then single pixels - Glass, Luminescent...;
 //   SectionOf 0 / 1) and Skill packs (pixelsSkillPacksTitle: SectionOf 2, the Lumberjack's Pack first). A tile shows the pack's
 //   pixels one after another (PackPictureKey), its first price (green / red; grey + 'Locked' while its requirement is missing),
 //   'Owned' once bought and a level badge on leveled packs. The buy bar shows the full description, the cost (or what it still
@@ -15,19 +15,6 @@ using UnityEngine;
 /// <summary>The shop's Pixels tab: pixel packs as tiles on two chips (Toggleables, Skill packs). Part of <see cref="PixelShop"/>.</summary>
 public partial class PixelShop
 {
-    private void BuildPixelsPage(Transform panel, float top)
-    {
-        TilePage page = BuildTilePage(panel, top, ShopTab.Pixels, new[] { pixelsToggleablesTitle, pixelsSkillPacksTitle }, false, 0);
-        page.collect = CollectPixelPacks;
-        page.tileName = i => packs[i].displayName;
-        page.pictureKey = PackPictureKey;
-        page.description = i => i < packs.Length ? ResolveDescription(packs[i]) : null;
-        page.fillTile = FillPackTile;
-        page.fillBar = i => FillPackBar(page, i);
-        page.purchase = (i, max) => { if (OpensUpgrades(i)) OpenUpgradesWindow(i); else TryBuy(i); };
-        page.quickBuy = i => TryBuy(i);
-    }
-
     /// <summary>A bought pack that still has upgrades: its Buy button opens the upgrades window.</summary>
     private bool OpensUpgrades(int i) => IsPurchased(i) && HasPack(i) && HasChildren(i);
 
@@ -80,6 +67,7 @@ public partial class PixelShop
         if (OpensUpgrades(i)) SetPageBuy(page, true, upgradeText);
         else if (owned) SetPageBuy(page, false, leveled ? maxedText : ownedText);
         else if (!requirementMet) SetPageBuy(page, false, lockedText);
-        else SetPageBuy(page, CanAfford(i), leveled ? upgradeText : buyText);
+        else if (CanAfford(i)) SetPageBuy(page, true, leveled ? upgradeText : buyText);
+        else SetPageBuy(page, false, NeedMoreLabel(CurrentCosts(pack), leveled ? upgradeText : buyText));
     }
 }

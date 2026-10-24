@@ -1,7 +1,7 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelShopConsumables.cs
-//   Third-and-a-half part of partial class PixelShop: the Consumables tab, a tile page (layout in PixelShopTilePage.cs).
-//   Chips: Utilities (opens first), Potions, Seeds, Supplies (ConsumableChipCategory -> PixelConsumables.CategoryOf 1 / 0 / 2 / 3;
+//   Part of partial class PixelShop: what the consumable tiles show (the catalog's Utilities / Potions / Seeds / Supplies entries,
+//   PixelShopCatalog.cs; the detail panel's x1 / x5 / x10 / MAX amounts). Entries: Utilities (opens first), Potions, Seeds, Supplies (PixelConsumables.CategoryOf 1 / 0 / 2 / 3;
 //   labels utilitiesCardTitle...). Tiles: price in green / red / grey when locked, owned count badge ("x3"), 'Full' when a potion
 //   is at its cap. Shift-click a tile = buy one; the buy bar has - count + and Buy (Shift-click Buy = MaxAffordable). The
 //   Recycler stands first among Utilities. Craft-only, not-sold, vendor-only items and Dragon seeds are never listed. The search
@@ -17,27 +17,6 @@ using UnityEngine;
 /// </summary>
 public partial class PixelShop
 {
-    /// <summary>The item category (PixelConsumables.CategoryOf) of each chip, in chip order: Utilities first.</summary>
-    private static readonly int[] ConsumableChipCategory = { 1, 0, 2, 3 };
-
-    private void BuildConsumablesArea(Transform panel, float top)
-    {
-        string[] titles = new string[ConsumableChipCategory.Length];
-        for (int c = 0; c < titles.Length; c++)
-        {
-            int cat = ConsumableChipCategory[c];
-            titles[c] = cat == 0 ? potionsCardTitle : cat == 1 ? utilitiesCardTitle : cat == 2 ? seedsCardTitle : suppliesCardTitle;
-        }
-        TilePage page = BuildTilePage(panel, top, ShopTab.Consumables, titles, true, 0);
-        page.collect = (chip, list) => CollectCategoryItems(ConsumableChipCategory[chip], list);
-        page.tileName = item => consumables.ItemName(item);
-        page.pictureKey = item => { string key = "item:" + consumables.ItemName(item); return () => key; };
-        page.description = item => consumables != null && item < consumables.ItemCount ? consumables.ItemDescription(item) : null;
-        page.fillTile = FillItemTile;
-        page.fillBar = item => FillItemBar(page, item);
-        page.purchase = (item, max) => { int n = max ? MaxAffordable(item) : page.count; if (n > 0) TryBuyItems(item, n); };
-        page.quickBuy = item => TryBuyItems(item, 1);
-    }
 
     /// <summary>How many of an item you could buy right now (room and maxPerPurchase allowing).</summary>
     private int MaxAffordable(int item)
@@ -134,6 +113,8 @@ public partial class PixelShop
         }
         PackCost[] total = consumables.ItemCostsTotal(item, page.count);
         SetCosts(page.barCosts, total, false);
-        SetPageBuy(page, CanAffordCosts(total), string.Format(buyCountFormat, page.count));
+        string label = string.Format(buyCountFormat, page.count);
+        bool can = CanAffordCosts(total);
+        SetPageBuy(page, can, can ? label : NeedMoreLabel(total, label));
     }
 }

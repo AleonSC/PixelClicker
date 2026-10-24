@@ -1,11 +1,10 @@
 // ---- System notes ----
 // PixelShopSearch.cs
-//   Part of partial class PixelShop: the search results, shown as a tile page (layout in PixelShopTilePage.cs, no chip row) while
-//   the search box has text (shopSearch; RefreshTilePages opens it in place of every tab). One page lists four kinds of results,
-//   told apart by id range:
+//   Part of partial class PixelShop: the search results (the catalog's search entry, PixelShopCatalog.cs, while the search box has text)
+//   and the id ranges every catalog tile uses. Four kinds, told apart by id range:
 //     packs (id = pack index, any tab; MatchesSearch: name, description, reward pixel names) - same tiles / bar as the Pixels tab,
 //     consumables (ItemBase + item: potions, devices, seeds, supplies; name, description, category word) - as on the Consumables tab,
-//     Value upgrades (ValueBase + tier: '<pixel> Value' + 'value upgrade') - Buy = one level, Shift = as many as you can,
+//     Value upgrades (ValueBase + tier: '<pixel> Value' + 'value upgrade') - Buy = the chosen number of levels (x1 / x5 / x10 / MAX), Shift = as many as you can,
 //     Operation rows (OperationBase + kind index: '<device> upgrades operation') - Buy opens that device's upgrade window.
 //   Shift-click a tile = buy one (Operation: opens the window). The emptied search shows the open tab again.
 // ---------------------------------------------------
@@ -15,8 +14,6 @@ using UnityEngine;
 /// <summary>The shop's search results as tiles. Part of <see cref="PixelShop"/>.</summary>
 public partial class PixelShop
 {
-    private TilePage searchPage;
-
     private const int ItemBase = 100000, ValueBase = 200000, OperationBase = 300000;
     private static readonly string[] CategoryWords = { "potion", "device utility", "seed", "supply instant" };
 
@@ -24,48 +21,6 @@ public partial class PixelShop
 
     private static SearchKind KindOf(int id) =>
         id >= OperationBase ? SearchKind.Operation : id >= ValueBase ? SearchKind.Value : id >= ItemBase ? SearchKind.Item : SearchKind.Pack;
-
-    private void BuildSearchPage(Transform panel, float top)
-    {
-        TilePage page = BuildTilePage(panel, top, ShopTab.Automatic, new string[0], false, 0);
-        page.empty.text = searchNoResultsText;
-        page.collect = (chip, list) => CollectSearchResults(list);
-        page.tileName = SearchTileName;
-        page.pictureKey = SearchPictureKey;
-        page.description = SearchDescription;
-        page.fillTile = (id, tile, selected) =>
-        {
-            switch (KindOf(id))
-            {
-                case SearchKind.Pack: FillPackTile(id, tile, selected); break;
-                case SearchKind.Item: FillItemTile(id - ItemBase, tile, selected); break;
-                case SearchKind.Value: FillValueTile(id - ValueBase, tile); break;
-                default: FillOperationTile(id - OperationBase, tile); break;
-            }
-        };
-        page.fillBar = id =>
-        {
-            switch (KindOf(id))
-            {
-                case SearchKind.Pack: FillPackBar(page, id); break;
-                case SearchKind.Item: FillItemBar(page, id - ItemBase); break;
-                case SearchKind.Value: FillValueBar(page, id - ValueBase); break;
-                default: SetCostMessage(page.barCosts, "", textColor); SetPageBuy(page, true, upgradeText); break;
-            }
-        };
-        page.purchase = (id, max) =>
-        {
-            switch (KindOf(id))
-            {
-                case SearchKind.Pack: if (OpensUpgrades(id)) OpenUpgradesWindow(id); else TryBuy(id); break;
-                case SearchKind.Item: { int item = id - ItemBase; int n = max ? MaxAffordable(item) : 1; if (n > 0) TryBuyItems(item, n); break; }
-                case SearchKind.Value: TryBuyValueUpgrade(id - ValueBase, max); RefreshRows(); break;
-                default: OpenOperationWindow(id - OperationBase); break;
-            }
-        };
-        page.quickBuy = id => page.purchase(id, false);
-        searchPage = page;
-    }
 
     /// <summary>Every match, in order: packs, consumables, Value upgrades, Operation rows.</summary>
     private void CollectSearchResults(List<int> list)
@@ -161,9 +116,13 @@ public partial class PixelShop
             SetPageBuy(page, false, valueCappedButtonText);
             return;
         }
-        PackCost[] cost = { new PackCost { type = tier.type, amount = ValueUpgradeCost(t) } };
+        int n = Mathf.Clamp(page.count, 1, Mathf.Max(1, ValueLevelsLeft(t)));
+        if (n != page.count) page.count = n;
+        PackCost[] cost = { new PackCost { type = tier.type, amount = ValueLevelsCost(t, n) } };
         SetCosts(page.barCosts, cost, false);
-        SetPageBuy(page, CanAffordCosts(cost), valueButtonText);
+        string label = n > 1 ? string.Format(upgradeCountFormat, n) : valueButtonText;
+        bool can = CanAffordCosts(cost);
+        SetPageBuy(page, can, can ? label : NeedMoreLabel(cost, label));
     }
 
     // ---- Operation rows as tiles ----

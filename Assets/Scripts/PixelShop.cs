@@ -331,20 +331,13 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Shown when a category has no items.")]
     [SerializeField] private string noItemsText = "Nothing to buy here.";
 
-    [Min(30f)]
-    [Tooltip("Height of the category buttons along the top of the Consumables tab.")]
-    [SerializeField] private float chipHeight = 56f;
-
-    [Min(140f)]
-    [Tooltip("Height of the buy bar along the bottom of the Consumables tab (picture, name, description, cost, count, Buy).")]
-    [SerializeField] private float buyBarHeight = 210f;
 
     [Min(80f)]
-    [Tooltip("Width of one item tile in the Pixels / Consumables grids. The picture is this minus 32. 160 fits 5 to a row in the 900-wide shop.")]
+    [Tooltip("Width of one item tile in the catalog grid. 140 fits 4 to a row in the 1240-wide shop.")]
     [SerializeField] private float tileWidth = 160f;
 
     [Min(100f)]
-    [Tooltip("Height of one item tile (picture + price line; the name is in the hover tooltip and the buy bar).")]
+    [Tooltip("Height of one item tile (picture, name and price line).")]
     [SerializeField] private float tileHeight = 176f;
 
     [Min(0f)]
@@ -357,6 +350,9 @@ public partial class PixelShop : MonoBehaviour
 
     [Tooltip("Shown in the search results when nothing matches.")]
     [SerializeField] private string searchNoResultsText = "Nothing in the shop matches that.";
+
+    [Tooltip("Shown in the grid when 'Only what I can buy' is on and nothing there can be bought.")]
+    [SerializeField] private string nothingAffordableText = "Nothing here you can buy right now.";
 
     [Tooltip("Shown when hovering the Consumables Buy button.")]
     [SerializeField] private string buyMaxTip = "Shift-click to buy as many as you can.";
@@ -512,17 +508,79 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Seconds between row refreshes while the shop is open (buying and tab changes refresh at once).")]
     [SerializeField] private float rowRefreshSeconds = 0.25f;
 
-    [Header("Currency Panel")]
-    [Tooltip("Hide the currency panel that sits on the left side of the shop window.")]
+    [Header("Currency strip (under the shop's header)")]
+    [Tooltip("Hide the strip of pixel amounts under the shop's header.")]
     [SerializeField] private bool hideCurrencyPanel = false;
 
-    [Tooltip("Width of the currency panel (canvas units). 0 = 380.")]
+    [Min(30f)]
+    [Tooltip("Height of the currency strip under the shop's header (the cubes and amounts scale with it).")]
+    [SerializeField] private float currencyStripHeight = 52f;
+
+    [Tooltip("Width of a window docked beside the open shop (the Pixel Guide; it gets narrower when the screen has less room). 0 = 380.")]
     [SerializeField] private float currencyPanelWidth = 380f;
 
-    [Tooltip("Gap between the currency panel and the shop window.")]
+    [Tooltip("Gap between the shop window and a window docked beside it.")]
     [SerializeField] private float currencyPanelGap = 10f;
 
-    /// <summary>Width of the currency panel (the Toggles window copies it).</summary>
+    [Header("Shop layout (2026-10-24: category rail, Saving up for card, detail panel)")]
+    [Min(160f)]
+    [Tooltip("Width of the category rail on the left (Pixels / Consumables / Upgrades / Minigames and their entries).")]
+    [SerializeField] private float railWidth = 230f;
+
+    [Min(240f)]
+    [Tooltip("Width of the detail panel on the right (picture, description, cost, amounts, Buy).")]
+    [SerializeField] private float detailPanelWidth = 330f;
+
+    [Min(70f)]
+    [Tooltip("Height of the Saving up for card above the grid.")]
+    [SerializeField] private float savingCardHeight = 96f;
+
+    [Tooltip("Width of the windows that keep the shop's older size (the pack Upgrades window, the Crafting window).")]
+    [SerializeField] private float classicWindowWidth = 900f;
+
+    [Tooltip("The quick amount buttons in the detail panel (consumables and Value levels); a MAX button follows them.")]
+    [SerializeField] private int[] amountPresets = { 1, 5, 10 };
+
+    [Tooltip("Label of the amount button that picks as many as you can afford and hold.")]
+    [SerializeField] private string amountMaxText = "Max";
+
+    [Tooltip("Colour of the thin bar along the bottom of a tile you can buy right now.")]
+    [SerializeField] private Color canBuyColor = new Color(0.28f, 0.82f, 0.4f, 1f);
+
+    [Tooltip("Background of the Saving up for card.")]
+    [SerializeField] private Color savingCardColor = new Color(0.19f, 0.17f, 0.28f, 1f);
+
+    [Tooltip("Colour of the Saving up for progress bar.")]
+    [SerializeField] private Color savingBarColor = new Color(0.65f, 0.3f, 0.95f, 1f);
+
+    [Tooltip("Label at the top of the Saving up for card.")]
+    [SerializeField] private string savingUpTitle = "Saving up for";
+
+    [Tooltip("Detail panel button that pins the selected item to the Saving up for card.")]
+    [SerializeField] private string saveForThisText = "Save up for this";
+
+    [Tooltip("The same button while the selected item is the pinned one (clicking it unpins).")]
+    [SerializeField] private string savingThisText = "Saving up for this (click to stop)";
+
+    [Tooltip("Added to the card's progress line while the item was pinned by the player (not picked by the shop).")]
+    [SerializeField] private string savingPinnedText = "pinned";
+
+    [Tooltip("The switch above the grid that hides everything you can't buy right now.")]
+    [SerializeField] private string onlyAffordableText = "Only what I can buy";
+
+    [Tooltip("The Buy button when a price can't be paid. {0} = the first currency you are short of.")]
+    [SerializeField] private string needMoreFormat = "Need more {0}";
+
+    [Tooltip("Heading above the grid while searching. {0} = the search text.")]
+    [SerializeField] private string resultsForFormat = "Results for \"{0}\"";
+
+    [Tooltip("The Buy button for several Value levels. {0} = how many.")]
+    [SerializeField] private string upgradeCountFormat = "Upgrade x{0}";
+
+    [Tooltip("The rail's entry under Minigames.")]
+    [SerializeField] private string allMinigamesText = "All minigames";
+
+    /// <summary>Width of a window docked beside the shop (the Pixel Guide copies it).</summary>
     /// <summary>Layout numbers the windows beside the shop copy so their contents line up with the shop's: where the first element under the header starts, how tall the tab row is and where the list starts.</summary>
     public float HeaderHeightValue => headerHeight;
     public float TabHeightValue => tabHeight;
@@ -533,18 +591,6 @@ public partial class PixelShop : MonoBehaviour
 
     /// <summary>Gap between the shop and its currency panel.</summary>
     public float CurrencyPanelGap => Mathf.Max(0f, currencyPanelGap);
-
-    [Tooltip("Height of each currency row. 0 = 84.")]
-    [SerializeField] private float currencyRowHeight = 84f;
-
-    [Tooltip("Size of the spinning pixel cube in each row. 0 = 60.")]
-    [SerializeField] private float currencyIconSize = 60f;
-
-    [Tooltip("Text size of the amounts (it shrinks for very long numbers). 0 = 34.")]
-    [SerializeField] private float currencyFontSize = 34f;
-
-    [Tooltip("Title at the top of the currency panel.")]
-    [SerializeField] private string currencyTitle = "Currency";
 
     [Header("Canvas")]
     [Tooltip("Sorting order of the shop canvas.")]
@@ -617,7 +663,7 @@ public partial class PixelShop : MonoBehaviour
         ApplyShopText();   // names, descriptions and prices from Resources/ShopText.txt (PixelShopDefaults.cs)
     }
 
-    [SerializeField, HideInInspector] private int tileLayoutVersion;   // 1 = 160 x 200 tiles (5 to a row), 2 = 176 tall (no name line)
+    [SerializeField, HideInInspector] private int tileLayoutVersion;   // 1 = 160 x 200 tiles (5 to a row), 2 = 176 tall (no name line), 3 = the 1240-wide catalog layout (140-wide named tiles)
     [SerializeField, HideInInspector] private int shopBalanceVersion; // 1 = the 2026-10-16 rebalance (new default prices, minigames need only their price), 2 = the 2026-10-24 skill pack ladder flags
 
     [Header("Skill pack price ladder (gathering packs; ShopPack.skillLadder)")]

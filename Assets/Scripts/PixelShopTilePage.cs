@@ -1,18 +1,16 @@
 // ---- System notes ----
 // PixelShopTilePage.cs
-//   Part of partial class PixelShop: the shared "tile page" layout used by the Pixels tab (PixelShopPixels.cs) and the Consumables
-//   tab (PixelShopConsumables.cs). Top to bottom:
-//   - category chips (the open one lit like a tab; each chip remembers its selected tile),
-//   - a scrolling grid of tiles, 160 x 176 = 5 to a row (still 3D picture - no name: the hover tooltip and the buy bar show it -, the price as colour swatches + numbers
-//     (CostStrip: SetCosts / SetCostMessage; red number = can't afford), a small corner badge, a 'Locked' mark over
-//     the picture). Click a tile = select it, Shift-click = the page's quick buy, hover = its description as the shop tooltip.
-//   - one buy bar for the selected tile: spinning picture, name, the full description, the cost (swatch + number + currency name,
-//     two columns), - count + (pages with hasCount)
-//     and the Buy button (Shift-click Buy = the page's 'as many as you can').
-//   A page only says WHAT to show through its delegates (collect, tileName, pictureKey, description, fillTile, fillBar, purchase,
-//   quickBuy); building, layout, selection and the shared tooltip live here. Tiles are built once per id and reused.
-//   Settings: PixelShop.cs "Consumables Tab" (chipHeight, buyBarHeight, tileWidth / Height / Gap, tileFontSize, buyMaxTip).
-//   While a page is open the main scrolling list is hidden (RefreshTilePages, called from RefreshRows).
+//   Part of partial class PixelShop: the shop's tile page (one, the CATALOG: PixelShopCatalog.cs fills it). Since 2026-10-24 (the 'A' redesign) the
+//   whole shop is this one page: the category rail picks what it lists (page.chip = the rail entry; no chip buttons), the search box lists matches.
+//   - a scrolling grid of tiles (tileWidth x tileHeight, 4 to a row at the defaults): still 3D picture, the NAME, the price as colour swatches +
+//     numbers (CostStrip: SetCosts / SetCostMessage; red number = can't afford), a small corner badge, a 'Locked' mark over the picture and a green
+//     bar along the bottom when you can buy it now. Click a tile = select it, Shift-click = quick buy, hover = its description as the shop tooltip.
+//   - the DETAIL PANEL on the right for the selected tile (BuildDetailPanel, replaced the bottom buy bar): spinning picture, name, where it is listed,
+//     the full description, the cost with what you hold ('75 White / 12.4K'), an amount row (- count +) and quick amounts (x1 x5 x10 MAX) for
+//     things bought in numbers (consumables, Value levels), 'Save up for this' (the Saving up for card, PixelShopCatalog.cs) and Buy.
+//   A page only says WHAT to show through its delegates (collect, tileName, pictureKey, description, fillTile, fillBar, purchase, quickBuy, hasAmount,
+//   maxAmount); building, layout, selection and the shared tooltip live here. Tiles are built once per id and reused.
+//   Settings: PixelShop.cs "Consumables Tab" (tileWidth / Height / Gap, tileFontSize, buyMaxTip) and "Shop layout" (rail, detail panel, amounts).
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -21,20 +19,21 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Part of <see cref="PixelShop"/>: a shop tab laid out as category chips, a grid of tiles and one buy bar (the Pixels and
-/// Consumables tabs). The tab's own file fills in what each tile and the bar show.
+/// Part of <see cref="PixelShop"/>: the shop's catalog page - a grid of tiles and a detail panel for the selected one.
+/// What each tile and the panel show comes from PixelShopCatalog.cs.
 /// </summary>
 public partial class PixelShop
 {
-    /// <summary>One tile in a page's grid.</summary>
+    /// <summary>One tile in the grid.</summary>
     private class ItemTile
     {
         public RectTransform rect;
         public Image background;
         public PictureSlot picture;
-        public Func<string> key;   // the tile's picture (also shown, spinning, in the buy bar while selected)
-        public TMP_Text badge, lockMark;   // (no name under the picture: the buy bar and the hover tooltip show it)
-        public CostStrip costs;   // the price: a colour swatch + number per currency
+        public Func<string> key;   // the tile's picture (also shown, spinning, in the detail panel while selected)
+        public TMP_Text name, badge, lockMark;
+        public CostStrip costs;    // the price: a colour swatch + number per currency
+        public GameObject canBuyBar;   // the green bar along the bottom: you can buy it right now
     }
 
     /// <summary>
@@ -48,197 +47,216 @@ public partial class PixelShop
         public TMP_Text[] numbers;
         public TMP_Text message;
         public int maxColumns;    // slots per row (the rest wrap onto more rows)
-        public bool withNames;    // "75 White" instead of "75" (the buy bar has room)
+        public bool withNames;    // "75 White" instead of "75" (the detail panel has room)
+        public bool withHeld;     // "... / 12.4K": what you hold of it (the detail panel)
         public float fontSize;
     }
 
-    /// <summary>A tab laid out as chips + tile grid + buy bar. The delegates say what it shows; everything else is shared.</summary>
+    /// <summary>The catalog: a grid + detail panel. The delegates say what it shows; everything else is shared.</summary>
     private class TilePage
     {
         public GameObject area;
-        public ShopTab tab;
-        public string[] chipTitles;
-        public Image[] chipImages;
-        public int chip;                 // the open chip
-        public int[] selected;           // the selected id on each chip (-1 = none)
-        public bool hasCount;            // the bar has - count + (consumables); packs are bought one at a time
+        public int chip;                 // the rail entry that is open (or the search entry)
+        public int[] selected;           // the selected id on each entry (-1 = none)
         public ScrollRect scroll;
-        public RectTransform content;
+        public RectTransform content, gridRect;
         public GameObject scrollBar;
         public TMP_Text empty;
         public readonly Dictionary<int, ItemTile> tiles = new Dictionary<int, ItemTile>();
         public readonly List<int> ids = new List<int>();
 
-        // The buy bar.
-        public TMP_Text barName, barDescription, barBuyLabel;
+        // The detail panel.
+        public TMP_Text barName, barKind, barDescription, barBuyLabel, pinLabel;
         public CostStrip barCosts;
         public TMP_InputField countField;
-        public Button minus, plus, buy;
-        public Image buyImage;
+        public Button minus, plus, buy, pin;
+        public Button[] amountButtons;
+        public GameObject amountRow, quickRow;
+        public Image buyImage, pinImage;
         public int count = 1;
 
-        // What the page shows (set by the tab's own file).
-        public Action<int, List<int>> collect;       // chip -> the ids listed on it, in order
+        // What the page shows (set by PixelShopCatalog.cs).
+        public Action<int, List<int>> collect;       // entry -> the ids listed on it, in order
         public Func<int, string> tileName;
         public Func<int, Func<string>> pictureKey;   // id -> its picture key (null = no picture)
         public Func<int, string> description;
+        public Func<int, string> kindLine;           // id -> where it is listed ('Consumables > Potions')
         public Action<int, ItemTile, bool> fillTile; // id, tile, selected: price line, badge, lock
-        public Action<int> fillBar;                  // id (or -1): cost line and Buy (SetPageBuy), count clamp
+        public Func<int, bool> canBuyNow;            // id -> can it be bought right now (the green bar, 'Only what I can buy')
+        public Action<int> fillBar;                  // id: cost line and Buy (SetPageBuy), count clamp
         public Action<int, bool> purchase;           // Buy pressed: id, Shift held ('as many as you can')
         public Action<int> quickBuy;                 // Shift-click on a tile
+        public Func<int, bool> hasAmount;            // id -> bought in numbers (the amount rows show)
+        public Func<int, int> maxAmount;             // id -> the MAX button's amount
+        public Func<int, bool> canPin;               // id -> 'Save up for this' makes sense (not owned)
 
         public int Selected => selected[chip];
     }
 
-    private readonly List<TilePage> tilePages = new List<TilePage>();
+    private TilePage catalog;
 
     // ------------------------------------------------------------------
     // Building
     // ------------------------------------------------------------------
 
-    /// <summary>Builds an (empty, hidden) page below 'top' units from the panel's top edge. The caller sets its delegates.</summary>
-    private TilePage BuildTilePage(Transform panel, float top, ShopTab tab, string[] chipTitles, bool hasCount, int startChip)
+    /// <summary>
+    /// Builds the (hidden) catalog page in the window area x..x+gridW (the grid) and the detail panel right of it, from 'top' down to the
+    /// window's bottom padding. 'entries' = how many rail entries remember a selection. The caller (PixelShopCatalog.cs) sets the delegates.
+    /// </summary>
+    private TilePage BuildCatalogPage(Transform panel, float x, float top, float gridTop, float gridW, int entries)
     {
-        // (no chip titles = no chip row: the grid starts at the top - the search results page)
-        TilePage page = new TilePage { tab = tab, chipTitles = chipTitles, hasCount = hasCount, chip = Mathf.Clamp(startChip, 0, Mathf.Max(0, chipTitles.Length - 1)) };
-        page.selected = new int[Mathf.Max(1, chipTitles.Length)];
+        TilePage page = new TilePage { chip = 0, selected = new int[Mathf.Max(1, entries)] };
         for (int i = 0; i < page.selected.Length; i++) page.selected[i] = -1;
 
-        page.area = new GameObject(tab + " Page", typeof(RectTransform));
+        page.area = new GameObject("Catalog", typeof(RectTransform));
         page.area.transform.SetParent(panel, false);
         RectTransform ar = page.area.GetComponent<RectTransform>();
         ar.anchorMin = Vector2.zero;
         ar.anchorMax = Vector2.one;
-        ar.offsetMin = new Vector2(panelPadding, panelPadding);
+        ar.offsetMin = new Vector2(x, panelPadding);
         ar.offsetMax = new Vector2(-panelPadding, -top);
 
-        float width = panelWidth - panelPadding * 2f;
-        BuildChips(page, width);
-
-        // The tile grid fills the space between the chips and the buy bar.
+        // The tile grid: the left part, below the Saving up card and the heading row.
         page.scroll = PixelUIKit.CreateScrollView(page.area.transform, "Tile Grid", tabActiveColor, PixelUIKit.ScrollBarWidth,
                                                   scrollSpeed, out page.content, out page.scrollBar);
-        RectTransform gr = page.scroll.GetComponent<RectTransform>();
-        gr.anchorMin = Vector2.zero;
-        gr.anchorMax = Vector2.one;
-        gr.offsetMin = new Vector2(0f, buyBarHeight + cardGap);
-        gr.offsetMax = new Vector2(0f, chipTitles.Length > 0 ? -(chipHeight + cardGap) : 0f);
+        page.gridRect = page.scroll.GetComponent<RectTransform>();
+        page.gridRect.anchorMin = new Vector2(0f, 0f);
+        page.gridRect.anchorMax = new Vector2(0f, 1f);
+        page.gridRect.pivot = new Vector2(0f, 1f);
+        page.gridRect.sizeDelta = new Vector2(gridW, -(gridTop - top));
+        page.gridRect.anchoredPosition = new Vector2(0f, -(gridTop - top));
 
         page.empty = CreateText(page.scroll.transform, "Empty", noItemsText, costFontSize, TextAlignmentOptions.Center, FontStyles.Italic);
         PixelUIKit.Stretch(page.empty.rectTransform);
         page.empty.gameObject.SetActive(false);
 
-        BuildBuyBar(page, width);
+        BuildDetailPanel(page, gridW + DetailGap);
         page.area.SetActive(false);
-        tilePages.Add(page);
         return page;
     }
 
-    /// <summary>The category buttons along the top: the open one is lit like a tab.</summary>
-    private void BuildChips(TilePage page, float width)
-    {
-        int n = page.chipTitles.Length;
-        page.chipImages = new Image[n];
-        float chipWidth = (width - cardGap * (n - 1)) / n;
-        for (int c = 0; c < n; c++)
-        {
-            int captured = c;
-            Button chip = CreateButton(page.area.transform, "Chip " + page.chipTitles[c], page.chipTitles[c], Vector2.zero, ButtonRole.Neutral,
-                                       textColor, buyFontSize * 0.75f, out TMP_Text label, out page.chipImages[c]);
-            PixelUIKit.Caps(label);
-            PlaceTopLeft(chip.GetComponent<RectTransform>(), c * (chipWidth + cardGap), 0f, chipWidth, chipHeight);
-            chip.onClick.AddListener(() => SelectPageChip(page, captured));
-        }
-    }
+    private float DetailGap => 16f;
 
-    /// <summary>The bar along the bottom: picture, name and description of the selected tile, its cost, (- count +) and Buy.</summary>
-    private void BuildBuyBar(TilePage page, float width)
+    /// <summary>The detail panel on the right: picture, name, where it is listed, description, cost (with what you hold), amounts, Save up and Buy.</summary>
+    private void BuildDetailPanel(TilePage page, float x)
     {
-        GameObject bar = new GameObject("Buy Bar", typeof(RectTransform), typeof(Image));
-        bar.transform.SetParent(page.area.transform, false);
-        bar.GetComponent<Image>().color = rowColor;
-        PixelUIKit.StyleBox(bar.GetComponent<Image>());
-        RectTransform br = bar.GetComponent<RectTransform>();
-        br.anchorMin = new Vector2(0f, 0f);
-        br.anchorMax = new Vector2(1f, 0f);
-        br.pivot = new Vector2(0.5f, 0f);
-        br.sizeDelta = new Vector2(0f, buyBarHeight);
-        br.anchoredPosition = Vector2.zero;
-        // (the bar is anchored to the bottom; its children are placed from this top-left holder)
+        GameObject panel = new GameObject("Detail Panel", typeof(RectTransform), typeof(Image));
+        panel.transform.SetParent(page.area.transform, false);
+        panel.GetComponent<Image>().color = rowColor;
+        PixelUIKit.StyleBox(panel.GetComponent<Image>());
+        RectTransform pr = panel.GetComponent<RectTransform>();
+        pr.anchorMin = new Vector2(0f, 0f);
+        pr.anchorMax = new Vector2(1f, 1f);
+        pr.offsetMin = new Vector2(x, 0f);
+        pr.offsetMax = Vector2.zero;
+        float w = DetailWidth, h = Mathf.Max(400f, panelHeight - panelPadding - CatalogTop);
+        // (children are placed from this top-left holder, in a fixed w x h box)
         RectTransform top = new GameObject("Top", typeof(RectTransform)).GetComponent<RectTransform>();
-        top.SetParent(bar.transform, false);
+        top.SetParent(panel.transform, false);
         top.anchorMin = top.anchorMax = top.pivot = new Vector2(0f, 1f);
-        top.sizeDelta = new Vector2(width, buyBarHeight);
+        top.sizeDelta = new Vector2(w, h);
         top.anchoredPosition = Vector2.zero;
 
-        float pad = 14f;
-        float textX = pad;
-        if (!hidePictures)
-        {
-            AddPictureSlot(top, cardPictureSize, new Vector2(pad, (buyBarHeight - cardPictureSize) * 0.5f), false, () => SelectedTileKey(page), false);
-            textX += cardPictureSize + pad;
-        }
+        const float pad = 16f;
+        float inner = w - pad * 2f;
+        float pic = Mathf.Min(150f, inner);
+        if (!hidePictures) AddPictureSlot(top, pic, new Vector2((w - pic) * 0.5f, pad), false, () => SelectedTileKey(page), false);
+        float y = pad + pic + 8f;
 
-        // Right column: cost, (- count +), Buy.
-        float rightW = 300f;
-        float rightX = width - pad - rightW;
-        float lineH = (buyBarHeight - pad * 2f - 16f) / 3f;
-        float y = pad;
-        float costH = page.hasCount ? lineH : lineH * 2f + 8f;   // without the count row the cost gets two lines
-        page.barCosts = BuildCostStrip(top, rightX, y, rightW, costH, 6, 2, costFontSize * 0.8f, true);
-        y += costH + 8f;
-
-        if (page.hasCount)
-        {
-            float stepW = 56f, countW = rightW - stepW * 2f - 16f;
-            page.minus = CreateButton(top, "Minus", "-", Vector2.zero, ButtonRole.Neutral, textColor, buyFontSize, out _, out _);
-            PlaceTopLeft(page.minus.GetComponent<RectTransform>(), rightX, y, stepW, lineH);
-            page.minus.onClick.AddListener(() => ChangePageCount(page, -1));
-
-            page.countField = PixelUIKit.CreateInputField(font, top, "Count", new Vector2(countW, lineH), tabInactiveColor, textColor, buyFontSize, "1");
-            page.countField.contentType = TMP_InputField.ContentType.IntegerNumber;
-            page.countField.text = "1";
-            page.countField.textComponent.alignment = TextAlignmentOptions.Center;
-            PlaceTopLeft(page.countField.GetComponent<RectTransform>(), rightX + stepW + 8f, y, countW, lineH);
-            page.countField.onValueChanged.AddListener(s =>
-            {
-                page.count = int.TryParse(s, out int n) ? Mathf.Clamp(n, 1, maxPerPurchase) : 1;   // live, so the cost updates while typing
-                RefreshRows();
-            });
-            page.countField.onEndEdit.AddListener(_ => page.countField.text = page.count.ToString());
-
-            page.plus = CreateButton(top, "Plus", "+", Vector2.zero, ButtonRole.Neutral, textColor, buyFontSize, out _, out _);
-            PlaceTopLeft(page.plus.GetComponent<RectTransform>(), rightX + rightW - stepW, y, stepW, lineH);
-            page.plus.onClick.AddListener(() => ChangePageCount(page, +1));
-            y += lineH + 8f;
-        }
-
-        page.buy = CreateButton(top, "Buy", "", Vector2.zero, ButtonRole.Success, textColor, buyFontSize, out page.barBuyLabel, out page.buyImage);
-        PlaceTopLeft(page.buy.GetComponent<RectTransform>(), rightX, y, rightW, lineH);
-        page.buy.onClick.AddListener(() => { int id = page.Selected; if (id >= 0) page.purchase(id, PixelInput.ShiftHeld()); });
-        if (page.hasCount)
-        {
-            Func<string> maxTip = () => buyMaxTip;   // hovering Buy explains Shift-click
-            PixelHoverTip buyTip = page.buy.gameObject.AddComponent<PixelHoverTip>();
-            buyTip.onEnter = () => hoverTip = maxTip;
-            buyTip.onExit = () => { if (hoverTip == maxTip) hoverTip = null; };
-        }
-
-        // Middle: name and the full description.
-        float textW = rightX - pad - textX;
-        page.barName = CreateText(top, "Name", "", nameFontSize * 0.9f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
+        page.barName = CreateText(top, "Name", "", nameFontSize * 0.75f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
         page.barName.enableAutoSizing = true;
-        page.barName.fontSizeMax = nameFontSize * 0.9f;
+        page.barName.fontSizeMax = nameFontSize * 0.75f;
         page.barName.fontSizeMin = 14f;
         PixelUIKit.Caps(page.barName);
-        PlaceTopLeft(page.barName.rectTransform, textX, pad, textW, 44f);
+        PlaceTopLeft(page.barName.rectTransform, pad, y, inner, 40f);
+        y += 40f;
+        page.barKind = CreateText(top, "Kind", "", tileFontSize * 0.9f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
+        page.barKind.color = levelColor;
+        PixelUIKit.FitOneLine(page.barKind, 11f);
+        PlaceTopLeft(page.barKind.rectTransform, pad, y, inner, 24f);
+        y += 30f;
 
-        page.barDescription = CreateText(top, "Description", "", tileFontSize * 1.1f, TextAlignmentOptions.TopLeft, FontStyles.Normal);
+        // Bottom up: Buy, Save up for this, quick amounts, - count +, the cost. The description takes what is left between.
+        float buyH = 62f, pinH = 36f, quickH = 44f, stepH = 48f, costH = 92f, gap = 8f;
+        float buyY = h - pad - buyH;
+        float pinY = buyY - gap - pinH;
+        float quickY = pinY - gap - quickH;
+        float stepY = quickY - gap - stepH;
+        float costY = stepY - gap - costH;
+
+        page.barDescription = CreateText(top, "Description", "", tileFontSize * 1.05f, TextAlignmentOptions.TopLeft, FontStyles.Normal);
         page.barDescription.richText = true;
         page.barDescription.enableAutoSizing = true;
-        page.barDescription.fontSizeMax = tileFontSize * 1.1f;
+        page.barDescription.fontSizeMax = tileFontSize * 1.05f;
         page.barDescription.fontSizeMin = 12f;
-        PlaceTopLeft(page.barDescription.rectTransform, textX, pad + 50f, textW, buyBarHeight - pad * 2f - 50f);
+        page.barDescription.color = new Color(0.78f, 0.82f, 0.9f, 1f);
+        PlaceTopLeft(page.barDescription.rectTransform, pad, y, inner, Mathf.Max(30f, costY - gap - y));
+
+        page.barCosts = BuildCostStrip(top, pad, costY, inner, costH, 6, 2, tileFontSize * 0.95f, true);
+        page.barCosts.withHeld = true;
+
+        // - count +
+        page.amountRow = new GameObject("Amount", typeof(RectTransform)).gameObject;
+        RectTransform amr = page.amountRow.GetComponent<RectTransform>();
+        amr.SetParent(top, false);
+        PlaceTopLeft(amr, pad, stepY, inner, stepH);
+        float stepW = 56f, countW = inner - stepW * 2f - 16f;
+        page.minus = CreateButton(amr, "Minus", "-", Vector2.zero, ButtonRole.Neutral, textColor, buyFontSize, out _, out _);
+        PlaceTopLeft(page.minus.GetComponent<RectTransform>(), 0f, 0f, stepW, stepH);
+        page.minus.onClick.AddListener(() => ChangePageCount(page, -1));
+        page.countField = PixelUIKit.CreateInputField(font, amr, "Count", new Vector2(countW, stepH), tabInactiveColor, textColor, buyFontSize * 0.85f, "1");
+        page.countField.contentType = TMP_InputField.ContentType.IntegerNumber;
+        page.countField.text = "1";
+        page.countField.textComponent.alignment = TextAlignmentOptions.Center;
+        PlaceTopLeft(page.countField.GetComponent<RectTransform>(), stepW + 8f, 0f, countW, stepH);
+        page.countField.onValueChanged.AddListener(s =>
+        {
+            page.count = int.TryParse(s, out int n) ? Mathf.Clamp(n, 1, maxPerPurchase) : 1;   // live, so the cost updates while typing
+            RefreshRows();
+        });
+        page.countField.onEndEdit.AddListener(_ => page.countField.text = page.count.ToString());
+        page.plus = CreateButton(amr, "Plus", "+", Vector2.zero, ButtonRole.Neutral, textColor, buyFontSize, out _, out _);
+        PlaceTopLeft(page.plus.GetComponent<RectTransform>(), inner - stepW, 0f, stepW, stepH);
+        page.plus.onClick.AddListener(() => ChangePageCount(page, +1));
+
+        // Quick amounts: x1 x5 x10 ... and MAX (as many as you can afford and hold).
+        page.quickRow = new GameObject("Quick Amounts", typeof(RectTransform)).gameObject;
+        RectTransform qr = page.quickRow.GetComponent<RectTransform>();
+        qr.SetParent(top, false);
+        PlaceTopLeft(qr, pad, quickY, inner, quickH);
+        int[] presets = AmountPresets;
+        int buttons = presets.Length + 1;
+        float qw = (inner - gap * (buttons - 1)) / buttons;
+        page.amountButtons = new Button[buttons];
+        for (int b = 0; b < buttons; b++)
+        {
+            bool max = b == presets.Length;
+            int amount = max ? 0 : presets[b];
+            Button q = CreateButton(qr, max ? "Max" : "x" + amount, max ? amountMaxText : "x" + amount, Vector2.zero, ButtonRole.Neutral, textColor, buyFontSize * 0.6f, out TMP_Text ql, out _);
+            PixelUIKit.Caps(ql);
+            PlaceTopLeft(q.GetComponent<RectTransform>(), b * (qw + gap), 0f, qw, quickH);
+            q.onClick.AddListener(() =>
+            {
+                int id = page.Selected;
+                if (id < 0) return;
+                SetPageCount(page, max && page.maxAmount != null ? Mathf.Max(1, page.maxAmount(id)) : amount);
+            });
+            page.amountButtons[b] = q;
+        }
+
+        // Save up for this: pins the item to the Saving up for card.
+        page.pin = CreateButton(top, "Save Up", "", Vector2.zero, ButtonRole.Neutral, textColor, buyFontSize * 0.55f, out page.pinLabel, out page.pinImage);
+        PlaceTopLeft(page.pin.GetComponent<RectTransform>(), pad, pinY, inner, pinH);
+        page.pin.onClick.AddListener(() => { int id = page.Selected; if (id >= 0) ToggleSavingGoal(id); });
+
+        page.buy = CreateButton(top, "Buy", "", Vector2.zero, ButtonRole.Success, textColor, buyFontSize * 0.85f, out page.barBuyLabel, out page.buyImage);
+        PixelUIKit.FitOneLine(page.barBuyLabel, 14f);
+        PlaceTopLeft(page.buy.GetComponent<RectTransform>(), pad, buyY, inner, buyH);
+        page.buy.onClick.AddListener(() => { int id = page.Selected; if (id >= 0) page.purchase(id, PixelInput.ShiftHeld()); });
+        Func<string> maxTip = () => buyMaxTip;   // hovering Buy explains Shift-click
+        PixelHoverTip buyTip = page.buy.gameObject.AddComponent<PixelHoverTip>();
+        buyTip.onEnter = () => { int id = page.Selected; if (id >= 0 && page.hasAmount != null && page.hasAmount(id)) hoverTip = maxTip; };
+        buyTip.onExit = () => { if (hoverTip == maxTip) hoverTip = null; };
     }
 
     private static void PlaceTopLeft(RectTransform rt, float x, float y, float w, float h)
@@ -254,7 +272,7 @@ public partial class PixelShop
         return id >= 0 && page.tiles.TryGetValue(id, out ItemTile tile) && tile.key != null ? tile.key() : null;
     }
 
-    /// <summary>A tile: still picture on top, name, price line, a badge in the top right corner and a 'Locked' mark.</summary>
+    /// <summary>A tile: still picture on top, the name, the price line, a badge in the top right corner, a 'Locked' mark and the can-buy bar.</summary>
     private ItemTile BuildTile(TilePage page, int id)
     {
         GameObject go = new GameObject("Tile " + id, typeof(RectTransform), typeof(Image));
@@ -265,26 +283,49 @@ public partial class PixelShop
         tile.rect.anchorMin = tile.rect.anchorMax = tile.rect.pivot = new Vector2(0f, 1f);
         tile.rect.sizeDelta = new Vector2(tileWidth, tileHeight);
 
-        float pic = tileWidth - 32f;
-        float lineH = tileFontSize * 1.35f;
+        float lineH = tileFontSize * 1.3f;
+        float pic = Mathf.Max(40f, Mathf.Min(tileWidth - 36f, tileHeight - lineH * 2f - 26f));
         float y = 8f;
         if (!hidePictures && tile.key != null)
-            tile.picture = AddPictureSlot(tile.rect, pic, new Vector2(16f, y), false, tile.key, true, page.scroll.viewport, true);
+            tile.picture = AddPictureSlot(tile.rect, pic, new Vector2((tileWidth - pic) * 0.5f, y), false, tile.key, true, page.scroll.viewport, true);
         y += pic + 4f;
 
-        tile.costs = BuildCostStrip(go.transform, 6f, y, tileWidth - 12f, Mathf.Max(lineH, tileHeight - y - 6f), 3, 3, tileFontSize, false);
+        tile.name = CreateText(go.transform, "Name", page.tileName(id), tileFontSize * 0.85f, TextAlignmentOptions.Center, FontStyles.Bold);
+        PixelUIKit.FitOneLine(tile.name, 11f);
+        tile.name.raycastTarget = false;
+        PlaceTopLeft(tile.name.rectTransform, 6f, y, tileWidth - 12f, lineH);
+        y += lineH;
 
-        tile.badge = CreateText(go.transform, "Badge", "", tileFontSize * 0.85f, TextAlignmentOptions.TopRight, FontStyles.Bold);
+        tile.costs = BuildCostStrip(go.transform, 6f, y, tileWidth - 12f, Mathf.Max(lineH, tileHeight - y - 10f), 3, 3, tileFontSize * 0.9f, false);
+
+        tile.badge = CreateText(go.transform, "Badge", "", tileFontSize * 0.8f, TextAlignmentOptions.TopRight, FontStyles.Bold);
         tile.badge.richText = true;
+        tile.badge.raycastTarget = false;
         PlaceTopLeft(tile.badge.rectTransform, 6f, 6f, tileWidth - 12f, lineH);
 
         tile.lockMark = CreateText(go.transform, "Locked", lockedText, tileFontSize * 0.85f, TextAlignmentOptions.Center, FontStyles.Bold);
         tile.lockMark.color = unaffordableColor;
+        tile.lockMark.raycastTarget = false;
         PlaceTopLeft(tile.lockMark.rectTransform, 6f, 8f + pic * 0.5f - lineH * 0.5f, tileWidth - 12f, lineH);
         tile.lockMark.gameObject.SetActive(false);
 
+        // The can-buy bar: a thin green line along the bottom edge.
+        GameObject bar = new GameObject("Can Buy", typeof(RectTransform), typeof(Image));
+        bar.transform.SetParent(go.transform, false);
+        Image bi = bar.GetComponent<Image>();
+        bi.color = canBuyColor;
+        bi.raycastTarget = false;
+        RectTransform brt = bar.GetComponent<RectTransform>();
+        brt.anchorMin = new Vector2(0f, 0f);
+        brt.anchorMax = new Vector2(1f, 0f);
+        brt.pivot = new Vector2(0.5f, 0f);
+        brt.offsetMin = new Vector2(10f, 3f);
+        brt.offsetMax = new Vector2(-10f, 7f);
+        tile.canBuyBar = bar;
+        bar.SetActive(false);
+
         PixelUIKit.MakeClickable(go, () => ClickTile(page, id), true, false);
-        Func<string> tip = () => "<b>" + page.tileName(id) + "</b>\n" + page.description(id);   // (the name shows here and in the buy bar, not on the tile)
+        Func<string> tip = () => "<b>" + page.tileName(id) + "</b>\n" + page.description(id);
         PixelHoverTip hover = go.AddComponent<PixelHoverTip>();
         hover.onEnter = () => hoverTip = tip;
         hover.onExit = () => { if (hoverTip == tip) hoverTip = null; };
@@ -292,32 +333,27 @@ public partial class PixelShop
     }
 
     // ------------------------------------------------------------------
-    // Using a page
+    // Using the page
     // ------------------------------------------------------------------
-
-    private void SelectPageChip(TilePage page, int chip)
-    {
-        page.chip = Mathf.Clamp(chip, 0, Mathf.Max(0, page.chipTitles.Length - 1));
-        if (page.content != null) page.content.anchoredPosition = Vector2.zero;
-        if (page.scroll != null) page.scroll.StopMovement();
-        RefreshRows();
-    }
 
     private void ClickTile(TilePage page, int id)
     {
+        if (page.Selected != id) SetPageCount(page, 1, false);   // a new item starts at x1
         page.selected[page.chip] = id;
         if (PixelInput.ShiftHeld() && page.quickBuy != null) page.quickBuy(id);
         RefreshRows();
     }
 
-    private void ChangePageCount(TilePage page, int delta)
+    private void ChangePageCount(TilePage page, int delta) => SetPageCount(page, page.count + delta);
+
+    private void SetPageCount(TilePage page, int count, bool refresh = true)
     {
-        page.count = Mathf.Clamp(page.count + delta, 1, maxPerPurchase);
-        page.countField.SetTextWithoutNotify(page.count.ToString());
-        RefreshRows();
+        page.count = Mathf.Clamp(count, 1, maxPerPurchase);
+        if (page.countField != null) page.countField.SetTextWithoutNotify(page.count.ToString());
+        if (refresh) RefreshRows();
     }
 
-    /// <summary>Sets the buy bar's Buy button (called from a page's fillBar).</summary>
+    /// <summary>Sets the detail panel's Buy button (called from fillBar).</summary>
     private void SetPageBuy(TilePage page, bool canBuy, string label)
     {
         page.buy.interactable = canBuy;
@@ -325,7 +361,7 @@ public partial class PixelShop
         SetShopRole(page.buyImage, canBuy ? ButtonRole.Success : ButtonRole.Neutral);
     }
 
-    /// <summary>Sets a tile's corner badge and lock mark (called from a page's fillTile; the price is SetCosts / SetCostMessage on tile.costs).</summary>
+    /// <summary>Sets a tile's corner badge and lock mark (called from fillTile; the price is SetCosts / SetCostMessage on tile.costs).</summary>
     private static void SetTile(ItemTile tile, string badge, bool locked)
     {
         PixelUIKit.SetText(tile.badge, badge);
@@ -354,7 +390,8 @@ public partial class PixelShop
             PixelUIKit.StyleBox(strip.swatches[i]);
             strip.swatches[i].raycastTarget = false;
             strip.numbers[i] = CreateText(strip.root, "Number " + i, "", fontSize, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
-            PixelUIKit.FitOneLine(strip.numbers[i], 12f);
+            strip.numbers[i].richText = true;
+            PixelUIKit.FitOneLine(strip.numbers[i], 11f);
             strip.numbers[i].raycastTarget = false;
             sw.SetActive(false);
             strip.numbers[i].gameObject.SetActive(false);
@@ -363,7 +400,7 @@ public partial class PixelShop
         strip.message.richText = true;
         strip.message.enableAutoSizing = true;
         strip.message.fontSizeMax = fontSize;
-        strip.message.fontSizeMin = 14f;
+        strip.message.fontSizeMin = 12f;
         strip.message.raycastTarget = false;
         PixelUIKit.Stretch(strip.message.rectTransform);
         return strip;
@@ -380,7 +417,8 @@ public partial class PixelShop
         int columns = Mathf.Min(shown, strip.maxColumns);
         int rows = (shown + columns - 1) / columns;
         Vector2 size = strip.root.sizeDelta;
-        float cellW = size.x / columns, cellH = size.y / rows;
+        float cellW = size.x / columns, cellH = Mathf.Min(size.y / rows, strip.fontSize * 1.6f);
+        float topY = (size.y - cellH * rows) * 0.5f;   // (fewer rows than room: centred in the strip)
         float swatch = Mathf.Min(cellH * 0.7f, strip.fontSize * 0.9f);
         for (int i = 0; i < slots; i++)
         {
@@ -394,21 +432,30 @@ public partial class PixelShop
             strip.swatches[i].color = t >= 0 ? clicker.Tiers[t].UIColor : PixelMaterials.CostColor(cost.minigameCurrency);   // (materials: their colour; minigame counters: grey)
             string text = PixelClicker.FormatNumberShort(cost.amount);
             if (strip.withNames) text += " " + ShortCostName(cost);
+            if (strip.withHeld) text += " <color=#9AA3BD>/ " + PixelClicker.FormatNumberShort(CostHeld(cost)) + "</color>";
             if (i == shown - 1 && costs.Length > shown) text += " +" + (costs.Length - shown);   // (more than fit: '+n')
             TMP_Text number = strip.numbers[i];
             PixelUIKit.SetText(number, text);
             number.color = locked ? lockedItemColor : CanAffordCost(cost) ? textColor : unaffordableColor;
 
-            // Place swatch + number as a centred pair in its cell (the last row is centred on its own).
+            // Place swatch + number as a pair in its cell (the last row is centred on its own; the detail panel's list is left aligned).
             int row = i / columns, col = i % columns;
             int inRow = row == rows - 1 ? shown - row * columns : columns;
-            float rowLeft = (size.x - inRow * cellW) * 0.5f;
+            float rowLeft = strip.withHeld ? 0f : (size.x - inRow * cellW) * 0.5f;
             float numberW = Mathf.Min(cellW - swatch - 6f, number.GetPreferredValues(text).x + 2f);
-            float pairX = rowLeft + col * cellW + (cellW - (swatch + 4f + numberW)) * 0.5f;
-            float midY = row * cellH + cellH * 0.5f;
+            float pairX = strip.withHeld ? rowLeft + col * cellW : rowLeft + col * cellW + (cellW - (swatch + 4f + numberW)) * 0.5f;
+            float midY = topY + row * cellH + cellH * 0.5f;
             PlaceTopLeft((RectTransform)strip.swatches[i].transform, pairX, midY - swatch * 0.5f, swatch, swatch);
-            PlaceTopLeft(number.rectTransform, pairX + swatch + 4f, midY - cellH * 0.5f, numberW, cellH);
+            PlaceTopLeft(number.rectTransform, pairX + swatch + 4f, midY - cellH * 0.5f, Mathf.Max(10f, numberW), cellH);
         }
+    }
+
+    /// <summary>How much the player holds of one line of a price (a pixel type, a material or a minigame counter).</summary>
+    private double CostHeld(PackCost cost)
+    {
+        if (!string.IsNullOrEmpty(cost.minigameCurrency)) return PixelMaterials.CostHeld(cost.minigameCurrency);
+        int t = clicker.IndexOf(cost.type);
+        return t >= 0 ? clicker.Tiers[t].count : 0d;
     }
 
     /// <summary>Shows one line of text instead of a price ('Full', 'Owned', what it still needs...).</summary>
@@ -438,40 +485,35 @@ public partial class PixelShop
     // Refreshing
     // ------------------------------------------------------------------
 
-    /// <summary>Called from RefreshRows: shows the open tab's page (if it has one) and hides the scrolling list while it is open.</summary>
+    /// <summary>Called from RefreshRows: refreshes the catalog and hides the old scrolling list (the catalog always replaces it).</summary>
     private void RefreshTilePages(bool searching)
     {
-        bool anyOpen = false;
-        foreach (TilePage page in tilePages)
-        {
-            bool open = page == searchPage ? searching : !searching && currentTab == page.tab;
-            if (page.area.activeSelf != open) page.area.SetActive(open);
-            if (!open) continue;
-            anyOpen = true;
-            RefreshTilePage(page);
-        }
+        if (catalog == null) return;
+        if (!catalog.area.activeSelf) catalog.area.SetActive(true);
         if (scrollRect != null)
         {
-            if (scrollRect.gameObject.activeSelf == anyOpen) scrollRect.gameObject.SetActive(!anyOpen);
-            if (scrollRect.verticalScrollbar != null && scrollRect.verticalScrollbar.gameObject.activeSelf == anyOpen)
-                scrollRect.verticalScrollbar.gameObject.SetActive(!anyOpen);
+            if (scrollRect.gameObject.activeSelf) scrollRect.gameObject.SetActive(false);
+            if (scrollRect.verticalScrollbar != null && scrollRect.verticalScrollbar.gameObject.activeSelf) scrollRect.verticalScrollbar.gameObject.SetActive(false);
         }
+        if (panelObject != null && !panelObject.activeInHierarchy) return;   // (closed: nothing to draw)
+        catalog.chip = searching ? SearchEntry : railEntry;
+        RefreshCatalogChrome(searching);
+        RefreshTilePage(catalog);
     }
 
     private void RefreshTilePage(TilePage page)
     {
-        for (int c = 0; c < page.chipImages.Length; c++) SetShopRole(page.chipImages[c], c == page.chip ? ButtonRole.Selected : ButtonRole.Neutral);
-
         page.collect(page.chip, page.ids);
+        if (onlyAffordable && page.canBuyNow != null) page.ids.RemoveAll(id => !page.canBuyNow(id));
         if (!page.ids.Contains(page.Selected)) page.selected[page.chip] = page.ids.Count > 0 ? page.ids[0] : -1;
         int selected = page.Selected;
 
-        // Tiles: only this chip's are shown, laid out left to right, row by row, the grid centred.
+        // Tiles: only this entry's are shown, laid out left to right, row by row, the grid centred.
         foreach (var pair in page.tiles)
             if (pair.Value.rect.gameObject.activeSelf && !page.ids.Contains(pair.Key)) pair.Value.rect.gameObject.SetActive(false);
 
-        RectTransform view = page.scroll.GetComponent<RectTransform>();
-        float viewWidth = view.rect.width > 1f ? view.rect.width : panelWidth - panelPadding * 2f;
+        RectTransform view = page.gridRect;
+        float viewWidth = view.rect.width > 1f ? view.rect.width : CatalogGridWidth;
         float usable = viewWidth - PixelUIKit.ScrollBarWidth - 8f;
         int columns = Mathf.Max(1, Mathf.FloorToInt((usable + tileGap) / (tileWidth + tileGap)));
         float left = (usable - (columns * tileWidth + (columns - 1) * tileGap)) * 0.5f;
@@ -483,22 +525,39 @@ public partial class PixelShop
             if (!tile.rect.gameObject.activeSelf) tile.rect.gameObject.SetActive(true);
             tile.rect.anchoredPosition = new Vector2(left + (n % columns) * (tileWidth + tileGap), -(4f + (n / columns) * (tileHeight + tileGap)));
             tile.background.color = id == selected ? tabActiveColor : rowColor;
+            PixelUIKit.SetText(tile.name, page.tileName(id));
             page.fillTile(id, tile, id == selected);
+            bool can = page.canBuyNow != null && page.canBuyNow(id);
+            if (tile.canBuyBar.activeSelf != can) tile.canBuyBar.SetActive(can);
         }
         int rowCount = (page.ids.Count + columns - 1) / columns;
         float contentHeight = rowCount > 0 ? 8f + rowCount * tileHeight + (rowCount - 1) * tileGap : 0f;
         PixelUIKit.UpdateScrollView(page.scroll, page.scrollBar, contentHeight, view.rect.height);
         if (page.empty.gameObject.activeSelf != (page.ids.Count == 0)) page.empty.gameObject.SetActive(page.ids.Count == 0);
 
-        // The buy bar.
+        RefreshDetailPanel(page, selected);
+    }
+
+    /// <summary>The detail panel for the selected id (or a blank one).</summary>
+    private void RefreshDetailPanel(TilePage page, int selected)
+    {
         bool has = selected >= 0;
-        if (page.hasCount)
+        bool amounts = has && page.hasAmount != null && page.hasAmount(selected);
+        if (page.amountRow.activeSelf != amounts) page.amountRow.SetActive(amounts);
+        if (page.quickRow.activeSelf != amounts) page.quickRow.SetActive(amounts);
+        if (!amounts && page.count != 1) SetPageCount(page, 1, false);
+
+        bool pinnable = has && page.canPin != null && page.canPin(selected);
+        if (page.pin.gameObject.activeSelf != pinnable) page.pin.gameObject.SetActive(pinnable);
+        if (pinnable)
         {
-            page.minus.interactable = page.plus.interactable = has;
-            if (!page.countField.isFocused && page.countField.text != page.count.ToString())
-                page.countField.SetTextWithoutNotify(page.count.ToString());
+            bool pinned = IsSavingGoal(selected);
+            PixelUIKit.SetText(page.pinLabel, pinned ? savingThisText : saveForThisText);
+            SetShopRole(page.pinImage, pinned ? ButtonRole.Selected : ButtonRole.Neutral);
         }
+
         PixelUIKit.SetText(page.barName, has ? page.tileName(selected) : "");
+        PixelUIKit.SetText(page.barKind, has && page.kindLine != null ? page.kindLine(selected) : "");
         PixelUIKit.SetText(page.barDescription, has ? page.description(selected) : noItemsText);
         if (!has)
         {
@@ -507,7 +566,7 @@ public partial class PixelShop
             return;
         }
         page.fillBar(selected);
-        if (page.hasCount && !page.countField.isFocused && page.countField.text != page.count.ToString())
+        if (amounts && !page.countField.isFocused && page.countField.text != page.count.ToString())
             page.countField.SetTextWithoutNotify(page.count.ToString());   // (fillBar may have clamped the count)
     }
 }
