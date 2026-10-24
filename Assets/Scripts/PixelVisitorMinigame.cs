@@ -972,7 +972,7 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
     private void BuildGreetingPanel()
     {
         // --- Greeting box (left of the visitor).
-        PixelWindowParts greetBox = Panel("Greeting", RapportTitle, new Vector2(720f, 560f), visitorRect.sizeDelta.x + 90f);   // (name + rapport step)
+        PixelWindowParts greetBox = Panel("Greeting", Pick(visitorName, DefaultName), new Vector2(720f, 470f), visitorRect.sizeDelta.x + 90f);
         greetingPanel = greetBox.Rect;
 
         TMP_Text message = PixelUIKit.CreateText(Font, greetingPanel, "Message", string.Format(Pick(greeting, DefaultGreeting), Mathf.RoundToInt(discountFraction * 100f)), 34f,
@@ -981,8 +981,8 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
         message.fontSizeMax = 34f;
         message.fontSizeMin = 14f;   // (a long greeting shrinks instead of being cut off)
         greetMessage = message;
-        Anchor(message.rectTransform, 0f, 0f, 1f, 1f, new Vector2(36f, 226f), new Vector2(-36f, -(greetBox.HeaderHeight + 2f)));
-        BuildRapportMeter(greetingPanel, 132f, 36f);   // (his rapport with you, above the buttons)
+        Anchor(message.rectTransform, 0f, 0f, 1f, 1f, new Vector2(36f, 130f), new Vector2(-36f, -(greetBox.HeaderHeight + 2f)));
+        AddRapportBadge(greetBox);   // (the heart in the header: hover it for his rapport with you)
 
         Button accept = PixelUIKit.CreateButton(Font, greetingPanel, "Accept", AcceptLabel, new Vector2(300f, 80f), ButtonRole.Success, 36f);
         PixelUIKit.Caps(accept);
@@ -1030,9 +1030,10 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
         float tabsH = tabsMode ? 64f : 0f;
         float listH = Mathf.Max(tallest * (rowH + 8f), tabsMode && CustomSellPanel ? SellPanelHeight : 0f);
         float top = PixelUIKit.WindowHeaderHeight;   // the window header: the sale line, tabs and list sit below it
-        float meterH = PixelRapport.Instance != null ? RapportMeterHeight + 12f : 0f;   // the rapport meter above the Done button
-        float height = Mathf.Min(1080f - 2f * barH - 30f, top + 106f + tabsH + listH + 110f + meterH);
-        waresPanel = Panel("Wares", Pick(waresTitle, DefaultWaresTitle), new Vector2(900f, Mathf.Max(420f, height)), visitorRect.sizeDelta.x + 90f).Rect;
+        float height = Mathf.Min(1080f - 2f * barH - 30f, top + 106f + tabsH + listH + 110f);
+        PixelWindowParts waresBox = Panel("Wares", Pick(waresTitle, DefaultWaresTitle), new Vector2(900f, Mathf.Max(420f, height)), visitorRect.sizeDelta.x + 90f);
+        waresPanel = waresBox.Rect;
+        AddRapportBadge(waresBox);   // (the heart in the header: hover it for his rapport with you)
 
         TMP_Text sale = PixelUIKit.CreateText(Font, waresPanel, "Sale", string.Format(SaleFormat, Mathf.RoundToInt(discountFraction * 100f)), 26f,
                                               TextAlignmentOptions.Center, FontStyles.Italic, new Color(0.7f, 1f, 0.75f));
@@ -1061,8 +1062,7 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
         RectTransform vr = waresScroll.GetComponent<RectTransform>();
         vr.anchorMin = Vector2.zero;
         vr.anchorMax = Vector2.one;
-        vr.offsetMin = new Vector2(24f, 110f + meterH);
-        if (meterH > 0f) BuildRapportMeter(waresPanel, 110f, 24f);
+        vr.offsetMin = new Vector2(24f, 110f);
         vr.offsetMax = new Vector2(-24f, -(top + 48f) - tabsH);
 
         // A vendor's own Sell tab (in place of the trade rows), over the same area as the list.
@@ -1086,7 +1086,7 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
             rows.Add(row);
             y += rowH + 8f;
         }
-        waresViewHeight = vr.rect.height > 1f ? vr.rect.height : (waresPanel.sizeDelta.y - (top + 158f) - tabsH - meterH);
+        waresViewHeight = vr.rect.height > 1f ? vr.rect.height : (waresPanel.sizeDelta.y - (top + 158f) - tabsH);
         // A vendor who only buys (no wares): straight to the Sell view, no tabs.
         bool sellOnly = tabsMode && CustomSellPanel && wares.Count == 0;
         if (sellOnly && tabButtons != null) foreach (Button tb in tabButtons) tb.gameObject.SetActive(false);

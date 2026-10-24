@@ -1625,3 +1625,4 @@
 [2026-10-24 10:44 UTC] To-do: the vendor unlockables are now Relics (Golden Axe and Market Charm built) and added relic looks / a hand-over show.
 [2026-10-24 10:47 UTC] Design: delivery crates are dropped by the vendor on their own fixed dock at the floor's edge (always the same spot per vendor), so players have to route husks to it; a line built to a dock keeps paying off.
 [2026-10-24 10:58 UTC] Charcoal is now a toggleable block: once its pixel is bought it gets a spawn switch in the Toggles window like Glass and Luminescent (the three share a new 'Toggleable' tag on their block cards instead of a hand-written list).
+[2026-10-24 11:03 UTC] Vendors' boxes no longer show the rapport meter or the step in the title: the title is just their name, with a small heart button in the corner (in their step's colour) that shows the rapport card when you hover or click it.
