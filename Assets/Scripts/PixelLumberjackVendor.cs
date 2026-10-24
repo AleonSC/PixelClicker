@@ -9,17 +9,12 @@
 //   different random pure pixels (focusPureRange 100-300 each) + some of one random woodcutting pixel you have unlocked (focusWoodRange 10-30). Each potion comes 0-2 times (potionStockLow / High) - 0 = not on sale this visit. SELL tab (2026-10-16, its own panel - PixelVisitorMinigame.CustomSellPanel): pick ANY woodcutting currency you hold
 //   (drop-down) - or (2026-10-20) CHARCOAL / WOOD CHIPS HUSKS lying loose on the floor (the Kiln's and the Wood Chipper's products; HuskWorthInWood:
 //   charcoalWorthInWood 3 / woodChipsWorthInWood 4 Wood each; on Accept he takes that many off the floor, TakeHusks) - the AMOUNT (slider + 10% / 25% / 50% / All), what to be paid in (a pure pixel you have unlocked), then 'Ask for an offer' - he names a RANDOM price; Accept or Decline.
-//   OFFER FORMULA (Offer): fair = PixelMarket.Quote (the SHARED vendor rule: the clicks the wood took x what a click on pure blocks earns x 1.2,
-//     x his market saturation for that wood, averaged over the amount - selling a lot lowers his price, it recovers over time; shown on the Sell tab)
-//     x mood (rolled once per visit, moodRange 0.85-1.15)  x roll = the average of two randoms in offerRollRange 0.7-1.25 (usually near the middle, rarely an extreme)
-//     (the roll is made ONCE per wood / pay pair per visit - asking again or changing the amount never rerolls it; a new visit rolls again)
-//     x (1 + Woodcutting level x levelBonusPerLevel 1%, max 30%), rounded down, at least 1.
+//   SELL tab = the shared Sell view (PixelVisitorMinigameSell.cs: pick the good and amount, live price = PixelMarket.Quote x mood x roll, his market trend)
+//     x OfferBonus (1 + Woodcutting level x levelBonusPerLevel 1%, max 30%). He also buys MAGIC WOOD (Evil Tree) a little (PixelMarket specialty, rate 1).
 //   Only visits while Woodcutting is the skill in training (CanVisit); started by PixelGuideVendor.StartVendors as soon as Woodcutting is available; counters lumberjack.bought / lumberjack.sold.
 // ---------------------------------------------------
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 /// <summary>
 /// The Lumberjack (id "lumberjack"): a cube-shaped vendor like Cubie who BUYS wood goods for pure currency. He only visits while Woodcutting
@@ -31,10 +26,6 @@ using UnityEngine.UI;
 public class PixelLumberjackVendor : PixelVisitorMinigame
 {
     [Header("Buying your wood (Sell tab; the price itself is PixelMarket's shared rule)")]
-    [Tooltip("Random roll on each offer (min, max); the offer uses the average of two rolls, so it is usually near the middle.")]
-    [SerializeField] private Vector2 offerRollRange = new Vector2(0.7f, 1.25f);
-    [Tooltip("His mood, rolled once per visit (min, max): a good day pays better.")]
-    [SerializeField] private Vector2 moodRange = new Vector2(0.85f, 1.15f);
     [Range(0f, 0.05f)]
     [Tooltip("Better prices per Woodcutting level (0.01 = +1% a level, at most +30%).")]
     [SerializeField] private float levelBonusPerLevel = 0.01f;
@@ -84,7 +75,6 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
     public override string Id => "lumberjack";
     public override string DisplayName => "Lumberjack";
 
-    protected override bool BuySellTabs => true;
     protected override int StockMin => 0;
     protected override int StockMax => Mathf.Max(1, Mathf.Max(potionStockHigh, chipperStockMax));
 
@@ -211,243 +201,38 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
         return true;
     }
 
-    private static bool IsPure(PixelClicker.PixelType type) => type >= PixelClicker.PixelType.White && type <= PixelClicker.PixelType.Blue;
+    private static bool IsPure(PixelClicker.PixelType type) => PixelMarket.IsPure(type);
 
     // ------------------------------------------------------------------
-    // Sell tab: choose what and how much, he names a price
+    // Sell tab: the shared Sell view (PixelVisitorMinigameSell.cs) - his Woodcutting goods + Magic Wood (a little) + his husk goods
     // ------------------------------------------------------------------
 
-    protected override List<Trade> RollTrades() => new List<Trade>();   // (no fixed offers: the Sell tab is the panel below)
-    protected override bool CustomSellPanel => true;
-    protected override float SellPanelHeight => 560f;
+    protected override bool BuysGoods => true;
+    protected override string GoodsSkillId => PixelSkills.WoodcuttingId;
+    protected override string NothingToSellText => "Come back when you've chopped something.";
 
-    private TMP_Dropdown woodDropdown, payDropdown;
-    private Slider amountSlider;
-    private TMP_Text haveLabel, amountLabel, offerLabel, marketLabel;
-    private Button askButton, acceptButton, declineButton;
-    private readonly List<int> woodTiers = new List<int>();
-    private readonly List<int> payTiers = new List<int>();
-    private float mood = 1f;
-    private int asks;
-    private readonly Dictionary<long, double> visitRolls = new Dictionary<long, double>();   // (wood tier, pay tier) -> his random roll, fixed for the whole visit
-    private double offerAmount, offerGet;
-    private int offerWood = -1, offerPay = -1;
-    private bool panelUpdating;
+    /// <summary>His Woodcutting level makes his prices better (levelBonusPerLevel a level, at most +30%).</summary>
+    protected override double OfferBonus => 1d + System.Math.Min(0.3, levelBonusPerLevel * PixelSkills.LevelOfId(PixelSkills.WoodcuttingId));
 
-    protected override void BuildSellPanel(RectTransform parent)
+    /// <summary>The shared goods, plus Charcoal / Wood Chips HUSKS lying loose on the floor: each sold as that much Wood (his market for Wood).</summary>
+    protected override void CollectSellGoods(List<SellGood> list)
     {
-        mood = Random.Range(Mathf.Min(moodRange.x, moodRange.y), Mathf.Max(moodRange.x, moodRange.y));
-        asks = 0;
-        visitRolls.Clear();
-        offerWood = -1;
-        TMP_FontAsset font = VendorFont;
-        Color box = new Color(0.16f, 0.16f, 0.22f, 1f);
-
-        Label(font, parent, "Sell", 0f, 50f, 0f, 0.2f);
-        woodDropdown = PixelUIKit.CreateDropdown(font, parent, "Wood", new Vector2(100f, 50f), box, box, Color.white, 24f);
-        Place(woodDropdown.GetComponent<RectTransform>(), 0f, 50f, 0.2f, 1f);
-        woodDropdown.onValueChanged.AddListener(_ => { if (!panelUpdating) { RefreshAmount(true); ClearOffer(); } });
-
-        haveLabel = Label(font, parent, "", 64f, 40f, 0f, 0.58f);
-        marketLabel = Label(font, parent, "", 64f, 40f, 0.58f, 1f);   // his current price for the picked wood and its trend (PixelMarket)
-        marketLabel.richText = true;
-        marketLabel.alignment = TextAlignmentOptions.MidlineRight;
-        amountSlider = PixelUIKit.CreateSlider(parent, "Amount", new Color(0.25f, 0.25f, 0.32f, 1f), new Color(0.85f, 0.45f, 0.3f, 1f), Color.white);
-        amountSlider.wholeNumbers = true;
-        Place(amountSlider.GetComponent<RectTransform>(), 112f, 30f, 0f, 1f);
-        amountSlider.onValueChanged.AddListener(_ => { if (!panelUpdating) { UpdateAmountLabel(); ClearOffer(); } });
-
-        string[] quick = { "10%", "25%", "50%", "All" };
-        float[] frac = { 0.1f, 0.25f, 0.5f, 1f };
-        for (int i = 0; i < 4; i++)
-        {
-            float f = frac[i];
-            Button b = PixelUIKit.CreateButton(font, parent, quick[i], quick[i], new Vector2(100f, 44f), ButtonRole.Neutral, 22f);
-            Place(b.GetComponent<RectTransform>(), 160f, 44f, i * 0.13f, i * 0.13f + 0.12f);
-            b.onClick.AddListener(() => { if (amountSlider.maxValue >= 1f) { amountSlider.value = Mathf.Max(1f, Mathf.Floor(amountSlider.maxValue * f)); } });
-        }
-        amountLabel = Label(font, parent, "", 160f, 44f, 0.54f, 1f);
-        amountLabel.alignment = TextAlignmentOptions.MidlineRight;
-
-        Label(font, parent, "Paid in", 222f, 50f, 0f, 0.2f);
-        payDropdown = PixelUIKit.CreateDropdown(font, parent, "Pay", new Vector2(100f, 50f), box, box, Color.white, 24f);
-        Place(payDropdown.GetComponent<RectTransform>(), 222f, 50f, 0.2f, 1f);
-        payDropdown.onValueChanged.AddListener(_ => { if (!panelUpdating) ClearOffer(); });
-
-        // (the Lumberjack's own orange - his theme colour, like the slider - so it stays a plain colour, not a role)
-        askButton = PixelUIKit.CreateButton(font, parent, "Ask", "Ask for an offer", new Vector2(100f, 60f), new Color(0.65f, 0.35f, 0.2f, 1f), Color.white, 28f);
-        Place(askButton.GetComponent<RectTransform>(), 292f, 60f, 0.2f, 0.8f);
-        askButton.onClick.AddListener(AskOffer);
-
-        offerLabel = PixelUIKit.CreateText(font, parent, "Offer", "", 28f, TextAlignmentOptions.Center, FontStyles.Normal, Color.white);
-        offerLabel.richText = true;
-        offerLabel.enableAutoSizing = true; offerLabel.fontSizeMax = 28f; offerLabel.fontSizeMin = 14f;
-        offerLabel.textWrappingMode = TextWrappingModes.Normal;
-        Place(offerLabel.rectTransform, 366f, 110f, 0f, 1f);
-
-        acceptButton = PixelUIKit.CreateButton(font, parent, "Accept", "Accept", new Vector2(100f, 60f), ButtonRole.Success, 28f);
-        Place(acceptButton.GetComponent<RectTransform>(), 486f, 60f, 0.12f, 0.46f);
-        acceptButton.onClick.AddListener(AcceptOffer);
-        declineButton = PixelUIKit.CreateButton(font, parent, "Decline", "Decline", new Vector2(100f, 60f), ButtonRole.Danger, 28f);
-        Place(declineButton.GetComponent<RectTransform>(), 486f, 60f, 0.54f, 0.88f);
-        declineButton.onClick.AddListener(() => { ClearOffer("Suit yourself. Ask again if you change your mind."); });
-        RefreshLists();
-    }
-
-    protected override void OnSellPanelShown() => RefreshLists();
-
-    private static TMP_Text Label(TMP_FontAsset font, RectTransform parent, string text, float y, float h, float x0, float x1)
-    {
-        TMP_Text t = PixelUIKit.CreateText(font, parent, "Label", text, 24f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, Color.white);
-        t.enableAutoSizing = true; t.fontSizeMax = 24f; t.fontSizeMin = 12f;
-        Place(t.rectTransform, y, h, x0, x1);
-        return t;
-    }
-
-    /// <summary>Stretches 'r' between the fractions x0..x1 of the panel's width, 'y' down from its top, 'h' tall.</summary>
-    private static void Place(RectTransform r, float y, float h, float x0, float x1)
-    {
-        r.anchorMin = new Vector2(x0, 1f); r.anchorMax = new Vector2(x1, 1f); r.pivot = new Vector2(0.5f, 1f);
-        r.offsetMin = new Vector2(x0 > 0f ? 6f : 0f, -(y + h)); r.offsetMax = new Vector2(x1 < 1f ? -6f : 0f, -y);
-    }
-
-    /// <summary>Fills the drop-downs: every woodcutting currency you hold, and the pure pixels you have unlocked.</summary>
-    private void RefreshLists()
-    {
-        if (woodDropdown == null || clicker == null) return;
-        panelUpdating = true;
-        PixelClicker.PixelTier[] tiers = clicker.Tiers;
-        int keepWood = woodDropdown.value < woodTiers.Count ? woodTiers[woodDropdown.value] : -1;
-        int keepPay = payDropdown.value < payTiers.Count ? payTiers[payDropdown.value] : -1;
-        woodTiers.Clear(); payTiers.Clear();
-        List<string> woodNames = new List<string>(), payNames = new List<string>();
-        for (int i = 0; i < tiers.Length; i++)
-        {
-            bool husks = HuskWorthInWood(tiers[i].type) > 0f;
-            if ((IsPackPixel(tiers[i].type) || husks) && HeldToSell(i) >= 1d)
-            {
-                woodTiers.Add(i);
-                woodNames.Add(tiers[i].displayName + (husks ? " husks  (" + HeldToSell(i) + " on the floor)" : "  (" + PixelClicker.FormatNumberShort(HeldToSell(i)) + ")"));
-            }
-            if (IsPure(tiers[i].type) && tiers[i].unlocked) { payTiers.Add(i); payNames.Add(tiers[i].displayName); }
-        }
-        if (woodNames.Count == 0) woodNames.Add("(no wood to sell)");
-        if (payNames.Count == 0) payNames.Add("(nothing)");
-        woodDropdown.ClearOptions(); woodDropdown.AddOptions(woodNames);
-        woodDropdown.SetValueWithoutNotify(Mathf.Max(0, woodTiers.IndexOf(keepWood)));
-        woodDropdown.RefreshShownValue();
-        payDropdown.ClearOptions(); payDropdown.AddOptions(payNames);
-        payDropdown.SetValueWithoutNotify(Mathf.Max(0, payTiers.IndexOf(keepPay)));
-        payDropdown.RefreshShownValue();
-        panelUpdating = false;
-        RefreshAmount(false);
-        if (offerWood < 0) ClearOffer(woodTiers.Count == 0 ? "Come back when you've chopped something." : "Pick what you're selling and how much, then ask me for an offer.");
-    }
-
-    private int SelectedWood => woodTiers.Count > 0 ? woodTiers[Mathf.Clamp(woodDropdown.value, 0, woodTiers.Count - 1)] : -1;
-    private int SelectedPay => payTiers.Count > 0 ? payTiers[Mathf.Clamp(payDropdown.value, 0, payTiers.Count - 1)] : -1;
-
-    private void RefreshAmount(bool resetToHalf)
-    {
-        int wood = SelectedWood;
-        double held = wood >= 0 ? HeldToSell(wood) : 0d;
-        panelUpdating = true;
-        float max = (float)System.Math.Min(held, 1e9);
-        amountSlider.minValue = max >= 1f ? 1f : 0f;
-        amountSlider.maxValue = Mathf.Max(amountSlider.minValue, max);
-        amountSlider.interactable = max >= 1f;
-        if (resetToHalf || amountSlider.value > max || amountSlider.value < 1f) amountSlider.SetValueWithoutNotify(Mathf.Max(amountSlider.minValue, Mathf.Floor(max * 0.5f)));
-        panelUpdating = false;
-        PixelUIKit.SetText(haveLabel, wood >= 0 ? "You have " + PixelClicker.FormatNumberShort(held) + " " + clicker.Tiers[wood].displayName : "You have no wood to sell");
+        base.CollectSellGoods(list);
         PixelMarket market = PixelMarket.Instance;
-        if (marketLabel != null)
-        {
-            int woodBlock = clicker.IndexOf(PixelClicker.PixelType.Wood);
-            int marketTier = wood >= 0 && HuskWorthInWood(clicker.Tiers[wood].type) > 0f && woodBlock >= 0 ? woodBlock : wood;
-            PixelUIKit.SetText(marketLabel, market != null && marketTier >= 0 ? market.TrendText(Id, marketTier) : "");
-        }
-        UpdateAmountLabel();
-    }
-
-    private void UpdateAmountLabel()
-    {
-        int wood = SelectedWood;
-        PixelUIKit.SetText(amountLabel, wood >= 0 ? "Selling " + PixelClicker.FormatNumberShort(amountSlider.value) + " " + clicker.Tiers[wood].displayName : "");
-        askButton.interactable = wood >= 0 && SelectedPay >= 0 && amountSlider.value >= 1f;
-    }
-
-    /// <summary>His price for 'amount' of tier 'wood', paid in tier 'pay' (the formula is in the header).</summary>
-    private double Offer(int wood, int pay, double amount)
-    {
-        PixelClicker.PixelTier[] tiers = clicker.Tiers;
-        float huskWorth = HuskWorthInWood(tiers[wood].type);   // (a husk good is valued as that much Wood)
         int woodBlock = clicker.IndexOf(PixelClicker.PixelType.Wood);
-        // The shared rule (PixelMarket): worth the clicks it took x 1.2, less as his market for it fills up. Paid 1:1 in the pure colour you pick.
-        PixelMarket market = PixelMarket.Instance;
-        if (market == null) return 1d;
-        double fair = huskWorth > 0f && woodBlock >= 0
-            ? market.Quote(Id, woodBlock, amount * huskWorth)   // (a husk good is sold as that much Wood)
-            : market.Quote(Id, wood, amount);
-        // His random roll is made ONCE per wood / pay pair per visit, so asking again (or changing the amount) never rerolls the price.
-        long key = (long)wood * 100000L + pay;
-        if (!visitRolls.TryGetValue(key, out double roll))
+        if (market == null || woodBlock < 0) return;
+        for (int i = 0; i < clicker.Tiers.Length; i++)
         {
-            float lo = Mathf.Min(offerRollRange.x, offerRollRange.y), hi = Mathf.Max(offerRollRange.x, offerRollRange.y);
-            roll = (Random.Range(lo, hi) + Random.Range(lo, hi)) * 0.5;
-            visitRolls[key] = roll;
+            float worth = HuskWorthInWood(clicker.Tiers[i].type);
+            if (worth <= 0f) continue;
+            int tier = i;
+            list.Add(new SellGood
+            {
+                marketKey = PixelMarket.TierKey(woodBlock), name = clicker.Tiers[tier].displayName + " husks", color = clicker.Tiers[tier].UIColor,
+                clicksPerUnit = worth * market.ClicksPerUnit(woodBlock), rate = market.RateOf(PixelMarket.Route.RawGoods),
+                held = () => HeldToSell(tier), take = n => TakeHusks(tier, n),
+            });
         }
-        double level = 1d + System.Math.Min(0.3, levelBonusPerLevel * PixelSkills.LevelOfId(PixelSkills.WoodcuttingId));
-        return System.Math.Max(1d, System.Math.Floor(fair * mood * roll * level));
-    }
-
-    private void AskOffer()
-    {
-        int wood = SelectedWood, pay = SelectedPay;
-        double amount = System.Math.Floor(amountSlider.value);
-        if (wood < 0 || pay < 0 || amount < 1d) return;
-        offerWood = wood; offerPay = pay; offerAmount = amount;
-        offerGet = Offer(wood, pay, amount);
-        asks++;
-        PixelClicker.PixelTier[] tiers = clicker.Tiers;
-        string say = asks <= 1 ? (mood >= 1.05f ? "Good day today! " : mood <= 0.92f ? "Rough morning... " : "")
-                   : "Same as before, friend - my price is my price. ";
-        string gold = ColorUtility.ToHtmlStringRGB(new Color(1f, 0.85f, 0.4f));
-        PixelUIKit.SetText(offerLabel, say + "I'll give you <b><color=#" + gold + ">" + PixelClicker.FormatNumber(offerGet) + " " + tiers[pay].displayName + "</color></b> for "
-                                       + PixelClicker.FormatNumberShort(amount) + " " + tiers[wood].displayName + ".");
-        acceptButton.gameObject.SetActive(true);
-        declineButton.gameObject.SetActive(true);
-        PixelAudio.Play("ui_click");
-    }
-
-    private void AcceptOffer()
-    {
-        if (offerWood < 0 || clicker == null) return;
-        bool paid = HuskWorthInWood(clicker.Tiers[offerWood].type) > 0f ? TakeHusks(offerWood, offerAmount) : clicker.TrySpend(offerWood, offerAmount);
-        if (!paid) { ClearOffer("Looks like you don't have that much any more."); RefreshLists(); return; }
-        clicker.AddCurrency(offerPay, offerGet);
-        PixelMarket market = PixelMarket.Instance;
-        if (market != null)
-        {
-            float huskWorth = HuskWorthInWood(clicker.Tiers[offerWood].type);
-            int woodBlock = clicker.IndexOf(PixelClicker.PixelType.Wood);
-            if (huskWorth > 0f && woodBlock >= 0) market.RecordSale(Id, woodBlock, offerAmount * huskWorth);
-            else market.RecordSale(Id, offerWood, offerAmount);
-        }
-        PixelStats.Count(Id + ".sold");
-        PixelAudio.Play("purchase");
-        string done = "Pleasure doing business! " + PixelClicker.FormatNumber(offerGet) + " " + clicker.Tiers[offerPay].displayName + " for you.";
-        offerWood = -1;
-        RefreshLists();
-        ClearOffer(done);
-    }
-
-    private void ClearOffer(string message = null)
-    {
-        offerWood = -1;
-        if (acceptButton != null) acceptButton.gameObject.SetActive(false);
-        if (declineButton != null) declineButton.gameObject.SetActive(false);
-        if (offerLabel != null && message != null) PixelUIKit.SetText(offerLabel, message);
-        else if (offerLabel != null) PixelUIKit.SetText(offerLabel, "");
     }
 
     /// <summary>A cube like Cubie in a red plaid shirt: a big beard, a green beanie, an axe and friendly eyes.</summary>

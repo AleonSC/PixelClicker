@@ -37,16 +37,11 @@ public class PixelFarmerMinigame : PixelVisitorMinigame
 
     protected override int OfferedWares => seedsOffered;
 
-    [Header("Buying your farm goods (Sell tab)")]
-    [Tooltip("How he makes his offers for your Farming goods on the Sell tab (the price itself is PixelMarket's shared rule).")]
-    [SerializeField] private GoodsOffers offers = new GoodsOffers();
 
     // Buy tab = his seeds, Sell tab = he buys Farming's goods (wheat, golden fruit, dirt...) - the shared goods buyer (PixelVisitorMinigameGoods.cs).
     protected override bool BuySellTabs => true;
     protected override bool BuysGoods => true;
     protected override string GoodsSkillId => PixelSkills.FarmingId;
-    protected override GoodsOffers Offers => offers;
-    protected override System.Collections.Generic.List<Trade> RollTrades() => RollGoodsTrades();
     protected override string TradeText => "Sell";
     protected override string TradePayWord => "Sell";
 

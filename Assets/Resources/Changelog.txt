@@ -1606,3 +1606,7 @@
 [2026-10-24 09:32 UTC] Game Loop page updated for today's Shops work: the skill pack price ladder and the vendor market (1.2x of clicking, saturation) are built, so the only critical gap left is what comes after the bill (prestige).
 [2026-10-24 09:31 UTC] New vendors Hazel the Forager and Old Salt the Angler buy Foraging and Fishing goods for pure pixels (they visit while that skill is trained), and the Farmer now has a Sell tab for Farming goods - all through one shared goods buyer on the vendor market.
 [2026-10-24 09:31 UTC] Toggles window: every vendor who buys your goods has a Call button that brings him over now, once per 30 minutes of play shared by all vendors (the button counts down), so most visits stay random.
+[2026-10-24 09:54 UTC] Vendors: minigame materials are specialty goods now - the Wizard pays about 2x for Ectoplasm, Magic Wood and Stardust, the Prospector for meteor chunks and the Tinkerer for bomb parts (Big Tim pays a little for Magic Wood), all from one table on the vendor market.
+[2026-10-24 09:54 UTC] Every vendor who buys from you now has the same Sell view as Big Tim: pick the good and amount, see the live price and his market trend on the Sell button (vendors with nothing to sell open straight on it).
+[2026-10-24 09:54 UTC] The Wizard trades minigame materials for things only he has: 20 Ectoplasm for a Ghost Bait, 5 Stardust for an Ultra pixel, shown beside the sell price.
+[2026-10-24 09:54 UTC] To-do: ticked 'Find a use for Ectoplasm' and added the Wizard's Magic Wood wand trade (a new item, to decide first).

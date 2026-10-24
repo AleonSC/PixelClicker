@@ -56,13 +56,14 @@ public class PixelMarket : MonoBehaviour
 
     private PixelClicker clicker;
     private struct Pressure { public double clicks; public float time; }
-    private readonly Dictionary<string, Pressure> pressure = new Dictionary<string, Pressure>();   // "vendor|tier" -> clicks-worth sold
+    private readonly Dictionary<string, Pressure> pressure = new Dictionary<string, Pressure>();   // "vendor|good key" -> clicks-worth sold
 
     /// <summary>The scene's market (null if there is none).</summary>
     public static PixelMarket Instance => PixelFind.Cached<PixelMarket>();
 
     private void Awake()
     {
+        EnsureSpecialties();
         clicker = GetComponent<PixelClicker>();
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
     }
@@ -104,50 +105,116 @@ public class PixelMarket : MonoBehaviour
     /// <summary>Full price of one unit of a good, in pure units (paid 1:1 in any pure colour), before saturation.</summary>
     public double FullPricePerUnit(int tier, Route route) => RateOf(route) * PurePerClick() * ClicksPerUnit(tier);
 
-    private static string Key(string vendor, int tier) => (vendor ?? "") + "|" + tier;
+    // ---- Goods by KEY: a pixel tier ("tier:7") or a minigame material ("mat:ghost"); the saturation is kept per vendor + key ----
+
+    /// <summary>The market key of a pixel currency.</summary>
+    public static string TierKey(int tier) => "tier:" + tier;
+
+    /// <summary>The market key of a non-pixel good (a minigame material / PixelMaterials id: the same ids as PixelMaterials.CostHeld).</summary>
+    public static string MaterialKey(string id) => "mat:" + id;
+
+    private static string Key(string vendor, string good) => (vendor ?? "") + "|" + good;
 
     /// <summary>The vendor's saturation for a good right now, in clicks-worth (decayed to now).</summary>
-    private double PressureNow(string vendor, int tier)
+    private double PressureNow(string vendor, string good)
     {
-        if (!pressure.TryGetValue(Key(vendor, tier), out Pressure p)) return 0d;
+        if (!pressure.TryGetValue(Key(vendor, good), out Pressure p)) return 0d;
         float minutes = (Time.unscaledTime - p.time) / 60f;
         return p.clicks * System.Math.Pow(0.5, minutes / System.Math.Max(0.1f, recoveryHalfLifeMinutes));
     }
 
     /// <summary>Price factor for the NEXT unit (1 = full price).</summary>
-    public double Factor(string vendor, int tier) => System.Math.Max(minFactor, 1d / (1d + PressureNow(vendor, tier) / saturationClicks));
+    public double Factor(string vendor, string good) => System.Math.Max(minFactor, 1d / (1d + PressureNow(vendor, good) / saturationClicks));
+    public double Factor(string vendor, int tier) => Factor(vendor, TierKey(tier));
 
     /// <summary>
-    /// What a vendor pays for 'amount' of a good, in pure units: the full price x the saturation factor averaged over the amount
-    /// (each unit sold lowers the price of the next). Before any vendor's own luck / mood.
+    /// What a vendor pays for 'amount' of a good, in pure units: rate x PurePerClick x the clicks of effort behind it, x the saturation factor
+    /// averaged over the amount (each unit sold lowers the price of the next). Before any vendor's own luck / mood.
     /// </summary>
-    public double Quote(string vendor, int tier, double amount, Route route = Route.RawGoods)
+    public double Quote(string vendor, string good, double clicksPerUnit, double amount, float rate)
     {
-        if (amount <= 0d) return 0d;
-        double perUnitClicks = ClicksPerUnit(tier);
-        double work = amount * perUnitClicks;   // clicks-worth sold
-        double k = saturationClicks, s0 = PressureNow(vendor, tier);
-        double avg = work > 0d ? k * System.Math.Log((k + s0 + work) / (k + s0)) / work : 1d;   // the average of 1 / (1 + s / k) from s0 to s0 + work
+        if (amount <= 0d || clicksPerUnit <= 0d) return 0d;
+        double work = amount * clicksPerUnit;   // clicks-worth sold
+        double k = saturationClicks, s0 = PressureNow(vendor, good);
+        double avg = k * System.Math.Log((k + s0 + work) / (k + s0)) / work;   // the average of 1 / (1 + s / k) from s0 to s0 + work
         avg = System.Math.Max(minFactor, avg);
-        return amount * FullPricePerUnit(tier, route) * avg;
+        return amount * rate * PurePerClick() * clicksPerUnit * avg;
     }
+
+    /// <summary>A skill currency at the route's rate (raw goods: 1.2x).</summary>
+    public double Quote(string vendor, int tier, double amount, Route route = Route.RawGoods) => Quote(vendor, TierKey(tier), ClicksPerUnit(tier), amount, RateOf(route));
 
     /// <summary>Call when a deal is accepted: the vendor's price for that good drops by the work sold.</summary>
-    public void RecordSale(string vendor, int tier, double amount)
+    public void RecordSale(string vendor, string good, double clicksWorth)
     {
-        double s = PressureNow(vendor, tier) + System.Math.Max(0d, amount) * ClicksPerUnit(tier);
-        pressure[Key(vendor, tier)] = new Pressure { clicks = s, time = Time.unscaledTime };
+        double s = PressureNow(vendor, good) + System.Math.Max(0d, clicksWorth);
+        pressure[Key(vendor, good)] = new Pressure { clicks = s, time = Time.unscaledTime };
     }
 
+    public void RecordSale(string vendor, int tier, double amount) => RecordSale(vendor, TierKey(tier), amount * ClicksPerUnit(tier));
+
     /// <summary>One line for a sell window: "Market 74% (recovering)" or "Market 100% (steady)", coloured.</summary>
-    public string TrendText(string vendor, int tier)
+    public string TrendText(string vendor, string good)
     {
-        double s = PressureNow(vendor, tier);
-        double f = Factor(vendor, tier);
+        double s = PressureNow(vendor, good);
+        double f = Factor(vendor, good);
         bool steady = s < steadyThreshold * saturationClicks;
         Color col = steady ? new Color(0.55f, 1f, 0.6f) : f < 0.6 ? new Color(1f, 0.5f, 0.45f) : new Color(1f, 0.85f, 0.4f);
-        string trend = steady ? "steady" : "▲ recovering";
+        string trend = steady ? "steady" : "\u25B2 recovering";
         return "Market <color=#" + ColorUtility.ToHtmlStringRGB(col) + ">" + Mathf.RoundToInt((float)f * 100f) + "%</color> (" + trend + ")";
+    }
+
+    public string TrendText(string vendor, int tier) => TrendText(vendor, TierKey(tier));
+
+    // ---- Specialty goods: minigame materials a vendor pays well for (one table) ----
+
+    /// <summary>One vendor's specialty: a minigame material he buys at a high rate.</summary>
+    [System.Serializable]
+    public class SpecialtyGood
+    {
+        [Tooltip("The vendor's id (wizard, prospector, tinkerer, lumberjack...).")]
+        public string vendorId = "wizard";
+        [Tooltip("The good: a minigame id (ghost = Ectoplasm, eviltree = Magic Wood, stardust, meteor = Meteor Chunks, bomb = Bomb Parts) or a material id - the ids PixelMaterials.CostHeld reads.")]
+        public string goodId = "ghost";
+        [Min(0.1f)]
+        [Tooltip("x what clicking pure blocks earns for the same effort (2 = the value ladder's specialty rung; ordinary goods are 1.2).")]
+        public float rate = 2f;
+        [Min(0.1f)]
+        [Tooltip("Clicks of effort one unit stands for (the time a minigame round takes, as clicks, divided by what it drops). Sets the price AND how fast his market fills up.")]
+        public float effortClicksPerUnit = 6f;
+    }
+
+    [Header("Specialty goods (minigame materials vendors pay well for)")]
+    [Tooltip("Who buys which minigame material, at what rate. Missing built-in rows (Ectoplasm / Magic Wood / Stardust to the Wizard, Magic Wood to Big Tim, Meteor Chunks to the Prospector, Bomb Parts to the Tinkerer) are added back at start.")]
+    [SerializeField] private List<SpecialtyGood> specialties = new List<SpecialtyGood>();
+
+    private static SpecialtyGood[] BuiltInSpecialties() => new[]
+    {
+        // Effort per unit (rough, from the minigame defaults; tune from session reports): a ghost hunt ~15 clicks of attention for 1-4 Ectoplasm,
+        // an Evil Tree ~50 clicks for 6-12 Magic Wood, a falling star ~20 clicks for 1 Stardust, a meteor ~1.5 clicks per chunk,
+        // a bomb defusal ~30 clicks for 2-4 Bomb Parts.
+        new SpecialtyGood { vendorId = "wizard", goodId = "ghost", rate = 2f, effortClicksPerUnit = 6f },
+        new SpecialtyGood { vendorId = "wizard", goodId = "eviltree", rate = 2f, effortClicksPerUnit = 5f },
+        new SpecialtyGood { vendorId = "lumberjack", goodId = "eviltree", rate = 1f, effortClicksPerUnit = 5f },   // (Big Tim pays a little)
+        new SpecialtyGood { vendorId = "wizard", goodId = "stardust", rate = 2f, effortClicksPerUnit = 20f },
+        new SpecialtyGood { vendorId = "prospector", goodId = "meteor", rate = 2f, effortClicksPerUnit = 1.5f },
+        new SpecialtyGood { vendorId = "tinkerer", goodId = "bomb", rate = 2f, effortClicksPerUnit = 10f },
+    };
+
+    private void EnsureSpecialties()
+    {
+        if (specialties == null) specialties = new List<SpecialtyGood>();
+        foreach (SpecialtyGood d in BuiltInSpecialties())
+            if (!specialties.Exists(x => x != null && x.vendorId == d.vendorId && x.goodId == d.goodId)) specialties.Add(d);
+    }
+
+    private void OnValidate() => EnsureSpecialties();
+
+    /// <summary>The specialty goods a vendor buys (empty list when none).</summary>
+    public List<SpecialtyGood> SpecialtiesOf(string vendorId)
+    {
+        EnsureSpecialties();
+        return specialties.FindAll(x => x != null && x.vendorId == vendorId && !string.IsNullOrEmpty(x.goodId));
     }
 
     /// <summary>Roughly how many of this pixel one unit is worth by rarity (1 / how fast it is earned): the Entrepreneur's pixel-for-pixel rate.</summary>

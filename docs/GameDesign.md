@@ -473,7 +473,9 @@ a lot and recovers over time) instead of hard caps. Husks still never become cur
 - **As built:** "1x" = the pure currency one click earns on pure blocks right now (the six colours count as equal units); a good is worth the
   clicks it took (clicks to collect / pay per click, multipliers included), so selling raw skill currency pays 1.2x what the same clicks on pure
   blocks would have. Saturation per vendor + good: price x 1 / (1 + clicks-worth sold / 900), floor 25%, half wears off every 10 real minutes;
-  shown in the sell window. Lumberjack, Prospector, Forager, Angler and the Farmer (Sell tab) use it; any buying vendor can also be CALLED
+  shown in the sell window. Lumberjack, Prospector, Forager, Angler and the Farmer (Sell tab) use it; minigame materials are SPECIALTY goods
+  at ~2x (Wizard: Ectoplasm, Magic Wood, Stardust; Prospector: meteor chunks; Tinkerer: bomb parts; Big Tim a little for Magic Wood) and the
+  Wizard trades them for things only he has (Ghost Bait, Ultra pixels) - built 2026-10-24; any buying vendor can also be CALLED
   from the Toggles window, once per 30 min of play (shared), so selling mostly still waits for their random visits.
 
 **Prestige** (Q2, details still open): settling the bill resets the run with Cubie's Goodwill (a lasting bonus) and a new, bigger bill.

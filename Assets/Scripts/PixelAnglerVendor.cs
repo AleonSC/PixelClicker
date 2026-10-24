@@ -2,7 +2,7 @@
 // PixelAnglerVendor.cs
 //   The Angler (id angler, 'Old Salt the Angler'; a navy cube in a yellow sou'wester with a grey beard and a fishing rod): a goods buyer -
 //   he BUYS Fishing's goods (fish, seaweed, shells, pearls, water...) for pure currency through the shared goods buyer
-//   (PixelVisitorMinigameGoods.cs: offers from his GoodsOffers block, priced by PixelMarket, market price and trend on each row). He only
+//   (the shared Sell view, PixelVisitorMinigameSell.cs: pick the good and amount, live price from PixelMarket with its trend). He only
 //   visits while Fishing is the skill in training (VisitSkillId) and is started by PixelGuideVendor.StartVendors once Fishing is
 //   available; he can also be called from the Toggles window (shared cooldown). Texts: Dialogue.txt [Visitor: angler].
 // ---------------------------------------------------
@@ -12,9 +12,6 @@ using UnityEngine;
 /// <summary>The Angler (id "angler"): buys fished goods for pure currency while Fishing is trained. All the visiting is in <see cref="PixelVisitorMinigame"/>.</summary>
 public class PixelAnglerVendor : PixelVisitorMinigame
 {
-    [Header("Offers")]
-    [Tooltip("How he makes his offers (the price itself is PixelMarket's shared rule).")]
-    [SerializeField] private GoodsOffers offers = new GoodsOffers();
 
     public override string Id => "angler";
     public override string DisplayName => "Angler";
@@ -33,8 +30,6 @@ public class PixelAnglerVendor : PixelVisitorMinigame
 
     protected override bool BuysGoods => true;
     protected override string GoodsSkillId => PixelSkills.FishingId;
-    protected override GoodsOffers Offers => offers;
-    protected override List<Trade> RollTrades() => RollGoodsTrades();
 
     /// <summary>A navy cube in a yellow sou'wester, with a bushy grey beard and a fishing rod with a bobber.</summary>
     protected override void DrawVisitor(Transform art)

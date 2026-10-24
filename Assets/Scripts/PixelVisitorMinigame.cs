@@ -307,23 +307,23 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
     /// <summary>Visitors that trade pixels return their offers here when they arrive (null = a normal wares visitor).</summary>
     protected virtual List<Trade> RollTrades() => null;
 
-    /// <summary>Called after a trade row is accepted (a goods buyer records the sale with PixelMarket: PixelVisitorMinigameGoods.cs).</summary>
-    protected virtual void OnTradeDone(Trade t) => RecordGoodsSale(t);
+    /// <summary>Called after a trade row is accepted.</summary>
+    protected virtual void OnTradeDone(Trade t) { }
 
-    /// <summary>Optional extra text on a trade row's second line (a goods buyer shows his market price for that good).</summary>
-    protected virtual string TradeNote(Trade t) => GoodsNote(t);
+    /// <summary>Optional extra text on a trade row's second line.</summary>
+    protected virtual string TradeNote(Trade t) => "";
 
-    /// <summary>True for a vendor that both SELLS wares and BUYS pixels: the window gets a Buy tab (the wares) and a Sell tab (the trades from <see cref="RollTrades"/>).</summary>
-    protected virtual bool BuySellTabs => false;
+    /// <summary>True for a vendor that both SELLS wares and BUYS: the window gets a Buy tab (the wares) and a Sell tab. Every vendor who buys from you has one (the shared Sell view, PixelVisitorMinigameSell.cs); one with no wares opens straight on it.</summary>
+    protected virtual bool BuySellTabs => BuysFromPlayer;
 
-    /// <summary>A vendor with its OWN Sell tab (BuySellTabs): BuildSellPanel fills a container in place of the trade rows (e.g. the Lumberjack's 'choose an amount, get an offer' panel).</summary>
-    protected virtual bool CustomSellPanel => false;
+    /// <summary>A Sell tab built by BuildSellPanel in place of the trade rows: the shared Sell view for every vendor who buys from you.</summary>
+    protected virtual bool CustomSellPanel => BuysFromPlayer;
     /// <summary>Height the custom Sell panel needs (the window grows to fit it).</summary>
-    protected virtual float SellPanelHeight => 0f;
+    protected virtual float SellPanelHeight => BuysFromPlayer ? 560f : 0f;
     /// <summary>Builds the custom Sell tab into 'parent' (stretched over the list area). Called once per visit when the window is built.</summary>
-    protected virtual void BuildSellPanel(RectTransform parent) { }
+    protected virtual void BuildSellPanel(RectTransform parent) { if (BuysFromPlayer) BuildGoodsSellPanel(parent); }
     /// <summary>The custom Sell tab became visible (refresh what you hold, etc.).</summary>
-    protected virtual void OnSellPanelShown() { }
+    protected virtual void OnSellPanelShown() { if (BuysFromPlayer) RefreshSellLists(); }
     /// <summary>The shared UI font, for a subclass that builds its own UI.</summary>
     protected TMP_FontAsset VendorFont => Font;
     private RectTransform sellPanelRoot;
@@ -711,12 +711,12 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
     {
         switch (id)
         {
-            case "wizard": return "A wandering wizard and Cubie's 'friend'. He trades potions and odd magic for pixels.\nVisits: from soon after Cubie opens his shop, now and then.";
-            case "tinkerer": return "An inventor who sells devices and tools, often at a discount.\nVisits: once six pixel types are unlocked.";
+            case "wizard": return "A wandering wizard and Cubie's 'friend'. He sells potions, buys Ectoplasm, Magic Wood and Stardust at a high price, and trades them for Ghost Bait and Ultra pixels.\nVisits: from soon after Cubie opens his shop, now and then.";
+            case "tinkerer": return "An inventor who sells devices and tools, often at a discount, and buys Bomb Parts at a high price.\nVisits: once six pixel types are unlocked.";
             case "entrepreneur": return "A slick dealer who trades one kind of pixel for another at his own rates.\nVisits: once eight pixel types are unlocked.";
             case "farmer": return "A farmer who sells seeds and buys your farm goods (wheat, golden fruit...) for pure pixels.\nVisits: while Farming is the skill in training, or when you call him from the Toggles window.";
             case "lumberjack": return "Big Tim the Lumberjack buys wood goods and sells woodcutting gear (the Focus potion among it).\nVisits: only while Woodcutting is the skill in training.";
-            case "prospector": return "An old miner who buys mining goods and sells mining gear.\nVisits: only while Mining is the skill in training.";
+            case "prospector": return "An old miner who buys mining goods (and meteor chunks at a high price) and sells mining gear.\nVisits: only while Mining is the skill in training.";
             case "forager": return "Hazel the Forager buys foraged goods (berries, mushrooms, herbs, truffles) for pure pixels.\nVisits: only while Foraging is the skill in training, or when you call her from the Toggles window.";
             case "angler": return "Old Salt the Angler buys fished goods (fish, shells, pearls, seaweed) for pure pixels.\nVisits: only while Fishing is the skill in training, or when you call him from the Toggles window.";
             case "egg": return "Egg, a very rare cat. A special gift the first time, a random present of pixels after that.\nVisits: rarely, once four pixel types are unlocked.";
@@ -1064,7 +1064,10 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
             y += rowH + 8f;
         }
         waresViewHeight = vr.rect.height > 1f ? vr.rect.height : (waresPanel.sizeDelta.y - (top + 158f) - tabsH);
-        shopTab = 0;
+        // A vendor who only buys (no wares): straight to the Sell view, no tabs.
+        bool sellOnly = tabsMode && CustomSellPanel && wares.Count == 0;
+        if (sellOnly && tabButtons != null) foreach (Button tb in tabButtons) tb.gameObject.SetActive(false);
+        shopTab = sellOnly ? 1 : 0;
         LayoutRows(rowH);
 
         Button done = PixelUIKit.CreateButton(Font, waresPanel, "Done", doneText, new Vector2(320f, 80f), ButtonRole.Neutral, 36f);
