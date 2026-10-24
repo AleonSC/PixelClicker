@@ -2,11 +2,11 @@
 // PixelShopTilePage.cs
 //   Part of partial class PixelShop: the shop's tile page (one, the CATALOG: PixelShopCatalog.cs fills it). Since 2026-10-24 (the 'A' redesign) the
 //   whole shop is this one page: the category rail picks what it lists (page.chip = the rail entry; no chip buttons), the search box lists matches.
-//   - a scrolling grid of tiles (tileWidth x tileHeight, 4 to a row at the defaults): still 3D picture, the NAME, the price as colour swatches +
-//     numbers (CostStrip: SetCosts / SetCostMessage; red number = can't afford), a small corner badge, a 'Locked' mark over the picture and a green
+//   - a scrolling grid of tiles (tileWidth x tileHeight, 4 to a row at the defaults): still 3D picture, the NAME, the price as colour squares
+//     only - which pixels it costs, no numbers (CostStrip.swatchesOnly; SetCosts / SetCostMessage), a small corner badge, a 'Locked' mark over the picture and a green
 //     bar along the bottom when you can buy it now. Click a tile = select it, Shift-click = quick buy, hover = its description as the shop tooltip.
 //   - the DETAIL PANEL on the right for the selected tile (BuildDetailPanel, replaced the bottom buy bar): spinning picture, name, where it is listed,
-//     the full description, the cost with what you hold ('75 White / 12.4K'), an amount row (- count +) and quick amounts (x1 x5 x10 MAX) for
+//     the full description, the cost ('75 White'; red = can't afford; what you hold is in the pinned Inventory beside the shop), an amount row (- count +) and quick amounts (x1 x5 x10 MAX) for
 //     things bought in numbers (consumables, Value levels), 'Save up for this' (the Saving up for card, PixelShopCatalog.cs) and Buy.
 //   A page only says WHAT to show through its delegates (collect, tileName, pictureKey, description, fillTile, fillBar, purchase, quickBuy, hasAmount,
 //   maxAmount); building, layout, selection and the shared tooltip live here. Tiles are built once per id and reused.
@@ -48,7 +48,8 @@ public partial class PixelShop
         public TMP_Text message;
         public int maxColumns;    // slots per row (the rest wrap onto more rows)
         public bool withNames;    // "75 White" instead of "75" (the detail panel has room)
-        public bool withHeld;     // "... / 12.4K": what you hold of it (the detail panel)
+        public bool listed;       // a left-aligned list (the detail panel) instead of centred rows
+        public bool swatchesOnly; // only the colour squares, no numbers (the tiles: the detail panel shows the amounts)
         public float fontSize;
     }
 
@@ -196,7 +197,7 @@ public partial class PixelShop
 
         page.barCosts = BuildCostStrip(top, pad, 0f, inner, costH, 6, 2, tileFontSize * 0.95f, true);
         PlaceBottomLeft(page.barCosts.root, pad, costB, inner, costH);
-        page.barCosts.withHeld = true;
+        page.barCosts.listed = true;
 
         // - count +
         page.amountRow = new GameObject("Amount", typeof(RectTransform)).gameObject;
@@ -307,7 +308,8 @@ public partial class PixelShop
         PlaceTopLeft(tile.name.rectTransform, 6f, y, tileWidth - 12f, lineH);
         y += lineH;
 
-        tile.costs = BuildCostStrip(go.transform, 6f, y, tileWidth - 12f, Mathf.Max(lineH, tileHeight - y - 10f), 3, 3, tileFontSize * 0.9f, false);
+        tile.costs = BuildCostStrip(go.transform, 6f, y, tileWidth - 12f, Mathf.Max(lineH, tileHeight - y - 10f), 6, 6, tileFontSize * 0.9f, false);
+        tile.costs.swatchesOnly = true;   // (just which pixels it costs: the amounts are in the detail panel, what you hold in the pinned Inventory)
 
         tile.badge = CreateText(go.transform, "Badge", "", tileFontSize * 0.8f, TextAlignmentOptions.TopRight, FontStyles.Bold);
         tile.badge.richText = true;
@@ -443,18 +445,27 @@ public partial class PixelShop
             strip.swatches[i].color = t >= 0 ? clicker.Tiers[t].UIColor : PixelMaterials.CostColor(cost.minigameCurrency);   // (materials: their colour; minigame counters: grey)
             string text = PixelClicker.FormatNumberShort(cost.amount);
             if (strip.withNames) text += " " + ShortCostName(cost);
-            if (strip.withHeld) text += " <color=#9AA3BD>/ " + PixelClicker.FormatNumberShort(CostHeld(cost)) + "</color>";
             if (i == shown - 1 && costs.Length > shown) text += " +" + (costs.Length - shown);   // (more than fit: '+n')
             TMP_Text number = strip.numbers[i];
+            if (strip.swatchesOnly)
+            {
+                // Just the squares, side by side in one centred row (dimmed while locked).
+                if (number.gameObject.activeSelf) number.gameObject.SetActive(false);
+                float sq = Mathf.Min(size.y * 0.8f, strip.fontSize * 1.1f), gapX = sq * 0.45f;
+                float left = (size.x - (shown * sq + (shown - 1) * gapX)) * 0.5f;
+                if (locked) strip.swatches[i].color *= new Color(0.5f, 0.5f, 0.5f, 1f);
+                PlaceTopLeft((RectTransform)strip.swatches[i].transform, left + i * (sq + gapX), (size.y - sq) * 0.5f, sq, sq);
+                continue;
+            }
             PixelUIKit.SetText(number, text);
             number.color = locked ? lockedItemColor : CanAffordCost(cost) ? textColor : unaffordableColor;
 
             // Place swatch + number as a pair in its cell (the last row is centred on its own; the detail panel's list is left aligned).
             int row = i / columns, col = i % columns;
             int inRow = row == rows - 1 ? shown - row * columns : columns;
-            float rowLeft = strip.withHeld ? 0f : (size.x - inRow * cellW) * 0.5f;
+            float rowLeft = strip.listed ? 0f : (size.x - inRow * cellW) * 0.5f;
             float numberW = Mathf.Min(cellW - swatch - 6f, number.GetPreferredValues(text).x + 2f);
-            float pairX = strip.withHeld ? rowLeft + col * cellW : rowLeft + col * cellW + (cellW - (swatch + 4f + numberW)) * 0.5f;
+            float pairX = strip.listed ? rowLeft + col * cellW : rowLeft + col * cellW + (cellW - (swatch + 4f + numberW)) * 0.5f;
             float midY = topY + row * cellH + cellH * 0.5f;
             PlaceTopLeft((RectTransform)strip.swatches[i].transform, pairX, midY - swatch * 0.5f, swatch, swatch);
             PlaceTopLeft(number.rectTransform, pairX + swatch + 4f, midY - cellH * 0.5f, Mathf.Max(10f, numberW), cellH);
