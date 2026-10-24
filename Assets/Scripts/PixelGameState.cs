@@ -3,8 +3,11 @@
 //   The OWNER of the player's progress (GameState.cs; docs/systems/PixelGameState.md).
 //   - PixelGameState.Current is the one GameState. It is never null: it is made on first use, so a system that starts early never waits for
 //     a save or for this component.
-//   - SAVE: PixelSaveGame writes Current into the save file whole (SaveData.state). LOAD: PixelSaveGame calls Replace(the file's copy) at the
-//     start of its load and RaiseLoaded() at the end (after the husks and the IPixelSaved parts), so views can refresh with everything in place.
+//   - SAVE: PixelSaveGame calls RaiseSaving() first (the Saving event: WORLD objects - placed devices, the running potion - copy themselves into
+//     their sub-state there, instead of every frame), then writes Current into the save file whole (SaveData.state).
+//   - LOAD: PixelSaveGame calls Replace(the file's copy) at the start of its load and RaiseLoaded() once the tiers, shop, husks and the IPixelSaved
+//     parts are back but BEFORE the Dev Hub tester machines (2026-10-24: a Solar Panel links to a placed device and belts dock on devices' couplings,
+//     so world objects rebuilt in Loaded must exist before the machines come back). Views refresh / world objects rebuild there.
 //   - NEW GAME / RESTART: both reload the scene and call NewGame() right before it (PixelPauseMenu Restart, PixelTitleScreen New Game - the
 //     only two scene loads), so the new scene starts with a fresh 'new GameState()'. Moved systems need no reset of their own. (Not done with
 //     PixelStatics.ResetOnRestart: sceneUnloaded can come after the new scene has started, which would wipe the new game's first moments.)
@@ -25,12 +28,16 @@ public class PixelGameState : MonoBehaviour
     /// <summary>Fired after a save's state was put in place (end of the load). Views refresh here (the bank's selection...).</summary>
     public static event Action Loaded;
 
+    /// <summary>Fired right before a save is written: world objects (placed devices, the running potion) copy themselves into their sub-state here.</summary>
+    public static event Action Saving;
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
         current = null;
         shown = null;
         Loaded = null;
+        Saving = null;
     }
 
     /// <summary>A fresh game: drops the current progress. Call it right before reloading the scene for Restart / New Game.</summary>
@@ -57,10 +64,14 @@ public class PixelGameState : MonoBehaviour
         current.Repair();
     }
 
-    /// <summary>Tells the views a load finished (PixelSaveGame calls it once everything is back).</summary>
-    public static void RaiseLoaded()
+    /// <summary>Tells world objects to copy themselves into the state (PixelSaveGame calls it right before writing a save).</summary>
+    public static void RaiseSaving() => Raise(Saving);
+
+    /// <summary>Tells the views a load finished (PixelSaveGame calls it once everything but the tester machines is back).</summary>
+    public static void RaiseLoaded() => Raise(Loaded);
+
+    private static void Raise(Action handlers)
     {
-        Action handlers = Loaded;
         if (handlers == null) return;
         foreach (Delegate d in handlers.GetInvocationList())
         {

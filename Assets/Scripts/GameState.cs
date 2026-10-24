@@ -14,7 +14,7 @@ using System.Collections.Generic;
 public class GameState
 {
     /// <summary>The systems whose progress lives here (they must not implement IPixelSaved or register restart resets: tools/compile-check/rules.sh checks it). Add a system's class name when it moves.</summary>
-    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab", "PixelBaitBucket", "PixelCubieBill", "PixelCombo", "PixelHints", "PixelRobotWorker", "PixelPets", "PixelAchievements" };
+    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab", "PixelBaitBucket", "PixelCubieBill", "PixelCombo", "PixelHints", "PixelRobotWorker", "PixelPets", "PixelAchievements", "PixelConsumables" };
 
     public BankState bank = new BankState();
     public StatsState stats = new StatsState();
@@ -29,6 +29,7 @@ public class GameState
     public UfoState ufo = new UfoState();
     public PetsState pets = new PetsState();
     public AchievementsState achievements = new AchievementsState();
+    public InventoryState inventory = new InventoryState();
 
     /// <summary>Fills in sub-states missing from an older save file (JsonUtility leaves a part the file lacks null in some cases).</summary>
     public void Repair()
@@ -49,6 +50,8 @@ public class GameState
         pets.Repair();
         if (achievements == null) achievements = new AchievementsState();
         achievements.Repair();
+        if (inventory == null) inventory = new InventoryState();
+        inventory.Repair();
         baitBucket.Repair();
         cubieBill.Repair();
         bank.Repair();
@@ -357,4 +360,59 @@ public class AchievementsState
     }
 
     public void Clear() { earned.Clear(); index = null; }
+}
+
+/// <summary>The potion / device inventory (PixelConsumables): how many of each item you hold (potions by type + combo types, devices by
+/// display name, as the save always matched them), the ghost backpack's extra storage per potion, and the WORLD part - the placed devices
+/// and the running potion - which those copy in on PixelGameState.Saving and are rebuilt from on load.</summary>
+[Serializable]
+public class InventoryState
+{
+    [Serializable]
+    public class Held
+    {
+        public string key;     // "p:type:second:third" for a potion (second / third = pixel type + 1 of a combo, 0 = none), "d:<display name>" for a device
+        public int owned;
+        public int bonus;      // a potion's extra storage from the ghost backpack
+    }
+
+    public List<Held> held = new List<Held>();
+
+    // The world part (written on Saving, read on Loaded: between saves it is NOT kept up to date).
+    public List<PixelConsumables.PlacedState> placed = new List<PixelConsumables.PlacedState>();
+    public bool hasActive;
+    public int activeType, activeSecond, activeThird;
+    public float activeRemaining;
+
+    [NonSerialized] private Dictionary<string, Held> index;   // (a lookup made on first use; never saved)
+
+    public void Repair()
+    {
+        if (held == null) held = new List<Held>();
+        held.RemoveAll(h => h == null || string.IsNullOrEmpty(h.key));
+        if (placed == null) placed = new List<PixelConsumables.PlacedState>();
+        placed.RemoveAll(p => p == null);
+        index = null;
+    }
+
+    /// <summary>The entry of an item (null when there is none and 'create' is false).</summary>
+    public Held Find(string key, bool create)
+    {
+        if (key == null) return null;
+        if (index == null || index.Count != held.Count)
+        {
+            index = new Dictionary<string, Held>();
+            foreach (Held h in held) if (h != null && h.key != null) index[h.key] = h;
+        }
+        if (index.TryGetValue(key, out Held found) || !create) return found;
+        found = new Held { key = key };
+        held.Add(found);
+        index[key] = found;
+        return found;
+    }
+
+    public int OwnedOf(string key) { Held h = Find(key, false); return h != null ? h.owned : 0; }
+    public void SetOwned(string key, int value) { Held h = Find(key, value != 0); if (h != null) h.owned = value; }
+    public int BonusOf(string key) { Held h = Find(key, false); return h != null ? h.bonus : 0; }
+    public void SetBonus(string key, int value) { Held h = Find(key, value != 0); if (h != null) h.bonus = value; }
 }

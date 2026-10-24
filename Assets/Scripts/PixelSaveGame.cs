@@ -69,7 +69,7 @@ public class PixelSaveGame : MonoBehaviour
         public PackSave[] packs;
         public MinigameSave[] minigames;
         public GameState state;   // the player's progress for the systems moved to GameState (PixelGameState; GameState.MovedSystems lists them)
-        public PixelSaveRegistry.Part[] parts;   // every system that still saves itself (IPixelSaved: inventory, achievements, pets, toggles...)
+        public PixelSaveRegistry.Part[] parts;   // systems that still save themselves (IPixelSaved) - none left since 2026-10-24: everything moved to the GameState
         public PixelFeatureTester.TesterSave[] testerObjects;   // the Dev Hub tester machines (Wood Chipper, belts + their riders, Kiln, Solar Panels)
         public PixelClicker.OldPixelState[] oldPixels;   // where the old pixels lie
         public PixelSettingsSync.Entry[] settings;       // the settings / dev tool choices of this save file
@@ -592,6 +592,7 @@ public class PixelSaveGame : MonoBehaviour
             foreach (PixelMinigame m in PixelMinigame.All)
                 if (m != null) minigameSaves.Add(new MinigameSave { id = m.Id, value = m.HasTracker ? m.TrackerCount : 0d, disabled = m.UserDisabled, extra = m.ExtraValue });
             data.minigames = minigameSaves.ToArray();
+            PixelGameState.RaiseSaving();   // (world objects - placed devices, the running potion - copy themselves into the state first)
             data.state = PixelGameState.Current;   // (the moved systems' progress, whole)
             data.playSeconds = data.state.stats.playSeconds;
             data.parts = PixelSaveRegistry.ExportAll();   // (inventory, achievements, pets, UFO, toggles, event log...: each system's own part)
@@ -742,8 +743,8 @@ public class PixelSaveGame : MonoBehaviour
             if (data.oldPixels != null) clicker.RestoreOldPixels(data.oldPixels); // older saves leave the pixels alone
 
             PixelSaveRegistry.ImportRange(data.parts, PixelSaveRegistry.WorldBand, int.MaxValue);   // (after the husks are back: Bank, placed devices + the running potion)
+            PixelGameState.RaiseLoaded();   // (the moved systems' views refresh and their world objects - placed devices... - are rebuilt, BEFORE the tester machines)
             PixelFeatureTester.ImportAll(data.testerObjects);   // after the devices (a solar panel links to one) and the old pixels (belt riders are made again)
-            PixelGameState.RaiseLoaded();   // (everything is back: the moved systems' views refresh)
 
             if (logToConsole) Debug.Log("PixelSaveGame: loaded the save from " + data.savedAt + ".", this);
             if (showMessage) ShowMessage("Loaded slot " + CurrentSlot);

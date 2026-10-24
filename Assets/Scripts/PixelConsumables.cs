@@ -23,107 +23,51 @@ using static PixelInput;
 /// can edit it): the price (any pixel types and amounts), the duration, the name and the amount owned.
 /// Add this to any GameObject (e.g. the cube). PixelShop adds it automatically if it is missing.
 /// </summary>
-public class PixelConsumables : MonoBehaviour, IPixelSaved
+public class PixelConsumables : MonoBehaviour
 {
-    // ---- save: this system writes its own part of the save file (PixelSaveRegistry) ----
-    // Two parts: what you HOLD (potions, devices; loads with the other inventories) and what is out IN THE WORLD (placed devices and the
-    // running potion; loads after the husks are back, since FinishLoad resets the spawn choice and devices may hold husks).
-    [System.Serializable] private class PotionSave { public int type, owned, second, third, bonus; }   // second / third = (pixel type + 1) of a combo potion, 0 = none; bonus = ghost backpack storage
-    [System.Serializable] private class DeviceSave { public string name; public int owned; }
-    [System.Serializable] private class HeldState { public PotionSave[] potions; public DeviceSave[] devices; }
-    [System.Serializable] private class WorldState { public PlacedState[] placed; public bool hasActive; public int activeType, activeSecond, activeThird; public float activeRemaining; }
+    // ---- progress: the inventory lives in the GameState (PixelGameState.Current.inventory) ----
+    // What you HOLD: Potion.owned / bonusCap and Device.owned read and write the state by key (no stored copy here). What is out IN THE
+    // WORLD (placed devices, the running potion) copies itself into the state on PixelGameState.Saving and is rebuilt from it on Loaded
+    // (once the husks are back, before the tester machines: a Solar Panel links to a placed device).
+    private static InventoryState Inv => PixelGameState.Current.inventory;
 
     private static int SecondOf(Potion p) => p.craftOnly ? (int)p.secondType + 1 : 0;
     private static int ThirdOf(Potion p) => p.craftOnly && p.hasThird ? (int)p.thirdType + 1 : 0;
 
-    string IPixelSaved.SaveId => "inventory";
-    int IPixelSaved.SaveOrder => 210;
-
-    string IPixelSaved.Export()
+    // A save is about to be written: the world part goes into the state.
+    private void OnSaving()
     {
-        HeldState s = new HeldState();
-        System.Collections.Generic.List<PotionSave> potionSaves = new System.Collections.Generic.List<PotionSave>();
-        for (int i = 0; i < Count; i++)
+        InventoryState inv = Inv;
+        inv.placed = GetPlacedDevices();
+        inv.hasActive = IsActive;
+        if (IsActive)
         {
-            Potion p = Get(i);
-            if (p.craftOnly && p.owned <= 0 && p.bonusCap <= 0) continue;   // (of the many combo potions only the ones you hold)
-            potionSaves.Add(new PotionSave { type = (int)p.type, owned = p.owned, bonus = p.bonusCap, second = SecondOf(p), third = ThirdOf(p) });
+            Potion running = Get(ActiveIndex);
+            inv.activeType = (int)running.type;
+            inv.activeSecond = SecondOf(running);
+            inv.activeThird = ThirdOf(running);
+            inv.activeRemaining = Remaining;
         }
-        s.potions = potionSaves.ToArray();
-        System.Collections.Generic.List<DeviceSave> deviceSaves = new System.Collections.Generic.List<DeviceSave>();
-        for (int i = 0; i < DeviceCount; i++)
-        {
-            Device d = GetDevice(i);
-            if (d.attuned && d.owned <= 0) continue;   // (there is an attuned device for every pixel type: only the ones you hold)
-            deviceSaves.Add(new DeviceSave { name = d.displayName, owned = d.owned });
-        }
-        s.devices = deviceSaves.ToArray();
-        return PixelSaveRegistry.ToJson(s);
     }
 
-    void IPixelSaved.Import(string data)
+    // A save was loaded: what you hold is in the state already; the old world part goes and the saved one is rebuilt.
+    private void OnLoaded()
     {
-        HeldState s = PixelSaveRegistry.FromJson<HeldState>(data);
         StopActive();
+        CancelPlacement();
+        ClampAllHeld();   // (the Operation Storage levels are in place too)
+        ClearPlacedDevices();
+        InventoryState inv = Inv;
+        foreach (PlacedState placed in inv.placed) RestorePlacedDevice(placed);
+        if (!inv.hasActive) return;
         for (int i = 0; i < Count; i++)
         {
             Potion p = Get(i);
-            int second = SecondOf(p), third = ThirdOf(p);
-            PotionSave saved = s != null && s.potions != null ? System.Array.Find(s.potions, x => x.type == (int)p.type && x.second == second && x.third == third) : null;
-            p.bonusCap = saved != null ? Mathf.Max(0, saved.bonus) : 0;
-            p.owned = saved != null ? Mathf.Max(0, saved.owned) : 0;   // (clamped to the caps in the world part: the Operation Storage levels load later, with the stats)
-        }
-        CancelPlacement();
-        for (int i = 0; i < DeviceCount; i++)
-        {
-            string name = GetDevice(i).displayName;
-            DeviceSave saved = s != null && s.devices != null ? System.Array.Find(s.devices, x => x.name == name) : null;
-            GetDevice(i).owned = saved != null ? Mathf.Max(0, saved.owned) : 0;
+            if ((int)p.type != inv.activeType || SecondOf(p) != inv.activeSecond || ThirdOf(p) != inv.activeThird) continue;
+            RestoreActive(i, inv.activeRemaining);
+            break;
         }
     }
-
-    /// <summary>The second save part: placed devices and the running potion (after the husks are back on the field).</summary>
-    private class WorldPart : IPixelSaved
-    {
-        private readonly PixelConsumables owner;
-        public WorldPart(PixelConsumables owner) { this.owner = owner; }
-        public string SaveId => "inventoryWorld";
-        public int SaveOrder => PixelSaveRegistry.WorldBand + 120;
-
-        public string Export()
-        {
-            WorldState s = new WorldState { placed = owner.GetPlacedDevices().ToArray() };
-            if (owner.IsActive)
-            {
-                Potion running = owner.Get(owner.ActiveIndex);
-                s.hasActive = true;
-                s.activeType = (int)running.type;
-                s.activeSecond = SecondOf(running);
-                s.activeThird = ThirdOf(running);
-                s.activeRemaining = owner.Remaining;
-            }
-            return PixelSaveRegistry.ToJson(s);
-        }
-
-        public void Import(string data)
-        {
-            owner.ClampAllHeld();   // (now that the Operation levels - Storage - are loaded too)
-            WorldState s = PixelSaveRegistry.FromJson<WorldState>(data);
-            owner.ClearPlacedDevices();
-            if (s == null) return;
-            if (s.placed != null) foreach (PlacedState placed in s.placed) owner.RestorePlacedDevice(placed);
-            if (!s.hasActive) return;
-            for (int i = 0; i < owner.Count; i++)
-            {
-                Potion p = owner.Get(i);
-                if ((int)p.type != s.activeType || SecondOf(p) != s.activeSecond || ThirdOf(p) != s.activeThird) continue;
-                owner.RestoreActive(i, s.activeRemaining);
-                break;
-            }
-        }
-    }
-
-    private WorldPart worldPart;
 
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
@@ -157,13 +101,25 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         [Tooltip("How many seconds the effect lasts after drinking.")]
         public float durationSeconds = 30f;
 
-        [Min(0)]
-        [Tooltip("How many of this potion you own. You can type a starting amount here for testing.")]
-        public int owned = 0;
+        /// <summary>How many of this potion you own (progress in the GameState; type a test amount in the Pixel Game State component).</summary>
+        public int owned { get => PixelGameState.Current.inventory.OwnedOf(Key); set => PixelGameState.Current.inventory.SetOwned(Key, value); }
 
-        [Min(0)]
-        [Tooltip("Runtime: extra storage for this potion on top of the normal limit. Grows when you keep a ghost's potion in the backpack while already full, and stays: the potion can be bought back up to the higher limit. Saved.")]
-        public int bonusCap = 0;
+        /// <summary>Extra storage on top of the normal limit (grows when you keep a ghost's potion in the backpack while already full, and stays). Progress in the GameState.</summary>
+        public int bonusCap { get => PixelGameState.Current.inventory.BonusOf(Key); set => PixelGameState.Current.inventory.SetBonus(Key, value); }
+
+        [NonSerialized] private string key;
+        [NonSerialized] private long keyFor = -1;
+        /// <summary>This potion's key in the inventory state: "p:type:second:third" (made again only when the potion's types change).</summary>
+        private string Key
+        {
+            get
+            {
+                int second = craftOnly ? (int)secondType + 1 : 0, third = craftOnly && hasThird ? (int)thirdType + 1 : 0;
+                long k = ((long)type * 100000L + second) * 100000L + third;
+                if (k != keyFor || key == null) { keyFor = k; key = "p:" + (int)type + ":" + second + ":" + third; }
+                return key;
+            }
+        }
 
         [Tooltip("Runtime: a combo potion (made by crafting). It makes its pixel type AND the second type appear, is never sold in the shop, and is created automatically.")]
         public bool craftOnly = false;
@@ -404,9 +360,19 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
         [Tooltip("Biomass Generators: seconds of power one Woodcutting husk adds.")]
         public float generatorChargePerHusk = 0f;
 
-        [Min(0)]
-        [Tooltip("How many of this device you own. You can type a starting amount here for testing.")]
-        public int owned = 0;
+        /// <summary>How many of this device you own (progress in the GameState by display name; type a test amount in the Pixel Game State component).</summary>
+        public int owned { get => PixelGameState.Current.inventory.OwnedOf(Key); set => PixelGameState.Current.inventory.SetOwned(Key, value); }
+
+        [NonSerialized] private string key, keyFor;
+        /// <summary>This device's key in the inventory state: "d:" + its display name (made again only when the name changes).</summary>
+        private string Key
+        {
+            get
+            {
+                if (!ReferenceEquals(keyFor, displayName) || key == null) { keyFor = displayName; key = "d:" + displayName; }
+                return key;
+            }
+        }
     }
 
     [Header("References")]
@@ -1634,8 +1600,8 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
 
     private void Awake()
     {
-        PixelSaveRegistry.Register(this);
-        PixelSaveRegistry.Register(worldPart = new WorldPart(this));
+        PixelGameState.Saving += OnSaving;
+        PixelGameState.Loaded += OnLoaded;
         // Escape cancels placing a device before it closes anything else.
         PixelWindows.Register(this, 100, () => IsPlacing, CancelPlacement);   // escape-only: cancels placing a device
 
@@ -2004,8 +1970,8 @@ public class PixelConsumables : MonoBehaviour, IPixelSaved
 
     private void OnDestroy()
     {
-        PixelSaveRegistry.Unregister(this);
-        PixelSaveRegistry.Unregister(worldPart);
+        PixelGameState.Saving -= OnSaving;
+        PixelGameState.Loaded -= OnLoaded;
         PixelWindows.Unregister(this);
         if (preview != null) Destroy(preview);
         if (IsPlacing && clicker != null) clicker.SetClicksBlocked(false);

@@ -1,6 +1,6 @@
 # PixelGameState / GameState
 
-Started 2026-10-23 (Phase 1: the owner, plus the Bank and the Stats as the pilot; then the Auto Clicker, the Focus potion, Time Stop and Pixel Grabbing, the Bait Bucket and Cubie's bill, the Combo switch, the event log, the UFO Helper, the pets and the achievements). The player's PROGRESS moves out of the MonoBehaviours into one plain object, one system at a time. The old `IPixelSaved` registry keeps working for the systems that have not moved yet.
+Started 2026-10-23 (Phase 1: the owner, plus the Bank and the Stats as the pilot; then the Auto Clicker, the Focus potion, Time Stop and Pixel Grabbing, the Bait Bucket and Cubie's bill, the Combo switch, the event log, the UFO Helper, the pets, the achievements and the potion / device inventory). The player's PROGRESS moves out of the MonoBehaviours into one plain object, one system at a time. The old `IPixelSaved` registry keeps working for the systems that have not moved yet.
 
 ## Why
 - **Saving:** each system saved its own part (`IPixelSaved`) in load-order bands.
@@ -18,7 +18,8 @@ With one state object, saving writes it, loading replaces it and a new game make
 - **`PixelGameState.cs` (the owner, in `PixelSystems.All`, Core):**
   - `PixelGameState.Current`: never null. It is made on first use, so early callers never wait.
   - `Replace(state)`: PixelSaveGame calls it FIRST in a load.
-  - `RaiseLoaded()` / the `Loaded` event: called LAST in a load, after tiers, shop, the IPixelSaved parts, husks and tester machines. Views refresh here.
+  - `RaiseLoaded()` / the `Loaded` event: called once tiers, shop, husks and the IPixelSaved parts are back, but BEFORE the Dev Hub tester machines (a Solar Panel links to a placed device, belts dock on devices' couplings). Views refresh and world objects rebuild here.
+  - `RaiseSaving()` / the `Saving` event: called right before a save is written. World objects that change all the time (placed devices, the running potion) copy themselves into their sub-state here instead of every frame.
   - `NewGame()`: called right before the scene reloads for Restart (`PixelPauseMenu.Restart`) and New Game (`PixelTitleScreen.StartNewGame`). These are the only two scene loads.
   - It does NOT use `PixelStatics.ResetOnRestart`, because `sceneUnloaded` can arrive after the new scene has started.
   - The component shows `Current` in the Inspector while playing ("State"), so you can read values and type them in to test.
@@ -69,5 +70,6 @@ With one state object, saving writes it, loading replaces it and a new game make
 | `PixelRobotWorker` (UFO Helper) | `UfoState` (switched off; the job: device by display name + spot, or banking one pixel type) | `SetJob` / `SetBankJob` write the state, so the runtime job and the state never drift; `Loaded` rebuilds the job's ghost and re-applies the switch. |
 | `PixelPets` | `PetsState` (owned pets in the order found: type, off, outfit, name) | Each live `Pet` keeps a reference to its state entry (`Pet.saved`; `type` / `off` / `outfit` / `customName` are properties on it), so every change is the state's at once - the pattern for a list of world objects. `Loaded` rebuilds the bodies. |
 | `PixelAchievements` | `AchievementsState` (earned tiers + when, by achievement id) | The achievement list stays Inspector config; `earnedTiers` / `EarnedAtOf` / `StampTier` read and write the state by id (no stored reference). The old 'ResetOnNextStart' flag that Restart / New Game set is gone: a new game's fresh state has nothing earned. `Loaded` re-grants anything already reached quietly. |
+| `PixelConsumables` (inventory) | `InventoryState` (held potions / devices by key, the ghost backpack bonus; the WORLD part: placed devices + the running potion) | `Potion.owned` / `bonusCap` and `Device.owned` are properties reading the state by key (potion "p:type:second:third", device "d:<display name>", the key cached on the item). Placed devices and the running potion change every frame, so they copy themselves in on `PixelGameState.Saving` and are rebuilt in `Loaded` - the pattern for world objects that change all the time. The last `IPixelSaved` part. |
 
 The remaining systems, simplest first, are on the to-do list.

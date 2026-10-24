@@ -10,7 +10,7 @@
 //   can be grabbed with the mouse (potionGrabRadius, kinematic follow, throw on release); a semi-transparent pixel-art backpack icon
 //   (bottom right above the bar, backpackSize/Margin/Alpha) shows while it falls; releasing over the icon keeps the potion
 //   (KeepPotion, PixelConsumables.AddKept, no shatter, no buff) and, if that potion is already at its limit, raises that potion's
-//   bonusCap by one (permanent, saved as PotionSave.bonus; ItemCapacity(item) = maxPotionsHeld + bonus drives
+//   bonusCap by one (permanent, progress in the GameState: InventoryState bonus; ItemCapacity(item) = maxPotionsHeld + bonus drives
 //   ItemRoom/ClampHeld(index, n)/the shop's Full text), so e.g. 16 held can be used down to 6 and re-bought to 16.
 // ---------------------------------------------------
 using System.Collections;
