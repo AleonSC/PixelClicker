@@ -990,51 +990,18 @@ public class PixelGodFind : MonoBehaviour
 
     private void BuildStudio(int tierIndex)
     {
-        studioRoot = new GameObject("God Find Studio");
-        studioRoot.transform.position = new Vector3(0f, -4700f, 0f);
-        pivot = new GameObject("Pivot").transform;
-        pivot.SetParent(studioRoot.transform, false);
-        GameObject model = clicker.CreateDisplayPixel(tierIndex, pivot, 1f);
-        if (model == null)
-        {
-            model = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            Destroy(model.GetComponent<Collider>());
-            model.transform.SetParent(pivot, false);
-        }
-        foreach (Collider col in model.GetComponentsInChildren<Collider>()) Destroy(col);
-        model.transform.localPosition = Vector3.zero;
-
-        rt = new RenderTexture(512, 512, 24, RenderTextureFormat.ARGB32) { name = "God Find Picture" };
-        GameObject camGo = new GameObject("Camera");
-        camGo.transform.SetParent(studioRoot.transform, false);
-        studioCam = camGo.AddComponent<Camera>();
-        studioCam.enabled = false;
-        studioCam.clearFlags = CameraClearFlags.SolidColor;
-        studioCam.backgroundColor = new Color(0f, 0f, 0f, 0f);
-        studioCam.orthographic = true;
-        studioCam.orthographicSize = 0.98f;
-        studioCam.nearClipPlane = 0.1f;
-        studioCam.farClipPlane = 30f;
-        studioCam.allowHDR = false;
+        studioRoot = PixelShowStudio.Create("God Find Studio", -4700f, 6f, 30f, new Vector3(2.5f, 3f, -5f), 30f, 6f, out studioCam);
+        studioCam.orthographicSize = 0.98f;   // a cube's diagonal is 1.73, so it never clips while it turns
+        pivot = PixelShowStudio.AddPixelModel(clicker, tierIndex, studioRoot.transform);
+        rt = PixelShowStudio.Picture("God Find Picture");
         studioCam.targetTexture = rt;
-        camGo.transform.localPosition = new Vector3(0f, 0f, -6f);
-
-        GameObject lightGo = new GameObject("Light");
-        lightGo.transform.SetParent(studioRoot.transform, false);
-        lightGo.transform.localPosition = new Vector3(2.5f, 3f, -5f);
-        Light light = lightGo.AddComponent<Light>();
-        light.type = LightType.Point;
-        light.range = 30f;
-        light.intensity = 6f;
-        light.shadows = LightShadows.None;
     }
 
     private void Cleanup()
     {
         if (canvasRoot != null) Destroy(canvasRoot);
-        if (studioRoot != null) Destroy(studioRoot);
-        if (rt != null) { rt.Release(); Destroy(rt); }
-        canvasRoot = null; studioRoot = null; rt = null; bits = null; rings = null; lines = null; cubeImage = null;
+        PixelShowStudio.Release(ref studioRoot, ref rt);
+        canvasRoot = null; bits = null; rings = null; lines = null; cubeImage = null;
         clouds = segs = feathers = fist = null; sun = sphere = glowBehind = null;
     }
 }

@@ -59,15 +59,6 @@ public class PixelDragonFind : MonoBehaviour
     [Tooltip("Text under the heading while the cube goes into the backpack.")]
     [SerializeField] private string stashedText = "It's yours now";
 
-    private struct Spark
-    {
-        public RectTransform rect;
-        public Image image;
-        public Vector2 pos, vel;
-        public float life, maxLife, size, spin;
-        public bool alive;
-    }
-
     private struct Request { public int tier; public Vector2 screenPos; }
 
     private static PixelDragonFind instance;
@@ -83,9 +74,7 @@ public class PixelDragonFind : MonoBehaviour
     private RawImage cubeImage;
     private RectTransform cubeRect;
     private TMP_Text title, subtitle;
-    private Spark[] sparks;
-    private Sprite sparkSprite;
-    private float emitCarry;
+    private readonly PixelUISparks sparkles = new PixelUISparks();   // the gold screen sparkles
 
     // The studio (the cube's 3D picture).
     private GameObject studioRoot;
@@ -204,7 +193,7 @@ public class PixelDragonFind : MonoBehaviour
             else if (t < zoomT + danceT)
             {
                 float d = t - zoomT;
-                if (!burstedArrival) { burstedArrival = true; Burst(centre, 55, 150f, 520f, 1f); PixelAudio.Play("pixel_land"); }
+                if (!burstedArrival) { burstedArrival = true; sparkles.Burst(centre, 55, 150f, 520f, 1f); PixelAudio.Play("pixel_land"); }
                 // A playful wander: loops, a bounce and a little spin.
                 float a = d * 2.1f, b = d * 3.1f + 1.3f;
                 Vector2 wander = new Vector2(Mathf.Sin(a) * danceRange.x * size.x, Mathf.Sin(b) * danceRange.y * size.y + Mathf.Abs(Mathf.Sin(d * 5f)) * 22f);
@@ -212,7 +201,7 @@ public class PixelDragonFind : MonoBehaviour
                 scale = cubeSize * (1f + 0.08f * Mathf.Sin(d * 7f) + 0.05f * Mathf.Sin(d * 3.3f));
                 darkAmount = 1f; packAlpha = Smooth(d / 0.5f); titleAlpha = Smooth(d / 0.4f);
                 euler = new Vector3(20f + Mathf.Sin(d * 2.3f) * 35f, 540f + d * 150f + Mathf.Sin(d * 4f) * 40f, Mathf.Sin(d * 3f) * 25f);
-                Emit(pos, scale, dt);
+                sparkles.Emit(pos, scale, sparklesPerSecond, dt);
             }
             else if (t < total)
             {
@@ -224,11 +213,11 @@ public class PixelDragonFind : MonoBehaviour
                 darkAmount = 1f; packAlpha = 1f; titleAlpha = 1f;
                 euler = new Vector3(20f + 360f * k, 700f + 720f * k, 0f);
                 subtitle.text = d > 0.3f ? stashedText : "";
-                Emit(pos, scale * 0.8f, dt);
+                sparkles.Emit(pos, scale * 0.8f, sparklesPerSecond, dt);
             }
             else
             {
-                if (!stashed) { stashed = true; Burst(pack, 40, 90f, 380f, 0.8f); PixelAudio.Play("dragon_stash"); bump = 1f; }
+                if (!stashed) { stashed = true; sparkles.Burst(pack, 40, 90f, 380f, 0.8f); PixelAudio.Play("dragon_stash"); bump = 1f; }
                 float f = (t - total) / fadeT;
                 darkAmount = 1f - Smooth(f); packAlpha = 1f - Smooth(f * 1.2f); titleAlpha = 1f - Smooth(f * 1.6f);
                 scale = 0f;
@@ -238,13 +227,13 @@ public class PixelDragonFind : MonoBehaviour
 
             bump = Mathf.Max(0f, bump - dt * 3.5f);
             ApplyFrame(pos, scale, euler, darkAmount, packAlpha, titleAlpha, bump);
-            UpdateSparks(dt);
+            sparkles.Tick(dt);
             yield return null;
         }
 
         // Let the last sparkles die out.
         float tail = 0.6f;
-        while (tail > 0f) { tail -= Time.unscaledDeltaTime; UpdateSparks(Time.unscaledDeltaTime); yield return null; }
+        while (tail > 0f) { tail -= Time.unscaledDeltaTime; sparkles.Tick(Time.unscaledDeltaTime); yield return null; }
         Cleanup();
     }
 
@@ -264,87 +253,6 @@ public class PixelDragonFind : MonoBehaviour
             pivot.localRotation = Quaternion.Euler(euler);
             studioCam.Render();
         }
-    }
-
-    // ------------------------------------------------------------------
-    // Sparkles
-    // ------------------------------------------------------------------
-
-    private void Emit(Vector2 at, float cubePixels, float dt)
-    {
-        emitCarry += sparklesPerSecond * dt;
-        while (emitCarry >= 1f)
-        {
-            emitCarry -= 1f;
-            Vector2 dir = Random.insideUnitCircle;
-            Spawn(at + dir * cubePixels * 0.5f, dir.normalized * Random.Range(30f, 150f) + Vector2.up * Random.Range(10f, 60f),
-                  Random.Range(0.5f, 1.2f), Random.Range(14f, 34f));
-        }
-    }
-
-    private void Burst(Vector2 at, int count, float minSpeed, float maxSpeed, float sizeScale)
-    {
-        for (int i = 0; i < count; i++)
-        {
-            Vector2 dir = Random.insideUnitCircle.normalized;
-            Spawn(at, dir * Random.Range(minSpeed, maxSpeed), Random.Range(0.6f, 1.4f), Random.Range(16f, 44f) * sizeScale);
-        }
-    }
-
-    private void Spawn(Vector2 pos, Vector2 vel, float life, float size)
-    {
-        if (sparks == null) return;
-        for (int i = 0; i < sparks.Length; i++)
-        {
-            if (sparks[i].alive) continue;
-            sparks[i].alive = true;
-            sparks[i].pos = pos; sparks[i].vel = vel;
-            sparks[i].life = sparks[i].maxLife = life;
-            sparks[i].size = size;
-            sparks[i].spin = Random.Range(-180f, 180f);
-            sparks[i].image.color = Color.Lerp(sparkleColor, Color.white, Random.value * 0.6f);
-            sparks[i].rect.gameObject.SetActive(true);
-            return;
-        }
-    }
-
-    private void UpdateSparks(float dt)
-    {
-        if (sparks == null) return;
-        for (int i = 0; i < sparks.Length; i++)
-        {
-            if (!sparks[i].alive) continue;
-            sparks[i].life -= dt;
-            if (sparks[i].life <= 0f) { sparks[i].alive = false; sparks[i].rect.gameObject.SetActive(false); continue; }
-            sparks[i].vel *= 1f - Mathf.Min(1f, dt * 1.6f);
-            sparks[i].vel += Vector2.down * 40f * dt;
-            sparks[i].pos += sparks[i].vel * dt;
-            float k = sparks[i].life / sparks[i].maxLife;
-            float s = sparks[i].size * Mathf.Sin(Mathf.Clamp01(k) * Mathf.PI * 0.5f + 0.2f);
-            sparks[i].rect.anchoredPosition = sparks[i].pos;
-            sparks[i].rect.sizeDelta = new Vector2(s, s);
-            sparks[i].rect.localRotation = Quaternion.Euler(0f, 0f, (1f - k) * sparks[i].spin);
-            Color col = sparks[i].image.color; col.a = Mathf.Clamp01(k * 1.6f); sparks[i].image.color = col;
-        }
-    }
-
-    private Sprite BuildSparkSprite()
-    {
-        const int n = 32;
-        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
-        float c = (n - 1) * 0.5f;
-        for (int y = 0; y < n; y++)
-            for (int x = 0; x < n; x++)
-            {
-                float dx = (x - c) / c, dy = (y - c) / c;
-                float r = Mathf.Sqrt(dx * dx + dy * dy);
-                float glow = Mathf.Clamp01(1f - r) * Mathf.Clamp01(1f - r);
-                float cross = Mathf.Clamp01(1f - Mathf.Min(Mathf.Abs(dx), Mathf.Abs(dy)) * 7f) * Mathf.Clamp01(1f - r);   // four-pointed star
-                float a = Mathf.Clamp01(glow * 0.6f + cross);
-                tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
-            }
-        tex.Apply(false, true);
-        return Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
     }
 
     // ------------------------------------------------------------------
@@ -390,19 +298,7 @@ public class PixelDragonFind : MonoBehaviour
         sr.anchorMin = new Vector2(0f, 1f); sr.anchorMax = new Vector2(1f, 1f); sr.pivot = new Vector2(0.5f, 1f);
         sr.sizeDelta = new Vector2(0f, 70f); sr.anchoredPosition = new Vector2(0f, -(bar + 140f));
 
-        if (sparkSprite == null) sparkSprite = BuildSparkSprite();
-        sparks = new Spark[160];
-        for (int i = 0; i < sparks.Length; i++)
-        {
-            Image img = NewImage("Spark", canvasRoot.transform, Color.white);
-            img.sprite = sparkSprite;
-            RectTransform sr2 = img.rectTransform;
-            sr2.anchorMin = sr2.anchorMax = new Vector2(0f, 0f);
-            sr2.pivot = new Vector2(0.5f, 0.5f);
-            img.gameObject.SetActive(false);
-            sparks[i] = new Spark { rect = sr2, image = img };
-        }
-        emitCarry = 0f;
+        sparkles.Build(canvasRoot.transform, 160, sparkleColor);
 
         BuildStudio(tierIndex);
         cubeImage.texture = rt;
@@ -421,51 +317,17 @@ public class PixelDragonFind : MonoBehaviour
 
     private void BuildStudio(int tierIndex)
     {
-        studioRoot = new GameObject("Dragon Find Studio");
-        studioRoot.transform.position = new Vector3(0f, -4300f, 0f);
-        pivot = new GameObject("Pivot").transform;
-        pivot.SetParent(studioRoot.transform, false);
-        GameObject model = clicker.CreateDisplayPixel(tierIndex, pivot, 1f);
-        if (model == null)
-        {
-            // No model (should not happen): a plain cube so the show still works.
-            model = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            Destroy(model.GetComponent<Collider>());
-            model.transform.SetParent(pivot, false);
-        }
-        foreach (Collider col in model.GetComponentsInChildren<Collider>()) Destroy(col);
-        model.transform.localPosition = Vector3.zero;
-
-        rt = new RenderTexture(512, 512, 24, RenderTextureFormat.ARGB32) { name = "Dragon Find Picture" };
-        GameObject camGo = new GameObject("Camera");
-        camGo.transform.SetParent(studioRoot.transform, false);
-        studioCam = camGo.AddComponent<Camera>();
-        studioCam.enabled = false;
-        studioCam.clearFlags = CameraClearFlags.SolidColor;
-        studioCam.backgroundColor = new Color(0f, 0f, 0f, 0f);
-        studioCam.orthographic = true;
+        studioRoot = PixelShowStudio.Create("Dragon Find Studio", -4300f, 6f, 30f, new Vector3(2.5f, 3f, -5f), 30f, 6f, out studioCam);
         studioCam.orthographicSize = 0.98f;   // a cube's diagonal is 1.73, so it never clips while it turns
-        studioCam.nearClipPlane = 0.1f;
-        studioCam.farClipPlane = 30f;
-        studioCam.allowHDR = false;
+        pivot = PixelShowStudio.AddPixelModel(clicker, tierIndex, studioRoot.transform);
+        rt = PixelShowStudio.Picture("Dragon Find Picture");
         studioCam.targetTexture = rt;
-        camGo.transform.localPosition = new Vector3(0f, 0f, -6f);
-
-        GameObject lightGo = new GameObject("Light");
-        lightGo.transform.SetParent(studioRoot.transform, false);
-        lightGo.transform.localPosition = new Vector3(2.5f, 3f, -5f);
-        Light light = lightGo.AddComponent<Light>();
-        light.type = LightType.Point;
-        light.range = 30f;
-        light.intensity = 6f;
-        light.shadows = LightShadows.None;
     }
 
     private void Cleanup()
     {
         if (canvasRoot != null) Destroy(canvasRoot);
-        if (studioRoot != null) Destroy(studioRoot);
-        if (rt != null) { rt.Release(); Destroy(rt); }
-        canvasRoot = null; studioRoot = null; rt = null; sparks = null; cubeImage = null;
+        PixelShowStudio.Release(ref studioRoot, ref rt);
+        canvasRoot = null; sparkles.Drop(); cubeImage = null;
     }
 }
