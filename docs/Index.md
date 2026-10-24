@@ -223,6 +223,10 @@ One line per script / system: what it is and where its details are. Search it (`
 | `PixelUltraFx.cs` | The feedback for gaining an Ultra pixel: a rising gold "+1 Ultra Pixel", a sparkle burst and the ultra_gain sound (called by PixelMinigame.UltraRoll). | `PixelUltraFx.cs` (class summary) |
 | Inventory currency groups (`PixelUI.Refresh`, `CurrencyGroup`) | The Currency tab lists the pixel rows in GROUPS under foldable headers (click a header, '- PURE' / '+ PURE'; | `docs/systems/PixelUI.md` |
 | `PixelShop.cs` / `PixelShopUI.cs` / `PixelShopDefaults.cs` | One partial class PixelShop in three files: | `docs/systems/PixelShop.md` |
+| `PixelShopTypes.cs` | Part of PixelShop (partial): the shop's data types (pack, cost, level, requirement, tab and effect types). | in the header comment of `PixelShop.cs` |
+| `PixelShopPackUpgrades.cs` | Part of PixelShop (partial): EnsureDefaultPacks, which adds missing built-in packs, then its ordered steps that bring saved packs up to date. | in the header comment of `PixelShop.cs` |
+| `PixelShopMigrate.cs` | Part of PixelShop (partial): MigrateOldPackData (old pack fields, renames, retired packs) in ordered steps, and MovePack. | in the header comment of `PixelShop.cs` |
+| `PixelShopBuying.cs` | Part of PixelShop (partial): pack state, requirements, costs, buying, pack effects and the dev unlocks. | in the header comment of `PixelShop.cs` |
 | `PixelOperation.cs` / `PixelShopOperation.cs` | Upgrades > Operation (the third sub-tab of the shop's Upgrades tab, operationSubTabText; | in the header comment of `PixelOperation.cs` |
 | `PixelTalk.cs` | Talking blips for dialogue boxes (PixelNotice tip / tutorial boxes, Cubie's speech panel): a code-made squeak per second typed letter, a speaker mute button next to each back button (saved per profile). | in the header comment of `PixelTalk.cs` |
 | `PixelDevTextEdit.cs` | Dev Hub custom text: right click any hub label to type your own text (saved per profile); the hub also has a search bar and favorite / minimizable widget cards. | `docs/systems/PixelDevTools.md` |
