@@ -81,7 +81,7 @@ public partial class PixelFloor
     private static string BuildStamp()
     {
 #if UNITY_EDITOR
-        try { return System.IO.File.GetLastWriteTimeUtc(typeof(PixelFloor).Assembly.Location).Ticks.ToString(); } catch (System.Exception) { return "editor"; }
+        try { return System.IO.File.GetLastWriteTimeUtc(System.IO.Path.Combine(Application.dataPath, "../Library/ScriptAssemblies/Assembly-CSharp.dll")).Ticks.ToString(); } catch (System.Exception) { return "editor"; }
 #else
         return Application.version + "|" + Application.buildGUID;
 #endif

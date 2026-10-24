@@ -1,7 +1,8 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelFind.cs
-//   PixelFind.First<T>() / All<T>() / Count<T>(): the only place with the FindFirstObjectByType / FindObjectOfType version check. Use it instead
-//   of calling Unity's Find methods directly.
+//   PixelFind.First<T>() / All<T>() / Count<T>(): the only place with the Find version checks (FindObjectOfType before 2023.1, then
+//   FindAnyObjectByType; FindObjectsByType with a sort mode until Unity 6.6, which deprecated the sort mode). Use it instead of calling
+//   Unity's Find methods directly. 'First' is any one of them: every caller looks for a single component, so the order never mattered.
 //   PixelFind.Cached<T>(): the same as First, but it remembers the answer (searches again only when the remembered object was destroyed, e.g.
 //   after Settings > Restart reloads the scene, or when none was found yet). Use it for the game's single components (PixelShop, PixelStats,
 //   PixelSkills...) anywhere that runs often; First does a full scene search on every call.
@@ -20,7 +21,7 @@ public static class PixelFind
     public static T First<T>() where T : UnityEngine.Object
     {
 #if UNITY_2023_1_OR_NEWER
-        return UnityEngine.Object.FindFirstObjectByType<T>();
+        return UnityEngine.Object.FindAnyObjectByType<T>();
 #else
         return UnityEngine.Object.FindObjectOfType<T>();
 #endif
@@ -47,7 +48,7 @@ public static class PixelFind
     public static UnityEngine.Object First(Type type)
     {
 #if UNITY_2023_1_OR_NEWER
-        return UnityEngine.Object.FindFirstObjectByType(type);
+        return UnityEngine.Object.FindAnyObjectByType(type);
 #else
         return UnityEngine.Object.FindObjectOfType(type);
 #endif
@@ -56,7 +57,9 @@ public static class PixelFind
     /// <summary>Every object of type T in the scene (a new array each call: for dev tools / one-off dumps, not for Update).</summary>
     public static T[] All<T>() where T : UnityEngine.Object
     {
-#if UNITY_2023_1_OR_NEWER
+#if UNITY_6000_6_OR_NEWER
+        return UnityEngine.Object.FindObjectsByType<T>();
+#elif UNITY_2023_1_OR_NEWER
         return UnityEngine.Object.FindObjectsByType<T>(FindObjectsSortMode.None);
 #else
         return UnityEngine.Object.FindObjectsOfType<T>();
@@ -66,7 +69,9 @@ public static class PixelFind
     /// <summary>How many objects of type T are in the scene.</summary>
     public static int Count<T>() where T : UnityEngine.Object
     {
-#if UNITY_2023_1_OR_NEWER
+#if UNITY_6000_6_OR_NEWER
+        return UnityEngine.Object.FindObjectsByType<T>().Length;
+#elif UNITY_2023_1_OR_NEWER
         return UnityEngine.Object.FindObjectsByType<T>(FindObjectsSortMode.None).Length;
 #else
         return UnityEngine.Object.FindObjectsOfType<T>().Length;

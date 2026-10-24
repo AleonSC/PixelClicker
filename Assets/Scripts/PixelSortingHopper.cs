@@ -416,7 +416,7 @@ public class PixelSortingHopper : MonoBehaviour, IPixelDeviceInfo, IPixelTierPic
         bool fading = (transform.localScale - baseScale).sqrMagnitude > 0.0001f;   // the floor's props fade (main menu, after a load): wait
         if (fading || PixelCalm.InMenu || Time.timeScale <= 0f) return;
 
-        if (pipeExit.x != pipeExit.x) AimPipe(DefaultPipeExit(Unit(clicker)));   // (once: lays the feed pipe out as built)
+        if (float.IsNaN(pipeExit.x)) AimPipe(DefaultPipeExit(Unit(clicker)));   // (once: lays the feed pipe out as built)
         Feed();
 
         tick -= Time.deltaTime;

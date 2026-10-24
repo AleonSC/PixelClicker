@@ -14,7 +14,7 @@ using System.Diagnostics;
 /// </summary>
 public static class PixelDebug
 {
-    [Conditional("UNITY_EDITOR"), Conditional("DEVELOPMENT_BUILD")]
+    [Conditional("UNITY_EDITOR"), Conditional("DEBUG")]
     public static void Info(string message, UnityEngine.Object context = null)
     {
         UnityEngine.Debug.Log(message, context);
