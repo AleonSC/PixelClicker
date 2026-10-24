@@ -103,6 +103,10 @@ One line per script / system: what it is and where its details are. Search it (`
 | `PixelCrafting.cs` | Crafting (shop pack with unlocksCrafting, Upgrades tab): | `docs/systems/PixelCrafting.md` |
 | `PixelCraftingCube.cs` | Crafting Cube: a placed crafting machine (from the Crafting window's button / Tester) with a coupling on each side and a floating book; crafts the picked recipe from husks fed in | in the header comment of `PixelCraftingCube.cs` |
 | `PixelCraftingCubeWindow.cs` | The Crafting Cube's recipe picker window (right-click tap on a cube) | in the header comment of `PixelCraftingCubeWindow.cs` |
+| `PixelCraftingBook.cs` | Part of PixelCrafting (partial): the Recipe Book side panel (known recipes, search, rows) and closing the window. | in the header comment of `PixelCrafting.cs` |
+| `PixelCraftingItems.cs` | Part of PixelCrafting (partial): item icons, the two crafting boxes, dragging from the list and the Materials list (headers, search, cells). | in the header comment of `PixelCrafting.cs` |
+| `PixelCraftingRecipes.cs` | Part of PixelCrafting (partial): finding recipes (plain, attuned, combo), pricing them, the recipe / Craft refresh and Craft. | in the header comment of `PixelCrafting.cs` |
+| `PixelCraftingLevel.cs` | Part of PixelCrafting (partial): crafting level (XP, bar, popup), spending ingredients, the Crafting Cube entry points and the database steps. | in the header comment of `PixelCrafting.cs` |
 | `PixelPets.cs` | Pets (added by PixelClicker.Awake, singleton PixelPets.Instance): | `docs/systems/PixelPets.md` |
 | `PixelPetsCustomize.cs` | Part of partial class PixelPets: names and outfits. | `docs/systems/PixelPetsCustomize.md` |
 | `PixelPetsMenu.cs` | Part of partial class PixelPets: right-click a pet for a small menu (its name + 'Pet away' = switch it off like its Toggles > Pets switch). | in the header comment of `PixelPetsMenu.cs` |
@@ -111,6 +115,8 @@ One line per script / system: what it is and where its details are. Search it (`
 | `PixelToggles.cs` | Toggles window: a button docked to the middle of the right edge (PixelHud.Dock with anchor (1, 0.5) = side docking, slides sideways) stays hidden until the Auto Clicker is bought (hideUntilAutoClicker | `docs/systems/PixelToggles.md` |
 | `PixelCardBoard.cs` | One draggable / foldable card board (drag the header to reorder, fold to the header, optional saved order / favorites / search) shared by the Dev Hub widgets and Pocket's Pinned tab. | in the header comment of `PixelCardBoard.cs` |
 | `PixelMyWindow.cs` | Pocket, formerly My Window (the player's own window; component added by PixelClicker.Awake): | in the header comment of `PixelMyWindow.cs` |
+| `PixelMyWindowCards.cs` | Part of PixelMyWindow (partial): the Pocket's Pinned board of cards (build, blank + card, hold-to-remove) and the pin picker. | in the header comment of `PixelMyWindow.cs` |
+| `PixelMyWindowRows.cs` | Part of PixelMyWindow (partial): the pinned rows per type (currency + rate, skill, goal, achievement, note, favorite) and their UI helpers. | in the header comment of `PixelMyWindow.cs` |
 | `PixelCustomKeys.cs` | Custom keybinds: bind any item (potion, device...) or tool to your own key; the window is the Keybinds tab of My Window; saved per save file. | in the header comment of `PixelCustomKeys.cs` |
 | `PixelBlockTooltip.cs` | Block hover tooltip (added by PixelClicker.Awake; | in the header comment of `PixelBlockTooltip.cs` |
 | `PixelPixelGuide.cs` / `PixelGuideTexts.cs` | Pixel Guide (added by PixelClicker.Awake): | in the header comment of `PixelPixelGuide.cs` |
@@ -339,6 +345,8 @@ One line per script / system: what it is and where its details are. Search it (`
 | `PixelAchievements.cs` | Modular achievements: Inspector list of Achievement (id, title, description, Kind, pixelType, target). | in the header comment of `PixelAchievements.cs` |
 | `PixelCubeIcon.cs` | UI MaskableGraphic drawing a tiny spinning shaded 3D cube (no camera/render texture) - achievement icons. | in the header comment of `PixelCubeIcon.cs` |
 | `PixelLog.cs` | Bottom-left "Log" toggle with two tabs (the husks / Clicks tab was removed; | `docs/systems/PixelLog.md` |
+| `PixelLogAchievements.cs` | Part of PixelLog (partial): the Achievements tab (badge rows + shared badge bar / title, row groups, section headers, refresh). | in the header comment of `PixelLog.cs` |
+| `PixelLogGoals.cs` | Part of PixelLog (partial): the Goals tab (list, goal rows, collecting the goals, refresh). | in the header comment of `PixelLog.cs` |
 | `PixelGoals.cs` | Data-driven goals for the Log's Goals tab: ONE Inspector table of rows (id, title, description, counter to watch, target, when it appears, reward of skill XP / a little currency paid by the goal); rewards can also unlock a tier (TierUnlockMode.ByGoal) or start a Cubie visit - the built-ins ARE the early progression: Click 50 -> Cubie 1, Crush 10 husks -> Gray, Recycle 20 -> Black, crush streak 5 -> XP, Earn 120 Black -> Cubie 2 (RGB + shop). A new goal = a new row. | in the header comment of `PixelGoals.cs` |
 | `GameState.cs` | The player's progress as plain [Serializable] data, one sub-state per moved system (BankState, StatsState); GameState.MovedSystems lists them (checked by the compile check). | `docs/systems/PixelGameState.md` |
 | `PixelGameState.cs` | Owner of the GameState: Current (never null), Replace / RaiseLoaded on load, NewGame on Restart / New Game, Inspector view of the state. | `docs/systems/PixelGameState.md` |
@@ -373,6 +381,10 @@ One line per script / system: what it is and where its details are. Search it (`
 | `PixelDevSetups.cs` / `PixelDevEvents.cs` / `PixelDevSounds.cs` / `PixelDevConsole.cs` | Dev Hub tabs: Setups (save / load named test setups = save files in TestSetups, built-ins from Resources/TestSetups), Events (show any tip / tutorial / level-up or achievement popup / your own text), Sounds (play every sound, live volume, copy changes for Claude), Console (live log with filters, stack traces, copy for Claude, red error badge). | in the header comment of each script |
 | `PixelDevUI.cs` / `PixelLogBuffer.cs` | PixelDevUI = the shared colours / PlaceTL / button / label / drop-down / tick helpers for Dev Hub tabs (new dev tabs use it); PixelLogBuffer = the one in-memory log record (any thread, from before the first scene) the Console reads. | in the header comment of each script |
 | `PixelDevTools.cs` | Dev tools (Editor/dev builds only unless allowInFullBuild is ticked on the component; | `docs/systems/PixelDevTools.md` |
+| `PixelDevToolsPanel.cs` | Part of PixelDevTools (partial): the Main tab widget board (BuildPanel and its card steps, Resource Tools card, Widget) and its world tools. | in the header comment of `PixelDevTools.cs` |
+| `PixelDevToolsSpawn.cs` | Part of PixelDevTools (partial): the spawn selector and the spawn / cheat widget cards with their drop-downs. | in the header comment of `PixelDevTools.cs` |
+| `PixelDevToolsGod.cs` | Part of PixelDevTools (partial): god pixel mode and its on-screen display. | in the header comment of `PixelDevTools.cs` |
+| `PixelDevToolsDocs.cs` | Part of PixelDevTools (partial): the To-Do and Changelog views of the Dev Hub Docs tab. | in the header comment of `PixelDevTools.cs` |
 | `tools/ui-map/` (`ui_map.txt`, `build.py`) | Interface map: every UI piece with a stable ID (H HUD, W windows, N popups, M menus, O world UI, D Dev Hub; `.n` = part). Builds `docs/UIMap.md` and the interactive map page. | `docs/UIMap.md` |
 | Device map | Interactive HTML map of every device and how husks / power connect them (open in a browser; keep it in step with ConnectionMap.md). | `docs/DeviceMap.html` |
 | `tools/dialogue-map/` (`build.py`, `ids.txt`) | Dialogue map: every section of Dialogue.txt ('Got it' tips T, tutorials / guides G, perk popups P, characters C) with a stable ID; builds `docs/DialogueMap.md` and the interactive dialogue page. | `docs/DialogueMap.md` |
