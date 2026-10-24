@@ -503,6 +503,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
         f.Apply("Cubie", "next button", ref nextText);
         f.Apply("Cubie", "last button", ref lastText);
         f.Apply("Cubie", "recycler gift", ref recyclerGiftText);
+        f.Apply("Cubie", "invoice", ref invoiceText);
         visitOnePages = f.ApplyList("Cubie", "visit 1 page", visitOnePages);
         visitTwoPages = f.ApplyList("Cubie", "visit 2 page", visitTwoPages);
         visitThreePages = f.ApplyList("Cubie", "visit 3 page", visitThreePages);
