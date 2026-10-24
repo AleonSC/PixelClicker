@@ -13,6 +13,10 @@
 //   - TakeIn(husk) = the device's ONE hook (IPixelSocketDevice.AcceptHusk); PortWorld / FacingWorld = where belts meet it.
 //   - Fitted couplings (socket.fitted: the Elevator and Belt Sorter, which are belt fittings themselves) are built with the piece (FitBuiltIn),
 //     are not saved and cannot be removed on their own.
+//   - HOSE ADAPTER (2026-10-24): while a Container Hose ends on it (SetHoseFitting, called by the hose), the coupling grows a form-fitting
+//     adapter: a rubber sleeve over the collar, a steel bell flaring from the collar out to the hose's own width (a PixelTube with a growing
+//     radius) and a clamp band with its screw where the hose goes in; the belt lip and the dark opening hide. HoseMouthWorld / HoseMouth(...) =
+//     where the hose itself starts (inside the bell, under the clamp). It goes again when the last hose on it is removed.
 //   - Keeps the same world size when its device rescales (the Recycler's Bin Size): KeepSize every frame.
 //   - PLACING by hand (dev only: Dev Hub > Tester > 'Coupling'): the ghost (CreateGhost) shows a teal ring on every FREE socket in view and magnetizes to the nearest one
 //     (TrySnapGhost: by screen distance, its arrow shows that socket's direction); a click fits it there (PlaceAt). Hold the right button on a placed
@@ -150,7 +154,74 @@ public class PixelCoupling : MonoBehaviour
         ShowArrow();
     }
 
-    private void OnDestroy() { all.Remove(this); }
+    private void OnDestroy() { all.Remove(this); if (bellMesh != null) Destroy(bellMesh); }
+
+    // ---- the hose adapter (a Container Hose ends here) ----
+
+    /// <summary>How far up from the port, and out along its facing, a hose starts (inside the adapter's bell, under its clamp), in husk widths.</summary>
+    public const float HoseMouthUp = 0.5f, HoseMouthOut = 0.72f;
+    private const float BellStart = 0.36f, BellEnd = 0.82f, SleeveRadius = 0.39f;
+
+    /// <summary>Where a hose ending on a coupling at this port starts (also for a free socket that will get one).</summary>
+    public static Vector3 HoseMouth(Vector3 port, Vector3 facing, float u) => port + Vector3.up * HoseMouthUp * u + facing * HoseMouthOut * u;
+    public Vector3 HoseMouthWorld => HoseMouth(PortWorld, FacingWorld, u);
+    public bool HoseFitted => hoseAdapter != null;
+
+    private GameObject hoseAdapter;
+    private Mesh bellMesh;
+    private Color flangeColor = new Color(0.62f, 0.66f, 0.7f, 1f);
+    private float fittedRadius;
+
+    /// <summary>Grows (on) or removes (off) the form-fitting hose adapter for a hose of 'hoseRadius' (world units).</summary>
+    public void SetHoseFitting(bool on, float hoseRadius = 0f)
+    {
+        if (ghost) return;
+        if (!on)
+        {
+            if (hoseAdapter == null) return;
+            Destroy(hoseAdapter);
+            hoseAdapter = null;
+            if (bellMesh != null) { Destroy(bellMesh); bellMesh = null; }
+            ShowBeltParts(true);
+            parts = GetComponentsInChildren<Renderer>(true);
+            return;
+        }
+        if (hoseAdapter != null && Mathf.Abs(fittedRadius - hoseRadius) < 0.001f) return;
+        if (hoseAdapter != null) SetHoseFitting(false);
+        fittedRadius = hoseRadius;
+        float r = Mathf.Max(0.05f * u, hoseRadius), y = HoseMouthUp * u;
+        PixelFactoryKit kit = new PixelFactoryKit(Clicker, false, true);
+        Color rubber = new Color(0.14f, 0.15f, 0.17f, 1f), steel = new Color(0.78f, 0.8f, 0.84f, 1f);
+        Vector3 axis = new Vector3(90f, 0f, 0f);
+        hoseAdapter = new GameObject("Coupling Hose Adapter");
+        Transform t = hoseAdapter.transform;
+        t.SetParent(transform, false);
+        // A rubber sleeve pulled over the collar, with a thin steel ring at its outer end.
+        kit.Cyl("Coupling Hose Sleeve", t, new Vector3(0f, y, 0.21f * u), SleeveRadius * u, 0.32f * u, rubber, axis, 0f, 0.35f);
+        kit.Cyl("Coupling Hose Ring", t, new Vector3(0f, y, BellStart * u), (SleeveRadius + 0.03f) * u, 0.06f * u, steel, axis, 0.9f, 0.7f);
+        // The bell: a steel reducer flaring from the sleeve out to the hose's width (a tube along +z whose radius eases from one to the other).
+        Vector3[] line = new Vector3[10];
+        for (int i = 0; i < line.Length; i++) line[i] = new Vector3(0f, y, Mathf.Lerp(BellStart, BellEnd, i / (float)(line.Length - 1)) * u);
+        float from = SleeveRadius * u, to = r + 0.04f * u;
+        bellMesh = PixelTube.Build(line, 1f, 20, null, null, i => { float k = i / (float)(line.Length - 1); return Mathf.Lerp(from, to, k * k * (3f - 2f * k)); });
+        GameObject bell = new GameObject("Coupling Hose Bell", typeof(MeshFilter), typeof(MeshRenderer));
+        bell.transform.SetParent(t, false);
+        bell.GetComponent<MeshFilter>().sharedMesh = bellMesh;
+        bell.GetComponent<MeshRenderer>().sharedMaterial = kit.Mat(Color.Lerp(steel, flangeColor, 0.5f), 0.8f, 0.6f);
+        // The clamp band over the joint, with its screw housing on top.
+        kit.Cyl("Coupling Hose Clamp", t, new Vector3(0f, y, (BellEnd - 0.04f) * u), r + 0.08f * u, 0.13f * u, steel, axis, 0.95f, 0.75f);
+        kit.Box("Coupling Hose Clamp Screw", t, new Vector3(0f, y + r + 0.11f * u, (BellEnd - 0.04f) * u), new Vector3(0.13f * u, 0.1f * u, 0.2f * u), steel, default, false, 0.95f, 0.75f);
+        kit.Cyl("Coupling Hose Clamp Bolt", t, new Vector3(0f, y + r + 0.11f * u, (BellEnd - 0.04f) * u), 0.035f * u, 0.32f * u, new Color(0.5f, 0.52f, 0.55f, 1f), axis, 0.9f, 0.6f);
+        ShowBeltParts(false);
+        parts = GetComponentsInChildren<Renderer>(true);
+    }
+
+    /// <summary>The belt-height lip and the dark opening (hidden under a hose adapter).</summary>
+    private void ShowBeltParts(bool show)
+    {
+        foreach (Transform c in transform)
+            if (c.name == "Coupling Lip" || c.name == "Coupling Opening") c.gameObject.SetActive(show);
+    }
 
     // ---- the model ----
 
@@ -162,6 +233,7 @@ public class PixelCoupling : MonoBehaviour
         Transform t = transform;
         Color steel = new Color(0.62f, 0.66f, 0.7f, 1f), dark = new Color(0.12f, 0.13f, 0.15f, 1f);
         Color flange = Color.Lerp(steel, tint, Mathf.Clamp01(tintShare));
+        flangeColor = flange;
         Vector3 axis = new Vector3(90f, 0f, 0f);   // cylinders lie along the socket's facing (+z)
         kit.Cyl("Coupling Flange", t, new Vector3(0f, 0.5f * u, 0.04f * u), 0.46f * u, 0.14f * u, flange, axis, 0.6f, 0.55f);
         kit.Cyl("Coupling Collar", t, new Vector3(0f, 0.5f * u, 0.2f * u), 0.34f * u, 0.3f * u, Color.Lerp(dark, flange, 0.45f), axis, 0.7f, 0.6f);
