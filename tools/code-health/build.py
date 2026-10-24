@@ -41,10 +41,20 @@ CHECKS = {
     'statics':     ('Project rules', 'Static state without a restart reset', 'Static fields outlive Restart (scene reload); clear them with a SubsystemRegistration ResetStatics / PixelStatics.ResetOnRestart.', 10, 10, 'statics', None),
     'todo':        ('Project rules', 'TODO / FIXME / HACK left in code', 'Open notes in code get forgotten; move them to Todo.txt or fix them.', 2, 10, 'raw', r'\b(?:TODO|FIXME|HACK|XXX)\b'),
     'no-header':   ('Docs', 'No header notes', 'Every script explains itself at the top: a "System notes" header, a /// summary on the class, or a docs/systems/<Name>.md page (CLAUDE.md).', 15, 15, 'docs', None),
+    'duplicate':   ('Size and structure', 'Copied code', 'The same 8+ lines of code also sit in another place: a change has to be made in every copy, and they drift apart. Move it into one shared helper and call that.', 3, 12, 'dup', None),
+    'restart-reset': ('Project rules', 'Restart reset not reviewed', 'PixelStatics.ResetOnRestart clears static state on Restart. Progress belongs in the GameState (a new game resets it by itself); a reset of unsaved run state says so on its line with \'// restart-reset-not-progress: <what>\'.', 4, 4, 'custom', None),
+    'one-place':   ('Project rules', 'Bypasses its one helper', 'A version-split API used outside the one script that hides it (physics materials: PixelPhysicsMaterials, scene searches: PixelFind, object ids: PixelObjectId). The split then lives in two places, and a Unity upgrade breaks the copy.', 4, 12, 'custom', None),
     'no-index':    ('Docs', 'Not in docs/Index.md', 'Every script / system gets one line in docs/Index.md so it can be found.', 8, 8, 'docs', None),
 }
 CATEGORIES = ['Performance', 'Size and structure', 'Project rules', 'Docs']
 CAT_CAP = {'Performance': 45, 'Size and structure': 30, 'Project rules': 25, 'Docs': 20}
+# 'one-place': the pattern and the one script allowed to use it.
+ONE_PLACE = [
+    (re.compile(r'new\s+Physic(?:s)?Material\s*\('), 'PixelPhysicsMaterials.cs', 'physics material made by hand'),
+    (re.compile(r'\b(?:FindObjectOfType|FindFirstObjectByType|FindAnyObjectByType|FindObjectsOfType|FindObjectsByType)\s*[<(]'), 'PixelFind.cs', 'Unity scene search called directly'),
+    (re.compile(r'\b(?:GetInstanceID|GetEntityId)\s*\('), 'PixelObjectId.cs', 'object id read directly'),
+]
+DUP_WINDOW = 8   # lines of real code (not braces / blank) that must match for a 'duplicate' finding
 EXEMPT = {'prefs': {'PixelPrefs.cs'}, 'debuglog': {'PixelDebug.cs', 'PixelCrashLog.cs', 'PixelDevConsole.cs'}}
 
 SIG = re.compile(r'^(\s{4}|\t)(?:(?:public|private|protected|internal|static|override|virtual|abstract|sealed|async|new|unsafe|extern)\s+)*'
@@ -110,6 +120,16 @@ def analyse(f, src, code, node_desc, in_index):
                     continue   # (one-time setup: not a per-frame cost)
                 if cid == 'hot-find' and re.search(r'==\s*null\)?\s*\w+\s*=\s*PixelFind\.First', l): add('hot-find-lazy', i + 1, lines[i])   # (a lazy fallback)
                 else: add(cid, i + 1, lines[i])
+    # Restart resets: each needs the not-progress marker (progress lives in the GameState).
+    if f != 'PixelStatics.cs':
+        for i, l in enumerate(code_lines):
+            if 'PixelStatics.ResetOnRestart(' in l and 'restart-reset-not-progress:' not in lines[i]:
+                add('restart-reset', i + 1, lines[i])
+    # Version-split APIs outside their one helper.
+    for rx, home, what in ONE_PLACE:
+        if f == home: continue
+        for i, l in enumerate(code_lines):
+            if rx.search(l): add('one-place', i + 1, what + ' (use ' + home[:-3] + '): ' + lines[i].strip())
     n = len(lines)
     if n > 1500: add('big-file', 1, f'{n:,} lines')
     for name, a, b in meths:
@@ -130,6 +150,46 @@ def analyse(f, src, code, node_desc, in_index):
     if not has_notes: add('no-header', 1, 'no System notes header, /// summary or docs/systems page')
     if not in_index: add('no-index', 1, 'no line in docs/Index.md')
     return findings, meths, n
+
+def find_duplicates(files, code, src_by_file):
+    """Blocks of DUP_WINDOW real code lines (whitespace ignored, braces / blank / one-word lines skipped) that appear in two or more places.
+    Returns {file: [finding, ...]}: one finding per copied run (the first line of the run), naming where the other copy is."""
+    trivial = re.compile(r'^(?:[{}();,\s]*|else|break;|return;|continue;|default:|try|finally|base\.\w+\(\);)$')
+    # Declarations are not 'code that does something': fields, one-line properties / overrides (=>), usings, attributes, signatures.
+    decl = re.compile(r'^(?:using\s|\[|(?:(?:public|private|protected|internal|static|readonly|override|virtual|const|abstract|sealed|new)\s+)+[\w<>\[\],.?]+\s+\w+\s*(?:[;=]|=>|\(|\{\s*get))')
+    comment = re.compile(r'//(?=(?:[^"]*"[^"]*")*[^"]*$).*')   # (a // comment that is not inside a string)
+    seq = {}
+    for f in files:
+        rows = []
+        raw = src_by_file[f].split('\n')
+        stripped = code[f].split('\n')
+        for i, l in enumerate(raw):
+            if i < len(stripped) and not stripped[i].strip(): continue   # (inside a block comment)
+            t = re.sub(r'\s+', ' ', comment.sub('', l)).strip()   # (string literals KEPT: two lists that differ only in their text are not copies)
+            if len(t) < 12 or trivial.match(t) or decl.match(t): continue
+            rows.append((i + 1, t))
+        seq[f] = rows
+    where = collections.defaultdict(list)
+    for f, rows in seq.items():
+        for k in range(len(rows) - DUP_WINDOW + 1):
+            key = hash('\n'.join(t for _, t in rows[k:k + DUP_WINDOW]))
+            where[key].append((f, k))
+    hit = collections.defaultdict(dict)   # file -> {window index: (other file, other line)}
+    for key, places in where.items():
+        if len(places) < 2: continue
+        for f, k in places:
+            other = next(((g, j) for g, j in places if (g, j) != (f, k) and not (g == f and abs(j - k) < DUP_WINDOW)), None)
+            if other: hit[f][k] = other
+    out = {}
+    for f, ks in hit.items():
+        rows = seq[f]
+        last = -10
+        for k in sorted(ks):
+            if k - last > 1:   # (the start of a new copied run)
+                g, j = ks[k]
+                out.setdefault(f, []).append({'check': 'duplicate', 'line': rows[k][0], 'text': f'{DUP_WINDOW}+ lines also in {g}:{seq[g][j][0]}'})
+            last = k
+    return out
 
 def score(findings, lines, fan_out):
     by = collections.Counter(x['check'] for x in findings)
@@ -167,12 +227,14 @@ def main():
     fan_out = {}
     for f in files:
         fan_out[f] = len({types[m.group(1)] for m in word.finditer(code[f]) if m.group(1) in types and types[m.group(1)] != f})
+    dups = find_duplicates(files, code, src)
     scripts = []
     for f in files:
         base = f[:-3]
         in_index = base in idx or any(base in k for k in idx) or re.search(r'\b' + re.escape(base) + r'\b', open(os.path.join(ROOT, 'docs', 'Index.md'), encoding='utf-8').read()) is not None
         findings, meths, n = analyse(f, src[f], code[f], '', in_index)
         if fan_out[f] >= 30: findings.append({'check': 'fan-out', 'line': 1, 'text': f'uses {fan_out[f]} other scripts'})
+        findings.extend(dups.get(f, []))
         total, cats = score(findings, n, fan_out[f])
         short = base[5:] if base.startswith('Pixel') else base
         group = next((g for g, rx in codemap.GROUPS if re.search(rx, short)), 'UI')
