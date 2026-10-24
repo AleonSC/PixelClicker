@@ -47,12 +47,6 @@ public class PixelEntrepreneurMinigame : PixelVisitorMinigame
     protected override Color TitleColor => new Color(0.5f, 0.95f, 0.6f);
     protected override string TradeText => "Trade";
 
-    /// <summary>Roughly how many of this pixel one unit is worth: the rarer (earned slower), the more valuable.</summary>
-    private static double UnitValue(PixelClicker.PixelTier t)
-    {
-        double earnRate = Mathf.Max(0.0001f, t.spawnWeight) * System.Math.Max(0.0001, t.amountPerClick) / System.Math.Max(1, t.clicksToCollect);
-        return 1d / earnRate;
-    }
 
     protected override List<Trade> RollTrades()
     {
@@ -82,7 +76,7 @@ public class PixelEntrepreneurMinigame : PixelVisitorMinigame
 
             double pay = System.Math.Max(1d, System.Math.Floor(tiers[payTier].count * Random.Range(minPayFraction, maxPayFraction)));
             double luck = Random.Range(minLuck, maxLuck);
-            double get = System.Math.Max(1d, System.Math.Floor(pay * UnitValue(tiers[payTier]) / UnitValue(tiers[getTier]) * luck));
+            double get = System.Math.Max(1d, System.Math.Floor(pay * PixelMarket.RarityValue(tiers[payTier]) / PixelMarket.RarityValue(tiers[getTier]) * luck));
             result.Add(new Trade { payTier = payTier, getTier = getTier, pay = pay, get = get });
         }
         return result;

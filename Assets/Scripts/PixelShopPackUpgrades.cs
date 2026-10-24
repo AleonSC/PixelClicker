@@ -58,6 +58,17 @@ public partial class PixelShop
             shopBalanceVersion = 1;
             changed = true;
         }
+        if (shopBalanceVersion < 2)
+        {
+            // 2026-10-24: the gathering skill packs go on the price ladder (Tier 0): saved packs take the coded skillLadder flag.
+            foreach (DefaultPack builtIn in BuiltInPacks)
+            {
+                int index = Array.FindIndex(packs, p => p != null && builtIn.isThis(p));
+                if (index >= 0) packs[index].skillLadder = builtIn.create(-1).skillLadder;
+            }
+            shopBalanceVersion = 2;
+            changed = true;
+        }
 
         if (tileLayoutVersion < 1)
         {
