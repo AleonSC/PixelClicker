@@ -651,22 +651,8 @@ public class PixelGoldenSnitch : MonoBehaviour
         hr.sizeDelta = new Vector2(420f, 40f);
     }
 
-    private PixelArcGraphic MakeRing(string name, Color c, float halfWidth, out RectTransform rect)
-    {
-        GameObject g = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer));
-        g.transform.SetParent(canvasObject.transform, false);
-        PixelArcGraphic arc = g.AddComponent<PixelArcGraphic>();
-        arc.Setup(0.9f, halfWidth, 1.5f);
-        arc.StartDegrees = 0f;
-        arc.EndDegrees = 359.5f;
-        arc.color = c;
-        arc.raycastTarget = false;
-        rect = arc.rectTransform;
-        rect.anchorMin = rect.anchorMax = Vector2.zero;
-        rect.pivot = new Vector2(0.5f, 0.5f);
-        g.SetActive(false);
-        return arc;
-    }
+    private PixelArcGraphic MakeRing(string name, Color c, float halfWidth, out RectTransform rect) =>
+        PixelArcRing.Create(canvasObject.transform, name, c, halfWidth, Vector2.zero, out rect);
 
     private void UpdateUI(Camera cam)
     {

@@ -247,22 +247,8 @@ public class PixelPowerClick : MonoBehaviour
         popup.gameObject.SetActive(false);
     }
 
-    private PixelArcGraphic MakeArc(string name, Color c, float halfWidth, out RectTransform rect)
-    {
-        GameObject g = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer));
-        g.transform.SetParent(canvasObject.transform, false);
-        PixelArcGraphic arc = g.AddComponent<PixelArcGraphic>();
-        arc.Setup(0.9f, halfWidth, 1.5f);
-        arc.StartDegrees = 0f;
-        arc.EndDegrees = 359.5f;
-        arc.color = c;
-        arc.raycastTarget = false;
-        rect = arc.rectTransform;
-        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
-        rect.pivot = new Vector2(0.5f, 0.5f);
-        g.SetActive(false);
-        return arc;
-    }
+    private PixelArcGraphic MakeArc(string name, Color c, float halfWidth, out RectTransform rect) =>
+        PixelArcRing.Create(canvasObject.transform, name, c, halfWidth, new Vector2(0.5f, 0.5f), out rect);
 
     /// <summary>The cube's centre in the canvas (anchored at the middle) and its radius on screen, in canvas units.</summary>
     private Vector2 CubeCanvasPoint(Camera cam, out float radius)

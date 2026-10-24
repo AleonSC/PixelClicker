@@ -379,16 +379,6 @@ public class PixelEggHatch : MonoBehaviour
 
     // ---- building ----
 
-    private static Image NewImage(string name, Transform parent, Color color)
-    {
-        GameObject go = new GameObject(name, typeof(RectTransform), typeof(Image));
-        go.transform.SetParent(parent, false);
-        Image img = go.GetComponent<Image>();
-        img.color = color;
-        img.raycastTarget = false;
-        return img;
-    }
-
     private void Build(int petTier)
     {
         Cleanup();
@@ -396,17 +386,8 @@ public class PixelEggHatch : MonoBehaviour
         canvasRoot = PixelUIKit.CreateCanvas("Egg Hatch", 691, new Vector2(1920f, 1080f), true);
         canvasRect = canvasRoot.GetComponent<RectTransform>();
 
-        dim = NewImage("Dark", canvasRoot.transform, new Color(0f, 0f, 0f, 0f));
-        PixelUIKit.Stretch(dim.rectTransform);
-        dim.raycastTarget = true;   // blocks clicks while it plays
-
-        backpack = NewImage("Backpack", canvasRoot.transform, new Color(1f, 1f, 1f, 0f));
-        backpack.sprite = PixelGhostMinigame.BuildBackpackSprite();
-        backpack.preserveAspect = true;
+        PixelShowScreen.DimAndBackpack(canvasRoot.transform, backpackSize, out dim, out backpack);   // the click-blocking dark layer + the backpack
         backpackRect = backpack.rectTransform;
-        backpackRect.anchorMin = backpackRect.anchorMax = new Vector2(0f, 0f);
-        backpackRect.pivot = new Vector2(0.5f, 0.5f);
-        backpackRect.sizeDelta = new Vector2(backpackSize, backpackSize);
 
         GameObject raw = new GameObject("Studio Picture", typeof(RectTransform), typeof(RawImage));
         raw.transform.SetParent(canvasRoot.transform, false);
@@ -415,19 +396,10 @@ public class PixelEggHatch : MonoBehaviour
         picture.enabled = false;
         PixelUIKit.Stretch(raw.GetComponent<RectTransform>());
 
-        flash = NewImage("Flash", canvasRoot.transform, new Color(1f, 1f, 0.9f, 0f));
+        flash = PixelShowScreen.NewImage("Flash", canvasRoot.transform, new Color(1f, 1f, 0.9f, 0f));
         PixelUIKit.Stretch(flash.rectTransform);
 
-        float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        title = PixelUIKit.CreateText(font, canvasRoot.transform, "Title", "", 64f, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 0.92f, 0.6f, 1f));
-        PixelUIKit.Caps(title);
-        RectTransform tr = title.rectTransform;
-        tr.anchorMin = new Vector2(0f, 1f); tr.anchorMax = new Vector2(1f, 1f); tr.pivot = new Vector2(0.5f, 1f);
-        tr.sizeDelta = new Vector2(0f, 100f); tr.anchoredPosition = new Vector2(0f, -(bar + 40f));
-        subtitle = PixelUIKit.CreateText(font, canvasRoot.transform, "Subtitle", "", 40f, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
-        RectTransform sr = subtitle.rectTransform;
-        sr.anchorMin = new Vector2(0f, 1f); sr.anchorMax = new Vector2(1f, 1f); sr.pivot = new Vector2(0.5f, 1f);
-        sr.sizeDelta = new Vector2(0f, 70f); sr.anchoredPosition = new Vector2(0f, -(bar + 140f));
+        PixelShowScreen.Titles(font, canvasRoot.transform, new Color(1f, 0.92f, 0.6f, 1f), out title, out subtitle);
 
         sparkles.Build(canvasRoot.transform, 160, sparkleColor);
         BuildStudio(petTier);
