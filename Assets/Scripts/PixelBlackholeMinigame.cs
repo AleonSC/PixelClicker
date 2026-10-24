@@ -306,12 +306,7 @@ public class PixelBlackholeMinigame : PixelMinigame
     {
         if (!running || holeActive) return;
 
-        spawnTimer -= Time.deltaTime;
-        if (spawnTimer <= 0f)
-        {
-            if (PixelMinigameLimits.AllowAnother(this)) StartCoroutine(HoleRoutine());
-            else spawnTimer = PixelMinigameLimits.RetrySeconds; // too many minigames running right now
-        }
+        if (SpawnDue(ref spawnTimer)) StartCoroutine(HoleRoutine());
     }
 
     /// <summary>Starts the minigame (the shop calls this when it is bought). Safe to call more than once.</summary>

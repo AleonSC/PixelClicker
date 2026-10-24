@@ -319,11 +319,7 @@ public class PixelSnakeMinigame : PixelMinigame
         if (activeRound) { Tick(Time.deltaTime); return; }
         if (!running) return;
 
-        spawnTimer -= Time.deltaTime;
-        if (spawnTimer > 0f) return;
-        if (!PixelMinigameLimits.AllowAnother(this)) { spawnTimer = PixelMinigameLimits.RetrySeconds; return; }
-        if (!TryStart(false)) spawnTimer = 12f; // not enough pixels lying around yet
-        else spawnTimer = 0f;
+        if (SpawnDue(ref spawnTimer)) spawnTimer = TryStart(false) ? 0f : 12f; // 12 s: not enough pixels lying around yet
     }
 
     // ------------------------------------------------------------------

@@ -15,7 +15,7 @@ public sealed class PixelPathCarrier
     private static readonly HashSet<Rigidbody> carriedAll = new HashSet<Rigidbody>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { carriedAll.Clear(); carriers.Clear(); listening = false; PixelStatics.ResetOnRestart(OnRestart); }
+    private static void ResetStatics() { carriedAll.Clear(); carriers.Clear(); listening = false; PixelStatics.ResetOnRestart(OnRestart); }   // restart-reset-not-progress: husks being carried right now
 
     // (Restart reloads the scene: the carried husks are gone with it - the set would only keep dead entries)
     private static void OnRestart() { carriedAll.Clear(); }

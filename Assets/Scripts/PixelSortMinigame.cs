@@ -305,10 +305,7 @@ public class PixelSortMinigame : PixelMinigame
         if (activeRound) { Tick(Time.deltaTime); return; }
         if (!running) return;
 
-        spawnTimer -= Time.deltaTime;
-        if (spawnTimer > 0f) return;
-        if (!PixelMinigameLimits.AllowAnother(this)) { spawnTimer = PixelMinigameLimits.RetrySeconds; return; }
-        spawnTimer = TryStart(false) ? 0f : 12f; // not enough mixed pixels lying around yet
+        if (SpawnDue(ref spawnTimer)) spawnTimer = TryStart(false) ? 0f : 12f; // 12 s: not enough mixed pixels lying around yet
     }
 
     // ------------------------------------------------------------------

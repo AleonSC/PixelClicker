@@ -220,7 +220,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
     private static void ResetStatics()
     {
         instance = null; PointOverride = null; ShopHold = false;
-        PixelStatics.ResetOnRestart(OnSceneUnloaded);
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);   // restart-reset-not-progress: Cubie's pointer override / shop hold of this run (his visit stages are Stats counters in the GameState)
     }
 
     // (Restart reloads the scene: a tutorial's pointer callback into the destroyed old scene, or a shop hold, must not carry over)

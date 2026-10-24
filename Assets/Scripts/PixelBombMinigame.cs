@@ -255,12 +255,7 @@ public class PixelBombMinigame : PixelMinigame
     private void Update()
     {
         if (!running || bombActive) return;
-        spawnTimer -= Time.deltaTime;
-        if (spawnTimer <= 0f)
-        {
-            if (PixelMinigameLimits.AllowAnother(this)) StartCoroutine(BombRoutine());
-            else spawnTimer = PixelMinigameLimits.RetrySeconds; // too many minigames running right now
-        }
+        if (SpawnDue(ref spawnTimer)) StartCoroutine(BombRoutine());
     }
 
     public override void Activate()

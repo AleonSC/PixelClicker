@@ -79,7 +79,7 @@ public class PixelFeatureTester : MonoBehaviour
     private static void ResetStatics()
     {
         instance = null; kept = null;
-        PixelStatics.ResetOnRestart(OnSceneUnloaded);
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);   // restart-reset-not-progress: tester machines kept from a load while the tester was off (they are saved with the save itself)
     }
 
     // (Restart reloads the scene: the old game's loaded test objects must not be written into the new game's saves)

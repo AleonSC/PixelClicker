@@ -208,7 +208,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     {
         nextAnyVisitTime = 0f; anyVisiting = false;
         // (Restart reloads the scene: a visit cut short left anyVisiting on and no vendor ever came again in the new game)
-        PixelStatics.ResetOnRestart(OnVisitSceneUnloaded);
+        PixelStatics.ResetOnRestart(OnVisitSceneUnloaded);   // restart-reset-not-progress: the shared visitor cooldown / visiting flag of this run
     }
 
     private static void OnVisitSceneUnloaded() { nextAnyVisitTime = 0f; anyVisiting = false; }

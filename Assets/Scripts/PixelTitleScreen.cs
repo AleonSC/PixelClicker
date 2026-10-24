@@ -26,7 +26,7 @@ public partial class PixelTitleScreen : MonoBehaviour
         PlayTime = 0f;
         PlayedOnce = false;
         NewGameStarted = false;
-        PixelStatics.ResetOnRestart(OnSceneUnloaded);
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);   // restart-reset-not-progress: 'played once this launch' / 'new game started' flags
     }
 
     // (a reloaded scene has not been played yet: a New Game from its title can start at once instead of reloading again)

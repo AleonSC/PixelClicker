@@ -143,7 +143,7 @@ public static class PixelSaveShots
     private static void ResetStatics()
     {
         screenCopy = thumb = null; haveThumb = false; thumbJpg = null; runner = null; textures.Clear();
-        PixelStatics.ResetOnRestart(OnSceneUnloaded);
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);   // restart-reset-not-progress: the save-screenshot thumbnail of this run
     }
 
     // (Restart reloads the scene: a save made while paused must not get the old game's last picture; the runner lives on, DontDestroyOnLoad)

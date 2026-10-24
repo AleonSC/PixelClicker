@@ -1040,7 +1040,7 @@ public class PixelConveyorSystem : MonoBehaviour
     private static void ResetSystem()
     {
         system = null; editorOpen = false;
-        PixelStatics.ResetOnRestart(OnSceneUnloaded);
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);   // restart-reset-not-progress: the belt speed window being open
     }
 
     // (Restart reloads the scene: a speed window left open would keep editorOpen on and stop belt clicks in the new game)

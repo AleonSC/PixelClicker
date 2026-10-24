@@ -269,12 +269,7 @@ public class PixelMeteorMinigame : PixelMinigame
     {
         if (!running || meteorActive) return;
 
-        spawnTimer -= Time.deltaTime;
-        if (spawnTimer <= 0f)
-        {
-            if (PixelMinigameLimits.AllowAnother(this)) StartCoroutine(MeteorRoutine());
-            else spawnTimer = PixelMinigameLimits.RetrySeconds; // too many minigames running right now
-        }
+        if (SpawnDue(ref spawnTimer)) StartCoroutine(MeteorRoutine());
     }
 
     public override void Activate()

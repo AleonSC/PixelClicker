@@ -310,7 +310,7 @@ public class OldPixelDespawn : MonoBehaviour, IHuskTick
         DevNoDespawn = false;
         HoldAll = false;
         rateOwner = null;
-        PixelStatics.ResetOnRestart(OnSceneUnloaded);
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);   // restart-reset-not-progress: husk freeze / hold flags of a running round
     }
 
     // (Restart reloads the scene: a black hole / takeover round cut short must not leave every husk frozen or held in the new game)

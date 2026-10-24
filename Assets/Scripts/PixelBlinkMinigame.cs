@@ -195,10 +195,7 @@ public class PixelBlinkMinigame : PixelMinigame
         if (activeRound) { Tick(Time.deltaTime); return; }
         if (!running || UserDisabled) return;
 
-        spawnTimer -= Time.deltaTime;
-        if (spawnTimer > 0f) return;
-        if (!PixelMinigameLimits.AllowAnother(this) || PixelPauseMenu.IsPaused || clicker.CubeHidden || TakeoverActive) { spawnTimer = PixelMinigameLimits.RetrySeconds; return; }
-        if (!TryStart()) spawnTimer = 12f;
+        if (SpawnDue(ref spawnTimer, PixelPauseMenu.IsPaused || clicker.CubeHidden || TakeoverActive) && !TryStart()) spawnTimer = 12f;
     }
 
     // ------------------------------------------------------------------

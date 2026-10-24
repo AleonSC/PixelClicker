@@ -110,7 +110,7 @@ public static class PixelCouplings
 {
     private static readonly List<IPixelSocketDevice> devices = new List<IPixelSocketDevice>();
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { devices.Clear(); PixelStatics.ResetOnRestart(() => devices.Clear()); }
+    private static void ResetStatics() { devices.Clear(); PixelStatics.ResetOnRestart(() => devices.Clear()); }   // restart-reset-not-progress: the socket devices of the old scene
 
     public static IReadOnlyList<IPixelSocketDevice> Devices => devices;
 

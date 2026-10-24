@@ -124,7 +124,7 @@ public class FractureFx : MonoBehaviour
     private static readonly System.Collections.Generic.Stack<FractureFx> pool = new System.Collections.Generic.Stack<FractureFx>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { pool.Clear(); PixelStatics.ResetOnRestart(ClearPool); }
+    private static void ResetStatics() { pool.Clear(); PixelStatics.ResetOnRestart(ClearPool); }   // restart-reset-not-progress: the obsidian effect pool
     private static void ClearPool() => pool.Clear();   // (Restart: the pooled flashes go with the scene)
 
     public static void Play(Vector3 centre, float size, int lines, float reachInSizes, float seconds) => Play(centre, size, lines, reachInSizes, seconds, new Color(0.97f, 0.98f, 1f, 1f), new Color(0.8f, 0.86f, 0.95f, 1f));

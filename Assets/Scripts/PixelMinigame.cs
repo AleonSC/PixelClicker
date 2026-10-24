@@ -13,6 +13,8 @@
 //   generically - a new minigame needs no changes to PixelShop or PixelSaveGame. For the dev tools' Despawn button a minigame must
 //   call Track(go) on everything it puts in the scene (roots, messages, effects) and override OnDespawned() to reset its busy flag /
 //   spawn timer (DespawnNow() stops its coroutines and destroys the tracked objects).
+//   SPAWN STEP: a subclass's Update counts its spawn timer with SpawnDue(ref spawnTimer, blocked) - due + PixelMinigameLimits.AllowAnother + its own
+//   'blocked' reason, else the limits' retry time (2026-10-24: was a copied block in 13 minigames). The Visitor rolls its own way.
 //   TakeoverActive, AutoClickerPaused and the floor area claims are cleared on every scene unload (Settings > Restart).
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -298,6 +300,17 @@ public abstract class PixelMinigame : MonoBehaviour
 
     /// <summary>After a load: e.g. a goal already reached is not announced again.</summary>
     protected virtual void OnProgressLoaded() { }
+
+    /// <summary>The shared spawn step for a subclass's Update: counts the timer down and says whether a round may start NOW.
+    /// When it is due but PixelMinigameLimits says no (or 'blocked' - the subclass's own reason, like the pause menu or a takeover),
+    /// the timer is set to the limits' retry time and it returns false. On true the subclass starts its round and sets the next timer.</summary>
+    protected bool SpawnDue(ref float timer, bool blocked = false)
+    {
+        timer -= Time.deltaTime;
+        if (timer > 0f) return false;
+        if (blocked || !PixelMinigameLimits.AllowAnother(this)) { timer = PixelMinigameLimits.RetrySeconds; return false; }
+        return true;
+    }
 
     /// <summary>False = the player can't switch this one off (no switch in the Toggles window; e.g. the very rare cat visitors).</summary>
     public virtual bool CanSwitchOff => true;

@@ -347,10 +347,7 @@ public class PixelBreakoutMinigame : PixelMinigame
         if (activeRound) { Tick(Time.deltaTime); return; }
         if (!running) return;
 
-        spawnTimer -= Time.deltaTime;
-        if (spawnTimer > 0f) return;
-        if (!PixelMinigameLimits.AllowAnother(this)) { spawnTimer = PixelMinigameLimits.RetrySeconds; return; }
-        spawnTimer = TryStart(false) ? 0f : 12f;
+        if (SpawnDue(ref spawnTimer)) spawnTimer = TryStart(false) ? 0f : 12f;
     }
 
     // ------------------------------------------------------------------

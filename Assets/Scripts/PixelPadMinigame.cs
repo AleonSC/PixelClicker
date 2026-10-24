@@ -186,12 +186,7 @@ public class PixelPadMinigame : PixelMinigame
     private void Update()
     {
         if (!running || padActive) return;
-        spawnTimer -= Time.deltaTime;
-        if (spawnTimer <= 0f)
-        {
-            if (PixelMinigameLimits.AllowAnother(this)) StartCoroutine(RoundRoutine());
-            else spawnTimer = PixelMinigameLimits.RetrySeconds;
-        }
+        if (SpawnDue(ref spawnTimer)) StartCoroutine(RoundRoutine());
     }
 
     public override void Activate()

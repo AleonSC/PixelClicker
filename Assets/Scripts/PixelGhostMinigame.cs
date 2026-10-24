@@ -363,12 +363,7 @@ public class PixelGhostMinigame : PixelMinigame
     {
         if (!running || ghostActive) return;
 
-        spawnTimer -= Time.deltaTime;
-        if (spawnTimer <= 0f)
-        {
-            if (PixelMinigameLimits.AllowAnother(this)) StartCoroutine(GhostRoutine());
-            else spawnTimer = PixelMinigameLimits.RetrySeconds; // too many minigames running right now
-        }
+        if (SpawnDue(ref spawnTimer)) StartCoroutine(GhostRoutine());
     }
 
     /// <summary>Starts the minigame (the shop calls this when it is bought). Safe to call more than once.</summary>

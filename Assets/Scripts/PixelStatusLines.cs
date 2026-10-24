@@ -22,7 +22,7 @@ public static class PixelStatusLines
         lines.Clear(); host = null;
         // The list is static, so it outlives a scene reload (Settings > Restart reloads the scene): a line from the old game (the tree bar's 'Oak 3 / 9')
         // came back the next time anything set a line. Every scene change starts with no lines.
-        PixelStatics.ResetOnRestart(OnSceneUnloaded);
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);   // restart-reset-not-progress: the status lines on screen
     }
 
     private static void OnSceneUnloaded() { lines.Clear(); host = null; }
