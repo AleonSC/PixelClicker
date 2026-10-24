@@ -45,9 +45,7 @@ public class PixelBlackholeMinigame : PixelMinigame
     [Min(1)]
     [Tooltip("Pixels that must be swallowed in total before the Singularity Pixel can be bought. The tracker keeps counting afterwards.")]
     [SerializeField] private double singularityThreshold = 250;
-
-    [Tooltip("Runtime: pixels swallowed so far (saved with the game). You can type a number to test the unlock.")]
-    [SerializeField] private double singularityCount = 0;
+    private double singularityCount { get => SavedCount; set => SavedCount = value; }   // (progress: the GameState)
 
     [Tooltip("Title of this minigame's tracker row in the shop.")]
     [SerializeField] private string trackerTitle = "Singularity Tracker";
@@ -333,6 +331,9 @@ public class PixelBlackholeMinigame : PixelMinigame
         singularityCount = System.Math.Max(0d, value);
         thresholdAnnounced = ThresholdReached;
     }
+
+    // A save was loaded: a goal it had already reached is not announced again.
+    protected override void OnProgressLoaded() => thresholdAnnounced = ThresholdReached;
 
     /// <summary>Opens a black hole right now (right-click the component &gt; Open Black Hole Now).</summary>
     [ContextMenu("Open Black Hole Now")]

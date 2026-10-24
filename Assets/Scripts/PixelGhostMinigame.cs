@@ -218,9 +218,7 @@ public class PixelGhostMinigame : PixelMinigame
     [Min(1)]
     [Tooltip("Ghosts that must be caught in total before the Ghost Pixel can be bought. The count keeps going afterwards.")]
     [SerializeField] private double ghostThreshold = 10;
-
-    [Tooltip("Runtime: ghosts caught so far (saved with the game). You can type a number to test the unlock.")]
-    [SerializeField] private double ghostsCaught = 0;
+    private double ghostsCaught { get => SavedCount; set => SavedCount = value; }   // (progress: the GameState)
 
     [Tooltip("Title of this minigame's tracker row in the shop.")]
     [SerializeField] private string trackerTitle = "Ghosts Caught";
@@ -321,9 +319,7 @@ public class PixelGhostMinigame : PixelMinigame
 
     [Tooltip("Most ectoplasm a caught ghost leaves.")]
     [SerializeField] private int ectoplasmMax = 4;
-
-    [Tooltip("Ectoplasm held (a minigame material, shown in the Inventory's Materials tab).")]
-    [SerializeField] private double ectoplasm = 0;
+    private double ectoplasm { get => SavedExtra; set => SavedExtra = value; }   // (progress: the GameState)
 
     public override string MaterialName => "Ectoplasm";
     public override double MaterialAmount => ectoplasm;

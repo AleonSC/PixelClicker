@@ -43,9 +43,7 @@ public class PixelMeteorMinigame : PixelMinigame
     [Min(1)]
     [Tooltip("Chunks you need in total before the Meteor Pixel can be bought. The count keeps going afterwards.")]
     [SerializeField] private double chunkGoal = 1000;
-
-    [Tooltip("Runtime: chunks collected so far (saved with the game). You can type a number to test the unlock.")]
-    [SerializeField] private double chunks = 0;
+    private double chunks { get => SavedCount; set => SavedCount = value; }   // (progress: the GameState)
 
     [Min(1)]
     [Tooltip("Chunks gained by each click on the meteor.")]
@@ -247,6 +245,9 @@ public class PixelMeteorMinigame : PixelMinigame
         chunks = System.Math.Max(0d, value);
         thresholdAnnounced = chunks >= chunkGoal;
     }
+
+    // A save was loaded: a goal it had already reached is not announced again.
+    protected override void OnProgressLoaded() => thresholdAnnounced = chunks >= chunkGoal;
 
     protected override void Awake()
     {

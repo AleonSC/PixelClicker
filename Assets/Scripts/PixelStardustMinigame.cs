@@ -106,9 +106,7 @@ public class PixelStardustMinigame : PixelMinigame
     [Min(1)]
     [Tooltip("Stardust needed in total before the Solar Pixel can be bought. The count keeps going afterwards.")]
     [SerializeField] private double stardustGoal = 10;
-
-    [Tooltip("Runtime: stardust collected so far (saved with the game). You can type a number to test the unlock.")]
-    [SerializeField] private double stardust = 0;
+    private double stardust { get => SavedCount; set => SavedCount = value; }   // (progress: the GameState)
 
     [Tooltip("Title of this minigame's tracker row in the shop.")]
     [SerializeField] private string trackerTitle = "Stardust";

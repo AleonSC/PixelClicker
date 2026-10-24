@@ -8,7 +8,7 @@
 //   trained) via PixelSkills.AddXp (so the XP popup shows too); defaults in DefaultSkillXp by id (meteor 1, black hole 1 per swallowed
 //   pixel, pad 6, stardust 8, ghost 12, dash 15, bomb 20, snake / sort / breakout 25, others 5); per minigame skillXpReward (0 =
 //   default) and disableSkillXp in the Inspector. A minigame can name its own skill with SkillXpTarget (meteor = Mining, evil tree = Woodcutting): its XP then always goes there, whatever is in training (nothing if that skill is not bought). Bought minigames get an on/off row in the Toggles window
-//   (PixelMinigame.UserDisabled, saved per minigame; the shop never auto-starts a disabled one). Shop packs refer to minigames by id
+//   (PixelMinigame.UserDisabled, progress per minigame in the GameState - MinigamesState, with the goal counters: SavedCount / SavedExtra, 2026-10-24; the shop never auto-starts a disabled one). Shop packs refer to minigames by id
 //   (unlocksMinigame; goals via a PackRequirement of kind MinigameGoal); the shop shows tracker rows and the save system stores counts
 //   generically - a new minigame needs no changes to PixelShop or PixelSaveGame. For the dev tools' Despawn button a minigame must
 //   call Track(go) on everything it puts in the scene (roots, messages, effects) and override OnDespawned() to reset its busy flag /
@@ -40,7 +40,7 @@ public abstract class PixelMinigame : MonoBehaviour
         AutoClickerPaused = false;
         claims.Clear();
         registry.Clear();
-        PixelStatics.ResetOnRestart(OnSceneUnloaded);
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);   // restart-reset-not-progress: a running round's takeover / auto-clicker pause / floor claims
     }
 
     // Settings > Restart reloads the scene but statics survive it: a round cut short left TakeoverActive / AutoClickerPaused on, and a
@@ -265,8 +265,39 @@ public abstract class PixelMinigame : MonoBehaviour
     /// <summary>Reset the 'something is on screen' state (busy flag, next-spawn timer, effects) after <see cref="DespawnNow"/>.</summary>
     protected virtual void OnDespawned() { }
 
-    /// <summary>The player switched this (bought) minigame off in the shop. Saved. The shop won't start it while this is true.</summary>
-    public bool UserDisabled { get; set; }
+    // ---- progress: each minigame's switch, goal counter and second number live in the GameState (PixelGameState.Current.minigames, by Id) ----
+    private MinigamesState.Entry Saved(bool create) => PixelGameState.Current.minigames.Find(Id, create);
+
+    /// <summary>The player switched this (bought) minigame off in the shop. Saved (GameState). The shop won't start it while this is true.</summary>
+    public bool UserDisabled
+    {
+        get { MinigamesState.Entry e = Saved(false); return e != null && e.disabled; }
+        set { MinigamesState.Entry e = Saved(value); if (e != null) e.disabled = value; }
+    }
+
+    /// <summary>A subclass's goal counter, kept in the GameState (a subclass keeps its counter in a property over this, not a field).</summary>
+    protected double SavedCount
+    {
+        get { MinigamesState.Entry e = Saved(false); return e != null ? e.count : 0d; }
+        set { MinigamesState.Entry e = Saved(value != 0d); if (e != null) e.count = value; }
+    }
+
+    /// <summary>A subclass's second saved number (bomb parts held, ectoplasm), kept in the GameState.</summary>
+    protected double SavedExtra
+    {
+        get { MinigamesState.Entry e = Saved(false); return e != null ? e.extra : 0d; }
+        set { MinigamesState.Entry e = Saved(value != 0d); if (e != null) e.extra = value; }
+    }
+
+    /// <summary>A save was loaded (its counters are in the GameState now): a switched-off minigame stops; a subclass fixes up what follows from its counter (OnProgressLoaded).</summary>
+    private void OnGameLoaded()
+    {
+        if (UserDisabled) Deactivate();
+        OnProgressLoaded();
+    }
+
+    /// <summary>After a load: e.g. a goal already reached is not announced again.</summary>
+    protected virtual void OnProgressLoaded() { }
 
     /// <summary>False = the player can't switch this one off (no switch in the Toggles window; e.g. the very rare cat visitors).</summary>
     public virtual bool CanSwitchOff => true;
@@ -339,11 +370,13 @@ public abstract class PixelMinigame : MonoBehaviour
     protected virtual void Awake()
     {
         if (!registry.Contains(this)) registry.Add(this);
+        PixelGameState.Loaded += OnGameLoaded;
     }
 
     protected virtual void OnDestroy()
     {
         registry.Remove(this);
+        PixelGameState.Loaded -= OnGameLoaded;
     }
 
     /// <summary>

@@ -48,15 +48,6 @@ public class PixelSaveGame : MonoBehaviour
     }
 
     [Serializable]
-    private class MinigameSave
-    {
-        public string id;
-        public double value;
-        public bool disabled; // switched off by the player in the shop
-        public double extra;  // a second number some minigames keep (the bomb's parts held)
-    }
-
-    [Serializable]
     private class SaveData
     {
         public int version = 1;
@@ -67,7 +58,6 @@ public class PixelSaveGame : MonoBehaviour
         public TierSave[] tiers;
         public long ultraPixels;   // Ultra pixels held
         public PackSave[] packs;
-        public MinigameSave[] minigames;
         public GameState state;   // the player's progress for the systems moved to GameState (PixelGameState; GameState.MovedSystems lists them)
         public PixelSaveRegistry.Part[] parts;   // systems that still save themselves (IPixelSaved) - none left since 2026-10-24: everything moved to the GameState
         public PixelFeatureTester.TesterSave[] testerObjects;   // the Dev Hub tester machines (Wood Chipper, belts + their riders, Kiln, Solar Panels)
@@ -588,10 +578,6 @@ public class PixelSaveGame : MonoBehaviour
             data.testerObjects = PixelFeatureTester.ExportAll();
 
             // Every minigame with a goal counter saves its count under its id.
-            System.Collections.Generic.List<MinigameSave> minigameSaves = new System.Collections.Generic.List<MinigameSave>();
-            foreach (PixelMinigame m in PixelMinigame.All)
-                if (m != null) minigameSaves.Add(new MinigameSave { id = m.Id, value = m.HasTracker ? m.TrackerCount : 0d, disabled = m.UserDisabled, extra = m.ExtraValue });
-            data.minigames = minigameSaves.ToArray();
             PixelGameState.RaiseSaving();   // (world objects - placed devices, the running potion - copy themselves into the state first)
             data.state = PixelGameState.Current;   // (the moved systems' progress, whole)
             data.playSeconds = data.state.stats.playSeconds;
@@ -716,17 +702,7 @@ public class PixelSaveGame : MonoBehaviour
 
             PixelSaveRegistry.ImportRange(data.parts, PixelSaveRegistry.SettingsBand, PixelSaveRegistry.MinigamesBand);   // (potion / device inventory)
 
-            foreach (PixelMinigame m in PixelMinigame.All)
-            {
-                if (m == null) continue;
-
-                MinigameSave saved = data.minigames != null ? Array.Find(data.minigames, x => x.id == m.Id) : null;
-                m.UserDisabled = saved != null && saved.disabled;
-                if (m.UserDisabled) m.Deactivate();
-                if (!m.HasTracker) continue;
-                m.SetTrackerCount(saved != null ? saved.value : 0d);
-                if (saved != null) m.SetExtraValue(saved.extra);
-            }
+            // (the minigames' switches and counters are in the GameState since 2026-10-24: PixelMinigame reads them; a switched-off one stops on Loaded)
             PixelSaveRegistry.ImportRange(data.parts, PixelSaveRegistry.MinigamesBand, PixelSaveRegistry.WorldBand);   // (achievements, stats)
 
             // Time away: only when the game has just started (loading by hand mid-game must not pay it again).

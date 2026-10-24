@@ -169,9 +169,21 @@ public class PixelPadMinigame : PixelMinigame
     public override double TrackerGoal => ultraGoal;
     public override string RequirementFormat => requirementFormat;
 
+    // The Ultra pixels ever earned belong to PixelClicker (not moved to the GameState yet): until it moves, this minigame carries the number in
+    // its own saved counter - copied in right before a save, put back on load. (Goes away when PixelClicker's state moves.)
+    private void CopyUltraEarnedIn() { if (clicker != null) SavedCount = clicker.UltraEarned; }
+    protected override void OnProgressLoaded() { if (clicker != null) clicker.SetUltraEarned((long)System.Math.Floor(SavedCount)); }
+
+    protected override void OnDestroy()
+    {
+        base.OnDestroy();
+        PixelGameState.Saving -= CopyUltraEarnedIn;
+    }
+
     protected override void Awake()
     {
         base.Awake();
+        PixelGameState.Saving += CopyUltraEarnedIn;
         clicker = clicker != null ? clicker : PixelFind.First<PixelClicker>();
         if (clicker == null)
         {

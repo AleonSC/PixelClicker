@@ -30,8 +30,7 @@ public class PixelEvilTreeMinigame : PixelMinigame
     [Min(1)]
     [Tooltip("The tracker's goal (nothing requires it yet; it only fills the bar in the shop).")]
     [SerializeField] private double woodGoal = 100;
-    [Tooltip("Runtime: magic wood held (saved with the game).")]
-    [SerializeField] private double magicWood = 0;
+    private double magicWood { get => SavedCount; set => SavedCount = value; }   // (progress: the GameState)
     [Min(1)]
     [Tooltip("Least magic wood a felled tree pays.")]
     [SerializeField] private int minWood = 6;

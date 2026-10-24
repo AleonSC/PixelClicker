@@ -38,14 +38,10 @@ public class PixelBombMinigame : PixelMinigame
 
     [Tooltip("Is the minigame running? (The shop turns this on when Bomb Defusal is bought.)")]
     [SerializeField] private bool running = false;
+    private double bombParts { get => SavedExtra; set => SavedExtra = value; }   // (progress: the GameState)
+    private double bombPartsEarned { get => SavedCount; set => SavedCount = value; }   // (progress: the GameState)
 
     [Header("Bomb Parts (tracker)")]
-    [Tooltip("Runtime: bomb parts you have right now (saved with the game). Spending them in the shop lowers this; you can type a number to test.")]
-    [SerializeField] private double bombParts = 0;
-
-    [Tooltip("Runtime: bomb parts ever earned (saved with the game). This is what the tracker bar in the shop shows, so spending parts doesn't lower it.")]
-    [SerializeField] private double bombPartsEarned = 0;
-
     [Min(1)]
     [Tooltip("The goal shown on the tracker's progress bar (the count keeps going past it).")]
     [SerializeField] private double partsGoal = 50;
@@ -227,6 +223,9 @@ public class PixelBombMinigame : PixelMinigame
     public override double TrackerGoal => partsGoal;
     public override string RequirementFormat => requirementFormat;
     public override void SetTrackerCount(double value) => bombPartsEarned = System.Math.Max(System.Math.Max(0d, value), bombParts);
+
+    // A save was loaded: parts ever earned are never fewer than the parts held.
+    protected override void OnProgressLoaded() { if (bombPartsEarned < bombParts) bombPartsEarned = bombParts; }
 
     /// <summary>Bomb parts you have right now. Other systems spend them with <see cref="TrySpendParts"/>.</summary>
     public double BombParts => bombParts;
