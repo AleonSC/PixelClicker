@@ -867,40 +867,37 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         Block(a, "Pupil R", pupil, new Vector2(18f, 26f) * size, new Vector2(spread + look, y - 2f));
     }
 
-    protected RectTransform Block(Transform parent, string name, Color color, Vector2 size, Vector2 pos, float rotation = 0f)
+    /// <summary>A cat's face on the cube (the cat visitors Bean and Egg): slit-pupil 'iris' eyes with glints, a cream muzzle, a pink nose,
+    /// a dark mouth and three whiskers a side. Each cat adds its own markings around it.</summary>
+    protected void CatFace(Transform a, Color iris, Color dark, Color cream, Color pink)
     {
-        GameObject g = new GameObject(name, typeof(RectTransform), typeof(Image));
-        g.transform.SetParent(parent, false);
-        Image im = g.GetComponent<Image>();
-        im.color = color;
-        im.raycastTarget = false;
-        RectTransform r = g.GetComponent<RectTransform>();
-        r.anchorMin = r.anchorMax = new Vector2(0.5f, 0f);
-        r.pivot = new Vector2(0.5f, 0.5f);
-        r.sizeDelta = size;
-        r.anchoredPosition = pos;
-        r.localRotation = Quaternion.Euler(0f, 0f, rotation);
-        return r;
+        Block(a, "Eye L", iris, new Vector2(44f, 44f), new Vector2(-46f, 214f));
+        Block(a, "Eye R", iris, new Vector2(44f, 44f), new Vector2(46f, 214f));
+        Block(a, "Pupil L", dark, new Vector2(10f, 38f), new Vector2(-46f, 214f));
+        Block(a, "Pupil R", dark, new Vector2(10f, 38f), new Vector2(46f, 214f));
+        Block(a, "Glint L", Color.white, new Vector2(9f, 9f), new Vector2(-56f, 228f));
+        Block(a, "Glint R", Color.white, new Vector2(9f, 9f), new Vector2(36f, 228f));
+        Block(a, "Muzzle", cream, new Vector2(96f, 56f), new Vector2(0f, 156f));
+        Block(a, "Nose", pink, new Vector2(20f, 14f), new Vector2(0f, 178f));
+        Block(a, "Mouth 1", dark, new Vector2(4f, 14f), new Vector2(0f, 164f));
+        Block(a, "Mouth 2", dark, new Vector2(26f, 4f), new Vector2(-13f, 156f), -12f);
+        Block(a, "Mouth 3", dark, new Vector2(26f, 4f), new Vector2(13f, 156f), 12f);
+        for (int w = 0; w < 3; w++)
+        {
+            Block(a, "Whisker L" + w, dark, new Vector2(46f, 3f), new Vector2(-112f, 168f - w * 10f), 8f - w * 8f);
+            Block(a, "Whisker R" + w, dark, new Vector2(46f, 3f), new Vector2(112f, 168f - w * 10f), -(8f - w * 8f));
+        }
     }
+
+    /// <summary>One square of the vendor's block art, placed from the bottom centre of the art (the shared <see cref="PixelBlockArt.Block"/>).</summary>
+    protected RectTransform Block(Transform parent, string name, Color color, Vector2 size, Vector2 pos, float rotation = 0f) =>
+        PixelBlockArt.Block(parent, name, color, size, pos, rotation, PixelBlockArt.BottomCentre);
 
     /// <summary>Draws this vendor (for a menu to walk about) under 'parent' at the given height: a holder anchored at the bottom centre with its art as the first child.</summary>
     public RectTransform BuildWalker(Transform parent, float height)
     {
-        GameObject holder = new GameObject(DisplayName + " Walker", typeof(RectTransform));
-        holder.transform.SetParent(parent, false);
-        RectTransform r = holder.GetComponent<RectTransform>();
-        float scale = height / 400f;
-        r.anchorMin = r.anchorMax = new Vector2(0.5f, 0f);
-        r.pivot = new Vector2(0.5f, 0f);
-        r.sizeDelta = new Vector2(300f * scale, 400f * scale);
-        GameObject art = new GameObject("Art", typeof(RectTransform));
-        art.transform.SetParent(holder.transform, false);
-        RectTransform ar = art.GetComponent<RectTransform>();
-        ar.anchorMin = ar.anchorMax = new Vector2(0.5f, 0f);
-        ar.pivot = new Vector2(0.5f, 0f);
-        ar.sizeDelta = new Vector2(300f, 400f);
-        ar.localScale = Vector3.one * scale;
-        DrawVisitor(art.transform);
+        RectTransform r = PixelBlockArt.WalkerHolder(parent, DisplayName + " Walker", height, out Transform art);
+        DrawVisitor(art);
         return r;
     }
 

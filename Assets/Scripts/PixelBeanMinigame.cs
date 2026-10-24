@@ -116,22 +116,7 @@ public class PixelBeanMinigame : PixelVisitorMinigame
         Block(a, "Mark M3", stripe, new Vector2(10f, 30f), new Vector2(26f, 266f), -10f);
         Block(a, "Cheek Stripe L", stripe, new Vector2(36f, 8f), new Vector2(-82f, 190f), -8f);
         Block(a, "Cheek Stripe R", stripe, new Vector2(36f, 8f), new Vector2(82f, 190f), 8f);
-        Block(a, "Eye L", iris, new Vector2(44f, 44f), new Vector2(-46f, 214f));
-        Block(a, "Eye R", iris, new Vector2(44f, 44f), new Vector2(46f, 214f));
-        Block(a, "Pupil L", dark, new Vector2(10f, 38f), new Vector2(-46f, 214f));
-        Block(a, "Pupil R", dark, new Vector2(10f, 38f), new Vector2(46f, 214f));
-        Block(a, "Glint L", Color.white, new Vector2(9f, 9f), new Vector2(-56f, 228f));
-        Block(a, "Glint R", Color.white, new Vector2(9f, 9f), new Vector2(36f, 228f));
-        Block(a, "Muzzle", cream, new Vector2(96f, 56f), new Vector2(0f, 156f));
-        Block(a, "Nose", pink, new Vector2(20f, 14f), new Vector2(0f, 178f));
-        Block(a, "Mouth 1", dark, new Vector2(4f, 14f), new Vector2(0f, 164f));
-        Block(a, "Mouth 2", dark, new Vector2(26f, 4f), new Vector2(-13f, 156f), -12f);
-        Block(a, "Mouth 3", dark, new Vector2(26f, 4f), new Vector2(13f, 156f), 12f);
-        for (int w = 0; w < 3; w++)
-        {
-            Block(a, "Whisker L" + w, dark, new Vector2(46f, 3f), new Vector2(-112f, 168f - w * 10f), 8f - w * 8f);
-            Block(a, "Whisker R" + w, dark, new Vector2(46f, 3f), new Vector2(112f, 168f - w * 10f), -(8f - w * 8f));
-        }
+        CatFace(a, iris, dark, cream, pink);
         // Green bandana at the chin.
         Block(a, "Bandana", apron, new Vector2(150f, 22f), new Vector2(0f, 98f));
         Block(a, "Bandana Point", apronDark, new Vector2(40f, 34f), new Vector2(0f, 76f), 45f);

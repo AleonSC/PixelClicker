@@ -459,31 +459,12 @@ public class PixelStardustMinigame : PixelMinigame
     /// <summary>Text that rises from where the star was and fades away, kept on screen.</summary>
     private IEnumerator RisingMessage(Vector3 start, Camera cam, string message)
     {
-        GameObject go = new GameObject("Stardust Message");
-        Track(go);
-        TextMeshPro text = go.AddComponent<TextMeshPro>();
-        text.text = message;
-        text.fontSize = messageTextSize;
-        text.fontStyle = FontStyles.Bold;
-        text.alignment = TextAlignmentOptions.Center;
-        text.outlineWidth = 0.2f;
-        text.outlineColor = new Color32(0, 0, 0, 255);
-        if (clicker.UIFont != null) text.font = clicker.UIFont;
-        text.rectTransform.sizeDelta = new Vector2(10f, 2f);
-
-        float t = 0f;
-        while (t < messageSeconds)
+        TextMeshPro text = PixelRisingText.Create("Stardust Message", message, messageTextSize, clicker.UIFont, new Vector2(10f, 2f));
+        Track(text.gameObject);
+        return PixelRisingText.Fade(text, messageSeconds, (tx, k) =>
         {
-            t += Time.unscaledDeltaTime;
-            float k = Mathf.Clamp01(t / messageSeconds);
-            go.transform.position = PixelUIKit.KeepOnScreen(cam, text, start + cam.transform.up * (k * 1.2f));
-            go.transform.rotation = cam.transform.rotation;
-            Color c = messageColor;
-            c.a *= 1f - k * k;
-            text.alpha = c.a;
-            text.color = c;
-            yield return null;
-        }
-        Destroy(go);
+            tx.transform.position = PixelUIKit.KeepOnScreen(cam, tx, start + cam.transform.up * (k * 1.2f));
+            tx.transform.rotation = cam.transform.rotation;
+        }, messageColor);
     }
 }

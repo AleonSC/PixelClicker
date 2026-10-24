@@ -8,6 +8,7 @@
 //   - AddPixelModel(clicker, tierIndex, parent): a 'Pivot' under parent holding the pixel type's real display model with its colliders
 //     removed (a plain cube if there is no model), for the show to turn.
 //   - Picture(name, size): a square transparent RenderTexture. Release(ref root, ref rt): destroys both.
+//   (The find shows' screen layers - dark layer, backpack, title / subtitle - are in PixelShowScreen; their sparkles in PixelUISparks.)
 // ---------------------------------------------------
 using UnityEngine;
 
