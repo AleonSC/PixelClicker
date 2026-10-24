@@ -192,7 +192,7 @@ One line per script / system: what it is and where its details are. Search it (`
 | `PixelFirstPerson.cs` | First person mode (added by PixelClicker.Awake; | `docs/systems/PixelFirstPerson.md` |
 | `PixelFirstPersonHotbar.cs` | The first person hotbar: five slots (wheel / number keys), slot 1 the axe drawn in your hand with its swing. | in the header comment of `PixelFirstPersonHotbar.cs` |
 | `PixelAttachment.cs` | Sticking husks to each other in first person build mode: the snap maths, the glue and prying them off. | in the header comment of `PixelAttachment.cs` |
-| `PixelPlacedDevice.cs` | Abstract base of placed devices: countdown, timer text facing the camera, shrink-away (InitCommon, OnTick, IsDying). | in the header comment of `PixelPlacedDevice.cs` |
+| `PixelPlacedDevice.cs` | Abstract base of placed devices: countdown, timer text facing the camera, shrink-away (InitCommon, OnTick, IsEnding). | in the header comment of `PixelPlacedDevice.cs` |
 | `PixelPermanentDevice.cs` | A thin permanent PixelPlacedDevice (no countdown, no switching on) on machines that keep their own behaviour, so they are bought, placed, saved, removed and carded like every device. | in the header comment of `PixelPermanentDevice.cs` |
 | `PixelRemoveTint.cs` | The red "being removed" look for ANY object while the right button is held on it (PixelRemoveTint.Set(object, 0..1)); used by the Tester's machines. | in the header comment of `PixelRemoveTint.cs` |
 | `PixelPop.cs` | Open / close animation for windows and tip boxes (component on the Inventory box, the Log panel, the Got-it box, the Shop panel, the Crafting window, the Toggles window and every pause-menu screen: | in the header comment of `PixelPop.cs` |

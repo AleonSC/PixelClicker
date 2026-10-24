@@ -46,7 +46,7 @@ All S / low-none: give each a shared material + `MaterialPropertyBlock`, or dest
 | D1 | `PixelClickerHusks.IsFlyingPixel` (:896): uncached `GetComponent<OldPixelFlight>` per husk per step (PixelViewBounds:139 always on, 24 caller files); `IgnoresViewBounds` -> `PixelLooks.Find` per husk per step | A flight flag on OldPixelInfo / the PixelHuskQuery entry; cache the looks result in ViewBounds' infoCache | S / low |
 | D2 | `OldPixelGravityWell.FixedUpdate` (`PixelLooks.cs:1768`): GetComponent before the radius check, plus lambda RemoveWhere/Sort every step | Distance check first, `PixelHuskQuery.Get`, cached comparer | S / low |
 | D3 | `PixelConveyor.cs:683-713` (husks x belts, riders^2), `PixelConnector.cs:289`, `PixelElectricLinks.cs:229/330` (allocates two Dictionaries every frame with zero links) | Return early when empty; reuse collections; one shared "loose husks this step" list in PixelHuskQuery; per-lane sorted riders | S for the early-outs, M for the list / medium |
-| D4 | `PixelClickerSkillBlocks.cs:33` Solar scan every 0.15 s even when Solar is locked; `PixelStream.cs:58` RaycastAll per streamed husk per step; `PixelPadMinigame`, `PixelPathCarrier`, `PixelNuclearPixel`, `PixelSeed.WaterPixel` GetComponent per husk | Unlock check; NonAlloc; `PixelHuskQuery.Get` | S / none |
+| D4 | `PixelClickerSkillBlocks.cs:33` Solar scan every 0.15 s even when Solar is locked; `PixelStream.cs:58` RaycastAll per streamed husk per step; `PixelPadMinigame`, `PixelPathCarrier`, `PixelNuclearPixel`, PixelSeed.WaterPixel (gone since: watering is `SeedSprout.WaterAll`) GetComponent per husk | Unlock check; NonAlloc; `PixelHuskQuery.Get` | S / none |
 
 ## E. Per-frame strings / layout / scene searches (small each, many of them)
 

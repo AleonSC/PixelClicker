@@ -272,7 +272,7 @@ Wood goods today only sell to the Lumberjack. Proposed sinks, to decide later: M
 ## Build plan (in steps)
 
 1. **Tree mode (shared system).** Data per skill pack: a filler pool, the tree-arrival settings (`minFiller` / `maxFiller`) and a list of species (unlock level, weight, slot list with Fixed / Run / Wildcard / Optional / Hazard slots, infested chance). `PixelClicker.RollTier` serves the filler rotation or the current tree's next slot. Built generic so Mining (veins), Foraging (bushes) and Fishing (spots) can use it later.
-2. **Tree bar + Timber + infested warning + lookahead.** The tree bar (`Oak 7 / 12`, Hive icon, near the Next Up window), the felling show, sound, Timber reward and stats; the infested look and sound; the Next Up window learns to show 1-3 blocks ahead (`PixelClicker.PeekNextTier` becomes a peek of N).
+2. **Tree bar + Timber + infested warning + lookahead.** The tree bar (`Oak 7 / 12`, Hive icon, near the Next Up window), the felling show, sound, Timber reward and stats; the infested look and sound; the Next Up window learns to show 1-3 blocks ahead (`PixelClicker.PeekTierAhead(ahead)` peeks N blocks ahead).
 3. **Woodcutting species + gating.** Oak, Pine, Birch, Maple, Great Oak and the filler pool; remove the per-block filler / hazard shares for Woodcutting.
 4. **Hook the existing mechanics in.** Block Hold keeps the tree's order; Shuffle only on filler; Great Oak becomes a species; Focus potion stops infestation; Focus made from collected hives (Lumberjack trade / recipe); holding Pesticide gives charges (and a left click on a Hive with charges clears it); Sap husks bait termites.
 5. **XP curve bands + XP per hit.** Then retune with the Balance report (which will need a "per tree" view).
