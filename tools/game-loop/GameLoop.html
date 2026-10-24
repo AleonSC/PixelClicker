@@ -1,0 +1,422 @@
+<title>Pixel Clicker Game Loop</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a game-board schematic - the loop diagram is the hero; a side panel explains the picked station; tabs switch to gaps, resources and phases. */
+:root {
+  --bg: #eef0f3; --panel: #ffffff; --ink: #1a2029; --dim: #5e6977; --line: #cfd6df; --accent: #3a63d8;
+  --built: #2f9e5b; --partial: #d99227; --designed: #4f7fd6; --gap: #d0453a; --open: #8a5cc7;
+  --display: "Chakra Petch", "Trebuchet MS", sans-serif; --body: "IBM Plex Sans", "Segoe UI", Arial, sans-serif; --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #10151c; --panel: #171e28; --ink: #e4e9f0; --dim: #93a0b1; --line: #2b3646; --accent: #7aa2ff;
+  --built: #46c27b; --partial: #f0ad45; --designed: #6f9dff; --gap: #f0645a; --open: #b08ae8; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #10151c; --panel: #171e28; --ink: #e4e9f0; --dim: #93a0b1; --line: #2b3646; --accent: #7aa2ff;
+  --built: #46c27b; --partial: #f0ad45; --designed: #6f9dff; --gap: #f0645a; --open: #b08ae8; color-scheme: dark }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); }
+.wrap { max-width: 1320px; margin: 0 auto; padding-block: 24px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 16px; }
+h1 { font: 700 clamp(1.6rem, 3.2vw, 2.3rem) var(--display); margin: 0; letter-spacing: 0.01em; text-wrap: balance; }
+.sub { color: var(--dim); margin: 6px 0 0; max-width: 78ch; line-height: 1.5; font-size: 0.92rem; }
+.score { display: flex; gap: 10px; flex-wrap: wrap; }
+.score span { display: inline-flex; align-items: center; gap: 7px; font: 600 0.82rem var(--mono); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px; }
+.score i, .key i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+nav { display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+nav button { font: 600 0.92rem var(--display); letter-spacing: 0.04em; text-transform: uppercase; background: none; border: 0; border-bottom: 3px solid transparent; color: var(--dim); padding: 10px 12px; cursor: pointer; }
+nav button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+button:focus-visible, .node:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.board { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+.mapbox { overflow-x: auto; padding: 8px; }
+svg#loop { display: block; width: 100%; min-width: 860px; height: auto; }
+.edge path { fill: none; stroke-width: 2.2; transition: opacity 0.15s; }
+.edge text { font: 600 10.5px var(--body); paint-order: stroke; stroke: var(--panel); stroke-width: 4px; }
+.node { cursor: pointer; }
+.node rect { stroke-width: 2; transition: opacity 0.15s; }
+.node text { pointer-events: none; }
+.node .t { font: 700 13.5px var(--display); fill: var(--ink); }
+.node .s { font: 500 10.5px var(--body); fill: var(--dim); }
+.node.sel rect { stroke-width: 3.5; }
+.dim { opacity: 0.18; }
+.tools { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin: 4px 4px 10px; font-size: 0.84rem; color: var(--dim); }
+.tools label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.tools input { accent-color: var(--accent); }
+.key { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.8rem; color: var(--dim); }
+.key span { display: inline-flex; gap: 6px; align-items: center; }
+.side h2 { font: 700 1.25rem var(--display); margin: 0; }
+.side .st { font: 600 0.72rem var(--mono); text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 5px; color: #fff; display: inline-block; }
+.side p { margin: 0; line-height: 1.55; font-size: 0.9rem; }
+.side h3 { font: 600 0.7rem var(--body); text-transform: uppercase; letter-spacing: 0.09em; color: var(--dim); margin: 6px 0 0; }
+.side ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 5px; font-size: 0.88rem; line-height: 1.45; }
+.side .flow { display: flex; flex-wrap: wrap; gap: 5px; }
+.side .flow button { font: 0.78rem var(--body); border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 5px; padding: 3px 8px; cursor: pointer; }
+.side .flow button:hover { border-color: var(--accent); }
+.side { display: flex; flex-direction: column; gap: 10px; position: sticky; top: max(12px, env(safe-area-inset-top, 0px)); }
+.gapbox { border-left: 3px solid var(--gap); padding: 6px 10px; background: color-mix(in srgb, var(--gap) 8%, transparent); border-radius: 0 6px 6px 0; font-size: 0.86rem; line-height: 1.45; }
+.ref { font: 0.75rem var(--mono); color: var(--dim); overflow-wrap: anywhere; }
+.gaps { display: flex; flex-direction: column; gap: 22px; }
+.gaps h2 { font: 700 1.05rem var(--display); margin: 0 0 8px; display: flex; gap: 10px; align-items: baseline; }
+.gaps h2 small { font: 500 0.8rem var(--body); color: var(--dim); }
+.gl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.gi { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--sev); border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.gi b { font: 700 0.98rem var(--display); }
+.gi p { margin: 0; font-size: 0.86rem; line-height: 1.5; }
+.gi .meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.chip { font: 600 0.72rem var(--mono); border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; color: var(--dim); }
+.gi button { align-self: flex-start; font: 600 0.78rem var(--body); background: none; border: 1px solid var(--line); border-radius: 5px; padding: 3px 9px; color: var(--accent); cursor: pointer; }
+table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+th { text-align: left; font: 600 0.7rem var(--body); text-transform: uppercase; letter-spacing: 0.08em; color: var(--dim); padding: 8px; border-bottom: 1px solid var(--line); }
+td { padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.45; }
+td:first-child { font-weight: 600; white-space: nowrap; }
+.verdict { font: 600 0.72rem var(--mono); text-transform: uppercase; padding: 2px 7px; border-radius: 4px; color: #fff; white-space: nowrap; }
+.tablebox { overflow-x: auto; }
+.phases { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.ph { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.ph .when { font: 600 0.75rem var(--mono); color: var(--dim); }
+.ph h3 { font: 700 1.05rem var(--display); margin: 0; }
+.ph .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; display: flex; }
+.ph .bar i { display: block; height: 100%; }
+.ph h4 { font: 600 0.68rem var(--body); text-transform: uppercase; letter-spacing: 0.09em; color: var(--dim); margin: 4px 0 0; }
+.ph ul { margin: 0; padding-left: 16px; font-size: 0.84rem; line-height: 1.45; display: flex; flex-direction: column; gap: 4px; }
+.ph ul.miss li::marker { color: var(--gap); }
+.note { font-size: 0.8rem; color: var(--dim); line-height: 1.5; max-width: 95ch; }
+@media (max-width: 1100px) { .phases { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 980px) { .board { grid-template-columns: 1fr; } .side { position: static; } }
+@media (max-width: 640px) { .gl, .phases { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Pixel Clicker Game Loop</h1>
+    <p class="sub">How every part of the game feeds the others: click the cube, spend what it gives, grow, and come back stronger. Each station and arrow is coloured by how finished it is, so the unfulfilled parts of the loop stand out. Click any station for what it gives, what it needs and what is missing.</p>
+  </header>
+  <div class="score" id="score"></div>
+  <nav role="tablist">
+    <button role="tab" data-tab="loop" aria-selected="true">The loop</button>
+    <button role="tab" data-tab="gaps" aria-selected="false">Gaps</button>
+    <button role="tab" data-tab="resources" aria-selected="false">Resources</button>
+    <button role="tab" data-tab="phases" aria-selected="false">Phases</button>
+  </nav>
+
+  <section id="tab-loop" class="board">
+    <div class="panel mapbox">
+      <div class="tools">
+        <label><input type="checkbox" id="onlyGaps"> Highlight what is missing</label>
+        <div class="key" id="key"></div>
+      </div>
+      <svg id="loop" viewBox="0 0 1180 780" role="img" aria-label="The game loop: stations and the arrows between them, coloured by status"></svg>
+    </div>
+    <aside class="panel side" id="side"></aside>
+  </section>
+
+  <section id="tab-gaps" class="gaps" hidden></section>
+
+  <section id="tab-resources" class="panel" hidden>
+    <div class="tablebox"><table>
+      <thead><tr><th>Resource</th><th>Comes from</th><th>Goes to</th><th>Verdict</th></tr></thead>
+      <tbody id="res"></tbody>
+    </table></div>
+  </section>
+
+  <section id="tab-phases" hidden>
+    <div class="phases" id="phases"></div>
+  </section>
+
+  <p class="note">Sources: docs/GameDesign.md (section 6, Cubie's bill and Tier 0), docs/systems/ConnectionMap.md, docs/systems/PixelRules.md, Assets/Resources/Todo.txt and the changelog, as of 24 Oct 2026. Status is about the design being in the game, not about balance: "Built" parts can still need tuning.</p>
+</div>
+
+<script>
+const STATUS = {
+  built:    { label: 'Built', css: 'var(--built)' },
+  partial:  { label: 'Partly built', css: 'var(--partial)' },
+  designed: { label: 'Designed, not built', css: 'var(--designed)' },
+  open:     { label: 'Open question', css: 'var(--open)' },
+};
+
+// ---- Stations ----
+const N = [
+  { id: 'cube', x: 590, y: 390, t: 'Click the cube', s: 'the core action', st: 'built',
+    d: 'Every click pays the block\'s currency and drops a husk. Blocks roll from the unlocked pixel types; tough blocks, hazards, fillers and rare drops vary it. The Auto Clicker clicks for you once bought.',
+    miss: [] },
+  { id: 'pure', x: 330, y: 250, t: 'Pure currency', s: 'White, Gray, Black, R, G, B', st: 'built',
+    d: 'The money: the six pure colours. Cubie takes only these; the shop sells for these.',
+    miss: [] },
+  { id: 'husks', x: 850, y: 250, t: 'Husks', s: 'material, never money', st: 'built',
+    d: 'The block\'s leftover body. Husks wait on the floor (lifetime, floor cap) and are the material for everything husk-based: crushing, recycling, machines, storage.',
+    miss: [] },
+  { id: 'shop', x: 330, y: 90, t: 'Cubie\'s shop', s: 'packs, upgrades, devices', st: 'built',
+    d: 'Pixel packs (new blocks), Value levels, Operation upgrades, consumables and devices, skill packs, minigame packs - all for pure currency.',
+    miss: ['Skill pack price ladder (~2-3x each, second at ~25-30 min) not set yet.', 'Many early-development shop pixels / devices still need deciding: shop-only or unlocked later.'] },
+  { id: 'bill', x: 105, y: 165, t: 'Cubie\'s bill', s: 'trust tiers 0-3', st: 'built',
+    d: 'Revealed at ~60 min. Paying 25K / 2.5M / 250M / 25B of each pure colour raises Cubie\'s trust, and each tier opens more machines and stock in his shop. Trust never gates skills or caps levels.',
+    miss: ['Milestone amounts are placeholders until session reports cover hours of play.', 'The price-tag foreshadowing needs a rework (the tag sits on an item you have not placed yet).'] },
+  { id: 'prestige', x: 105, y: 40, t: 'Settle the bill', s: 'prestige', st: 'open',
+    d: 'At 25B of each colour the bill is settled. The plan: reset the run with a lasting bonus (Cubie\'s Goodwill) and a bigger bill (x10).',
+    miss: ['How prestige works is undecided (design question Q2): what resets, what stays, what Goodwill gives.'] },
+  { id: 'standard', x: 590, y: 175, t: 'Standard skill', s: 'abilities + tool unlocks', st: 'built',
+    d: 'The ability skill. Levels from clicks, crushes and goals unlock Block Hold, Power Click, Next up, Shuffle and their tree twists, plus level-gated tools (Sorting Hopper at 3, Sweeper at 5).',
+    miss: ['Front-loaded XP curve (levels 2-7 at ~3 / 10 / 20 / 35 / 45 / 60 min) to tune.', 'Only two shop tools are level-gated so far; Husk Capacity as a Standard reward is still unplaced.'] },
+  { id: 'crush', x: 1075, y: 160, t: 'Husk Crush', s: 'right-click a husk', st: 'built',
+    d: 'Right-click husks for Standard XP; streaks, air crush and charge crush add more and refund Power Click / Block Hold / Charge Crush cooldowns at Standard 7-9.',
+    miss: [] },
+  { id: 'recycler', x: 1075, y: 320, t: 'Recycler', s: 'the lossy money exit', st: 'built',
+    d: 'Cubie\'s first gift. Husks dropped in come back as a share of a click\'s currency; same-colour streaks pay more. The only way husks turn into money.',
+    miss: [] },
+  { id: 'factory', x: 850, y: 95, t: 'Machines & factory', s: 'belts, junctions, hoses', st: 'partial',
+    d: 'Couplings join everything: belts, Junction Box, Container Hose, Elevator, Belt Sorter, Sorting Hopper, Sweeper, Storage Crate, Crafting Cube, Biomass Generators, Power Bank. Trust Tier 1 opens the factory parts.',
+    miss: ['Several machines are still Dev Hub tester features with no skill home (Electrician is the natural one).', 'No strong REASON to build a factory yet: vendor orders and products are designed but not built.', 'Build mode + free cam, chute, robot arm, launcher and coupling settings are on the to-do.', 'Machine breakdowns / jams (the first-person repair loop) are designed only.'] },
+  { id: 'materials', x: 1075, y: 500, t: 'Materials', s: 'Charcoal, Wood Chips, drops', st: 'partial',
+    d: 'Held materials that are not currency: Charcoal (Kiln), Wood Chips (Wood Chipper), minigame drops (stardust, meteor chunks, bomb parts, ectoplasm, Magic Wood).',
+    miss: ['Magic Wood (Evil Tree) has no use.', 'Ectoplasm (Ghost) has no use.', 'Most materials have one sink at best (fuel, a pack price, a vendor).'] },
+  { id: 'products', x: 850, y: 560, t: 'Products & Discovery', s: 'machine outputs, new blocks', st: 'designed',
+    d: 'Machines make PRODUCTS (bodies that ride belts and sit in crates, not currency). Making enough of a product DISCOVERS a new block for the cube - how the making skills get their blocks.',
+    miss: ['Products as an item kind are not built (only the Charcoal material exists).', 'Discovery is not built as a rule; the Charcoal Pixel is bought in the shop with Charcoal instead (a first step).', 'Making skills (Firemaking, Smithing, Electrician as maker) have no real path in yet.'] },
+  { id: 'orders', x: 590, y: 720, t: 'Vendor orders', s: 'deliver for ~3x pay', st: 'designed',
+    d: 'Vendors post orders like "50 Wood Chips in 10 minutes", delivered by belt, tube or hand to a drop-off; the best-paying route and the reason to build a factory. Later: rapport with each vendor.',
+    miss: ['Not built. Without it the factory has no customer.'] },
+  { id: 'skills', x: 420, y: 560, t: 'Gathering skills', s: 'Woodcutting, Foraging, Fishing, Mining', st: 'built',
+    d: 'A skill pack swaps the cube\'s blocks for the skill\'s own (filler, core blocks, a hazard, rare specials), with XP, levels, perks and a tree. All open from Tier 0.',
+    miss: ['Tree node effects and perks are partly text only.', 'Cross-skill links: Foraging and Fishing give nothing to other skills; Mining needs nothing.', 'Skill tiers (Making, Operation skills) not decided / built.'] },
+  { id: 'goods', x: 200, y: 600, t: 'Skill goods', s: 'wood, ore, fish... currencies', st: 'built',
+    d: 'Skill blocks pay their own currencies (Wood, Copper, Fish...). Used for skill tools from vendors and sold for pure currency.',
+    miss: ['Few sinks inside their own skill; Composite Value upgrades (paid in the skill pixel) not built.'] },
+  { id: 'vendors', x: 105, y: 450, t: 'Vendors', s: 'Big Tim, Prospector, Farmer...', st: 'partial',
+    d: 'Visitors buy skill goods for pure currency and sell skill tools. Cubie calls them peddlers.',
+    miss: ['They buy at ~0.8x of the rarity rate: training a skill earns LESS pure currency than clicking, so skills slow Cubie\'s bill. The value ladder (~1.2x raw goods, ~2x products, ~3x orders) and market saturation are not built - a Tier 0 priority.', 'Only Big Tim has a full Sell tab.'] },
+  { id: 'minigames', x: 330, y: 720, t: 'Minigames', s: 'takeover + side games', st: 'partial',
+    d: 'Black Hole, Ghost, Meteor, Stardust, Evil Tree, Snake, Dash, Breakout, Bomb and more. They pay currency, raise the minigame XP multiplier and drop materials / Ultra pixels.',
+    miss: ['Most only pay currency; each should feed one skill the way the Evil Tree feeds Woodcutting.', 'Minigame progression rework (base-coin packs, goal-gated minigame pixels) not done.'] },
+  { id: 'ultra', x: 850, y: 720, t: 'Ultra pixels', s: 'rare meta currency', st: 'partial',
+    d: 'From minigames and the dragon\'s blessing. Spent on Ultra boosts per pixel type.',
+    miss: ['Thin sink: the cosmetics shop (floors / skies behind Ultra, Wardrobe tab) is designed only; other uses still to decide.'] },
+  { id: 'collect', x: 1075, y: 680, t: 'Collectibles', s: 'Dragon, God, Prime Cubes', st: 'built',
+    d: 'Super-rare drops with their own shows, the wish and the Gauntlet; the Collection Log and gallery track them.',
+    miss: ['Rare-set table cleanup (one data entry per family) not done; super-rare gear is post-1.0.'] },
+];
+
+// ---- Arrows: from, to, label, status, bend (curvature) ----
+const E = [
+  ['cube', 'pure', 'every click pays', 'built', -0.15],
+  ['cube', 'husks', 'every click drops one', 'built', 0.15],
+  ['pure', 'shop', 'buy', 'built', 0],
+  ['shop', 'cube', 'packs add blocks, Value, Auto Clicker', 'built', -0.25],
+  ['pure', 'bill', 'pay Cubie', 'built', 0.1],
+  ['bill', 'shop', 'trust opens machines + stock', 'built', 0.1],
+  ['bill', 'prestige', 'settle at 25B', 'open', 0],
+  ['shop', 'skills', 'skill packs (price ladder not set)', 'partial', 0.35],
+  ['skills', 'cube', 'swap the cube\'s blocks', 'built', -0.1],
+  ['skills', 'goods', 'skill blocks pay goods', 'built', 0],
+  ['goods', 'vendors', 'sell', 'partial', 0.15],
+  ['vendors', 'pure', 'pure back (0.8x - too low)', 'partial', 0.15],
+  ['husks', 'crush', 'right-click', 'built', -0.1],
+  ['crush', 'standard', 'Standard XP + refunds', 'built', -0.12],
+  ['standard', 'cube', 'Block Hold, Power Click...', 'built', 0.12],
+  ['standard', 'shop', 'level-gated tools', 'partial', -0.1],
+  ['husks', 'recycler', 'drop in', 'built', 0.1],
+  ['recycler', 'pure', 'lossy currency', 'built', -0.42],
+  ['husks', 'factory', 'couplings move them', 'partial', -0.1],
+  ['factory', 'materials', 'Kiln, Chipper', 'partial', 0.45],
+  ['materials', 'factory', 'fuel for generators', 'built', 0.2],
+  ['materials', 'products', 'products as items', 'designed', 0.1],
+  ['products', 'cube', 'discover new blocks', 'designed', -0.12],
+  ['products', 'orders', 'deliver', 'designed', 0.12],
+  ['orders', 'pure', '~3x pay', 'designed', -0.35],
+  ['minigames', 'pure', 'currency', 'built', 0.25],
+  ['minigames', 'skills', 'XP multiplier (few feed a skill)', 'partial', -0.1],
+  ['minigames', 'materials', 'drops (some unused)', 'partial', -0.18],
+  ['minigames', 'ultra', 'Ultra pixels', 'built', -0.12],
+  ['ultra', 'cube', 'Ultra boosts (cosmetics not built)', 'partial', 0.2],
+  ['cube', 'collect', 'super-rare drops', 'built', -0.15],
+];
+
+// ---- Gaps (ranked) ----
+const GAPS = [
+  { sev: 'critical', node: 'vendors', t: 'Skills earn less pure currency than clicking', d: 'Training a skill swaps out the basic cubes, and vendors pay only ~0.8x for skill goods, so every skill slows Cubie\'s bill. The value ladder (raw goods ~1.2x, products ~2x, orders ~3x) with market saturation fixes it.', loop: 'Skills -> goods -> vendors -> pure', todo: 'Vendor value ladder + market saturation (PRIORITY)' },
+  { sev: 'critical', node: 'shop', t: 'No skill pack price ladder', d: 'Tier 0 needs the gathering packs priced so the second is affordable at ~25-30 min, the third at ~45 and the fourth at ~70 - the first real choice between skills.', loop: 'Pure -> shop -> skills', todo: 'Skill packs sold in the main shop for Pure currency' },
+  { sev: 'critical', node: 'prestige', t: 'Nothing after the bill is settled', d: 'The spine ends at 25B of each colour (~25-30 h). Prestige - what resets, what stays, what Cubie\'s Goodwill gives - is undecided.', loop: 'Bill -> prestige -> a new run', todo: 'Design question Q2' },
+  { sev: 'major', node: 'orders', t: 'The factory has no customer', d: 'Belts and machines move husks well, but nothing asks for their output. Vendor orders (and rapport) give a reason to build.', loop: 'Factory -> products -> orders -> pure', todo: 'Vendor orders; Vendor rapport' },
+  { sev: 'major', node: 'products', t: 'Products and Discovery are not built', d: 'Machine outputs should be products that can discover new blocks - the way making skills get their blocks. Today only the Charcoal material exists and the Charcoal Pixel is bought in the shop.', loop: 'Materials -> products -> new blocks', todo: 'Products as a new item kind; Discovery; Move Wood Chips and Charcoal to products' },
+  { sev: 'major', node: 'skills', t: 'Making / Operation skills have no path', d: 'Firemaking, Smithing and Automation are planned as skills that open from your gathering levels and machines, but the skill tiers are not decided or built.', loop: 'Skills -> factory -> new skills', todo: 'Skill tiers (design)' },
+  { sev: 'major', node: 'factory', t: 'Factory machines lack a home and a tier', d: 'Several machines are Dev Hub tester features with no skill home; build mode, chute, robot arm, launcher and coupling settings are still on the to-do.', loop: 'Husks -> factory', todo: 'Build mode + free cam; Chute; Robot arm; Launcher; Coupling settings; Device table' },
+  { sev: 'major', node: 'minigames', t: 'Most minigames only pay currency', d: 'Only the Evil Tree (Woodcutting) and Weak Spots (Fishing) feed a skill. Each minigame should feed one skill so it joins the loop instead of sitting beside it.', loop: 'Minigames -> skills', todo: 'Minigame progression rework; Connection Map gap 6' },
+  { sev: 'minor', node: 'materials', t: 'Dead-end materials', d: 'Magic Wood (Evil Tree) and Ectoplasm (Ghost) can be earned but not used.', loop: 'Minigames -> materials -> ?', todo: 'Find a use for Ectoplasm; Connection Map gap 5' },
+  { sev: 'minor', node: 'ultra', t: 'Ultra pixels have one thin sink', d: 'Ultra boosts only. The cosmetics shop (floors and skies behind Ultra, a Wardrobe tab) is designed but not built.', loop: 'Minigames -> Ultra -> ?', todo: 'Ultra pixel use; Cosmetics shop' },
+  { sev: 'minor', node: 'goods', t: 'Skill goods have few sinks of their own', d: 'Composite Value upgrades (paid in the skill pixel, raise payout and XP) and per-skill sinks would give goods a use besides selling.', loop: 'Goods -> ?', todo: 'Composite Value upgrades' },
+  { sev: 'minor', node: 'skills', t: 'Skills barely link to each other', d: 'Foraging and Fishing give nothing to other skills, Mining needs nothing; tree effects and perks are partly text only.', loop: 'Skill <-> skill', todo: 'Cross-skill links; skill tree effects' },
+  { sev: 'minor', node: 'factory', t: 'No first-person repair loop yet', d: 'Machine breakdowns / jams that send you down to fix them (with other skills\' husks) are designed only.', loop: 'Factory -> first person -> skills', todo: 'Machine jams; Machine breakdowns' },
+  { sev: 'minor', node: 'bill', t: 'The debt is foreshadowed weakly', d: 'Cubie mentions the Recycler\'s price tag before you have placed it, and the tag is small. A "tab" in the shop header (or another rework) is pending.', loop: 'Cubie\'s story', todo: 'Rework the tag (to decide)' },
+];
+const SEV = { critical: { label: 'Critical', css: 'var(--gap)' }, major: { label: 'Major', css: 'var(--partial)' }, minor: { label: 'Minor', css: 'var(--designed)' } };
+
+// ---- Resources ----
+const RES = [
+  ['Pure currency', 'clicks, Recycler, vendors, goals, minigames', 'shop, Cubie\'s bill, crafting', 'healthy', 'built'],
+  ['Husks', 'every click', 'crush, Recycler, Chipper, Kiln, generators, Crafting Cube, Bank, Lightning Rod, despawn', 'healthy', 'built'],
+  ['Standard XP', 'crushes, clicks, goals', 'levels: abilities, tree twists, level-gated tools', 'healthy (curve to tune)', 'built'],
+  ['Skill XP', 'skill blocks, Chipper, minigame multiplier', 'levels, perks, tree nodes (partly text only)', 'partial', 'partial'],
+  ['Skill goods', 'skill blocks', 'vendors (0.8x), skill tools', 'weak sink, low rate', 'partial'],
+  ['Trust', 'paying the bill', 'opens machines + stock', 'built, numbers to tune', 'built'],
+  ['Charcoal', 'Kiln', 'Biomass fuel (x8), Charcoal Pixel pack, Lumberjack', 'ok', 'built'],
+  ['Wood Chips', 'Wood Chipper', 'Biomass fuel (x4), Lumberjack', 'ok', 'built'],
+  ['Stardust, meteor chunks, bomb parts', 'their minigames', 'minigame pack prices', 'thin', 'partial'],
+  ['Magic Wood', 'Evil Tree', 'nothing', 'dead end', 'gap'],
+  ['Ectoplasm', 'Ghost minigame', 'nothing', 'dead end', 'gap'],
+  ['Ultra pixels', 'minigames, dragon blessing', 'Ultra boosts', 'thin', 'partial'],
+  ['Products', '(machines, planned)', '(orders, discovery, crafting - planned)', 'not built', 'designed'],
+];
+
+// ---- Phases ----
+const PH = [
+  { t: 'Tier 0', when: '0 - ~1.5 h', built: 0.7, part: 0.2,
+    does: ['Pure colours, Cubie\'s Recycler, the shop, the Auto Clicker', 'First skill (Woodcutting) at 10-20 min, the rest on a price ladder', 'Husk Crush, Standard abilities, Hopper and Sweeper', 'Cubie\'s bill at ~60 min, then pay vs. skill'],
+    miss: ['Skill pack price ladder', 'Vendor value ladder (skills must pay back)', 'Tag / tab foreshadowing rework'] },
+  { t: 'Tier 1', when: '~1.5 - 6 h', built: 0.45, part: 0.3,
+    does: ['Factory parts: belts, sorters, Junction Box', 'More gathering skills levelling', 'Generators and charcoal fuel'],
+    miss: ['A reason to build: vendor orders', 'Products and Discovery', 'Build mode + free cam', 'Making skills\' way in'] },
+  { t: 'Tier 2', when: '~6 - 15 h', built: 0.3, part: 0.25,
+    does: ['Power: generators, Power Bank', 'Bigger machines and upgrades'],
+    miss: ['Operation skills (Automation)', 'Machine breakdowns / first-person repairs', 'Vendor rapport'] },
+  { t: 'Tier 3', when: '~15 - 25 h', built: 0.2, part: 0.2,
+    does: ['Premium stock', 'Rare hunting (Dragon / God / Prime Cubes)'],
+    miss: ['What premium stock actually is', 'Cosmetics shop for Ultra pixels', 'Rare-hunting gear'] },
+  { t: 'Settled', when: '~25 - 30 h', built: 0, part: 0.1,
+    does: ['Pay off 25B of each colour'],
+    miss: ['Prestige: what resets, what stays, Goodwill', 'The next (x10) bill'] },
+];
+
+(function () {
+  const byId = Object.fromEntries(N.map(n => [n.id, n]));
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const W = 176, H = 54;
+
+  // score strip
+  const counts = {}; N.forEach(n => counts[n.st] = (counts[n.st] || 0) + 1);
+  const ec = {}; E.forEach(e => ec[e[3]] = (ec[e[3]] || 0) + 1);
+  document.getElementById('score').innerHTML = Object.entries(STATUS).map(([k, v]) => `<span><i style="background:${v.css}"></i>${v.label}: ${counts[k] || 0} station${counts[k] === 1 ? '' : 's'}, ${ec[k] || 0} arrow${ec[k] === 1 ? '' : 's'}</span>`).join('')
+    + `<span><i style="background:var(--gap)"></i>${GAPS.filter(g => g.sev === 'critical').length} critical gaps</span>`;
+  document.getElementById('key').innerHTML = Object.values(STATUS).map(v => `<span><i style="background:${v.css}"></i>${v.label}</span>`).join('');
+
+  // ---- draw the loop ----
+  const svg = document.getElementById('loop'), NS = 'http://www.w3.org/2000/svg';
+  const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); (parent || svg).appendChild(e); return e; };
+  const defs = el('defs', {});
+  Object.entries(STATUS).forEach(([k, v]) => {
+    const m = el('marker', { id: 'arr-' + k, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' }, defs);
+    el('path', { d: 'M0,0 L10,5 L0,10 z', fill: v.css }, m);
+  });
+  // clip a line from centre to centre at the box edges
+  function edgePoint(n, tx, ty) {
+    const dx = tx - n.x, dy = ty - n.y, sx = (W / 2 + 6) / Math.abs(dx || 1e-6), sy = (H / 2 + 6) / Math.abs(dy || 1e-6), s = Math.min(sx, sy);
+    return [n.x + dx * s, n.y + dy * s];
+  }
+  const gEdges = el('g', {}), gNodes = el('g', {});
+  const edgeEls = E.map(([a, b, label, st, bend]) => {
+    const A = byId[a], B = byId[b];
+    const mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2, dx = B.x - A.x, dy = B.y - A.y;
+    const cx = mx - dy * bend, cy = my + dx * bend;
+    const [x1, y1] = edgePoint(A, cx, cy), [x2, y2] = edgePoint(B, cx, cy);
+    const g = el('g', { class: 'edge' }, gEdges);
+    const dash = st === 'designed' ? '7 5' : st === 'open' ? '2 5' : st === 'partial' ? '12 4' : '';
+    el('path', { d: `M${x1},${y1} Q${cx},${cy} ${x2},${y2}`, stroke: STATUS[st].css, 'stroke-dasharray': dash, 'marker-end': `url(#arr-${st})` }, g);
+    const lx = 0.25 * x1 + 0.5 * cx + 0.25 * x2, ly = 0.25 * y1 + 0.5 * cy + 0.25 * y2;
+    const tx = el('text', { x: lx, y: ly + 4, 'text-anchor': 'middle', fill: STATUS[st].css }, g); tx.textContent = label;
+    return { g, a, b, st, label: tx };
+  });
+  const nodeEls = N.map(n => {
+    const g = el('g', { class: 'node', tabindex: 0, role: 'button', 'aria-label': n.t + ' - ' + STATUS[n.st].label, transform: `translate(${n.x - W / 2},${n.y - H / 2})` }, gNodes);
+    el('rect', { width: W, height: H, rx: 10, fill: 'var(--panel)', stroke: STATUS[n.st].css }, g);
+    el('rect', { width: 8, height: H, rx: 4, fill: STATUS[n.st].css }, g);
+    const t = el('text', { x: 18, y: 23, class: 't' }, g); t.textContent = n.t;
+    const s = el('text', { x: 18, y: 40, class: 's' }, g); s.textContent = n.s;
+    if (n.miss.length) { const c = el('circle', { cx: W - 14, cy: 14, r: 9, fill: STATUS[n.st] && n.st === 'built' ? 'var(--partial)' : 'var(--gap)' }, g); const ct = el('text', { x: W - 14, y: 18, 'text-anchor': 'middle', style: 'font:700 11px var(--mono);fill:#fff' }, g); ct.textContent = n.miss.length; }
+    g.addEventListener('click', () => select(n.id));
+    g.addEventListener('mouseenter', () => { hovered = n.id; restyle(); });
+    g.addEventListener('mouseleave', () => { hovered = null; restyle(); });
+    g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(n.id); } });
+    return { g, n };
+  });
+
+  let selected = null, hovered = null;
+  const onlyGaps = document.getElementById('onlyGaps');
+  function restyle() {
+    const near = new Set();
+    if (selected) { near.add(selected); E.forEach(([a, b]) => { if (a === selected) near.add(b); if (b === selected) near.add(a); }); }
+    nodeEls.forEach(({ g, n }) => {
+      const faded = (selected && !near.has(n.id)) || (onlyGaps.checked && n.st === 'built' && !n.miss.length);
+      g.classList.toggle('dim', faded); g.classList.toggle('sel', n.id === selected);
+    });
+    const focus = hovered || selected;
+    edgeEls.forEach(({ g, a, b, st, label }) => {
+      const faded = (selected && a !== selected && b !== selected) || (onlyGaps.checked && st === 'built');
+      g.classList.toggle('dim', faded);
+      // Arrow labels only for the station you hover or pick (all at once they crowd each other); 'highlight what is missing' shows the unbuilt ones.
+      const show = focus ? (a === focus || b === focus) : (onlyGaps.checked && st !== 'built');
+      label.style.display = show ? '' : 'none';
+    });
+  }
+  onlyGaps.addEventListener('change', restyle);
+
+  const side = document.getElementById('side');
+  function flowButtons(ids) { return ids.map(id => `<button data-go="${id}">${esc(byId[id].t)}</button>`).join(''); }
+  function select(id) {
+    selected = id;
+    const n = byId[id];
+    if (!n) { side.innerHTML = intro(); restyle(); return; }
+    const outs = E.filter(e => e[0] === id), ins = E.filter(e => e[1] === id);
+    const relGaps = GAPS.filter(g => g.node === id);
+    side.innerHTML = `<span class="st" style="background:${STATUS[n.st].css}">${STATUS[n.st].label}</span>
+      <h2>${esc(n.t)}</h2><p>${esc(n.d)}</p>
+      <h3>Gives to</h3><ul>${outs.map(e => `<li><b>${esc(byId[e[1]].t)}</b>: ${esc(e[2])} <span class="ref">(${STATUS[e[3]].label.toLowerCase()})</span></li>`).join('') || '<li>nothing yet</li>'}</ul>
+      <h3>Fed by</h3><ul>${ins.map(e => `<li><b>${esc(byId[e[0]].t)}</b>: ${esc(e[2])} <span class="ref">(${STATUS[e[3]].label.toLowerCase()})</span></li>`).join('') || '<li>nothing</li>'}</ul>
+      ${n.miss.length ? `<h3>Missing</h3>${n.miss.map(m => `<div class="gapbox">${esc(m)}</div>`).join('')}` : '<h3>Missing</h3><p style="color:var(--built)">Nothing missing in the design here.</p>'}
+      ${relGaps.length ? `<h3>To-do</h3>${relGaps.map(g => `<div class="ref">${esc(g.todo)}</div>`).join('')}` : ''}
+      <h3>Jump to</h3><div class="flow">${flowButtons([...new Set([...outs.map(e => e[1]), ...ins.map(e => e[0])])])}</div>
+      <div class="flow"><button data-go="">Clear selection</button></div>`;
+    side.querySelectorAll('button[data-go]').forEach(b => b.onclick = () => select(b.dataset.go || null));
+    restyle();
+  }
+  function intro() {
+    return `<h2>Read the loop</h2>
+      <p>The core: <b>click the cube</b> for <b>pure currency</b> and a <b>husk</b>. Currency buys from <b>Cubie's shop</b> and pays his <b>bill</b>, which opens more of the shop. Husks feed <b>Husk Crush</b> (Standard XP and abilities), the <b>Recycler</b> (a little money back) and the <b>factory</b>.</p>
+      <p><b>Skills</b> swap the cube's blocks for their own and pay <b>skill goods</b> that vendors buy for pure currency; minigames and rare drops run alongside.</p>
+      <p>Dashed arrows are not built yet. A badge on a station counts what is missing there. Hover a station to read its arrows; click it to follow it.</p>`;
+  }
+  side.innerHTML = intro();
+  svg.addEventListener('click', e => { if (e.target === svg) select(null); });
+
+  // ---- gaps tab ----
+  document.getElementById('tab-gaps').innerHTML = Object.entries(SEV).map(([k, v]) => {
+    const list = GAPS.filter(g => g.sev === k);
+    return `<div><h2 style="color:${v.css}">${v.label} <small>${list.length} ${k === 'critical' ? '- the loop breaks or ends here' : k === 'major' ? '- a part of the loop with no purpose yet' : '- loose ends'}</small></h2>
+      <div class="gl">${list.map(g => `<div class="gi" style="--sev:${v.css}"><b>${esc(g.t)}</b><p>${esc(g.d)}</p>
+        <div class="meta"><span class="chip">${esc(g.loop)}</span></div><div class="ref">To-do: ${esc(g.todo)}</div>
+        <button data-node="${g.node}">Show on the loop</button></div>`).join('')}</div></div>`;
+  }).join('');
+  document.querySelectorAll('#tab-gaps button[data-node]').forEach(b => b.onclick = () => { showTab('loop'); select(b.dataset.node); });
+
+  // ---- resources tab ----
+  const VC = { built: 'var(--built)', partial: 'var(--partial)', designed: 'var(--designed)', gap: 'var(--gap)' };
+  document.getElementById('res').innerHTML = RES.map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td><td><span class="verdict" style="background:${VC[r[4]]}">${esc(r[3])}</span></td></tr>`).join('');
+
+  // ---- phases tab ----
+  document.getElementById('phases').innerHTML = PH.map(p => `<div class="ph"><span class="when">${esc(p.when)}</span><h3>${esc(p.t)}</h3>
+    <div class="bar" title="${Math.round(p.built * 100)}% built, ${Math.round(p.part * 100)}% partly built"><i style="width:${p.built * 100}%;background:var(--built)"></i><i style="width:${p.part * 100}%;background:var(--partial)"></i></div>
+    <h4>What you do</h4><ul>${p.does.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+    <h4>Missing</h4><ul class="miss">${p.miss.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('');
+
+  // ---- tabs (bookmarkable: #loop #gaps #resources #phases) ----
+  const tabs = ['loop', 'gaps', 'resources', 'phases'];
+  function showTab(t) {
+    if (!tabs.includes(t)) t = 'loop';
+    tabs.forEach(x => { document.getElementById('tab-' + x).hidden = x !== t; });
+    document.querySelectorAll('nav button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
+    try { history.replaceState(null, '', '#' + t); } catch (e) {}
+  }
+  document.querySelectorAll('nav button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+  showTab((location.hash || '#loop').slice(1));
+  restyle();
+})();
+</script>
