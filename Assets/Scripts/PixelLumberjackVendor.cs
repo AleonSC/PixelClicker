@@ -178,6 +178,9 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
     protected override string TradePayWord => "Sell";
 
     /// <summary>He only comes while you are training Woodcutting.</summary>
+    /// <summary>He buys your wood (his own Sell panel, PixelMarket prices), so he can be called from the Toggles window.</summary>
+    public override bool BuysFromPlayer => true;
+
     protected override string VisitSkillId => PixelSkills.WoodcuttingId;   // only visits while it is in training (and says so in Toggles)
 
 

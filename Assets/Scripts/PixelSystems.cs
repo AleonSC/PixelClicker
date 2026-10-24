@@ -120,6 +120,8 @@ public static class PixelSystems
         new Entry(typeof(PixelFarmerMinigame), "Minigames"),
         new Entry(typeof(PixelEntrepreneurMinigame), "Minigames"),
         new Entry(typeof(PixelProspectorVendor), "Minigames"),
+        new Entry(typeof(PixelForagerVendor), "Minigames"),
+        new Entry(typeof(PixelAnglerVendor), "Minigames"),
         new Entry(typeof(PixelLumberjackVendor), "Minigames"),
         new Entry(typeof(PixelEggMinigame), "Minigames"),
         new Entry(typeof(PixelBeanMinigame), "Minigames"),

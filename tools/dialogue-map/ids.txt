@@ -9,6 +9,8 @@ C6 | Visitor: prospector
 C7 | Visitor: lumberjack
 C8 | Visitor: egg
 C9 | Visitor: bean
+C10 | Visitor: forager
+C11 | Visitor: angler
 G1 | Intro tips
 G2 | Tutorial: Shop
 G3 | Tutorial: Toggles

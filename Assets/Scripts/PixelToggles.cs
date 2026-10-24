@@ -53,6 +53,19 @@ public class PixelToggles : MonoBehaviour
     [Tooltip("Shown on the Vendors tab until a vendor has started visiting.")]
     [SerializeField] private string noVendorsText = "No vendors yet. They start visiting as you progress.";
 
+    [Tooltip("Label of the 'Call' button on a buying vendor's row (calls him now; one call per PixelGuideVendor's call cooldown).")]
+    [SerializeField] private string callButtonText = "Call";
+
+    [Tooltip("The Call button while the call cooldown runs. {0} = minutes of play left.")]
+    [SerializeField] private string callWaitFormat = "{0}m";
+
+    [Tooltip("The Call button after you called him, until he arrives.")]
+    [SerializeField] private string callComingText = "Coming";
+
+    [Min(40f)]
+    [Tooltip("Width of the Call button.")]
+    [SerializeField] private float callButtonWidth = 110f;
+
     [Tooltip("Shown on the Pets tab while you have no pets.")]
     [SerializeField] private string noPetsText = "No pets yet. Very rarely, clicking a pixel gives you its pet.";
 
@@ -144,6 +157,10 @@ public class PixelToggles : MonoBehaviour
         public Action editAction;
         public GameObject info;    // the orange '!' (rows with a note)
         public string note;
+        public Button call;        // vendor rows: call him now (PixelVisitorMinigame.Call, shared cooldown)
+        public TMP_Text callLabel;
+        public Image callImage;
+        public PixelVisitorMinigame callVendor;
     }
 
     private struct Entry
@@ -154,6 +171,7 @@ public class PixelToggles : MonoBehaviour
         public Action editAction;   // pet rows: opens the rename window (a pencil shows at the left of the name)
         public bool skipAll;   // not switched by the 'Toggle all' row (a mode switch rather than an on / off item)
         public string note;    // an orange '!' with this as its tooltip (e.g. 'only visits while training Woodcutting')
+        public PixelVisitorMinigame callVendor;   // a vendor who buys from you: the row gets a 'Call' button
     }
 
     private GameObject canvasRoot, windowObject, emptyObject, hintObject, openObject;
@@ -385,6 +403,7 @@ public class PixelToggles : MonoBehaviour
                 {
                     label = mg.DisplayName,
                     note = mg.ToggleNote,
+                    callVendor = mg is PixelVisitorMinigame v && v.BuysFromPlayer ? v : null,
                     on = !mg.UserDisabled,
                     setter = on =>
                     {
@@ -470,7 +489,17 @@ public class PixelToggles : MonoBehaviour
             row.note = entries[i].note;
             bool hasNote = !string.IsNullOrEmpty(row.note);
             row.info.SetActive(hasNote);
-            row.label.rectTransform.offsetMax = new Vector2(-(rowHeight + 20f) - (hasNote ? rowHeight * 0.62f + 10f : 0f), 0f);
+            float rightUsed = (rowHeight + 20f) + (hasNote ? rowHeight * 0.62f + 10f : 0f);
+            row.callVendor = entries[i].callVendor;
+            bool hasCall = row.callVendor != null;
+            if (row.call.gameObject.activeSelf != hasCall) row.call.gameObject.SetActive(hasCall);
+            if (hasCall)
+            {
+                ((RectTransform)row.call.transform).anchoredPosition = new Vector2(-(rightUsed - 6f), 0f);
+                rightUsed += callButtonWidth + 10f;
+                RefreshCallButton(row);
+            }
+            row.label.rectTransform.offsetMax = new Vector2(-rightUsed, 0f);
             row.go.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -i * (rowHeight + 8f));
         }
 
@@ -480,6 +509,18 @@ public class PixelToggles : MonoBehaviour
         float viewHeight = scroll.GetComponent<RectTransform>().rect.height;
         PixelUIKit.UpdateScrollView(scroll, bar, Mathf.Max(contentHeight - 8f, 0f), viewHeight);
         UpdateTabTip();
+    }
+
+    /// <summary>The Call button's state: 'Call' when he can come, 'Coming' after a call, the minutes left while the shared cooldown runs.</summary>
+    private void RefreshCallButton(RowUI row)
+    {
+        PixelVisitorMinigame v = row.callVendor;
+        double wait = PixelVisitorMinigame.CallReadyIn;
+        bool can = v.CanCall;
+        string text = v.OnHisWay ? callComingText : wait > 0d ? string.Format(callWaitFormat, Mathf.CeilToInt((float)(wait / 60d))) : callButtonText;
+        PixelUIKit.SetText(row.callLabel, text);
+        row.call.interactable = can;
+        PixelUIKit.SetRole(row.callImage, can ? ButtonRole.Success : ButtonRole.Neutral);
     }
 
     /// <summary>"Seed Pixels" -> "Seed": the Pixels group already says what the switches are for, and short names stay on one line at full size.</summary>
@@ -555,6 +596,16 @@ public class PixelToggles : MonoBehaviour
         ir.anchoredPosition = new Vector2(-14f - size - 10f, 0f);
         row.info = ir.gameObject;
         row.info.SetActive(false);
+
+        // The 'Call' button (rows of vendors who buy from you), placed left of the '!' / tick box in Refresh.
+        row.call = PixelUIKit.CreateButton(font, row.go.transform, "Call", callButtonText, new Vector2(callButtonWidth, size), ButtonRole.Neutral, fontSize * 0.8f);
+        RectTransform cr = (RectTransform)row.call.transform;
+        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 0.5f);
+        cr.sizeDelta = new Vector2(callButtonWidth, size);
+        row.callImage = row.call.GetComponent<Image>();
+        row.callLabel = row.call.GetComponentInChildren<TMP_Text>(true);
+        row.call.onClick.AddListener(() => { if (row.callVendor != null && row.callVendor.Call()) Refresh(); });
+        row.call.gameObject.SetActive(false);
 
         row.toggle = box.GetComponent<Toggle>();
         row.toggle.targetGraphic = bg;

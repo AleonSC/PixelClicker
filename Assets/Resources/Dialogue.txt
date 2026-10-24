@@ -481,6 +481,32 @@ full label: Full
 peek bubble: Psst! {0} is here. Click me to see what I've got!
 missed log: {0} stopped by and left.
 
+[Visitor: forager]
+name: Hazel the Forager
+greeting: Ooh, you've been out in the brambles too! I'll take berries, mushrooms, herbs - truffles most of all. Pure pixels for the lot. Shall we trade?
+wares title: Hazel's Basket
+arrival log: The Forager is here!
+accept button: Show me!
+reject button: No thanks
+done button: Done
+buy button: Buy
+full label: Full
+peek bubble: Psst! {0} is here. Click me to see what I've got!
+missed log: {0} stopped by and left.
+
+[Visitor: angler]
+name: Old Salt the Angler
+greeting: Ahoy! Smells like a good catch on you. Fish, shells, pearls, even the seaweed - I'll buy it all for pure pixels. Let's haggle!
+wares title: Old Salt's Offers
+arrival log: The Angler is here!
+accept button: Show me!
+reject button: No thanks
+done button: Done
+buy button: Buy
+full label: Full
+peek bubble: Psst! {0} is here. Click me to see what I've got!
+missed log: {0} stopped by and left.
+
 [Visitor: lumberjack]
 name: Big Tim the Lumberjack
 greeting: Timber! A fellow chopper! I sell wood chippers and potions, and I'll buy any wood you've got - tell me how much and I'll name a fair-ish price.

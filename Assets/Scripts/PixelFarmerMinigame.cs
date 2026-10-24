@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// The Farmer (id "farmer"): a visitor who stops time and sells SEEDS at a discount. Plentiful, cheap seeds of the common pixel types
+/// The Farmer (id "farmer"): a visitor who stops time and sells SEEDS at a discount (Buy tab) and buys your Farming goods (Sell tab, the shared goods buyer). Plentiful, cheap seeds of the common pixel types
 /// (big stock), a few expensive ones of the rare types (small stock). Started by <see cref="PixelGuideVendor"/> like the other vendors;
 /// all the behaviour (sliding in, greeting, accept / reject, wares window) is in <see cref="PixelVisitorMinigame"/>.
 /// </summary>
@@ -36,6 +36,19 @@ public class PixelFarmerMinigame : PixelVisitorMinigame
     private static void ResetStatics() { DevAlwaysDragonSeeds = false; }
 
     protected override int OfferedWares => seedsOffered;
+
+    [Header("Buying your farm goods (Sell tab)")]
+    [Tooltip("How he makes his offers for your Farming goods on the Sell tab (the price itself is PixelMarket's shared rule).")]
+    [SerializeField] private GoodsOffers offers = new GoodsOffers();
+
+    // Buy tab = his seeds, Sell tab = he buys Farming's goods (wheat, golden fruit, dirt...) - the shared goods buyer (PixelVisitorMinigameGoods.cs).
+    protected override bool BuySellTabs => true;
+    protected override bool BuysGoods => true;
+    protected override string GoodsSkillId => PixelSkills.FarmingId;
+    protected override GoodsOffers Offers => offers;
+    protected override System.Collections.Generic.List<Trade> RollTrades() => RollGoodsTrades();
+    protected override string TradeText => "Sell";
+    protected override string TradePayWord => "Sell";
 
     /// <summary>She only comes while you are training Farming (like the Lumberjack with Woodcutting).</summary>
     protected override string VisitSkillId => PixelSkills.FarmingId;   // only visits while it is in training (and says so in Toggles)

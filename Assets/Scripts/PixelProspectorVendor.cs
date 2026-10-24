@@ -1,9 +1,9 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelProspectorVendor.cs
 //   The Prospector (id prospector, 'Pip the Prospector'; a visitor drawn as a CUBE like Cubie - orange earth tones, hard hat with a
-//   lamp, pickaxe, grin - the test for turning vendors into cube characters): he BUYS mining goods for pure currency (RollTrades: up
-//   to offerCount 3 different ores you hold >= minHeld, each asks minSellFraction..maxSellFraction of your stock and pays a random
-//   unlocked pure pixel (White..Blue) at the SHARED vendor rule (PixelMarket.Quote: effort x 1.2, less as his market for that ore fills up) x luck; the base trade rows say 'Sell'
+//   lamp, pickaxe, grin - the test for turning vendors into cube characters): he BUYS mining goods for pure currency - the shared goods
+//   buyer (PixelVisitorMinigameGoods.cs: offers from his GoodsOffers block, priced by PixelMarket, paid in a random pure colour; his market
+//   price and trend show on each row); the base trade rows say 'Sell'
 //   via TradePayWord / TradeText). He only visits while Mining is the skill in training (VisitSkillId = MiningId, the shared vendor rule; was CanVisit = PixelSkills.TrainingId ==
 //   MiningId; a failed check just waits for the next visit timer) and is started by PixelGuideVendor.StartVendors as soon as Mining is
 //   available (first visit after about otherFirstVisitSeconds x 0.5-1). Counter prospector.bought. Mining's whole 'sink' for now is
@@ -22,29 +22,8 @@ using UnityEngine;
 public class PixelProspectorVendor : PixelVisitorMinigame
 {
     [Header("Offers")]
-    [Min(1)]
-    [Tooltip("How many offers he brings (a different ore in each).")]
-    [SerializeField] private int offerCount = 3;
-
-    [Range(0.01f, 1f)]
-    [Tooltip("Fewest fraction of the ore you hold of one type that an offer asks for.")]
-    [SerializeField] private float minSellFraction = 0.3f;
-
-    [Range(0.01f, 1f)]
-    [Tooltip("Most fraction of the ore you hold of one type that an offer asks for.")]
-    [SerializeField] private float maxSellFraction = 1f;
-
-    [Min(0.05f)]
-    [Tooltip("Worst luck factor on a deal (1 = the plain rate).")]
-    [SerializeField] private float minLuck = 0.85f;
-
-    [Min(0.05f)]
-    [Tooltip("Best luck factor on a deal.")]
-    [SerializeField] private float maxLuck = 1.25f;
-
-    [Min(1f)]
-    [Tooltip("You must hold at least this many of an ore for him to ask for it.")]
-    [SerializeField] private double minHeld = 5;
+    [Tooltip("How he makes his offers (the price itself is PixelMarket's shared rule).")]
+    [SerializeField] private GoodsOffers offers = new GoodsOffers();
 
     public override string Id => "prospector";
     public override string DisplayName => "Prospector";
@@ -65,42 +44,11 @@ public class PixelProspectorVendor : PixelVisitorMinigame
 
 
 
-    protected override List<Trade> RollTrades()
-    {
-        List<Trade> result = new List<Trade>();
-        if (clicker == null) return result;
-        PixelClicker.PixelTier[] tiers = clicker.Tiers;
-
-        List<int> sellable = new List<int>();   // ores you hold enough of
-        List<int> pure = new List<int>();       // pure pixel types he pays in
-        for (int i = 0; i < tiers.Length; i++)
-        {
-            if ((PixelClicker.IsOre(tiers[i].type) || tiers[i].type == PixelClicker.PixelType.Obsidian) && tiers[i].count >= minHeld) sellable.Add(i);
-            if (PixelMarket.IsPure(tiers[i].type) && tiers[i].unlocked) pure.Add(i);
-        }
-        if (sellable.Count == 0 || pure.Count == 0) return result;
-
-        PixelMarket market = PixelMarket.Instance;
-        if (market == null) return result;
-        for (int n = 0; n < offerCount && sellable.Count > 0; n++)
-        {
-            int si = Random.Range(0, sellable.Count);
-            int oreTier = sellable[si];
-            sellable.RemoveAt(si);   // a different ore in every offer
-
-            int payTier = pure[Random.Range(0, pure.Count)];
-            double sell = System.Math.Max(1d, System.Math.Floor(tiers[oreTier].count * Random.Range(minSellFraction, maxSellFraction)));
-            double luck = Random.Range(minLuck, maxLuck);
-            double get = System.Math.Max(1d, System.Math.Floor(market.Quote(Id, oreTier, sell) * luck));   // (the shared vendor rule, paid 1:1 in that pure colour)
-            // payTier/getTier: you hand over the ore ('pay') and receive the pure pixels ('get').
-            result.Add(new Trade { payTier = oreTier, getTier = payTier, pay = sell, get = get });
-        }
-        return result;
-    }
-
-    protected override void OnTradeDone(Trade t) { PixelMarket market = PixelMarket.Instance; if (market != null) market.RecordSale(Id, t.payTier, t.pay); }
-
-    protected override string TradeNote(Trade t) { PixelMarket market = PixelMarket.Instance; return market != null ? market.TrendText(Id, t.payTier) : ""; }
+    // He buys Mining's goods (ores, Obsidian, Bedrock, Rock...) - the shared goods buyer in PixelVisitorMinigameGoods.cs.
+    protected override bool BuysGoods => true;
+    protected override string GoodsSkillId => PixelSkills.MiningId;
+    protected override GoodsOffers Offers => offers;
+    protected override List<Trade> RollTrades() => RollGoodsTrades();
 
     /// <summary>A cube like Cubie, in earth colours: a hard hat with a lamp, a pickaxe and a friendly grin.</summary>
     protected override void DrawVisitor(Transform art)

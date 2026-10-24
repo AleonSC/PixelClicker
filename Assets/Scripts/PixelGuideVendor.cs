@@ -214,6 +214,13 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
     [Tooltip("Seconds until a newly started Tinkerer / Entrepreneur makes their first visit (random between this and twice this).")]
     [SerializeField] private float otherFirstVisitSeconds = 60f;
 
+    [Min(1f)]
+    [Tooltip("After you CALL a vendor (the 'Call' button on the Toggles window's Vendors rows), no vendor can be called again for this many minutes of play. Long on purpose: visits mostly stay random.")]
+    [SerializeField] private float vendorCallCooldownMinutes = 30f;
+
+    /// <summary>Minutes between vendor calls (the Toggles window's 'Call' button).</summary>
+    public float VendorCallCooldownMinutes => vendorCallCooldownMinutes;
+
     private static PixelGuideVendor instance;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -630,6 +637,8 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
         PixelSkills skills = PixelSkills.Instance;
         TryStart("lumberjack", skills != null && skills.IsAvailable(skills.Find(PixelSkills.WoodcuttingId)), Random.Range(otherFirstVisitSeconds * 0.5f, otherFirstVisitSeconds));   // the Lumberjack buys wood goods and only visits while Woodcutting is trained
         TryStart("prospector", skills != null && skills.IsAvailable(skills.Find(PixelSkills.MiningId)), Random.Range(otherFirstVisitSeconds * 0.5f, otherFirstVisitSeconds));
+        TryStart("forager", skills != null && skills.IsAvailable(skills.Find(PixelSkills.ForagingId)), Random.Range(otherFirstVisitSeconds * 0.5f, otherFirstVisitSeconds));   // buys foraged goods, visits while Foraging is trained
+        TryStart("angler", skills != null && skills.IsAvailable(skills.Find(PixelSkills.FishingId)), Random.Range(otherFirstVisitSeconds * 0.5f, otherFirstVisitSeconds));     // buys fished goods, visits while Fishing is trained
         // Two very rare cat visitors, Egg and Bean: a special gift the first time, a random present of pixels on later visits.
         TryStart("egg", UnlockedTypes() >= 4, Random.Range(600f, 1200f));
         TryStart("bean", UnlockedTypes() >= 6, Random.Range(900f, 1500f));
@@ -873,7 +882,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
             e.discovered = PixelStats.Total(Stage1Key) >= 1d;
             PixelDatabase.Entry recycler = b.Find("Consumable", "Recycler");
             if (recycler != null) b.Link(e, "Gives", recycler, "Given by");
-            foreach (string id in new[] { "wizard", "tinkerer", "farmer", "entrepreneur", "lumberjack", "prospector" })
+            foreach (string id in new[] { "wizard", "tinkerer", "farmer", "entrepreneur", "lumberjack", "prospector", "forager", "angler" })
                 if (b.Minigames.TryGetValue(id, out PixelDatabase.Entry v)) b.Link(e, "Sends", v, "Sent by");
         });
     }

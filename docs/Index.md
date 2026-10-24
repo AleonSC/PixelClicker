@@ -78,6 +78,9 @@ One line per script / system: what it is and where its details are. Search it (`
 | `PixelFeedback.cs` | Give feedback (for testers): the pause menu's long green Give feedback button (right above Quit; | in the header comment of `PixelFeedback.cs` |
 | `PixelVisitorMinigame.cs` / `PixelTinkererMinigame.cs` / `PixelWizardMinigame.cs` / `PixelEntrepreneurMinigame.cs` / `PixelFarmerMinigame.cs` | Visitor minigames (no shop packs any more - started by PixelGuideVendor; | `docs/systems/PixelVisitorMinigame.md` |
 | `PixelProspectorVendor.cs` | The Prospector (id prospector, 'Pip the Prospector'; | in the header comment of `PixelProspectorVendor.cs` |
+| `PixelForagerVendor.cs` | The Forager (id forager, 'Hazel the Forager'): a goods buyer for Foraging's goods; visits while Foraging is trained or when called. | in the header comment of `PixelForagerVendor.cs` |
+| `PixelAnglerVendor.cs` | The Angler (id angler, 'Old Salt the Angler'): a goods buyer for Fishing's goods; visits while Fishing is trained or when called. | in the header comment of `PixelAnglerVendor.cs` |
+| `PixelVisitorMinigameGoods.cs` | Part of PixelVisitorMinigame: the shared goods buyer (GoodsOffers, RollGoodsTrades, market notes) and calling a vendor from the Toggles window (shared play-time cooldown). | in the header comment of `PixelVisitorMinigameGoods.cs` |
 | `PixelLumberjackVendor.cs` | The Lumberjack (id lumberjack, 'Big Tim the Lumberjack'; | in the header comment of `PixelLumberjackVendor.cs` |
 | `PixelMarket.cs` | The shared vendor price rule (value ladder + market saturation): what any vendor pays in pure currency for goods - worth the clicks they took x 1.2 (products 2x, orders 3x later), less as his market for that good fills up, recovering over time. | in the header comment of `PixelMarket.cs` |
 | `PixelEggMinigame.cs` / `PixelBeanMinigame.cs` | Two very rare cat visitors (ids egg, bean; | `docs/systems/PixelEggMinigame.md` |

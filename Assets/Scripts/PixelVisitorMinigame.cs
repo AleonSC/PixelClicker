@@ -11,7 +11,7 @@ using UnityEngine.UI;
 /// Extends <see cref="PixelMinigame"/>, so it needs no changes to the shop or the save system.
 /// The greeting, wares and aside boxes are the standard window as a dialog (PixelUIKit.CreateWindow, no X), set at the right edge.
 /// </summary>
-public abstract class PixelVisitorMinigame : PixelMinigame
+public abstract partial class PixelVisitorMinigame : PixelMinigame
 {
     [Header("References")]
     [Tooltip("The PixelClicker whose pixels pay for the wares. Found automatically if left empty.")]
@@ -247,6 +247,8 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         switch (id)
         {
             case "lumberjack": return new[] { "Interest on a second-hand bin? Classic Cubie.", "Cubie tried to bill me for the sawdust once. MY sawdust." };
+            case "forager": return new[] { "Cubie tried to sell me a mushroom. MY mushroom. Picked from MY patch.", "He calls the woods 'unlicensed inventory'." };
+            case "angler": return new[] { "Cubie charges a fee to look at the sea. I've seen it. Not worth it.", "He tried to bill a fish for swimming past his shop." };
             case "prospector": return new[] { "He charged me rent for standing near his shop.", "Cubie says he owns the only shop. I say he owns the only shop that owns a shop." };
             case "wizard": return new[] { "I offered to turn Cubie's ledger into a frog. He invoiced me for the frog.", "Mind that teal fellow. His numbers have more zeroes than my spells." };
             case "tinkerer": return new[] { "That Recycler of yours? I built the prototype. Cubie built the price tag.", "Cubie calls us peddlers. At least peddlers don't charge interest on gifts." };
@@ -305,11 +307,11 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     /// <summary>Visitors that trade pixels return their offers here when they arrive (null = a normal wares visitor).</summary>
     protected virtual List<Trade> RollTrades() => null;
 
-    /// <summary>Called after a trade row is accepted (a buying vendor records the sale with PixelMarket here).</summary>
-    protected virtual void OnTradeDone(Trade t) { }
+    /// <summary>Called after a trade row is accepted (a goods buyer records the sale with PixelMarket: PixelVisitorMinigameGoods.cs).</summary>
+    protected virtual void OnTradeDone(Trade t) => RecordGoodsSale(t);
 
-    /// <summary>Optional extra text on a trade row's second line (a buying vendor shows his market price for that good).</summary>
-    protected virtual string TradeNote(Trade t) => "";
+    /// <summary>Optional extra text on a trade row's second line (a goods buyer shows his market price for that good).</summary>
+    protected virtual string TradeNote(Trade t) => GoodsNote(t);
 
     /// <summary>True for a vendor that both SELLS wares and BUYS pixels: the window gets a Buy tab (the wares) and a Sell tab (the trades from <see cref="RollTrades"/>).</summary>
     protected virtual bool BuySellTabs => false;
@@ -409,7 +411,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         if (!running || visiting || clicker == null) return;
         spawnTimer -= Time.deltaTime;
         if (spawnTimer > 0f) return;
-        if (!rolled)
+        if (!rolled && !called)
         {
             // A rare visitor: one roll per timer, and only when the visit would make sense.
             rolled = true;
@@ -420,8 +422,8 @@ public abstract class PixelVisitorMinigame : PixelMinigame
                 return;
             }
         }
-        if (anyVisiting || Time.unscaledTime < nextAnyVisitTime || !CalmForVisit()) return;   // waits (checked every frame) for a quiet moment
-        if (PixelMinigameLimits.AllowAnother(this)) { rolled = false; StartCoroutine(VisitRoutine(false)); }
+        if (anyVisiting || (!called && Time.unscaledTime < nextAnyVisitTime) || !CalmForVisit()) return;   // waits (checked every frame) for a quiet moment (a called vendor skips the shared gap)
+        if (called || PixelMinigameLimits.AllowAnother(this)) { rolled = false; called = false; StartCoroutine(VisitRoutine(false)); }
         else spawnTimer = PixelMinigameLimits.RetrySeconds;
     }
 
@@ -712,9 +714,11 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             case "wizard": return "A wandering wizard and Cubie's 'friend'. He trades potions and odd magic for pixels.\nVisits: from soon after Cubie opens his shop, now and then.";
             case "tinkerer": return "An inventor who sells devices and tools, often at a discount.\nVisits: once six pixel types are unlocked.";
             case "entrepreneur": return "A slick dealer who trades one kind of pixel for another at his own rates.\nVisits: once eight pixel types are unlocked.";
-            case "farmer": return "A farmer who deals in seeds and farm goods.\nVisits: once five pixel types are unlocked.";
+            case "farmer": return "A farmer who sells seeds and buys your farm goods (wheat, golden fruit...) for pure pixels.\nVisits: while Farming is the skill in training, or when you call him from the Toggles window.";
             case "lumberjack": return "Big Tim the Lumberjack buys wood goods and sells woodcutting gear (the Focus potion among it).\nVisits: only while Woodcutting is the skill in training.";
             case "prospector": return "An old miner who buys mining goods and sells mining gear.\nVisits: only while Mining is the skill in training.";
+            case "forager": return "Hazel the Forager buys foraged goods (berries, mushrooms, herbs, truffles) for pure pixels.\nVisits: only while Foraging is the skill in training, or when you call her from the Toggles window.";
+            case "angler": return "Old Salt the Angler buys fished goods (fish, shells, pearls, seaweed) for pure pixels.\nVisits: only while Fishing is the skill in training, or when you call him from the Toggles window.";
             case "egg": return "Egg, a very rare cat. A special gift the first time, a random present of pixels after that.\nVisits: rarely, once four pixel types are unlocked.";
             case "bean": return "Bean, the other very rare cat. A special gift the first time, a random present of pixels after that.\nVisits: rarely, once six pixel types are unlocked.";
             default: return "";
