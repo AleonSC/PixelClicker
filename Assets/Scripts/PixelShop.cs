@@ -549,9 +549,6 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("The same button while the selected item is the pinned one (clicking it unpins).")]
     [SerializeField] private string savingThisText = "Saving up for this (click to stop)";
 
-    [Tooltip("Added to the card's progress line while the item was pinned by the player (not picked by the shop).")]
-    [SerializeField] private string savingPinnedText = "pinned";
-
     [Tooltip("The switch above the grid that hides everything you can't buy right now.")]
     [SerializeField] private string onlyAffordableText = "Only what I can buy";
 

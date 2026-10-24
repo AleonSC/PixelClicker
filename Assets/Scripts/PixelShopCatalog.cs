@@ -6,9 +6,9 @@
 //   - the CATEGORY RAIL on the left: group labels (Pixels, Consumables, Upgrades, Minigames) and their entries (RailKind: Toggleables, Skill
 //     packs, Utilities, Potions, Seeds, Supplies, Features, Value, Operation, Minigames) with how many each lists; it replaced the four tabs, the
 //     filter chips and the Upgrades sub-tabs (which used to scroll away with the list),
-//   - the SAVING UP FOR card: the item you pinned ('Save up for this' in the detail panel; per save, key Shop.SavingGoal) or, when nothing is
-//     pinned, the unlocked pack you are closest to affording - its picture, a progress bar (the limiting price line) and 'have / need'. Click it
-//     to jump to the item. Hidden when there is nothing to save for.
+//   - the SAVING UP FOR card: the item you pinned ('Save up for this' in the detail panel; per save, key Shop.SavingGoal) - its name, a
+//     progress bar (the limiting price line) and 'have / need'. Click it to jump to the item. Only shown while something is pinned: unpinned,
+//     it hides and the heading row + grid move up into its space (PlaceBelowSavingCard).
 //   - a heading row (the entry's name or 'Results for ...') with the 'Only what I can buy' switch,
 //   - the CATALOG grid + DETAIL PANEL (PixelShopTilePage.cs). Every kind of thing is a tile now: packs, consumables (ItemBase + item), Value
 //     upgrades (ValueBase + tier; bought in numbers like consumables: x1 / x5 / x10 / MAX), Operation devices (OperationBase + kind: Buy opens
@@ -93,6 +93,7 @@ public partial class PixelShop
         catalog = BuildCatalogPage(panel, CatalogX, top, top + catalogGridTop, CatalogGridWidth, RailOrder.Length + 1);
         BuildSavingCard(catalog.area.transform, CatalogGridWidth, cardH);
         BuildHeadingRow(catalog.area.transform, savingCardSpace, CatalogGridWidth);
+        PlaceBelowSavingCard(false);   // (the card starts hidden: the heading and grid start in its space until something is pinned)
 
         catalog.collect = CollectEntry;
         catalog.tileName = SearchTileName;
@@ -589,21 +590,11 @@ public partial class PixelShop
         RefreshRows();
     }
 
-    /// <summary>The id the card shows: the pinned goal while it can still be saved for, else the unlocked pack you are closest to affording.</summary>
+    /// <summary>The id the card shows: the pinned goal while it can still be saved for, else none (-1: the card hides and the grid moves up into its space).</summary>
     private int PickSavingGoal()
     {
         int pinned = GoalFromKey(PixelPrefs.GetString(SavingGoalKey, ""));
-        if (pinned >= 0 && CanSaveFor(pinned)) return pinned;
-        int best = -1;
-        float bestProgress = -1f;
-        for (int i = 0; i < packs.Length && i < ItemBase; i++)
-        {
-            ShopPack pack = packs[i];
-            if (pack == null || IsChild(i) || IsPurchased(i) || !IsRequirementMet(i) || CanAfford(i) || HiddenAsPurchased(i)) continue;
-            float p = Progress(CurrentCosts(pack), out _);
-            if (p > bestProgress) { bestProgress = p; best = i; }
-        }
-        return best;
+        return pinned >= 0 && CanSaveFor(pinned) ? pinned : -1;
     }
 
     /// <summary>How far you are towards a price (0..1, the line you are furthest from); 'limit' = that line.</summary>
@@ -663,7 +654,6 @@ public partial class PixelShop
             line = PixelClicker.FormatNumberShort(CostHeld(c)) + " / " + PixelClicker.FormatNumberShort(c.amount) + " " + ShortCostName(c) + "   -   " + Mathf.FloorToInt(p * 100f) + "%";
         }
         else line = Mathf.FloorToInt(p * 100f) + "%";
-        if (IsSavingGoal(savingId)) line += "   -   " + savingPinnedText;
         PixelUIKit.SetText(savingProgress, line);
     }
 }

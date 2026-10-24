@@ -1639,3 +1639,4 @@
 [2026-10-24 11:54 UTC] Shop cleanup: removed two settings the new layout no longer uses (scrollbar width, card gap).
 [2026-10-24 12:01 UTC] Shop: the currency strip no longer scrolls - it wraps onto extra rows so every pixel amount shows, and the category list, grid and detail panel move down to make room.
 [2026-10-24 12:25 UTC] Shop: removed the currency row under the header; opening the shop now opens the pinned Inventory (your currency) and closing the shop closes it again, and you can put it away or bring it back without closing the shop.
+[2026-10-24 13:07 UTC] Shop: the Saving up for card only shows while you have pinned something to save for; with nothing pinned the item grid moves up to fill its space (it used to leave an empty gap).
