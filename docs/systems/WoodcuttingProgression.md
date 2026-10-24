@@ -66,7 +66,7 @@ A species is an ordered **slot list**. A slot is one of:
 
 | Species | Unlock | Shape | Character |
 |---|---|---|---|
-| **Oak** | 1 | `Leaf, Leaf, Wood x3-6, [Sap 30% / Wood], Acorn?, [Heartwood 20% / Wood], (Hive)` (Sap from level 2, Acorn from 3, Heartwood from 6; before that those slots are Wood) | The all-rounder; feeds the Great Oak through acorns. |
+| **Oak** | 1 | `Leaf, Leaf, Bark, Wood x3-6, [Sap 30% / Wood], Acorn?, [Heartwood 20% / Wood], (Hive)` (Sap from level 2, Acorn from 3, Heartwood from 6; before that those slots are Wood) | The all-rounder; feeds the Great Oak through acorns. |
 | **Pine** | 4 | `Leaf, Pinecone, Wood x4-8, Pinecone, Wood x1-2, (Hive)` | Tall: a long log run with cones. |
 | **Birch** | 8 | `Leaf, Bark, Wood x2-3, Bark, (Hive)` | Short and quick: Timber after Timber. |
 | **Maple** | 12 | `Leaf, Wood x2-4, Sap, Sap, Wood x1-3, [Heartwood 25% / Sap], (Hive)` | Sticky and well paid. |
@@ -295,3 +295,5 @@ Wood goods today only sell to the Lumberjack. Proposed sinks, to decide later: M
 - Should the auto clicker be able to fell whole trees, or stop at the core so heartwood is always hand-chopped?
 
 **Tree mode is the normal Woodcutting (2026-10-16):** `PixelTreeMode.requireTestPack` (off) - trees play whenever Woodcutting is in play, no hidden pack needed.
+
+**Bark fix (2026-10-24):** Bark had no source once tree mode became how Woodcutting plays (it was only planned for the Birch at level 8), yet the Wood Chipper (150 Bark) and the Evil Tree pack (250 Bark) cost it. It now joins the filler rotation from level 1 and every Oak has a Bark block at the top of its trunk (`PixelTreeMode` speciesVersion 2). The pack's `fillerStartShare` (85% since 2026-10-24) only applies when tree mode is off; in tree mode the filler stretch between trees is `minFillerAtLevel1` / `maxFillerAtLevel1` (12-30 blocks).

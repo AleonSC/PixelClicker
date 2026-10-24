@@ -3,7 +3,7 @@
 //   TREE MODE (step 1 of docs/systems/WoodcuttingProgression.md; tested in Unity 2026-10-16 - it plays well, timings / numbers still being tuned; component added by PixelClicker.Awake, PixelTreeMode.Instance). While the skill
 //   named in skillId (woodcutting) is in play (since 2026-10-16 always - it is how Woodcutting plays; requireTestPack on = only while the hidden
 //   'Oak Trees (test)' pack with unlocksTreeMode is owned, the old test switch), the cube stops rolling the pack's blocks by weight and alternates between:
-//     - the FILLER rotation: random picks from 'fillers' (Twig, Leaf, Wood; Moss and Sap from level 2). At least a minimum of them, then a
+//     - the FILLER rotation: random picks from 'fillers' (Twig, Leaf, Wood, Bark; Moss and Sap from level 2; Bark added 2026-10-24 - it had no source). At least a minimum of them, then a
 //       growing chance per block until a tree is certain at a maximum. The run SHRINKS with the level: 12-30 at level 1 (minFillerAtLevel1 /
 //       maxFillerAtLevel1) down to 3-10 at fillerLevelSpan (20) and above (minFillerAtTop / maxFillerAtTop), so trees are a treat early on;
 //     - a TREE: a species picked by weight among the unlocked ones (Oak only for now) plays out its slot list in order (Fixed / Run / Wildcard /
@@ -95,7 +95,7 @@ public class PixelTreeMode : MonoBehaviour
     [SerializeField] private string skillId = PixelSkills.WoodcuttingId;
 
     [Header("Filler rotation")]
-    [Tooltip("The filler blocks (random picks between trees). Empty = the built-in list (Twig, Leaf, Wood; Moss and Sap from level 2).")]
+    [Tooltip("The filler blocks (random picks between trees). Empty = the built-in list (Twig, Leaf, Wood, Bark; Moss and Sap from level 2).")]
     [SerializeField] private List<FillerBlock> fillers = new List<FillerBlock>();
     // How long the filler run between trees is SHRINKS with the skill level: long at level 1 (trees are a treat), short by fillerLevelSpan.
     // (Renamed from minFiller / maxFiller so the old saved 3 / 10 don't carry over.)
@@ -115,7 +115,7 @@ public class PixelTreeMode : MonoBehaviour
     [Tooltip("The skill level where the filler run reaches its shortest (the 'At Top' values). Between level 1 and this it shrinks evenly.")]
     [SerializeField] private int fillerLevelSpan = 20;
 
-    [HideInInspector, SerializeField] private int speciesVersion = 0;   // fix-ups for the saved species list (1 = Great Oak species added)
+    [HideInInspector, SerializeField] private int speciesVersion = 0;   // fix-ups for the saved species / filler lists (1 = Great Oak species added; 2 = Bark in the fillers and the Oak)
 
     [Header("Species")]
     [Tooltip("The tree species. Empty = the built-in list (Oak).")]
@@ -188,6 +188,19 @@ public class PixelTreeMode : MonoBehaviour
             speciesVersion = 1;
         }
         if (fillers == null || fillers.Count == 0) fillers = DefaultFillers();
+        if (speciesVersion < 2)
+        {
+            // 2026-10-24: Bark never spawned in tree mode (it was only planned for a Birch at level 8), yet the Wood Chipper and the Evil Tree cost it.
+            // It joins the filler rotation from level 1 and every Oak gets a Bark block at the top of its trunk (after the leaves).
+            if (!fillers.Exists(f => f != null && f.block == "Bark")) fillers.Add(new FillerBlock { block = "Bark" });
+            TreeSpecies oak = species.Find(s => s != null && s.displayName == "Oak" && string.IsNullOrEmpty(s.rareFromRule));
+            if (oak != null && oak.slots != null && !oak.slots.Exists(t => t != null && t.block == "Bark"))
+            {
+                int at = oak.slots.FindLastIndex(t => t != null && t.block == "Leaf") + 1;
+                oak.slots.Insert(Mathf.Clamp(at, 0, oak.slots.Count), new TreeSlot { kind = SlotKind.Fixed, block = "Bark" });
+            }
+            speciesVersion = 2;
+        }
         if (maxFillerAtLevel1 < minFillerAtLevel1 + 1) maxFillerAtLevel1 = minFillerAtLevel1 + 1;
         if (maxFillerAtTop < minFillerAtTop + 1) maxFillerAtTop = minFillerAtTop + 1;
     }
@@ -196,13 +209,13 @@ public class PixelTreeMode : MonoBehaviour
 
     private static List<FillerBlock> DefaultFillers() => new List<FillerBlock>
     {
-        new FillerBlock { block = "Twig" }, new FillerBlock { block = "Leaf" }, new FillerBlock { block = "Wood" },
+        new FillerBlock { block = "Twig" }, new FillerBlock { block = "Leaf" }, new FillerBlock { block = "Wood" }, new FillerBlock { block = "Bark" },
         new FillerBlock { block = "Moss", fromLevel = 2 }, new FillerBlock { block = "Sap", fromLevel = 2 },
     };
 
     private static List<TreeSpecies> DefaultSpecies() => new List<TreeSpecies>
     {
-        // Oak: Leaf, Leaf, Wood x3-6, [Sap 30% / Wood], Acorn?, [Heartwood 20% / Wood], (Hive). Sap from level 2, Acorn from 3, Heartwood from 6.
+        // Oak: Leaf, Leaf, Bark, Wood x3-6, [Sap 30% / Wood], Acorn?, [Heartwood 20% / Wood], (Hive). Sap from level 2, Acorn from 3, Heartwood from 6.
         new TreeSpecies
         {
             displayName = "Oak", unlockLevel = 1, weight = 1f, canBeInfested = true,
@@ -210,6 +223,7 @@ public class PixelTreeMode : MonoBehaviour
             {
                 new TreeSlot { kind = SlotKind.Fixed, block = "Leaf" },
                 new TreeSlot { kind = SlotKind.Fixed, block = "Leaf" },
+                new TreeSlot { kind = SlotKind.Fixed, block = "Bark" },   // (2026-10-24: Bark had no source in tree mode)
                 new TreeSlot { kind = SlotKind.Run, block = "Wood", minCount = 3, maxCount = 6, rareBlock = "Pesticide", rareChance = 0.06f },
                 new TreeSlot { kind = SlotKind.Wildcard, block = "Sap", altBlock = "Wood", chance = 0.3f, fromLevel = 2 },
                 new TreeSlot { kind = SlotKind.Optional, block = "Acorn", chance = 0.5f, fromLevel = 3 },
