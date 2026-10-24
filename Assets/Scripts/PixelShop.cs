@@ -502,14 +502,7 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Seconds between row refreshes while the shop is open (buying and tab changes refresh at once).")]
     [SerializeField] private float rowRefreshSeconds = 0.25f;
 
-    [Header("Currency strip (under the shop's header)")]
-    [Tooltip("Hide the strip of pixel amounts under the shop's header.")]
-    [SerializeField] private bool hideCurrencyPanel = false;
-
-    [Min(30f)]
-    [Tooltip("Height of ONE row of the currency strip under the shop's header (the cubes and amounts scale with it; the strip wraps onto more rows when the pixels don't fit).")]
-    [SerializeField] private float currencyStripHeight = 52f;
-
+    [Header("Windows docked beside the shop")]
     [Tooltip("Width of a window docked beside the open shop (the Pixel Guide; it gets narrower when the screen has less room). 0 = 380.")]
     [SerializeField] private float currencyPanelWidth = 380f;
 
@@ -773,7 +766,6 @@ public partial class PixelShop : MonoBehaviour
         {
             nextRowRefreshTime = Time.unscaledTime + rowRefreshSeconds;
             RefreshRows();
-            RefreshCurrency();
         }
         UpdateCurrencyAndWindows();
         UpdateOperationPictures();

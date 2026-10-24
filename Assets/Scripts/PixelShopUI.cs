@@ -175,7 +175,7 @@ public partial class PixelShop
         // (the old tab bar is not built; the scrolling list stays hidden behind the catalog - its rows serve the pack Upgrades window)
         BuildScrollArea(panelObject.transform, CatalogTop, out contentRect, out scrollRect, out emptyLabel);
         BuildUpgradesWindow(parent);
-        BuildCurrencyStrip(panelObject.transform);
+        BuildShopTooltip();
 
         // Pack rows live inside the scrolling content.
         rows = new PackRow[packs.Length];
@@ -577,7 +577,6 @@ public partial class PixelShop
         PixelPop.Show(panelObject);
         upgradesSubTab = Mathf.Clamp(subTab, 0, 2);
         SelectRailEntry(Mathf.Max(0, EntryOf(tab == ShopTab.Automatic ? ShopTab.Pixels : tab, subTab)));
-        RefreshCurrency();
     }
 
     private TMP_InputField searchField;

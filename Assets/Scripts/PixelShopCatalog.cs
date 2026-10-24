@@ -2,7 +2,7 @@
 // PixelShopCatalog.cs
 //   Part of partial class PixelShop: the shop's layout since 2026-10-24 (the 'A + Saving up' design from the Shop Redesign canvas). The window
 //   (panelWidth 1240) has, under the header (title left, search box, IOU / ? / X):
-//   - the CURRENCY STRIP: every pixel type you hold, always visible (PixelShopCurrency.cs; replaced the slide-out Currency panel),
+//   - no currency row: the PINNED Inventory opens beside the shop while it is open (PixelShopCurrency.cs),
 //   - the CATEGORY RAIL on the left: group labels (Pixels, Consumables, Upgrades, Minigames) and their entries (RailKind: Toggleables, Skill
 //     packs, Utilities, Potions, Seeds, Supplies, Features, Value, Operation, Minigames) with how many each lists; it replaced the four tabs, the
 //     filter chips and the Upgrades sub-tabs (which used to scroll away with the list),
@@ -45,7 +45,6 @@ public partial class PixelShop
     private TMP_Text catalogHeading;
     private GameObject affordToggleFill;
     private RectTransform headingRow;
-    private RectTransform catalogBody;   // the rail + catalog, below the currency strip
     private float savingCardSpace;   // the card's height + gap (the heading row and the grid move up by this while the card is hidden)
     private float catalogGridTop;    // the grid's top below the catalog area's top, with the card showing
     private Image affordToggleBox;
@@ -64,16 +63,7 @@ public partial class PixelShop
     private float RailW => Mathf.Max(160f, railWidth);
     private float CatalogX => RailX + RailW + panelPadding * 0.8f;
     private float DetailWidth => Mathf.Max(240f, detailPanelWidth);
-    private float CatalogTop => CatalogTopFor(1);
-
-    /// <summary>Where the rail and catalog start when the currency strip has 'rows' rows.</summary>
-    private float CatalogTopFor(int rows) => headerHeight + 8f + (hideCurrencyPanel ? 0f : CurrencyStripHeightFor(rows)) + 10f;
-
-    /// <summary>Moves the rail and catalog to start below a currency strip of 'rows' rows.</summary>
-    private void SetCatalogRows(int rows)
-    {
-        if (catalogBody != null) catalogBody.offsetMax = new Vector2(0f, -CatalogTopFor(rows));
-    }
+    private float CatalogTop => headerHeight + 10f;
     private float CatalogGridWidth => panelWidth - CatalogX - panelPadding - DetailGap - DetailWidth;
     private float HeadingHeight => 40f;
     private int[] AmountPresets => amountPresets != null && amountPresets.Length > 0 ? amountPresets : new[] { 1, 5, 10 };
@@ -86,8 +76,8 @@ public partial class PixelShop
     private void BuildCatalog(Transform panel)
     {
         PixelPrefs.DeclarePerSave(SavingGoalKey, PixelPrefs.Kind.String);
-        // Everything under the currency strip lives in one body that moves down when the strip wraps onto another row (SetCatalogTop).
-        catalogBody = new GameObject("Catalog Body", typeof(RectTransform)).GetComponent<RectTransform>();
+        // Everything under the header lives in one body.
+        RectTransform catalogBody = new GameObject("Catalog Body", typeof(RectTransform)).GetComponent<RectTransform>();
         catalogBody.SetParent(panel, false);
         catalogBody.anchorMin = Vector2.zero;
         catalogBody.anchorMax = Vector2.one;

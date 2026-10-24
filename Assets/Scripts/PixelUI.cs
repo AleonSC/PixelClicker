@@ -25,6 +25,7 @@ using UnityEngine.InputSystem;
 /// The Inventory box is a standard Fixed window (PixelUIKit.CreateWindow: title, grey X, pin button in the left header slot), kept at its
 /// HUD corner instead of the centre. The pinned (compact) mode is its own widget: it hides the title / X / tabs and keeps its own drag,
 /// minimise and padlock buttons (PixelPopoutDrag), which are not part of the standard window.
+/// The Shop opens the pinned Inventory while it is open (ShowPinnedBesideShop; it switches to pinned for that time) and closes it after.
 ///
 /// Part files (partial class): PixelUIPopups.cs (popups + tooltips), PixelUIRefresh.cs (the Currency rows / Refresh), PixelUICompact.cs
 /// (the pinned Inventory), PixelUIInventoryTabs.cs (tabs, Consumables / Materials lists), PixelUIGuide.cs (tier guide + potion timer).
@@ -611,8 +612,23 @@ public partial class PixelUI : MonoBehaviour
             PixelLog.SetLogOpen(false);
             PixelBank.CloseWindowIfOpen();
             PixelSkills.CloseWindowIfOpen();
-            PixelShop.CloseShopWindow();
+            if (!Compact) PixelShop.CloseShopWindow();   // (the pinned one sits beside the open shop)
         }
+    }
+
+    /// <summary>
+    /// Shows the PINNED Inventory without closing the shop (the shop calls this when it opens: the pinned view shows your currency while you
+    /// shop). Switches the Inventory to its pinned currency view first if it was not pinned; the shop puts the old mode back when it closes.
+    /// </summary>
+    public static void ShowPinnedBesideShop()
+    {
+        PixelUI ui = inventoryInstance;
+        if (ui == null || ui.boxObject == null || !ui.autoMode) return;
+        if (!Compact) CompactMode = 1;
+        ui.UpdatePinnedPlacement();
+        ui.Refresh();
+        PixelPop.Show(ui.boxObject);
+        ui.Refresh();
     }
 
     private void OnDestroy()

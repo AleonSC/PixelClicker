@@ -151,7 +151,7 @@ public partial class PixelShop
         pr.offsetMax = Vector2.zero;
         float w = DetailWidth;
         // (the picture, name and kind hang from the top edge; the cost, amounts, Save up and Buy stand on the bottom edge; the description
-        //  stretches between them - so the panel works at any height, e.g. when the currency strip above gets another row)
+        //  stretches between them - so the panel works at any window height)
         RectTransform top = pr;
 
         const float pad = 16f;

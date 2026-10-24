@@ -1,29 +1,22 @@
 // ---- System notes ----
 // PixelShopCurrency.cs
-//   Part of partial class PixelShop: the CURRENCY STRIP under the shop's header (since 2026-10-24; it replaced the slide-out Currency panel on the
-//   shop's left). One chip per pixel type you have unlocked or hold: a small spinning cube in its colour + the amount (abbreviated), left to right;
-//   when there are more than fit on a row the strip WRAPS onto another row (it never scrolls) and the rail + catalog below move down with it
-//   (SetCatalogRows). Hover a chip: the pixel's name and the full amount.
-//   Also: CloseShopWindow, and the shop closing the Inventory / Log while it is open (and bringing them back after). Settings: PixelShop.cs
-//   "Currency strip" (hideCurrencyPanel, currencyStripHeight = the height of ONE row).
+//   Part of partial class PixelShop: what the shop does with the Inventory and Log windows, and the shop's tooltip.
+//   Since 2026-10-24 the shop has NO currency row of its own: opening the shop opens the PINNED Inventory (switching the Inventory to its
+//   pinned view for as long as the shop is open) and closes the Log; closing the shop closes that pinned Inventory again and puts the
+//   Inventory back the way it was (full view, or the Log, if one was open before; a pinned Inventory that was already open stays). The player can still put the pinned Inventory away with
+//   its HUD button / key while the shop stays open, and bring it back (a pinned Inventory opening never closes the shop: PixelUI.SetInventoryOpen).
+//   The tooltip box here shows the purchase cards' hover text (hoverTip). Also: CloseShopWindow.
 // ---------------------------------------------------
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// The shop's currency strip: every pixel type you hold, as a small spinning cube and the amount, always visible under the header.
-/// Part of <see cref="PixelShop"/>; its Inspector settings are in PixelShop.cs ("Currency strip").
+/// The shop's companion windows (the pinned Inventory shows your currency while you shop) and its hover tooltip.
+/// Part of <see cref="PixelShop"/>.
 /// </summary>
 public partial class PixelShop
 {
-    private class CurrencyChip
-    {
-        public RectTransform rect;
-        public PixelCubeIcon icon;
-        public TMP_Text amount;
-    }
-
     /// <summary>Closes the shop window (the Inventory and Log call this when they open: the windows never show together).</summary>
     public static void CloseShopWindow()
     {
@@ -31,86 +24,21 @@ public partial class PixelShop
         if (shop != null && shop.panelObject != null && PixelPop.IsOpen(shop.panelObject)) PixelPop.Hide(shop.panelObject);
     }
 
-    private GameObject currencyStrip;
-    private RectTransform currencyContent;
-    private int currencyRows = 1;   // how many rows the strip has now
-    private CurrencyChip[] currencyChips;
     private RectTransform currencyTipRect;
     private string currencyTipShown;   // (the tip text last measured, so the box is only measured again when it changes)
-    private bool currencyTipWasCard;
     private Vector2 currencyTipSize;
     private TMP_Text currencyTipText;
     private RectTransform currencyCanvasRect;
-    private int currencyHover = -1;
     private bool shopWasOpen;
-    private bool reopenInventory, reopenLog; // which windows the shop closed when it opened, to bring back when it closes
+    private bool reopenFullInventory, reopenLog, pinnedWasOpen; // which windows the shop closed when it opened, to bring back when it closes
+    private int compactModeBefore;               // the Inventory's pinned mode before the shop pinned it (0 = it was not pinned)
 
-    private float CurrencyRowHeight => Mathf.Max(30f, currencyStripHeight);
-    private float CurrencyIconSize => CurrencyRowHeight * 0.55f;
-    private float CurrencyFontSize => CurrencyRowHeight * 0.46f;
-
-    /// <summary>The strip's height with 'rows' rows of chips.</summary>
-    private float CurrencyStripHeightFor(int rows) => CurrencyRowHeight * Mathf.Max(1, rows) + 4f;
-
-    /// <summary>The strip under the header: rows of chips (cube + amount), one per pixel type; it wraps onto more rows instead of scrolling.</summary>
-    private void BuildCurrencyStrip(Transform shopPanel)
+    /// <summary>The hover tooltip for the shop's purchase cards.</summary>
+    private void BuildShopTooltip()
     {
         if (clicker == null) return;
         currencyCanvasRect = canvasRoot.GetComponent<RectTransform>();
         BuildCurrencyTooltip();
-        if (hideCurrencyPanel) return;
-
-        currencyStrip = new GameObject("Currency Strip", typeof(RectTransform), typeof(Image));
-        currencyStrip.transform.SetParent(shopPanel, false);
-        Image bg = currencyStrip.GetComponent<Image>();
-        bg.color = new Color(0.05f, 0.05f, 0.08f, 0.85f);
-        PixelUIKit.StyleBox(bg, true);
-        PlaceTopLeft(currencyStrip.GetComponent<RectTransform>(), panelPadding, headerHeight + 8f, panelWidth - panelPadding * 2f, CurrencyStripHeightFor(1));
-        currencyContent = currencyStrip.GetComponent<RectTransform>();
-
-        var tiers = clicker.Tiers;
-        currencyChips = new CurrencyChip[tiers.Length];
-        float icon = CurrencyIconSize;
-        for (int i = 0; i < tiers.Length; i++)
-        {
-            CurrencyChip chip = new CurrencyChip();
-            GameObject go = new GameObject("Currency " + i, typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(currencyContent, false);
-            Image cb = go.GetComponent<Image>();
-            cb.color = rowColor;
-            PixelUIKit.StyleBox(cb);
-            chip.rect = go.GetComponent<RectTransform>();
-            chip.rect.anchorMin = chip.rect.anchorMax = chip.rect.pivot = new Vector2(0f, 1f);
-
-            GameObject iconGo = new GameObject("Icon", typeof(RectTransform), typeof(CanvasRenderer));
-            iconGo.transform.SetParent(go.transform, false);
-            chip.icon = iconGo.AddComponent<PixelCubeIcon>();
-            chip.icon.spinDegreesPerSecond = 60f + (i % 5) * 8f; // not all in step
-            chip.icon.raycastTarget = false;
-            RectTransform ir = chip.icon.rectTransform;
-            ir.anchorMin = ir.anchorMax = ir.pivot = new Vector2(0f, 0.5f);
-            ir.sizeDelta = new Vector2(icon, icon);
-            ir.anchoredPosition = new Vector2(8f, 0f);
-
-            chip.amount = CreateText(go.transform, "Amount", "", CurrencyFontSize, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
-            chip.amount.overflowMode = TextOverflowModes.Overflow;
-#if UNITY_2023_1_OR_NEWER
-            chip.amount.textWrappingMode = TextWrappingModes.NoWrap;
-#else
-            chip.amount.enableWordWrapping = false;
-#endif
-            chip.amount.raycastTarget = false;
-            RectTransform ar = chip.amount.rectTransform;
-            ar.anchorMin = ar.anchorMax = ar.pivot = new Vector2(0f, 0.5f);
-            ar.anchoredPosition = new Vector2(icon + 14f, 0f);
-
-            // Hover the chip: name + the full amount.
-            PixelHoverTip tip = go.AddComponent<PixelHoverTip>();
-            int tier = i;
-            tip.onEnter = () => currencyHover = tier;
-            tip.onExit = () => { if (currencyHover == tier) currencyHover = -1; };
-            currencyChips[i] = chip;
-        }
     }
 
     private void BuildCurrencyTooltip()
@@ -129,72 +57,39 @@ public partial class PixelShop
         tr.anchorMin = tr.anchorMax = tr.pivot = new Vector2(0f, 1f);
         tr.anchoredPosition = new Vector2(14f, -10f);
 #if UNITY_2023_1_OR_NEWER
-        currencyTipText.textWrappingMode = TextWrappingModes.NoWrap;
+        currencyTipText.textWrappingMode = TextWrappingModes.Normal;
 #else
-        currencyTipText.enableWordWrapping = false;
+        currencyTipText.enableWordWrapping = true;
 #endif
         currencyTipText.overflowMode = TextOverflowModes.Overflow;
         go.SetActive(false);
     }
 
-    /// <summary>Updates the amounts and which pixel types are listed (unlocked ones, or any you hold), laid out left to right in rows.</summary>
-    private void RefreshCurrency()
-    {
-        if (currencyStrip == null || currencyChips == null) return;
-        var tiers = clicker.Tiers;
-        float rowH = CurrencyRowHeight, chipH = rowH - 8f, gap = 8f;
-        float width = panelWidth - panelPadding * 2f - 6f;
-        float x = 6f;
-        int row = 0;
-        for (int i = 0; i < currencyChips.Length && i < tiers.Length; i++)
-        {
-            CurrencyChip chip = currencyChips[i];
-            PixelClicker.PixelTier tier = tiers[i];
-            bool visible = tier.unlocked || tier.count > 0d;
-            if (chip.rect.gameObject.activeSelf != visible) chip.rect.gameObject.SetActive(visible);
-            if (!visible) continue;
-
-            chip.icon.color = tier.UIColor;
-            chip.amount.color = tier.UIColor;
-            string text = PixelClicker.FormatNumberShort(tier.count);
-            PixelUIKit.SetText(chip.amount, text);
-            float textW = chip.amount.GetPreferredValues(text).x + 4f;
-            chip.amount.rectTransform.sizeDelta = new Vector2(textW, chipH);
-            float w = CurrencyIconSize + 14f + textW + 12f;
-            if (x + w > width && x > 6f) { row++; x = 6f; }   // (no room left on this row: wrap)
-            chip.rect.sizeDelta = new Vector2(w, chipH);
-            chip.rect.anchoredPosition = new Vector2(x, -(6f + row * rowH));
-            x += w + gap;
-        }
-        int rows = row + 1;
-        if (rows != currencyRows)
-        {
-            currencyRows = rows;
-            RectTransform sr = currencyStrip.GetComponent<RectTransform>();
-            sr.sizeDelta = new Vector2(sr.sizeDelta.x, CurrencyStripHeightFor(rows));
-            SetCatalogRows(rows);
-        }
-    }
-
-    /// <summary>Called every frame: tooltip position, and closing the Inventory / Log the moment the shop opens.</summary>
+    /// <summary>Called every frame: tooltip position, and showing the pinned Inventory (closing the Log) while the shop is open.</summary>
     private void UpdateCurrencyAndWindows()
     {
         bool open = panelObject != null && PixelPop.IsOpen(panelObject);
         if (open && !shopWasOpen)
         {
-            // The shop replaces the Inventory and Log windows (its currency strip shows what they would).
-            reopenInventory = PixelUI.InventoryOpen;
+            // The pinned Inventory shows the currency while you shop (the full Inventory and the Log close).
+            reopenFullInventory = PixelUI.InventoryOpen && !PixelUI.Compact;
+            pinnedWasOpen = PixelUI.InventoryOpen && PixelUI.Compact;   // (already pinned and open: it simply stays when the shop closes)
             reopenLog = PixelLog.LogOpen;
-            PixelUI.SetInventoryOpen(false);
+            compactModeBefore = PixelUI.CompactMode;
             PixelLog.SetLogOpen(false);
-            RefreshCurrency();
+            PixelUI.ShowPinnedBesideShop();
         }
         if (!open && shopWasOpen)
         {
-            // The shop closed: bring back the window it replaced, unless the player opened something else meanwhile
-            // (opening the Inventory / Log / Crafting is what closed it).
-            bool inventory = reopenInventory, log = reopenLog;
-            reopenInventory = reopenLog = false;
+            // The shop closed: put the pinned Inventory away (unless it was already open before the shop) and the Inventory's view back
+            // the way it was; bring back the window it replaced, unless the player opened something else meanwhile.
+            if (!pinnedWasOpen)
+            {
+                if (PixelUI.InventoryOpen && PixelUI.Compact) PixelUI.SetInventoryOpen(false, true);
+                PixelUI.CompactMode = compactModeBefore;
+            }
+            bool inventory = reopenFullInventory, log = reopenLog;
+            reopenFullInventory = reopenLog = false;
             if (!PixelWindows.AnyOpenExcept(this) && !PixelUI.InventoryOpen && !PixelLog.LogOpen)
             {
                 if (inventory) PixelUI.SetInventoryOpen(true);
@@ -205,45 +100,22 @@ public partial class PixelShop
 
         if (currencyTipRect == null) return;
         string tipString = open && hoverTip != null ? hoverTip() : null;
-        bool cardTip = !string.IsNullOrEmpty(tipString);
-        bool show = cardTip || (open && currencyHover >= 0 && currencyHover < clicker.Tiers.Length && currencyStrip != null);
+        bool show = !string.IsNullOrEmpty(tipString);
         if (currencyTipRect.gameObject.activeSelf != show) currencyTipRect.gameObject.SetActive(show);
         if (!show) return;
 
-        // A purchase card's '!' box shows the item's description (wrapped); the currency list shows name + amount on one line each.
+        // A purchase card's '!' box shows the item's description, wrapped.
         Vector2 size;
-        string wanted = cardTip ? tipString : null;
-        if (!cardTip)
-        {
-            PixelClicker.PixelTier hovered = clicker.Tiers[currencyHover];
-            wanted = hovered.displayName + "\n" + hovered.count.ToString("#,0.##");
-        }
-        if (wanted == currencyTipShown && cardTip == currencyTipWasCard) size = currencyTipSize;   // (same text as last frame: no need to measure it again)
-        else if (cardTip)
+        if (tipString == currencyTipShown) size = currencyTipSize;   // (same text as last frame: no need to measure it again)
+        else
         {
             const float wrapWidth = 460f;
-#if UNITY_2023_1_OR_NEWER
-            currencyTipText.textWrappingMode = TextWrappingModes.Normal;
-#else
-            currencyTipText.enableWordWrapping = true;
-#endif
             PixelUIKit.SetText(currencyTipText, tipString);
             Vector2 pref = currencyTipText.GetPreferredValues(tipString, wrapWidth, 0f);
             currencyTipText.rectTransform.sizeDelta = new Vector2(wrapWidth, pref.y);
             size = new Vector2(wrapWidth, pref.y) + new Vector2(28f, 20f);
         }
-        else
-        {
-#if UNITY_2023_1_OR_NEWER
-            currencyTipText.textWrappingMode = TextWrappingModes.NoWrap;
-#else
-            currencyTipText.enableWordWrapping = false;
-#endif
-            PixelUIKit.SetText(currencyTipText, wanted);
-            size = currencyTipText.GetPreferredValues() + new Vector2(28f, 20f);
-            currencyTipText.rectTransform.sizeDelta = size - new Vector2(28f, 20f);
-        }
-        currencyTipShown = wanted; currencyTipWasCard = cardTip; currencyTipSize = size;
+        currencyTipShown = tipString; currencyTipSize = size;
         currencyTipRect.sizeDelta = size;
 
         Vector2 local;

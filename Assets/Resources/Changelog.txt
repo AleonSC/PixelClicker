@@ -1638,3 +1638,4 @@
 [2026-10-24 11:49 UTC] Dragging husks keeps a steady depth (free cam especially): the drag style is chosen once when you grab instead of flipping with the mouse position, the husk stays at its distance in front of a moving or turning camera, and pointing near the horizon no longer flings it far away.
 [2026-10-24 11:54 UTC] Shop cleanup: removed two settings the new layout no longer uses (scrollbar width, card gap).
 [2026-10-24 12:01 UTC] Shop: the currency strip no longer scrolls - it wraps onto extra rows so every pixel amount shows, and the category list, grid and detail panel move down to make room.
+[2026-10-24 12:25 UTC] Shop: removed the currency row under the header; opening the shop now opens the pinned Inventory (your currency) and closing the shop closes it again, and you can put it away or bring it back without closing the shop.
