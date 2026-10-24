@@ -541,7 +541,11 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
         return why;
     }
 
-    private bool ShopThere => (shop != null ? shop : (shop = PixelFind.First<PixelShop>())) != null && shop.ShopAvailable;
+    private bool ShopThere => (shop != null ? shop : (shop = PixelFind.Cached<PixelShop>())) != null && shop.ShopAvailable;
+
+    /// <summary>The debug line for 'visit 1 is waiting' (built only when the reason changes, see lastBlocker in Update).</summary>
+    private string Visit1WaitReason() =>
+        PixelGoals.GrantsVisit(1) ? "Cubie visit 1 waits for its goal (PixelGoals)" : "Cubie visit 1 waits for " + visitOneAfterWhiteClicks + " White pixel clicks";
 
     private void Update()
     {
@@ -551,8 +555,8 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
         if (ShopHold) UpdateHold();
         if (ShopHold && !peeking && !disableGuide && !visiting && !narrating) StartCoroutine(PeekRoutine());
         if (disableGuide || clicker == null || visiting) { if (disableGuide && lastBlocker != "disabled") { lastBlocker = "disabled"; PixelDebug.Info("Cubie is off: disableGuide is ticked", this); } return; }
-        if (shop == null) shop = PixelFind.First<PixelShop>();
-        if (stats == null) stats = PixelFind.First<PixelStats>();
+        if (shop == null) shop = PixelFind.Cached<PixelShop>();
+        if (stats == null) stats = PixelFind.Cached<PixelStats>();
         if (stats == null) return; // progress is kept in the stat counters, so nothing happens without them
 
         if (!Calm()) { calmTimer = 0f; return; }
@@ -584,7 +588,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
                 }
             }
             else if (Visit2Due) StartCoroutine(Visit(2, Pages(visitTwoPages, DefaultTwo)));
-            else if (!s1 && !Visit1Ready) { if (lastBlocker != "clicks") { lastBlocker = "clicks"; PixelDebug.Info(PixelGoals.GrantsVisit(1) ? "Cubie visit 1 waits for its goal (PixelGoals)" : "Cubie visit 1 waits for " + visitOneAfterWhiteClicks + " White pixel clicks", this); } }
+            else if (!s1 && !Visit1Ready) { if (lastBlocker != "clicks") { lastBlocker = "clicks"; PixelDebug.Info(Visit1WaitReason(), this); } }
             else if (!s1) { PixelDebug.Info("Cubie starts visit 1", this); StartCoroutine(Visit(1, Pages(visitOnePages, DefaultOne))); }
             else if (lastBlocker != "s1done") { lastBlocker = "s1done"; PixelDebug.Info("Cubie visit 1 is already recorded (guide.stage1) - he waits for the shop", this); }
             return;
