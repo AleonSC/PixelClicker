@@ -53,10 +53,10 @@ Effort: S < 1 h, M = a few hours, L = a day.
    - `IPixelSocketDevice` forces `AcceptHusk` on every device (:86).
    - `IntakeAt`, `NearestCoupling` (:284), `Ports`, `Emit` and the hose's `Snap` (:127) don't filter by kind, so a Power coupling would be offered to belts and handed husks.
 
-   Add a kind filter on the shared queries and one hook interface per kind (`IPixelHuskIntake`, later `IPixelPowerIntake`). Do it before Power. **S-M**
+   Add a kind filter on the shared queries and one hook interface per kind (IPixelHuskIntake, later IPixelPowerIntake - proposed names, never built: sockets stayed husk-only, see Done above). Do it before Power. **S-M**
 2. **The same "free Husk socket" loop is copied 4 times** (`PixelCoupling.cs:248, :290, :330`, `PixelSocketPlates.cs:45`), and the husk-width getter 4 times. Use one `PixelCouplings.FreeSockets(kind)`. **S**
 3. **Dead code:**
-   - `Occupy` / `Vacate` / `Occupied` (`PixelSockets.cs:152-160`) have no callers;
+   - Occupy / Vacate / Occupied (`PixelSockets.cs:152-160`) have no callers (since removed);
    - `PixelElevator` still implements `IPixelSocketDevice` with zero sockets (:17, :137, :195);
    - the header still mentions the Hopper and connectors. **S**
 4. **Speed (fine at today's scale):**
@@ -64,7 +64,7 @@ Effort: S < 1 h, M = a few hours, L = a day.
    - every `Emit` / `OutputHasRoom` / `OutputConnected` also scans for the belt starting there, and the crate, Husk Source and Junction Box ask every tick;
    - the plates rebuild string keys every 0.3 s.
 
-   Use a dictionary keyed by (device, socket id) and cache the attached belt per coupling on a topology version (the same idea as ConveyorAudit's `PixelBeltLink`). **S-M**
+   Use a dictionary keyed by (device, socket id) and cache the attached belt per coupling on a topology version (the same idea as ConveyorAudit's PixelBeltLink proposal). **S-M**
 
 ## Shared systems worth building
 
