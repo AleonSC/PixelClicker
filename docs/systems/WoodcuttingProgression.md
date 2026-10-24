@@ -47,7 +47,7 @@ Why it works:
 **Built (2026-10-16, after testing):** the filler run shrinks with the level - 12-30 filler blocks between trees at level 1, down to 3-10 by level 20 (`PixelTreeMode` minFillerAtLevel1 / maxFillerAtLevel1, minFillerAtTop / maxFillerAtTop, fillerLevelSpan). Trees came far too often at low levels with a fixed 3-10.
 
 - During the filler rotation each click has a growing chance to start a tree: a few filler blocks always come first (minimum 3), then the chance climbs until a tree is guaranteed (by about 10). Inspector data: `minFiller`, `maxFiller` (or a chance curve).
-- Levels shorten the filler stretch a little (more trees per hour), so the share of junk falls as you level - replacing today's filler fade (75% -> 25% over 20 levels).
+- Levels shorten the filler stretch a little (more trees per hour), so the share of junk falls as you level - replacing today's filler fade (85% -> 25% over 20 levels; the start was raised from 75% on 2026-10-24).
 - The species is a weighted pick among the unlocked ones; acorns on the floor add weight to the Great Oak.
 
 ## Tree shapes

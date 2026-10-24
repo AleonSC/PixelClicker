@@ -188,7 +188,7 @@ public partial class PixelSkills : MonoBehaviour
     [Tooltip("Share of the XP an automatic (auto clicker) click gives compared with a manual click.")]
     [SerializeField] private float autoXpFactor = 0.25f;
 
-    [Tooltip("Data version of the skill packs' XP curves (1 = 2026-10-24: every skill pack levels at Standard's pace - baseXp 600, xpGrowth 1.5; Offline Progression keeps its own). Raised by code; lower it to apply the change again.")]
+    [Tooltip("Data version of the skill packs' XP curves (1 = 2026-10-24: every skill pack levels at Standard's pace - baseXp 600, xpGrowth 1.5; Offline Progression keeps its own; 2 = Woodcutting's filler starts at 85%). Raised by code; lower it to apply the change again.")]
     [SerializeField] private int skillPaceVersion = 0;
 
     [Tooltip("Turn the whole skill system (and its Skills tab) off.")]
@@ -306,6 +306,13 @@ public partial class PixelSkills : MonoBehaviour
                 if (pack != null && pack.id != StandardId && pack.id != OfflineId) { pack.baseXp = 600f; pack.xpGrowth = 1.5f; }
             skillPaceVersion = 1;
         }
+        if (skillPaceVersion < 2)
+        {
+            // More Woodcutting filler early on (2026-10-24): twigs / pinecones / moss start at 85% of spawns (was 75%), still thinning to 25% by level 20.
+            SkillPack wood = Find(WoodcuttingId);
+            if (wood != null && Mathf.Approximately(wood.fillerStartShare, 0.75f)) wood.fillerStartShare = 0.85f;
+            skillPaceVersion = 2;
+        }
 
         // Offline Progression is listed right under Standard.
         int offlineAt = packs.FindIndex(p => p.id == OfflineId);
@@ -339,7 +346,7 @@ public partial class PixelSkills : MonoBehaviour
                 baseXp = 600f, xpGrowth = 1.5f,   // (2026-10-24: every skill pack levels at Standard's pace)
                 types = new[] { PixelClicker.PixelType.Wood, PixelClicker.PixelType.Bark, PixelClicker.PixelType.Sap, PixelClicker.PixelType.Leaf,
                                 PixelClicker.PixelType.Heartwood, PixelClicker.PixelType.Twig, PixelClicker.PixelType.Pinecone, PixelClicker.PixelType.Moss, PixelClicker.PixelType.HornetNest, PixelClicker.PixelType.GreatOak, PixelClicker.PixelType.Whetstone, PixelClicker.PixelType.Acorn, PixelClicker.PixelType.Pesticide },
-                fillerType = "Twig", extraFillerTypes = "Pinecone,Moss", fillerStartShare = 0.75f, fillerEndShare = 0.25f, hazardType = "HornetNest", hazardBaseShare = 0.015f, hazardPerLevelShare = 0.001f,
+                fillerType = "Twig", extraFillerTypes = "Pinecone,Moss", fillerStartShare = 0.85f, fillerEndShare = 0.25f, hazardType = "HornetNest", hazardBaseShare = 0.015f, hazardPerLevelShare = 0.001f,
                 perks = new[]
                 {
                     new Perk { level = 2, text = WoodChipperPerkText, implemented = true, noticeText = WoodChipperNotice },
