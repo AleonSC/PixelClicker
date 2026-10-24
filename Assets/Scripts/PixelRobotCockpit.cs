@@ -34,6 +34,7 @@ public partial class PixelRobotWorker
     [SerializeField] private float cockpitLookSpeed = 0.35f;
 
     [TextArea(1, 3)]
+    [Tooltip("Hint line shown while riding in the UFO's cabin.")]
     [SerializeField] private string rideHint = "Mouse: look around  -  WASD: walk about the cabin  -  Esc: climb out";
 
     /// <summary>True while you ride inside the UFO (cube clicks, Pixel Grabbing, the block tooltip and first person mode step aside).</summary>

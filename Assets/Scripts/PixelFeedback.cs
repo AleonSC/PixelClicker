@@ -34,8 +34,11 @@ using UnityEngine.UI;
 public class PixelFeedback : MonoBehaviour
 {
     [Header("Window")]
+    [Tooltip("Title of the feedback window.")]
     [SerializeField] private string title = "Give feedback";
+    [Tooltip("Grey hint text shown in the empty feedback box.")]
     [SerializeField] private string placeholder = "Type your feedback here: what you liked, what felt off, bugs you found...";
+    [Tooltip("Canvas sorting order of the feedback window (higher = drawn over more of the UI).")]
     [SerializeField] private int sortingOrder = 800;
 
     [Header("Screenshots")]

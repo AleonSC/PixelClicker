@@ -243,6 +243,7 @@ public partial class PixelDevTools : MonoBehaviour
 
     [Tooltip("Tick box colours (box, tick).")]
     [SerializeField] private Color tickBoxColor = new Color(0.25f, 0.25f, 0.3f, 1f);
+    [Tooltip("Colour of the tick in the Dev Tools' tick boxes.")]
     [SerializeField] private Color tickColor = new Color(0.4f, 0.9f, 0.5f, 1f);
 
     [Header("Canvas")]

@@ -188,6 +188,7 @@ public partial class PixelUI : MonoBehaviour
     [Tooltip("Hover tip on a supply item (Combo Fuel, Ghost Bait, Pet Treat).")]
     [SerializeField] private string supplyHint = "Right-click a supply to use it";
 
+    [Tooltip("Hint in the Inventory's device list.")]
     [SerializeField] private string deviceHint = "Right-click a device to place it";
 
     [Tooltip("Hint text size.")]

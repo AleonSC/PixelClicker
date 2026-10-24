@@ -92,8 +92,11 @@ public class PixelPadMinigame : PixelScheduledMinigame
     [Tooltip("Text at the top of the screen while a round runs. {0} = seconds left, {1} = the wanted pixel.")]
     [SerializeField] private string hudFormat = "ULTRA HOLES   {0}s   -   {1}";
 
+    [Tooltip("Colour of the rising message when a husk goes into the right hole.")]
     [SerializeField] private Color correctColor = new Color(0.6f, 1f, 0.65f, 1f);
+    [Tooltip("Colour of the rising message when a drop also gives an Ultra pixel.")]
     [SerializeField] private Color ultraColor = new Color(1f, 0.85f, 0.25f, 1f);
+    [Tooltip("Colour of the rising message when a husk goes into a wrong hole.")]
     [SerializeField] private Color wrongColor = new Color(1f, 0.4f, 0.35f, 1f);
 
     [Min(0.5f)]

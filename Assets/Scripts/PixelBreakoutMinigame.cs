@@ -140,7 +140,9 @@ public class PixelBreakoutMinigame : PixelScheduledMinigame
     [SerializeField] private bool disableUltra = false;
 
     [Header("Look")]
+    [Tooltip("Colour of the paddle.")]
     [SerializeField] private Color paddleColor = new Color(0.4f, 0.9f, 1f, 1f);
+    [Tooltip("Colour of the court's top and side walls (alpha = how see-through).")]
     [SerializeField] private Color lineColor = new Color(1f, 1f, 1f, 0.55f);
     [Tooltip("Colour of the court's background. It is always drawn fully solid (its alpha is ignored), so nothing shows through it.")]
     [SerializeField] private Color backColor = new Color(0f, 0f, 0f, 1f);
@@ -154,14 +156,19 @@ public class PixelBreakoutMinigame : PixelScheduledMinigame
     [Tooltip("Status line. {0} = bricks left, {1} = balls left, {2} = seconds left.")]
     [SerializeField] private string statusFormat = "BREAKOUT   bricks {0}   balls {1}   {2}s";
 
+    [Tooltip("Floating message when every brick is broken.")]
     [SerializeField] private string winFormat = "Cleared!";
+    [Tooltip("Floating message when the last ball is lost.")]
     [SerializeField] private string loseText = "Out of balls";
+    [Tooltip("Floating message when the round's time runs out.")]
     [SerializeField] private string timeoutText = "Time's up";
 
     [Min(10f)]
+    [Tooltip("Size of the floating win / lose message (world text size).")]
     [SerializeField] private float messageTextSize = 5f;
 
     [Min(0.5f)]
+    [Tooltip("How long the floating win / lose message rises and fades (seconds).")]
     [SerializeField] private float messageSeconds = 2.2f;
 
     private class Brick

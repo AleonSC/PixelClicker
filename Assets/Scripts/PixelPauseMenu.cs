@@ -248,27 +248,40 @@ public partial class PixelPauseMenu : MonoBehaviour
     [SerializeField] private float settingsViewHeight = 640f;
 
     [Header("Settings Screen Rows")]
+    [Tooltip("Heading of the gameplay section in Settings.")]
     [SerializeField] private string headerGameplay = "Gameplay";
+    [Tooltip("Heading of the interface section in Settings.")]
     [SerializeField] private string headerInterface = "Interface";
 
     [Tooltip("Heading of the accessibility section in Settings.")]
     [SerializeField] private string headerAccessibility = "Accessibility";
+    [Tooltip("Heading of the display section in Settings.")]
     [SerializeField] private string headerDisplay = "Display";
+    [Tooltip("Heading of the audio section in Settings.")]
     [SerializeField] private string headerAudio = "Audio";
+    [Tooltip("Settings row: show the first-time tip boxes.")]
     [SerializeField] private string tipsLabel = "Show first-time tips";
+    [Tooltip("Settings button that plays the opening tutorial again.")]
     [SerializeField] private string replayTutorialText = "Replay tutorial";
 
     [Tooltip("Text of the Settings button that opens the feedback window.")]
     [SerializeField] private string feedbackText = "Give feedback";
+    [Tooltip("Settings row: show the event log.")]
     [SerializeField] private string eventLogLabel = "Event log";
+    [Tooltip("Settings row: text size of the event log.")]
     [SerializeField] private string eventLogSizeLabel = "Event log text size";
+    [Tooltip("Settings row: show the +N number popups on clicks.")]
     [SerializeField] private string popupsLabel = "Number popups (+N)";
+    [Tooltip("Settings row: show block tooltips (Alt key).")]
     [SerializeField] private string blockTipsLabel = "Block tooltips (Alt: tap = next, hold = peek)";
+    [Tooltip("Settings row: size of the number popups.")]
     [SerializeField] private string popupSizeLabel = "Popup size";
     [Tooltip("Label of the Settings choice for how the docked menu buttons behave.")]
     [SerializeField] private string buttonModeLabel = "Menu buttons";
 
+    [Tooltip("Settings row: UI scale (applied after a restart).")]
     [SerializeField] private string uiScaleLabel = "UI scale (after restart)";
+    [Tooltip("Settings row: colour-blind marks on blocks.")]
     [SerializeField] private string colorBlindLabel = "Colour-blind marks";
     [Tooltip("Label of the small button in the Save / Load window that opens the list of autosaves.")]
     [SerializeField] private string autosavesText = "Autosaves";
@@ -292,26 +305,41 @@ public partial class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string filterStrengthLabel = "Filter strength";
     [Tooltip("Label of the slider for the orbit camera's field of view (the default camera; Top down too).")]
     [SerializeField] private string orbitFovLabel = "Orbit field of view";
+    [Tooltip("Settings row: play the camera intro at the next start.")]
     [SerializeField] private string cameraIntroLabel = "Camera intro (next start)";
     [Tooltip("Label of the switch for the Galactic Arcade studio intro at launch.")]
     [SerializeField] private string studioIntroLabel = "Studio intro (at launch)";
+    [Tooltip("Settings row: day / night cycle on or off.")]
     [SerializeField] private string dayNightLabel = "Day / night cycle";
     [Tooltip("Settings > Gameplay: label of the 'Did you know?' tips switch.")]
     [SerializeField] private string didYouKnowLabel = "Did you know tips";
+    [Tooltip("Settings row: how long one day lasts.")]
     [SerializeField] private string dayNightLengthLabel = "Length of a day";
+    [Tooltip("Settings row: how often the game autosaves.")]
     [SerializeField] private string autoSaveLabel = "Autosave every";
+    [Tooltip("Settings row: show a message when it autosaves.")]
     [SerializeField] private string autoSaveMessageLabel = "Show autosave message";
+    [Tooltip("Settings row: VSync.")]
     [SerializeField] private string vsyncLabel = "VSync";
+    [Tooltip("Settings row: fullscreen.")]
     [SerializeField] private string fullscreenLabel = "Fullscreen";
+    [Tooltip("Settings row: screen resolution.")]
     [SerializeField] private string resolutionLabel = "Resolution";
+    [Tooltip("Settings button that opens the key bindings screen.")]
     [SerializeField] private string keybindsButtonText = "Change keybinds";
     [Tooltip("Settings > Audio button that opens the song checklist, and that window's title.")]
     [SerializeField] private string customPlaylistText = "Custom playlist";
+    [Tooltip("Title of the custom playlist screen.")]
     [SerializeField] private string playlistPanelTitle = "Custom playlist";
+    [Tooltip("Playlist button that ticks every song.")]
     [SerializeField] private string playlistAllText = "Select all songs";
+    [Tooltip("Hint under the custom playlist.")]
     [SerializeField] private string playlistHintText = "Only ticked songs play. At least one stays ticked.";
+    [Tooltip("Title of the key bindings screen.")]
     [SerializeField] private string keyBindingsPanelTitle = "Keybinds";
+    [Tooltip("Key bindings button that puts every key back to its default.")]
     [SerializeField] private string resetKeysText = "Reset keys to default";
+    [Tooltip("Shown on a key binding while it waits for the new key.")]
     [SerializeField] private string pressAKeyText = "Press a key...";
 
     [Tooltip("Names of the rebindable actions, in the order of PixelAction (Time Stop, Hose, Turn left, Turn right, Event log, Time slow).")]
@@ -1096,6 +1124,7 @@ public partial class PixelPauseMenu : MonoBehaviour
 
     [Tooltip("Placeholder of the search box at the top right of the pause menu.")]
     [SerializeField] private string menuSearchPlaceholder = "Search menu and settings...";
+    [Tooltip("Grey hint text in the Settings search box.")]
     [SerializeField] private string settingsSearchPlaceholder = "Search settings...";
 
     /// <summary>Two half-width buttons side by side on one row (keeps the menu short).</summary>

@@ -84,9 +84,11 @@ public class PixelBlockRules : MonoBehaviour, IPixelDatabaseSource
     }
 
     [Header("Special blocks (rare replacements)")]
+    [Tooltip("Special blocks: rare replacements that can take a block's place when it spawns (rule per pixel type, chance and what it becomes).")]
     [SerializeField] private List<SpecialRule> specialRules = new List<SpecialRule>();
 
     [Header("Hold blocks (bonus while held)")]
+    [Tooltip("Hold blocks: blocks that give a bonus while they are held (Block Hold), one rule per pixel type.")]
     [SerializeField] private List<HoldRule> holdRules = new List<HoldRule>();
 
     [Serializable]
@@ -100,6 +102,7 @@ public class PixelBlockRules : MonoBehaviour, IPixelDatabaseSource
     }
 
     [Header("Hazards that drain the hold meter")]
+    [Tooltip("Hazards that drain the Block Hold meter when they go off, and by how much.")]
     [SerializeField] private List<HazardHoldPenalty> hazardPenalties = new List<HazardHoldPenalty>();
 
     [Tooltip("Add the built-in rules that are missing from the lists above (at start).")]
