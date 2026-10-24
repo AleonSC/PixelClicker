@@ -37,6 +37,10 @@ Idea for the look: husks could be slightly duller than the block on the cube (a 
 
 > **Husks are never currency by themselves. Only a machine can turn them into something - and the Recycler is the machine that turns them into currency, at a loss.**
 
+> **Trading husks is not husks becoming currency (clarified 2026-10-24).** A husk never PAYS anything by itself, but a vendor can BUY husks
+> (a delivery job) - that is a trade, like selling skill goods. The rule is about husks having no built-in payout, not about who may buy them.
+> Balance, not the rule, limits it: jobs are capped (one active job per vendor, a few per hour) and cost real effort.
+
 This keeps the world consistent (a machine is processing husks, like every other machine) while clicking stays the real way to earn currency.
 
 ## What husks are for
@@ -86,6 +90,15 @@ Charcoal husks. This is how the MAKING skills (Smithing, Firemaking, ...) get th
 packs - the factory becomes the gateway to new skills. Rules: discovery is ONE-TIME (no feeding a machine to keep a block); NO LOOPS (a
 discovered block's husks process into something new or higher, never back into the product that discovered it); watch the currency count
 (group the Inventory by skill before there are dozens).
+
+## Delivery jobs (agreed 2026-10-24, not built)
+Vendors post DELIVERY JOBS for specific husks ('30 Bark + 10 Sap husks within 10 minutes'). The player places a DELIVERY CRATE wherever they
+like: an In coupling and an open top, a big label ('Bark 18 / 30') and the job's timer; it takes only the requested types (others bounce off),
+one section per type for mixed jobs. Full = it seals and the vendor hauls it away (a small moment). Pay: pure currency + rapport (`PixelRapport`,
+the biggest rapport source) + sometimes a reward item. Out of time = no penalty: the job expires, the crate empties back out, partial rapport.
+Jobs scale: early ones are small (~15 husks, fed by hand / the Sweeper), later ones big or mixed and only practical with belts, filters and
+sorters (Cubie's trust Tier 1) - the reason to build a factory, and husks fading adds pressure. They replace the to-do's 'Vendor orders':
+the same crates take PRODUCTS later (the ~3x rung of the value ladder) once products exist.
 
 ## Crafting uses husks (agreed 2026-10-18, not built)
 

@@ -469,7 +469,7 @@ vendors take goods (orders) and buy skill currency and products for pure currenc
 **Where the pure money comes from - the value ladder (agreed; raw goods + saturation BUILT 2026-10-24: `PixelMarket`, products / orders not yet):** training a skill replaces the basic cubes, so skills must pay
 back in pure currency, and MORE effort must pay MORE: clicking pure pixels 1x; selling raw skill currency to vendors ~1.2x (today 0.8x of the
 rarity rate - too low); selling products ~2x; vendor orders ~3x but limited. Markets SATURATE (a vendor's price for a good drops as you sell
-a lot and recovers over time) instead of hard caps. Husks still never become currency except through the lossy Recycler.
+a lot and recovers over time) instead of hard caps. Husks still never PAY currency by themselves (only the lossy Recycler turns them into it); vendors may BUY husks in delivery jobs - a trade, capped by the jobs (PixelRules.md 'Delivery jobs').
 - **As built:** "1x" = the pure currency one click earns on pure blocks right now (the six colours count as equal units); a good is worth the
   clicks it took (clicks to collect / pay per click, multipliers included), so selling raw skill currency pays 1.2x what the same clicks on pure
   blocks would have. Saturation per vendor + good: price x 1 / (1 + clicks-worth sold / 900), floor 25%, half wears off every 10 real minutes;

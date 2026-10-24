@@ -2922,6 +2922,10 @@ The rule, word for word
 
 > Husks are never currency by themselves. Only a machine can turn them into something - and the Recycler is the machine that turns them into currency, at a loss.
 
+> Trading husks is not husks becoming currency (clarified 2026-10-24). A husk never PAYS anything by itself, but a vendor can BUY husks
+> (a delivery job) - that is a trade, like selling skill goods. The rule is about husks having no built-in payout, not about who may buy them.
+> Balance, not the rule, limits it: jobs are capped (one active job per vendor, a few per hour) and cost real effort.
+
 This keeps the world consistent (a machine is processing husks, like every other machine) while clicking stays the real way to earn currency.
 
 What husks are for
@@ -2971,6 +2975,15 @@ Charcoal husks. This is how the MAKING skills (Smithing, Firemaking, ...) get th
 packs - the factory becomes the gateway to new skills. Rules: discovery is ONE-TIME (no feeding a machine to keep a block); NO LOOPS (a
 discovered block's husks process into something new or higher, never back into the product that discovered it); watch the currency count
 (group the Inventory by skill before there are dozens).
+
+Delivery jobs (agreed 2026-10-24, not built)
+Vendors post DELIVERY JOBS for specific husks ('30 Bark + 10 Sap husks within 10 minutes'). The player places a DELIVERY CRATE wherever they
+like: an In coupling and an open top, a big label ('Bark 18 / 30') and the job's timer; it takes only the requested types (others bounce off),
+one section per type for mixed jobs. Full = it seals and the vendor hauls it away (a small moment). Pay: pure currency + rapport (PixelRapport,
+the biggest rapport source) + sometimes a reward item. Out of time = no penalty: the job expires, the crate empties back out, partial rapport.
+Jobs scale: early ones are small (~15 husks, fed by hand / the Sweeper), later ones big or mixed and only practical with belts, filters and
+sorters (Cubie's trust Tier 1) - the reason to build a factory, and husks fading adds pressure. They replace the to-do's 'Vendor orders':
+the same crates take PRODUCTS later (the ~3x rung of the value ladder) once products exist.
 
 Crafting uses husks (agreed 2026-10-18, not built)
 
@@ -3785,7 +3798,7 @@ Code clean-ups worth doing some day
 [ ] Launcher + catcher (Devices, the 'fun' transport): flings husks in an arc from a coupling to a catcher basket across the floor; crosses over other lines; badly aimed husks miss and land loose
 [ ] Coupling settings (Devices; on the coupling's device card, no new window): Filter (one husk type passes), Priority / overflow (used only when the main output is full), Rate limit (at most one husk every N s), Colour tag (tint to tell lines apart), In / Out / Auto (Auto = decided by what's attached, like the Junction Box)
 [ ] Build mode + free cam (Devices for behaviour, UI and Interfaces for the bar; design in docs/GameDesign.md section 6 'Build mode and free cam'): one toggle (key + HUD button) that eases into PixelFreeCam with a build bar of owned placeables; opens itself on the first placement (Cubie's Recycler gift) with a one-line tip; every placeable goes through it and Inventory 'Place' opens it; place / move / rotate / remove with a flow preview; no cube clicks while building; mid-game the first belt / tube / Junction Box adds the socket / coupling view (in / out arrows, line colours, hidden openings through the model)
-[ ] Vendor orders (Devices + Shops; a reason to build a factory): vendors (Big Tim, the Prospector, the Farmer...) post ORDERS like '50 Wood Chips within 10 minutes' or '20 Copper ingots', delivered by belt / tube / hand to a DELIVERY PAD (a placeable with couplings) for big rewards (currency, rare items, cosmetics); a few open at a time, shown in the Log's Goals tab or the vendor's card; orders scale with progress and need throughput, so factories pay off; gives vendors something to do between visits
+[ ] Delivery jobs (Devices + Shops; design in docs/systems/PixelRules.md 'Delivery jobs', agreed 2026-10-24; replaces 'Vendor orders'): vendors post jobs for specific husks ('30 Bark + 10 Sap within 10 min'); the player places a delivery crate (In coupling + open top, label 'Bark 18 / 30', timer, takes only the requested types, a section per type); full = sealed and hauled away by the vendor; pays pure currency + rapport (biggest rapport source) + sometimes an item; expiry = no penalty (partial rapport); capped (one active job per vendor, a few per hour); small early jobs by hand, big / mixed ones need belts and sorters; later the same crates take products (~3x rung)
 [ ] Products as a new item kind (Devices + Code Cleanup; rule in docs/systems/PixelRules.md 'Currency, husks and PRODUCTS'): machine outputs are PRODUCTS, not pixel types - a body that rides belts / tubes / chutes and sits in crates / the Workbench (reuse husk physics + PixelHuskPool) but no block and no click currency; add ItemKind Product next to Pixel / Potion / Device; used by crafting, vendor orders, upgrades, cosmetics; vendors can buy them; chains of 2 (sometimes 3) steps
 [ ] Move Wood Chips and Charcoal to products (with 'Products as a new item kind'): today they are pixel types (currency, block card) with no use; make them products the Wood Chipper / Kiln output, give each a use (e.g. Charcoal = Smelter / Generator fuel, Wood Chips = Composter or a crafting ingredient) and remove their pixel-type leftovers (enum values stay appended, unused)
 [ ] Discovery - products unlock blocks (with 'Products as a new item kind'; rule in docs/systems/PixelRules.md 'Discovery'): making enough of a product discovers a new pixel type that then spawns on the cube with its own currency and husks (e.g. Kiln: wood husks -> Charcoal products -> discover the Charcoal pixel for Firemaking); a TierUnlockMode 'ByDiscovery' (appended) next to ByGoal; one-time, no loops (a discovered block's husks never process back into its product); the making skills get their blocks this way; show progress ('Charcoal: 14 / 25 to discover') on the machine's device card
