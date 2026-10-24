@@ -581,6 +581,15 @@ public partial class PixelUI : MonoBehaviour
 
     /// <summary>Opens or closes the Inventory box. Opening it closes the Log (they never show together).</summary>
     /// <summary>The Inventory window's rectangle (null if there is none); used to place tip boxes next to it.</summary>
+    /// <summary>Shows one of the Inventory's tabs (0 Currency, 1 Consumables, 2 Materials), e.g. for a tip about what is in it.</summary>
+    public static void ShowInventoryTab(int tab)
+    {
+        if (inventoryInstance == null) return;
+        inventoryInstance.inventoryTab = Mathf.Clamp(tab, 0, 2);
+        if (inventoryInstance.listContent != null) inventoryInstance.listContent.anchoredPosition = Vector2.zero;
+        inventoryInstance.Refresh();
+    }
+
     public static RectTransform WindowRect => inventoryInstance != null && inventoryInstance.boxObject != null ? inventoryInstance.boxObject.GetComponent<RectTransform>() : null;
 
     public static void SetInventoryOpen(bool open, bool force = false)

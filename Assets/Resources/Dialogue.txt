@@ -326,20 +326,16 @@ text: Ultra pixel earned! Your Ultra pixels are one general currency, shown at t
 overlay line: You earned an Ultra pixel!
 
 [Intro tips]
-log: This is your Log. It tracks your achievements and your goals - what to work towards next. (Your click counts per pixel are in Settings > Stats.) Open it any time with the Log button at the bottom left.
-inventory: This is your Inventory. Currency shows how many of each pixel you hold - you spend them in the shop. Consumables holds your potions and devices. Open it any time with the Inventory button at the top left.
-earn: Clicking the pixel is the main way to earn currency. As you play, upgrades, minigames and managing the husks that fall to the floor will open up other ways to earn.
+log: Click the cube to earn pixels: they're your money. Your goals are in the Log (bottom left). The first one brings a visitor.
+inventory: Your Inventory: devices like this Recycler live in Consumables. Right-click one to place it.
 right click: Try the right mouse button too: HOLD it on the block on the cube. It's each block's second action. On the pure pixels (black, gray, white, red, green and blue) it puts a stake on the block - the longer you hold (watch the meter by your cursor), the more it is worth when it comes round again, but the stake can also go bad and pay nothing. Skill blocks you meet later do their own thing when held.
 
 [Tutorial: Shop]
-step 1: Welcome to the Shop! The list on the left shows every pixel you hold - prices are paid in those pixels. The tabs along the top split up what is for sale.
-step 2: Pixels: packs that unlock new pixel types. Every new type is its own currency, and some need goals from the minigames before you can buy them.
-step 3: Upgrades - Features: one-time unlocks such as the Auto Clicker, Pixel Grabbing, Time Stop and the Pixel Bank, plus upgrades for them.
-step 4: Upgrades - Value: makes a pixel type pay more, paid in that same pixel. Each level costs a little more than the last. Shift-click buys as many levels as you can afford.
-step 5: Upgrades - Operation: improves your consumables. Each one has a spinning picture and an orange arrow that opens its upgrades: longer lasting, bigger reach, more uses, more storage.
-step 6: Consumables: things with a one-time use - potions, devices, seeds and supplies. Buy them here, then use them from the Consumables tab of your Inventory.
-step 7: Minigames: events that start on their own once you buy them, from ghosts and meteors to Snake and Breakout. They pay rewards and unlock rare pixels. Every minigame can be switched on or off in the Toggles window, so you can customize your gameplay experience.
-step 8: Anything greyed out shows what it still needs. Open the Shop again any time with the Shop button at the top right.
+step 1: Welcome to the Shop! Prices are paid in the pixels listed on the left. Anything greyed out shows what it still needs.
+step 2: Pixels: packs that unlock new pixel types. Every new type is its own currency, and some need goals from the minigames first.
+step 3: Upgrades: Features are one-time unlocks like the Auto Clicker and Time Stop. Value makes a pixel type pay more (Shift-click buys every level you can afford). Operation improves your consumables.
+step 4: Consumables: potions, devices, seeds and supplies. Buy them here, then use them from your Inventory.
+step 5: Minigames: events that start on their own once bought. They pay rewards and unlock rare pixels. Switch any of them off in the Toggles window.
 
 [Tutorial: Toggles]
 step 1: Psst - you bought the Auto Clicker! It starts switched OFF. See the Toggles tab on the right edge of the screen? Every on / off switch in the game lives there. Let me open it.
@@ -398,25 +394,19 @@ next button: Next
 last button: Okay!
 recycler gift: <b>+1 Recycler</b> (in your Consumables)
 invoice: <i>*rrrrrrip*</i>
-visit 1 page 1: Psst... over here. The name's Cubie. I deal in pixels. A very legitimate little operation. The *only* operation, really, but who's counting.
-visit 1 page 2: See, pixels are money around here. White, gray, black, and red, green and blue later. Why those? Why not the shiny ones? Who knows. That's just what we're all told, so we go with it.
-visit 1 page 3: How do you get them? You click. And click. And click some more. Don't look at me like that. Everybody starts at the bottom. Some of us just climbed out faster.
-visit 1 page 4: And those leftover bits piling up on the floor? Don't let them rot. Smash them for practice, or toss them in this. Recycles them for a little something back. Same colour in a row? Even better.\n\n{recycler}
-visit 1 page 5: Oh, don't mind the tag. Standard paperwork. Consider it a gift. Ish.
-visit 1 page 6: Come find me when you've got a pile worth my time. I'll be around. I'm *always* around.
-visit 2 page 1: Well, well... look at that pile of black. White, gray, black: you've got the basics down. Real, official, everybody-agrees-it's-worth-something money.
-visit 2 page 2: But that's only half of the pure stuff. Here: red, green and blue. They'll turn up on your cube from now on. Consider it a loan. A friendly one. Mostly. And don't worry about the tag. Yet.\n\n{gift}
-visit 2 page 3: Grind all six and you're as rich as plain pixels get. That's the last step before you branch off into the good stuff. And my shop's open now - the Shop button's at the top right. Don't worry, I'm not counting your pockets. Much.
-visit 2 page 4: Here's the secret nobody tells you: the clicking never really stops. It just gets better pay. Save up for an Auto Clicker first, and the work starts doing itself while you do the clever bits.
-visit 2 page 5: Then learn a skill. The fancy pixels, wood, ore, crops and sparks, are goods, not coin - worth plenty to the right buyer. Big Tim the Lumberjack is a good place to start.
-visit 2 page 6: More vendors will wander through as you grow. Where from? Nobody asks. They pay in the same pixels, and that's good enough for everyone. You can switch them off in the Toggles menu (it opens up once you get the Auto Clicker).
-visit 2 page 7: My friend the Wizard might drop by soon. Keep him away from my stock, he turns things into frogs. Be seeing you...
+visit 1 page 1: Psst... over here. The name's Cubie. I deal in pixels. The *only* dealer, really, but who's counting.
+visit 1 page 2: Pixels are money around here. Why those and not the shiny ones? Nobody knows. That's just what we're all told.
+visit 1 page 3: Those leftover bits on the floor? Don't let them rot. Crush them for practice, or toss them in this. Same colour in a row pays better.\n\n{recycler}
+visit 1 page 4: Oh, don't mind the tag. Standard paperwork. Consider it a gift. Ish. Come find me when you've got a pile worth my time.
+visit 2 page 1: Well, well... look at that pile of black. White, gray, black: you've got the basics down.
+visit 2 page 2: Here's the other half of the pure stuff: red, green and blue. They'll turn up on your cube from now on. A loan. A friendly one. Don't worry about the tag. Yet.\n\n{gift}
+visit 2 page 3: And my shop's open, top right. Save up for an Auto Clicker first. The clicking never stops, it just starts doing itself.
+visit 2 page 4: Other peddlers will wander through. My friend the Wizard might drop by first. Keep him away from my stock. Be seeing you...
 visit 3 page 1: Remember that tag? The one you weren't supposed to worry about? Time to worry. Just a little.
 visit 3 page 2: Terms: see reverse.\n\n{invoice}
 visit 3 page 3: Interest. It compounds. Like my disappointment.
 visit 3 page 4: I own the only shop in existence. So what I say goes. Those other guys? Peddlers. I run the show.
-visit 3 page 5: Look, I know it's rough out here. I was in your position once. Maybe one day you'll run things around here, if you're lucky.
-visit 3 page 6: So I'll tell you what: every time you prove you're still in this, I'll *let* you buy some of my newer, better stock. Pay a bit, earn a bit of trust. Fair's fair.
+visit 3 page 5: Look, I know it's rough out here. I was in your position once. So I'll tell you what: every time you prove you're still in this, I'll *let* you buy some of my newer, better stock. Pay a bit, earn a bit of trust. Fair's fair.
 
 [Visitor: tinkerer]
 name: Tinkerer

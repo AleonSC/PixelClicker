@@ -6,7 +6,7 @@
 //   smirk; slides in like the visitors, time stops, a paged speech box, Next button or Escape = next page). Visit 1 (new game, after
 //   the intro tips, calmSeconds (1.5) of calm): a shady dealer's pitch - pixels are money 'because that's what we're all told' (a
 //   fiat-currency joke), clicking is the monotonous grind you endure until the good stuff opens up - then he leaves and you click
-//   pixels (4 pages; visit 2 has 7 and ends on the same theme: the clicking never stops, it just pays better). Visit 2 (RGB UNLOCK, 2026-10-16:
+//   pixels (since 2026-10-24: 4 pages each for visits 1 and 2, 5 for visit 3; after visit 1 PixelHints.ShowInventoryIntro shows the Inventory tip). Visit 2 (RGB UNLOCK, 2026-10-16:
 //   when visitTwoAfterBlack (100) Black pixels have been EARNED - Visit2Due, BlackUntilVisitTwo for the guide line / Log goal): he says the
 //   basics are done, GIVES THE RGB PACK for free (PixelShop.GrantPackRewarding; the pack is hidden from the shop, so everything that needs it
 //   still works) plus a taste of Red / Green / Blue (rgbGiftMin..rgbGiftMax each, AddBonusCurrency - a gift is not 'earned') when the page
@@ -497,6 +497,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
         if (cubieDataVersion < 1) { if (visitOneAfterWhiteClicks == 50) visitOneAfterWhiteClicks = 100; cubieDataVersion = 1; }   // (2026-10-16: Cubie comes after 100 White clicks)
         if (cubieDataVersion < 2) { visitTwoPages = DefaultTwo; cubieDataVersion = 2; }   // (2026-10-16: visit 2 now unlocks RGB - the saved shop-intro lines are replaced)
         if (cubieDataVersion < 3) { visitOnePages = DefaultOne; visitTwoPages = DefaultTwo; cubieDataVersion = 3; }   // (2026-10-23: Cubie's bill - the monopoly hints and the price tag lines)
+        if (cubieDataVersion < 4) { visitOnePages = DefaultOne; visitTwoPages = DefaultTwo; visitThreePages = DefaultThree; cubieDataVersion = 4; }   // (2026-10-24: the shorter visits)
         // The user's own lines (Assets/Resources/Dialogue.txt, PixelDialogue) win over the Inspector / built-in ones.
         PixelTextFile f = PixelDialogue.File;
         f.Apply("Cubie", "name", ref characterName);
@@ -658,25 +659,22 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
     // A visit
     // ------------------------------------------------------------------
 
+    // 2026-10-24: visit 1 cut from 6 pages to 4 and visit 2 from 7 to 4 (the player has already clicked 50 times when he comes; skills, Big Tim and
+    // the Toggles switch-off are left for later); visit 3's last two pages merged.
     private string[] DefaultOne => new[]
     {
-        "Psst... over here. The name's Cubie. I deal in pixels. A very legitimate little operation. The *only* operation, really, but who's counting.",
-        "See, pixels are money around here. White, gray, black, and red, green and blue later. Why those? Why not the shiny ones? Who knows. That's just what we're all told, so we go with it.",
-        "How do you get them? You click. And click. And click some more. Don't look at me like that. Everybody starts at the bottom. Some of us just climbed out faster.",
-        "And those leftover bits piling up on the floor? Don't let them rot. Smash them for practice, or toss them in this. Recycles them for a little something back. Same colour in a row? Even better.\n\n{recycler}",
-        "Oh, don't mind the tag. Standard paperwork. Consider it a gift. Ish.",
-        "Come find me when you've got a pile worth my time. I'll be around. I'm *always* around.",
+        "Psst... over here. The name's Cubie. I deal in pixels. The *only* dealer, really, but who's counting.",
+        "Pixels are money around here. Why those and not the shiny ones? Nobody knows. That's just what we're all told.",
+        "Those leftover bits on the floor? Don't let them rot. Crush them for practice, or toss them in this. Same colour in a row pays better.\n\n{recycler}",
+        "Oh, don't mind the tag. Standard paperwork. Consider it a gift. Ish. Come find me when you've got a pile worth my time.",
     };
 
     private string[] DefaultTwo => new[]
     {
-        "Well, well... look at that pile of black. White, gray, black: you've got the basics down. Real, official, everybody-agrees-it's-worth-something money.",
-        "But that's only half of the pure stuff. Here: red, green and blue. They'll turn up on your cube from now on. Consider it a loan. A friendly one. Mostly. And don't worry about the tag. Yet.\n\n{gift}",
-        "Grind all six and you're as rich as plain pixels get. That's the last step before you branch off into the good stuff. And my shop's open now - the Shop button's at the top right. Don't worry, I'm not counting your pockets. Much.",
-        "Here's the secret nobody tells you: the clicking never really stops. It just gets better pay. Save up for an Auto Clicker first, and the work starts doing itself while you do the clever bits.",
-        "Then learn a skill. The fancy pixels, wood, ore, crops and sparks, are goods, not coin - worth plenty to the right buyer. Big Tim the Lumberjack is a good place to start.",
-        "More vendors will wander through as you grow. Where from? Nobody asks. They pay in the same pixels, and that's good enough for everyone. You can switch them off in the Toggles menu (it opens up once you get the Auto Clicker).",
-        "My friend the Wizard might drop by soon. Keep him away from my stock, he turns things into frogs. Be seeing you...",
+        "Well, well... look at that pile of black. White, gray, black: you've got the basics down.",
+        "Here's the other half of the pure stuff: red, green and blue. They'll turn up on your cube from now on. A loan. A friendly one. Don't worry about the tag. Yet.\n\n{gift}",
+        "And my shop's open, top right. Save up for an Auto Clicker first. The clicking never stops, it just starts doing itself.",
+        "Other peddlers will wander through. My friend the Wizard might drop by first. Keep him away from my stock. Be seeing you...",
     };
 
     /// <summary>Visit 3: the bill reveal (PixelCubieBill). He yanks the Recycler's tag and it unrolls into the invoice ({invoice}); the Bill window opens after.</summary>
@@ -686,8 +684,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
         "Terms: see reverse.\n\n{invoice}",
         "Interest. It compounds. Like my disappointment.",
         "I own the only shop in existence. So what I say goes. Those other guys? Peddlers. I run the show.",
-        "Look, I know it's rough out here. I was in your position once. Maybe one day you'll run things around here, if you're lucky.",
-        "So I'll tell you what: every time you prove you're still in this, I'll *let* you buy some of my newer, better stock. Pay a bit, earn a bit of trust. Fair's fair.",
+        "Look, I know it's rough out here. I was in your position once. So I'll tell you what: every time you prove you're still in this, I'll *let* you buy some of my newer, better stock. Pay a bit, earn a bit of trust. Fair's fair.",
     };
 
     private static string[] Pages(string[] list, string[] fallback) => list != null && list.Length > 0 ? list : fallback;
@@ -783,6 +780,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
         PixelWindows.Unregister(this);
         Unfreeze();
         if (kind == 1 && !recyclerGiven && !replaying) { recyclerGiven = true; GiveRecycler(); }   // (a page list without {recycler} still hands it over)
+        if (kind == 1) PixelHints.ShowInventoryIntro();   // (the Inventory tip: the Recycler he just gave is in it)
         if (kind <= 2) PixelStats.Best(Stage1Key, 1d);
         if (second)
         {
