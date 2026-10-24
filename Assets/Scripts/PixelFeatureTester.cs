@@ -794,7 +794,7 @@ public class PixelFeatureTester : MonoBehaviour
         instance.StopPlacing();
         instance.linkPanel = panel;
         instance.placeStartFrame = Time.frameCount;
-        panel.GetComponent<PixelSolarPanel>()?.ShowRange(true);
+        ShowPanelRange(panel, true);
         instance.linkOnly = true;
         PixelClicker.ExternalClickBlock = true; instance.blocking = true;
         instance.Refresh();
@@ -802,9 +802,12 @@ public class PixelFeatureTester : MonoBehaviour
 
     private bool linkOnly;   // linking a placed panel without placing anything
 
+    /// <summary>Shows or hides a placed solar panel's blue link ring (nothing if the object is not a panel).</summary>
+    private static void ShowPanelRange(GameObject panel, bool on) { panel.GetComponent<PixelSolarPanel>()?.ShowRange(on); }
+
     private void EndLink(bool keepPlacing)
     {
-        if (linkPanel != null) linkPanel.GetComponent<PixelSolarPanel>()?.ShowRange(false);
+        if (linkPanel != null) ShowPanelRange(linkPanel, false);
         linkPanel = null;
         if (linkOnly) { linkOnly = false; if (blocking) { PixelClicker.ExternalClickBlock = false; blocking = false; } }
         Refresh();
@@ -1102,7 +1105,7 @@ public class PixelFeatureTester : MonoBehaviour
             GameObject go = placing.place(clicker, point, useYaw);
             if (go != null) placing.placed.Add(go);
             if (go != null && AfterPlaced()) return;
-            if (go != null && placing.linkAfterPlace) { linkPanel = go; linkOnly = false; placeStartFrame = Time.frameCount; go.GetComponent<PixelSolarPanel>()?.ShowRange(true); }
+            if (go != null && placing.linkAfterPlace) { linkPanel = go; linkOnly = false; placeStartFrame = Time.frameCount; ShowPanelRange(go, true); }
             Refresh();
         }
         else if (PixelInput.RightPressed()) StopPlacing();

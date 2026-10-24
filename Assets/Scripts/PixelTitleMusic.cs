@@ -21,6 +21,7 @@ public class PixelTitleMusic : MonoBehaviour
 
     private CanvasGroup group;
     private RectTransform rect;
+    private readonly Vector3[] cornersBuffer = new Vector3[4];   // (the box's corners, refilled each frame by GetWorldCorners)
     private TMP_Dropdown dropdown;
     private float hideSeconds = 5f, lastActivity, alpha;
     private bool wasShowing, refreshing, built;
@@ -192,7 +193,7 @@ public class PixelTitleMusic : MonoBehaviour
         if (shuffled != shownShuffle) RefreshShuffle();
 
         // Activity: the mouse over the box (a margin round it), a click on it, or the list being open.
-        Vector3[] corners = new Vector3[4];
+        Vector3[] corners = cornersBuffer;   // (one reused array, no garbage each frame)
         rect.GetWorldCorners(corners);
         Vector2 pointer = PixelInput.PointerPosition();
         bool over = pointer.x >= corners[0].x - HoverMargin && pointer.x <= corners[2].x + HoverMargin && pointer.y >= corners[0].y - HoverMargin && pointer.y <= corners[2].y + HoverMargin;
