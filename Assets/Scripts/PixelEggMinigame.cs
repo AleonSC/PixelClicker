@@ -121,22 +121,7 @@ public class PixelEggMinigame : PixelVisitorMinigame
         Block(a, "Forehead 1", furSide, new Vector2(10f, 30f), new Vector2(-24f, 268f));
         Block(a, "Forehead 2", furSide, new Vector2(10f, 36f), new Vector2(0f, 270f));
         Block(a, "Forehead 3", furSide, new Vector2(10f, 30f), new Vector2(24f, 268f));
-        Block(a, "Eye L", iris, new Vector2(44f, 44f), new Vector2(-46f, 214f));
-        Block(a, "Eye R", iris, new Vector2(44f, 44f), new Vector2(46f, 214f));
-        Block(a, "Pupil L", dark, new Vector2(10f, 38f), new Vector2(-46f, 214f));
-        Block(a, "Pupil R", dark, new Vector2(10f, 38f), new Vector2(46f, 214f));
-        Block(a, "Glint L", Color.white, new Vector2(9f, 9f), new Vector2(-56f, 228f));
-        Block(a, "Glint R", Color.white, new Vector2(9f, 9f), new Vector2(36f, 228f));
-        Block(a, "Muzzle", cream, new Vector2(96f, 56f), new Vector2(0f, 156f));
-        Block(a, "Nose", pink, new Vector2(20f, 14f), new Vector2(0f, 178f));
-        Block(a, "Mouth 1", dark, new Vector2(4f, 14f), new Vector2(0f, 164f));
-        Block(a, "Mouth 2", dark, new Vector2(26f, 4f), new Vector2(-13f, 156f), -12f);
-        Block(a, "Mouth 3", dark, new Vector2(26f, 4f), new Vector2(13f, 156f), 12f);
-        for (int w = 0; w < 3; w++)
-        {
-            Block(a, "Whisker L" + w, dark, new Vector2(46f, 3f), new Vector2(-112f, 168f - w * 10f), 8f - w * 8f);
-            Block(a, "Whisker R" + w, dark, new Vector2(46f, 3f), new Vector2(112f, 168f - w * 10f), -(8f - w * 8f));
-        }
+        CatFace(a, iris, dark, cream, pink);
         // The egg, held in both paws in front of his chin: a white pixel with softly rounded corners.
         Block(a, "Egg Shade", shellShade, new Vector2(78f, 86f), new Vector2(0f, 88f));
         Block(a, "Egg", shell, new Vector2(72f, 80f), new Vector2(-2f, 92f));
