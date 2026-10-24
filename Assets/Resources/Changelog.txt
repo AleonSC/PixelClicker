@@ -1630,3 +1630,4 @@
 [2026-10-24 11:01 UTC] Game Loop page, UI map and Dialogue map updated for delivery jobs (Delivery jobs station built, the factory's missing-customer gap closed, new job window / crate label / dock marker pieces, vendors' job offer lines).
 [2026-10-24 11:01 UTC] To-do: Delivery jobs ticked off.
 [2026-10-24 10:58 UTC] Charcoal is now a toggleable block: once its pixel is bought it gets a spawn switch in the Toggles window like Glass and Luminescent (the three share a new 'Toggleable' tag on their block cards instead of a hand-written list).
+[2026-10-24 11:04 UTC] Rebuilt the Code Map and Code Health pages for the delivery jobs scripts.
