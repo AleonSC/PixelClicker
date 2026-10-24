@@ -92,11 +92,12 @@ discovered block's husks process into something new or higher, never back into t
 (group the Inventory by skill before there are dozens).
 
 ## Delivery jobs (agreed 2026-10-24, not built)
-Vendors post DELIVERY JOBS for specific husks ('30 Bark + 10 Sap husks within 10 minutes'). The player places a DELIVERY CRATE wherever they
-like: an In coupling and an open top, a big label ('Bark 18 / 30') and the job's timer; it takes only the requested types (others bounce off),
+Vendors post DELIVERY JOBS for specific husks ('30 Bark + 10 Sap husks within 10 minutes'). The VENDOR DROPS the DELIVERY CRATE on a FIXED
+SPOT (decided 2026-10-24: so players are forced to route) - each vendor has their own DOCK at the edge of the floor, always in the same
+place, so a line built to Big Tim's dock keeps paying off on every later job. The crate has an In coupling and an open top, a big label ('Bark 18 / 30') and the job's timer; it takes only the requested types (others bounce off),
 one section per type for mixed jobs. Full = it seals and the vendor hauls it away (a small moment). Pay: pure currency + rapport (`PixelRapport`,
 the biggest rapport source) + sometimes a reward item. Out of time = no penalty: the job expires, the crate empties back out, partial rapport.
-Jobs scale: early ones are small (~15 husks, fed by hand / the Sweeper), later ones big or mixed and only practical with belts, filters and
+Jobs scale: early ones are small (~15 husks, carried or thrown in by hand before belts exist), later ones big or mixed and only practical with belts, filters and
 sorters (Cubie's trust Tier 1) - the reason to build a factory, and husks fading adds pressure. They replace the to-do's 'Vendor orders':
 the same crates take PRODUCTS later (the ~3x rung of the value ladder) once products exist.
 
