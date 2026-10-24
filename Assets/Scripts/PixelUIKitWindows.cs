@@ -113,6 +113,13 @@ public static partial class PixelUIKit
     private static readonly System.Collections.Generic.List<TMP_Text> titles = new System.Collections.Generic.List<TMP_Text>();
     private static Color titleColorShown = Color.white;
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetTitleStatics()   // (a fresh play mode start: no titles yet, the start colour; play mode may skip the domain reload)
+    {
+        titles.Clear();
+        titleColorShown = Color.white;
+    }
+
     /// <summary>Re-applies PixelUITheme's title colour to every window title still in the theme colour.</summary>
     public static void RefreshTitles()
     {

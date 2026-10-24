@@ -416,7 +416,6 @@ public partial class PixelClicker
     [SerializeField] private int capacitorChargeCap = 0;
     [Tooltip("Extra payout per stored charge for the Capacitor pixel (0 = 0.15).")]
     [SerializeField] private float capacitorPayPerCharge = 0f;
-    private static int capacitorCharge;
     [Tooltip("The Transistor pixel makes the NEXT pixel you collect pay this many times as much (0 = 2).")]
     [SerializeField] private float transistorMultiplier = 0f;
     [Tooltip("Seconds a Fuse pixel can be collected for its bonus before it burns out (0 = 3).")]
@@ -425,7 +424,6 @@ public partial class PixelClicker
     [SerializeField] private float fuseBonus = 0f;
     [Tooltip("Extra payout of a Bulb per old conductor pixel (Electric, Wire, Battery, Resistor) lying around, up to 30 of them (0 = 0.1).")]
     [SerializeField] private float bulbPerConductor = 0f;
-    private static double transistorBoost = 1d;
     private float liveSince;
 
     /// <summary>The old pixels on the floor that carry current (Electric, Wire, Battery, Resistor), at most 30.</summary>

@@ -209,9 +209,6 @@ public partial class PixelClicker
     /// <summary>How many small cubes (1-7) a Dragon Cube carries; 0 for every other pixel type.</summary>
     public static int DragonCubeStars(PixelType type) => IsDragonCube(type) ? (int)type - (int)PixelType.DragonCube1 + 1 : 0;
 
-    /// <summary>Extra payout multiplier from outside effects (a dragon wish's Golden Hour); 1 normally.</summary>
-    public static float WishMultiplier = 1f;
-
     /// <summary>Can the player switch this pixel's spawning off (tick box in the inventory)?</summary>
     public enum SpawnSwitch
     {
