@@ -305,6 +305,12 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     /// <summary>Visitors that trade pixels return their offers here when they arrive (null = a normal wares visitor).</summary>
     protected virtual List<Trade> RollTrades() => null;
 
+    /// <summary>Called after a trade row is accepted (a buying vendor records the sale with PixelMarket here).</summary>
+    protected virtual void OnTradeDone(Trade t) { }
+
+    /// <summary>Optional extra text on a trade row's second line (a buying vendor shows his market price for that good).</summary>
+    protected virtual string TradeNote(Trade t) => "";
+
     /// <summary>True for a vendor that both SELLS wares and BUYS pixels: the window gets a Buy tab (the wares) and a Sell tab (the trades from <see cref="RollTrades"/>).</summary>
     protected virtual bool BuySellTabs => false;
 
@@ -785,6 +791,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         if (!clicker.TrySpend(t.payTier, t.pay)) return;
         clicker.AddCurrency(t.getTier, t.get);
         t.done = true;
+        OnTradeDone(t);
         PixelStats.Count(Id + ".bought");
         PixelAudio.Play("purchase");
         RefreshWares();
@@ -797,7 +804,8 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         bool afford = clicker.CanAfford(clicker.Tiers[t.payTier].type, t.pay);
         Color col = afford ? new Color(0.55f, 1f, 0.6f) : new Color(1f, 0.45f, 0.45f);
         PixelUIKit.SetText(row.cost, TradePayWord + " <color=#" + ColorUtility.ToHtmlStringRGB(col) + ">" + PixelClicker.FormatNumberShort(t.pay) + " " + payName + "</color>");
-        PixelUIKit.SetText(row.owned, "You own " + PixelClicker.FormatNumberShort(clicker.GetCount(clicker.Tiers[t.payTier].type)));
+        string note = TradeNote(t);
+        PixelUIKit.SetText(row.owned, "You own " + PixelClicker.FormatNumberShort(clicker.GetCount(clicker.Tiers[t.payTier].type)) + (string.IsNullOrEmpty(note) ? "" : "   " + note));
         PixelUIKit.SetText(row.stockLabel, "");
         row.buy.interactable = !t.done && afford;
         PixelUIKit.SetText(row.buyLabel, t.done ? "Sold" : TradeText);

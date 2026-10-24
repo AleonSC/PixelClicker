@@ -17,10 +17,48 @@ public partial class PixelShop
     private static bool IsLeveled(ShopPack pack) => pack.levels != null && pack.levels.Length > 0;
 
     /// <summary>The costs for the pack's next purchase (the next level for upgrade packs). Null if nothing left to buy.</summary>
-    private static PackCost[] CurrentCosts(ShopPack pack)
+    private PackCost[] CurrentCosts(ShopPack pack)
     {
+        if (pack.skillLadder) return LadderCosts(pack);
         if (!IsLeveled(pack)) return pack.costs;
         return pack.level < pack.levels.Length ? pack.levels[Mathf.Max(0, pack.level)].costs : null;
+    }
+
+    // ------------------------------------------------------------------
+    // Skill pack price ladder (GameDesign section 6 'Tier 0'): every gathering pack is on sale from the start, each one dearer than the last.
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// The price of a gathering skill pack (ShopPack.skillLadder): skillLadderStarterPrice of each of the six pure colours x skillLadderGrowth ^ rung,
+    /// rounded to two significant figures. The rung: by purchase order, how many ladder packs you already own (the Nth pack you buy costs rung N-1,
+    /// whichever it is); or, with that off, the pack's place among the ladder packs in the list. With skillLadderStarterFixed the Lumberjack's
+    /// Pack always costs rung 0 and every other pack at least rung 1, so Woodcutting stays the cheap first skill.
+    /// </summary>
+    private PackCost[] LadderCosts(ShopPack pack)
+    {
+        int rung = 0;
+        bool starter = skillLadderStarterFixed && IsWoodcutterPack(pack);
+        if (!starter)
+        {
+            for (int i = 0; i < packs.Length; i++)
+            {
+                ShopPack p = packs[i];
+                if (p == pack && !skillLadderByPurchaseOrder) break;   // fixed rungs: count the ladder packs listed before this one
+                if (p == null || p == pack || !p.skillLadder) continue;
+                if (!skillLadderByPurchaseOrder || IsPurchased(i)) rung++;   // by purchase order: count the ones already bought
+            }
+            if (skillLadderStarterFixed) rung = Mathf.Max(1, rung);
+        }
+        return AllSix(LadderPrice(rung));
+    }
+
+    /// <summary>Price per pure colour of ladder rung 'rung' (0 = the starter).</summary>
+    public double LadderPrice(int rung)
+    {
+        double raw = skillLadderStarterPrice * System.Math.Pow(System.Math.Max(1d, skillLadderGrowth), rung);
+        if (raw <= 0d) return 0d;
+        double scale = System.Math.Pow(10d, System.Math.Floor(System.Math.Log10(raw)) - 1d);   // (two significant figures: 625 -> 630, 1563 -> 1600)
+        return System.Math.Round(raw / scale) * scale;
     }
 
     /// <summary>One-time packs: bought. Upgrade packs: at max level (nothing left to buy).</summary>
