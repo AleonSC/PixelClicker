@@ -24,6 +24,7 @@ public enum PixelTag
     Plant = 1 << 11,          // what cracked Seed shells grow (IsPlant)
     Electrical = 1 << 12,     // the Electrician pack's own blocks (IsElectricalBlock)
     Firemaking = 1 << 13,     // the Firemaking pack's blocks (IsFireBlock)
+    Toggleable = 1 << 14,     // an extra pixel bought in the shop's Toggleables (Glass, Luminescent, Charcoal): a spawn switch in the Toggles window, on by default (PixelTier.CanSwitchOff)
 }
 
 /// <summary>Tag questions (kept as their own small class so callers read simply): PixelBlockTags.Has(type, PixelTag.Wood).</summary>
