@@ -143,20 +143,8 @@ public partial class PixelShop
         System.Func<string> iouText = () => "Cubie's bill: pay it off to earn his trust (and his better stock)";
         iouTip.onEnter = () => hoverTip = iouText;
         iouTip.onExit = () => { if (hoverTip == iouText) hoverTip = null; };
-        GameObject fillGo = new GameObject("Hold Fill", typeof(RectTransform), typeof(Image));
-        fillGo.transform.SetParent(help.transform, false);
-        Image fillImage = fillGo.GetComponent<Image>();
-        fillImage.color = new Color(1f, 1f, 1f, 0.45f);
-        fillImage.raycastTarget = false;
-        RectTransform fillRect = fillGo.GetComponent<RectTransform>();
-        fillRect.anchorMin = Vector2.zero;
-        fillRect.anchorMax = new Vector2(0f, 1f);
-        fillRect.offsetMin = fillRect.offsetMax = Vector2.zero;
-        fillRect.SetSiblingIndex(1);   // above the button's face, under its label
-        PixelHoldButton hold = help.gameObject.AddComponent<PixelHoldButton>();
-        hold.Setup(fillRect, helpHoldSeconds, () =>
+        PixelUIKit.AddHoldAction(help, helpHoldSeconds, () =>
         {
-            hold.ResetProgress();
             PixelShopTutorial tut = PixelFind.First<PixelShopTutorial>();
             if (tut != null) tut.Replay();
         });
@@ -505,19 +493,11 @@ public partial class PixelShop
         sr.offsetMax = new Vector2(-panelPadding, -top);   // full width, like the tabs and the Consumables cards: the scroll bar fades in over the right edge instead of reserving room there
 
         // Content
-        GameObject contentGo = new GameObject("Content", typeof(RectTransform));
-        contentGo.transform.SetParent(scrollGo.transform, false);
-        content = contentGo.GetComponent<RectTransform>();
-        content.anchorMin = new Vector2(0f, 1f);
-        content.anchorMax = new Vector2(1f, 1f);
-        content.pivot = new Vector2(0.5f, 1f);
-        content.sizeDelta = Vector2.zero;
-        content.anchoredPosition = Vector2.zero;
+        content = PixelUIKit.CreateScrollContent(scrollGo.transform);
 
         // Scrollbar
-        GameObject barGo = new GameObject("Scrollbar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
-        barGo.transform.SetParent(parent, false);
-        barGo.GetComponent<Image>().color = scrollbarTrackColor;
+        Scrollbar scrollbar = PixelUIKit.CreateScrollBar(parent, scrollbarTrackColor);
+        GameObject barGo = scrollbar.gameObject;
         RectTransform br = barGo.GetComponent<RectTransform>();
         br.anchorMin = new Vector2(1f, 0f);
         br.anchorMax = new Vector2(1f, 1f);
@@ -525,28 +505,9 @@ public partial class PixelShop
         br.offsetMin = new Vector2(-(panelPadding + PixelUIKit.ScrollBarWidth), panelPadding);
         br.offsetMax = new Vector2(-panelPadding, -top);
 
-        GameObject handleGo = new GameObject("Handle", typeof(RectTransform), typeof(Image));
-        handleGo.transform.SetParent(barGo.transform, false);
-        Image handleImage = handleGo.GetComponent<Image>();
-        PixelUIKit.StyleScrollBar(barGo.GetComponent<Image>(), handleImage);
-        RectTransform hr = handleGo.GetComponent<RectTransform>();
-        hr.offsetMin = hr.offsetMax = Vector2.zero;
-
-        Scrollbar scrollbar = barGo.GetComponent<Scrollbar>();
-        scrollbar.handleRect = hr;
-        scrollbar.targetGraphic = handleImage;
-        scrollbar.direction = Scrollbar.Direction.BottomToTop;
-
         // Scroll behaviour
         scroll = scrollGo.GetComponent<ScrollRect>();
-        scroll.gameObject.AddComponent<PixelScrollSound>();
-        scroll.content = content;
-        scroll.horizontal = false;
-        scroll.vertical = true;
-        scroll.movementType = ScrollRect.MovementType.Clamped;
-        scroll.scrollSensitivity = scrollSpeed;
-        scroll.verticalScrollbar = scrollbar;
-        scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+        PixelUIKit.SetupVerticalScroll(scroll, content, scrollbar, scrollSpeed);
         HideBarGraphics(barGo);
 
         // "Nothing here yet" message for empty tabs.

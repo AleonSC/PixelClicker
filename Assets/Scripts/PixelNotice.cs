@@ -110,26 +110,14 @@ public class PixelNoticeBox : MonoBehaviour
         backRect.anchorMin = backRect.anchorMax = backRect.pivot = new Vector2(0f, 1f);
         backRect.anchoredPosition = new Vector2(10f, -10f);
         muteRect = PixelTalk.AddMuteButton(font, box.GetComponent<RectTransform>(), new Vector2(40f, 40f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(62f, -10f), ButtonRole.Neutral).GetComponent<RectTransform>();   // mutes the talking blips
-        GameObject fillGo = new GameObject("Hold Fill", typeof(RectTransform), typeof(Image));
-        fillGo.transform.SetParent(back.transform, false);
-        Image fillImage = fillGo.GetComponent<Image>();
-        fillImage.color = new Color(1f, 1f, 1f, 0.45f);
-        fillImage.raycastTarget = false;
-        RectTransform fillRect = fillGo.GetComponent<RectTransform>();
-        fillRect.anchorMin = Vector2.zero;
-        fillRect.anchorMax = new Vector2(0f, 1f);
-        fillRect.offsetMin = fillRect.offsetMax = Vector2.zero;
-        fillRect.SetSiblingIndex(1);
-        BuildSkip(box.transform, font);
-        PixelHoldButton hold = back.gameObject.AddComponent<PixelHoldButton>();
-        hold.Setup(fillRect, backHoldSeconds, () =>
+        PixelUIKit.AddHoldAction(back, backHoldSeconds, () =>
         {
-            hold.ResetProgress();
             System.Action go = backCallback;
             closedCallback = null;   // going back is not 'Got it'
             Close();
             go?.Invoke();
         });
+        BuildSkip(box.transform, font);
     }
 
     private RectTransform backRect, muteRect, skipRect;
@@ -143,20 +131,8 @@ public class PixelNoticeBox : MonoBehaviour
         skipRect = skip.GetComponent<RectTransform>();
         skipRect.anchorMin = skipRect.anchorMax = skipRect.pivot = new Vector2(1f, 1f);
         skipRect.anchoredPosition = new Vector2(-10f, -10f);
-        GameObject fillGo = new GameObject("Hold Fill", typeof(RectTransform), typeof(Image));
-        fillGo.transform.SetParent(skip.transform, false);
-        Image fillImage = fillGo.GetComponent<Image>();
-        fillImage.color = new Color(1f, 1f, 1f, 0.45f);
-        fillImage.raycastTarget = false;
-        RectTransform fillRect = fillGo.GetComponent<RectTransform>();
-        fillRect.anchorMin = Vector2.zero;
-        fillRect.anchorMax = new Vector2(0f, 1f);
-        fillRect.offsetMin = fillRect.offsetMax = Vector2.zero;
-        fillRect.SetSiblingIndex(1);
-        PixelHoldButton hold = skip.gameObject.AddComponent<PixelHoldButton>();
-        hold.Setup(fillRect, skipHoldSeconds, () =>
+        PixelUIKit.AddHoldAction(skip, skipHoldSeconds, () =>
         {
-            hold.ResetProgress();
             System.Action go = skipCallback;
             closedCallback = null;   // skipping is not 'Got it'
             Close();

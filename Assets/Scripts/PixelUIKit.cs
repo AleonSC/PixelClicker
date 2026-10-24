@@ -6,7 +6,8 @@ using UnityEngine.UI;
 /// <summary>
 /// Small shared helpers for the code-built UI (canvas, event system, text, buttons), so every UI script
 /// builds things the same way instead of carrying its own copy.
-/// Part files: PixelUIKitWindows.cs (the window builder CreateWindow), PixelUIKitControls.cs (drop-downs, input fields, scroll views, tick boxes, sliders).
+/// Part files: PixelUIKitWindows.cs (the window builder CreateWindow, FitBesideShop), PixelUIKitControls.cs (drop-downs, input fields, scroll views / bars, tick boxes, sliders).
+/// Also here: tooltips (PlaceTooltip, CreateTipBox), info badges, hold-to-use buttons (AddHoldAction), bottom progress bars (CreateBottomBar).
 /// </summary>
 public static partial class PixelUIKit
 {
@@ -59,6 +60,32 @@ public static partial class PixelUIKit
         float lo = r.yMin + bar + edge + (down ? size.y : 0f), hi = r.yMax - bar - edge - (down ? 0f : size.y);
         pos.y = Mathf.Clamp(pos.y, lo, Mathf.Max(lo, hi));
         tip.anchoredPosition = pos;
+    }
+
+    /// <summary>
+    /// The box of a window's HOVER TOOLTIP (Pixel Guide, Skills): a dark rounded box with a 22pt rich-text label at its top left, hidden until used.
+    /// Returns the box's rect (centre-anchored, pivot top left - size it and place it with <see cref="PlaceTooltip"/>); 'text' is its label.
+    /// </summary>
+    public static RectTransform CreateTipBox(TMP_FontAsset font, Transform parent, string objectName, Color textColor, out TMP_Text text)
+    {
+        GameObject go = new GameObject(objectName, typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(parent, false);
+        Image bg = go.GetComponent<Image>();
+        bg.color = new Color(0.05f, 0.05f, 0.08f, 0.97f);
+        bg.raycastTarget = false;
+        StyleBox(bg);
+        RectTransform box = go.GetComponent<RectTransform>();
+        box.anchorMin = box.anchorMax = new Vector2(0.5f, 0.5f);
+        box.pivot = new Vector2(0f, 1f);
+        text = CreateText(font, go.transform, "Text", "", 22f, TextAlignmentOptions.TopLeft, FontStyles.Normal, textColor);
+        text.richText = true;
+        text.raycastTarget = false;
+        RectTransform t = text.rectTransform;
+        t.anchorMin = t.anchorMax = new Vector2(0f, 1f);
+        t.pivot = new Vector2(0f, 1f);
+        t.anchoredPosition = new Vector2(14f, -10f);
+        go.SetActive(false);
+        return box;
     }
 
     /// <summary>The height of the camera's view (world units) at 'depth' in front of it - works for the normal and the flat (orthographic) view.</summary>
@@ -779,6 +806,65 @@ public static partial class PixelUIKit
         tip.onEnter = onEnter;
         tip.onExit = onExit;
         return rect;
+    }
+
+    /// <summary>
+    /// Makes a button HOLD-TO-USE (Notice Back / Skip, the Shop's '?'): a white see-through fill grows across it while it is held
+    /// (above its face, under its label) and 'onHeld' runs once it is full (the progress is reset first, so it can be held again).
+    /// </summary>
+    public static PixelHoldButton AddHoldAction(Button button, float holdSeconds, System.Action onHeld)
+    {
+        GameObject fillGo = new GameObject("Hold Fill", typeof(RectTransform), typeof(Image));
+        fillGo.transform.SetParent(button.transform, false);
+        Image fillImage = fillGo.GetComponent<Image>();
+        fillImage.color = new Color(1f, 1f, 1f, 0.45f);
+        fillImage.raycastTarget = false;
+        RectTransform fillRect = fillGo.GetComponent<RectTransform>();
+        fillRect.anchorMin = Vector2.zero;
+        fillRect.anchorMax = new Vector2(0f, 1f);
+        fillRect.offsetMin = fillRect.offsetMax = Vector2.zero;
+        fillRect.SetSiblingIndex(1);   // above the button's face, under its label
+        PixelHoldButton hold = button.gameObject.AddComponent<PixelHoldButton>();
+        hold.Setup(fillRect, holdSeconds, () =>
+        {
+            hold.ResetProgress();
+            onHeld?.Invoke();
+        });
+        return hold;
+    }
+
+    /// <summary>
+    /// A PROGRESS BAR along the bottom of a window (Crafting level, Skills Mastery): a dark inset track 'sideInset' in from both sides,
+    /// 'bottom' up from the bottom edge and 'height' tall, with a 'fillColor' fill inside it (3 in from the edges). Set the fill's
+    /// anchorMax.x (0-1) to show the progress; put the label on the returned track yourself. The track does not take clicks (raycastTarget off).
+    /// </summary>
+    public static Image CreateBottomBar(Transform parent, string objectName, Color fillColor, float sideInset, float bottom, float height, out RectTransform fill)
+    {
+        GameObject track = new GameObject(objectName, typeof(RectTransform), typeof(Image));
+        track.transform.SetParent(parent, false);
+        Image trackImage = track.GetComponent<Image>();
+        trackImage.color = new Color(0.05f, 0.05f, 0.08f, 1f);
+        trackImage.raycastTarget = false;
+        StyleBox(trackImage, true);
+        RectTransform tr = track.GetComponent<RectTransform>();
+        tr.anchorMin = new Vector2(0f, 0f);
+        tr.anchorMax = new Vector2(1f, 0f);
+        tr.pivot = new Vector2(0.5f, 0f);
+        tr.offsetMin = new Vector2(sideInset, bottom);
+        tr.offsetMax = new Vector2(-sideInset, bottom + height);
+
+        GameObject fillGo = new GameObject("Fill", typeof(RectTransform), typeof(Image));
+        fillGo.transform.SetParent(track.transform, false);
+        Image fillImage = fillGo.GetComponent<Image>();
+        fillImage.color = fillColor;
+        fillImage.raycastTarget = false;
+        fill = fillGo.GetComponent<RectTransform>();
+        fill.anchorMin = Vector2.zero;
+        fill.anchorMax = new Vector2(0f, 1f);
+        fill.pivot = new Vector2(0f, 0.5f);
+        fill.offsetMin = new Vector2(3f, 3f);
+        fill.offsetMax = new Vector2(-3f, -3f);
+        return trackImage;
     }
 
     /// <summary>A resize grip for a window's bottom-right corner: three short diagonal lines, transparent elsewhere (white; tint it with the Image colour).</summary>
