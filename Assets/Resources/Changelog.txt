@@ -1623,3 +1623,4 @@
 [2026-10-24 10:44 UTC] New collectibles you work for, the Relics: a fourth family in the Collection Log beside the rare Dragon, God and Prime Cubes, never dropped but handed over by vendors at a rapport step (an unearned page says how to get it).
 [2026-10-24 10:44 UTC] Built the first two Relics: Big Tim's Golden Axe (at Friend: Woodcutting XP +10% while you hold it) and the Wizard's Market Charm (at Partner: cast it from any vendor's Sell view and every vendor pays full price again, recharges for an hour of play).
 [2026-10-24 10:44 UTC] To-do: the vendor unlockables are now Relics (Golden Axe and Market Charm built) and added relic looks / a hand-over show.
+[2026-10-24 10:47 UTC] Design: delivery crates are dropped by the vendor on their own fixed dock at the floor's edge (always the same spot per vendor), so players have to route husks to it; a line built to a dock keeps paying off.
