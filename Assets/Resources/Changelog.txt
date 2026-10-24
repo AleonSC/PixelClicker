@@ -1614,3 +1614,4 @@
 [2026-10-24 10:07 UTC] Vendor rapport: every vendor now has a five-step rapport meter (Stranger, Customer, Regular, Friend, Partner) earned by visits, sales, trades and gifts; higher steps pay better, recover their market faster, visit more often and bring more stock, and never drop.
 [2026-10-24 10:07 UTC] Vendors' Sell view has a Gift button: give a vendor some of the picked good for rapport (his loved goods count much more, only three gifts a visit count); his step shows in his greeting box and Game Database entry.
 [2026-10-24 10:07 UTC] To-do: ticked 'Vendor rapport' and added the proposed unique unlockable per vendor (to decide first).
+[2026-10-24 10:23 UTC] Vendors' greeting box and wares / Sell window now show a rapport meter: a pink bar across all five steps with a tick at each, and '♥ Regular · 42 / 80 to Friend', updating as you sell, trade or give gifts.

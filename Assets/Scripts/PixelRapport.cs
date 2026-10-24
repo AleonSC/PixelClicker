@@ -263,6 +263,14 @@ public class PixelRapport : MonoBehaviour
     }
 
     public Step StepOf(string vendorId) => StepAt(StepIndex(vendorId));
+
+    /// <summary>His rapport points right now (the trickle applied).</summary>
+    public double Points(string vendorId) { RapportState.Entry e = Entry(vendorId, false); return e != null ? e.points : 0d; }
+
+    /// <summary>How many steps there are, and the points each one needs (for the meter's ticks).</summary>
+    public int StepCount { get { EnsureDefaults(); return steps.Count; } }
+    public float StepPoints(int index) => StepAt(index).points;
+    public string StepNameAt(int index) => StepAt(index).name;
     public string StepName(string vendorId) => StepOf(vendorId).name;
 
     /// <summary>"Regular (42 / 80 to Friend)", or "Partner" at the top.</summary>
