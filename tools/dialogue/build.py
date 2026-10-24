@@ -70,9 +70,10 @@ def pages(start):
     i = c.index(start); body = c[i:c.index("};", i)]
     return list_literals(body[body.index("{"):])
 add("Cubie", [("name", field_default(c, "characterName")), ("next button", field_default(c, "nextText")), ("last button", field_default(c, "lastText")),
-              ("recycler gift", field_default(c, "recyclerGiftText"))]
+              ("recycler gift", field_default(c, "recyclerGiftText")), ("invoice", field_default(c, "invoiceText"))]
     + [("visit 1 page %d" % (n + 1), t) for n, t in enumerate(pages("private string[] DefaultOne"))]
-    + [("visit 2 page %d" % (n + 1), t) for n, t in enumerate(pages("private string[] DefaultTwo"))])
+    + [("visit 2 page %d" % (n + 1), t) for n, t in enumerate(pages("private string[] DefaultTwo"))]
+    + [("visit 3 page %d" % (n + 1), t) for n, t in enumerate(pages("private string[] DefaultThree"))])
 
 # --- visitors / vendors ---
 base = src("PixelVisitorMinigame.cs")
@@ -84,6 +85,7 @@ def prop(code, name):
     return string_expr(code, m.end()) if m else None
 visitors = [("PixelTinkererMinigame.cs", []), ("PixelWizardMinigame.cs", []), ("PixelEntrepreneurMinigame.cs", []),
             ("PixelFarmerMinigame.cs", [("dragon aside", "dragonAsideText")]), ("PixelProspectorVendor.cs", []), ("PixelLumberjackVendor.cs", []),
+            ("PixelForagerVendor.cs", []), ("PixelAnglerVendor.cs", []),
             ("PixelEggMinigame.cs", [("farewell", "farewellText"), ("gift farewell", "giftFarewellText")]),
             ("PixelBeanMinigame.cs", [("farewell", "farewellText"), ("gift farewell", "giftFarewellText")])]
 for file, extras in visitors:

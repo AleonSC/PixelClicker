@@ -97,12 +97,8 @@ overlay line: You placed a Fan!
 text: Sprinkler placed! It is grey and asleep: left-click it to switch it on. Then it waters every growing seed and Seed pet within its reach about once a second, so they grow much faster.
 overlay line: You placed a Sprinkler!
 
-[Tip: device_MagnetSorter]
-text: Magnetized Sorter placed! Left-click it to switch it on. It sucks loose husks from the arc in front of its magnet into the box. Click an exit pipe to grab it, click again to put it down; scroll over a pipe to choose which stored pixel type it shoots out.
-overlay line: You placed a Magnetized Sorter!
-
 [Tip: device_QuantumOrganizer]
-text: Quantum Organizer placed! Left-click it to switch it on, then drop a pixel onto the pad to bind its type. Every loose husk of that type is dematerialized and stored in the box. Click the box to let some out again.
+text: Quantum Organizer placed! Left-click it to switch it on, then grab a husk and drop it onto the pad to bind its type. Every loose husk of that type is dematerialized and stored in the box. Click the box to let some out again.
 overlay line: You placed a Quantum Organizer!
 
 [Tip: device_StorageCrate]
@@ -110,7 +106,7 @@ text: Storage Crate placed! It needs no switching on. Let go of a pixel you are 
 overlay line: You placed a Storage Crate!
 
 [Tip: device_SortingHopper]
-text: Sorting Hopper placed! Put it near a Recycler and it latches onto the back. Husks dropped into its bowl are held (up to 20). Right-click the hopper and press Select filter: that type goes into the Recycler, every other type drops out of its bottom spout.
+text: Sorting Hopper placed! Husks dropped into its bowl are held (up to 20). Right-click it and pick a filter: that type drops out of its green pipe - put a Recycler or a belt under it - and every other type drops out of its bottom spout. Drag it by its handles to move it.
 overlay line: You placed a Sorting Hopper!
 
 [Tip: device_Funnel]
@@ -133,13 +129,13 @@ overlay line: You placed a Pocket Biomass Generator!
 text: Biomass Generator placed! A bigger ring and much more charge: every device inside runs on its power while you feed it Woodcutting husks (the firebox on top, or its intake coupling). Empty, it flashes red and then shuts down unless you feed it.
 overlay line: You placed a Biomass Generator!
 
+[Tip: device_PowerBank]
+text: Power Bank placed! Biomass Generators inside its big ring charge it with their spare power (the arcs show it flowing), and while it holds charge every device in the ring runs on it - their timers stop. It comes empty: put a running generator near it.
+overlay line: You placed a Power Bank!
+
 [Tip: device_Magnet]
 text: Magnet placed! It is grey and asleep: left-click it to switch it on. Then it pulls loose husks in around it and holds them in a heap without collecting them.
 overlay line: You placed a Magnet!
-
-[Tip: device_Sorter]
-text: Sorter placed! It is grey and asleep: left-click its ring or pipe to switch it on. Then click its buttons to change how hard husks are pushed out of the pipe.
-overlay line: You placed a Sorter!
 
 [Tip: craft]
 text: Crafted! The new item is in your Inventory under Consumables.
@@ -242,7 +238,7 @@ text: Prospector's ores unlocked! Copper, Tin, Iron, Silver, Gold, Obsidian and 
 overlay line: You unlocked the Prospector's ores!
 
 [Tip: pixel_Water]
-text: Water Pixels unlocked! When an old Water pixel splashes on the ground near Seed sprouts or the Seed pet, they grow and sow much faster for a while. The water is used up either way. Stream them over your sprouts with a Sorter!
+text: Water Pixels unlocked! When an old Water pixel splashes on the ground near Seed sprouts or the Seed pet, they grow and sow much faster for a while. The water is used up either way.
 overlay line: You unlocked Water Pixels!
 
 [Tip: pixel_Seed]
@@ -401,18 +397,26 @@ name: Cubie
 next button: Next
 last button: Okay!
 recycler gift: <b>+1 Recycler</b> (in your Consumables)
-visit 1 page 1: Psst... over here. The name's Cubie. I deal in pixels. A very legitimate little operation.
-visit 1 page 2: See, pixels are money around here. The white, gray and black ones, then red, green and blue later. Why those? Why not the shiny ones? Who knows. That's just what we're all told, so we go with it.
-visit 1 page 3: Now, how do you get them? You click. And click. And click some more. Same thing, all day. Don't look at me like that, everybody starts at the bottom.
-visit 1 page 4: Oh, and those leftover bits piling up on the floor? Don't just let them rot. Take this Recycler: anything that lands in it gets recycled for a little something back. Same colour in a row? Even better.\n\n{recycler}
-visit 1 page 5: Think of it as paying your dues. Tedious? Absolutely. But grind long enough and the good stuff opens up. Come find me when you've got a pile worth my time.
+invoice: <i>*rrrrrrip*</i>
+visit 1 page 1: Psst... over here. The name's Cubie. I deal in pixels. A very legitimate little operation. The *only* operation, really, but who's counting.
+visit 1 page 2: See, pixels are money around here. White, gray, black, and red, green and blue later. Why those? Why not the shiny ones? Who knows. That's just what we're all told, so we go with it.
+visit 1 page 3: How do you get them? You click. And click. And click some more. Don't look at me like that. Everybody starts at the bottom. Some of us just climbed out faster.
+visit 1 page 4: And those leftover bits piling up on the floor? Don't let them rot. Smash them for practice, or toss them in this. Recycles them for a little something back. Same colour in a row? Even better.\n\n{recycler}
+visit 1 page 5: Oh, don't mind the tag. Standard paperwork. Consider it a gift. Ish.
+visit 1 page 6: Come find me when you've got a pile worth my time. I'll be around. I'm *always* around.
 visit 2 page 1: Well, well... look at that pile of black. White, gray, black: you've got the basics down. Real, official, everybody-agrees-it's-worth-something money.
-visit 2 page 2: But that's only half of the pure stuff. Here: red, green and blue. They'll turn up on your cube from now on. Consider it a loan. A friendly one. Mostly.\n\n{gift}
+visit 2 page 2: But that's only half of the pure stuff. Here: red, green and blue. They'll turn up on your cube from now on. Consider it a loan. A friendly one. Mostly. And don't worry about the tag. Yet.\n\n{gift}
 visit 2 page 3: Grind all six and you're as rich as plain pixels get. That's the last step before you branch off into the good stuff. And my shop's open now - the Shop button's at the top right. Don't worry, I'm not counting your pockets. Much.
 visit 2 page 4: Here's the secret nobody tells you: the clicking never really stops. It just gets better pay. Save up for an Auto Clicker first, and the work starts doing itself while you do the clever bits.
 visit 2 page 5: Then learn a skill. The fancy pixels, wood, ore, crops and sparks, are goods, not coin - worth plenty to the right buyer. Big Tim the Lumberjack is a good place to start.
 visit 2 page 6: More vendors will wander through as you grow. Where from? Nobody asks. They pay in the same pixels, and that's good enough for everyone. You can switch them off in the Toggles menu (it opens up once you get the Auto Clicker).
 visit 2 page 7: My friend the Wizard might drop by soon. Keep him away from my stock, he turns things into frogs. Be seeing you...
+visit 3 page 1: Remember that tag? The one you weren't supposed to worry about? Time to worry. Just a little.
+visit 3 page 2: Terms: see reverse.\n\n{invoice}
+visit 3 page 3: Interest. It compounds. Like my disappointment.
+visit 3 page 4: I own the only shop in existence. So what I say goes. Those other guys? Peddlers. I run the show.
+visit 3 page 5: Look, I know it's rough out here. I was in your position once. Maybe one day you'll run things around here, if you're lucky.
+visit 3 page 6: So I'll tell you what: every time you prove you're still in this, I'll *let* you buy some of my newer, better stock. Pay a bit, earn a bit of trust. Fair's fair.
 
 [Visitor: tinkerer]
 name: Tinkerer
@@ -481,6 +485,19 @@ full label: Full
 peek bubble: Psst! {0} is here. Click me to see what I've got!
 missed log: {0} stopped by and left.
 
+[Visitor: lumberjack]
+name: Big Tim the Lumberjack
+greeting: Timber! A fellow chopper! I sell wood chippers and potions, and I'll buy any wood you've got - tell me how much and I'll name a fair-ish price.
+wares title: Big Tim's Yard
+arrival log: The Lumberjack is here!
+accept button: Show me!
+reject button: No thanks
+done button: Done
+buy button: Buy
+full label: Full
+peek bubble: Psst! {0} is here. Click me to see what I've got!
+missed log: {0} stopped by and left.
+
 [Visitor: forager]
 name: Hazel the Forager
 greeting: Ooh, you've been out in the brambles too! I'll take berries, mushrooms, herbs - truffles most of all. Pure pixels for the lot. Shall we trade?
@@ -499,19 +516,6 @@ name: Old Salt the Angler
 greeting: Ahoy! Smells like a good catch on you. Fish, shells, pearls, even the seaweed - I'll buy it all for pure pixels. Let's haggle!
 wares title: Old Salt's Offers
 arrival log: The Angler is here!
-accept button: Show me!
-reject button: No thanks
-done button: Done
-buy button: Buy
-full label: Full
-peek bubble: Psst! {0} is here. Click me to see what I've got!
-missed log: {0} stopped by and left.
-
-[Visitor: lumberjack]
-name: Big Tim the Lumberjack
-greeting: Timber! A fellow chopper! I sell wood chippers and potions, and I'll buy any wood you've got - tell me how much and I'll name a fair-ish price.
-wares title: Big Tim's Yard
-arrival log: The Lumberjack is here!
 accept button: Show me!
 reject button: No thanks
 done button: Done

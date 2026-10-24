@@ -176,6 +176,8 @@ public class PixelBank : MonoBehaviour
 
     [Tooltip("Text near the nozzle when nothing is stored.")]
     [SerializeField] private string emptyDisplayText = "Bank empty";
+    [Tooltip("The bank window's list when no husks are stored (it only lists the types stored inside).")]
+    [SerializeField] private string emptyListText = "Nothing stored yet";
 
     [Tooltip("Text near the nozzle when the bank is full and you try to suck up another pixel.")]
     [SerializeField] private string fullText = "Bank full";
@@ -1372,12 +1374,12 @@ public class PixelBank : MonoBehaviour
     {
         capacityLabel.text = string.Format(capacityFormat, PixelClicker.FormatNumber(Total), PixelClicker.InfiniteResources ? "Infinite" : PixelClicker.FormatNumber(Capacity));
 
-        // One row per unlocked pixel type that can be stored.
+        // One row per pixel type with husks INSIDE the bank right now (2026-10-24: empty types are no longer listed).
         PixelClicker.PixelTier[] tiers = clicker.Tiers;
         int used = 0;
         for (int i = 0; i < tiers.Length; i++)
         {
-            if (!tiers[i].unlocked || tiers[i].flyAway) continue;
+            if (tiers[i].flyAway || CountAt(i) <= 0) continue;
             if (used >= rows.Count) rows.Add(BuildRow());
             RowUI row = rows[used];
             row.tier = i;
@@ -1388,10 +1390,24 @@ public class PixelBank : MonoBehaviour
             long stored = CountAt(i);
             row.count.text = PixelClicker.FormatNumber(stored);
             row.background.color = HoseOn && i == selected ? rowSelectedColor : rowColor;
-            float dim = stored > 0 ? 1f : 0.45f;
-            row.label.color = new Color(textColor.r, textColor.g, textColor.b, dim);
-            row.count.color = new Color(textColor.r, textColor.g, textColor.b, dim);
+            row.label.color = textColor;
+            row.count.color = textColor;
             used++;
+        }
+        if (used == 0)
+        {
+            // Nothing stored: one plain row saying so (instead of an empty list).
+            if (rows.Count == 0) rows.Add(BuildRow());
+            RowUI row = rows[0];
+            row.tier = -1;
+            row.go.SetActive(true);
+            row.go.GetComponent<RectTransform>().anchoredPosition = Vector2.zero;
+            row.swatch.color = Color.clear;
+            row.label.text = emptyListText;
+            row.count.text = "";
+            row.background.color = rowColor;
+            row.label.color = new Color(textColor.r, textColor.g, textColor.b, 0.6f);
+            used = 1;
         }
         for (int i = used; i < rows.Count; i++) rows[i].go.SetActive(false);
 
