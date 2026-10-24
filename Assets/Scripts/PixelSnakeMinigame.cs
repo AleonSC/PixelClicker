@@ -641,29 +641,13 @@ public class PixelSnakeMinigame : PixelMinigame
 
     private IEnumerator MessageRoutine(Vector3 start, Camera c, string message)
     {
-        GameObject go = new GameObject("Snake Message");
-        Track(go);
-        TextMeshPro text = go.AddComponent<TextMeshPro>();
-        text.text = message;
-        text.fontSize = messageTextSize;
-        text.fontStyle = FontStyles.Bold;
-        text.alignment = TextAlignmentOptions.Center;
-        text.outlineWidth = 0.2f;
-        text.outlineColor = new Color32(0, 0, 0, 255);
-        if (clicker.UIFont != null) text.font = clicker.UIFont;
-        text.rectTransform.sizeDelta = new Vector2(14f, 4f);
-
-        float t = 0f;
-        while (t < messageSeconds)
+        TextMeshPro text = PixelRisingText.Create("Snake Message", message, messageTextSize, clicker.UIFont, new Vector2(14f, 4f));
+        Track(text.gameObject);
+        return PixelRisingText.Fade(text, messageSeconds, (tx, k) =>
         {
-            t += Time.unscaledDeltaTime;
-            float k = Mathf.Clamp01(t / messageSeconds);
-            go.transform.position = PixelUIKit.KeepOnScreen(c, text, start + Vector3.up * (1.2f + k * 1.2f));
-            go.transform.rotation = c.transform.rotation;
-            text.alpha = 1f - k * k;
-            yield return null;
-        }
-        Destroy(go);
+            tx.transform.position = PixelUIKit.KeepOnScreen(c, tx, start + Vector3.up * (1.2f + k * 1.2f));
+            tx.transform.rotation = c.transform.rotation;
+        });
     }
 
     // ------------------------------------------------------------------
