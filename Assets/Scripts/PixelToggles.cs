@@ -788,38 +788,16 @@ public class PixelToggles : MonoBehaviour
     }
 
     private PixelShop shopRef;
-    [Tooltip("Gap between the shop window and this window when both are open.")]
+#pragma warning disable 0414   // (no longer read: beside the shop the window mirrors the Currency panel's gap, PixelUIKit.FitBesideShop; kept so the Inspector value stays)
+    [Tooltip("Not used at the moment: beside the shop this window uses the Currency panel's gap (mirroring it).")]
     [SerializeField] private float gapToShop = 8f;
+#pragma warning restore 0414
 
-    /// <summary>With the shop open the window is as tall as it and fills the space between it and the screen's right edge.</summary>
+    /// <summary>With the shop open the window is as tall as it and as wide as the Currency panel, flush against the shop (the shared PixelUIKit.FitBesideShop).</summary>
     private void FitBesideShop()
     {
-        RectTransform wr = windowObject.GetComponent<RectTransform>();
         if (shopRef == null) shopRef = PixelFind.First<PixelShop>();
-        RectTransform shopRect = shopRef != null ? shopRef.PanelRect : null;
-        Canvas canvas = windowObject.GetComponentInParent<Canvas>();
-        float scale = canvas != null ? Mathf.Max(0.01f, canvas.rootCanvas.scaleFactor) : 1f;
-        PixelHud hud = PixelHud.Instance;
-        float inset = hud != null ? hud.SideShownInset : 0f;
-
-        if (shopRect == null || !shopRect.gameObject.activeInHierarchy)
-        {
-            wr.sizeDelta = windowSize;
-            wr.anchoredPosition = new Vector2(-inset, 0f);
-            SetBesideShop(false);
-            return;
-        }
-        SetBesideShop(true);
-        Vector3[] c = new Vector3[4];
-        shopRect.GetWorldCorners(c); // screen pixels (overlay canvas)
-        float shopRight = c[2].x, shopTop = c[2].y, shopBottom = c[0].y;
-        float width = (Screen.width - shopRight) / scale - gapToShop - inset;
-        // Same width as the Currency panel on the shop's other side, mirrored (same gap).
-        if (shopRef != null) width = shopRef.CurrencyPanelWidth;
-        float gap = shopRef != null ? shopRef.CurrencyPanelGap : gapToShop;
-        float rightEdgeFromScreenRight = (Screen.width - shopRight) / scale - gap - width; // flush against the shop, mirroring the currency panel
-        wr.sizeDelta = new Vector2(width, (shopTop - shopBottom) / scale);
-        wr.anchoredPosition = new Vector2(-Mathf.Max(0f, rightEdgeFromScreenRight), ((shopTop + shopBottom) * 0.5f - Screen.height * 0.5f) / scale);
+        SetBesideShop(PixelUIKit.FitBesideShop(windowObject.GetComponent<RectTransform>(), shopRef, windowSize));
     }
 
     private void SetBesideShop(bool value)
