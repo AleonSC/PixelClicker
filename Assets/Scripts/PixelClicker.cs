@@ -969,8 +969,7 @@ public partial class PixelClicker : MonoBehaviour
             if (tiers[i].count < tiers[i].startingAmount) tiers[i].count = tiers[i].startingAmount;
         }
 
-        EnsureDragonCubes();
-        EnsureGodCubes();
+        EnsureRareSets();   // Dragon / God / Prime Cubes and the Cubelette (the table in PixelRareSets.cs)
         EnsureGoldenSnitch();
         foreach (PixelTier legacy in tiers) if (legacy != null && legacy.type == PixelType.HornetNest && legacy.displayName == "Hornet Nest") legacy.displayName = "Termite Hive";   // renamed
         ReapplyTextOverrides(false);

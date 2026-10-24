@@ -207,7 +207,7 @@ public partial class PixelClicker
     public static bool IsRareCube(PixelType type) => IsDragonCube(type) || IsGodCube(type) || type == PixelType.GoldenSnitch;   // (the rare collectibles: no pets, potions, crafting or pixel achievements; the Golden Snitch too)
 
     /// <summary>How many small cubes (1-7) a Dragon Cube carries; 0 for every other pixel type.</summary>
-    public static int DragonCubeStars(PixelType type) => IsDragonCube(type) ? (int)type - (int)PixelType.DragonCube1 + 1 : 0;
+    public static int DragonCubeStars(PixelType type) => PixelRareSets.Dragon.IndexOf(type) + 1;   // (its place in the set; 0 = not a Dragon Cube)
 
     /// <summary>Can the player switch this pixel's spawning off (tick box in the inventory)?</summary>
     public enum SpawnSwitch

@@ -618,7 +618,22 @@ public partial class PixelShop : MonoBehaviour
     }
 
     [SerializeField, HideInInspector] private int tileLayoutVersion;   // 1 = 160 x 200 tiles (5 to a row), 2 = 176 tall (no name line)
-    [SerializeField, HideInInspector] private int shopBalanceVersion; // 1 = the 2026-10-16 rebalance (new default prices, minigames need only their price)
+    [SerializeField, HideInInspector] private int shopBalanceVersion; // 1 = the 2026-10-16 rebalance (new default prices, minigames need only their price), 2 = the 2026-10-24 skill pack ladder flags
+
+    [Header("Skill pack price ladder (gathering packs; ShopPack.skillLadder)")]
+    [Min(1f)]
+    [Tooltip("Price of the first rung, in EACH of the six pure colours: the Lumberjack's Pack (affordable at about 10-20 min).")]
+    [SerializeField] private float skillLadderStarterPrice = 250f;
+
+    [Min(1f)]
+    [Tooltip("Each rung costs this many times the one before (2.5: 250 / 630 / 1.6K / 3.9K / 9.8K of each pure colour). Targets: the 2nd pack ~25-30 min, 3rd ~45, 4th ~70.")]
+    [SerializeField] private float skillLadderGrowth = 2.5f;
+
+    [Tooltip("On: the Nth skill pack you buy costs rung N-1, whichever it is (the player's choice of skill stays free). Off: a fixed rung per pack, by its place in the pack list.")]
+    [SerializeField] private bool skillLadderByPurchaseOrder = true;
+
+    [Tooltip("On: the Lumberjack's Pack always costs the first rung and every other pack at least the second, so Woodcutting stays the cheap first skill.")]
+    [SerializeField] private bool skillLadderStarterFixed = true;
     [SerializeField, HideInInspector] private int packDataVersion; // 1 = Obsidian pays 7 (was 5); 2 = Singularity spawn weight 0.08 (was 0.2); 3 = Electric pays a random 1-15; 4 = Electric pack gets its real price + Luminescent requirement; 5 = Electric becomes an early unlock (8K RGB, needs the Auto Clicker pack, listed before Vacuum)
 
 #if UNITY_EDITOR

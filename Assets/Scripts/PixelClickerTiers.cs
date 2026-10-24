@@ -1,7 +1,7 @@
 // ---- System notes ----
 // PixelClickerTiers.cs
-//   Part of partial class PixelClicker: the tier list's helpers. Setting up the rare tiers at start (EnsureDragonCubes, EnsureGodCubes - God
-//   and Prime Cubes and the Cubelette -, EnsureGoldenSnitch, with goldenSnitchSpawnWeight), and the "Tier helpers" section: which tier is on
+//   Part of partial class PixelClicker: the tier list's helpers. Setting up the rare tiers at start (EnsureRareSets - every family in the
+//   PixelRareSets table -, EnsureGoldenSnitch, with goldenSnitchSpawnWeight), and the "Tier helpers" section: which tier is on
 //   the cube (GetClickTierIndex), spawn picking, unlocks, counts, the Block Hold hooks. Split out of PixelClicker.cs (no behaviour change).
 // ---------------------------------------------------
 using System;
@@ -17,28 +17,42 @@ using UnityEngine.InputSystem;
 
 public partial class PixelClicker
 {
-    /// <summary>The seven Dragon Cube tiers: orange, 1 payout each, an extremely low spawn weight and no requirements (rare drops).</summary>
-    private void EnsureDragonCubes()
+    /// <summary>The super-rare families' tiers (the table in PixelRareSets.cs: Dragon, God, Prime Cubes, the Cubelette): 1 payout each, a tiny
+    /// spawn weight from the set's Inspector knob, no requirements (rare drops). A set switched off in the Inspector is not made.</summary>
+    private void EnsureRareSets()
     {
-        if (disableDragonCubes) return;
-        float weight = dragonCubeSpawnWeight > 0f ? dragonCubeSpawnWeight : 0.0001f;
-        for (int stars = 1; stars <= 7; stars++)
+        foreach (PixelRareSets.Set set in PixelRareSets.All)
         {
-            PixelType type = (PixelType)((int)PixelType.DragonCube1 + stars - 1);
-            if (IndexOf(type) >= 0) continue;
-            EnsureTier(new PixelTier
+            if (RareSetSwitchedOff(set)) continue;
+            float weight = RareSetWeight(set);
+            foreach (PixelRareSets.Member m in set.members)
             {
-                type = type,
-                displayName = "Dragon Cube (" + stars + ")",
-                color = new Color(1f, 0.62f, 0.12f, 0.6f),
-                amountPerClick = 1,
-                spawnWeight = weight,
-                rareDrop = true,
-                translucent = true,
-                spawnSwitch = SpawnSwitch.AlwaysOn,
-                unlockMode = TierUnlockMode.ShopOnly,
-            });
+                int existing = IndexOf(m.type);
+                if (existing >= 0)
+                {
+                    if (set.renameSaved && tiers[existing].displayName != m.name) tiers[existing].displayName = m.name;   // (a saved scene keeps an old name otherwise)
+                    continue;
+                }
+                EnsureTier(new PixelTier
+                {
+                    type = m.type, displayName = m.name, color = m.color, amountPerClick = 1, spawnWeight = weight,
+                    rareDrop = true, translucent = set.translucent, glow = m.glow > 0f, glowIntensity = m.glow,
+                    spawnSwitch = SpawnSwitch.AlwaysOn, unlockMode = TierUnlockMode.ShopOnly,
+                });
+            }
         }
+    }
+
+    /// <summary>Is this rare set switched off in the Inspector (disableDragonCubes / disableGodCubes; the God knob covers the Prime Cubes too)?</summary>
+    private bool RareSetSwitchedOff(PixelRareSets.Set set) =>
+        set.rarity == PixelRareSets.Rarity.Dragon ? disableDragonCubes : disableGodCubes;
+
+    /// <summary>The spawn weight of each member of this set (the Inspector knob, or its coded default; 0 for a set that is never rolled).</summary>
+    private float RareSetWeight(PixelRareSets.Set set)
+    {
+        if (set.neverRolled) return 0f;
+        if (set.rarity == PixelRareSets.Rarity.Dragon) return dragonCubeSpawnWeight > 0f ? dragonCubeSpawnWeight : 0.0001f;
+        return godCubeSpawnWeight > 0f ? godCubeSpawnWeight : 0.000001f;
     }
 
     [Tooltip("Spawn weight of the Golden Snitch (a very rare drop that flies off the cube). 0 = the coded default (0.00003; a Dragon Cube is 0.0001).")]
@@ -89,36 +103,6 @@ public partial class PixelClicker
         });
     }
 
-    /// <summary>The three Egyptian God Cube tiers (Slifer red, Ra gold, Obelisk blue): 1 payout, an insanely low spawn weight, no requirements, only one of each can be held.</summary>
-    private void EnsureGodCubes()
-    {
-        if (disableGodCubes) return;
-        float weight = godCubeSpawnWeight > 0f ? godCubeSpawnWeight : 0.000001f;
-        void Add(PixelType type, string name, Color color, float glowIntensity)
-        {
-            int existing = IndexOf(type);
-            if (existing >= 0) { if (PixelClicker.IsInfinityStone(type) && tiers[existing].displayName != name) tiers[existing].displayName = name; return; }   // (a saved scene keeps the old name otherwise)
-            EnsureTier(new PixelTier
-            {
-                type = type, displayName = name, color = color, amountPerClick = 1, spawnWeight = weight,
-                rareDrop = true, glow = true, glowIntensity = glowIntensity,
-                spawnSwitch = SpawnSwitch.AlwaysOn, unlockMode = TierUnlockMode.ShopOnly,
-            });
-        }
-        Add(PixelType.GodSlifer, "Slifer the Sky Dragon", new Color(0.92f, 0.12f, 0.1f, 1f), 1.6f);
-        Add(PixelType.GodRa, "Ra the Winged Dragon", new Color(1f, 0.82f, 0.15f, 1f), 2.2f);
-        Add(PixelType.GodObelisk, "Obelisk the Tormentor", new Color(0.2f, 0.38f, 0.95f, 1f), 1.4f);
-        // The six Prime Cubes drop like the God Cubes (same weight); the Cubelette is only ever made with the Gauntlet (weight 0 = never rolled).
-        for (int i = 0; i < 6; i++) Add(PixelType.StoneSpace + i, PixelInfinity.StoneName(i), PixelInfinity.StoneColor(i), 1.5f);
-        int cubeletteAt = IndexOf(PixelType.InfinityCubelette);
-        if (cubeletteAt >= 0) tiers[cubeletteAt].displayName = "Prime Cubelette";   // (a saved scene keeps the old name otherwise)
-        else
-            EnsureTier(new PixelTier
-            {
-                type = PixelType.InfinityCubelette, displayName = "Prime Cubelette", color = new Color(1f, 0.9f, 0.55f, 1f), amountPerClick = 1, spawnWeight = 0f,
-                rareDrop = true, glow = true, glowIntensity = 2.2f, spawnSwitch = SpawnSwitch.AlwaysOn, unlockMode = TierUnlockMode.ShopOnly,
-            });
-    }
 
     // ------------------------------------------------------------------
     // Tier helpers

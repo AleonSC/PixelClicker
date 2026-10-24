@@ -1,7 +1,7 @@
 // ---- System notes ----
 // PixelInfinity.cs
 //   The Prime Cubes, the Gauntlet and the Prime Cubelette (a homage; names are work in progress). Component added by PixelClicker.Awake.
-//   * Six stones (PixelType.StoneSpace..StoneSoul 85-90, PixelClicker.IsInfinityStone, tiers made by EnsureGodCubes) are rare drops with exactly the God Cubes' rules (IsGodCube is true for them:
+//   * Six stones (PixelType.StoneSpace..StoneSoul 85-90, PixelClicker.IsInfinityStone, tiers made by EnsureRareSets from the PixelRareSets table) are rare drops with exactly the God Cubes' rules (IsGodCube is true for them:
 //     one of each, same spawn weight godCubeSpawnWeight, CanSpawn false once held, backpack stash) and each has its OWN find show (PixelGodFind.DrawStone: Space tesseract, Mind thought-bolts,
 //     Reality tearing shapes, Power detonation, Time's backwards clock, Soul wisps) and code-made sound (PixelGodSynth.Stone). Looks: PixelLooks.StoneLook, looksVersion 60.
 //   * When the player holds all six (and has no Cubelette and no Gauntlet) the WIZARD offers the Prime Gauntlet (PixelWizardMinigame.ModifyWares + aside line): DeviceKind.Gauntlet 17,

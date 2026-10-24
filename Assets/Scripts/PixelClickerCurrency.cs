@@ -53,69 +53,56 @@ public partial class PixelClicker
     {
         yield return null;   // (the show starts in the same click)
         while (PixelDragonFind.Playing || PixelGodFind.Playing) yield return null;
-        AnnounceDragonCube(tierIndex);
+        AnnounceRareFind(tierIndex);
     }
 
-    /// <summary>The first time each Dragon Cube turns up: a log line (and a tip the very first time), plus a note when all seven are held.</summary>
-    private void AnnounceDragonCube(int tierIndex)
+    /// <summary>The first time each super rare turns up: its set's log line and tip (PixelRareSets), plus the set's note once every member is held.</summary>
+    private void AnnounceRareFind(int tierIndex)
     {
-        if (IsInfinityStone(tiers[tierIndex].type))
-        {
-            PixelHints.Announce("You found the " + tiers[tierIndex].displayName + "! Only one of each Prime Cube can exist.");
-            PixelHints.Trigger("stone_first");
-            return;
-        }
-        if (IsGodCube(tiers[tierIndex].type))
-        {
-            PixelHints.Announce("You found " + tiers[tierIndex].displayName + "! Only one of each God Cube can exist.");
-            PixelHints.Trigger("god_first");
-            return;
-        }
-        if (tiers[tierIndex].type == PixelType.GoldenSnitch)
+        PixelTier tier = tiers[tierIndex];
+        if (tier.type == PixelType.GoldenSnitch)
         {
             PixelHints.Announce("Your first Golden Snitch! It is in your Inventory now.");
             return;
         }
-        if (tiers[tierIndex].type == PixelType.InfinityCubelette)
-        {
-            PixelHints.Announce("You forged the Prime Cubelette!");
-            return;
-        }
-        PixelHints.Announce("You found a " + tiers[tierIndex].displayName + "!");
-        PixelHints.Trigger("dragon_first");
-        if (HasAllDragonCubes) PixelHints.Announce("You hold all seven Dragon Cubes! Summon the dragon.");
+        PixelRareSets.Set set = PixelRareSets.Of(tier.type);
+        if (set == null) return;
+        PixelHints.Announce(string.Format(set.firstFoundFormat, tier.displayName));
+        if (!string.IsNullOrEmpty(set.firstFoundTip)) PixelHints.Trigger(set.firstFoundTip);
+        if (!string.IsNullOrEmpty(set.completeText) && HoldsWholeSet(set)) PixelHints.Announce(set.completeText);
     }
 
     /// <summary>A random Dragon Cube tier the player does not hold right now (so a Dragon Seed grows one they lack). -1 when they hold all seven.</summary>
-    public int PickMissingDragonCube()
-    {
-        System.Collections.Generic.List<int> missing = new System.Collections.Generic.List<int>();
-        for (int i = 0; i < tiers.Length; i++)
-            if (tiers[i].rareDrop && IsDragonCube(tiers[i].type) && tiers[i].count < 1d) missing.Add(i);
-        return missing.Count == 0 ? -1 : missing[UnityEngine.Random.Range(0, missing.Count)];
-    }
+    public int PickMissingDragonCube() => PickSetMember(PixelRareSets.Dragon, true);
 
     /// <summary>Any one of the seven Dragon Cube tiers at random (-1 if they don't exist). Used by the Dragon Seed under Infinite resources.</summary>
-    public int PickAnyDragonCube()
+    public int PickAnyDragonCube() => PickSetMember(PixelRareSets.Dragon, false);
+
+    /// <summary>A random tier of this rare set ('missingOnly': only members the player holds none of). -1 when there is none.</summary>
+    public int PickSetMember(PixelRareSets.Set set, bool missingOnly)
     {
-        System.Collections.Generic.List<int> all = new System.Collections.Generic.List<int>();
-        for (int i = 0; i < tiers.Length; i++) if (tiers[i].rareDrop && IsDragonCube(tiers[i].type)) all.Add(i);
-        return all.Count == 0 ? -1 : all[UnityEngine.Random.Range(0, all.Count)];
+        System.Collections.Generic.List<int> pick = new System.Collections.Generic.List<int>();
+        foreach (PixelRareSets.Member m in set.members)
+        {
+            int i = IndexOf(m.type);
+            if (i >= 0 && tiers[i].rareDrop && (!missingOnly || tiers[i].count < 1d)) pick.Add(i);
+        }
+        return pick.Count == 0 ? -1 : pick[UnityEngine.Random.Range(0, pick.Count)];
+    }
+
+    /// <summary>Does the player hold at least one of every member of this rare set?</summary>
+    public bool HoldsWholeSet(PixelRareSets.Set set)
+    {
+        foreach (PixelRareSets.Member m in set.members)
+        {
+            int index = IndexOf(m.type);
+            if (index < 0 || tiers[index].count < 1d) return false;
+        }
+        return true;
     }
 
     /// <summary>Does the player hold at least one of each of the seven Dragon Cubes?</summary>
-    public bool HasAllDragonCubes
-    {
-        get
-        {
-            for (int s = 0; s < 7; s++)
-            {
-                int index = IndexOf((PixelType)((int)PixelType.DragonCube1 + s));
-                if (index < 0 || tiers[index].count < 1d) return false;
-            }
-            return true;
-        }
-    }
+    public bool HasAllDragonCubes => HoldsWholeSet(PixelRareSets.Dragon);
 
     /// <summary>Takes up to 'amount' off a tier's currency (never below zero) without counting it as spending. Returns how much was taken.</summary>
     public double RemoveCurrency(int tierIndex, double amount)

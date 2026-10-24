@@ -50,23 +50,13 @@ public class PixelCollectionLog : MonoBehaviour
 
     private static readonly Entry[] Entries = BuildEntries();
 
+    /// <summary>One entry per member of every super-rare set, in the table's order (PixelRareSets: section, flavour).</summary>
     private static Entry[] BuildEntries()
     {
         System.Collections.Generic.List<Entry> list = new System.Collections.Generic.List<Entry>();
-        for (int i = 0; i < 7; i++)
-            list.Add(new Entry { type = PixelClicker.PixelType.DragonCube1 + i, section = "Dragon Cubes",
-                flavour = "A glassy orange cube with " + (i + 1) + (i == 0 ? " small cube" : " small cubes") + " inside, like a dragon ball. Gather all seven and the dragon can be summoned." });
-        list.Add(new Entry { type = PixelClicker.PixelType.GodSlifer, section = "God Cubes", flavour = "A red cube held together by storm lightning. The Sky Dragon answers to no one." });
-        list.Add(new Entry { type = PixelClicker.PixelType.GodRa, section = "God Cubes", flavour = "Polished gold wrapped in a sun's corona. The Winged Dragon of the sun." });
-        list.Add(new Entry { type = PixelClicker.PixelType.GodObelisk, section = "God Cubes", flavour = "A deep blue stone that sheds dust. The Tormentor's fist ends arguments." });
-        string[] stone =
-        {
-            "Bends space itself. A tesseract turns inside it.", "Thoughts crackle through it like lightning.", "Reality warps wherever it sits.",
-            "Unbelievable power, packed into a tiny cube.", "Its clock hands run backwards and forwards at will.", "Wisps of orange mist circle it. It remembers.",
-        };
-        for (int i = 0; i < 6; i++)
-            list.Add(new Entry { type = PixelClicker.PixelType.StoneSpace + i, section = "Prime Cubes", flavour = stone[i] });
-        list.Add(new Entry { type = PixelClicker.PixelType.InfinityCubelette, section = "Prime", flavour = "Forged in the Gauntlet from all six Prime Cubes. Only one can exist." });
+        foreach (PixelRareSets.Set set in PixelRareSets.All)
+            foreach (PixelRareSets.Member m in set.members)
+                list.Add(new Entry { type = m.type, section = set.logSection, flavour = m.flavour });
         return list.ToArray();
     }
 
