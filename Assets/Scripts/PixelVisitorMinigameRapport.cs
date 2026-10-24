@@ -26,7 +26,12 @@ public abstract partial class PixelVisitorMinigame
     private string RapportName => Pick(visitorName, DefaultName);
 
     /// <summary>A new visit: the per-visit caps start again.</summary>
-    private void RapportVisitStart() { rapportDealThisVisit = 0d; giftsThisVisit = 0; rapportMeters.Clear(); }
+    private void RapportVisitStart()
+    {
+        rapportDealThisVisit = 0d; giftsThisVisit = 0; rapportMeters.Clear();
+        PixelRapport r = PixelRapport.Instance;
+        if (r != null) r.GrantReward(Id, RapportName);   // (his relic, if your step already earned it)
+    }
 
     /// <summary>You opened his visit (clicked him when he peeked in).</summary>
     private void RapportVisitAccepted()

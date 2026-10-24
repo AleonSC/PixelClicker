@@ -45,7 +45,7 @@ public partial class PixelClicker
 
     /// <summary>Is this rare set switched off in the Inspector (disableDragonCubes / disableGodCubes; the God knob covers the Prime Cubes too)?</summary>
     private bool RareSetSwitchedOff(PixelRareSets.Set set) =>
-        set.rarity == PixelRareSets.Rarity.Dragon ? disableDragonCubes : disableGodCubes;
+        set.rarity == PixelRareSets.Rarity.Earned ? false : set.rarity == PixelRareSets.Rarity.Dragon ? disableDragonCubes : disableGodCubes;   // (the Relics are always there)
 
     /// <summary>The spawn weight of each member of this set (the Inspector knob, or its coded default; 0 for a set that is never rolled).</summary>
     private float RareSetWeight(PixelRareSets.Set set)

@@ -46,7 +46,7 @@ public class PixelCollectionLog : MonoBehaviour
     [Tooltip("Brightness of each cube's light. 0 = 3.")]
     [SerializeField] private float galleryLightIntensity = 0f;
 
-    private struct Entry { public PixelClicker.PixelType type; public string section, flavour; }
+    private struct Entry { public PixelClicker.PixelType type; public string section, flavour, hint; }
 
     private static readonly Entry[] Entries = BuildEntries();
 
@@ -56,7 +56,7 @@ public class PixelCollectionLog : MonoBehaviour
         System.Collections.Generic.List<Entry> list = new System.Collections.Generic.List<Entry>();
         foreach (PixelRareSets.Set set in PixelRareSets.All)
             foreach (PixelRareSets.Member m in set.members)
-                list.Add(new Entry { type = m.type, section = set.logSection, flavour = m.flavour });
+                list.Add(new Entry { type = m.type, section = set.logSection, flavour = m.flavour, hint = m.hint });
         return list.ToArray();
     }
 
@@ -308,7 +308,7 @@ public class PixelCollectionLog : MonoBehaviour
         bool known = Known(e, out int tier, out double total);
         p.section.text = e.section;
         p.title.text = known ? clicker.Tiers[tier].displayName : unknownText;
-        p.body.text = known ? e.flavour : unknownText;
+        p.body.text = known ? e.flavour : !string.IsNullOrEmpty(e.hint) ? e.hint : unknownText;   // (a Relic you work for says how to get it)
         p.foot.text = known ? (total > 1d ? "Found " + total.ToString("0") + " times" : "Found") + (clicker.Tiers[tier].count >= 1d ? "  -  in your backpack" : "") : "Not found yet";
         if (tier >= 0)
         {

@@ -157,6 +157,9 @@ public class PixelMarket : MonoBehaviour
 
     public void RecordSale(string vendor, int tier, double amount) => RecordSale(vendor, TierKey(tier), amount * ClicksPerUnit(tier));
 
+    /// <summary>Every vendor's market recovers to full at once (the Market Charm, PixelRelics).</summary>
+    public void ClearSaturation() => pressure.Clear();
+
     /// <summary>One line for a sell window: "Market 74% (recovering)" or "Market 100% (steady)", coloured.</summary>
     public string TrendText(string vendor, string good)
     {

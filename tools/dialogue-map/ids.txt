@@ -107,3 +107,4 @@ T80 | Tip: timestop_empty
 T81 | Tip: ultra
 T82 | Minigame: Black Hole
 T83 | Tip: device_PowerBank
+T84 | Tip: relic_first
