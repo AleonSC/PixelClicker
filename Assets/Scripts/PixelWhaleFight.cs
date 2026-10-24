@@ -244,13 +244,7 @@ public class PixelWhaleFight : MonoBehaviour, IPixelDatabaseSource
         pos.y = Mathf.Clamp(pos.y, areaBottom, areaTop);
     }
 
-    private void Place()
-    {
-        Vector3 basePos = clicker.CubeBasePosition;
-        float depth = Vector3.Dot(basePos - cam.transform.position, cam.transform.forward);
-        Vector3 world = cam.ViewportToWorldPoint(new Vector3(pos.x, pos.y, depth));
-        clicker.SetCubeOffset(world - basePos);
-    }
+    private void Place() => PixelCubeScreenSpot.Place(clicker, cam, pos);
 
     // ------------------------------------------------------------------
     // The fishing line
