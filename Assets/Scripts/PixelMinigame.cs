@@ -465,6 +465,10 @@ public abstract class PixelMinigame : MonoBehaviour
     /// <summary>Colour of the material's line in the Materials tab.</summary>
     public virtual Color MaterialColor => Color.white;
 
+    /// <summary>Spends some of this minigame's material (shop prices, vendors buying it). Default: the goal counter is the material (Magic Wood,
+    /// Stardust, Meteor Chunks; the Bomb's TrySpendTracker spends its parts); the Ghost spends its Ectoplasm instead.</summary>
+    public virtual bool TrySpendMaterial(double amount) => TrySpendTracker(amount);
+
     /// <summary>A second saved number, for minigames whose goal counter and spendable amount differ (the bomb's parts held). Default none.</summary>
     public virtual double ExtraValue => 0d;
 

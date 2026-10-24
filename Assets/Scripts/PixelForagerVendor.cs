@@ -2,7 +2,7 @@
 // PixelForagerVendor.cs
 //   The Forager (id forager, 'Hazel the Forager'; a mossy green cube with a red mushroom-cap hat and a wicker basket): a goods buyer -
 //   she BUYS Foraging's goods (berries, mushrooms, herbs, truffles, weeds...) for pure currency through the shared goods buyer
-//   (PixelVisitorMinigameGoods.cs: offers from her GoodsOffers block, priced by PixelMarket, market price and trend on each row). She only
+//   (the shared Sell view, PixelVisitorMinigameSell.cs: pick the good and amount, live price from PixelMarket with its trend). She only
 //   visits while Foraging is the skill in training (VisitSkillId) and is started by PixelGuideVendor.StartVendors once Foraging is
 //   available; she can also be called from the Toggles window (shared cooldown). Texts: Dialogue.txt [Visitor: forager].
 // ---------------------------------------------------
@@ -12,9 +12,6 @@ using UnityEngine;
 /// <summary>The Forager (id "forager"): buys foraged goods for pure currency while Foraging is trained. All the visiting is in <see cref="PixelVisitorMinigame"/>.</summary>
 public class PixelForagerVendor : PixelVisitorMinigame
 {
-    [Header("Offers")]
-    [Tooltip("How she makes her offers (the price itself is PixelMarket's shared rule).")]
-    [SerializeField] private GoodsOffers offers = new GoodsOffers();
 
     public override string Id => "forager";
     public override string DisplayName => "Forager";
@@ -33,8 +30,6 @@ public class PixelForagerVendor : PixelVisitorMinigame
 
     protected override bool BuysGoods => true;
     protected override string GoodsSkillId => PixelSkills.ForagingId;
-    protected override GoodsOffers Offers => offers;
-    protected override List<Trade> RollTrades() => RollGoodsTrades();
 
     /// <summary>A mossy green cube with a red, white-spotted mushroom cap for a hat and a wicker basket of berries.</summary>
     protected override void DrawVisitor(Transform art)

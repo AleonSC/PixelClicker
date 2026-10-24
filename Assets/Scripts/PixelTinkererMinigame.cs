@@ -3,6 +3,7 @@ using UnityEngine;
 /// <summary>
 /// The Tinkerer (id "tinkerer", Minigames tab, very cheap): a visitor who stops time and sells every consumable DEVICE at a big
 /// discount. All the behaviour (sliding in, greeting, accept / reject, wares window) is in <see cref="PixelVisitorMinigame"/>.
+/// Sell tab (the shared Sell view): he buys Bomb Parts as a specialty good (PixelMarket).
 /// </summary>
 public class PixelTinkererMinigame : PixelVisitorMinigame
 {

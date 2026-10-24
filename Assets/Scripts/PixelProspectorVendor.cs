@@ -2,8 +2,8 @@
 // PixelProspectorVendor.cs
 //   The Prospector (id prospector, 'Pip the Prospector'; a visitor drawn as a CUBE like Cubie - orange earth tones, hard hat with a
 //   lamp, pickaxe, grin - the test for turning vendors into cube characters): he BUYS mining goods for pure currency - the shared goods
-//   buyer (PixelVisitorMinigameGoods.cs: offers from his GoodsOffers block, priced by PixelMarket, paid in a random pure colour; his market
-//   price and trend show on each row); the base trade rows say 'Sell'
+//   buyer (the shared Sell view, PixelVisitorMinigameSell.cs: pick the ore and amount, live price from PixelMarket with its trend; METEOR
+//   CHUNKS are his specialty good at ~2x, PixelMarket.SpecialtiesOf); the base trade rows say 'Sell'
 //   via TradePayWord / TradeText). He only visits while Mining is the skill in training (VisitSkillId = MiningId, the shared vendor rule; was CanVisit = PixelSkills.TrainingId ==
 //   MiningId; a failed check just waits for the next visit timer) and is started by PixelGuideVendor.StartVendors as soon as Mining is
 //   available (first visit after about otherFirstVisitSeconds x 0.5-1). Counter prospector.bought. Mining's whole 'sink' for now is
@@ -21,9 +21,6 @@ using UnityEngine;
 /// </summary>
 public class PixelProspectorVendor : PixelVisitorMinigame
 {
-    [Header("Offers")]
-    [Tooltip("How he makes his offers (the price itself is PixelMarket's shared rule).")]
-    [SerializeField] private GoodsOffers offers = new GoodsOffers();
 
     public override string Id => "prospector";
     public override string DisplayName => "Prospector";
@@ -47,8 +44,6 @@ public class PixelProspectorVendor : PixelVisitorMinigame
     // He buys Mining's goods (ores, Obsidian, Bedrock, Rock...) - the shared goods buyer in PixelVisitorMinigameGoods.cs.
     protected override bool BuysGoods => true;
     protected override string GoodsSkillId => PixelSkills.MiningId;
-    protected override GoodsOffers Offers => offers;
-    protected override List<Trade> RollTrades() => RollGoodsTrades();
 
     /// <summary>A cube like Cubie, in earth colours: a hard hat with a lamp, a pickaxe and a friendly grin.</summary>
     protected override void DrawVisitor(Transform art)

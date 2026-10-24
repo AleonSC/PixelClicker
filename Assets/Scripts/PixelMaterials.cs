@@ -105,7 +105,9 @@ public class PixelMaterials : MonoBehaviour
     {
         if (IsMaterial(id)) return Amount(id);
         PixelMinigame m = PixelMinigame.Find(id);
-        return m != null && m.HasTracker ? m.SpendableCount : 0d;
+        if (m == null) return 0d;
+        if (!string.IsNullOrEmpty(m.MaterialName)) return m.MaterialAmount;   // a minigame's material (Ectoplasm, Magic Wood, Stardust, Meteor Chunks, Bomb Parts)
+        return m.HasTracker ? m.SpendableCount : 0d;
     }
 
     public static bool CostAffordable(string id, double amount) => PixelClicker.InfiniteResources || CostHeld(id) >= amount;
@@ -116,16 +118,24 @@ public class PixelMaterials : MonoBehaviour
         if (PixelClicker.InfiniteResources) return;
         if (IsMaterial(id)) { TrySpend(id, amount); return; }
         PixelMinigame m = PixelMinigame.Find(id);
-        if (m != null) m.TrySpendTracker(amount);
+        if (m == null) return;
+        if (!string.IsNullOrEmpty(m.MaterialName)) m.TrySpendMaterial(amount);
+        else m.TrySpendTracker(amount);
     }
 
     public static string CostName(string id)
     {
         if (IsMaterial(id)) return NameOf(id);
         PixelMinigame m = PixelMinigame.Find(id);
+        if (m != null && !string.IsNullOrEmpty(m.MaterialName)) return m.MaterialName;
         return m != null && !string.IsNullOrEmpty(m.TrackerTitle) ? m.TrackerTitle : id;
     }
 
     /// <summary>Swatch colour of a non-pixel price line (minigame counters: grey).</summary>
-    public static Color CostColor(string id) => IsMaterial(id) ? ColorOf(id) : new Color(0.6f, 0.6f, 0.65f, 1f);
+    public static Color CostColor(string id)
+    {
+        if (IsMaterial(id)) return ColorOf(id);
+        PixelMinigame m = PixelMinigame.Find(id);
+        return m != null && !string.IsNullOrEmpty(m.MaterialName) ? m.MaterialColor : new Color(0.6f, 0.6f, 0.65f, 1f);
+    }
 }

@@ -1,11 +1,9 @@
 // ---- System notes ----
 // PixelVisitorMinigameGoods.cs
 //   Part of PixelVisitorMinigame: the GOODS BUYERS and CALLING a vendor.
-//   - A goods buyer (BuysGoods; the Prospector, Forager, Angler and the Farmer's Sell tab) buys one skill's goods (GoodsSkillId: the types of
-//     that skill pack that pay something) for pure currency. RollGoodsTrades makes its offers from its GoodsOffers settings (how many offers,
-//     what share of your stock each asks for, luck), priced by the shared rule PixelMarket.Quote (effort x 1.2, less as his market for that
-//     good fills up) and paid 1:1 in a random unlocked pure colour. Accepting a row records the sale (RecordGoodsSale) and every row shows
-//     his market price and trend (GoodsNote). The Lumberjack sells through his own Sell panel but uses the same market.
+//   - A goods buyer (BuysGoods; Big Tim, the Prospector, Forager, Angler and the Farmer) buys one skill's goods (GoodsSkillId: the types of that
+//     skill pack that pay something, IsGood). A vendor with specialty goods in PixelMarket's table (the Wizard, the Tinkerer) buys too.
+//     Both sell through the shared Sell view (PixelVisitorMinigameSell.cs).
 //   - CALLING (the Toggles window's Vendors rows, 'Call'): a vendor that buys from you (BuysFromPlayer) can be called once per shared
 //     cooldown (PixelGuideVendor.vendorCallCooldownMinutes, 30 by default, in PLAY time - saved through the stat 'vendor.callReady').
 //     A called vendor comes at the next calm moment, even when his skill is not in training and without waiting for the gap after
@@ -17,46 +15,22 @@ using UnityEngine;
 
 public abstract partial class PixelVisitorMinigame
 {
-    /// <summary>How a goods buyer makes his offers (each vendor has its own block in the Inspector).</summary>
-    [Serializable]
-    public class GoodsOffers
-    {
-        [Min(1)]
-        [Tooltip("How many offers he brings (a different good in each).")]
-        public int offerCount = 3;
-
-        [Range(0.01f, 1f)]
-        [Tooltip("Fewest fraction of what you hold of one good that an offer asks for.")]
-        public float minSellFraction = 0.3f;
-
-        [Range(0.01f, 1f)]
-        [Tooltip("Most fraction of what you hold of one good that an offer asks for.")]
-        public float maxSellFraction = 1f;
-
-        [Min(0.05f)]
-        [Tooltip("Worst luck factor on a deal (1 = the market price).")]
-        public float minLuck = 0.85f;
-
-        [Min(0.05f)]
-        [Tooltip("Best luck factor on a deal.")]
-        public float maxLuck = 1.25f;
-
-        [Min(1f)]
-        [Tooltip("You must hold at least this many of a good for him to ask for it.")]
-        public double minHeld = 5;
-    }
-
-    /// <summary>True for a vendor whose trade rows buy one skill's goods (see <see cref="GoodsSkillId"/>).</summary>
+    /// <summary>True for a vendor who buys one skill's goods (see <see cref="GoodsSkillId"/>) in his Sell view.</summary>
     protected virtual bool BuysGoods => false;
 
     /// <summary>The skill whose goods a goods buyer takes (its skill pack's pixel types).</summary>
     protected virtual string GoodsSkillId => null;
 
-    /// <summary>A goods buyer's offer settings (its own serialized block).</summary>
-    protected virtual GoodsOffers Offers => null;
-
-    /// <summary>Does this vendor buy anything from the player (so it can be called from the Toggles window)?</summary>
-    public virtual bool BuysFromPlayer => BuysGoods;
+    /// <summary>Does this vendor buy anything from the player (his skill's goods or specialty materials)? He gets the Sell view and can be called from the Toggles window.</summary>
+    public virtual bool BuysFromPlayer
+    {
+        get
+        {
+            if (BuysGoods) return true;
+            PixelMarket market = PixelMarket.Instance;
+            return market != null && market.SpecialtiesOf(Id).Count > 0;
+        }
+    }
 
     /// <summary>Is this pixel type one of the goods he buys? (One of his skill's types that pays something.)</summary>
     protected bool IsGood(int tier)
@@ -66,51 +40,6 @@ public abstract partial class PixelVisitorMinigame
         PixelMarket market = PixelMarket.Instance;
         if (pack == null || pack.types == null || market == null) return false;
         return Array.IndexOf(pack.types, clicker.Tiers[tier].type) >= 0 && market.ClicksPerUnit(tier) > 0d;
-    }
-
-    /// <summary>A goods buyer's offers: up to offerCount goods you hold, each a share of your stock, paid in a random unlocked pure colour at the market price x luck.</summary>
-    protected List<Trade> RollGoodsTrades()
-    {
-        List<Trade> result = new List<Trade>();
-        GoodsOffers o = Offers ?? new GoodsOffers();
-        PixelMarket market = PixelMarket.Instance;
-        if (clicker == null || market == null) return result;
-        PixelClicker.PixelTier[] tiers = clicker.Tiers;
-
-        List<int> sellable = new List<int>(), pure = new List<int>();
-        for (int i = 0; i < tiers.Length; i++)
-        {
-            if (tiers[i].count >= o.minHeld && IsGood(i)) sellable.Add(i);
-            if (PixelMarket.IsPure(tiers[i].type) && tiers[i].unlocked) pure.Add(i);
-        }
-        if (sellable.Count == 0 || pure.Count == 0) return result;
-
-        for (int n = 0; n < o.offerCount && sellable.Count > 0; n++)
-        {
-            int si = UnityEngine.Random.Range(0, sellable.Count);
-            int good = sellable[si];
-            sellable.RemoveAt(si);   // a different good in every offer
-            int payTier = pure[UnityEngine.Random.Range(0, pure.Count)];
-            float lo = Mathf.Min(o.minSellFraction, o.maxSellFraction), hi = Mathf.Max(o.minSellFraction, o.maxSellFraction);
-            double sell = System.Math.Max(1d, System.Math.Floor(tiers[good].count * UnityEngine.Random.Range(lo, hi)));
-            double luck = UnityEngine.Random.Range(Mathf.Min(o.minLuck, o.maxLuck), Mathf.Max(o.minLuck, o.maxLuck));
-            double get = System.Math.Max(1d, System.Math.Floor(market.Quote(Id, good, sell) * luck));
-            // payTier / getTier: you hand over the good ('pay') and receive the pure pixels ('get').
-            result.Add(new Trade { payTier = good, getTier = payTier, pay = sell, get = get });
-        }
-        return result;
-    }
-
-    private void RecordGoodsSale(Trade t)
-    {
-        PixelMarket market = PixelMarket.Instance;
-        if (BuysGoods && market != null && t != null) market.RecordSale(Id, t.payTier, t.pay);
-    }
-
-    private string GoodsNote(Trade t)
-    {
-        PixelMarket market = PixelMarket.Instance;
-        return BuysGoods && market != null && t != null ? market.TrendText(Id, t.payTier) : "";
     }
 
     // ------------------------------------------------------------------

@@ -15,7 +15,7 @@ using System.Collections.Generic;
 public class GameState
 {
     /// <summary>The systems whose progress lives here (they must not register restart resets for it: tools/compile-check/rules.sh checks it). Add a system's class name when it moves.</summary>
-    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab", "PixelBaitBucket", "PixelCubieBill", "PixelCombo", "PixelHints", "PixelRobotWorker", "PixelPets", "PixelAchievements", "PixelConsumables", "PixelSkills", "PixelMinigame", "PixelShop", "PixelClicker", "PixelMaterials" };
+    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab", "PixelBaitBucket", "PixelCubieBill", "PixelCombo", "PixelHints", "PixelRobotWorker", "PixelPets", "PixelAchievements", "PixelConsumables", "PixelSkills", "PixelMinigame", "PixelShop", "PixelClicker", "PixelMaterials", "PixelRapport" };
 
     public BankState bank = new BankState();
     public StatsState stats = new StatsState();
@@ -36,6 +36,7 @@ public class GameState
     public ShopState shop = new ShopState();
     public ClickerState clicker = new ClickerState();
     public MaterialsState materials = new MaterialsState();
+    public RapportState rapport = new RapportState();
 
     /// <summary>Fills in sub-states missing from an older save file (JsonUtility leaves a part the file lacks null in some cases).</summary>
     public void Repair()
@@ -68,6 +69,8 @@ public class GameState
         clicker.Repair();
         if (materials == null) materials = new MaterialsState();
         materials.Repair();
+        if (rapport == null) rapport = new RapportState();
+        rapport.Repair();
         baitBucket.Repair();
         cubieBill.Repair();
         bank.Repair();
@@ -104,6 +107,39 @@ public class MaterialsState
     {
         for (int i = 0; i < held.Count; i++) if (held[i].id == id) { held[i].amount = amount; return; }
         held.Add(new Entry { id = id, amount = amount });
+    }
+}
+
+/// <summary>Vendor rapport (PixelRapport): per vendor id, his rapport points, the highest step reached (never drops) and when you last dealt with him.</summary>
+[Serializable]
+public class RapportState
+{
+    [Serializable]
+    public class Entry
+    {
+        public string id;          // the vendor's id (wizard, lumberjack...)
+        public double points;      // rapport points (trickles down when he is ignored, never below his step's floor)
+        public int reached;        // the highest step reached (0 = Stranger); never drops
+        public double lastDeal;    // play seconds of the last deal / visit
+        public double lastTrickle; // play seconds the trickle was last applied
+    }
+
+    public List<Entry> vendors = new List<Entry>();
+
+    public void Repair()
+    {
+        if (vendors == null) vendors = new List<Entry>();
+        vendors.RemoveAll(e => e == null || string.IsNullOrEmpty(e.id));
+    }
+
+    /// <summary>The vendor's entry (made when 'create' and missing; else null).</summary>
+    public Entry Get(string id, bool create)
+    {
+        for (int i = 0; i < vendors.Count; i++) if (vendors[i].id == id) return vendors[i];
+        if (!create) return null;
+        Entry e = new Entry { id = id };
+        vendors.Add(e);
+        return e;
     }
 }
 

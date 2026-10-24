@@ -308,6 +308,14 @@ public class PixelGhostMinigame : PixelScheduledMinigame
 
     public override string MaterialName => "Ectoplasm";
     public override double MaterialAmount => ectoplasm;
+
+    /// <summary>Spends Ectoplasm (vendors buying it, prices) - never the ghosts-caught goal counter.</summary>
+    public override bool TrySpendMaterial(double amount)
+    {
+        if (amount < 0d || ectoplasm < amount) return false;
+        ectoplasm -= amount;
+        return true;
+    }
     public override Color MaterialColor => new Color(0.55f, 1f, 0.8f, 1f);
     public override double ExtraValue => ectoplasm;
     public override void SetExtraValue(double value) => ectoplasm = System.Math.Max(0d, value);

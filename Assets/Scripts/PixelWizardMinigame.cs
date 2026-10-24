@@ -3,6 +3,7 @@ using UnityEngine;
 /// <summary>
 /// The Wizard (id "wizard", Minigames tab, cheap): a visitor who stops time and sells POTIONS at a big discount (every potion whose
 /// pixel type you have unlocked; combo potions can only be crafted). All the behaviour is in <see cref="PixelVisitorMinigame"/>.
+/// Sell tab (the shared Sell view): he buys Ectoplasm, Magic Wood and Stardust as specialty goods (PixelMarket) and TRADES them (see trades: 20 Ectoplasm -> Ghost Bait, 5 Stardust -> 1 Ultra pixel).
 /// </summary>
 public class PixelWizardMinigame : PixelVisitorMinigame
 {
@@ -18,6 +19,79 @@ public class PixelWizardMinigame : PixelVisitorMinigame
     [Min(1)]
     [Tooltip("Most bottles of each potion he has (so you can't stock up).")]
     [SerializeField] private int stockMax = 3;
+
+    // ---- Trades for minigame materials (beside selling them: the shared Sell view's trade buttons) ----
+
+    public enum TradeReward { Device, Ultra }
+
+    /// <summary>One of his trades: 'cost' of a minigame material for something only he has.</summary>
+    [System.Serializable]
+    public class MaterialTrade
+    {
+        [Tooltip("The material: a minigame id (ghost = Ectoplasm, eviltree = Magic Wood, stardust) or a material id (PixelMaterials.CostHeld).")]
+        public string goodId = "ghost";
+        [Min(1f)]
+        [Tooltip("How much of it the trade takes.")]
+        public double cost = 20;
+        [Tooltip("What you get: a consumable device (Device kind below) or Ultra pixels.")]
+        public TradeReward reward = TradeReward.Device;
+        [Tooltip("The consumable you get (reward Device).")]
+        public PixelConsumables.DeviceKind device = PixelConsumables.DeviceKind.GhostBait;
+        [Min(1)]
+        [Tooltip("How many you get.")]
+        public int amount = 1;
+        [Tooltip("Name on the button ('Trade 20 Ectoplasm for <this>'). Empty = the item's name.")]
+        public string label = "";
+    }
+
+    [Header("Trades (worth more than selling the material)")]
+    [Tooltip("His trades for minigame materials, shown beside the sell price. Missing built-in ones (20 Ectoplasm -> Ghost Bait, 5 Stardust -> 1 Ultra pixel) are added back at start.")]
+    [SerializeField] private System.Collections.Generic.List<MaterialTrade> trades = new System.Collections.Generic.List<MaterialTrade>();
+
+    private static MaterialTrade[] BuiltInTrades() => new[]
+    {
+        new MaterialTrade { goodId = "ghost", cost = 20, reward = TradeReward.Device, device = PixelConsumables.DeviceKind.GhostBait, amount = 1, label = "Ghost Bait" },
+        new MaterialTrade { goodId = "stardust", cost = 5, reward = TradeReward.Ultra, amount = 1, label = "1 Ultra pixel" },
+    };
+
+    private void EnsureTrades()
+    {
+        if (trades == null) trades = new System.Collections.Generic.List<MaterialTrade>();
+        foreach (MaterialTrade d in BuiltInTrades())
+            if (!trades.Exists(t => t != null && t.goodId == d.goodId && t.reward == d.reward && t.device == d.device)) trades.Add(d);
+    }
+
+    private void OnValidate() => EnsureTrades();
+
+    protected override void CollectTradeOffers(SellGood good, System.Collections.Generic.List<TradeOffer> list)
+    {
+        EnsureTrades();
+        foreach (MaterialTrade t in trades)
+        {
+            if (t == null || PixelMarket.MaterialKey(t.goodId) != good.marketKey) continue;
+            MaterialTrade trade = t;
+            string name = !string.IsNullOrEmpty(t.label) ? t.label : t.reward == TradeReward.Ultra ? t.amount + " Ultra pixel" + (t.amount == 1 ? "" : "s") : t.device.ToString();
+            list.Add(new TradeOffer
+            {
+                cost = t.cost, label = name,
+                available = () => trade.reward == TradeReward.Ultra || RoomFor(trade.device) >= trade.amount,
+                give = () =>
+                {
+                    if (trade.reward == TradeReward.Ultra) { clicker.AddUltra(trade.amount); return true; }
+                    return consumables != null && consumables.GiveDevice(trade.device, trade.amount);
+                },
+            });
+        }
+    }
+
+    /// <summary>How many more of a device kind you can hold (its capacity, Operation storage upgrades included).</summary>
+    private int RoomFor(PixelConsumables.DeviceKind kind)
+    {
+        if (consumables == null) return 0;
+        for (int i = 0; i < consumables.ItemCount; i++)
+            if (consumables.IsDevice(i) && !consumables.ItemAttuned(i) && consumables.DeviceKindOf(i) == kind) return consumables.ItemRoom(i);
+        return 0;
+    }
 
     protected override int OfferedWares => potionsOffered;
     protected override int StockMin => stockMin;
