@@ -1,7 +1,7 @@
 // ---- System notes ----
 // PixelConveyor.cs
 //   HEIGHT / RAMPS: belt ends (a, b) are full 3D points - the y is the belt's underside. While placing, the scroll wheel raises / lowers the point being placed (PixelFeatureTester.UpdateLine, steps of half a cube,
-//   ClampEnd keeps the slope under about 37 degrees); posts (BuildSupports) stand on the floor (FloorY) under a raised belt. Riders measure their place along the GROUND (Length = horizontal length), PointAt gives the
+//   ClampEnd keeps the slope under about 37 degrees; NO OVERLAPS (2026-10-24, PlaceProblem / OverlapProblem): a new piece may not lie over or cross a belt at the same height - meeting end to end, at corners and at a Combiner inlet is fine, a bridge a cube higher is fine); posts (BuildSupports) stand on the floor (FloorY) under a raised belt. Riders measure their place along the GROUND (Length = horizontal length), PointAt gives the
 //   sloped height, RunSpeed / LiftFactor adjust speed and rest height for the slope. Snap() matches belt ends and elevator tops by SCREEN distance, so raised ends can be snapped to; FindNext only chains belts
 //   whose heights match. The Conveyor Elevator (PixelElevator.cs) lifts pixels between heights.
 //   CORNERS: where belts chain at an angle the outside of the turn is filled with a ROUNDED corner (an arc, a curved rail and a turntable plate; PixelConveyorJoint.cs).
@@ -751,6 +751,66 @@ public class PixelConveyor : MonoBehaviour
     }
 
     private static float Flat(Vector3 v) { v.y = 0f; return v.magnitude; }
+
+    /// <summary>Why a new belt from 'from' to 'to' can't be placed (null = it can): too sharp a turn, or it would OVERLAP a belt already there.</summary>
+    public static string PlaceProblem(Vector3 from, Vector3 to)
+    {
+        string turn = TurnProblem(from, to);
+        if (turn != null) return turn + " - pick a gentler angle";
+        return OverlapProblem(from, to);
+    }
+
+    /// <summary>
+    /// (2026-10-24) A new belt may not lie over or cross a belt already there at the same height. Both belts are seen from above as strips (their
+    /// widths); each strip's ends are trimmed by the two half widths so belts may still MEET end to end, at corners (the turn limit keeps those at
+    /// 60 degrees or more) and at a Combiner's side inlet. A belt high enough above / below the other (a bridge) is fine.
+    /// </summary>
+    public static string OverlapProblem(Vector3 from, Vector3 to)
+    {
+        PixelClicker c = PixelFind.Cached<PixelClicker>();
+        float unit = Mathf.Max(0.05f, c != null ? c.OldPixelWorldSize : 0.5f);
+        float newWidth = (1.35f + (LaneCount - 1) * 1.1f) * unit;
+        float clearance = 1.0f * unit;   // (how far apart in height two belts must be to pass over one another)
+        foreach (PixelConveyor other in all)
+        {
+            if (other == null || other.ghostMode || !other.gameObject.activeInHierarchy) continue;
+            float trim = (newWidth + other.Width) * 0.5f;
+            if (!Trim(from, to, trim, out Vector3 p0, out Vector3 p1)) continue;           // (too short to cross anything)
+            if (!Trim(other.a, other.b, trim, out Vector3 q0, out Vector3 q1)) continue;
+            ClosestOnSegments(p0, p1, q0, q1, out float sp, out float sq);
+            Vector3 pp = Vector3.Lerp(p0, p1, sp), qq = Vector3.Lerp(q0, q1, sq);
+            if (Flat(pp - qq) >= trim - 0.05f * unit) continue;
+            if (Mathf.Abs(pp.y - qq.y) >= clearance) continue;
+            return "Belts can't overlap - leave a gap or join them end to end";
+        }
+        return null;
+    }
+
+    /// <summary>The segment a-b with 'by' taken off each end (seen from above); false when nothing is left.</summary>
+    private static bool Trim(Vector3 a, Vector3 b, float by, out Vector3 t0, out Vector3 t1)
+    {
+        t0 = a; t1 = b;
+        float len = Flat(b - a);
+        if (len <= by * 2f) return false;
+        float f = by / len;
+        t0 = Vector3.Lerp(a, b, f);
+        t1 = Vector3.Lerp(a, b, 1f - f);
+        return true;
+    }
+
+    /// <summary>The closest points of two segments seen from above (XZ), as fractions along each.</summary>
+    private static void ClosestOnSegments(Vector3 p0, Vector3 p1, Vector3 q0, Vector3 q1, out float s, out float t)
+    {
+        Vector2 P = new Vector2(p0.x, p0.z), d1 = new Vector2(p1.x - p0.x, p1.z - p0.z);
+        Vector2 Q = new Vector2(q0.x, q0.z), d2 = new Vector2(q1.x - q0.x, q1.z - q0.z);
+        Vector2 r = P - Q;
+        float a = Vector2.Dot(d1, d1), e = Vector2.Dot(d2, d2), f = Vector2.Dot(d2, r);
+        float cc = Vector2.Dot(d1, r), b = Vector2.Dot(d1, d2), denom = a * e - b * b;
+        s = denom > 1e-8f ? Mathf.Clamp01((b * f - cc * e) / denom) : 0f;
+        t = e > 1e-8f ? (b * s + f) / e : 0f;
+        if (t < 0f) { t = 0f; s = a > 1e-8f ? Mathf.Clamp01(-cc / a) : 0f; }
+        else if (t > 1f) { t = 1f; s = a > 1e-8f ? Mathf.Clamp01((b - cc) / a) : 0f; }
+    }
 
     /// <summary>Posts under a raised belt, from the floor up to the belt's underside: at both ends and every few cube widths between (they stay upright however the belt slopes).</summary>
     private void BuildSupports(PixelFactoryKit k, Color steel)

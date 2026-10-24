@@ -1593,3 +1593,4 @@
 [2026-10-24 07:03 UTC] Code cleanup: 18 very long, branchy methods (Block Hold meter, Inventory refresh, Skills window, God Find stones and others) were cut into smaller named steps that run in the same order, and the unexplained settings in My Window and the Skills window now have Inspector tooltips.
 [2026-10-24 07:09 UTC] Placing conveyor belts: a right click now cancels the ghost (stops placing) instead of taking the last laid piece back; the pieces already laid stay.
 [2026-10-24 07:11 UTC] Belt panel: hovering 'Remove this piece' now makes only that belt piece glow (red) so you can see which one it removes; device panel buttons can now react to hovering.
+[2026-10-24 07:13 UTC] Conveyor belts can no longer be placed overlapping or crossing another belt at the same height (joining end to end, corners, Combiner inlets and bridges a cube higher still work).
