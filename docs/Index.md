@@ -163,6 +163,8 @@ One line per script / system: what it is and where its details are. Search it (`
 | `PixelFloorLive.cs` | Part of PixelFloor: the fifth batch of floors and the live overlay (real 3D objects on the floor plane that follow the mouse). | `docs/systems/PixelFloor.md` |
 | `PixelFloorLayers.cs` | Part of PixelFloor: big non-repeating floors - large textures drawn a few ms per frame, animated floors repainting only what moves, and the floor cache on disk. | `docs/systems/PixelFloor.md` |
 | `PixelFloorPlanets.cs` | Part of PixelFloor: Moon Surface and Red Planet - two big still crater pictures drawn on worker threads. | `docs/systems/PixelFloor.md` |
+| `PixelFloorShade.cs` | Part of PixelFloor (partial): drawing the floor textures (BuildTexture, Fill), Shade and its pattern groups (ShadeGrids / Stone / Tiles / Shiny / Arenas / Animated), the Pac-Man floor and the pattern helpers. | in the header comment of `PixelFloor.cs` |
+| `PixelFloorDefaults.cs` | Part of PixelFloor (partial): the built-in floor styles (EnsureDefaultStyles with its once-only upgrades of saved lists, the DefaultStyles / ThemedStyles / ExtraStyles tables). | in the header comment of `PixelFloor.cs` |
 | `PixelDayNight.cs` | Day / night cycle (added by PixelClicker.Awake; | in the header comment of `PixelDayNight.cs` |
 | `PixelOrthoView.cs` | Flat view (added by PixelClicker.Awake; Settings > Display > 'Flat view' = PixelOrthoView.Enabled, off by default, synced per save): | `docs/systems/PixelOrthoView.md` |
 | `PixelSkybox.cs` | Sky styles (added by PixelClicker.Awake, implements IPixelLookSource): | `docs/systems/PixelSkybox.md` |
