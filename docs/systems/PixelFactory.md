@@ -9,7 +9,7 @@ Both are Dev Hub > Tester features (PixelFeatureTester), built from primitives i
 
 ## Kiln (PixelKiln.cs)
 - Anything inside the mouth zone (in front of the +X door) burns: `ClaimOldPixel`, drawn in while it shrinks, then after `charcoalDelaySeconds` it gives `charcoalPerPixel` CHARCOAL, one per `charcoalGapSeconds`, as a MATERIAL (2026-10-24): `PixelMaterials.Add("charcoal")`, a "+1 Charcoal" popup over the kiln (`PixelUI.ShowWorldText`), shown in the Inventory's Materials tab. Fire light, embers, smoke (thicker while it burns).
-- Charcoal buys the **Charcoal Pixel** in the shop (Pixels tab: 50 Charcoal + 1,500 Gray + 1,500 Black, needs the RGB pack); that pixel spawns on the cube and its husks are Biomass Generator fuel (`charcoalFuel`). Before 2026-10-24 the kiln spat Charcoal husks out of a back chute and Charcoal was a Firemaking block.
+- Charcoal buys the **Charcoal Pixel** in the shop (Pixels tab: 50 Charcoal + 1,500 Gray + 1,500 Black, needs the RGB pack); that pixel spawns on the cube and its husks are the most efficient Biomass Generator fuel (`charcoalFuel` 8 wood husks; Wood Chips 4). Before 2026-10-24 the kiln spat Charcoal husks out of a back chute and Charcoal was a Firemaking block.
 - A belt can lead into the mouth through a coupling on its 'mouth' (In) socket (the old 'chute' Out socket is gone).
 
 ## Wood Chipper discharge arrow and chute socket

@@ -221,7 +221,7 @@ public static class PixelBlockCatalog
             guide: t => "Woodcutting block: a canister of pesticide. It takes " + t.clicksToCollect + " clicks and pays a little - grab it with Block Hold instead. Held for a second, it is used up (it shrinks to husk size and pops off as a husk, no currency) and gives 3 Pesticide charges. Each charge clears the next Termite Hive automatically, safely (no termites, no XP penalty). Letting go early keeps the charges you already got, but the canister is still used up."),
         B(PixelType.Charcoal, PixelTag.None,
             guide: t => "A lump of charcoal. The Kiln turns burnt husks into Charcoal (a material); spend it in the shop to add this pixel to the spawn pool.",
-            oldPixel: "is fuel: drop it into a Biomass Generator and it burns far longer than a wood husk."),
+            oldPixel: "is the best fuel there is: in a Biomass Generator one burns as long as 8 wood husks."),
         B(PixelType.GodSlifer, PixelTag.RareCollectible,
             guide: t => "One of the three Egyptian God Cubes: Slifer the Sky Dragon, a red cube held together by storm lightning. The rarest kind of drop in the game (roughly 1 in 7 million pixels). It pays 1 of itself and you can only ever hold one."),
         B(PixelType.GodRa, PixelTag.RareCollectible,

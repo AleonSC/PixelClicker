@@ -91,7 +91,7 @@ public partial class PixelShop
         {
             displayName = "Charcoal Pixel",
             tab = ShopTab.Pixels,
-            description = "Adds the Charcoal pixel to the random spawn pool. Its husks are fuel: drop them into a Biomass Generator and they burn far longer than wood. Paid with the Charcoal the Kiln makes.",
+            description = "Adds the Charcoal pixel to the random spawn pool. Its husks are the most efficient fuel: in a Biomass Generator one burns as long as 8 wood husks. Paid with the Charcoal the Kiln makes.",
             requirements = Needs(requiresRgbIndex),
             costs = new[]
             {
