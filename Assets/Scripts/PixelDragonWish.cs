@@ -175,9 +175,9 @@ public class PixelDragonWish : MonoBehaviour, IPixelDatabaseSource
         if (buttonGlow != null) buttonGlow.gameObject.SetActive(false);
 
         // The seven cubes are used up.
-        for (int s = 0; s < 7; s++)
+        foreach (PixelRareSets.Member m in PixelRareSets.Dragon.members)
         {
-            int index = clicker.IndexOf((PixelClicker.PixelType)((int)PixelClicker.PixelType.DragonCube1 + s));
+            int index = clicker.IndexOf(m.type);
             if (index >= 0) clicker.RemoveCurrency(index, 1d);   // really used up, even with Infinite resources on
         }
         PixelStats.Count("dragon.summons");

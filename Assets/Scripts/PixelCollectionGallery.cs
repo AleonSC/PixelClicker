@@ -247,15 +247,17 @@ public class PixelCollectionGallery : MonoBehaviour
     private void BuildItems()
     {
         int total = PixelCollectionLog.EntryCount;
-        // Rows: Dragon Cubes (7), God Cubes (3), Prime Cubes (6), the Cubelette. Rows are 2.6 apart; a row is spread over the walkable width.
+        // One row per super-rare set, in the table's order (PixelRareSets: Dragon Cubes, God Cubes, Prime Cubes, the Cubelette).
+        // Rows are 2.6 apart; a row is spread over the walkable width.
         float half = cfg.boundsSize * 0.5f;
-        List<int>[] rows = { new List<int>(), new List<int>(), new List<int>(), new List<int>() };
+        List<int>[] rows = new List<int>[PixelRareSets.All.Length];
+        float[] rowZ = new float[rows.Length];
+        for (int r = 0; r < rows.Length; r++) { rows[r] = new List<int>(); rowZ[r] = half - 1.2f - 2.6f * r; }
         for (int i = 0; i < total; i++)
         {
-            PixelClicker.PixelType type = PixelCollectionLog.EntryType(i);
-            rows[PixelClicker.IsDragonCube(type) ? 0 : PixelClicker.IsInfinityStone(type) ? 2 : type == PixelClicker.PixelType.InfinityCubelette ? 3 : 1].Add(i);
+            int r = System.Array.IndexOf(PixelRareSets.All, PixelRareSets.Of(PixelCollectionLog.EntryType(i)));
+            if (r >= 0) rows[r].Add(i);
         }
-        float[] rowZ = { half - 1.2f, half - 3.8f, half - 6.4f, half - 9f };
         for (int r = 0; r < rows.Length; r++)
         {
             int count = rows[r].Count;

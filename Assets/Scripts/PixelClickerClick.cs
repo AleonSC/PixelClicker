@@ -116,8 +116,7 @@ public partial class PixelClicker
         double amount = ClickPayout(tier, tierIndex, need, breaks, automatic, out bool richBreak);
         tier.timesCollected += breaks;
         AddCurrency(tierIndex, amount);
-        if (IsGodCube(tier.type) && amount > 0d) PixelGodFind.Play(tierIndex, pixelTransform.position);   // each God has its own show
-        else if (IsDragonCube(tier.type) && amount > 0d) PixelDragonFind.Play(tierIndex, pixelTransform.position);   // the "you found one" show
+        if (amount > 0d) PlayRareFindShow(tier.type, tierIndex);   // a super rare's "you found one" show (its set says which: PixelRareSets)
         PixelCollected?.Invoke(tierIndex, amount, automatic);
 
         // A Mirror pixel also counts as a click on the last other pixel type collected: it pays that click's amount again.
@@ -259,5 +258,14 @@ public partial class PixelClicker
             OreFx.Break(pixelTransform.position, PixelBaseSize, tier.color, richBreak);
             if (richBreak) { liveRich = false; if (richGlitter != null) { Destroy(richGlitter); richGlitter = null; } }
         }
+    }
+
+    /// <summary>The find show of a super rare that was just collected (the set's show in PixelRareSets; nothing for other blocks).</summary>
+    private void PlayRareFindShow(PixelType type, int tierIndex)
+    {
+        PixelRareSets.Set set = PixelRareSets.Of(type);
+        if (set == null) return;
+        if (set.show == PixelRareSets.Show.GodFind) PixelGodFind.Play(tierIndex, pixelTransform.position);   // each God / Prime Cube has its own show
+        else if (set.show == PixelRareSets.Show.DragonFind) PixelDragonFind.Play(tierIndex, pixelTransform.position);
     }
 }

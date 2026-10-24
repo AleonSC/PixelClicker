@@ -1,7 +1,7 @@
 // ---- System notes ----
 // PixelGodFind.cs
 //   The finds of the three Egyptian God Cubes (component added by PixelClicker.Awake; PixelGodFind.Play(tierIndex, worldPos), queued; called from PixelClicker.CollectInternal when a God Cube pays out).
-//   The cubes (PixelType.GodSlifer / GodRa / GodObelisk, PixelClicker.IsGodCube, tiers made by EnsureGodCubes, spawn weight godCubeSpawnWeight = 0.000001, one of each: CanSpawn is false and
+//   The cubes (PixelType.GodSlifer / GodRa / GodObelisk, PixelClicker.IsGodCube, tiers made by EnsureRareSets from the PixelRareSets table, spawn weight godCubeSpawnWeight = 0.000001, one of each: CanSpawn is false and
 //   AddCurrency ignores a second one) have their OWN show each, all drawn in UI space on a canvas that blocks clicks (sorting 691, unscaled time, Escape skips to the backpack like the Dragon Cube show):
 //     SLIFER - a storm: dark clouds, three lightning strikes (flash + jagged bolts), a long red lightning serpent that flies across the screen in a figure-eight with crackling arcs, then coils into the cube
 //       in a final blast.
@@ -146,7 +146,7 @@ public class PixelGodFind : MonoBehaviour
         yield return null;   // the canvas scaler sets the canvas size on the first frame
 
         PixelClicker.PixelType type = clicker.Tiers[req.tier].type;
-        stoneIdx = PixelClicker.IsInfinityStone(type) ? (int)type - (int)PixelClicker.PixelType.StoneSpace : -1;
+        stoneIdx = PixelRareSets.Prime.IndexOf(type);   // (-1 = not a Prime Cube)
         God god = type == PixelClicker.PixelType.GodSlifer ? God.Slifer : type == PixelClicker.PixelType.GodRa ? God.Ra : type == PixelClicker.PixelType.GodObelisk ? God.Obelisk
                 : type == PixelClicker.PixelType.InfinityCubelette ? God.Cubelette : God.Stone;
         float mainT = god == God.Slifer ? 5.9f : god == God.Ra ? 5.2f : god == God.Obelisk ? 5.5f : god == God.Stone ? 5.0f : 6.4f;
