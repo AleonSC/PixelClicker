@@ -476,6 +476,32 @@ a lot and recovers over time) instead of hard caps. Husks still never become cur
   shown in the sell window. Lumberjack, Prospector, Forager, Angler and the Farmer (Sell tab) use it; any buying vendor can also be CALLED
   from the Toggles window, once per 30 min of play (shared), so selling mostly still waits for their random visits.
 
+**Specialty buyers + Wizard trades (agreed 2026-10-24, not built):** every minigame material gets a vendor who pays extra for it, so
+minigames feed the economy and a vendor's visit becomes a payday: Ectoplasm, Magic Wood, Stardust -> the Wizard (Big Tim pays a little
+for Magic Wood); meteor chunks -> the Prospector; bomb parts -> the Tinkerer. One per-vendor specialty list in the market rule
+(`PixelMarket`), priced on the ~2x rung with the usual saturation. The Wizard also TRADES the same materials for things only he has, at a
+better deal than selling (Ectoplasm -> Ghost Bait / a phantom potion, Magic Wood -> a skill-boost wand, Stardust -> an Ultra pixel), so
+there is a choice: cash now or something special.
+
+**Vendor rapport - the warm side of the economy (agreed 2026-10-24, not built):** Cubie is the cold side (you pay, he trusts you); the
+vendors are the warm side (you deal with them, they like you).
+- **One meter per vendor, five steps:** Stranger -> Customer -> Regular -> Friend -> Partner.
+- **Earned by dealing, never by grinding:** selling goods (specialty goods most), accepting a visit when they peek in, trades, GIFTS,
+  and later filling orders (the biggest source). It does not wait for orders.
+- **Gifts (decided 2026-10-24):** give a vendor something they love just for rapport (each vendor has a short 'loves' list, e.g. the
+  Wizard loves Ectoplasm, Big Tim loves Heartwood); a loved gift counts much more than a sale, an ordinary gift a little, and only the
+  first few gifts per visit count (no dumping a stack).
+- **No decay, a slow trickle (decided 2026-10-24):** a vendor you ignore slowly loses rapport WITHIN their current step, but never drops a
+  step once reached - you can never lose a reward. A missed visit earns nothing but costs nothing extra.
+- **Each step gives:** better prices and faster saturation recovery; more frequent visits; bigger / rarer stock; new greeting lines; and
+  ONE unique unlockable per vendor at Friend or Partner (Big Tim: a golden axe; the Wizard: a spell; the Tinkerer: a device blueprint;
+  the cats: a cat pet).
+- **Personality:** the vendors' jabs at Cubie get sharper as they trust you; at Partner they share gossip about him - where Cubie's
+  backstory leaks out (the bill story can use it).
+- **Rules:** rapport never gates core progression (Cubie's trust stays the spine); small numbers (each step reachable in normal play);
+  ONE system for every vendor - a table of steps and rewards, with the per-vendor parts (loves list, lines, the unique reward) as data.
+  The Database's Character entries show each vendor's step.
+
 **Prestige** (Q2, details still open): settling the bill resets the run with Cubie's Goodwill (a lasting bonus) and a new, bigger bill.
 
 ### End game
