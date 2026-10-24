@@ -103,6 +103,19 @@ public class PixelDevTextEdit : MonoBehaviour
         return true;
     }
 
+    // The 2 s scan (Update's timer): put saved texts on their labels (a label found for the first time remembers the text it had).
+    private void ScanLabels()
+    {
+        foreach (TMP_Text label in canvasRoot.GetComponentsInChildren<TMP_Text>(false))
+        {
+            if (tracked.ContainsKey(label) || !Editable(label)) continue;
+            string path = PathOf(label);
+            if (!custom.ContainsKey(path)) continue;
+            if (!original.ContainsKey(path)) original[path] = label.text;
+            tracked[label] = path;
+        }
+    }
+
     private void Update()
     {
         if (canvasRoot == null || !PixelDevHub.IsOpen) { tap.Update(null); return; }
@@ -112,15 +125,7 @@ public class PixelDevTextEdit : MonoBehaviour
         if (scanTimer <= 0f)
         {
             scanTimer = 2f;
-            if (custom.Count > 0)
-                foreach (TMP_Text label in canvasRoot.GetComponentsInChildren<TMP_Text>(false))
-                {
-                    if (tracked.ContainsKey(label) || !Editable(label)) continue;
-                    string path = PathOf(label);
-                    if (!custom.ContainsKey(path)) continue;
-                    if (!original.ContainsKey(path)) original[path] = label.text;
-                    tracked[label] = path;
-                }
+            if (custom.Count > 0) ScanLabels();
         }
 
         // Right click on a label opens the box; right HOLD stays the favorite (PixelCardBoard).
