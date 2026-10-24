@@ -140,15 +140,7 @@ public class PixelDashMinigame : PixelMinigame
     protected override void Awake()
     {
         base.Awake();
-        if (clicker == null) clicker = PixelFind.First<PixelClicker>();
-        if (clicker == null)
-        {
-            Debug.LogError("PixelDashMinigame: no PixelClicker found in the scene.", this);
-            enabled = false;
-            return;
-        }
-        clicker.PixelCollected += OnCollected;
-        clicker.PixelHit += OnHit;
+        if (!HookCubeClicks(ref clicker, OnCollected, OnHit)) return;
         if (startRunning) running = true;
         spawnTimer = firstRoundDelay;
     }
@@ -156,19 +148,15 @@ public class PixelDashMinigame : PixelMinigame
     protected override void OnDestroy()
     {
         base.OnDestroy();
-        if (clicker != null)
-        {
-            clicker.PixelCollected -= OnCollected;
-            clicker.PixelHit -= OnHit;
-        }
+        UnhookCubeClicks(clicker, OnCollected, OnHit);
         if (activeRound) EndRound(false);
     }
 
     protected override void OnDespawned()
     {
         if (activeRound) EndRound(false);
-        if (uiRoot != null) { Destroy(uiRoot); uiRoot = null; statusLabel = null; }
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        DropRoundUi(ref uiRoot, ref statusLabel);
+        spawnTimer = RandomBetween(minInterval, maxInterval);
     }
 
     [ContextMenu("Start A Dash Now")]
@@ -189,7 +177,7 @@ public class PixelDashMinigame : PixelMinigame
 
     private void Update()
     {
-        if (ResultShownLong(ref resultTimer, activeRound, uiRoot)) { Destroy(uiRoot); uiRoot = null; statusLabel = null; }
+        if (ResultShownLong(ref resultTimer, activeRound, uiRoot)) DropRoundUi(ref uiRoot, ref statusLabel);
         if (activeRound) { Tick(Time.deltaTime); return; }
         if (!running || UserDisabled) return;
 
@@ -202,22 +190,7 @@ public class PixelDashMinigame : PixelMinigame
 
     private bool TryStart()
     {
-        cam = clicker.ViewCamera;
-        if (cam == null || clicker.PixelTransform == null) return false;
-
-        tierIndex = clicker.CurrentClickTierIndex;
-        if (tierIndex < 0 || tierIndex >= clicker.Tiers.Length) return false;
-        if (clicker.Tiers[tierIndex].rareDrop || clicker.Tiers[tierIndex].flyAway)
-        {
-            // Never a Dragon Cube / meteor: fall back to the first plain pixel.
-            tierIndex = clicker.IndexOf(PixelClicker.PixelType.White);
-            if (tierIndex < 0) return false;
-        }
-
-        // The cube stays this pixel for the whole round (a running potion already does the same by itself).
-        PixelConsumables potions = PixelFind.First<PixelConsumables>();
-        forcedByMe = potions == null || !potions.IsActive;
-        if (forcedByMe) clicker.SetForcedSpawnTier(clicker.Tiers[tierIndex].type);
+        if (!PrepareCubeRound(clicker, ref cam, ref tierIndex, ref forcedByMe)) return false;
 
         clicks = 0;
         timeLeft = roundSeconds;
@@ -304,10 +277,7 @@ public class PixelDashMinigame : PixelMinigame
         }
 
         // Put the cube at that spot on the screen (same distance from the camera, so it keeps its size).
-        Vector3 basePos = clicker.CubeBasePosition;
-        float depth = Vector3.Dot(basePos - cam.transform.position, cam.transform.forward);
-        Vector3 world = cam.ViewportToWorldPoint(new Vector3(current.x, current.y, depth));
-        clicker.SetCubeOffset(world - basePos);
+        PixelCubeScreenSpot.Place(clicker, cam, current);
 
         UpdateStatus();
     }
@@ -316,18 +286,14 @@ public class PixelDashMinigame : PixelMinigame
     {
         if (!activeRound) return;
         activeRound = false;
-        PixelMinigame.AutoClickerPaused = false;
+        ReleaseCubeRound(clicker, ref forcedByMe);
         clicker.SetCubeOffset(null);
-        if (forcedByMe) clicker.ClearForcedSpawnTier();
-        forcedByMe = false;
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        spawnTimer = RandomBetween(minInterval, maxInterval);
 
-        if (!paid) { if (uiRoot != null) { Destroy(uiRoot); uiRoot = null; statusLabel = null; } return; }
+        if (!paid) { DropRoundUi(ref uiRoot, ref statusLabel); return; }
 
+        double bonus = PayCubeRoundBonus(clicker, tierIndex, clicks, rewardMultiplier);
         PixelClicker.PixelTier tier = clicker.Tiers[tierIndex];
-        double perClick = tier.amountPerClick * clicker.PayoutMultiplier(tierIndex) * clicker.ClickMultiplier / Mathf.Max(1, tier.clicksToCollect);
-        double bonus = clicks * rewardMultiplier * perClick;
-        if (bonus > 0d) clicker.AddCurrency(tierIndex, bonus);
 
         PixelStats.Count("dash.clicks", clicks);
         PixelStats.Best("dash.best", clicks);

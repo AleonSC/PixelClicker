@@ -16,6 +16,9 @@
 //   SPAWN STEP: a subclass's Update counts its spawn timer with SpawnDue(ref spawnTimer, blocked) - due + PixelMinigameLimits.AllowAnother + its own
 //   'blocked' reason, else the limits' retry time (2026-10-24: was a copied block in 13 minigames). The Visitor rolls its own way.
 //   RESULT TEXT: ResultShownLong(ref resultTimer, roundRunning, uiRoot) says when a round's result text should go (Blink, Dash, Evade, Traffic).
+//   CUBE ROUNDS (Blink, Dash, Evade, Traffic - rounds played on the clickable cube): shared steps HookCubeClicks / UnhookCubeClicks (Awake /
+//   OnDestroy), PrepareCubeRound (TryStart: camera, round pixel, forced spawn tier), ReleaseCubeRound + PayCubeRoundBonus (EndRound),
+//   DropRoundUi, RandomBetween (2026-10-24: were copied blocks). Moving the cube on screen: PixelCubeScreenSpot.Place.
 //   Takeover rounds' bystander husks (shrink away during the round): PixelBystanders.
 //   TakeoverActive, AutoClickerPaused and the floor area claims are cleared on every scene unload (Settings > Restart).
 // ---------------------------------------------------
@@ -321,6 +324,85 @@ public abstract class PixelMinigame : MonoBehaviour
         if (timer > 0f) return false;
         if (blocked || !PixelMinigameLimits.AllowAnother(this)) { timer = PixelMinigameLimits.RetrySeconds; return false; }
         return true;
+    }
+
+    // ---- Cube rounds: shared steps of the minigames played on the clickable cube itself (Blink, Dash, Evade, Traffic) ----
+
+    /// <summary>Awake step of a cube round: finds the PixelClicker when the field is empty and listens to its clicks.
+    /// False (an error logged and this component switched off) when there is no PixelClicker in the scene.</summary>
+    protected bool HookCubeClicks(ref PixelClicker clicker, System.Action<int, double, bool> onCollected, System.Action<int, int, int, bool> onHit)
+    {
+        if (clicker == null) clicker = PixelFind.First<PixelClicker>();
+        if (clicker == null)
+        {
+            Debug.LogError(GetType().Name + ": no PixelClicker found in the scene.", this);
+            enabled = false;
+            return false;
+        }
+        clicker.PixelCollected += onCollected;
+        clicker.PixelHit += onHit;
+        return true;
+    }
+
+    /// <summary>OnDestroy step of a cube round: stops listening to the clicker's clicks (HookCubeClicks' other half).</summary>
+    protected static void UnhookCubeClicks(PixelClicker clicker, System.Action<int, double, bool> onCollected, System.Action<int, int, int, bool> onHit)
+    {
+        if (clicker == null) return;
+        clicker.PixelCollected -= onCollected;
+        clicker.PixelHit -= onHit;
+    }
+
+    /// <summary>A random wait between two Inspector values (either may be the bigger one), e.g. the next round's spawn timer.</summary>
+    protected static float RandomBetween(float a, float b) => Random.Range(Mathf.Min(a, b), Mathf.Max(a, b));
+
+    /// <summary>Destroys a round's UI (when it is still there) and forgets it and its status label.</summary>
+    protected static void DropRoundUi(ref GameObject uiRoot, ref TMPro.TMP_Text statusLabel)
+    {
+        if (uiRoot == null) return;
+        Destroy(uiRoot);
+        uiRoot = null;
+        statusLabel = null;
+    }
+
+    /// <summary>TryStart step of a cube round: takes the camera, picks the round's pixel (the one on the cube; never a Dragon Cube /
+    /// meteor - then White) and keeps the cube that pixel for the whole round (unless a running potion already does). False = no round now.</summary>
+    protected static bool PrepareCubeRound(PixelClicker clicker, ref Camera cam, ref int tierIndex, ref bool forcedByMe)
+    {
+        cam = clicker.ViewCamera;
+        if (cam == null || clicker.PixelTransform == null) return false;
+
+        tierIndex = clicker.CurrentClickTierIndex;
+        if (tierIndex < 0 || tierIndex >= clicker.Tiers.Length) return false;
+        if (clicker.Tiers[tierIndex].rareDrop || clicker.Tiers[tierIndex].flyAway)
+        {
+            tierIndex = clicker.IndexOf(PixelClicker.PixelType.White);   // never a Dragon Cube / meteor
+            if (tierIndex < 0) return false;
+        }
+
+        // The cube stays this pixel for the whole round (a running potion already does the same by itself).
+        PixelConsumables potions = PixelFind.First<PixelConsumables>();
+        forcedByMe = potions == null || !potions.IsActive;
+        if (forcedByMe) clicker.SetForcedSpawnTier(clicker.Tiers[tierIndex].type);
+        return true;
+    }
+
+    /// <summary>EndRound step of a cube round (PrepareCubeRound's other half): the auto clicker works again and the cube's forced pixel is let go.</summary>
+    protected static void ReleaseCubeRound(PixelClicker clicker, ref bool forcedByMe)
+    {
+        AutoClickerPaused = false;
+        if (forcedByMe) clicker.ClearForcedSpawnTier();
+        forcedByMe = false;
+    }
+
+    /// <summary>EndRound step of a cube round: pays the bonus - count x rewardMultiplier x the round pixel's worth per click -
+    /// and returns it (for the result line).</summary>
+    protected static double PayCubeRoundBonus(PixelClicker clicker, int tierIndex, int count, float rewardMultiplier)
+    {
+        PixelClicker.PixelTier tier = clicker.Tiers[tierIndex];
+        double perClick = tier.amountPerClick * clicker.PayoutMultiplier(tierIndex) * clicker.ClickMultiplier / Mathf.Max(1, tier.clicksToCollect);
+        double bonus = count * rewardMultiplier * perClick;
+        if (bonus > 0d) clicker.AddCurrency(tierIndex, bonus);
+        return bonus;
     }
 
     /// <summary>False = the player can't switch this one off (no switch in the Toggles window; e.g. the very rare cat visitors).</summary>

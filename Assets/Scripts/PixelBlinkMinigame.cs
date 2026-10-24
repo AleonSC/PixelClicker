@@ -138,15 +138,7 @@ public class PixelBlinkMinigame : PixelMinigame
     protected override void Awake()
     {
         base.Awake();
-        if (clicker == null) clicker = PixelFind.First<PixelClicker>();
-        if (clicker == null)
-        {
-            Debug.LogError("PixelBlinkMinigame: no PixelClicker found in the scene.", this);
-            enabled = false;
-            return;
-        }
-        clicker.PixelCollected += OnCollected;
-        clicker.PixelHit += OnHit;
+        if (!HookCubeClicks(ref clicker, OnCollected, OnHit)) return;
         if (startRunning) running = true;
         spawnTimer = firstRoundDelay;
     }
@@ -154,19 +146,15 @@ public class PixelBlinkMinigame : PixelMinigame
     protected override void OnDestroy()
     {
         base.OnDestroy();
-        if (clicker != null)
-        {
-            clicker.PixelCollected -= OnCollected;
-            clicker.PixelHit -= OnHit;
-        }
+        UnhookCubeClicks(clicker, OnCollected, OnHit);
         if (activeRound) EndRound(false);
     }
 
     protected override void OnDespawned()
     {
         if (activeRound) EndRound(false);
-        if (uiRoot != null) { Destroy(uiRoot); uiRoot = null; statusLabel = null; }
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        DropRoundUi(ref uiRoot, ref statusLabel);
+        spawnTimer = RandomBetween(minInterval, maxInterval);
     }
 
     [ContextMenu("Start A Blink Round Now")]
@@ -187,7 +175,7 @@ public class PixelBlinkMinigame : PixelMinigame
 
     private void Update()
     {
-        if (ResultShownLong(ref resultTimer, activeRound, uiRoot)) { Destroy(uiRoot); uiRoot = null; statusLabel = null; }
+        if (ResultShownLong(ref resultTimer, activeRound, uiRoot)) DropRoundUi(ref uiRoot, ref statusLabel);
         if (activeRound) { Tick(Time.deltaTime); return; }
         if (!running || UserDisabled) return;
 
@@ -200,21 +188,7 @@ public class PixelBlinkMinigame : PixelMinigame
 
     private bool TryStart()
     {
-        cam = clicker.ViewCamera;
-        if (cam == null || clicker.PixelTransform == null) return false;
-
-        tierIndex = clicker.CurrentClickTierIndex;
-        if (tierIndex < 0 || tierIndex >= clicker.Tiers.Length) return false;
-        if (clicker.Tiers[tierIndex].rareDrop || clicker.Tiers[tierIndex].flyAway)
-        {
-            tierIndex = clicker.IndexOf(PixelClicker.PixelType.White);   // never a Dragon Cube / meteor
-            if (tierIndex < 0) return false;
-        }
-
-        // The cube stays this pixel for the whole round (a running potion already does the same by itself).
-        PixelConsumables potions = PixelFind.First<PixelConsumables>();
-        forcedByMe = potions == null || !potions.IsActive;
-        if (forcedByMe) clicker.SetForcedSpawnTier(clicker.Tiers[tierIndex].type);
+        if (!PrepareCubeRound(clicker, ref cam, ref tierIndex, ref forcedByMe)) return false;
 
         clicks = 0;
         timeLeft = roundSeconds;
@@ -275,7 +249,7 @@ public class PixelBlinkMinigame : PixelMinigame
                 if (phaseT >= phaseLength)
                 {
                     spot = PickSpot(spot);   // the teleport: while it is too small to see
-                    PlaceCube(spot);
+                    PixelCubeScreenSpot.Place(clicker, cam, spot);   // (the same distance from the camera, so it keeps its size)
                     phase = Phase.Hidden;
                     phaseT = 0f;
                     phaseLength = Random.Range(Mathf.Min(hiddenMin, hiddenMax), Mathf.Max(hiddenMin, hiddenMax));
@@ -313,32 +287,19 @@ public class PixelBlinkMinigame : PixelMinigame
         UpdateStatus();
     }
 
-    /// <summary>Puts the cube at a spot on the screen (the same distance from the camera, so it keeps its size).</summary>
-    private void PlaceCube(Vector2 viewport)
-    {
-        Vector3 basePos = clicker.CubeBasePosition;
-        float depth = Vector3.Dot(basePos - cam.transform.position, cam.transform.forward);
-        Vector3 world = cam.ViewportToWorldPoint(new Vector3(viewport.x, viewport.y, depth));
-        clicker.SetCubeOffset(world - basePos);
-    }
-
     private void EndRound(bool paid)
     {
         if (!activeRound) return;
         activeRound = false;
-        PixelMinigame.AutoClickerPaused = false;
+        ReleaseCubeRound(clicker, ref forcedByMe);
         clicker.SetCubeOffset(null);
         clicker.SetCubeShrink(1f, shrinkSeconds);
-        if (forcedByMe) clicker.ClearForcedSpawnTier();
-        forcedByMe = false;
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        spawnTimer = RandomBetween(minInterval, maxInterval);
 
-        if (!paid) { if (uiRoot != null) { Destroy(uiRoot); uiRoot = null; statusLabel = null; } return; }
+        if (!paid) { DropRoundUi(ref uiRoot, ref statusLabel); return; }
 
+        double bonus = PayCubeRoundBonus(clicker, tierIndex, clicks, rewardMultiplier);
         PixelClicker.PixelTier tier = clicker.Tiers[tierIndex];
-        double perClick = tier.amountPerClick * clicker.PayoutMultiplier(tierIndex) * clicker.ClickMultiplier / Mathf.Max(1, tier.clicksToCollect);
-        double bonus = clicks * rewardMultiplier * perClick;
-        if (bonus > 0d) clicker.AddCurrency(tierIndex, bonus);
 
         PixelStats.Count("blink.clicks", clicks);
         PixelStats.Best("blink.best", clicks);

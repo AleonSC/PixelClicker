@@ -156,15 +156,7 @@ public class PixelTrafficMinigame : PixelMinigame
     protected override void Awake()
     {
         base.Awake();
-        if (clicker == null) clicker = PixelFind.First<PixelClicker>();
-        if (clicker == null)
-        {
-            Debug.LogError("PixelTrafficMinigame: no PixelClicker found in the scene.", this);
-            enabled = false;
-            return;
-        }
-        clicker.PixelCollected += OnCollected;
-        clicker.PixelHit += OnHit;
+        if (!HookCubeClicks(ref clicker, OnCollected, OnHit)) return;
         if (startRunning) running = true;
         spawnTimer = firstRoundDelay;
     }
@@ -172,11 +164,7 @@ public class PixelTrafficMinigame : PixelMinigame
     protected override void OnDestroy()
     {
         base.OnDestroy();
-        if (clicker != null)
-        {
-            clicker.PixelCollected -= OnCollected;
-            clicker.PixelHit -= OnHit;
-        }
+        UnhookCubeClicks(clicker, OnCollected, OnHit);
         if (activeRound) EndRound(false);
         DestroyLight();
     }
@@ -185,8 +173,8 @@ public class PixelTrafficMinigame : PixelMinigame
     {
         if (activeRound) EndRound(false);
         DestroyLight();
-        if (uiRoot != null) { Destroy(uiRoot); uiRoot = null; statusLabel = null; }
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        DropRoundUi(ref uiRoot, ref statusLabel);
+        spawnTimer = RandomBetween(minInterval, maxInterval);
     }
 
     [ContextMenu("Start A Traffic Round Now")]
@@ -207,7 +195,7 @@ public class PixelTrafficMinigame : PixelMinigame
 
     private void Update()
     {
-        if (ResultShownLong(ref resultTimer, activeRound, uiRoot)) { Destroy(uiRoot); uiRoot = null; statusLabel = null; }
+        if (ResultShownLong(ref resultTimer, activeRound, uiRoot)) DropRoundUi(ref uiRoot, ref statusLabel);
         if (activeRound) { Tick(Time.deltaTime); return; }
         if (!running || UserDisabled) return;
 
@@ -261,21 +249,7 @@ public class PixelTrafficMinigame : PixelMinigame
 
     private bool TryStart()
     {
-        cam = clicker.ViewCamera;
-        if (cam == null || clicker.PixelTransform == null) return false;
-
-        tierIndex = clicker.CurrentClickTierIndex;
-        if (tierIndex < 0 || tierIndex >= clicker.Tiers.Length) return false;
-        if (clicker.Tiers[tierIndex].rareDrop || clicker.Tiers[tierIndex].flyAway)
-        {
-            tierIndex = clicker.IndexOf(PixelClicker.PixelType.White);   // never a Dragon Cube / meteor
-            if (tierIndex < 0) return false;
-        }
-
-        // The cube stays this pixel for the whole round (a running potion already does the same by itself).
-        PixelConsumables potions = PixelFind.First<PixelConsumables>();
-        forcedByMe = potions == null || !potions.IsActive;
-        if (forcedByMe) clicker.SetForcedSpawnTier(clicker.Tiers[tierIndex].type);
+        if (!PrepareCubeRound(clicker, ref cam, ref tierIndex, ref forcedByMe)) return false;
 
         points = 0;
         timeLeft = roundSeconds;
@@ -338,18 +312,14 @@ public class PixelTrafficMinigame : PixelMinigame
     {
         if (!activeRound) return;
         activeRound = false;
-        PixelMinigame.AutoClickerPaused = false;
-        if (forcedByMe) clicker.ClearForcedSpawnTier();
-        forcedByMe = false;
+        ReleaseCubeRound(clicker, ref forcedByMe);
         DestroyLight();
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        spawnTimer = RandomBetween(minInterval, maxInterval);
 
-        if (!paid) { if (uiRoot != null) { Destroy(uiRoot); uiRoot = null; statusLabel = null; } return; }
+        if (!paid) { DropRoundUi(ref uiRoot, ref statusLabel); return; }
 
+        double bonus = PayCubeRoundBonus(clicker, tierIndex, Mathf.Max(0, points), rewardMultiplier);
         PixelClicker.PixelTier tier = clicker.Tiers[tierIndex];
-        double perClick = tier.amountPerClick * clicker.PayoutMultiplier(tierIndex) * clicker.ClickMultiplier / Mathf.Max(1, tier.clicksToCollect);
-        double bonus = Mathf.Max(0, points) * rewardMultiplier * perClick;
-        if (bonus > 0d) clicker.AddCurrency(tierIndex, bonus);
 
         PixelStats.Best("traffic.best", Mathf.Max(0, points));
         if (points > 0) Report(MinigameEvent.Clicked);   // a success (bonus skill XP)
