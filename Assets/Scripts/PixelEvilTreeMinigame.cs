@@ -200,6 +200,37 @@ public class PixelEvilTreeMinigame : PixelMinigame
         return g.transform;
     }
 
+    /// <summary>The tree's body under 'root' (unit size: 1 tall): trunk, canopy, the glowing face ('eyeL' / 'eyeR' blink) and four whipping branch arms (added to 'arms').</summary>
+    private Transform BuildTreeBody(Transform root, Material bark, Material leaf, Material glow, Material dark, List<Arm> arms, out Transform eyeL, out Transform eyeR)
+    {
+        Transform body = new GameObject("Body").transform;
+        body.SetParent(root, false);
+        Part(body, PrimitiveType.Cylinder, "Trunk", new Vector3(0f, 0.32f, 0f), new Vector3(0.26f, 0.32f, 0.26f), bark, true);
+        Part(body, PrimitiveType.Sphere, "Canopy", new Vector3(0f, 0.78f, 0f), new Vector3(0.62f, 0.5f, 0.62f), leaf, true);
+        Part(body, PrimitiveType.Sphere, "Canopy Left", new Vector3(-0.26f, 0.66f, 0f), new Vector3(0.38f, 0.32f, 0.38f), leaf, false);
+        Part(body, PrimitiveType.Sphere, "Canopy Right", new Vector3(0.27f, 0.7f, 0.04f), new Vector3(0.36f, 0.3f, 0.36f), leaf, false);
+        // Face on the trunk (towards the camera side, set each frame by turning the body).
+        eyeL = Part(body, PrimitiveType.Sphere, "Eye L", new Vector3(-0.07f, 0.46f, -0.125f), new Vector3(0.07f, 0.045f, 0.03f), glow, false);
+        eyeR = Part(body, PrimitiveType.Sphere, "Eye R", new Vector3(0.07f, 0.46f, -0.125f), new Vector3(0.07f, 0.045f, 0.03f), glow, false);
+        Part(body, PrimitiveType.Cube, "Mouth", new Vector3(0f, 0.3f, -0.128f), new Vector3(0.13f, 0.035f, 0.02f), dark, false);
+        Part(body, PrimitiveType.Cube, "Fang L", new Vector3(-0.04f, 0.285f, -0.13f), new Vector3(0.016f, 0.03f, 0.02f), glow, false);
+        Part(body, PrimitiveType.Cube, "Fang R", new Vector3(0.04f, 0.285f, -0.13f), new Vector3(0.016f, 0.03f, 0.02f), glow, false);
+
+        // Arms: branches that whip about from pivots on the trunk.
+        for (int i = 0; i < 4; i++)
+        {
+            Transform pivot = new GameObject("Arm " + i).transform;
+            pivot.SetParent(body, false);
+            float side = i % 2 == 0 ? -1f : 1f;
+            pivot.localPosition = new Vector3(0f, 0.42f + 0.07f * (i / 2), 0f);
+            pivot.localRotation = Quaternion.Euler(0f, i < 2 ? 0f : 90f, 0f);
+            Part(pivot, PrimitiveType.Cylinder, "Branch", new Vector3(side * 0.22f, 0f, 0f), new Vector3(0.035f, 0.22f, 0.035f), bark, false).localRotation = Quaternion.Euler(0f, 0f, 90f);
+            Part(pivot, PrimitiveType.Sphere, "Twig Leaves", new Vector3(side * 0.45f, 0f, 0f), new Vector3(0.14f, 0.1f, 0.14f), leaf, false);
+            arms.Add(new Arm { pivot = pivot, speed = Random.Range(3f, 6f), phase = Random.value * 6.28f, reach = side });
+        }
+        return body;
+    }
+
     private IEnumerator TreeRoutine()
     {
         treeActive = true;
@@ -219,32 +250,8 @@ public class PixelEvilTreeMinigame : PixelMinigame
         Material glow = Flat(eyeColor);
         Material dark = Flat(new Color(0.05f, 0.02f, 0.05f, 1f));
 
-        Transform body = new GameObject("Body").transform;
-        body.SetParent(root.transform, false);
-        Part(body, PrimitiveType.Cylinder, "Trunk", new Vector3(0f, 0.32f, 0f), new Vector3(0.26f, 0.32f, 0.26f), bark, true);
-        Part(body, PrimitiveType.Sphere, "Canopy", new Vector3(0f, 0.78f, 0f), new Vector3(0.62f, 0.5f, 0.62f), leaf, true);
-        Part(body, PrimitiveType.Sphere, "Canopy Left", new Vector3(-0.26f, 0.66f, 0f), new Vector3(0.38f, 0.32f, 0.38f), leaf, false);
-        Part(body, PrimitiveType.Sphere, "Canopy Right", new Vector3(0.27f, 0.7f, 0.04f), new Vector3(0.36f, 0.3f, 0.36f), leaf, false);
-        // Face on the trunk (towards the camera side, set each frame by turning the body).
-        Transform eyeL = Part(body, PrimitiveType.Sphere, "Eye L", new Vector3(-0.07f, 0.46f, -0.125f), new Vector3(0.07f, 0.045f, 0.03f), glow, false);
-        Transform eyeR = Part(body, PrimitiveType.Sphere, "Eye R", new Vector3(0.07f, 0.46f, -0.125f), new Vector3(0.07f, 0.045f, 0.03f), glow, false);
-        Part(body, PrimitiveType.Cube, "Mouth", new Vector3(0f, 0.3f, -0.128f), new Vector3(0.13f, 0.035f, 0.02f), dark, false);
-        Part(body, PrimitiveType.Cube, "Fang L", new Vector3(-0.04f, 0.285f, -0.13f), new Vector3(0.016f, 0.03f, 0.02f), glow, false);
-        Part(body, PrimitiveType.Cube, "Fang R", new Vector3(0.04f, 0.285f, -0.13f), new Vector3(0.016f, 0.03f, 0.02f), glow, false);
-
-        // Arms: branches that whip about from pivots on the trunk.
         List<Arm> arms = new List<Arm>();
-        for (int i = 0; i < 4; i++)
-        {
-            Transform pivot = new GameObject("Arm " + i).transform;
-            pivot.SetParent(body, false);
-            float side = i % 2 == 0 ? -1f : 1f;
-            pivot.localPosition = new Vector3(0f, 0.42f + 0.07f * (i / 2), 0f);
-            pivot.localRotation = Quaternion.Euler(0f, i < 2 ? 0f : 90f, 0f);
-            Part(pivot, PrimitiveType.Cylinder, "Branch", new Vector3(side * 0.22f, 0f, 0f), new Vector3(0.035f, 0.22f, 0.035f), bark, false).localRotation = Quaternion.Euler(0f, 0f, 90f);
-            Part(pivot, PrimitiveType.Sphere, "Twig Leaves", new Vector3(side * 0.45f, 0f, 0f), new Vector3(0.14f, 0.1f, 0.14f), leaf, false);
-            arms.Add(new Arm { pivot = pivot, speed = Random.Range(3f, 6f), phase = Random.value * 6.28f, reach = side });
-        }
+        Transform body = BuildTreeBody(root.transform, bark, leaf, glow, dark, arms, out Transform eyeL, out Transform eyeR);
 
         // Health bar: a flat bar above the tree that always faces the camera.
         GameObject barRoot = new GameObject("Evil Tree Health");

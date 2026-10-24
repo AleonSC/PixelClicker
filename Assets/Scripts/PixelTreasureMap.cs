@@ -84,7 +84,7 @@ public class PixelTreasureMap : MonoBehaviour, IPixelDatabaseSource
 
     private void Update()
     {
-        if (clicker == null) clicker = PixelFind.First<PixelClicker>();
+        if (clicker == null) clicker = PixelFind.Cached<PixelClicker>();
         if (clicker == null) return;
         if (!showing && queue.Count > 0) StartCoroutine(Show(queue.Dequeue()));
 

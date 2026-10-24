@@ -919,6 +919,15 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         canvasRoot = PixelUIKit.CreateCanvas("PixelVisitor Canvas", 700, new Vector2(1920f, 1080f), true);
         Track(canvasRoot);
 
+        BuildVisitorArt();
+        BuildGreetingPanel();
+        BuildWaresPanel();
+        BuildAsidePanel();
+    }
+
+    /// <summary>The visitor: a little pixel-art person made of blocks (300 x 400 design space, scaled to visitorHeight), bottom right.</summary>
+    private void BuildVisitorArt()
+    {
         // --- The visitor: a little pixel-art person made of blocks (300 x 400 design space, scaled to visitorHeight).
         GameObject holder = new GameObject("Visitor", typeof(RectTransform));
         holder.transform.SetParent(canvasRoot.transform, false);
@@ -937,7 +946,11 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         artRect.localScale = Vector3.one * scale;
 
         DrawVisitor(art.transform);
+    }
 
+    /// <summary>The greeting box left of the visitor: the (typed) greeting and the Accept / Reject buttons.</summary>
+    private void BuildGreetingPanel()
+    {
         // --- Greeting box (left of the visitor).
         PixelWindowParts greetBox = Panel("Greeting", Pick(visitorName, DefaultName), new Vector2(720f, 470f), visitorRect.sizeDelta.x + 90f);
         greetingPanel = greetBox.Rect;
@@ -959,7 +972,11 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         Corner(reject.GetComponent<RectTransform>(), new Vector2(0.75f, 0f), new Vector2(0f, 36f));
         reject.onClick.AddListener(() => { if (Typing) { FinishType(); return; } if (decision == 0) decision = 2; });
         greetingPanel.gameObject.SetActive(false);
+    }
 
+    /// <summary>The wares window: rolls this visit's wares / trades (selection, stock, own prices), then builds the sale line, the Buy / Sell tabs, the list with its rows, a vendor's own Sell panel and the Done button.</summary>
+    private void BuildWaresPanel()
+    {
         // --- Wares window.
         float barH = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
         trades = RollTrades();
@@ -1041,57 +1058,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         float y = 0f;
         for (int n = 0; n < rowCount; n++)
         {
-            int item = entries[n].Key;
-            Trade trade = entries[n].Value;
-            bool isTrade = trade != null;
-            WareRow row = new WareRow { item = item, trade = trade, tab = isTrade ? 1 : 0 };
-            GameObject go = new GameObject("Ware", typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(waresContent, false);
-            go.GetComponent<Image>().color = new Color(0.16f, 0.16f, 0.2f, 1f);
-            PixelUIKit.StyleButtonLook(go.GetComponent<Image>());   // rounded, like the buttons (the look only: a row is not recoloured as a button)
-            go.GetComponent<Image>().raycastTarget = false;
-            row.rect = go.GetComponent<RectTransform>();
-            row.rect.anchorMin = new Vector2(0f, 1f);
-            row.rect.anchorMax = new Vector2(1f, 1f);
-            row.rect.pivot = new Vector2(0.5f, 1f);
-            row.rect.sizeDelta = new Vector2(-20f, rowH);
-            row.rect.anchoredPosition = new Vector2(0f, -y);
-            Image rowBack = go.GetComponent<Image>();
-            Outline rowGlow = null;
-            if (!isTrade && Highlighted(item))
-            {
-                rowGlow = go.AddComponent<Outline>();
-                rowGlow.effectDistance = new Vector2(4f, -4f);
-                rowGlow.useGraphicAlpha = false;
-            }
-
-            row.name = PixelUIKit.CreateText(Font, go.transform, "Name", isTrade ? TradeGetText(trade) : consumables.ItemName(item), 32f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, Color.white);
-            row.name.enableAutoSizing = true; row.name.fontSizeMax = 32f; row.name.fontSizeMin = 14f;
-            Anchor(row.name.rectTransform, 0f, 0.55f, 0.62f, 1f, new Vector2(16f, 0f), new Vector2(0f, -6f));
-
-            row.cost = PixelUIKit.CreateText(Font, go.transform, "Cost", "", 24f, TextAlignmentOptions.MidlineLeft, FontStyles.Normal, Color.white);
-            row.cost.richText = true;
-            row.cost.enableAutoSizing = true; row.cost.fontSizeMax = 24f; row.cost.fontSizeMin = 11f;
-            Anchor(row.cost.rectTransform, 0f, 0.05f, 0.62f, 0.55f, new Vector2(16f, 0f), new Vector2(0f, 0f));
-
-            row.owned = PixelUIKit.CreateText(Font, go.transform, "Owned", "", 22f, TextAlignmentOptions.MidlineRight, FontStyles.Normal, new Color(1f, 1f, 1f, 0.6f));
-            row.owned.enableAutoSizing = true; row.owned.fontSizeMax = 22f; row.owned.fontSizeMin = 11f;
-            Anchor(row.owned.rectTransform, 0.62f, 0.05f, 1f, 0.55f, new Vector2(0f, 0f), new Vector2(-190f, 0f));
-
-            row.stockLabel = PixelUIKit.CreateText(Font, go.transform, "Stock", "", 24f, TextAlignmentOptions.MidlineRight, FontStyles.Bold, new Color(1f, 0.85f, 0.4f));
-            row.stockLabel.enableAutoSizing = true; row.stockLabel.fontSizeMax = 24f; row.stockLabel.fontSizeMin = 11f;
-            Anchor(row.stockLabel.rectTransform, 0.62f, 0.55f, 1f, 1f, new Vector2(0f, 0f), new Vector2(-190f, -6f));
-
-            row.buy = PixelUIKit.CreateButton(Font, go.transform, "Buy", isTrade ? TradeText : buyText, new Vector2(150f, 70f), ButtonRole.Success, 32f);
-            row.buyImage = row.buy.GetComponent<Image>();
-            row.buyLabel = row.buy.GetComponentInChildren<TMP_Text>();
-            RectTransform br = row.buy.GetComponent<RectTransform>();
-            br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0.5f);
-            br.anchoredPosition = new Vector2(-14f, 0f);
-            if (rowGlow != null) go.AddComponent<PixelPulseGlow>().Setup(rowBack, rowGlow, row.name);
-            int captured = item;
-            Trade capturedTrade = trade;
-            row.buy.onClick.AddListener(() => { if (capturedTrade != null) DoTrade(capturedTrade); else Buy(captured); });
+            WareRow row = BuildWareRow(entries[n].Key, entries[n].Value, rowH, y);
             rows.Add(row);
             y += rowH + 8f;
         }
@@ -1104,7 +1071,66 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         Corner(done.GetComponent<RectTransform>(), new Vector2(0.5f, 0f), new Vector2(0f, 20f));
         done.onClick.AddListener(() => waresDone = true);
         waresPanel.gameObject.SetActive(false);
+    }
 
+    /// <summary>One row of the wares list at 'y' (from the list's top): the item's (or trade's) name, cost, owned count, stock and its Buy / Trade button; a highlighted ware gets a pulsing glow.</summary>
+    private WareRow BuildWareRow(int item, Trade trade, float rowH, float y)
+    {
+        bool isTrade = trade != null;
+        WareRow row = new WareRow { item = item, trade = trade, tab = isTrade ? 1 : 0 };
+        GameObject go = new GameObject("Ware", typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(waresContent, false);
+        go.GetComponent<Image>().color = new Color(0.16f, 0.16f, 0.2f, 1f);
+        PixelUIKit.StyleButtonLook(go.GetComponent<Image>());   // rounded, like the buttons (the look only: a row is not recoloured as a button)
+        go.GetComponent<Image>().raycastTarget = false;
+        row.rect = go.GetComponent<RectTransform>();
+        row.rect.anchorMin = new Vector2(0f, 1f);
+        row.rect.anchorMax = new Vector2(1f, 1f);
+        row.rect.pivot = new Vector2(0.5f, 1f);
+        row.rect.sizeDelta = new Vector2(-20f, rowH);
+        row.rect.anchoredPosition = new Vector2(0f, -y);
+        Image rowBack = go.GetComponent<Image>();
+        Outline rowGlow = null;
+        if (!isTrade && Highlighted(item))
+        {
+            rowGlow = go.AddComponent<Outline>();
+            rowGlow.effectDistance = new Vector2(4f, -4f);
+            rowGlow.useGraphicAlpha = false;
+        }
+
+        row.name = PixelUIKit.CreateText(Font, go.transform, "Name", isTrade ? TradeGetText(trade) : consumables.ItemName(item), 32f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, Color.white);
+        row.name.enableAutoSizing = true; row.name.fontSizeMax = 32f; row.name.fontSizeMin = 14f;
+        Anchor(row.name.rectTransform, 0f, 0.55f, 0.62f, 1f, new Vector2(16f, 0f), new Vector2(0f, -6f));
+
+        row.cost = PixelUIKit.CreateText(Font, go.transform, "Cost", "", 24f, TextAlignmentOptions.MidlineLeft, FontStyles.Normal, Color.white);
+        row.cost.richText = true;
+        row.cost.enableAutoSizing = true; row.cost.fontSizeMax = 24f; row.cost.fontSizeMin = 11f;
+        Anchor(row.cost.rectTransform, 0f, 0.05f, 0.62f, 0.55f, new Vector2(16f, 0f), new Vector2(0f, 0f));
+
+        row.owned = PixelUIKit.CreateText(Font, go.transform, "Owned", "", 22f, TextAlignmentOptions.MidlineRight, FontStyles.Normal, new Color(1f, 1f, 1f, 0.6f));
+        row.owned.enableAutoSizing = true; row.owned.fontSizeMax = 22f; row.owned.fontSizeMin = 11f;
+        Anchor(row.owned.rectTransform, 0.62f, 0.05f, 1f, 0.55f, new Vector2(0f, 0f), new Vector2(-190f, 0f));
+
+        row.stockLabel = PixelUIKit.CreateText(Font, go.transform, "Stock", "", 24f, TextAlignmentOptions.MidlineRight, FontStyles.Bold, new Color(1f, 0.85f, 0.4f));
+        row.stockLabel.enableAutoSizing = true; row.stockLabel.fontSizeMax = 24f; row.stockLabel.fontSizeMin = 11f;
+        Anchor(row.stockLabel.rectTransform, 0.62f, 0.55f, 1f, 1f, new Vector2(0f, 0f), new Vector2(-190f, -6f));
+
+        row.buy = PixelUIKit.CreateButton(Font, go.transform, "Buy", isTrade ? TradeText : buyText, new Vector2(150f, 70f), ButtonRole.Success, 32f);
+        row.buyImage = row.buy.GetComponent<Image>();
+        row.buyLabel = row.buy.GetComponentInChildren<TMP_Text>();
+        RectTransform br = row.buy.GetComponent<RectTransform>();
+        br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0.5f);
+        br.anchoredPosition = new Vector2(-14f, 0f);
+        if (rowGlow != null) go.AddComponent<PixelPulseGlow>().Setup(rowBack, rowGlow, row.name);
+        int captured = item;
+        Trade capturedTrade = trade;
+        row.buy.onClick.AddListener(() => { if (capturedTrade != null) DoTrade(capturedTrade); else Buy(captured); });
+        return row;
+    }
+
+    /// <summary>A second speech box (only when the subclass set AsideText for this visit): its message, Next and a hold-to-go-back arrow.</summary>
+    private void BuildAsidePanel()
+    {
         // --- A second speech box (only when the subclass set AsideText for this visit).
         asidePanel = null;
         if (!string.IsNullOrEmpty(AsideText))

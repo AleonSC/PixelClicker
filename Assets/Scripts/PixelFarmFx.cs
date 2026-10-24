@@ -113,22 +113,31 @@ public static class PixelFarmFx
         if (PixelFx.Material == null) return;
         type = PixelBlockCatalog.FxType(type);   // (a card can borrow another block's break burst: fxAs)
         PixelFx.Burst root = Root("Farm Break", centre);
-        ParticleSystem Burst(string name, Vector2 life, Vector2 speed, Vector2 psize, float gravity, Color a, Color b, int count, float radius, bool fade, Vector2 sizeLife = default)
-        {
-            PixelFx.Spec s = new PixelFx.Spec
-            {
-                lifetime = life, speed = speed * size, size = psize * size, gravity = gravity, colorA = a, colorB = b, burst = count,
-                shape = ParticleSystemShapeType.Sphere, shapeRadius = size * radius, randomDirection = 0.1f, maxParticles = count + 10, sizeOverLife = sizeLife,
-            };
-            if (fade) s.overLife = PixelFx.FadeGradient(Color.white, Color.white, Color.white, 0.85f);
-            return root.Add(name, s);
-        }
+        if (BreakFarmBlock(type, centre, size, root)) return;
+        if (BreakWoodForageBlock(type, centre, size, root)) return;
+        BreakFishBlock(type, centre, size, root);
+    }
 
+    /// <summary>One particle burst of a break (a sphere of bits around the block, its sizes scaled by the block size).</summary>
+    private static ParticleSystem Burst(PixelFx.Burst root, float size, string name, Vector2 life, Vector2 speed, Vector2 psize, float gravity, Color a, Color b, int count, float radius, bool fade, Vector2 sizeLife = default)
+    {
+        PixelFx.Spec s = new PixelFx.Spec
+        {
+            lifetime = life, speed = speed * size, size = psize * size, gravity = gravity, colorA = a, colorB = b, burst = count,
+            shape = ParticleSystemShapeType.Sphere, shapeRadius = size * radius, randomDirection = 0.1f, maxParticles = count + 10, sizeOverLife = sizeLife,
+        };
+        if (fade) s.overLife = PixelFx.FadeGradient(Color.white, Color.white, Color.white, 0.85f);
+        return root.Add(name, s);
+    }
+
+    /// <summary>The break burst of the farm blocks (Dirt, Water, Fertilizer, Pollen, Wheat, Weevil); false for any other type.</summary>
+    private static bool BreakFarmBlock(PixelClicker.PixelType type, Vector3 centre, float size, PixelFx.Burst root)
+    {
         switch (type)
         {
             case PixelClicker.PixelType.Dirt:
-                Burst("Clods", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3.4f), new Vector2(0.07f, 0.16f), 2.6f, new Color(0.45f, 0.3f, 0.17f), new Color(0.28f, 0.18f, 0.1f), 22, 0.5f, false).Play();
-                Burst("Dust", new Vector2(0.9f, 1.5f), new Vector2(0.2f, 1f), new Vector2(0.25f, 0.5f), -0.04f, new Color(0.62f, 0.5f, 0.38f, 0.5f), new Color(0.5f, 0.4f, 0.3f, 0.4f), 8, 0.5f, true, new Vector2(0.6f, 1.6f)).Play();
+                Burst(root, size, "Clods", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3.4f), new Vector2(0.07f, 0.16f), 2.6f, new Color(0.45f, 0.3f, 0.17f), new Color(0.28f, 0.18f, 0.1f), 22, 0.5f, false).Play();
+                Burst(root, size, "Dust", new Vector2(0.9f, 1.5f), new Vector2(0.2f, 1f), new Vector2(0.25f, 0.5f), -0.04f, new Color(0.62f, 0.5f, 0.38f, 0.5f), new Color(0.5f, 0.4f, 0.3f, 0.4f), 8, 0.5f, true, new Vector2(0.6f, 1.6f)).Play();
                 break;
             case PixelClicker.PixelType.Water:
             {
@@ -152,120 +161,142 @@ public static class PixelFarmFx
                 break;
             }
             case PixelClicker.PixelType.Fertilizer:
-                Burst("Spores", new Vector2(1f, 1.8f), new Vector2(0.6f, 2.2f), new Vector2(0.06f, 0.14f), -0.15f, new Color(0.7f, 1f, 0.4f), new Color(0.35f, 0.8f, 0.2f), 30, 0.55f, true, new Vector2(1f, 0.2f)).Play();
-                Burst("Clumps", new Vector2(0.6f, 1f), new Vector2(1f, 3f), new Vector2(0.06f, 0.12f), 2.5f, new Color(0.45f, 0.35f, 0.15f), new Color(0.3f, 0.5f, 0.15f), 12, 0.5f, false).Play();
+                Burst(root, size, "Spores", new Vector2(1f, 1.8f), new Vector2(0.6f, 2.2f), new Vector2(0.06f, 0.14f), -0.15f, new Color(0.7f, 1f, 0.4f), new Color(0.35f, 0.8f, 0.2f), 30, 0.55f, true, new Vector2(1f, 0.2f)).Play();
+                Burst(root, size, "Clumps", new Vector2(0.6f, 1f), new Vector2(1f, 3f), new Vector2(0.06f, 0.12f), 2.5f, new Color(0.45f, 0.35f, 0.15f), new Color(0.3f, 0.5f, 0.15f), 12, 0.5f, false).Play();
                 PixelFxRing.Spawn(centre, new Color(0.6f, 1f, 0.35f, 0.6f), size * 0.5f, size * 3.5f, 0.6f, 0f);
                 break;
             case PixelClicker.PixelType.Pollen:
-                Burst("Cloud", new Vector2(1.2f, 2.2f), new Vector2(0.3f, 1.4f), new Vector2(0.15f, 0.35f), -0.05f, new Color(1f, 0.92f, 0.4f, 0.6f), new Color(1f, 0.8f, 0.25f, 0.5f), 14, 0.5f, true, new Vector2(0.6f, 1.8f)).Play();
-                Burst("Motes", new Vector2(1.2f, 2.4f), new Vector2(0.5f, 1.8f), new Vector2(0.05f, 0.11f), -0.08f, new Color(1f, 1f, 0.7f), new Color(1f, 0.85f, 0.3f), 34, 0.5f, true, new Vector2(1f, 0.2f)).Play();
+                Burst(root, size, "Cloud", new Vector2(1.2f, 2.2f), new Vector2(0.3f, 1.4f), new Vector2(0.15f, 0.35f), -0.05f, new Color(1f, 0.92f, 0.4f, 0.6f), new Color(1f, 0.8f, 0.25f, 0.5f), 14, 0.5f, true, new Vector2(0.6f, 1.8f)).Play();
+                Burst(root, size, "Motes", new Vector2(1.2f, 2.4f), new Vector2(0.5f, 1.8f), new Vector2(0.05f, 0.11f), -0.08f, new Color(1f, 1f, 0.7f), new Color(1f, 0.85f, 0.3f), 34, 0.5f, true, new Vector2(1f, 0.2f)).Play();
                 break;
             case PixelClicker.PixelType.Wheat:
-                Burst("Chaff", new Vector2(0.9f, 1.6f), new Vector2(1.2f, 3.2f), new Vector2(0.05f, 0.12f), 0.9f, new Color(0.98f, 0.86f, 0.45f), new Color(0.82f, 0.62f, 0.22f), 36, 0.5f, false).Play();
-                Burst("Grains", new Vector2(0.7f, 1.2f), new Vector2(1.4f, 3.6f), new Vector2(0.05f, 0.09f), 2.4f, new Color(0.95f, 0.78f, 0.3f), new Color(0.75f, 0.55f, 0.18f), 14, 0.45f, false).Play();
+                Burst(root, size, "Chaff", new Vector2(0.9f, 1.6f), new Vector2(1.2f, 3.2f), new Vector2(0.05f, 0.12f), 0.9f, new Color(0.98f, 0.86f, 0.45f), new Color(0.82f, 0.62f, 0.22f), 36, 0.5f, false).Play();
+                Burst(root, size, "Grains", new Vector2(0.7f, 1.2f), new Vector2(1.4f, 3.6f), new Vector2(0.05f, 0.09f), 2.4f, new Color(0.95f, 0.78f, 0.3f), new Color(0.75f, 0.55f, 0.18f), 14, 0.45f, false).Play();
                 break;
             case PixelClicker.PixelType.Weevil:
-                Burst("Legs", new Vector2(0.5f, 0.9f), new Vector2(1.6f, 4.2f), new Vector2(0.05f, 0.1f), 2.2f, new Color(0.15f, 0.1f, 0.07f), new Color(0.32f, 0.22f, 0.12f), 24, 0.5f, false).Play();
-                Burst("Splat", new Vector2(0.6f, 1.1f), new Vector2(0.4f, 1.6f), new Vector2(0.12f, 0.26f), 0.4f, new Color(0.7f, 0.75f, 0.25f, 0.8f), new Color(0.5f, 0.55f, 0.15f, 0.7f), 8, 0.5f, true, new Vector2(1f, 1.4f)).Play();
+                Burst(root, size, "Legs", new Vector2(0.5f, 0.9f), new Vector2(1.6f, 4.2f), new Vector2(0.05f, 0.1f), 2.2f, new Color(0.15f, 0.1f, 0.07f), new Color(0.32f, 0.22f, 0.12f), 24, 0.5f, false).Play();
+                Burst(root, size, "Splat", new Vector2(0.6f, 1.1f), new Vector2(0.4f, 1.6f), new Vector2(0.12f, 0.26f), 0.4f, new Color(0.7f, 0.75f, 0.25f, 0.8f), new Color(0.5f, 0.55f, 0.15f, 0.7f), 8, 0.5f, true, new Vector2(1f, 1.4f)).Play();
                 break;
+            default: return false;
+        }
+        return true;
+    }
+
+    /// <summary>The break burst of the wood and forage blocks (Wood, Twig, Bark, Sap, Leaf, Heartwood, Berry, Mushroom, Herb, Truffle, Weeds, Mold, Toadstool); false for any other type.</summary>
+    private static bool BreakWoodForageBlock(PixelClicker.PixelType type, Vector3 centre, float size, PixelFx.Burst root)
+    {
+        switch (type)
+        {
             case PixelClicker.PixelType.Wood:
             case PixelClicker.PixelType.Twig:
-                Burst("Chips", new Vector2(0.6f, 1.1f), new Vector2(1.4f, 3.6f), new Vector2(0.06f, 0.14f), 2.6f, new Color(0.7f, 0.5f, 0.3f), new Color(0.45f, 0.3f, 0.16f), 26, 0.5f, false).Play();
-                Burst("Splinters", new Vector2(0.5f, 0.9f), new Vector2(1.8f, 4.4f), new Vector2(0.03f, 0.06f), 2.2f, new Color(0.9f, 0.75f, 0.5f), new Color(0.7f, 0.5f, 0.3f), 14, 0.5f, false).Play();
+                Burst(root, size, "Chips", new Vector2(0.6f, 1.1f), new Vector2(1.4f, 3.6f), new Vector2(0.06f, 0.14f), 2.6f, new Color(0.7f, 0.5f, 0.3f), new Color(0.45f, 0.3f, 0.16f), 26, 0.5f, false).Play();
+                Burst(root, size, "Splinters", new Vector2(0.5f, 0.9f), new Vector2(1.8f, 4.4f), new Vector2(0.03f, 0.06f), 2.2f, new Color(0.9f, 0.75f, 0.5f), new Color(0.7f, 0.5f, 0.3f), 14, 0.5f, false).Play();
                 break;
             case PixelClicker.PixelType.Bark:
-                Burst("Shards", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3.2f), new Vector2(0.07f, 0.16f), 2.8f, new Color(0.45f, 0.33f, 0.24f), new Color(0.3f, 0.2f, 0.14f), 24, 0.5f, false).Play();
-                Burst("Dust", new Vector2(0.9f, 1.4f), new Vector2(0.2f, 0.9f), new Vector2(0.2f, 0.4f), -0.04f, new Color(0.55f, 0.45f, 0.35f, 0.5f), new Color(0.45f, 0.36f, 0.28f, 0.4f), 8, 0.5f, true, new Vector2(0.6f, 1.5f)).Play();
+                Burst(root, size, "Shards", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3.2f), new Vector2(0.07f, 0.16f), 2.8f, new Color(0.45f, 0.33f, 0.24f), new Color(0.3f, 0.2f, 0.14f), 24, 0.5f, false).Play();
+                Burst(root, size, "Dust", new Vector2(0.9f, 1.4f), new Vector2(0.2f, 0.9f), new Vector2(0.2f, 0.4f), -0.04f, new Color(0.55f, 0.45f, 0.35f, 0.5f), new Color(0.45f, 0.36f, 0.28f, 0.4f), 8, 0.5f, true, new Vector2(0.6f, 1.5f)).Play();
                 break;
             case PixelClicker.PixelType.Sap:
-                Burst("Drops", new Vector2(0.6f, 1.2f), new Vector2(1.2f, 3f), new Vector2(0.07f, 0.15f), 2f, new Color(1f, 0.8f, 0.3f), new Color(0.9f, 0.55f, 0.1f), 24, 0.45f, false, new Vector2(1f, 0.5f)).Play();
+                Burst(root, size, "Drops", new Vector2(0.6f, 1.2f), new Vector2(1.2f, 3f), new Vector2(0.07f, 0.15f), 2f, new Color(1f, 0.8f, 0.3f), new Color(0.9f, 0.55f, 0.1f), 24, 0.45f, false, new Vector2(1f, 0.5f)).Play();
                 PixelFxRing.Spawn(centre, new Color(1f, 0.75f, 0.25f, 0.7f), size * 0.4f, size * 2f, 0.5f, 0f);
                 break;
             case PixelClicker.PixelType.Leaf:
-                Burst("Leaves", new Vector2(1.2f, 2.2f), new Vector2(0.8f, 2.4f), new Vector2(0.08f, 0.16f), 0.3f, new Color(0.55f, 0.9f, 0.35f), new Color(0.25f, 0.62f, 0.2f), 22, 0.5f, false).Play();
+                Burst(root, size, "Leaves", new Vector2(1.2f, 2.2f), new Vector2(0.8f, 2.4f), new Vector2(0.08f, 0.16f), 0.3f, new Color(0.55f, 0.9f, 0.35f), new Color(0.25f, 0.62f, 0.2f), 22, 0.5f, false).Play();
                 break;
             case PixelClicker.PixelType.Heartwood:
-                Burst("Glints", new Vector2(0.9f, 1.7f), new Vector2(1f, 3.8f), new Vector2(0.06f, 0.14f), -0.1f, new Color(1f, 0.85f, 0.6f), new Color(1f, 0.5f, 0.3f), 44, 0.55f, true, new Vector2(1f, 0f)).Play();
-                Burst("Chips", new Vector2(0.6f, 1.1f), new Vector2(1.4f, 3.6f), new Vector2(0.07f, 0.15f), 2.4f, new Color(0.85f, 0.45f, 0.32f), new Color(0.55f, 0.25f, 0.18f), 22, 0.5f, false).Play();
+                Burst(root, size, "Glints", new Vector2(0.9f, 1.7f), new Vector2(1f, 3.8f), new Vector2(0.06f, 0.14f), -0.1f, new Color(1f, 0.85f, 0.6f), new Color(1f, 0.5f, 0.3f), 44, 0.55f, true, new Vector2(1f, 0f)).Play();
+                Burst(root, size, "Chips", new Vector2(0.6f, 1.1f), new Vector2(1.4f, 3.6f), new Vector2(0.07f, 0.15f), 2.4f, new Color(0.85f, 0.45f, 0.32f), new Color(0.55f, 0.25f, 0.18f), 22, 0.5f, false).Play();
                 PixelFxRing.Spawn(centre, new Color(1f, 0.6f, 0.4f, 0.85f), size * 0.4f, size * 3f, 0.6f, 2f);
                 break;
             case PixelClicker.PixelType.Berry:
-                Burst("Juice", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3.2f), new Vector2(0.07f, 0.16f), 2.4f, new Color(0.85f, 0.2f, 0.4f), new Color(0.55f, 0.1f, 0.3f), 24, 0.45f, false, new Vector2(1f, 0.5f)).Play();
-                Burst("Splat", new Vector2(0.6f, 1f), new Vector2(0.4f, 1.4f), new Vector2(0.12f, 0.26f), 0.4f, new Color(0.8f, 0.2f, 0.4f, 0.8f), new Color(0.6f, 0.12f, 0.3f, 0.7f), 8, 0.5f, true, new Vector2(1f, 1.4f)).Play();
+                Burst(root, size, "Juice", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3.2f), new Vector2(0.07f, 0.16f), 2.4f, new Color(0.85f, 0.2f, 0.4f), new Color(0.55f, 0.1f, 0.3f), 24, 0.45f, false, new Vector2(1f, 0.5f)).Play();
+                Burst(root, size, "Splat", new Vector2(0.6f, 1f), new Vector2(0.4f, 1.4f), new Vector2(0.12f, 0.26f), 0.4f, new Color(0.8f, 0.2f, 0.4f, 0.8f), new Color(0.6f, 0.12f, 0.3f, 0.7f), 8, 0.5f, true, new Vector2(1f, 1.4f)).Play();
                 break;
             case PixelClicker.PixelType.Mushroom:
-                Burst("Spores", new Vector2(1f, 1.8f), new Vector2(0.5f, 1.8f), new Vector2(0.05f, 0.12f), -0.1f, new Color(0.95f, 0.85f, 0.7f), new Color(0.8f, 0.55f, 0.4f), 34, 0.5f, true, new Vector2(1f, 0.2f)).Play();
-                Burst("Cap Bits", new Vector2(0.6f, 1f), new Vector2(1.2f, 3f), new Vector2(0.07f, 0.14f), 2.4f, new Color(0.85f, 0.4f, 0.3f), new Color(0.95f, 0.9f, 0.8f), 14, 0.5f, false).Play();
+                Burst(root, size, "Spores", new Vector2(1f, 1.8f), new Vector2(0.5f, 1.8f), new Vector2(0.05f, 0.12f), -0.1f, new Color(0.95f, 0.85f, 0.7f), new Color(0.8f, 0.55f, 0.4f), 34, 0.5f, true, new Vector2(1f, 0.2f)).Play();
+                Burst(root, size, "Cap Bits", new Vector2(0.6f, 1f), new Vector2(1.2f, 3f), new Vector2(0.07f, 0.14f), 2.4f, new Color(0.85f, 0.4f, 0.3f), new Color(0.95f, 0.9f, 0.8f), 14, 0.5f, false).Play();
                 break;
             case PixelClicker.PixelType.Herb:
-                Burst("Flecks", new Vector2(0.9f, 1.6f), new Vector2(0.8f, 2.6f), new Vector2(0.05f, 0.11f), 0.5f, new Color(0.45f, 0.85f, 0.4f), new Color(0.2f, 0.55f, 0.25f), 26, 0.5f, false).Play();
+                Burst(root, size, "Flecks", new Vector2(0.9f, 1.6f), new Vector2(0.8f, 2.6f), new Vector2(0.05f, 0.11f), 0.5f, new Color(0.45f, 0.85f, 0.4f), new Color(0.2f, 0.55f, 0.25f), 26, 0.5f, false).Play();
                 break;
             case PixelClicker.PixelType.Truffle:
-                Burst("Earth", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3.2f), new Vector2(0.07f, 0.15f), 2.6f, new Color(0.4f, 0.28f, 0.2f), new Color(0.25f, 0.17f, 0.12f), 20, 0.5f, false).Play();
-                Burst("Glints", new Vector2(0.9f, 1.6f), new Vector2(1f, 3.4f), new Vector2(0.05f, 0.12f), -0.1f, new Color(1f, 0.95f, 0.7f), new Color(0.9f, 0.75f, 0.4f), 36, 0.5f, true, new Vector2(1f, 0f)).Play();
+                Burst(root, size, "Earth", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3.2f), new Vector2(0.07f, 0.15f), 2.6f, new Color(0.4f, 0.28f, 0.2f), new Color(0.25f, 0.17f, 0.12f), 20, 0.5f, false).Play();
+                Burst(root, size, "Glints", new Vector2(0.9f, 1.6f), new Vector2(1f, 3.4f), new Vector2(0.05f, 0.12f), -0.1f, new Color(1f, 0.95f, 0.7f), new Color(0.9f, 0.75f, 0.4f), 36, 0.5f, true, new Vector2(1f, 0f)).Play();
                 PixelFxRing.Spawn(centre, new Color(0.9f, 0.75f, 0.4f, 0.8f), size * 0.4f, size * 2.6f, 0.5f, 2f);
                 break;
             case PixelClicker.PixelType.Weeds:
-                Burst("Bits", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3f), new Vector2(0.05f, 0.11f), 2.2f, new Color(0.6f, 0.7f, 0.35f), new Color(0.4f, 0.5f, 0.25f), 16, 0.5f, false).Play();
+                Burst(root, size, "Bits", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3f), new Vector2(0.05f, 0.11f), 2.2f, new Color(0.6f, 0.7f, 0.35f), new Color(0.4f, 0.5f, 0.25f), 16, 0.5f, false).Play();
                 break;
             case PixelClicker.PixelType.Mold:
-                Burst("Spores", new Vector2(1.2f, 2.2f), new Vector2(1f, 3.2f), new Vector2(0.1f, 0.22f), -0.05f, new Color(0.55f, 0.85f, 0.35f, 0.8f), new Color(0.3f, 0.5f, 0.2f, 0.7f), 45, 0.55f, true, new Vector2(1f, 0.3f)).Play();
+                Burst(root, size, "Spores", new Vector2(1.2f, 2.2f), new Vector2(1f, 3.2f), new Vector2(0.1f, 0.22f), -0.05f, new Color(0.55f, 0.85f, 0.35f, 0.8f), new Color(0.3f, 0.5f, 0.2f, 0.7f), 45, 0.55f, true, new Vector2(1f, 0.3f)).Play();
                 PixelFxRing.Spawn(centre, new Color(0.5f, 0.8f, 0.3f, 0.8f), size * 0.5f, size * 4f, 0.7f, 0f);
                 break;
             case PixelClicker.PixelType.Toadstool:
-                Burst("Spores", new Vector2(1.2f, 2.2f), new Vector2(1f, 3.2f), new Vector2(0.1f, 0.22f), -0.05f, new Color(0.75f, 0.4f, 0.85f, 0.8f), new Color(0.45f, 0.9f, 0.4f, 0.7f), 50, 0.55f, true, new Vector2(1f, 0.3f)).Play();
-                Burst("Cloud", new Vector2(1.2f, 2f), new Vector2(0.3f, 1.2f), new Vector2(0.3f, 0.6f), -0.03f, new Color(0.6f, 0.35f, 0.7f, 0.5f), new Color(0.4f, 0.7f, 0.35f, 0.4f), 12, 0.5f, true, new Vector2(0.6f, 1.8f)).Play();
+                Burst(root, size, "Spores", new Vector2(1.2f, 2.2f), new Vector2(1f, 3.2f), new Vector2(0.1f, 0.22f), -0.05f, new Color(0.75f, 0.4f, 0.85f, 0.8f), new Color(0.45f, 0.9f, 0.4f, 0.7f), 50, 0.55f, true, new Vector2(1f, 0.3f)).Play();
+                Burst(root, size, "Cloud", new Vector2(1.2f, 2f), new Vector2(0.3f, 1.2f), new Vector2(0.3f, 0.6f), -0.03f, new Color(0.6f, 0.35f, 0.7f, 0.5f), new Color(0.4f, 0.7f, 0.35f, 0.4f), 12, 0.5f, true, new Vector2(0.6f, 1.8f)).Play();
                 PixelFxRing.Spawn(centre, new Color(0.7f, 0.4f, 0.85f, 0.8f), size * 0.5f, size * 4f, 0.7f, 0f);
                 break;
+            default: return false;
+        }
+        return true;
+    }
+
+    /// <summary>The break burst of the fishing blocks and the Golden Fruit (Fish, Bait, Seaweed, Shell, Pearl, Driftwood, Jellyfish, Hornet Nest, Bottle, Whale, Golden Fruit); false for any other type.</summary>
+    private static bool BreakFishBlock(PixelClicker.PixelType type, Vector3 centre, float size, PixelFx.Burst root)
+    {
+        switch (type)
+        {
             case PixelClicker.PixelType.Fish:
-                Burst("Drops", new Vector2(0.6f, 1.1f), new Vector2(1.4f, 3.4f), new Vector2(0.05f, 0.12f), 2.6f, new Color(0.6f, 0.8f, 1f), new Color(0.35f, 0.55f, 0.85f), 28, 0.5f, false).Play();
-                Burst("Scales", new Vector2(0.7f, 1.2f), new Vector2(0.8f, 2.2f), new Vector2(0.06f, 0.12f), 1.4f, new Color(0.85f, 0.92f, 1f), new Color(0.6f, 0.7f, 0.85f), 12, 0.5f, false).Play();
+                Burst(root, size, "Drops", new Vector2(0.6f, 1.1f), new Vector2(1.4f, 3.4f), new Vector2(0.05f, 0.12f), 2.6f, new Color(0.6f, 0.8f, 1f), new Color(0.35f, 0.55f, 0.85f), 28, 0.5f, false).Play();
+                Burst(root, size, "Scales", new Vector2(0.7f, 1.2f), new Vector2(0.8f, 2.2f), new Vector2(0.06f, 0.12f), 1.4f, new Color(0.85f, 0.92f, 1f), new Color(0.6f, 0.7f, 0.85f), 12, 0.5f, false).Play();
                 break;
             case PixelClicker.PixelType.Bait:
-                Burst("Crumbs", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3f), new Vector2(0.05f, 0.11f), 2.6f, new Color(0.9f, 0.65f, 0.35f), new Color(0.6f, 0.38f, 0.18f), 22, 0.5f, false).Play();
+                Burst(root, size, "Crumbs", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3f), new Vector2(0.05f, 0.11f), 2.6f, new Color(0.9f, 0.65f, 0.35f), new Color(0.6f, 0.38f, 0.18f), 22, 0.5f, false).Play();
                 break;
             case PixelClicker.PixelType.Seaweed:
-                Burst("Strands", new Vector2(0.9f, 1.6f), new Vector2(0.6f, 2f), new Vector2(0.06f, 0.14f), 0.6f, new Color(0.25f, 0.7f, 0.4f), new Color(0.15f, 0.45f, 0.3f), 22, 0.5f, false).Play();
-                Burst("Drops", new Vector2(0.6f, 1f), new Vector2(1f, 2.6f), new Vector2(0.04f, 0.09f), 2.4f, new Color(0.6f, 0.85f, 1f), new Color(0.4f, 0.65f, 0.9f), 12, 0.5f, false).Play();
+                Burst(root, size, "Strands", new Vector2(0.9f, 1.6f), new Vector2(0.6f, 2f), new Vector2(0.06f, 0.14f), 0.6f, new Color(0.25f, 0.7f, 0.4f), new Color(0.15f, 0.45f, 0.3f), 22, 0.5f, false).Play();
+                Burst(root, size, "Drops", new Vector2(0.6f, 1f), new Vector2(1f, 2.6f), new Vector2(0.04f, 0.09f), 2.4f, new Color(0.6f, 0.85f, 1f), new Color(0.4f, 0.65f, 0.9f), 12, 0.5f, false).Play();
                 break;
             case PixelClicker.PixelType.Shell:
-                Burst("Shards", new Vector2(0.6f, 1.1f), new Vector2(1.4f, 3.2f), new Vector2(0.06f, 0.13f), 2.6f, new Color(1f, 0.8f, 0.82f), new Color(0.9f, 0.55f, 0.65f), 20, 0.5f, false).Play();
-                Burst("Glints", new Vector2(0.8f, 1.4f), new Vector2(0.8f, 2.6f), new Vector2(0.04f, 0.1f), -0.05f, new Color(1f, 1f, 1f), new Color(1f, 0.85f, 0.9f), 16, 0.5f, true).Play();
+                Burst(root, size, "Shards", new Vector2(0.6f, 1.1f), new Vector2(1.4f, 3.2f), new Vector2(0.06f, 0.13f), 2.6f, new Color(1f, 0.8f, 0.82f), new Color(0.9f, 0.55f, 0.65f), 20, 0.5f, false).Play();
+                Burst(root, size, "Glints", new Vector2(0.8f, 1.4f), new Vector2(0.8f, 2.6f), new Vector2(0.04f, 0.1f), -0.05f, new Color(1f, 1f, 1f), new Color(1f, 0.85f, 0.9f), 16, 0.5f, true).Play();
                 break;
             case PixelClicker.PixelType.Pearl:
-                Burst("Glints", new Vector2(1f, 1.8f), new Vector2(1f, 3.6f), new Vector2(0.05f, 0.13f), -0.1f, new Color(1f, 1f, 1f), new Color(0.85f, 0.9f, 1f), 44, 0.5f, true).Play();
-                Burst("Drops", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3f), new Vector2(0.05f, 0.1f), 2.4f, new Color(0.7f, 0.85f, 1f), new Color(0.5f, 0.7f, 0.95f), 14, 0.5f, false).Play();
+                Burst(root, size, "Glints", new Vector2(1f, 1.8f), new Vector2(1f, 3.6f), new Vector2(0.05f, 0.13f), -0.1f, new Color(1f, 1f, 1f), new Color(0.85f, 0.9f, 1f), 44, 0.5f, true).Play();
+                Burst(root, size, "Drops", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3f), new Vector2(0.05f, 0.1f), 2.4f, new Color(0.7f, 0.85f, 1f), new Color(0.5f, 0.7f, 0.95f), 14, 0.5f, false).Play();
                 PixelFxRing.Spawn(centre, new Color(0.9f, 0.95f, 1f, 0.8f), size * 0.4f, size * 2.6f, 0.5f, 2f);
                 break;
             case PixelClicker.PixelType.Driftwood:
-                Burst("Splinters", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3f), new Vector2(0.05f, 0.11f), 2.2f, new Color(0.7f, 0.65f, 0.55f), new Color(0.5f, 0.45f, 0.38f), 14, 0.5f, false).Play();
+                Burst(root, size, "Splinters", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3f), new Vector2(0.05f, 0.11f), 2.2f, new Color(0.7f, 0.65f, 0.55f), new Color(0.5f, 0.45f, 0.38f), 14, 0.5f, false).Play();
                 break;
             case PixelClicker.PixelType.Jellyfish:
-                Burst("Sparks", new Vector2(0.5f, 1f), new Vector2(2f, 5f), new Vector2(0.05f, 0.12f), 0f, new Color(1f, 0.6f, 0.95f), new Color(0.5f, 0.8f, 1f), 40, 0.55f, true).Play();
-                Burst("Goo", new Vector2(0.9f, 1.6f), new Vector2(0.4f, 1.6f), new Vector2(0.2f, 0.45f), 0.3f, new Color(0.9f, 0.5f, 0.85f, 0.5f), new Color(0.6f, 0.4f, 0.9f, 0.4f), 12, 0.5f, true, new Vector2(1f, 1.6f)).Play();
+                Burst(root, size, "Sparks", new Vector2(0.5f, 1f), new Vector2(2f, 5f), new Vector2(0.05f, 0.12f), 0f, new Color(1f, 0.6f, 0.95f), new Color(0.5f, 0.8f, 1f), 40, 0.55f, true).Play();
+                Burst(root, size, "Goo", new Vector2(0.9f, 1.6f), new Vector2(0.4f, 1.6f), new Vector2(0.2f, 0.45f), 0.3f, new Color(0.9f, 0.5f, 0.85f, 0.5f), new Color(0.6f, 0.4f, 0.9f, 0.4f), 12, 0.5f, true, new Vector2(1f, 1.6f)).Play();
                 PixelFxRing.Spawn(centre, new Color(1f, 0.6f, 0.95f, 0.8f), size * 0.5f, size * 4f, 0.6f, 0f);
                 break;
             case PixelClicker.PixelType.HornetNest:
-                Burst("Termites", new Vector2(0.8f, 1.5f), new Vector2(1.5f, 4.2f), new Vector2(0.05f, 0.09f), 0f, new Color(0.92f, 0.84f, 0.64f), new Color(0.4f, 0.24f, 0.12f), 40, 0.5f, false).Play();
-                Burst("Mud", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3f), new Vector2(0.07f, 0.15f), 1.6f, new Color(0.62f, 0.4f, 0.26f), new Color(0.42f, 0.26f, 0.16f), 18, 0.5f, false).Play();
+                Burst(root, size, "Termites", new Vector2(0.8f, 1.5f), new Vector2(1.5f, 4.2f), new Vector2(0.05f, 0.09f), 0f, new Color(0.92f, 0.84f, 0.64f), new Color(0.4f, 0.24f, 0.12f), 40, 0.5f, false).Play();
+                Burst(root, size, "Mud", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3f), new Vector2(0.07f, 0.15f), 1.6f, new Color(0.62f, 0.4f, 0.26f), new Color(0.42f, 0.26f, 0.16f), 18, 0.5f, false).Play();
                 break;
             case PixelClicker.PixelType.Bottle:
-                Burst("Shards", new Vector2(0.7f, 1.3f), new Vector2(1.6f, 4.2f), new Vector2(0.05f, 0.13f), 2.6f, new Color(0.7f, 0.95f, 0.9f, 0.9f), new Color(0.25f, 0.65f, 0.5f, 0.9f), 34, 0.5f, false).Play();
-                Burst("Glints", new Vector2(0.6f, 1.1f), new Vector2(0.8f, 2.6f), new Vector2(0.04f, 0.1f), -0.05f, new Color(1f, 1f, 1f), new Color(0.8f, 1f, 0.95f), 20, 0.5f, true).Play();
-                Burst("Cork", new Vector2(0.8f, 1.2f), new Vector2(2.5f, 4.5f), new Vector2(0.08f, 0.14f), 2.4f, new Color(0.62f, 0.42f, 0.22f), new Color(0.46f, 0.3f, 0.14f), 3, 0.2f, false).Play();
+                Burst(root, size, "Shards", new Vector2(0.7f, 1.3f), new Vector2(1.6f, 4.2f), new Vector2(0.05f, 0.13f), 2.6f, new Color(0.7f, 0.95f, 0.9f, 0.9f), new Color(0.25f, 0.65f, 0.5f, 0.9f), 34, 0.5f, false).Play();
+                Burst(root, size, "Glints", new Vector2(0.6f, 1.1f), new Vector2(0.8f, 2.6f), new Vector2(0.04f, 0.1f), -0.05f, new Color(1f, 1f, 1f), new Color(0.8f, 1f, 0.95f), 20, 0.5f, true).Play();
+                Burst(root, size, "Cork", new Vector2(0.8f, 1.2f), new Vector2(2.5f, 4.5f), new Vector2(0.08f, 0.14f), 2.4f, new Color(0.62f, 0.42f, 0.22f), new Color(0.46f, 0.3f, 0.14f), 3, 0.2f, false).Play();
                 break;
             case PixelClicker.PixelType.Whale:
                 // A big spout and a crown of spray.
-                Burst("Spout", new Vector2(0.9f, 1.6f), new Vector2(3f, 6.5f), new Vector2(0.06f, 0.14f), 2.4f, new Color(0.85f, 0.95f, 1f), new Color(0.5f, 0.75f, 1f), 70, 0.25f, false).Play();
-                Burst("Mist", new Vector2(1f, 1.8f), new Vector2(0.4f, 1.6f), new Vector2(0.3f, 0.6f), -0.03f, new Color(0.85f, 0.95f, 1f, 0.5f), new Color(0.6f, 0.8f, 1f, 0.4f), 16, 0.6f, true, new Vector2(0.6f, 1.8f)).Play();
+                Burst(root, size, "Spout", new Vector2(0.9f, 1.6f), new Vector2(3f, 6.5f), new Vector2(0.06f, 0.14f), 2.4f, new Color(0.85f, 0.95f, 1f), new Color(0.5f, 0.75f, 1f), 70, 0.25f, false).Play();
+                Burst(root, size, "Mist", new Vector2(1f, 1.8f), new Vector2(0.4f, 1.6f), new Vector2(0.3f, 0.6f), -0.03f, new Color(0.85f, 0.95f, 1f, 0.5f), new Color(0.6f, 0.8f, 1f, 0.4f), 16, 0.6f, true, new Vector2(0.6f, 1.8f)).Play();
                 PixelFxRing.Spawn(centre, new Color(0.6f, 0.85f, 1f, 0.9f), size * 0.5f, size * 4.5f, 0.8f, 2f);
                 break;
             case PixelClicker.PixelType.GoldenFruit:
-                Burst("Glints", new Vector2(0.9f, 1.8f), new Vector2(1f, 4.2f), new Vector2(0.06f, 0.15f), -0.1f, new Color(1f, 0.98f, 0.7f), new Color(1f, 0.78f, 0.2f), 60, 0.6f, true, new Vector2(1f, 0f)).Play();
-                Burst("Juice", new Vector2(0.7f, 1.2f), new Vector2(1.4f, 3.8f), new Vector2(0.07f, 0.15f), 2.2f, new Color(1f, 0.85f, 0.3f), new Color(1f, 0.65f, 0.1f), 24, 0.5f, false).Play();
+                Burst(root, size, "Glints", new Vector2(0.9f, 1.8f), new Vector2(1f, 4.2f), new Vector2(0.06f, 0.15f), -0.1f, new Color(1f, 0.98f, 0.7f), new Color(1f, 0.78f, 0.2f), 60, 0.6f, true, new Vector2(1f, 0f)).Play();
+                Burst(root, size, "Juice", new Vector2(0.7f, 1.2f), new Vector2(1.4f, 3.8f), new Vector2(0.07f, 0.15f), 2.2f, new Color(1f, 0.85f, 0.3f), new Color(1f, 0.65f, 0.1f), 24, 0.5f, false).Play();
                 PixelFxRing.Spawn(centre, new Color(1f, 0.85f, 0.3f, 0.9f), size * 0.4f, size * 3.2f, 0.6f, 3f);
                 PixelAudio.Play("farm_gleam");
                 break;
+            default: return false;
         }
+        return true;
     }
 }

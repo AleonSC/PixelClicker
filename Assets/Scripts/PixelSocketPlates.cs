@@ -27,9 +27,10 @@ public class PixelSocketPlates : MonoBehaviour
 
     private PixelClicker clicker;
     private float next;
-    private readonly Dictionary<string, GameObject> plates = new Dictionary<string, GameObject>();
-    private readonly HashSet<string> seen = new HashSet<string>();
-    private readonly List<string> stale = new List<string>();
+    // A plate's key: its device's object id + the socket's id (a pair, so no key string is built on every refresh).
+    private readonly Dictionary<(int device, string socket), GameObject> plates = new Dictionary<(int device, string socket), GameObject>();
+    private readonly HashSet<(int device, string socket)> seen = new HashSet<(int device, string socket)>();
+    private readonly List<(int device, string socket)> stale = new List<(int device, string socket)>();
 
     private void Awake()
     {
@@ -47,15 +48,15 @@ public class PixelSocketPlates : MonoBehaviour
             foreach (IPixelSocketDevice d in PixelCouplings.Devices)
                 foreach (PixelSocket s in PixelCouplings.FreeSockets(d))
                 {
-                    string key = PixelObjectId.Of((Object)d) + "/" + s.id;
+                    (int device, string socket) key = (PixelObjectId.Of((Object)d), s.id);
                     seen.Add(key);
                     if (plates.TryGetValue(key, out GameObject g) && g != null) { PixelCouplings.KeepSize(g.transform); continue; }
                     plates[key] = Build(d, s);
                 }
         // Plates whose socket is taken (or whose device went) are removed.
         stale.Clear();
-        foreach (KeyValuePair<string, GameObject> kv in plates) if (!seen.Contains(kv.Key) || kv.Value == null) stale.Add(kv.Key);
-        foreach (string k in stale)
+        foreach (KeyValuePair<(int device, string socket), GameObject> kv in plates) if (!seen.Contains(kv.Key) || kv.Value == null) stale.Add(kv.Key);
+        foreach ((int device, string socket) k in stale)
         {
             if (plates.TryGetValue(k, out GameObject g) && g != null) Destroy(g);
             plates.Remove(k);

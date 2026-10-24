@@ -136,6 +136,9 @@ public partial class PixelPets
     /// <summary>The named special outfits that follow the generated ones (Super Saiyan hair and other themed sets).</summary>
     private static List<Outfit> specialOutfits;
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetCustomizeStatics() { specialOutfits = null; }   // (a fresh play-mode start builds the special outfits table again)
+
     private static List<Outfit> Specials()
     {
         if (specialOutfits != null) return specialOutfits;
@@ -280,6 +283,13 @@ public partial class PixelPets
         Color light = Color.Lerp(c, Color.white, 0.45f);
         Color gold = new Color(1f, 0.82f, 0.2f);
         Color black = new Color(0.04f, 0.04f, 0.06f);
+        if (AddAccessoryHatsToAura(root, acc, c, dark, light, gold, black)) return;
+        AddAccessoryEarsToWings(root, acc, c, dark, light, gold, black);
+    }
+
+    /// <summary>Builds the accessories from the Top Hat to the Aura (hats, halo, headphones, antennae, face pieces, neckwear, cape, Super Saiyan hair); false for any other accessory. 'dark' / 'light' are shades of the colour 'c'.</summary>
+    private bool AddAccessoryHatsToAura(Transform root, Acc acc, Color c, Color dark, Color light, Color gold, Color black)
+    {
         const PrimitiveType Cube = PrimitiveType.Cube, Cyl = PrimitiveType.Cylinder, Sph = PrimitiveType.Sphere;
 
         switch (acc)
@@ -395,6 +405,18 @@ public partial class PixelPets
                     Prim(root, Cube, new Vector3(Mathf.Cos(a) * 0.7f, -0.5f, Mathf.Sin(a) * 0.7f), new Vector3(0.18f, 0.7f, 0.18f), new Color(c.r, c.g, c.b, c.a * 1.5f), null, true);   // flames licking up from the floor
                 }
                 break;
+            default: return false;
+        }
+        return true;
+    }
+
+    /// <summary>Builds the accessories from the Cat Ears to the Wings (ears, helmets and hats, flower, monocle, eyepatch, backpack, tail, spikes, wings); false for any other accessory. 'dark' / 'light' are shades of the colour 'c'.</summary>
+    private bool AddAccessoryEarsToWings(Transform root, Acc acc, Color c, Color dark, Color light, Color gold, Color black)
+    {
+        const PrimitiveType Cube = PrimitiveType.Cube, Cyl = PrimitiveType.Cylinder, Sph = PrimitiveType.Sphere;
+
+        switch (acc)
+        {
             case Acc.CatEars:
                 foreach (float x in new[] { -0.3f, 0.3f })
                 {
@@ -485,7 +507,9 @@ public partial class PixelPets
                     Prim(root, Cube, new Vector3(s * 0.74f, -0.06f, -0.36f), new Vector3(0.3f, 0.36f, 0.04f), light, new Vector3(0f, s * 40f, s * 15f));
                 }
                 break;
+            default: return false;
         }
+        return true;
     }
 
     /// <summary>Builds outfit number 'index' (0 = none) as a child "Outfit" of 'parent'; 'size' = the pet's edge length.</summary>

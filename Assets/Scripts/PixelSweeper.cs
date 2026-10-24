@@ -286,10 +286,13 @@ public class PixelSweeper : MonoBehaviour, IPixelDeviceInfo
 
     // ---------------- every frame ----------------
 
+    private PixelPlacedDevice placedDevice;   // (this Sweeper's PixelPlacedDevice, fetched once it is there)
+
     private void Update()
     {
         if (clicker == null || bot == null) return;
-        PixelPlacedDevice device = GetComponent<PixelPlacedDevice>();
+        if (placedDevice == null) placedDevice = GetComponent<PixelPlacedDevice>();
+        PixelPlacedDevice device = placedDevice;
         if (device != null && device.IsEnding) { DropTarget(); return; }
         if (PixelCalm.InMenu || Time.timeScale <= 0f) return;
         float dt = Time.deltaTime;
