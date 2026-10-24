@@ -388,3 +388,5 @@ One line per script / system: what it is and where its details are. Search it (`
 | `tools/ui-map/` (`ui_map.txt`, `build.py`) | Interface map: every UI piece with a stable ID (H HUD, W windows, N popups, M menus, O world UI, D Dev Hub; `.n` = part). Builds `docs/UIMap.md` and the interactive map page. | `docs/UIMap.md` |
 | Device map | Interactive HTML map of every device and how husks / power connect them (open in a browser; keep it in step with ConnectionMap.md). | `docs/DeviceMap.html` |
 | `tools/dialogue-map/` (`build.py`, `ids.txt`) | Dialogue map: every section of Dialogue.txt ('Got it' tips T, tutorials / guides G, perk popups P, characters C) with a stable ID; builds `docs/DialogueMap.md` and the interactive dialogue page. | `docs/DialogueMap.md` |
+
+| `PixelRisingText.cs` | Floating 3D message of a minigame round (bold outlined world text that rises, fades and destroys itself; Create + Fade coroutine). Used by Breakout, Snake, Sorting Race and Stardust. | in the header comment of `PixelRisingText.cs` |
