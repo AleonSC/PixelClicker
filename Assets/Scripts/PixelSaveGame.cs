@@ -40,14 +40,6 @@ public class PixelSaveGame : MonoBehaviour
     }
 
     [Serializable]
-    private class PackSave
-    {
-        public string name;
-        public bool purchased;
-        public int level;
-    }
-
-    [Serializable]
     private class SaveData
     {
         public int version = 1;
@@ -57,7 +49,6 @@ public class PixelSaveGame : MonoBehaviour
         public double playSeconds;  // time played, for the slot list's summary (the stats part keeps the real one)
         public TierSave[] tiers;
         public long ultraPixels;   // Ultra pixels held
-        public PackSave[] packs;
         public GameState state;   // the player's progress for the systems moved to GameState (PixelGameState; GameState.MovedSystems lists them)
         public PixelSaveRegistry.Part[] parts;   // systems that still save themselves (IPixelSaved) - none left since 2026-10-24: everything moved to the GameState
         public PixelFeatureTester.TesterSave[] testerObjects;   // the Dev Hub tester machines (Wood Chipper, belts + their riders, Kiln, Solar Panels)
@@ -563,17 +554,6 @@ public class PixelSaveGame : MonoBehaviour
                     valueLevel = tiers[i].valueLevel,
                 };
 
-            if (shop != null)
-            {
-                data.packs = new PackSave[shop.PackCount];
-                for (int i = 0; i < data.packs.Length; i++)
-                    data.packs[i] = new PackSave
-                    {
-                        name = shop.GetPackName(i),
-                        purchased = shop.GetPackPurchased(i),
-                        level = shop.GetPackLevel(i),
-                    };
-            }
 
             data.testerObjects = PixelFeatureTester.ExportAll();
 
@@ -685,16 +665,8 @@ public class PixelSaveGame : MonoBehaviour
                 clicker.LoadTierState((PixelClicker.PixelType)t.type, t.count, t.total, t.unlocked, t.spawnDisabled, t.timesCollected, t.ultraLevel, t.valueLevel);
             clicker.RestoreUltra(data.ultraPixels);
 
-            // Shop: match packs by name.
-            if (shop != null)
-            {
-                for (int i = 0; i < shop.PackCount; i++)
-                {
-                    PackSave saved = data.packs != null
-                        ? Array.Find(data.packs, p => p.name == shop.GetPackName(i) || (p.name == "Robot Worker" && shop.GetPackName(i) == "UFO Helper")) : null;
-                    shop.SetPackState(i, saved != null && saved.purchased, saved != null ? saved.level : 0);
-                }
-            }
+            // Shop: the packs bought are in the GameState; their effects are switched on / off HERE, before the rest of the load (a fixed core step).
+            if (shop != null) shop.ApplyLoadedPackStates();
 
             // The systems that save themselves (PixelSaveRegistry), in bands around the core steps below.
             PixelSaveRegistry.ImportRange(data.parts, int.MinValue, PixelSaveRegistry.SettingsBand);   // (toggles, auto clicker, pets, UFO, event log)

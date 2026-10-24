@@ -14,7 +14,7 @@ using System.Collections.Generic;
 public class GameState
 {
     /// <summary>The systems whose progress lives here (they must not implement IPixelSaved or register restart resets: tools/compile-check/rules.sh checks it). Add a system's class name when it moves.</summary>
-    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab", "PixelBaitBucket", "PixelCubieBill", "PixelCombo", "PixelHints", "PixelRobotWorker", "PixelPets", "PixelAchievements", "PixelConsumables", "PixelSkills", "PixelMinigame" };
+    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab", "PixelBaitBucket", "PixelCubieBill", "PixelCombo", "PixelHints", "PixelRobotWorker", "PixelPets", "PixelAchievements", "PixelConsumables", "PixelSkills", "PixelMinigame", "PixelShop" };
 
     public BankState bank = new BankState();
     public StatsState stats = new StatsState();
@@ -32,6 +32,7 @@ public class GameState
     public InventoryState inventory = new InventoryState();
     public SkillsState skills = new SkillsState();
     public MinigamesState minigames = new MinigamesState();
+    public ShopState shop = new ShopState();
 
     /// <summary>Fills in sub-states missing from an older save file (JsonUtility leaves a part the file lacks null in some cases).</summary>
     public void Repair()
@@ -58,6 +59,8 @@ public class GameState
         skills.Repair();
         if (minigames == null) minigames = new MinigamesState();
         minigames.Repair();
+        if (shop == null) shop = new ShopState();
+        shop.Repair();
         baitBucket.Repair();
         cubieBill.Repair();
         bank.Repair();
@@ -478,6 +481,45 @@ public class MinigamesState
         found = new Entry { id = id };
         games.Add(found);
         index[id] = found;
+        return found;
+    }
+}
+
+/// <summary>The shop packs bought (PixelShop), by pack display name (as the save always matched them): bought, and the level of an upgrade.</summary>
+[Serializable]
+public class ShopState
+{
+    [Serializable]
+    public class Entry
+    {
+        public string name;
+        public bool purchased;
+        public int level;
+    }
+
+    public List<Entry> packs = new List<Entry>();
+
+    [NonSerialized] private Dictionary<string, Entry> index;   // (a lookup made on first use; never saved)
+
+    public void Repair()
+    {
+        if (packs == null) packs = new List<Entry>();
+        packs.RemoveAll(e => e == null || string.IsNullOrEmpty(e.name));
+        index = null;
+    }
+
+    public Entry Find(string name, bool create)
+    {
+        if (name == null) return null;
+        if (index == null || index.Count != packs.Count)
+        {
+            index = new Dictionary<string, Entry>();
+            foreach (Entry e in packs) if (e != null && e.name != null && !index.ContainsKey(e.name)) index[e.name] = e;
+        }
+        if (index.TryGetValue(name, out Entry found) || !create) return found;
+        found = new Entry { name = name };
+        packs.Add(found);
+        index[name] = found;
         return found;
     }
 }

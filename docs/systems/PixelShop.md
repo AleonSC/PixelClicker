@@ -1,5 +1,7 @@
 # PixelShop
 
+**Progress (2026-10-24):** bought / level of every pack live in the GameState (`PixelGameState.Current.shop`, by display name); `ShopPack.purchased` / `level` are properties over it. On load PixelSaveGame calls `ApplyLoadedPackStates()` at the old fixed step. Overrides older save wording below.
+
 Moved from CLAUDE.md. The script header comments and `CLAUDE.md` index point here.
 
 ## PixelShop.cs / PixelShopUI.cs / PixelShopDefaults.cs

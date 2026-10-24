@@ -194,8 +194,13 @@ public partial class PixelShop : MonoBehaviour
         [HideInInspector] public bool requiresSingularity;
         [HideInInspector] public bool requiresGhosts;
 
-        [Tooltip("Runtime: has this pack been bought? (Packs with reward tiers also count as bought once all their tiers are unlocked.)")]
-        public bool purchased = false;
+        /// <summary>Has this pack been bought? (Packs with reward tiers also count as bought once all their tiers are unlocked.) Progress in the
+        /// GameState by display name - tick it to test in the Pixel Game State component (State > Shop).</summary>
+        public bool purchased
+        {
+            get { ShopState.Entry e = PixelGameState.Current.shop.Find(displayName, false); return e != null && e.purchased; }
+            set { ShopState.Entry e = PixelGameState.Current.shop.Find(displayName, value); if (e != null) e.purchased = value; }
+        }
 
         [Header("Upgrade levels (leave empty for a one-time pack)")]
         [Tooltip("What each level of this upgrade changes.")]
@@ -204,8 +209,12 @@ public partial class PixelShop : MonoBehaviour
         [Tooltip("The levels, in order. Level 1 is Element 0. If this has entries, 'Costs' above is ignored and each level has its own price.")]
         public PackLevel[] levels;
 
-        [Tooltip("Runtime: current level (0 = not bought). You can set a starting level here.")]
-        public int level = 0;
+        /// <summary>The upgrade's current level (0 = not bought). Progress in the GameState by display name.</summary>
+        public int level
+        {
+            get { ShopState.Entry e = PixelGameState.Current.shop.Find(displayName, false); return e != null ? e.level : 0; }
+            set { ShopState.Entry e = PixelGameState.Current.shop.Find(displayName, value != 0); if (e != null) e.level = value; }
+        }
 
         [NonSerialized] public int appliedLevel = -1;
     }
@@ -2031,7 +2040,17 @@ public partial class PixelShop : MonoBehaviour
 
     public int GetPackLevel(int index) => packs[index].level;
 
-    /// <summary>Restores a pack's bought flag and level without re-applying its effect (the save restores those separately).</summary>
+    /// <summary>
+    /// A save was loaded (PixelSaveGame calls this at its old fixed step, right after the tiers - pack effects must be switched on / off before
+    /// the rest of the load): every pack takes its bought flag and level from the GameState and its side effects follow (SetPackState).
+    /// </summary>
+    public void ApplyLoadedPackStates()
+    {
+        for (int i = 0; i < packs.Length; i++)
+            if (packs[i] != null) SetPackState(i, packs[i].purchased, packs[i].level);
+    }
+
+    /// <summary>Sets a pack's bought flag and level without re-applying its effect (switches off what a not-bought pack gives; re-applies the upgrades stored nowhere else).</summary>
     public void SetPackState(int index, bool purchased, int level)
     {
         ShopPack pack = packs[index];
