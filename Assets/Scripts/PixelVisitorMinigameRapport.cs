@@ -5,8 +5,9 @@
 //     PixelRapport.DealPointsPerVisit), and gifts from the Sell view (GiveGift: only PixelRapport.GiftsPerVisit count a visit).
 //   - Gifts: the Sell view's Gift button gives the picked good (a gift = PixelRapport.GiftClicks of effort, at least 1). His LOVES (PixelRapport's
 //     vendor data) count much more; a loved good he doesn't buy is listed too, as 'gift only' (AddGiftOnlyGoods).
-//   - The RAPPORT METER (BuildRapportMeter): a bar in his greeting box and in the wares / Sell window - the fill is his points across the whole
-//     meter (0 .. Partner), a tick at each step, and the label '♥ Regular  ·  42 / 80 to Friend'. It refreshes whenever points come in.
+//   - The RAPPORT METER (BuildRapportMeter, UI map N21.4): a sunken card in his greeting box and in the wares / Sell window - his step in its
+//     colour ('♥ Regular') and the progress ('42 / 80 to Friend') on one line, a bar of rounded segments (one per step after Stranger, each
+//     filling in its step's colour, PixelRapport Step.color) and the step names under them. It refreshes whenever points come in.
 //   - What his step gives here: NextVisitWait (more visits), RapportExtraWares / RapportExtraStock (bigger stock), RapportRareChance (the
 //     Farmer's Dragon Seed), his step line in the greeting and the step in the greeting box title (RapportTitle). Sale prices and market
 //     recovery are PixelMarket's (PriceFactor / RecoverySpeed).
@@ -48,60 +49,118 @@ public abstract partial class PixelVisitorMinigame
 
     // ---- The rapport meter (greeting box, wares / Sell window) ----
 
-    private sealed class RapportMeter { public RectTransform fill; public TMP_Text label; }
+    /// <summary>One meter's parts: the step name, the progress text, and per segment its fill and the step name under it.</summary>
+    private sealed class RapportMeter
+    {
+        public TMP_Text step, progress;
+        public RectTransform[] fills;
+        public Image[] fillImages;
+        public TMP_Text[] names;
+    }
     private readonly List<RapportMeter> rapportMeters = new List<RapportMeter>();
-    private static readonly Color RapportFill = new Color(1f, 0.42f, 0.6f, 1f);
 
-    /// <summary>The meter's height in a dialog box (canvas units).</summary>
-    private const float RapportMeterHeight = 34f;
+    /// <summary>The meter card's height in a dialog box (canvas units).</summary>
+    private const float RapportMeterHeight = 84f;
 
-    /// <summary>Builds a rapport meter along the bottom of 'parent', 'bottom' up from its bottom edge (nothing without PixelRapport).</summary>
+    /// <summary>
+    /// Builds a rapport meter card along the bottom of 'parent', 'bottom' up from its bottom edge (nothing without PixelRapport): a sunken card
+    /// with his step on the left in its colour ('♥ Regular') and the progress on the right ('42 / 80 to Friend'), a bar of rounded segments
+    /// (one per step after Stranger, each filling as you get there) and the step names under the segments.
+    /// </summary>
     private void BuildRapportMeter(RectTransform parent, float bottom, float sideInset)
     {
         PixelRapport r = PixelRapport.Instance;
         if (r == null || parent == null) return;
-        Image track = PixelUIKit.CreateBottomBar(parent, "Rapport Meter", RapportFill, sideInset, bottom, RapportMeterHeight, out RectTransform fill);
-        float top = Mathf.Max(1f, r.StepPoints(r.StepCount - 1));
-        for (int i = 1; i < r.StepCount - 1; i++)   // a tick where each step begins (the ends need none)
+        TMP_FontAsset font = Font;
+
+        RectTransform card = MeterBox(parent, "Rapport Meter", new Color(0.06f, 0.06f, 0.1f, 0.95f), true);
+        card.anchorMin = new Vector2(0f, 0f); card.anchorMax = new Vector2(1f, 0f); card.pivot = new Vector2(0.5f, 0f);
+        card.offsetMin = new Vector2(sideInset, bottom); card.offsetMax = new Vector2(-sideInset, bottom + RapportMeterHeight);
+        GameObject innerGo = new GameObject("Inner", typeof(RectTransform));
+        innerGo.transform.SetParent(card, false);
+        RectTransform inner = innerGo.GetComponent<RectTransform>();
+        inner.anchorMin = Vector2.zero; inner.anchorMax = Vector2.one;
+        inner.offsetMin = new Vector2(14f, 6f); inner.offsetMax = new Vector2(-14f, -6f);
+
+        RapportMeter m = new RapportMeter();
+        m.step = MeterText(font, inner, "Step", 22f, FontStyles.Bold, TextAlignmentOptions.MidlineLeft);
+        SellPlace(m.step.rectTransform, 0f, 26f, 0f, 0.5f);
+        m.progress = MeterText(font, inner, "Progress", 18f, FontStyles.Normal, TextAlignmentOptions.MidlineRight);
+        SellPlace(m.progress.rectTransform, 0f, 26f, 0.5f, 1f);
+
+        int segments = Mathf.Max(1, r.StepCount - 1);
+        m.fills = new RectTransform[segments];
+        m.fillImages = new Image[segments];
+        m.names = new TMP_Text[segments];
+        for (int i = 0; i < segments; i++)
         {
-            GameObject tick = new GameObject("Tick " + r.StepNameAt(i), typeof(RectTransform), typeof(Image));
-            tick.transform.SetParent(track.transform, false);
-            Image img = tick.GetComponent<Image>();
-            img.color = new Color(1f, 1f, 1f, 0.55f);
-            img.raycastTarget = false;
-            RectTransform tr = tick.GetComponent<RectTransform>();
-            float x = Mathf.Clamp01(r.StepPoints(i) / top);
-            tr.anchorMin = new Vector2(x, 0f); tr.anchorMax = new Vector2(x, 1f);
-            tr.pivot = new Vector2(0.5f, 0.5f);
-            tr.offsetMin = new Vector2(-1.5f, 3f); tr.offsetMax = new Vector2(1.5f, -3f);
+            float x0 = i / (float)segments, x1 = (i + 1) / (float)segments;
+            RectTransform track = MeterBox(inner, "Segment " + (i + 1), new Color(0.02f, 0.02f, 0.035f, 1f), true);
+            SellPlace(track, 30f, 16f, x0, x1);
+            RectTransform fill = MeterBox(track, "Fill", Color.white, false);
+            fill.anchorMin = Vector2.zero; fill.anchorMax = new Vector2(0f, 1f); fill.pivot = new Vector2(0f, 0.5f);
+            fill.offsetMin = new Vector2(2f, 2f); fill.offsetMax = new Vector2(-2f, -2f);
+            m.fills[i] = fill;
+            m.fillImages[i] = fill.GetComponent<Image>();
+            m.names[i] = MeterText(font, inner, "Name " + (i + 1), 15f, FontStyles.Normal, TextAlignmentOptions.Center);
+            SellPlace(m.names[i].rectTransform, 48f, 22f, x0, x1);
+            PixelUIKit.SetText(m.names[i], r.StepNameAt(i + 1));
         }
-        TMP_Text label = PixelUIKit.CreateText(Font, track.transform, "Label", "", 20f, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
-        label.enableAutoSizing = true; label.fontSizeMax = 20f; label.fontSizeMin = 12f;
-        label.raycastTarget = false;
-        RectTransform lr = label.rectTransform;
-        lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one;
-        lr.offsetMin = new Vector2(8f, 0f); lr.offsetMax = new Vector2(-8f, 0f);
-        rapportMeters.Add(new RapportMeter { fill = fill, label = label });
+        rapportMeters.Add(m);
         RefreshRapportMeters();
     }
 
-    /// <summary>Redraws every meter of this visit: the fill across the whole meter and '♥ Regular  ·  42 / 80 to Friend'.</summary>
+    /// <summary>A rounded box (sunken or raised, PixelUIKit.StyleBox) that takes no clicks.</summary>
+    private static RectTransform MeterBox(Transform parent, string name, Color color, bool inset)
+    {
+        GameObject go = new GameObject(name, typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(parent, false);
+        Image img = go.GetComponent<Image>();
+        img.color = color;
+        img.raycastTarget = false;
+        PixelUIKit.StyleBox(img, inset);
+        return go.GetComponent<RectTransform>();
+    }
+
+    private static TMP_Text MeterText(TMP_FontAsset font, Transform parent, string name, float size, FontStyles style, TextAlignmentOptions align)
+    {
+        TMP_Text t = PixelUIKit.CreateText(font, parent, name, "", size, align, style, Color.white);
+        t.enableAutoSizing = true; t.fontSizeMax = size; t.fontSizeMin = Mathf.Min(12f, size);
+        t.richText = true;
+        t.raycastTarget = false;
+        return t;
+    }
+
+    /// <summary>Redraws every meter of this visit: each segment fills in its step's colour, the reached steps' names light up.</summary>
     private void RefreshRapportMeters()
     {
         PixelRapport r = PixelRapport.Instance;
         if (r == null || rapportMeters.Count == 0) return;
         int step = r.StepIndex(Id);
-        double points = r.Points(Id);
         int last = r.StepCount - 1;
-        float fraction = Mathf.Clamp01((float)(points / Mathf.Max(1f, r.StepPoints(last))));
-        if (step >= last) fraction = 1f;
-        string text = "\u2665 " + r.StepNameAt(step) + "  \u00B7  " + (step >= last ? "best of friends"
-            : Mathf.FloorToInt((float)points) + " / " + Mathf.CeilToInt(r.StepPoints(step + 1)) + " to " + r.StepNameAt(step + 1));
+        double points = r.Points(Id);
+        Color now = r.StepColorAt(step);
+        string stepText = "<color=#" + ColorUtility.ToHtmlStringRGB(now) + ">\u2665 " + r.StepNameAt(step) + "</color>";
+        string progressText = step >= last ? "<color=#" + ColorUtility.ToHtmlStringRGB(now) + ">Best of friends</color>"
+            : "<b>" + Mathf.FloorToInt((float)points) + "</b><color=#9a9cb4> / " + Mathf.CeilToInt(r.StepPoints(step + 1)) + "  to " + r.StepNameAt(step + 1) + "</color>";
         foreach (RapportMeter m in rapportMeters)
         {
-            if (m.fill == null) continue;
-            m.fill.anchorMax = new Vector2(fraction, 1f);
-            PixelUIKit.SetText(m.label, text);
+            if (m.step == null) continue;
+            PixelUIKit.SetText(m.step, stepText);
+            PixelUIKit.SetText(m.progress, progressText);
+            for (int i = 0; i < m.fills.Length; i++)
+            {
+                // Segment i leads from step i to step i + 1: full once reached, part-filled while it is the next one, else empty.
+                float lo = r.StepPoints(i), hi = r.StepPoints(i + 1);
+                float frac = step > i ? 1f : step == i && hi > lo ? Mathf.Clamp01(((float)points - lo) / (hi - lo)) : 0f;
+                Color c = r.StepColorAt(i + 1);
+                m.fills[i].gameObject.SetActive(frac > 0.01f);
+                m.fills[i].anchorMax = new Vector2(frac, 1f);
+                m.fillImages[i].color = step > i ? c : Color.Lerp(c, Color.white, 0.25f) * new Color(1f, 1f, 1f, 0.85f);   // (the one being filled is a little paler)
+                bool reached = step >= i + 1;
+                m.names[i].color = reached ? c : i == step ? new Color(0.92f, 0.92f, 0.96f) : new Color(0.5f, 0.52f, 0.6f);
+                m.names[i].fontStyle = reached || i == step ? FontStyles.Bold : FontStyles.Normal;
+            }
         }
     }
 

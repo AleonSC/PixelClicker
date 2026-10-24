@@ -50,7 +50,15 @@ public class PixelRapport : MonoBehaviour
         [Min(1f)]
         [Tooltip("x his chance to bring a rare ware (the Farmer's Dragon Seed).")]
         public float rareChance = 1f;
+        [Tooltip("The step's colour on the rapport meter (its name and its bar segment). Fully clear = the built-in colour.")]
+        public Color color = new Color(0f, 0f, 0f, 0f);
     }
+
+    /// <summary>The built-in meter colours: Stranger grey, Customer sky, Regular green, Friend gold, Partner pink.</summary>
+    private static readonly Color[] BuiltInColors =
+    {
+        new Color(0.72f, 0.74f, 0.82f), new Color(0.42f, 0.78f, 1f), new Color(0.45f, 0.92f, 0.55f), new Color(1f, 0.8f, 0.3f), new Color(1f, 0.45f, 0.7f),
+    };
 
     /// <summary>A good a vendor loves as a gift.</summary>
     [Serializable]
@@ -156,6 +164,8 @@ public class PixelRapport : MonoBehaviour
             steps.Add(new Step { name = "Friend", points = 80f, priceBonus = 0.1f, recoverySpeed = 1.6f, visitWait = 0.8f, extraWares = 1, extraStock = 1, rareChance = 1.5f });
             steps.Add(new Step { name = "Partner", points = 150f, priceBonus = 0.15f, recoverySpeed = 2f, visitWait = 0.7f, extraWares = 2, extraStock = 2, rareChance = 2f });
         }
+        for (int i = 0; i < steps.Count; i++)   // (a step without a colour gets the built-in one)
+            if (steps[i] != null && steps[i].color.a <= 0f) steps[i].color = BuiltInColors[Mathf.Min(i, BuiltInColors.Length - 1)];
         if (vendors == null) vendors = new List<Vendor>();
         foreach (Vendor d in BuiltInVendors())
             if (!vendors.Exists(v => v != null && v.vendorId == d.vendorId)) vendors.Add(d);
@@ -271,6 +281,7 @@ public class PixelRapport : MonoBehaviour
     public int StepCount { get { EnsureDefaults(); return steps.Count; } }
     public float StepPoints(int index) => StepAt(index).points;
     public string StepNameAt(int index) => StepAt(index).name;
+    public Color StepColorAt(int index) => StepAt(index).color;
     public string StepName(string vendorId) => StepOf(vendorId).name;
 
     /// <summary>"Regular (42 / 80 to Friend)", or "Partner" at the top.</summary>
