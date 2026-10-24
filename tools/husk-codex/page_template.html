@@ -1,0 +1,673 @@
+<title>Husk Codex</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a field guide - header, three views (catalogue grid + specimen panel, interaction map, fall lab), all from one dataset. */
+:root{
+  --bg:#eef2ee; --surface:#f9fbf8; --sunk:#e2e8e2; --line:#c9d3ca; --fg:#17211b; --muted:#5a6b60;
+  --accent:#2e7a48; --accent-ink:#ffffff; --floor:#4c8f3d; --floor-dark:#3d7731; --sky:#d9ecf4;
+  --boost:#2c8a4f; --harm:#c23b32; --feeds:#b57914; --creates:#2f66c4; --hold:#7a4fc0; --link:#13889a; --reads:#6b7570; --converts:#c2448a; --consume:#d0661c;
+  --display:"Pixelify Sans", "Courier New", monospace;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --radius:6px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#101612; --surface:#18201b; --sunk:#0c110e; --line:#2b3830; --fg:#e4ece6; --muted:#93a59a;
+  --accent:#6fcf8e; --accent-ink:#0b130e; --floor:#2f5f27; --floor-dark:#264f20; --sky:#16232b;
+  --boost:#5fd08a; --harm:#f0776d; --feeds:#e8b04a; --creates:#7aa7f5; --hold:#b592f2; --link:#4cc7d8; --reads:#9aa7a0; --converts:#f07ab8; --consume:#f39a55;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101612; --surface:#18201b; --sunk:#0c110e; --line:#2b3830; --fg:#e4ece6; --muted:#93a59a;
+  --accent:#6fcf8e; --accent-ink:#0b130e; --floor:#2f5f27; --floor-dark:#264f20; --sky:#16232b;
+  --boost:#5fd08a; --harm:#f0776d; --feeds:#e8b04a; --creates:#7aa7f5; --hold:#b592f2; --link:#4cc7d8; --reads:#9aa7a0; --converts:#f07ab8; --consume:#f39a55;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:0 48px}
+.wrap{max-width:1240px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);font-weight:700;text-wrap:balance;margin:0;letter-spacing:.01em}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* ---- header ---- */
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 32px;padding-block:28px 18px;border-bottom:2px solid var(--fg)}
+.brand{display:flex;gap:16px;align-items:center;min-width:0}
+.brand h1{font-size:clamp(34px,6vw,54px);line-height:1}
+.brand p{margin:4px 0 0;color:var(--muted);max-width:56ch}
+.counts{display:flex;gap:22px;flex-wrap:wrap}
+.counts div{display:flex;flex-direction:column}
+.counts b{font-family:var(--display);font-size:26px;line-height:1.1}
+.counts span{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+nav.views{display:flex;gap:4px;margin-top:18px;border-bottom:1px solid var(--line);overflow-x:auto}
+nav.views button{background:none;border:0;padding:10px 16px;cursor:pointer;font-family:var(--display);font-size:18px;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px;white-space:nowrap}
+nav.views button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+
+/* ---- cubes ---- */
+[hidden]{display:none!important}
+.iso{width:var(--w,38px);height:auto;flex:none;display:block;overflow:visible}
+.iso.husk{--w:18px}
+.iso polygon{stroke:rgba(0,0,0,.28);stroke-width:1;stroke-linejoin:round}
+.cube-dark .iso polygon{stroke:rgba(255,255,255,.3)}
+
+/* ---- catalogue ---- */
+.catalogue{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:24px;margin-top:20px;align-items:start}
+.tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.search{flex:1 1 220px;min-width:0;padding:9px 12px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+.tools select{padding:9px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 11px;cursor:pointer;font-size:13px;display:inline-flex;gap:6px;align-items:center}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chip small{font-family:var(--mono);opacity:.7}
+.chip.haz[aria-pressed="true"]{background:var(--harm);border-color:var(--harm);color:#fff}
+.family-block{margin-bottom:22px}
+.family-block h2{font-size:20px;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;margin-bottom:10px}
+.family-block h2 small{font-family:var(--body);font-weight:400;font-size:13px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.tile{display:flex;gap:10px;align-items:center;padding:10px;border:1px solid var(--line);background:var(--surface);border-radius:var(--radius);cursor:pointer;text-align:left;min-width:0;position:relative}
+.tile:hover{border-color:var(--muted)}
+.tile[aria-current="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
+.tile .iso{--w:34px}
+.tile .nm{font-weight:700;font-size:14px;line-height:1.25;overflow-wrap:anywhere}
+.tile .sub{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.tile .flag{position:absolute;top:6px;right:7px;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--harm);letter-spacing:.05em}
+.tile .dots{display:flex;gap:3px;margin-top:3px}
+.tile .dots span{width:6px;height:6px;border-radius:1px;background:var(--line)}
+.tile .dots span.on{background:var(--accent)}
+.empty{padding:30px;border:1px dashed var(--line);border-radius:var(--radius);color:var(--muted);text-align:center}
+
+/* specimen panel */
+.panel{position:sticky;top:12px;border:1px solid var(--line);background:var(--surface);border-radius:8px;overflow:hidden;max-height:calc(100vh - 24px);overflow-y:auto}
+.panel .stage{background:linear-gradient(var(--sky),var(--sky) 62%,var(--floor) 62%,var(--floor-dark));height:170px;display:grid;place-items:center;perspective:700px;position:relative}
+.cube3d{--z:44px;width:88px;height:88px;position:relative;transform-style:preserve-3d;animation:spin 14s linear infinite;transform:rotateX(-24deg) rotateY(35deg)}
+.cube3d div{position:absolute;inset:0;border:1px solid rgba(0,0,0,.18)}
+.cube3d .f1{transform:translateZ(var(--z));background:var(--cl)}.cube3d .f2{transform:rotateY(180deg) translateZ(var(--z));background:var(--cl)}
+.cube3d .f3{transform:rotateY(90deg) translateZ(var(--z));background:var(--cr)}.cube3d .f4{transform:rotateY(-90deg) translateZ(var(--z));background:var(--cr)}
+.cube3d .f5{transform:rotateX(90deg) translateZ(var(--z));background:var(--ct)}.cube3d .f6{transform:rotateX(-90deg) translateZ(var(--z));background:var(--cb)}
+@keyframes spin{from{transform:rotateX(-24deg) rotateY(0deg)}to{transform:rotateX(-24deg) rotateY(360deg)}}
+.stage .husk-mini{position:absolute;right:26px;bottom:18px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.stage .num{position:absolute;left:12px;top:10px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.pbody{padding:16px 18px 20px;display:flex;flex-direction:column;gap:16px}
+.pbody h2{font-size:26px;line-height:1.1}
+.fam{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap}
+.fam .hz{color:var(--harm);font-weight:700}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.stats div{background:var(--bg);padding:8px 10px;display:flex;flex-direction:column;min-width:0}
+.stats b{font-family:var(--mono);font-size:16px}
+.stats span{font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.sect h3{font-family:var(--body);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.sect p{margin:0}
+.husk-text{border-left:3px solid var(--accent);padding-left:10px}
+.husk-text.plain{border-left-color:var(--line);color:var(--muted)}
+.meters{display:grid;gap:7px}
+.meter{display:grid;grid-template-columns:70px 1fr 42px;gap:8px;align-items:center;font-size:13px}
+.meter .bar{height:8px;background:var(--sunk);border-radius:2px;overflow:hidden}
+.meter .bar i{display:block;height:100%;background:var(--accent)}
+.meter .mono{font-size:12px;text-align:right}
+.tagrow{display:flex;flex-wrap:wrap;gap:5px}
+.tag{font-size:12px;padding:2px 8px;border-radius:3px;background:var(--sunk);border:1px solid var(--line)}
+.ix{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.ix li{display:grid;grid-template-columns:auto 1fr;gap:8px;font-size:13.5px;align-items:start}
+.kind{font-family:var(--mono);font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding:1px 6px;border-radius:3px;color:var(--k);border:1px solid var(--k);white-space:nowrap;margin-top:2px}
+.ix a{color:var(--fg);font-weight:700;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:2px;cursor:pointer}
+.ix a:hover{text-decoration-color:var(--accent)}
+.ghostbtn{align-self:flex-start;background:var(--accent);color:var(--accent-ink);border:0;border-radius:var(--radius);padding:8px 14px;cursor:pointer;font-weight:700}
+
+/* ---- interaction map ---- */
+.mapwrap{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;margin-top:20px;align-items:start}
+.mapbox{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.mapbox svg{display:block;width:100%;min-width:640px;height:auto}
+.mapbox text{font-family:var(--body);fill:var(--fg)}
+.edge{fill:none;stroke-width:1.4;opacity:.55;transition:opacity .15s}
+.dim .edge{opacity:.06}.dim .edge.hot{opacity:1;stroke-width:2.4}
+.node{cursor:pointer}
+.dim .node{opacity:.25}.dim .node.hot{opacity:1}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.legend .chip{font-family:var(--mono);font-size:11.5px;text-transform:uppercase}
+.legend .chip::before{content:"";width:10px;height:3px;background:var(--k);display:inline-block}
+.caption{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:14px 16px;position:sticky;top:12px}
+.caption h3{font-size:20px;margin-bottom:6px}
+.caption p{margin:0 0 10px;color:var(--muted);font-size:14px}
+
+/* ---- fall lab ---- */
+.lab{margin-top:20px;display:grid;gap:14px}
+.lab .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.lab canvas{width:100%;height:auto;display:block;border-radius:8px;border:1px solid var(--line);background:var(--sky);touch-action:manipulation}
+.picker{display:flex;flex-wrap:wrap;gap:6px}
+.pick{display:inline-flex;gap:6px;align-items:center;padding:3px 9px 3px 4px;border:1px solid var(--line);border-radius:4px;background:var(--surface);cursor:pointer;font-size:13px}
+.pick i{width:14px;height:14px;border-radius:2px;background:var(--c);box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}
+.pick[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius);padding:8px 14px;cursor:pointer;font-weight:700}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.note{color:var(--muted);font-size:13.5px;max-width:80ch;margin:0}
+.labhint{font-family:var(--mono);font-size:12px;color:var(--muted)}
+
+@media (max-width:900px){
+  .catalogue,.mapwrap{grid-template-columns:minmax(0,1fr)}
+  .panel{position:static;max-height:none}
+  .caption{position:static}
+}
+@media (max-width:480px){
+  .counts{gap:14px}.counts b{font-size:20px}.counts span{font-size:10.5px}
+  .brand{align-items:flex-start}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stats{grid-template-columns:repeat(2,1fr)}
+}
+@media (prefers-reduced-motion:reduce){.cube3d{animation:none}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span id="brandCube" style="--w:62px;display:block"></span>
+      <div>
+        <h1>Husk Codex</h1>
+        <p>Every block in Pixel Clicker: what a click on it does, what its husk does once it drops, and which other husks, sprouts and machines it touches.</p>
+      </div>
+    </div>
+    <div class="counts">
+      <div><b class="mono" id="cBlocks">0</b><span>Blocks</span></div>
+      <div><b class="mono" id="cOdd">0</b><span>Unusual husks</span></div>
+      <div><b class="mono" id="cLinks">0</b><span>Interactions</span></div>
+      <div><b class="mono" id="cHaz">0</b><span>Hazards</span></div>
+    </div>
+  </header>
+
+  <nav class="views" role="tablist" aria-label="Views">
+    <button role="tab" id="tab-catalogue" aria-selected="true" data-view="catalogue">Catalogue</button>
+    <button role="tab" id="tab-web" aria-selected="false" data-view="web">Interaction map</button>
+    <button role="tab" id="tab-lab" aria-selected="false" data-view="lab">Fall lab</button>
+  </nav>
+
+  <!-- CATALOGUE -->
+  <section id="view-catalogue" class="catalogue" role="tabpanel" aria-labelledby="tab-catalogue">
+    <div style="min-width:0">
+      <div class="tools">
+        <input id="q" class="search" type="search" placeholder="Search blocks and husk texts (try 'sprout', 'float', 'termite')" aria-label="Search">
+        <select id="sort" aria-label="Sort">
+          <option value="n">Game order</option>
+          <option value="pay">Highest pay</option>
+          <option value="rare">Rarest first</option>
+          <option value="hits">Toughest first</option>
+          <option value="name">A to Z</option>
+        </select>
+      </div>
+      <div class="chips" id="famChips"></div>
+      <div id="groups"></div>
+    </div>
+    <aside class="panel" id="panel" aria-live="polite"></aside>
+  </section>
+
+  <!-- INTERACTION MAP -->
+  <section id="view-web" class="mapwrap" role="tabpanel" aria-labelledby="tab-web" hidden>
+    <div style="min-width:0">
+      <div class="legend" id="kindChips"></div>
+      <div class="mapbox"><svg id="map" viewBox="0 0 1000 1000" role="img" aria-label="Map of husk interactions"></svg></div>
+    </div>
+    <div class="caption" id="mapCaption"></div>
+  </section>
+
+  <!-- FALL LAB -->
+  <section id="view-lab" class="lab" role="tabpanel" aria-labelledby="tab-lab" hidden>
+    <p class="note">Husks drop off the cube with the bounce, grip and gravity their look gives them in the game, plus their special behaviour: Leaf swings down, Ghost floats off after a few bounces, Glass shatters, Water splashes, Meteor streaks away, Fire burns out, Solar hovers, a Singularity pulls the others in, Nuclear makes its neighbours fade. Pick husks, then drop them. Click the floor to drop the picked ones there.</p>
+    <div class="bar">
+      <button class="btn primary" id="dropBtn">Drop picked</button>
+      <button class="btn" id="randBtn">Drop 12 random</button>
+      <button class="btn" id="clearBtn">Clear floor</button>
+      <span class="labhint" id="labCount"></span>
+    </div>
+    <div class="picker" id="picker"></div>
+    <canvas id="lab" width="1200" height="460" aria-label="Fall lab: husks dropping onto a grass floor"></canvas>
+  </section>
+</div>
+
+<script>
+const DATA = __DATA__;
+
+const FAMILIES = [
+  ['core','Core colours','White to Blue: the plain blocks everything starts with.'],
+  ['special','Specials','Shop and event blocks with a trick of their own.'],
+  ['wood','Woodcutting','Logs, leaves, sap and the Termite Hive.'],
+  ['forage','Foraging','Berries, mushrooms, herbs and two nasty hazards.'],
+  ['fish','Fishing','Fish, bait and the very rare Whale.'],
+  ['farming','Farming','Seeds, water and everything that feeds sprouts.'],
+  ['mining','Mining','Ores that crack, rich veins and the Gas Pocket.'],
+  ['electric','Electrician','Conductors that link devices with arcs.'],
+  ['fire','Firemaking','The test skill: tinder, flint, embers and Wildfire.'],
+  ['rare','Rares','Dragon, God and Prime Cubes, the Cubelette and the Golden Snitch.'],
+];
+const FAMNAME = Object.fromEntries(FAMILIES.map(f=>[f[0],f[1]]));
+const KINDS = {
+  boost:['Helps','--boost'], harm:['Harms','--harm'], feeds:['Feeds','--feeds'], creates:['Makes','--creates'],
+  hold:['Holds','--hold'], link:['Links','--link'], reads:['Counts','--reads'], converts:['Converts','--converts'], consume:['Collects','--consume']
+};
+const BEH = {
+  flutter:'Swings down like a leaf', splash:'Splashes on landing', shatter:'Shatters on landing', floatAway:'Floats off the screen',
+  gravityWell:'Gravity well', radiation:'Radioactive', burn:'Burns away', sunFx:'Hovers and pays a trickle', wobble:'Jelly wobble',
+  jagged:'Chipped edges', blob:'Soft blob shape', shine:'Shiny sweep', cometTail:'Comet tail', flyAway:'Streaks across the screen', glow:'Glows'
+};
+const MOTION_BEH = ['flutter','splash','shatter','floatAway','gravityWell','radiation','burn','sunFx','flyAway'];
+const px = DATA.pixels, byId = Object.fromEntries(px.map(p=>[p.id,p]));
+const SYS = DATA.systems, LINKS = DATA.links;
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// The game's texts carry a little rich text (<b>, <i>); keep those two, escape everything else.
+const rich = s => esc(s).replace(/&lt;(\/?)(b|i)&gt;/g,'<$1$2>');
+const hex = c => '#'+c.map(v=>Math.round(Math.max(0,Math.min(1,v))*255).toString(16).padStart(2,'0')).join('');
+const shade = (c,f) => hex(c.map(v=> f>=1 ? v+(1-v)*(f-1) : v*f));
+const lum = c => .2126*c[0]+.7152*c[1]+.0722*c[2];
+function cubeVars(c){ return `--ct:${shade(c,1.28)};--cl:${hex(c)};--cr:${shade(c,.72)};--cb:${shade(c,.55)}`; }
+function iso(c, cls=''){
+  return `<svg class="iso ${cls}" viewBox="0 0 40 46" aria-hidden="true"><polygon points="20,2 38,12 20,22 2,12" fill="${shade(c,1.28)}"/><polygon points="2,12 20,22 20,44 2,34" fill="${hex(c)}"/><polygon points="38,12 20,22 20,44 38,34" fill="${shade(c,.72)}"/></svg>`;
+}
+const fmt = v => v==null ? '—' : (v>=1000 ? Math.round(v).toLocaleString('en') : (Number.isInteger(v) ? String(v) : v.toFixed(v<1?2:1)));
+function hitsLabel(p){ return p.rmin ? `${fmt(p.rmin)}-${fmt(p.rmax)}` : fmt(p.hits); }
+function payLabel(p){ return p.pmin ? `${fmt(p.pmin)}-${fmt(p.pmax)}` : fmt(p.pay); }
+function rarity(p){
+  const w = p.weight;
+  if (w==null) return {label:'—',dots:0};
+  if (w===0) return {label:'Never rolled',dots:0};
+  if (w>=0.8) return {label:'Common',dots:5};
+  if (w>=0.4) return {label:'Regular',dots:4};
+  if (w>=0.15) return {label:'Uncommon',dots:3};
+  if (w>=0.03) return {label:'Rare',dots:2};
+  if (w>=0.001) return {label:'Very rare',dots:1};
+  return {label:'Legendary',dots:1};
+}
+const isOdd = p => p.beh.some(b=>MOTION_BEH.includes(b)) || !p.huskDefault || p.phys.gravity!==1 || p.phys.bounce>0.3;
+function sysName(id){ return SYS[id] || (byId[id] ? byId[id].name : id); }
+function nodeLink(id){ return byId[id] ? `<a data-go="${id}">${esc(byId[id].name)}</a>` : `<b>${esc(SYS[id])}</b>`; }
+
+/* links that touch one pixel, including the group ones (every husk, wood husks...) */
+function linksFor(p){
+  const own = LINKS.filter(l=>l.from===p.id || l.to===p.id);
+  const group = LINKS.filter(l=>{
+    const g = [l.from,l.to];
+    if (g.includes(p.id)) return false;
+    if (l.from==='allhusks') return true;                       // every husk can go to these
+    if (g.includes('woodhusks')) return p.family==='wood';      // and every Woodcutting husk to these
+    return false;
+  });
+  return {own, group};
+}
+
+/* ---------- counts ---------- */
+document.getElementById('brandCube').innerHTML = iso([.3,.6,.21]);
+$('#cBlocks').textContent = px.length;
+$('#cOdd').textContent = px.filter(isOdd).length;
+$('#cLinks').textContent = LINKS.length;
+$('#cHaz').textContent = px.filter(p=>p.hazard).length;
+
+/* ---------- catalogue ---------- */
+const state = { fam:new Set(), haz:false, q:'', sort:'n', sel:'Leaf' };
+try { const s = localStorage.getItem('huskcodex.sort'); if (s) state.sort = s; } catch(e){}
+$('#sort').value = state.sort;
+
+function famChips(){
+  const box = $('#famChips');
+  let h = `<button class="chip" data-fam="*" aria-pressed="${state.fam.size===0}">All <small>${px.length}</small></button>`;
+  for (const [id,label] of FAMILIES){
+    const n = px.filter(p=>p.family===id).length;
+    h += `<button class="chip" data-fam="${id}" aria-pressed="${state.fam.has(id)}">${label} <small>${n}</small></button>`;
+  }
+  h += `<button class="chip haz" data-haz aria-pressed="${state.haz}">Hazards only <small>${px.filter(p=>p.hazard).length}</small></button>`;
+  box.innerHTML = h;
+}
+$('#famChips').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.hasAttribute('data-haz')) state.haz = !state.haz;
+  else if (b.dataset.fam==='*') state.fam.clear();
+  else { const f=b.dataset.fam; state.fam.has(f) ? state.fam.delete(f) : state.fam.add(f); }
+  famChips(); renderGrid();
+});
+$('#q').addEventListener('input', e=>{ state.q = e.target.value.trim().toLowerCase(); renderGrid(); });
+$('#sort').addEventListener('change', e=>{ state.sort = e.target.value; try{localStorage.setItem('huskcodex.sort',state.sort)}catch(_){} renderGrid(); });
+
+function matches(p){
+  if (state.fam.size && !state.fam.has(p.family)) return false;
+  if (state.haz && !p.hazard) return false;
+  if (!state.q) return true;
+  const hay = (p.name+' '+p.id+' '+p.guide+' '+p.husk+' '+FAMNAME[p.family]+' '+p.beh.map(b=>BEH[b]).join(' ')).toLowerCase();
+  return state.q.split(/\s+/).every(w=>hay.includes(w));
+}
+function sorter(a,b){
+  switch(state.sort){
+    case 'pay': return (b.pay??-1)-(a.pay??-1);
+    case 'rare': return (a.weight??9)-(b.weight??9);
+    case 'hits': return (b.rmax||b.hits)-(a.rmax||a.hits);
+    case 'name': return a.name.localeCompare(b.name);
+    default: return (a.n??999)-(b.n??999);
+  }
+}
+function tile(p){
+  const r = rarity(p);
+  const dots = [1,2,3,4,5].map(i=>`<span class="${i<=r.dots?'on':''}"></span>`).join('');
+  const dark = lum(p.color)<0.12 ? ' cube-dark' : '';
+  return `<button class="tile${dark}" data-id="${p.id}" aria-current="${p.id===state.sel}">
+    ${p.hazard?'<span class="flag">HAZARD</span>':''}
+    ${iso(p.color)}
+    <span style="min-width:0"><span class="nm">${esc(p.name.replace(/ Pixels$/,''))}</span>
+    <span class="sub" style="display:block">pays ${payLabel(p)} · ${hitsLabel(p)} hit${p.hits>1||p.rmin?'s':''}</span>
+    <span class="dots" title="${r.label}">${dots}</span></span></button>`;
+}
+function renderGrid(){
+  const list = px.filter(matches).sort(sorter);
+  const out = $('#groups');
+  if (!list.length){ out.innerHTML = `<div class="empty">No block matches "${esc(state.q)}". Clear the search or pick another family.</div>`; return; }
+  if (state.sort!=='n'){ out.innerHTML = `<div class="grid">${list.map(tile).join('')}</div>`; return; }
+  let h='';
+  for (const [id,label,blurb] of FAMILIES){
+    const g = list.filter(p=>p.family===id); if (!g.length) continue;
+    h += `<div class="family-block"><h2>${label} <small>${blurb}</small></h2><div class="grid">${g.map(tile).join('')}</div></div>`;
+  }
+  out.innerHTML = h;
+}
+$('#groups').addEventListener('click', e=>{ const t=e.target.closest('.tile'); if (t) select(t.dataset.id, true); });
+
+function meter(label, v, max, txt){
+  const pct = Math.max(2, Math.min(100, v/max*100));
+  return `<div class="meter"><span>${label}</span><span class="bar"><i style="width:${pct}%"></i></span><span class="mono">${txt}</span></div>`;
+}
+function renderPanel(){
+  const p = byId[state.sel]; if (!p) return;
+  const r = rarity(p);
+  const {own, group} = linksFor(p);
+  const li = l => {
+    const [kl,kv] = KINDS[l.kind];
+    const other = l.from===p.id ? l.to : l.from;
+    const dir = l.from===p.id ? '' : (l.to===p.id ? '' : '');
+    return `<li><span class="kind" style="--k:var(${kv})">${kl}</span><span>${l.from===p.id && l.to===p.id ? '' : (l.from===p.id ? '→ ' : '← ')}${nodeLink(other)}: ${esc(l.text)}</span></li>`;
+  };
+  const beh = p.beh.map(b=>`<span class="tag">${BEH[b]||b}</span>`).join('');
+  const custom = p.phys.gravity!==1 || p.phys.bounce!==0.08 || p.phys.friction!==0.65;
+  $('#panel').innerHTML = `
+    <div class="stage" style="${cubeVars(p.color)}">
+      <span class="num">#${p.n}</span>
+      <div class="cube3d"><div class="f1"></div><div class="f2"></div><div class="f3"></div><div class="f4"></div><div class="f5"></div><div class="f6"></div></div>
+      <span class="husk-mini">${iso(p.color,'husk')}husk</span>
+    </div>
+    <div class="pbody">
+      <div><h2>${esc(p.name)}</h2>
+        <div class="fam"><span>${FAMNAME[p.family]}</span>${p.hazard?'<span class="hz">Hazard</span>':''}<span>${r.label}</span></div></div>
+      <div class="stats">
+        <div><b>${payLabel(p)}</b><span>Pays</span></div>
+        <div><b>${hitsLabel(p)}</b><span>Clicks</span></div>
+        <div><b>${p.weight==null?'—':fmt(p.weight)}</b><span>Spawn weight</span></div>
+      </div>
+      <div class="sect"><h3>On the cube</h3><p>${rich(p.guide)||'<span style="color:var(--muted)">No guide text yet.</span>'}</p></div>
+      <div class="sect"><h3>Its husk</h3><p class="husk-text ${p.huskDefault?'plain':''}">${p.huskDefault?'An ordinary husk: it ':'It '}${rich(p.husk)}</p></div>
+      <div class="sect"><h3>How the husk falls${custom?'':' (the shared defaults)'}</h3>
+        <div class="meters">
+          ${meter('Bounce', p.phys.bounce, 1, fmt(p.phys.bounce))}
+          ${meter('Grip', p.phys.friction, 1.4, fmt(p.phys.friction))}
+          ${meter('Gravity', p.phys.gravity, 1, p.phys.gravity===0?'none':'×'+fmt(p.phys.gravity))}
+        </div>
+        ${beh?`<div class="tagrow" style="margin-top:10px">${beh}</div>`:''}
+      </div>
+      <div class="sect"><h3>Interactions</h3>
+        ${own.length?`<ul class="ix">${own.map(li).join('')}</ul>`:'<p style="color:var(--muted);font-size:14px">Nothing special of its own.</p>'}
+        ${group.length?`<p style="color:var(--muted);font-size:13px;margin-top:10px">Like ${p.family==='wood'?'every Woodcutting husk':'every husk'}: ${group.map(l=>esc(l.text.replace(/\.$/,''))).join('; ')}.</p>`:''}
+      </div>
+      <button class="ghostbtn" data-drop="${p.id}">Drop it in the fall lab</button>
+    </div>`;
+}
+$('#panel').addEventListener('click', e=>{
+  const a = e.target.closest('[data-go]'); if (a){ select(a.dataset.go, true); return; }
+  const d = e.target.closest('[data-drop]'); if (d){ showView('lab'); lab.picked = new Set([d.dataset.drop]); renderPicker(); lab.dropPicked(); }
+});
+function select(id, scroll){
+  if (!byId[id]) return;
+  state.sel = id;
+  document.querySelectorAll('.tile').forEach(t=>t.setAttribute('aria-current', t.dataset.id===id));
+  renderPanel();
+  if (scroll && window.matchMedia('(max-width:900px)').matches) $('#panel').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+/* ---------- views ---------- */
+function showView(v){
+  document.querySelectorAll('nav.views button').forEach(b=>b.setAttribute('aria-selected', b.dataset.view===v));
+  for (const k of ['catalogue','web','lab']) $('#view-'+k).hidden = k!==v;
+  if (v==='lab'){ lab.resize(); if (!lab.started) lab.start(); }
+}
+document.querySelector('nav.views').addEventListener('click', e=>{ const b=e.target.closest('button'); if (b) showView(b.dataset.view); });
+
+/* ---------- interaction map ---------- */
+const mapState = { kinds:new Set(Object.keys(KINDS)), focus:null };
+function kindChips(){
+  $('#kindChips').innerHTML = Object.entries(KINDS).map(([k,[l,v]])=>{
+    const n = LINKS.filter(x=>x.kind===k).length;
+    return `<button class="chip" data-kind="${k}" style="--k:var(${v})" aria-pressed="${mapState.kinds.has(k)}">${l} <small>${n}</small></button>`;
+  }).join('');
+}
+$('#kindChips').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; const k=b.dataset.kind; mapState.kinds.has(k)?mapState.kinds.delete(k):mapState.kinds.add(k); kindChips(); drawMap(); });
+
+function drawMap(){
+  const svg = $('#map'), C = 500;
+  const shown = LINKS.filter(l=>mapState.kinds.has(l.kind));
+  const ids = new Set(); shown.forEach(l=>{ids.add(l.from); ids.add(l.to);});
+  const sysIds = [...ids].filter(i=>SYS[i]);
+  const pxIds = [...ids].filter(i=>byId[i]).sort((a,b)=>{
+    const fa = FAMILIES.findIndex(f=>f[0]===byId[a].family), fb = FAMILIES.findIndex(f=>f[0]===byId[b].family);
+    return fa-fb || byId[a].n-byId[b].n;
+  });
+  const pos = {};
+  pxIds.forEach((id,i)=>{ const a = -Math.PI/2 + i/pxIds.length*Math.PI*2; pos[id] = {x:C+Math.cos(a)*360, y:C+Math.sin(a)*360, a}; });
+  // things acted on sit in two columns in the middle, each beside the blocks that reach it (fewer crossing lines)
+  const mean = id => { const ps = shown.filter(l=>l.from===id||l.to===id).map(l=>pos[l.from===id?l.to:l.from]).filter(Boolean);
+    return ps.length ? {x:ps.reduce((s,q)=>s+q.x,0)/ps.length, y:ps.reduce((s,q)=>s+q.y,0)/ps.length} : {x:C,y:C}; };
+  const m = Object.fromEntries(sysIds.map(id=>[id,mean(id)]));
+  const cols = [sysIds.filter(id=>m[id].x<C), sysIds.filter(id=>m[id].x>=C)];
+  while (Math.abs(cols[0].length-cols[1].length)>1){ const [big,small] = cols[0].length>cols[1].length?[0,1]:[1,0];
+    cols[big].sort((a,b)=>Math.abs(m[a].x-C)-Math.abs(m[b].x-C)); cols[small].push(cols[big].shift()); }
+  cols.forEach((col,ci)=>{ col.sort((a,b)=>m[a].y-m[b].y); const n=col.length, top=C-(n-1)*20;
+    col.forEach((id,i)=>{ pos[id] = {x:C+(ci?95:-95), y:top+i*40, a:0, side:ci?1:-1}; }); });
+  let h = '<g class="edges">';
+  shown.forEach((l,i)=>{
+    let A = pos[l.from], B = pos[l.to]; if (!A||!B||l.from===l.to) return;
+    const edgeOf = (P,Q) => P.side ? {x:P.x + (Q.x<P.x?-88:88), y:P.y} : P;
+    A = edgeOf(A,B); B = edgeOf(B,A);
+    const mx=(A.x+B.x)/2, my=(A.y+B.y)/2, cx = C+(mx-C)*.35, cy = C+(my-C)*.35;
+    h += `<path class="edge" data-i="${i}" data-a="${l.from}" data-b="${l.to}" d="M${A.x.toFixed(1)},${A.y.toFixed(1)} Q${cx.toFixed(1)},${cy.toFixed(1)} ${B.x.toFixed(1)},${B.y.toFixed(1)}" stroke="var(${KINDS[l.kind][1]})"/>`;
+  });
+  h += '</g><g class="nodes">';
+  for (const id of sysIds){
+    const P = pos[id], label = SYS[id], w = 176;
+    h += `<g class="node" data-id="${id}" tabindex="0" transform="translate(${P.x.toFixed(1)},${P.y.toFixed(1)})">
+      <rect x="${-w/2}" y="-13" width="${w}" height="26" rx="4" fill="var(--bg)" stroke="var(--fg)" stroke-width="1.2"/>
+      <text text-anchor="middle" y="4.5" font-size="${label.length>24?11:12.5}" font-weight="700">${esc(label)}</text></g>`;
+  }
+  for (const id of pxIds){
+    const P = pos[id], p = byId[id], deg = P.a*180/Math.PI, flip = Math.cos(P.a)<0;
+    const rot = flip ? deg+180 : deg, anchor = flip ? 'end':'start', dx = flip ? -14 : 14;
+    h += `<g class="node" data-id="${id}" tabindex="0" transform="translate(${P.x.toFixed(1)},${P.y.toFixed(1)})">
+      <rect x="-7" y="-7" width="14" height="14" fill="${hex(p.color)}" stroke="var(--fg)" stroke-width="1" transform="rotate(45)"/>
+      <text transform="rotate(${rot.toFixed(1)})" x="${dx}" y="4" text-anchor="${anchor}" font-size="13">${esc(p.name.replace(/ Pixels$/,''))}</text></g>`;
+  }
+  h += '</g>';
+  svg.innerHTML = h;
+  svg.classList.toggle('dim', !!mapState.focus);
+  if (mapState.focus) focusNode(mapState.focus);
+  else caption(null);
+}
+function focusNode(id){
+  mapState.focus = id;
+  const svg = $('#map'); svg.classList.add('dim');
+  svg.querySelectorAll('.edge').forEach(e=>e.classList.toggle('hot', e.dataset.a===id || e.dataset.b===id));
+  const near = new Set([id]); svg.querySelectorAll('.edge.hot').forEach(e=>{near.add(e.dataset.a); near.add(e.dataset.b);});
+  svg.querySelectorAll('.node').forEach(n=>n.classList.toggle('hot', near.has(n.dataset.id)));
+  caption(id);
+}
+function caption(id){
+  const box = $('#mapCaption');
+  if (!id){
+    box.innerHTML = `<h3>How husks reach each other</h3><p>Blocks sit on the outer ring, coloured as they are in the game; the things they act on (sprouts, devices, machines, groups of husks) sit inside. Pick a dot or a box to follow its lines.</p><p>The busiest corners: Farming feeds sprouts, Electrician links devices, and the hazards all go after the husks lying round the cube.</p>`;
+    return;
+  }
+  const ls = LINKS.filter(l=>(l.from===id||l.to===id) && mapState.kinds.has(l.kind));
+  const name = sysName(id);
+  box.innerHTML = `<h3>${esc(name)}</h3>
+    ${byId[id]?`<p><a class="mono" style="color:var(--accent);cursor:pointer" data-open="${id}">Open in the catalogue</a></p>`:''}
+    <ul class="ix">${ls.map(l=>`<li><span class="kind" style="--k:var(${KINDS[l.kind][1]})">${KINDS[l.kind][0]}</span><span>${nodeLink(l.from)} → ${nodeLink(l.to)}: ${esc(l.text)}</span></li>`).join('')}</ul>
+    <p style="margin-top:12px"><button class="btn" data-clear>Show everything</button></p>`;
+}
+$('#map').addEventListener('click', e=>{ const n=e.target.closest('.node'); if (n) focusNode(n.dataset.id); else { mapState.focus=null; drawMap(); } });
+$('#map').addEventListener('keydown', e=>{ if ((e.key==='Enter'||e.key===' ') && e.target.closest('.node')){ e.preventDefault(); focusNode(e.target.closest('.node').dataset.id); }});
+$('#mapCaption').addEventListener('click', e=>{
+  if (e.target.closest('[data-clear]')){ mapState.focus=null; drawMap(); return; }
+  const o = e.target.closest('[data-open]'); if (o){ showView('catalogue'); select(o.dataset.open, true); return; }
+  const g = e.target.closest('[data-go]'); if (g){ focusNode(g.dataset.go); }
+});
+
+/* ---------- fall lab ---------- */
+const lab = (()=>{
+  const cv = $('#lab'), ctx = cv.getContext('2d');
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let W=1200, H=460, floorY=H-56, S=22, items=[], parts=[], last=0, running=false;
+  const picked = new Set(['Leaf','Glass','Water','Ghost','Solar','Wood']);
+  const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  function resize(){
+    const r = cv.getBoundingClientRect(); if (!r.width) return;
+    const dpr = Math.min(2, window.devicePixelRatio||1);
+    W = r.width; H = Math.max(300, Math.min(520, r.width*0.42)); cv.style.height = H+'px';
+    cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); ctx.setTransform(dpr,0,0,dpr,0,0);
+    floorY = H-50; S = Math.max(14, Math.min(24, W/50));
+    draw();
+  }
+  function spawn(p, x){
+    const cubeX = x ?? W/2, b = p.beh;
+    const it = { p, x:cubeX+(Math.random()-.5)*S, y:96, vx:(Math.random()-.5)*220, vy:-120-Math.random()*120, a:0, va:(Math.random()-.5)*6,
+      bounces:0, landed:false, age:0, alpha:1, size:S, dead:false, phase:Math.random()*6.28, heading:Math.random()<.5?-1:1 };
+    if (b.includes('flyAway')){ const ang = (20+Math.random()*140)*Math.PI/180; it.vx = Math.cos(ang)*520; it.vy = -Math.sin(ang)*520; it.fly=true; it.trail=[]; }
+    if (b.includes('flutter')){ it.flutter=true; it.vx*=.4; it.vy=0; }
+    items.push(it);
+    if (items.length>60) items.shift();
+  }
+  function burst(x,y,col,n,spd,life,grav=900,sz=4){
+    for (let i=0;i<n;i++){ const a=Math.random()*Math.PI*2, s=spd*(.4+Math.random()*.8); parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-spd*.5,life,max:life,col,grav,sz}); }
+  }
+  function step(dt){
+    const g0 = 1300;
+    for (const it of items){
+      if (it.dead) continue;
+      const p = it.p, ph = p.phys, b = p.beh; it.age += dt;
+      if (it.fly){ it.trail.push([it.x,it.y]); if (it.trail.length>18) it.trail.shift(); it.x+=it.vx*dt; it.y+=it.vy*dt; it.a+=it.va*dt;
+        if (it.x<-60||it.x>W+60||it.y<-60) it.dead=true; continue; }
+      if (it.flutter && !it.landed){
+        const w = Math.PI*2/1.6, t = it.age*w + it.phase, c = Math.cos(t);
+        const tvx = it.heading*1.6*S*w*c, tvy = 2.2*S*(1.6*c*c-.15);
+        const k = 1-Math.exp(-8*dt); it.vx += (tvx-it.vx)*k; it.vy += (tvy-it.vy)*k; it.a = -0.6*c*it.heading;
+      } else if (b.includes('sunFx')){
+        const hover = floorY - S*2.2 + Math.sin(it.age*2+it.phase)*5;
+        it.vy += (hover-it.y)*6*dt - it.vy*3*dt; it.vx *= (1-2*dt); it.a += .4*dt;
+      } else if (it.floating){
+        it.vy -= 160*dt; it.vx += it.heading*40*dt; if (it.y < -40) it.dead=true;
+      } else {
+        it.vy += g0*ph.gravity*dt;
+      }
+      // gravity well pulls loose neighbours
+      if (b.includes('gravityWell') && it.landed){
+        for (const o of items){ if (o===it||o.dead||o.fly||o.p.beh.includes('gravityWell')) continue;
+          const dx=it.x-o.x, d=Math.abs(dx); if (d<S*9 && d>S*.9){ o.vx += Math.sign(dx)*500*dt; } }
+      }
+      if (b.includes('radiation') && it.landed){
+        for (const o of items){ if (o===it||o.dead||o.p.beh.includes('radiation')) continue;
+          if (Math.hypot(it.x-o.x,it.y-o.y) < S*4) { o.alpha -= dt*.9; if (o.alpha<=0) o.dead=true; } }
+      }
+      it.x += it.vx*dt; it.y += it.vy*dt; it.a += it.va*dt;
+      const bottom = floorY - it.size/2;
+      if (it.y >= bottom && it.vy>0 && !b.includes('sunFx')){
+        const speed = it.vy; it.y = bottom;
+        if (b.includes('shatter') && speed>200){ burst(it.x,bottom,p.color,10,260,.9,1400,5); it.dead=true; continue; }
+        if (b.includes('splash') && !it.splashed){ it.splashed=true; burst(it.x,bottom,[.55,.8,1],16,300,.8,1300,3);
+          for (let k=0;k<4;k++) parts.push({x:it.x,y:bottom,vx:(k-1.5)*120,vy:-260-Math.random()*80,life:.9,max:.9,col:p.color,grav:1300,sz:S*.4,cube:true}); it.dead=true; continue; }
+        it.landed = true; it.flutter = false;
+        const e = Math.min(.9, ph.bounce);
+        it.vy = speed>60 ? -speed*e : 0; it.bounces++;
+        it.vx *= (1-Math.min(.9, ph.friction*.6)); it.va *= .5;
+        if (b.includes('floatAway') && it.bounces>=2){ it.floating=true; }
+      }
+      if (it.landed && it.y>=bottom-0.5){ it.vx *= Math.max(0,1-ph.friction*6*dt); it.va *= Math.max(0,1-8*dt); it.a += (Math.round(it.a/(Math.PI/2))*(Math.PI/2)-it.a)*Math.min(1,10*dt); }
+      if (b.includes('burn') && it.landed){ it.size -= S/6*dt; if (Math.random()<.5) parts.push({x:it.x+(Math.random()-.5)*it.size,y:it.y-it.size/2,vx:0,vy:-60,life:.6,max:.6,col:[1,.5,.1],grav:-100,sz:3}); if (it.size<3) it.dead=true; }
+      if (it.x < it.size/2){ it.x=it.size/2; it.vx=Math.abs(it.vx)*.4; }
+      if (it.x > W-it.size/2){ it.x=W-it.size/2; it.vx=-Math.abs(it.vx)*.4; }
+    }
+    // simple husk-on-husk stacking along the floor: push overlapping resting husks apart sideways and up
+    for (let i=0;i<items.length;i++) for (let j=i+1;j<items.length;j++){
+      const A=items[i], B=items[j]; if (A.dead||B.dead||A.fly||B.fly||A.floating||B.floating) continue;
+      const dx=B.x-A.x, dy=B.y-A.y, min=(A.size+B.size)/2*.95;
+      if (Math.abs(dx)<min && Math.abs(dy)<min){
+        if (Math.abs(dy) > Math.abs(dx)*.6){ const top = dy<0?B:A, low = dy<0?A:B; top.y = low.y - min; if (top.vy>0) top.vy=0; top.landed=true; top.flutter=false; }
+        else { const push=(min-Math.abs(dx))/2*Math.sign(dx||1); A.x-=push; B.x+=push; }
+      }
+    }
+    items = items.filter(i=>!i.dead);
+    for (const q of parts){ q.life-=dt; q.vy+=q.grav*dt; q.x+=q.vx*dt; q.y+=q.vy*dt; if (q.y>floorY-q.sz/2 && q.grav>0){ q.y=floorY-q.sz/2; q.vy*=-.3; q.vx*=.7; } }
+    parts = parts.filter(q=>q.life>0);
+  }
+  function drawCube(x,y,s,a,col,alpha){
+    ctx.save(); ctx.translate(x,y); ctx.rotate(a); ctx.globalAlpha=alpha;
+    ctx.fillStyle = hex(col); ctx.fillRect(-s/2,-s/2,s,s);
+    ctx.fillStyle = shade(col,1.3); ctx.fillRect(-s/2,-s/2,s,s*.22);
+    ctx.fillStyle = shade(col,.7); ctx.fillRect(-s/2,s*.28,s,s*.22);
+    ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth=1; ctx.strokeRect(-s/2+.5,-s/2+.5,s-1,s-1);
+    ctx.restore();
+  }
+  function draw(){
+    const sky = cssVar('--sky'), floor = cssVar('--floor'), floorD = cssVar('--floor-dark');
+    ctx.globalAlpha=1; ctx.fillStyle = sky; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = floor; ctx.fillRect(0,floorY,W,H-floorY);
+    ctx.fillStyle = floorD; for (let x=0;x<W;x+=24) for (let y=floorY;y<H;y+=24) if (((x/24)+(y/24|0))%3===0) ctx.fillRect(x,y,12,12);
+    // the clicker cube
+    const cs = S*2.6, cx = W/2, cy = 60;
+    ctx.fillStyle = cssVar('--fg'); ctx.globalAlpha=.08; ctx.fillRect(cx-cs/2+4,cy-cs/2+4,cs,cs); ctx.globalAlpha=1;
+    drawCube(cx,cy,cs,0,[.95,.95,.95],1);
+    for (const it of items){
+      if (it.fly && it.trail){ for (let k=0;k<it.trail.length;k++){ const [tx,ty]=it.trail[k]; ctx.globalAlpha=k/it.trail.length*.5; ctx.fillStyle=k%2?'#ff9a3a':hex(it.p.color); ctx.fillRect(tx-it.size*k/36,ty-it.size*k/36,it.size*k/18,it.size*k/18);} }
+      const b = it.p.beh;
+      if (b.includes('gravityWell') && it.landed){ ctx.globalAlpha=.25; ctx.strokeStyle=hex(it.p.color); ctx.lineWidth=2; ctx.beginPath(); ctx.arc(it.x,it.y,S*(4+Math.sin(it.age*3)),0,6.28); ctx.stroke(); }
+      if (b.includes('radiation') && it.landed){ ctx.globalAlpha=.2+.1*Math.sin(it.age*5); ctx.strokeStyle='#7dff5a'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(it.x,it.y,S*4,0,6.28); ctx.stroke(); }
+      if (b.includes('glow')||b.includes('sunFx')){ const gr=ctx.createRadialGradient(it.x,it.y,0,it.x,it.y,it.size*1.8); gr.addColorStop(0,'rgba(255,240,170,.55)'); gr.addColorStop(1,'rgba(255,240,170,0)'); ctx.globalAlpha=1; ctx.fillStyle=gr; ctx.fillRect(it.x-it.size*2,it.y-it.size*2,it.size*4,it.size*4); }
+      drawCube(it.x,it.y,it.size,it.a,it.p.color,Math.max(0,it.alpha)*(b.includes('floatAway')?.8:1));
+    }
+    for (const q of parts){ ctx.globalAlpha=Math.max(0,q.life/q.max); ctx.fillStyle=hex(q.col); ctx.fillRect(q.x-q.sz/2,q.y-q.sz/2,q.sz,q.sz); }
+    ctx.globalAlpha=1;
+    $('#labCount').textContent = `${items.length} husk${items.length===1?'':'s'} on the floor`;
+  }
+  function loop(t){
+    const dt = Math.min(.033,(t-last)/1000||0); last=t;
+    if (!$('#view-lab').hidden){ step(dt); draw(); }
+    requestAnimationFrame(loop);
+  }
+  function settle(){ for (let i=0;i<400;i++) step(1/60); }
+  function dropPicked(x){ const list=[...picked].map(id=>byId[id]).filter(Boolean); list.forEach((p,i)=>setTimeout(()=>spawn(p,x),i*140)); if (reduce) setTimeout(()=>{settle();draw();}, list.length*140+20); }
+  cv.addEventListener('click', e=>{ const r=cv.getBoundingClientRect(); dropPicked(e.clientX-r.left); });
+  $('#dropBtn').addEventListener('click', ()=>dropPicked());
+  $('#randBtn').addEventListener('click', ()=>{ const pool = px.filter(p=>p.family!=='rare'); for (let i=0;i<12;i++) setTimeout(()=>spawn(pool[Math.random()*pool.length|0]), i*110); if (reduce) setTimeout(()=>{settle();draw();},1500); });
+  $('#clearBtn').addEventListener('click', ()=>{ items=[]; parts=[]; draw(); });
+  window.addEventListener('resize', resize);
+  let started=false;
+  return { resize, dropPicked, get started(){ return started; },
+           start(){ started=true; [...picked].forEach((id,i)=>spawn(byId[id], W*(.2+i*.12))); settle(); draw(); requestAnimationFrame(loop); },
+           set picked(v){ picked.clear(); v.forEach(x=>picked.add(x)); }, get picked(){ return picked; } };
+})();
+function renderPicker(){
+  const sorted = [...px].filter(p=>p.family!=='rare').sort((a,b)=>(isOdd(b)-isOdd(a)) || a.n-b.n);
+  $('#picker').innerHTML = sorted.map(p=>`<button class="pick" data-id="${p.id}" style="--c:${hex(p.color)}" aria-pressed="${lab.picked.has(p.id)}"><i></i>${esc(p.name.replace(/ Pixels$/,''))}</button>`).join('');
+}
+$('#picker').addEventListener('click', e=>{ const b=e.target.closest('.pick'); if(!b) return; const id=b.dataset.id; lab.picked.has(id)?lab.picked.delete(id):lab.picked.add(id); b.setAttribute('aria-pressed', lab.picked.has(id)); });
+
+/* ---------- start ---------- */
+famChips(); renderGrid();
+const fromHash = decodeURIComponent((location.hash||'').slice(1));
+if (fromHash==='map') showView('web');
+if (byId[fromHash]) state.sel = fromHash;
+select(state.sel, false);
+kindChips(); drawMap(); renderPicker();
+if (fromHash==='lab') showView('lab');
+</script>
