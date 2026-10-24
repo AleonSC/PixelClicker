@@ -436,78 +436,10 @@ public class PixelDevShapes : MonoBehaviour
         PixelClicker.DevClickBlock = free;   // the cube ignores clicks while the placer is open
         Shape hoverShape = free && !overUi ? PickShape() : null;
 
-        if (free && !overUi)
-        {
-            Ray ray = cam.ScreenPointToRay(PointerPosition());
-            if (LeftPressed())
-            {
-                Shape hit = PickShape();
-                if (hit != null)
-                {
-                    Select(hit);
-                    dragging = true;
-                    dragPlane = new Plane(Vector3.up, hit.go.transform.position);
-                    dragOffset = dragPlane.Raycast(ray, out float enter) ? hit.go.transform.position - ray.GetPoint(enter) : Vector3.zero;
-                }
-                else if (FloorPoint(ray, out Vector3 point)) AddShape(point);
-            }
-            if (RightPressed())
-            {
-                Shape doomed = PickShape();   // right-click removes the shape under the mouse
-                if (doomed != null) { Select(doomed); DeleteSelected(); dragging = false; }
-            }
-            if (dragging && selected != null && LeftHeld())
-            {
-                if (dragPlane.Raycast(ray, out float enter))
-                {
-                    selected.data.pos = ray.GetPoint(enter) + dragOffset;
-                    Rebuild(selected);
-                    dirty = true;
-                }
-            }
-            // Wheel: turns smoothly; Ctrl + wheel resizes. It acts on the shape under the mouse (or the one being dragged), else on the brush (the ghost).
-            float scroll = ScrollY();
-            Shape target = dragging ? selected : hoverShape;
-            if (Mathf.Abs(scroll) > 0.01f)
-            {
-                if (target != null && target != selected) Select(target);
-                if (ControlHeld())
-                {
-                    float factor = Mathf.Pow(1.1f, scroll);
-                    if (target != null)
-                    {
-                        target.data.size = Mathf.Clamp(target.data.size * factor, 0.1f, 40f);
-                        brushSize = target.data.size;
-                        Rebuild(target);
-                        dirty = true;
-                    }
-                    else brushSize = Mathf.Clamp(brushSize * factor, 0.1f, 40f);
-                }
-                else if (target != null) selYawTarget += scroll * 15f;
-                else brushYawTarget += scroll * 15f;
-            }
-        }
+        if (free && !overUi) HandleShapeMouse(hoverShape);
         if (!LeftHeld()) dragging = false;
 
-        if (free)
-        {
-            // Q / E turn too; the turning itself is smoothed towards its target.
-            float turn = (PixelKeys.Held(PixelAction.RotateRight) ? 1f : 0f) - (PixelKeys.Held(PixelAction.RotateLeft) ? 1f : 0f);
-            bool onShape = selected != null && (dragging || hoverShape == selected);
-            if (Mathf.Abs(turn) > 0.1f)
-            {
-                if (onShape) selYawTarget += turn * 120f * Time.unscaledDeltaTime;
-                else brushYawTarget += turn * 120f * Time.unscaledDeltaTime;
-            }
-            float k = 1f - Mathf.Exp(-14f * Time.unscaledDeltaTime);
-            brushYaw = Mathf.Lerp(brushYaw, brushYawTarget, k);
-            if (selected != null && !Mathf.Approximately(selected.data.yaw, selYawTarget))
-            {
-                selected.data.yaw = Mathf.Abs(selected.data.yaw - selYawTarget) < 0.05f ? selYawTarget : Mathf.Lerp(selected.data.yaw, selYawTarget, k);
-                Rebuild(selected);
-                dirty = true;
-            }
-        }
+        if (free) TurnShapes(hoverShape);
         UpdateGhost(free && !overUi && !dragging && hoverShape == null);
 
         if (free && selected != null)
@@ -518,6 +450,79 @@ public class PixelDevShapes : MonoBehaviour
         foreach (Shape s in shapes) PositionLabel(s);
         saveTimer -= Time.unscaledDeltaTime;
         if (dirty && saveTimer <= 0f && !dragging) { SaveNow(); saveTimer = 0.5f; Refresh(); }
+    }
+
+    // Update step (mouse free and not over the UI): click to place / select and drag, right-click to delete, wheel turns / Ctrl + wheel resizes.
+    private void HandleShapeMouse(Shape hoverShape)
+    {
+        Ray ray = cam.ScreenPointToRay(PointerPosition());
+        if (LeftPressed())
+        {
+            Shape hit = PickShape();
+            if (hit != null)
+            {
+                Select(hit);
+                dragging = true;
+                dragPlane = new Plane(Vector3.up, hit.go.transform.position);
+                dragOffset = dragPlane.Raycast(ray, out float enter) ? hit.go.transform.position - ray.GetPoint(enter) : Vector3.zero;
+            }
+            else if (FloorPoint(ray, out Vector3 point)) AddShape(point);
+        }
+        if (RightPressed())
+        {
+            Shape doomed = PickShape();   // right-click removes the shape under the mouse
+            if (doomed != null) { Select(doomed); DeleteSelected(); dragging = false; }
+        }
+        if (dragging && selected != null && LeftHeld())
+        {
+            if (dragPlane.Raycast(ray, out float enter))
+            {
+                selected.data.pos = ray.GetPoint(enter) + dragOffset;
+                Rebuild(selected);
+                dirty = true;
+            }
+        }
+        // Wheel: turns smoothly; Ctrl + wheel resizes. It acts on the shape under the mouse (or the one being dragged), else on the brush (the ghost).
+        float scroll = ScrollY();
+        Shape target = dragging ? selected : hoverShape;
+        if (Mathf.Abs(scroll) > 0.01f)
+        {
+            if (target != null && target != selected) Select(target);
+            if (ControlHeld())
+            {
+                float factor = Mathf.Pow(1.1f, scroll);
+                if (target != null)
+                {
+                    target.data.size = Mathf.Clamp(target.data.size * factor, 0.1f, 40f);
+                    brushSize = target.data.size;
+                    Rebuild(target);
+                    dirty = true;
+                }
+                else brushSize = Mathf.Clamp(brushSize * factor, 0.1f, 40f);
+            }
+            else if (target != null) selYawTarget += scroll * 15f;
+            else brushYawTarget += scroll * 15f;
+        }
+    }
+
+    // Update step: Q / E turn too; the turning itself is smoothed towards its target.
+    private void TurnShapes(Shape hoverShape)
+    {
+        float turn = (PixelKeys.Held(PixelAction.RotateRight) ? 1f : 0f) - (PixelKeys.Held(PixelAction.RotateLeft) ? 1f : 0f);
+        bool onShape = selected != null && (dragging || hoverShape == selected);
+        if (Mathf.Abs(turn) > 0.1f)
+        {
+            if (onShape) selYawTarget += turn * 120f * Time.unscaledDeltaTime;
+            else brushYawTarget += turn * 120f * Time.unscaledDeltaTime;
+        }
+        float k = 1f - Mathf.Exp(-14f * Time.unscaledDeltaTime);
+        brushYaw = Mathf.Lerp(brushYaw, brushYawTarget, k);
+        if (selected != null && !Mathf.Approximately(selected.data.yaw, selYawTarget))
+        {
+            selected.data.yaw = Mathf.Abs(selected.data.yaw - selYawTarget) < 0.05f ? selYawTarget : Mathf.Lerp(selected.data.yaw, selYawTarget, k);
+            Rebuild(selected);
+            dirty = true;
+        }
     }
 
     // ------------------------------------------------------------------

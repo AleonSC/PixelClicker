@@ -564,35 +564,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
         if (calmTimer < calmSeconds) return;
 
         bool s1 = PixelStats.Total(Stage1Key) >= 1d, s2 = PixelStats.Total(Stage2Key) >= 1d;
-        if (!s2)
-        {
-            if (ShopThere && !s1 && !replaying)
-            {
-                // A save that already reached the shop: no visits, no gift - just the vendors from now on.
-                PixelDebug.Info("Cubie skips both visits: the Shop button is already available (required pixel unlocked)", this);
-                PixelStats.Best(Stage1Key, 1d);
-                PixelStats.Best(Stage2Key, 1d);
-                PixelStats.Best(PixelShopTutorial.DoneKey, 1d);   // an older save: no tutorial
-                StartVendors(true);
-            }
-            else if (!PixelHints.TipsEnabled && !replaying)
-            {
-                PixelDebug.Info("Cubie skips his visits: Show first-time tips is off", this);
-                // 'Show first-time tips' is off: Cubie does not turn up with his intros. The game carries on as if they had happened, and the starter gift still arrives once the shop is there.
-                if (!s1 && Visit1Ready) { PixelStats.Best(Stage1Key, 1d); GiveRecycler(); }   // (no visit, but the Recycler still arrives: the 'Recycle 20 husks' goal needs it)
-                if (Visit2Due)
-                {
-                    PixelStats.Best(Stage2Key, 1d);
-                    GiveGift();
-                    StartVendors(false);
-                }
-            }
-            else if (Visit2Due) StartCoroutine(Visit(2, Pages(visitTwoPages, DefaultTwo)));
-            else if (!s1 && !Visit1Ready) { if (lastBlocker != "clicks") { lastBlocker = "clicks"; PixelDebug.Info(Visit1WaitReason(), this); } }
-            else if (!s1) { PixelDebug.Info("Cubie starts visit 1", this); StartCoroutine(Visit(1, Pages(visitOnePages, DefaultOne))); }
-            else if (lastBlocker != "s1done") { lastBlocker = "s1done"; PixelDebug.Info("Cubie visit 1 is already recorded (guide.stage1) - he waits for the shop", this); }
-            return;
-        }
+        if (!s2) { UpdateFirstVisits(s1); return; }
 
         // Cubie's bill (PixelCubieBill): the reveal visit once its goal is done, then a short talk whenever a trust tier opens.
         if (PixelCubieBill.RevealDue) { StartCoroutine(Visit(3, Pages(visitThreePages, DefaultThree))); return; }
@@ -604,6 +576,36 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
             vendorTimer = 3f;
             StartVendors(false);
         }
+    }
+
+    // Update step before the shop (stage 2) is reached: Cubie's first two visits, or skipping them (shop already there / tips off).
+    private void UpdateFirstVisits(bool s1)
+    {
+        if (ShopThere && !s1 && !replaying)
+        {
+            // A save that already reached the shop: no visits, no gift - just the vendors from now on.
+            PixelDebug.Info("Cubie skips both visits: the Shop button is already available (required pixel unlocked)", this);
+            PixelStats.Best(Stage1Key, 1d);
+            PixelStats.Best(Stage2Key, 1d);
+            PixelStats.Best(PixelShopTutorial.DoneKey, 1d);   // an older save: no tutorial
+            StartVendors(true);
+        }
+        else if (!PixelHints.TipsEnabled && !replaying)
+        {
+            PixelDebug.Info("Cubie skips his visits: Show first-time tips is off", this);
+            // 'Show first-time tips' is off: Cubie does not turn up with his intros. The game carries on as if they had happened, and the starter gift still arrives once the shop is there.
+            if (!s1 && Visit1Ready) { PixelStats.Best(Stage1Key, 1d); GiveRecycler(); }   // (no visit, but the Recycler still arrives: the 'Recycle 20 husks' goal needs it)
+            if (Visit2Due)
+            {
+                PixelStats.Best(Stage2Key, 1d);
+                GiveGift();
+                StartVendors(false);
+            }
+        }
+        else if (Visit2Due) StartCoroutine(Visit(2, Pages(visitTwoPages, DefaultTwo)));
+        else if (!s1 && !Visit1Ready) { if (lastBlocker != "clicks") { lastBlocker = "clicks"; PixelDebug.Info(Visit1WaitReason(), this); } }
+        else if (!s1) { PixelDebug.Info("Cubie starts visit 1", this); StartCoroutine(Visit(1, Pages(visitOnePages, DefaultOne))); }
+        else if (lastBlocker != "s1done") { lastBlocker = "s1done"; PixelDebug.Info("Cubie visit 1 is already recorded (guide.stage1) - he waits for the shop", this); }
     }
 
     // ------------------------------------------------------------------

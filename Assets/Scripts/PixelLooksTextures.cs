@@ -19,45 +19,10 @@ public static partial class PixelLooks
 
         const int n = 64;
         Color32[] px = new Color32[n * n];
-        Color wood = new Color(0.5f, 0.3f, 0.14f, 1f), woodDark = new Color(0.3f, 0.17f, 0.07f, 1f), gold = new Color(1f, 0.78f, 0.22f, 1f), goldDark = new Color(0.62f, 0.44f, 0.08f, 1f);
-        Color dark = new Color(0.1f, 0.06f, 0.03f, 1f);
         for (int y = 0; y < n; y++)
             for (int x = 0; x < n; x++)
             {
-                Color c;
-                // Planks run across; a seam every 8 px, each plank its own tone and grain.
-                int plank = y / 8;
-                float tone = 0.85f + PixelNoise.Hash(plank, 7, 3) * 0.3f;
-                float grain = PixelNoise.Hash(x / 2, y, 11) * 0.12f;
-                c = Color.Lerp(woodDark, wood, 0.5f + grain) * tone;
-                if (y % 8 == 0) c = woodDark * 0.8f;
-                c.a = 1f;
-
-                bool strap = (x >= 9 && x <= 14) || (x >= 49 && x <= 54);
-                bool frame = x <= 2 || x >= 61 || y <= 2 || y >= 61;
-                if (strap || frame) { c = Color.Lerp(goldDark, gold, 0.55f + PixelNoise.Hash(x, y, 5) * 0.35f); if (x == 9 || x == 49 || (frame && (x == 2 || x == 61 || y == 2 || y == 61))) c = goldDark * 0.8f; c.a = 1f; }
-
-                // The lid: a dark seam a bit above the middle, with a gold lock plate on it.
-                int seam = 27;
-                if (Mathf.Abs(y - seam) <= 1 && !strap) c = dark;
-                bool lockPlate = x >= 27 && x <= 36 && y >= 22 && y <= 36;
-                if (lockPlate) { c = (x == 27 || x == 36 || y == 22 || y == 36) ? goldDark : Color.Lerp(goldDark, gold, 0.75f); }
-                bool keyhole = (x >= 31 && x <= 32 && y >= 27 && y <= 32) || (x >= 30 && x <= 33 && y >= 31 && y <= 32);
-                if (keyhole) c = dark;
-                // Rivets.
-                if ((x == 5 || x == 58) && (y == 5 || y == 58 || y == 32)) c = gold;
-
-                // Light leaking out of the seam as it is hit.
-                if (step > 0)
-                {
-                    float spread = 1f + step * 0.9f;                                   // half-width in px
-                    float d = Mathf.Abs(y - seam) / spread;
-                    if (d < 1f && !lockPlate)
-                    {
-                        float glow = (1f - d) * (0.35f + step * 0.08f);
-                        c = Color.Lerp(c, new Color(1f, 0.93f, 0.55f, 1f), Mathf.Clamp01(glow));
-                    }
-                }
+                Color c = ChestTexel(x, y, step);
                 px[y * n + x] = new Color32((byte)Mathf.Clamp(c.r * 255f, 0f, 255f), (byte)Mathf.Clamp(c.g * 255f, 0f, 255f), (byte)Mathf.Clamp(c.b * 255f, 0f, 255f), 255);
             }
 
@@ -66,6 +31,55 @@ public static partial class PixelLooks
         tex.Apply(true, false);
         chestTextures[step] = tex;
         return tex;
+    }
+
+    // The chest's colours (ChestTexture).
+    private static readonly Color ChestWood = new Color(0.5f, 0.3f, 0.14f, 1f), ChestWoodDark = new Color(0.3f, 0.17f, 0.07f, 1f),
+                                  ChestGold = new Color(1f, 0.78f, 0.22f, 1f), ChestGoldDark = new Color(0.62f, 0.44f, 0.08f, 1f),
+                                  ChestDark = new Color(0.1f, 0.06f, 0.03f, 1f);
+
+    /// <summary>ChestTexture step: the colour of one texel (x, y) of the 64 px chest face at hit 'step'.</summary>
+    private static Color ChestTexel(int x, int y, int step)
+    {
+        Color c;
+        // Planks run across; a seam every 8 px, each plank its own tone and grain.
+        int plank = y / 8;
+        float tone = 0.85f + PixelNoise.Hash(plank, 7, 3) * 0.3f;
+        float grain = PixelNoise.Hash(x / 2, y, 11) * 0.12f;
+        c = Color.Lerp(ChestWoodDark, ChestWood, 0.5f + grain) * tone;
+        if (y % 8 == 0) c = ChestWoodDark * 0.8f;
+        c.a = 1f;
+
+        bool strap = (x >= 9 && x <= 14) || (x >= 49 && x <= 54);
+        bool frame = x <= 2 || x >= 61 || y <= 2 || y >= 61;
+        if (strap || frame) { c = Color.Lerp(ChestGoldDark, ChestGold, 0.55f + PixelNoise.Hash(x, y, 5) * 0.35f); if (x == 9 || x == 49 || (frame && (x == 2 || x == 61 || y == 2 || y == 61))) c = ChestGoldDark * 0.8f; c.a = 1f; }
+
+        // The lid: a dark seam a bit above the middle, with a gold lock plate on it.
+        int seam = 27;
+        if (Mathf.Abs(y - seam) <= 1 && !strap) c = ChestDark;
+        bool lockPlate = x >= 27 && x <= 36 && y >= 22 && y <= 36;
+        if (lockPlate) { c = (x == 27 || x == 36 || y == 22 || y == 36) ? ChestGoldDark : Color.Lerp(ChestGoldDark, ChestGold, 0.75f); }
+        bool keyhole = (x >= 31 && x <= 32 && y >= 27 && y <= 32) || (x >= 30 && x <= 33 && y >= 31 && y <= 32);
+        if (keyhole) c = ChestDark;
+        // Rivets.
+        if ((x == 5 || x == 58) && (y == 5 || y == 58 || y == 32)) c = ChestGold;
+
+        // Light leaking out of the seam as it is hit.
+        if (step > 0) c = ChestSeamLight(c, y, seam, step, lockPlate);
+        return c;
+    }
+
+    /// <summary>ChestTexel step: the yellow-white light leaking out along the lid seam (wider and brighter with every hit 'step').</summary>
+    private static Color ChestSeamLight(Color c, int y, int seam, int step, bool lockPlate)
+    {
+        float spread = 1f + step * 0.9f;                                   // half-width in px
+        float d = Mathf.Abs(y - seam) / spread;
+        if (d < 1f && !lockPlate)
+        {
+            float glow = (1f - d) * (0.35f + step * 0.08f);
+            c = Color.Lerp(c, new Color(1f, 0.93f, 0.55f, 1f), Mathf.Clamp01(glow));
+        }
+        return c;
     }
 
     /// <summary>

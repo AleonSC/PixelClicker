@@ -28,17 +28,26 @@ public partial class PixelSkills
     [Tooltip("Gap between the screen edge's docked tab and the window.")]
     [SerializeField] private float gapToButton = 14f;
 
+    [Tooltip("Title shown at the top of the Skills window.")]
     [SerializeField] private string windowTitle = "Skills";
+    [Tooltip("Label on the HUD Skills button.")]
     [SerializeField] private string tabText = "Skills";
+    [Tooltip("Train button label for a skill you can switch to.")]
     [SerializeField] private string trainText = "Train";
     [Tooltip("Train button label on Offline Progression (a passive skill: it only earns XP from offline progress).")]
     [SerializeField] private string passiveText = "Earns while away";
+    [Tooltip("Train button label for the skill you are training now.")]
     [SerializeField] private string trainingText = "Training";
+    [Tooltip("Train button label on the Standard skill (switches back to standard pixels).")]
     [SerializeField] private string useStandardText = "Use standard pixels";
+    [Tooltip("Badge shown on the card of the skill being trained.")]
     [SerializeField] private string activeBadgeText = "ACTIVE";
+    [Tooltip("Name shown for a skill that is not unlocked yet.")]
     [SerializeField] private string lockedName = "???";
+    [Tooltip("Label on the button that opens the selected skill's tree.")]
     [SerializeField] private string treeButtonText = "Skill tree";
 
+    [Tooltip("Text after the skill name in the skill tree window's title.")]
     [SerializeField] private string treeTitleText = "Skill tree";
 
     [Tooltip("Size of one skill tree node (canvas units).")]
@@ -52,8 +61,11 @@ public partial class PixelSkills
     [Tooltip("Colour of a skill tree node you cannot unlock yet (the skill cards and pack buttons use the Neutral / Selected button roles).")]
     [SerializeField] private Color cardColor = new Color(0.17f, 0.17f, 0.21f, 1f);
     private Color textColor => PixelUITheme.TextColor;   // (the theme: PixelUITheme)
+    [Tooltip("Colour of the dim text (skill descriptions, card levels).")]
     [SerializeField] private Color dimTextColor = new Color(1f, 1f, 1f, 0.55f);
+    [Tooltip("Colour of unlocked perks: tree links, the points label and the ACTIVE badge.")]
     [SerializeField] private Color perkUnlockedColor = new Color(0.55f, 1f, 0.6f, 1f);
+    [Tooltip("Canvas sorting order of the Skills window (higher = drawn on top).")]
     [SerializeField] private int sortingOrder = 131;
 
     private class Card
@@ -847,6 +859,37 @@ public partial class PixelSkills
         headerFill.anchorMax = new Vector2(Mathf.Clamp01((float)(into / need)), 1f);
         headerFill.offsetMax = new Vector2(-3f, -3f);
 
+        RefreshCards();
+
+        // Detail of the selected card.
+        selected = Mathf.Clamp(selected, 0, packs.Count - 1);
+        SkillPack p = packs[selected];
+        bool available = IsAvailable(p);
+        PixelUIKit.SetText(detailName, available ? ShownName(p) : lockedName);
+        PixelUIKit.SetText(detailInfo, available && p.id == OfflineId ? "<b>While you're away, your character does:</b>" : "");
+
+        // The skill tree has its own window; the button only shows for a skill that has one.
+        bool hasNodes = available && p.nodes != null && p.nodes.Length > 0;
+        treeToggle.gameObject.SetActive(hasNodes);
+        RefreshGuideBook(p, available);   // (after the tree button, so the book sits left of it)
+        PixelUIKit.SetText(treeToggleLabel, treeButtonText);
+        if (!hasNodes && TreeOpen) PixelPop.Hide(treeWindow);
+        if (hasNodes && TreeOpen) RefreshTree(p);
+        bool showTree = false;
+
+        RefreshOfflineTaskButtons(p, available, showTree);
+        RefreshPerks(p, available, showTree);
+
+        bool isActiveSel = p.id == TrainingId;
+        bool passive = p.id == OfflineId;   // (trains only from offline progress)
+        trainButton.interactable = available && !isActiveSel && !passive;
+        PixelUIKit.SetText(trainLabel, passive ? passiveText : isActiveSel ? trainingText : (p.id == StandardId ? useStandardText : trainText));
+        trainButton.gameObject.SetActive(available);
+    }
+
+    // RefreshWindow step: the skill cards in the list (name, level, bar, ACTIVE badge, tree button).
+    private void RefreshCards()
+    {
         for (int i = 0; i < cards.Count; i++)
         {
             Card c = cards[i];
@@ -866,23 +909,11 @@ public partial class PixelSkills
             fr.offsetMax = Vector2.zero;
         }
         PixelUIKit.UpdateScrollView(listScroll, listBar, cards.Count * 108f, listScroll.GetComponent<RectTransform>().rect.height);
+    }
 
-        // Detail of the selected card.
-        selected = Mathf.Clamp(selected, 0, packs.Count - 1);
-        SkillPack p = packs[selected];
-        bool available = IsAvailable(p);
-        PixelUIKit.SetText(detailName, available ? ShownName(p) : lockedName);
-        PixelUIKit.SetText(detailInfo, available && p.id == OfflineId ? "<b>While you're away, your character does:</b>" : "");
-
-        // The skill tree has its own window; the button only shows for a skill that has one.
-        bool hasNodes = available && p.nodes != null && p.nodes.Length > 0;
-        treeToggle.gameObject.SetActive(hasNodes);
-        RefreshGuideBook(p, available);   // (after the tree button, so the book sits left of it)
-        PixelUIKit.SetText(treeToggleLabel, treeButtonText);
-        if (!hasNodes && TreeOpen) PixelPop.Hide(treeWindow);
-        if (hasNodes && TreeOpen) RefreshTree(p);
-        bool showTree = false;
-
+    // RefreshWindow step: on Offline Progression, one button per playable pack (what your character does while you are away).
+    private void RefreshOfflineTaskButtons(SkillPack p, bool available, bool showTree)
+    {
         // Offline Progression: one button per pack whose pixels you can play with.
         int slot = 0;
         foreach (SkillPack other in packs)
@@ -900,7 +931,11 @@ public partial class PixelSkills
             slot++;
         }
         for (int i = slot; i < pixelPackButtons.Count; i++) pixelPackButtons[i].gameObject.SetActive(false);
+    }
 
+    // RefreshWindow step: the selected skill's perk list (each level's head, and its text while unfolded).
+    private void RefreshPerks(SkillPack p, bool available, bool showTree)
+    {
         int pl = LevelOf(p);
         bool showPerks = available && !showTree && p.id != OfflineId && p.perks != null;
         perkScroll.gameObject.SetActive(showPerks);
@@ -947,11 +982,5 @@ public partial class PixelSkills
             RectTransform sr = perkScroll.GetComponent<RectTransform>();
             PixelUIKit.UpdateScrollView(perkScroll, perkBar, py, sr.rect.height > 1f ? sr.rect.height : 260f);
         }
-
-        bool isActiveSel = p.id == TrainingId;
-        bool passive = p.id == OfflineId;   // (trains only from offline progress)
-        trainButton.interactable = available && !isActiveSel && !passive;
-        PixelUIKit.SetText(trainLabel, passive ? passiveText : isActiveSel ? trainingText : (p.id == StandardId ? useStandardText : trainText));
-        trainButton.gameObject.SetActive(available);
     }
 }

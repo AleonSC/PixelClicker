@@ -189,8 +189,13 @@ public partial class PixelAudio
             // A one-shot cue that has played to its end hands back to the playlist.
             if (!cueSource.loop && !cueSource.isPlaying && Application.isFocused && !AudioListener.pause && cueGain > 0.5f) { cueSpent = cueActive; cueTarget = -1; }
         }
+        FadePlaylistAndCueVolume(dt);
+    }
 
-        // The playlist: quiet (and paused where it was) while a cue is wanted or playing, back in when none is.
+    // Step of UpdateCues: the playlist goes quiet (and pauses where it was) while a cue is wanted or playing,
+    // and comes back in when none is; then the cue source's volume is set.
+    private void FadePlaylistAndCueVolume(float dt)
+    {
         bool wantPlaylist = cueActive < 0 && cueTarget < 0;
         float step = dt / Mathf.Max(0.05f, wantPlaylist ? cueReturnFade : (cueActive >= 0 && cueActive < musicCues.Count ? CueFadeIn(musicCues[cueActive]) : 1f));
         playlistGain = Mathf.MoveTowards(playlistGain, wantPlaylist ? 1f : 0f, step);
