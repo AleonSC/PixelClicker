@@ -485,7 +485,7 @@ for Magic Wood); meteor chunks -> the Prospector; bomb parts -> the Tinkerer. On
 better deal than selling (Ectoplasm -> Ghost Bait / a phantom potion, Magic Wood -> a skill-boost wand, Stardust -> an Ultra pixel), so
 there is a choice: cash now or something special.
 
-**Vendor rapport - the warm side of the economy (agreed 2026-10-24, not built):** Cubie is the cold side (you pay, he trusts you); the
+**Vendor rapport - the warm side of the economy (agreed 2026-10-24; BUILT 2026-10-24 except the unique unlockables and orders - `PixelRapport`, numbers in `docs/systems/PixelVisitorMinigame.md`):** Cubie is the cold side (you pay, he trusts you); the
 vendors are the warm side (you deal with them, they like you).
 - **One meter per vendor, five steps:** Stranger -> Customer -> Regular -> Friend -> Partner.
 - **Earned by dealing, never by grinding:** selling goods (specialty goods most), accepting a visit when they peek in, trades, GIFTS,

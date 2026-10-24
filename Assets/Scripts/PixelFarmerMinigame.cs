@@ -50,7 +50,7 @@ public class PixelFarmerMinigame : PixelVisitorMinigame
 
     protected override void ModifyWares(System.Collections.Generic.List<int> wares)
     {
-        if (consumables == null || clicker == null || (!DevAlwaysDragonSeeds && Random.value >= dragonSeedChance) || clicker.PickMissingDragonCube() < 0) return;
+        if (consumables == null || clicker == null || (!DevAlwaysDragonSeeds && Random.value >= dragonSeedChance * RapportRareChance) || clicker.PickMissingDragonCube() < 0) return;
         for (int i = 0; i < consumables.ItemCount; i++)
             if (consumables.IsDragonSeed(i)) { wares.Insert(0, i); AsideText = dragonAsideText; return; } // first in the list, with a second line of dialogue
     }

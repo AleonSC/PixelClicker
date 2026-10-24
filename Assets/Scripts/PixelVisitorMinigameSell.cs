@@ -11,6 +11,8 @@
 //   - TRADE buttons under it (CollectTradeOffers; the Wizard): swap a fixed amount of the picked good for something only he has - shown beside the
 //     sell price so both choices are clear.
 //   - A vendor with no wares opens straight on this view (no Buy / Sell tabs).
+//   - GIFT button beside Sell (rapport, PixelVisitorMinigameRapport.cs): gives some of the picked good for rapport only; goods he LOVES are marked
+//     with a heart, and a loved good he doesn't buy is listed as 'gift only'.
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -30,6 +32,8 @@ public abstract partial class PixelVisitorMinigame
     protected class SellGood
     {
         public string marketKey;           // his market (saturation) for it: PixelMarket.TierKey / MaterialKey
+        public string goodId;              // the pixel type name / material id (what PixelRapport's loves lists name); null = none
+        public bool giftOnly;              // a good he loves but doesn't buy: it can only be given as a gift (rapport)
         public string name;
         public Color color = Color.white;
         public double clicksPerUnit;       // effort behind one unit
@@ -59,7 +63,7 @@ public abstract partial class PixelVisitorMinigame
                 int tier = i;
                 list.Add(new SellGood
                 {
-                    marketKey = PixelMarket.TierKey(tier), name = clicker.Tiers[tier].displayName, color = clicker.Tiers[tier].UIColor,
+                    marketKey = PixelMarket.TierKey(tier), goodId = clicker.Tiers[tier].type.ToString(), name = clicker.Tiers[tier].displayName, color = clicker.Tiers[tier].UIColor,
                     clicksPerUnit = market.ClicksPerUnit(tier), rate = market.RateOf(PixelMarket.Route.RawGoods),
                     held = () => System.Math.Floor(clicker.Tiers[tier].count), take = n => clicker.TrySpend(tier, n),
                 });
@@ -69,7 +73,7 @@ public abstract partial class PixelVisitorMinigame
             string id = s.goodId;
             list.Add(new SellGood
             {
-                marketKey = PixelMarket.MaterialKey(id), name = PixelMaterials.CostName(id), color = PixelMaterials.CostColor(id),
+                marketKey = PixelMarket.MaterialKey(id), goodId = id, name = PixelMaterials.CostName(id), color = PixelMaterials.CostColor(id),
                 clicksPerUnit = s.effortClicksPerUnit, rate = s.rate,
                 held = () => System.Math.Floor(PixelMaterials.CostHeld(id)),
                 take = n => { if (!PixelMaterials.CostAffordable(id, n)) return false; PixelMaterials.CostSpend(id, n); return true; },
@@ -91,7 +95,8 @@ public abstract partial class PixelVisitorMinigame
     private TMP_Dropdown goodDropdown, payDropdown;
     private Slider amountSlider;
     private TMP_Text haveLabel, amountLabel, sayLabel, marketLabel, sellLabel;
-    private Button sellButton;
+    private Button sellButton, giftButton;
+    private TMP_Text giftLabel;
     private readonly Button[] tradeButtons = new Button[2];
     private readonly TMP_Text[] tradeLabels = new TMP_Text[2];
     private readonly List<TradeOffer> tradeOffers = new List<TradeOffer>();
@@ -145,8 +150,16 @@ public abstract partial class PixelVisitorMinigame
         // The live price on the button: 'Sell for 1.2K Red'.
         sellButton = PixelUIKit.CreateButton(font, parent, "Sell", "", new Vector2(100f, 60f), ButtonRole.Success, 28f);
         sellLabel = sellButton.GetComponentInChildren<TMP_Text>(true);
-        SellPlace(sellButton.GetComponent<RectTransform>(), 292f, 60f, 0.1f, 0.9f);
+        SellPlace(sellButton.GetComponent<RectTransform>(), 292f, 60f, 0f, 0.62f);
         sellButton.onClick.AddListener(SellNow);
+
+        // The gift beside it (rapport, PixelRapport): 'Gift 12 Ectoplasm ♥'.
+        giftButton = PixelUIKit.CreateButton(font, parent, "Gift", "", new Vector2(100f, 60f), ButtonRole.Primary, 22f);
+        giftLabel = giftButton.GetComponentInChildren<TMP_Text>(true);
+        PixelUIKit.FitOneLine(giftLabel, 12f);
+        SellPlace(giftButton.GetComponent<RectTransform>(), 292f, 60f, 0.62f, 1f);
+        giftButton.onClick.AddListener(GiveGift);
+        giftButton.gameObject.SetActive(PixelRapport.Instance != null);
 
         // Trades (the Wizard): 'Trade 20 Ectoplasm for Ghost Bait'.
         for (int i = 0; i < 2; i++)
@@ -191,6 +204,7 @@ public abstract partial class PixelVisitorMinigame
         int keepPay = SelectedPay;
         List<SellGood> all = new List<SellGood>();
         CollectSellGoods(all);
+        AddGiftOnlyGoods(all);
         sellGoods.Clear();
         List<string> names = new List<string>();
         foreach (SellGood g in all)
@@ -198,7 +212,7 @@ public abstract partial class PixelVisitorMinigame
             double n = g.held != null ? g.held() : 0d;
             if (n < 1d) continue;
             sellGoods.Add(g);
-            names.Add(g.name + "  (" + PixelClicker.FormatNumberShort(n) + ")" + (g.rate > 1.5f ? "  ★" : ""));   // (a star: one of his specialties)
+            names.Add(g.name + "  (" + PixelClicker.FormatNumberShort(n) + ")" + (g.rate > 1.5f ? "  ★" : "") + (LovesGood(g) ? "  \u2665" : "") + (g.giftOnly ? " gift" : ""));   // (a star: one of his specialties; a heart: he loves it as a gift)
         }
         payTiers.Clear();
         List<string> payNames = new List<string>();
@@ -239,7 +253,7 @@ public abstract partial class PixelVisitorMinigame
     private double SellPrice(SellGood g, double amount)
     {
         PixelMarket market = PixelMarket.Instance;
-        if (market == null || g == null || amount < 1d) return 0d;
+        if (market == null || g == null || g.giftOnly || amount < 1d) return 0d;
         if (!visitRolls.TryGetValue(g.marketKey, out double roll))
         {
             float lo = Mathf.Min(offerRollRange.x, offerRollRange.y), hi = Mathf.Max(offerRollRange.x, offerRollRange.y);
@@ -259,8 +273,9 @@ public abstract partial class PixelVisitorMinigame
         PixelUIKit.SetText(marketLabel, market != null && g != null ? market.TrendText(Id, g.marketKey) : "");
         shownPrice = g != null && pay >= 0 ? SellPrice(g, amount) : 0d;
         bool can = g != null && pay >= 0 && amount >= 1d && shownPrice >= 1d;
-        PixelUIKit.SetText(sellLabel, can ? "Sell for " + PixelClicker.FormatNumberShort(shownPrice) + " " + clicker.Tiers[pay].displayName : "Sell");
+        PixelUIKit.SetText(sellLabel, can ? "Sell for " + PixelClicker.FormatNumberShort(shownPrice) + " " + clicker.Tiers[pay].displayName : g != null && g.giftOnly ? "Gift only" : "Sell");
         sellButton.interactable = can;
+        RefreshGiftButton(g);
 
         // Trades for this good (the Wizard): each button says what it costs and what you get.
         tradeOffers.Clear();
@@ -277,17 +292,30 @@ public abstract partial class PixelVisitorMinigame
         }
     }
 
+    /// <summary>The Gift button: how many make a gift, a heart for a loved good, the gifts left this visit.</summary>
+    private void RefreshGiftButton(SellGood g)
+    {
+        if (giftButton == null || !giftButton.gameObject.activeSelf) return;
+        double amount = GiftAmount(g);
+        bool loved = LovesGood(g);
+        if (GiftsLeft < 1) PixelUIKit.SetText(giftLabel, "No more gifts today");
+        else PixelUIKit.SetText(giftLabel, g != null ? "Gift " + PixelClicker.FormatNumberShort(amount) + " " + g.name + (loved ? " \u2665" : "") : "Gift");
+        giftButton.interactable = g != null && GiftsLeft > 0 && g.held() >= amount;
+    }
+
     private void SellNow()
     {
         SellGood g = SelectedGood;
         int pay = SelectedPay;
         double amount = System.Math.Floor(amountSlider.value);
-        if (g == null || pay < 0 || amount < 1d) return;
+        if (g == null || g.giftOnly || pay < 0 || amount < 1d) return;
         double price = SellPrice(g, amount);
         if (!g.take(amount)) { PixelUIKit.SetText(sayLabel, "Looks like you don't have that much any more."); RefreshSellLists(); return; }
         clicker.AddCurrency(pay, price);
         PixelMarket market = PixelMarket.Instance;
         if (market != null) market.RecordSale(Id, g.marketKey, amount * g.clicksPerUnit);
+        PixelRapport rapport = PixelRapport.Instance;
+        if (rapport != null) RapportDeal(rapport.SalePoints(amount * g.clicksPerUnit, g.rate > 1.5f));   // (specialty goods count more)
         PixelStats.Count(Id + ".sold");
         PixelAudio.Play("purchase");
         RefreshSellLists();
@@ -302,6 +330,8 @@ public abstract partial class PixelVisitorMinigame
         if (g.held() < t.cost || (t.available != null && !t.available())) return;
         if (!t.give()) { PixelUIKit.SetText(sayLabel, "Hm, that didn't work out."); RefreshSellLists(); return; }   // (handed over first, so nothing is lost if he can't)
         g.take(t.cost);
+        PixelRapport rapport = PixelRapport.Instance;
+        if (rapport != null) RapportDeal(rapport.TradePoints);
         PixelStats.Count(Id + ".traded");
         PixelAudio.Play("purchase");
         RefreshSellLists();

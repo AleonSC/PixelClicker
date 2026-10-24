@@ -1611,3 +1611,6 @@
 [2026-10-24 09:54 UTC] Every vendor who buys from you now has the same Sell view as Big Tim: pick the good and amount, see the live price and his market trend on the Sell button (vendors with nothing to sell open straight on it).
 [2026-10-24 09:54 UTC] The Wizard trades minigame materials for things only he has: 20 Ectoplasm for a Ghost Bait, 5 Stardust for an Ultra pixel, shown beside the sell price.
 [2026-10-24 09:54 UTC] To-do: ticked 'Find a use for Ectoplasm' and added the Wizard's Magic Wood wand trade (a new item, to decide first).
+[2026-10-24 10:07 UTC] Vendor rapport: every vendor now has a five-step rapport meter (Stranger, Customer, Regular, Friend, Partner) earned by visits, sales, trades and gifts; higher steps pay better, recover their market faster, visit more often and bring more stock, and never drop.
+[2026-10-24 10:07 UTC] Vendors' Sell view has a Gift button: give a vendor some of the picked good for rapport (his loved goods count much more, only three gifts a visit count); his step shows in his greeting box and Game Database entry.
+[2026-10-24 10:07 UTC] To-do: ticked 'Vendor rapport' and added the proposed unique unlockable per vendor (to decide first).

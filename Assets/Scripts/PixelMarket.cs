@@ -10,6 +10,7 @@
 //     1 / (1 + pressure / saturationClicks) (selling saturationClicks of work halves it), never below minFactor; pressure halves every
 //     recoveryHalfLifeMinutes (real time, so a paused / time-stopped game still recovers). Quote averages the factor over the whole
 //     amount sold (a big dump drives its own price down as it goes). RecordSale adds the pressure when a deal is accepted.
+//   - RAPPORT (PixelRapport): a vendor's rapport step adds to his price (Quote x PriceFactor) and speeds his recovery (the half-life / RecoverySpeed).
 //   - Not saved: the market recovers anyway, a reload just starts it fresh.
 //   Used by the Lumberjack's Sell tab and the Prospector's offers; the Entrepreneur's pixel-for-pixel deals use RarityValue.
 //   Husks are never currency: a vendor buys skill CURRENCY (or a husk good he names, valued as currency); the Recycler stays the only
@@ -120,7 +121,9 @@ public class PixelMarket : MonoBehaviour
     {
         if (!pressure.TryGetValue(Key(vendor, good), out Pressure p)) return 0d;
         float minutes = (Time.unscaledTime - p.time) / 60f;
-        return p.clicks * System.Math.Pow(0.5, minutes / System.Math.Max(0.1f, recoveryHalfLifeMinutes));
+        PixelRapport rapport = PixelRapport.Instance;
+        float halfLife = System.Math.Max(0.1f, recoveryHalfLifeMinutes) / (rapport != null ? rapport.RecoverySpeed(vendor) : 1f);   // (his rapport step: his market recovers faster)
+        return p.clicks * System.Math.Pow(0.5, minutes / halfLife);
     }
 
     /// <summary>Price factor for the NEXT unit (1 = full price).</summary>
@@ -129,7 +132,7 @@ public class PixelMarket : MonoBehaviour
 
     /// <summary>
     /// What a vendor pays for 'amount' of a good, in pure units: rate x PurePerClick x the clicks of effort behind it, x the saturation factor
-    /// averaged over the amount (each unit sold lowers the price of the next). Before any vendor's own luck / mood.
+    /// averaged over the amount (each unit sold lowers the price of the next), x his rapport step's price bonus (PixelRapport). Before any vendor's own luck / mood.
     /// </summary>
     public double Quote(string vendor, string good, double clicksPerUnit, double amount, float rate)
     {
@@ -138,7 +141,8 @@ public class PixelMarket : MonoBehaviour
         double k = saturationClicks, s0 = PressureNow(vendor, good);
         double avg = k * System.Math.Log((k + s0 + work) / (k + s0)) / work;   // the average of 1 / (1 + s / k) from s0 to s0 + work
         avg = System.Math.Max(minFactor, avg);
-        return amount * rate * PurePerClick() * clicksPerUnit * avg;
+        PixelRapport rapport = PixelRapport.Instance;
+        return amount * rate * PurePerClick() * clicksPerUnit * avg * (rapport != null ? rapport.PriceFactor(vendor) : 1f);   // (x his rapport step's better price)
     }
 
     /// <summary>A skill currency at the route's rate (raw goods: 1.2x).</summary>

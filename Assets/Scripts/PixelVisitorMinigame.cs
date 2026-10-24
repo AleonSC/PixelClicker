@@ -262,6 +262,8 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
     private string GreetingWithJab()
     {
         string text = string.Format(Pick(greeting, DefaultGreeting), Mathf.RoundToInt(discountFraction * 100f));
+        string line = RapportLine;   // what he says at your rapport step (PixelRapport)
+        if (!string.IsNullOrEmpty(line)) text += "\n\n<size=85%>" + line + "</size>";
         string[] jabs = cubieJabs != null && cubieJabs.Length > 0 ? cubieJabs : CubieJabs(Id);
         if (jabs == null || jabs.Length == 0 || !PixelGuideVendor.SecondVisitDone || UnityEngine.Random.value >= cubieJabChance) return text;
         string jab = jabs[UnityEngine.Random.Range(0, jabs.Length)];
@@ -418,7 +420,7 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
             if (!CanVisit || Random.value >= VisitChance)
             {
                 rolled = false;
-                spawnTimer = Random.Range(visitMinSeconds, visitMaxSeconds);
+                spawnTimer = NextVisitWait();
                 return;
             }
         }
@@ -452,7 +454,7 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
         nextAnyVisitTime = Time.unscaledTime + sharedCooldownSeconds;
         Unfreeze();
         PixelWindows.Unregister(this);
-        spawnTimer = Random.Range(visitMinSeconds, visitMaxSeconds);
+        spawnTimer = NextVisitWait();
     }
 
     // ------------------------------------------------------------------
@@ -466,6 +468,7 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
         visiting = true;
         anyVisiting = true;
         decision = 0;
+        RapportVisitStart();
         asideDone = false;
         AsideText = null;
         waresDone = false;
@@ -530,7 +533,7 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
                 visiting = false;
                 anyVisiting = false;
                 nextAnyVisitTime = Time.unscaledTime + sharedCooldownSeconds * missedReturnFactor;
-                spawnTimer = Random.Range(visitMinSeconds, visitMaxSeconds) * missedReturnFactor;
+                spawnTimer = NextVisitWait() * missedReturnFactor;
                 yield break;
             }
             visitorRect.localRotation = Quaternion.identity;
@@ -577,6 +580,7 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
             }
         } while (again);
 
+        if (decision == 1) RapportVisitAccepted();   // (opening the visit counts towards his rapport)
         if (decision == 1 && IsGift) OnGift();
         if (decision == 1 && !IsGift)
         {
@@ -603,7 +607,7 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
         visiting = false;
         anyVisiting = false;
         nextAnyVisitTime = Time.unscaledTime + sharedCooldownSeconds;
-        spawnTimer = Random.Range(visitMinSeconds, visitMaxSeconds);
+        spawnTimer = NextVisitWait();
     }
 
     private Image peekCatcher;
@@ -731,6 +735,15 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
         string blurb = CharacterBlurb(Id);
         string hello = PixelDatabase.Plain(string.Format(Pick(greeting, DefaultGreeting), Mathf.RoundToInt(discountFraction * 100f)));
         e.detail = (blurb.Length > 0 ? blurb + "\n" : "") + (hello.Length > 0 ? "Says: \"" + hello + "\"\n" : "") + "Can be switched off in the Toggles window.";
+        PixelRapport rapport = PixelRapport.Instance;
+        if (rapport != null)
+        {
+            e.detail += "\nRapport: " + rapport.ProgressText(Id) + ".";
+            List<string> loves = new List<string>();
+            foreach (PixelRapport.Love l in rapport.LovesOf(Id))
+                loves.Add(System.Enum.TryParse(l.goodId, out PixelClicker.PixelType t) && clicker != null && clicker.IndexOf(t) >= 0 ? clicker.Tiers[clicker.IndexOf(t)].displayName : PixelMaterials.CostName(l.goodId));
+            if (loves.Count > 0) e.detail += "\nLoves (as a gift): " + string.Join(", ", loves) + ".";
+        }
         e.discovered = Running;   // (met once the guide has started them)
         List<string> ware = WareNames();
         if (ware.Count > 0) { b.VendorWares.Add(new KeyValuePair<PixelDatabase.Entry, List<string>>(e, ware)); e.detail += "\nSells: " + string.Join(", ", ware) + "."; }
@@ -783,6 +796,8 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
         foreach (PixelShop.PackCost c in price) Spend(c);
         consumables.AddItem(item, 1);
         if (stock.ContainsKey(item)) stock[item]--;
+        PixelRapport rapport = PixelRapport.Instance;
+        if (rapport != null) RapportDeal(rapport.PurchasePoints);
         PixelStats.Count("shop.items");
         PixelStats.Count(Id + ".bought");
         PixelAudio.Play("purchase");
@@ -796,6 +811,8 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
         clicker.AddCurrency(t.getTier, t.get);
         t.done = true;
         OnTradeDone(t);
+        PixelRapport rapport = PixelRapport.Instance;
+        if (rapport != null) RapportDeal(rapport.TradePoints);
         PixelStats.Count(Id + ".bought");
         PixelAudio.Play("purchase");
         RefreshWares();
@@ -953,7 +970,7 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
     private void BuildGreetingPanel()
     {
         // --- Greeting box (left of the visitor).
-        PixelWindowParts greetBox = Panel("Greeting", Pick(visitorName, DefaultName), new Vector2(720f, 470f), visitorRect.sizeDelta.x + 90f);
+        PixelWindowParts greetBox = Panel("Greeting", RapportTitle, new Vector2(720f, 470f), visitorRect.sizeDelta.x + 90f);   // (name + rapport step)
         greetingPanel = greetBox.Rect;
 
         TMP_Text message = PixelUIKit.CreateText(Font, greetingPanel, "Message", string.Format(Pick(greeting, DefaultGreeting), Mathf.RoundToInt(discountFraction * 100f)), 34f,
@@ -985,11 +1002,12 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
         bool tradeMode = trades != null && !tabsMode;
         List<int> wares = tradeMode ? new List<int>() : Wares();
         stock.Clear();
-        if (!tradeMode && OfferedWares > 0)
-            while (wares.Count > OfferedWares) wares.RemoveAt(Random.Range(0, wares.Count)); // a small random selection
+        int offered = OfferedWares > 0 ? OfferedWares + RapportExtraWares : 0;   // (his rapport step brings a bigger selection)
+        if (!tradeMode && offered > 0)
+            while (wares.Count > offered) wares.RemoveAt(Random.Range(0, wares.Count)); // a small random selection
         if (!tradeMode) ModifyWares(wares);
         if (!tradeMode && StockMax > 0)
-            foreach (int w in wares) stock[w] = StockFor(w);
+            foreach (int w in wares) { int n = StockFor(w); stock[w] = n > 0 && !Highlighted(w) ? n + RapportExtraStock : n; }   // (rapport: more of each; a highlighted rare ware stays as it is)
         if (!tradeMode && StockMax > 0) wares.RemoveAll(w => stock.TryGetValue(w, out int n) && n <= 0);   // a stock of 0 = he didn't bring that one this time
         visitPrice.Clear();
         if (!tradeMode)
