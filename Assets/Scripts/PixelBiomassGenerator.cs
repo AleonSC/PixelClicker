@@ -5,7 +5,7 @@
 //   - BIOMASS GENERATOR (DeviceKind.BiomassGenerator 28): the big one, on sale at Woodcutting level 10 (shopSkillId 'woodcutting').
 //   They differ only in their Device entry: radius (how far the power reaches), generatorMaxCharge (seconds of power when full) and generatorChargePerHusk
 //   (seconds one wood husk adds), and the model's size (bodyDiameter).
-//   - FUEL: husks of WOODCUTTING (PixelSkills.HuskSkillId == woodcutting), plus CHARCOAL (the Kiln's, x charcoalFuel = 3 wood husks) and WOOD CHIPS
+//   - FUEL: husks of WOODCUTTING (PixelSkills.HuskSkillId == woodcutting), plus CHARCOAL (the Charcoal pixel's husks, x charcoalFuel = 8 wood husks: the most efficient fuel) and WOOD CHIPS
 //     (the Wood Chipper's, x woodChipsFuel = 4; 2026-10-20, FuelOf) that land in the open firebox on top (dropped by hand or by physics) - or come
 //     in through its intake coupling socket - are burnt: taken off the floor (FlyIn), + generatorChargePerHusk, up to the max. Other husks are left alone.
 //     The firebox is never narrower than 1.8 husk widths (the pocket model is small) and a husk resting on its rim counts. A SMALL SUCTION (suckRadiusHusks,
@@ -44,7 +44,7 @@ public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHu
     [Header("Fuel")]
     [Min(0f)]
     [Tooltip("How many wood husks' worth of charge one CHARCOAL husk (from the Charcoal pixel) gives. 0 = Charcoal is not burnt.")]
-    [SerializeField] private float charcoalFuel = 3f;
+    [SerializeField] private float charcoalFuel = 8f;   // the best fuel (2026-10-24, was 3): the Charcoal pixel is bought with Kiln charcoal
     [Min(0f)]
     [Tooltip("How many wood husks' worth of charge one WOOD CHIPS husk (from the Wood Chipper) gives. 0 = Wood Chips are not burnt.")]
     [SerializeField] private float woodChipsFuel = 4f;

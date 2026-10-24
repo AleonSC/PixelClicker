@@ -688,6 +688,16 @@ public partial class PixelShop
             changed = true;
         }
 
+        if (packDataVersion < 42)
+        {
+            // The Charcoal Pixel's husks are the most efficient fuel (8 wood husks in a Biomass Generator): its saved description says so.
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                    if (p != null && p.displayName == "Charcoal Pixel") p.description = CreateCharcoalPixelPack(-1).description;
+            packDataVersion = Mathf.Max(packDataVersion, 42);
+            changed = true;
+        }
+
         if (packDataVersion < 41)
         {
             // Charcoal is its own shop pixel now (2026-10-24, bought with the Kiln's charcoal material): the Firemaker's Pack no longer rewards it.
