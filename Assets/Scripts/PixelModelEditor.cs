@@ -72,6 +72,7 @@ public class PixelModelEditor : MonoBehaviour
     private readonly List<KeyValuePair<string, Func<Transform, GameObject>>> sources = new List<KeyValuePair<string, Func<Transform, GameObject>>>();
     private int sourceIndex = -1;
     private Transform model, selected;
+    private Renderer selectedRenderer;   // (the selected part's renderer, fetched once in Select for the blink in Update)
     private readonly Dictionary<Transform, Snap> originals = new Dictionary<Transform, Snap>();
     private readonly List<Transform> added = new List<Transform>();
     private readonly Dictionary<Transform, string> addedWhat = new Dictionary<Transform, string>();
@@ -238,7 +239,7 @@ public class PixelModelEditor : MonoBehaviour
         sourceIndex = index;
         StopBlink();
         PixelModelPicture.Release(Key);
-        originals.Clear(); added.Clear(); addedWhat.Clear(); deleted.Clear(); selected = null;
+        originals.Clear(); added.Clear(); addedWhat.Clear(); deleted.Clear(); selected = null; selectedRenderer = null;
         Func<Transform, GameObject> build = sources[index].Value;
         viewport.texture = PixelModelPicture.Get(Key, build, 512, tilt);
         viewport.color = viewport.texture != null ? Color.white : Color.clear;
@@ -321,6 +322,7 @@ public class PixelModelEditor : MonoBehaviour
     {
         StopBlink();
         selected = t;
+        selectedRenderer = t != null ? t.GetComponent<Renderer>() : null;
         blinkUntil = Time.unscaledTime + 1.2f;
         RebuildPartList();
         ShowSelected();
@@ -541,7 +543,7 @@ public class PixelModelEditor : MonoBehaviour
         // The selected part blinks for a moment so you can see which one it is.
         if (selected != null && !deleted.Contains(selected))
         {
-            Renderer r = selected.GetComponent<Renderer>();
+            Renderer r = selectedRenderer;
             if (r != null)
             {
                 bool show = Time.unscaledTime >= blinkUntil || Mathf.Repeat(Time.unscaledTime * 5f, 1f) < 0.5f;

@@ -458,7 +458,7 @@ public class PixelDevInspector : MonoBehaviour
         StringBuilder sb = new StringBuilder();
         foreach (string e in edits) sb.AppendLine(e);
         GUIUtility.systemCopyBuffer = sb.Length > 0 ? sb.ToString() : "(no edits yet)";
-        Debug.Log("PixelDevInspector: " + edits.Count + " edit(s) copied to the clipboard.");
+        PixelDebug.Info("PixelDevInspector: " + edits.Count + " edit(s) copied to the clipboard.");
     }
 
     // ------------------------------------------------------------------
@@ -637,6 +637,17 @@ public class PixelDevInspector : MonoBehaviour
     // Per-frame
     // ------------------------------------------------------------------
 
+    // The World tab's once-a-second counts (husks, bodies, awake bodies): a scene search, so Update only calls it on its 1 s timer.
+    private void CountWorldObjects()
+    {
+        oldCount = PixelFind.Count<OldPixelInfo>();
+        Rigidbody[] bodies =
+            PixelFind.All<Rigidbody>();
+        bodyCount = bodies.Length;
+        awakeCount = 0;
+        foreach (Rigidbody b in bodies) if (!b.IsSleeping()) awakeCount++;
+    }
+
     private void Update()
     {
         if (!IsOpen) return;
@@ -657,12 +668,7 @@ public class PixelDevInspector : MonoBehaviour
             countT = 1f;
             if (tab == 0)
             {
-                oldCount = PixelFind.Count<OldPixelInfo>();
-                Rigidbody[] bodies =
-                    PixelFind.All<Rigidbody>();
-                bodyCount = bodies.Length;
-                awakeCount = 0;
-                foreach (Rigidbody b in bodies) if (!b.IsSleeping()) awakeCount++;
+                CountWorldObjects();
             }
         }
 

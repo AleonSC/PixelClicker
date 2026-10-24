@@ -145,6 +145,35 @@ public partial class PixelSkills
         help.onClick.AddListener(StartTutorial);
         PixelMenuFx.AddWindowLine(windowObject.transform, header);
         BuildPinButton();   // left header slot: pins the training skill with an XP bar in a small window you can move
+        BuildWindowHeader(header);   // "Training: Mining  Lv 3" + an XP bar, the minigame bonus on the right
+
+        BuildMasteryBar();   // along the bottom: progress across all skills
+
+        // Left: the pack cards.
+        listScroll = PixelUIKit.CreateScrollView(windowObject.transform, "Pack List", new Color(1f, 1f, 1f, 0.35f), 10f, 60f, out listContent, out listBar);
+        RectTransform lr = listScroll.GetComponent<RectTransform>();
+        lr.anchorMin = new Vector2(0f, 0f);
+        lr.anchorMax = new Vector2(0f, 1f);
+        lr.pivot = new Vector2(0f, 0.5f);
+        lr.offsetMin = new Vector2(26f, 84f);
+        lr.offsetMax = new Vector2(26f + 330f, -(header + 114f));
+        for (int i = 0; i < packs.Count; i++) cards.Add(BuildCard(i));
+
+        BuildDetailPanel(header);   // right: the selected pack
+
+        BuildTreeWindow();
+        BuildTip();
+        windowObject.SetActive(false);
+        PixelWindows.Register(this, 14, () => WindowOpen, () => PixelPop.Hide(windowObject));
+        // (Changed also fires on every XP gain - twice per collected block - so it only moves the next refresh up to within 0.1 s
+        //  instead of re-laying out the whole window on every click; Update does the refresh)
+        Changed += () => { if (WindowOpen) refreshTimer = Mathf.Min(refreshTimer, 0.1f); };
+        built = true;
+    }
+
+    // BuildWindow, step: the header row - "Training: Mining  Lv 3" + an XP bar, and the minigame XP bonus on the right.
+    private void BuildWindowHeader(float header)
+    {
         // Header: "Training: Mining  Lv 3" + an XP bar.
         headerLabel = PixelUIKit.CreateText(Font, windowObject.transform, "Header", "", 34f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);
         Place(headerLabel.rectTransform, 0f, 1f, 0.6f, 1f, new Vector2(30f, -(header + 68f)), new Vector2(-6f, -(header + 10f)));   // the left part of the row (the minigame bonus has the right part, so they never overlap)
@@ -172,19 +201,11 @@ public partial class PixelSkills
         headerFill.offsetMin = new Vector2(3f, 3f);
         headerFill.offsetMax = new Vector2(-3f, -3f);
         headerFill.pivot = new Vector2(0f, 0.5f);
+    }
 
-        BuildMasteryBar();   // along the bottom: progress across all skills
-
-        // Left: the pack cards.
-        listScroll = PixelUIKit.CreateScrollView(windowObject.transform, "Pack List", new Color(1f, 1f, 1f, 0.35f), 10f, 60f, out listContent, out listBar);
-        RectTransform lr = listScroll.GetComponent<RectTransform>();
-        lr.anchorMin = new Vector2(0f, 0f);
-        lr.anchorMax = new Vector2(0f, 1f);
-        lr.pivot = new Vector2(0f, 0.5f);
-        lr.offsetMin = new Vector2(26f, 84f);
-        lr.offsetMax = new Vector2(26f + 330f, -(header + 114f));
-        for (int i = 0; i < packs.Count; i++) cards.Add(BuildCard(i));
-
+    // BuildWindow, step: the right side - the selected pack (name, info, perk sections, skill tree button, Train button).
+    private void BuildDetailPanel(float header)
+    {
         // Right: the selected pack.
         GameObject detail = new GameObject("Detail", typeof(RectTransform), typeof(Image));
         detail.transform.SetParent(windowObject.transform, false);
@@ -269,15 +290,6 @@ public partial class PixelSkills
             if (selected >= 0 && selected < packs.Count) SetActive(packs[selected].id);
             RefreshWindow();
         });
-
-        BuildTreeWindow();
-        BuildTip();
-        windowObject.SetActive(false);
-        PixelWindows.Register(this, 14, () => WindowOpen, () => PixelPop.Hide(windowObject));
-        // (Changed also fires on every XP gain - twice per collected block - so it only moves the next refresh up to within 0.1 s
-        //  instead of re-laying out the whole window on every click; Update does the refresh)
-        Changed += () => { if (WindowOpen) refreshTimer = Mathf.Min(refreshTimer, 0.1f); };
-        built = true;
     }
 
     /// <summary>The 'Skill tree' button in the detail panel, the separate skill tree window and the pixel-pack buttons of Offline Progression.</summary>
