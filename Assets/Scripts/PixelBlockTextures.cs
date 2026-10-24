@@ -58,6 +58,10 @@ public static class PixelBlockTextures
 
     // ---- Twigs: a tangle of thin sticks criss-crossing over a dark gap, so the cube reads as a bundle of twigs ----
     private static Vector4[] twigLines;
+
+    // The twig lines are rebuilt on first use (same fixed seeds); cleared at play-mode start.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { twigLines = null; }
     private static Color TwigsPixel(int x, int y)
     {
         if (twigLines == null)

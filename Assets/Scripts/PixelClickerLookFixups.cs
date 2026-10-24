@@ -4,6 +4,8 @@
 //   Inspector) and a looksVersion number; each 'if (looksVersion < N)' step below adds or replaces the looks that changed in version N, so a
 //   scene saved before a look existed still gets it. They run in order on every Play until the scene is saved with the new number (the
 //   scene's data is old, so in practice they run each time). New look changes add the next step at the END with the next number.
+//   The steps are grouped into RunLookFixupsTo<N>() methods (called in order from RunLookFixups) only to keep each method short: a new step goes at
+//   the end of the last group (start a new group, called last, when that one passes ~130 lines).
 //   Split out of Awake in PixelClicker.cs (no behaviour change).
 // ---------------------------------------------------
 using System;
@@ -21,6 +23,18 @@ public partial class PixelClicker
 {
     /// <summary>Brings the saved Pixel Looks list up to the current looksVersion (one step per version, in order).</summary>
     private void RunLookFixups()
+    {
+        // (the steps, in version order, split into groups so each method stays short; every step still checks looksVersion itself)
+        RunLookFixupsTo14();
+        RunLookFixupsTo23();
+        RunLookFixupsTo34();
+        RunLookFixupsTo45();
+        RunLookFixupsTo55();
+        RunLookFixupsTo65();
+    }
+
+    /// <summary>Look fix-up steps 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 (in this order; part of RunLookFixups).</summary>
+    private void RunLookFixupsTo14()
     {
         if (looksVersion < 3)
         {
@@ -161,6 +175,11 @@ public partial class PixelClicker
             looks = list14.ToArray();
             looksVersion = 14;
         }
+    }
+
+    /// <summary>Look fix-up steps 15, 16, 17, 18, 19, 20, 21, 22, 23 (in this order; part of RunLookFixups).</summary>
+    private void RunLookFixupsTo23()
+    {
         if (looksVersion < 15)
         {
             // The Water look (a wobbling see-through blue jelly cube) is new: add it to lists saved before it existed.
@@ -299,6 +318,11 @@ public partial class PixelClicker
             }
             looksVersion = 23;
         }
+    }
+
+    /// <summary>Look fix-up steps 24, 25, 26, 27, 28, 29, 31, 30, 34 (in this order; part of RunLookFixups).</summary>
+    private void RunLookFixupsTo34()
+    {
         if (looksVersion < 24)
         {
             // Black and Gray lose their rim; Obsidian's rim turns darker (only where it is still the shaded bevel default).
@@ -427,7 +451,11 @@ public partial class PixelClicker
             looks = list32.ToArray();
             looksVersion = 34;
         }
+    }
 
+    /// <summary>Look fix-up steps 35, 36, 38, 39, 40, 41, 42, 43, 44, 45 (in this order; part of RunLookFixups).</summary>
+    private void RunLookFixupsTo45()
+    {
         if (looksVersion < 35)
         {
             // Meteor and Solar got their own looks.
@@ -566,7 +594,11 @@ public partial class PixelClicker
             looks = list45.ToArray();
             looksVersion = 45;
         }
+    }
 
+    /// <summary>Look fix-up steps 46, 47, 48, 49, 50, 51, 52, 53, 54, 55 (in this order; part of RunLookFixups).</summary>
+    private void RunLookFixupsTo55()
+    {
         if (looksVersion < 46)
         {
             // New ores (Silver, Gold, Bedrock) and the Fishing blocks got looks.
@@ -686,7 +718,11 @@ public partial class PixelClicker
             looks = list55.ToArray();
             looksVersion = 55;
         }
+    }
 
+    /// <summary>Look fix-up steps 56, 57, 58, 59, 60, 61, 62, 63, 64, 65 (in this order; part of RunLookFixups).</summary>
+    private void RunLookFixupsTo65()
+    {
         if (looksVersion < 56)
         {
             // Wood-family old pixels (and the Whetstone) hardly bounce: low bounce, grippy, normal gravity.

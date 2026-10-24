@@ -253,6 +253,10 @@ public static class PixelBlockCatalog
 
     private static PixelBlockCard[] byType;
 
+    // The lookup is rebuilt from Cards on first use; cleared at play-mode start (it only mirrors the table above).
+    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { byType = null; }
+
     private static void Build()
     {
         int max = 0;
