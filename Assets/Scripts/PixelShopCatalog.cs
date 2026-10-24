@@ -45,6 +45,7 @@ public partial class PixelShop
     private TMP_Text catalogHeading;
     private GameObject affordToggleFill;
     private RectTransform headingRow;
+    private RectTransform catalogBody;   // the rail + catalog, below the currency strip
     private float savingCardSpace;   // the card's height + gap (the heading row and the grid move up by this while the card is hidden)
     private float catalogGridTop;    // the grid's top below the catalog area's top, with the card showing
     private Image affordToggleBox;
@@ -63,7 +64,16 @@ public partial class PixelShop
     private float RailW => Mathf.Max(160f, railWidth);
     private float CatalogX => RailX + RailW + panelPadding * 0.8f;
     private float DetailWidth => Mathf.Max(240f, detailPanelWidth);
-    private float CatalogTop => headerHeight + 8f + (hideCurrencyPanel ? 0f : CurrencyStripHeight) + 10f;
+    private float CatalogTop => CatalogTopFor(1);
+
+    /// <summary>Where the rail and catalog start when the currency strip has 'rows' rows.</summary>
+    private float CatalogTopFor(int rows) => headerHeight + 8f + (hideCurrencyPanel ? 0f : CurrencyStripHeightFor(rows)) + 10f;
+
+    /// <summary>Moves the rail and catalog to start below a currency strip of 'rows' rows.</summary>
+    private void SetCatalogRows(int rows)
+    {
+        if (catalogBody != null) catalogBody.offsetMax = new Vector2(0f, -CatalogTopFor(rows));
+    }
     private float CatalogGridWidth => panelWidth - CatalogX - panelPadding - DetailGap - DetailWidth;
     private float HeadingHeight => 40f;
     private int[] AmountPresets => amountPresets != null && amountPresets.Length > 0 ? amountPresets : new[] { 1, 5, 10 };
@@ -76,7 +86,15 @@ public partial class PixelShop
     private void BuildCatalog(Transform panel)
     {
         PixelPrefs.DeclarePerSave(SavingGoalKey, PixelPrefs.Kind.String);
-        float top = CatalogTop;
+        // Everything under the currency strip lives in one body that moves down when the strip wraps onto another row (SetCatalogTop).
+        catalogBody = new GameObject("Catalog Body", typeof(RectTransform)).GetComponent<RectTransform>();
+        catalogBody.SetParent(panel, false);
+        catalogBody.anchorMin = Vector2.zero;
+        catalogBody.anchorMax = Vector2.one;
+        catalogBody.offsetMin = Vector2.zero;
+        catalogBody.offsetMax = new Vector2(0f, -CatalogTop);
+        panel = catalogBody;
+        float top = 0f;
         BuildRail(panel, top);
 
         float cardH = Mathf.Max(70f, savingCardHeight);
@@ -143,7 +161,11 @@ public partial class PixelShop
         GameObject rail = new GameObject("Category Rail", typeof(RectTransform));
         rail.transform.SetParent(panel, false);
         RectTransform rr = rail.GetComponent<RectTransform>();
-        PlaceTopLeft(rr, RailX, top, RailW, panelHeight - top - panelPadding);
+        rr.anchorMin = new Vector2(0f, 0f);
+        rr.anchorMax = new Vector2(0f, 1f);
+        rr.pivot = new Vector2(0f, 1f);
+        rr.offsetMin = new Vector2(RailX, panelPadding);
+        rr.offsetMax = new Vector2(RailX + RailW, -top);
 
         railImages = new Image[RailOrder.Length];
         railCounts = new TMP_Text[RailOrder.Length];

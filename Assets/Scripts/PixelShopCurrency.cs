@@ -2,9 +2,10 @@
 // PixelShopCurrency.cs
 //   Part of partial class PixelShop: the CURRENCY STRIP under the shop's header (since 2026-10-24; it replaced the slide-out Currency panel on the
 //   shop's left). One chip per pixel type you have unlocked or hold: a small spinning cube in its colour + the amount (abbreviated), left to right;
-//   when there are more than fit, the mouse wheel over the strip scrolls it sideways. Hover a chip: the pixel's name and the full amount.
+//   when there are more than fit on a row the strip WRAPS onto another row (it never scrolls) and the rail + catalog below move down with it
+//   (SetCatalogRows). Hover a chip: the pixel's name and the full amount.
 //   Also: CloseShopWindow, and the shop closing the Inventory / Log while it is open (and bringing them back after). Settings: PixelShop.cs
-//   "Currency strip" (hideCurrencyPanel, currencyStripHeight).
+//   "Currency strip" (hideCurrencyPanel, currencyStripHeight = the height of ONE row).
 // ---------------------------------------------------
 using TMPro;
 using UnityEngine;
@@ -32,7 +33,7 @@ public partial class PixelShop
 
     private GameObject currencyStrip;
     private RectTransform currencyContent;
-    private ScrollRect currencyScroll;
+    private int currencyRows = 1;   // how many rows the strip has now
     private CurrencyChip[] currencyChips;
     private RectTransform currencyTipRect;
     private string currencyTipShown;   // (the tip text last measured, so the box is only measured again when it changes)
@@ -44,11 +45,14 @@ public partial class PixelShop
     private bool shopWasOpen;
     private bool reopenInventory, reopenLog; // which windows the shop closed when it opened, to bring back when it closes
 
-    private float CurrencyStripHeight => Mathf.Max(30f, currencyStripHeight);
-    private float CurrencyIconSize => CurrencyStripHeight * 0.55f;
-    private float CurrencyFontSize => CurrencyStripHeight * 0.46f;
+    private float CurrencyRowHeight => Mathf.Max(30f, currencyStripHeight);
+    private float CurrencyIconSize => CurrencyRowHeight * 0.55f;
+    private float CurrencyFontSize => CurrencyRowHeight * 0.46f;
 
-    /// <summary>The strip under the header: a sideways-scrolling row of chips (cube + amount), one per pixel type.</summary>
+    /// <summary>The strip's height with 'rows' rows of chips.</summary>
+    private float CurrencyStripHeightFor(int rows) => CurrencyRowHeight * Mathf.Max(1, rows) + 4f;
+
+    /// <summary>The strip under the header: rows of chips (cube + amount), one per pixel type; it wraps onto more rows instead of scrolling.</summary>
     private void BuildCurrencyStrip(Transform shopPanel)
     {
         if (clicker == null) return;
@@ -56,24 +60,13 @@ public partial class PixelShop
         BuildCurrencyTooltip();
         if (hideCurrencyPanel) return;
 
-        currencyStrip = new GameObject("Currency Strip", typeof(RectTransform), typeof(Image), typeof(RectMask2D), typeof(ScrollRect));
+        currencyStrip = new GameObject("Currency Strip", typeof(RectTransform), typeof(Image));
         currencyStrip.transform.SetParent(shopPanel, false);
         Image bg = currencyStrip.GetComponent<Image>();
         bg.color = new Color(0.05f, 0.05f, 0.08f, 0.85f);
         PixelUIKit.StyleBox(bg, true);
-        PlaceTopLeft(currencyStrip.GetComponent<RectTransform>(), panelPadding, headerHeight + 8f, panelWidth - panelPadding * 2f, CurrencyStripHeight);
-
-        currencyContent = new GameObject("Chips", typeof(RectTransform)).GetComponent<RectTransform>();
-        currencyContent.SetParent(currencyStrip.transform, false);
-        currencyContent.anchorMin = currencyContent.anchorMax = currencyContent.pivot = new Vector2(0f, 0.5f);
-        currencyContent.sizeDelta = new Vector2(0f, CurrencyStripHeight);
-        currencyScroll = currencyStrip.GetComponent<ScrollRect>();
-        currencyScroll.content = currencyContent;
-        currencyScroll.viewport = currencyStrip.GetComponent<RectTransform>();
-        currencyScroll.horizontal = true;
-        currencyScroll.vertical = false;   // (the mouse wheel then scrolls it sideways)
-        currencyScroll.movementType = ScrollRect.MovementType.Clamped;
-        currencyScroll.scrollSensitivity = Mathf.Max(10f, scrollSpeed);
+        PlaceTopLeft(currencyStrip.GetComponent<RectTransform>(), panelPadding, headerHeight + 8f, panelWidth - panelPadding * 2f, CurrencyStripHeightFor(1));
+        currencyContent = currencyStrip.GetComponent<RectTransform>();
 
         var tiers = clicker.Tiers;
         currencyChips = new CurrencyChip[tiers.Length];
@@ -87,7 +80,7 @@ public partial class PixelShop
             cb.color = rowColor;
             PixelUIKit.StyleBox(cb);
             chip.rect = go.GetComponent<RectTransform>();
-            chip.rect.anchorMin = chip.rect.anchorMax = chip.rect.pivot = new Vector2(0f, 0.5f);
+            chip.rect.anchorMin = chip.rect.anchorMax = chip.rect.pivot = new Vector2(0f, 1f);
 
             GameObject iconGo = new GameObject("Icon", typeof(RectTransform), typeof(CanvasRenderer));
             iconGo.transform.SetParent(go.transform, false);
@@ -144,12 +137,15 @@ public partial class PixelShop
         go.SetActive(false);
     }
 
-    /// <summary>Updates the amounts and which pixel types are listed (unlocked ones, or any you hold), laid out left to right.</summary>
+    /// <summary>Updates the amounts and which pixel types are listed (unlocked ones, or any you hold), laid out left to right in rows.</summary>
     private void RefreshCurrency()
     {
         if (currencyStrip == null || currencyChips == null) return;
         var tiers = clicker.Tiers;
-        float x = 6f, gap = 8f, chipH = CurrencyStripHeight - 10f;
+        float rowH = CurrencyRowHeight, chipH = rowH - 8f, gap = 8f;
+        float width = panelWidth - panelPadding * 2f - 6f;
+        float x = 6f;
+        int row = 0;
         for (int i = 0; i < currencyChips.Length && i < tiers.Length; i++)
         {
             CurrencyChip chip = currencyChips[i];
@@ -165,11 +161,19 @@ public partial class PixelShop
             float textW = chip.amount.GetPreferredValues(text).x + 4f;
             chip.amount.rectTransform.sizeDelta = new Vector2(textW, chipH);
             float w = CurrencyIconSize + 14f + textW + 12f;
+            if (x + w > width && x > 6f) { row++; x = 6f; }   // (no room left on this row: wrap)
             chip.rect.sizeDelta = new Vector2(w, chipH);
-            chip.rect.anchoredPosition = new Vector2(x, 0f);
+            chip.rect.anchoredPosition = new Vector2(x, -(6f + row * rowH));
             x += w + gap;
         }
-        currencyContent.sizeDelta = new Vector2(x, CurrencyStripHeight);
+        int rows = row + 1;
+        if (rows != currencyRows)
+        {
+            currencyRows = rows;
+            RectTransform sr = currencyStrip.GetComponent<RectTransform>();
+            sr.sizeDelta = new Vector2(sr.sizeDelta.x, CurrencyStripHeightFor(rows));
+            SetCatalogRows(rows);
+        }
     }
 
     /// <summary>Called every frame: tooltip position, and closing the Inventory / Log the moment the shop opens.</summary>

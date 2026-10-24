@@ -149,13 +149,10 @@ public partial class PixelShop
         pr.anchorMax = new Vector2(1f, 1f);
         pr.offsetMin = new Vector2(x, 0f);
         pr.offsetMax = Vector2.zero;
-        float w = DetailWidth, h = Mathf.Max(400f, panelHeight - panelPadding - CatalogTop);
-        // (children are placed from this top-left holder, in a fixed w x h box)
-        RectTransform top = new GameObject("Top", typeof(RectTransform)).GetComponent<RectTransform>();
-        top.SetParent(panel.transform, false);
-        top.anchorMin = top.anchorMax = top.pivot = new Vector2(0f, 1f);
-        top.sizeDelta = new Vector2(w, h);
-        top.anchoredPosition = Vector2.zero;
+        float w = DetailWidth;
+        // (the picture, name and kind hang from the top edge; the cost, amounts, Save up and Buy stand on the bottom edge; the description
+        //  stretches between them - so the panel works at any height, e.g. when the currency strip above gets another row)
+        RectTransform top = pr;
 
         const float pad = 16f;
         float inner = w - pad * 2f;
@@ -176,13 +173,13 @@ public partial class PixelShop
         PlaceTopLeft(page.barKind.rectTransform, pad, y, inner, 24f);
         y += 30f;
 
-        // Bottom up: Buy, Save up for this, quick amounts, - count +, the cost. The description takes what is left between.
+        // Bottom up (distances from the bottom edge): Buy, Save up for this, quick amounts, - count +, the cost. The description takes what is left between.
         float buyH = 62f, pinH = 36f, quickH = 44f, stepH = 48f, costH = 92f, gap = 8f;
-        float buyY = h - pad - buyH;
-        float pinY = buyY - gap - pinH;
-        float quickY = pinY - gap - quickH;
-        float stepY = quickY - gap - stepH;
-        float costY = stepY - gap - costH;
+        float buyB = pad;
+        float pinB = buyB + buyH + gap;
+        float quickB = pinB + pinH + gap;
+        float stepB = quickB + quickH + gap;
+        float costB = stepB + stepH + gap;
 
         page.barDescription = CreateText(top, "Description", "", tileFontSize * 1.05f, TextAlignmentOptions.TopLeft, FontStyles.Normal);
         page.barDescription.richText = true;
@@ -190,16 +187,22 @@ public partial class PixelShop
         page.barDescription.fontSizeMax = tileFontSize * 1.05f;
         page.barDescription.fontSizeMin = 12f;
         page.barDescription.color = new Color(0.78f, 0.82f, 0.9f, 1f);
-        PlaceTopLeft(page.barDescription.rectTransform, pad, y, inner, Mathf.Max(30f, costY - gap - y));
+        RectTransform dr = page.barDescription.rectTransform;
+        dr.anchorMin = Vector2.zero;
+        dr.anchorMax = Vector2.one;
+        dr.pivot = new Vector2(0f, 1f);
+        dr.offsetMin = new Vector2(pad, costB + costH + gap);
+        dr.offsetMax = new Vector2(-pad, -y);
 
-        page.barCosts = BuildCostStrip(top, pad, costY, inner, costH, 6, 2, tileFontSize * 0.95f, true);
+        page.barCosts = BuildCostStrip(top, pad, 0f, inner, costH, 6, 2, tileFontSize * 0.95f, true);
+        PlaceBottomLeft(page.barCosts.root, pad, costB, inner, costH);
         page.barCosts.withHeld = true;
 
         // - count +
         page.amountRow = new GameObject("Amount", typeof(RectTransform)).gameObject;
         RectTransform amr = page.amountRow.GetComponent<RectTransform>();
         amr.SetParent(top, false);
-        PlaceTopLeft(amr, pad, stepY, inner, stepH);
+        PlaceBottomLeft(amr, pad, stepB, inner, stepH);
         float stepW = 56f, countW = inner - stepW * 2f - 16f;
         page.minus = CreateButton(amr, "Minus", "-", Vector2.zero, ButtonRole.Neutral, textColor, buyFontSize, out _, out _);
         PlaceTopLeft(page.minus.GetComponent<RectTransform>(), 0f, 0f, stepW, stepH);
@@ -223,7 +226,7 @@ public partial class PixelShop
         page.quickRow = new GameObject("Quick Amounts", typeof(RectTransform)).gameObject;
         RectTransform qr = page.quickRow.GetComponent<RectTransform>();
         qr.SetParent(top, false);
-        PlaceTopLeft(qr, pad, quickY, inner, quickH);
+        PlaceBottomLeft(qr, pad, quickB, inner, quickH);
         int[] presets = AmountPresets;
         int buttons = presets.Length + 1;
         float qw = (inner - gap * (buttons - 1)) / buttons;
@@ -246,12 +249,12 @@ public partial class PixelShop
 
         // Save up for this: pins the item to the Saving up for card.
         page.pin = CreateButton(top, "Save Up", "", Vector2.zero, ButtonRole.Neutral, textColor, buyFontSize * 0.55f, out page.pinLabel, out page.pinImage);
-        PlaceTopLeft(page.pin.GetComponent<RectTransform>(), pad, pinY, inner, pinH);
+        PlaceBottomLeft(page.pin.GetComponent<RectTransform>(), pad, pinB, inner, pinH);
         page.pin.onClick.AddListener(() => { int id = page.Selected; if (id >= 0) ToggleSavingGoal(id); });
 
         page.buy = CreateButton(top, "Buy", "", Vector2.zero, ButtonRole.Success, textColor, buyFontSize * 0.85f, out page.barBuyLabel, out page.buyImage);
         PixelUIKit.FitOneLine(page.barBuyLabel, 14f);
-        PlaceTopLeft(page.buy.GetComponent<RectTransform>(), pad, buyY, inner, buyH);
+        PlaceBottomLeft(page.buy.GetComponent<RectTransform>(), pad, buyB, inner, buyH);
         page.buy.onClick.AddListener(() => { int id = page.Selected; if (id >= 0) page.purchase(id, PixelInput.ShiftHeld()); });
         Func<string> maxTip = () => buyMaxTip;   // hovering Buy explains Shift-click
         PixelHoverTip buyTip = page.buy.gameObject.AddComponent<PixelHoverTip>();
@@ -264,6 +267,14 @@ public partial class PixelShop
         rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
         rt.sizeDelta = new Vector2(w, h);
         rt.anchoredPosition = new Vector2(x, -y);
+    }
+
+    /// <summary>Places a box 'y' units up from its parent's bottom left corner.</summary>
+    private static void PlaceBottomLeft(RectTransform rt, float x, float y, float w, float h)
+    {
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 0f);
+        rt.sizeDelta = new Vector2(w, h);
+        rt.anchoredPosition = new Vector2(x, y);
     }
 
     private static string SelectedTileKey(TilePage page)

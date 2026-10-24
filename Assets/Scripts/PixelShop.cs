@@ -507,7 +507,7 @@ public partial class PixelShop : MonoBehaviour
     [SerializeField] private bool hideCurrencyPanel = false;
 
     [Min(30f)]
-    [Tooltip("Height of the currency strip under the shop's header (the cubes and amounts scale with it).")]
+    [Tooltip("Height of ONE row of the currency strip under the shop's header (the cubes and amounts scale with it; the strip wraps onto more rows when the pixels don't fit).")]
     [SerializeField] private float currencyStripHeight = 52f;
 
     [Tooltip("Width of a window docked beside the open shop (the Pixel Guide; it gets narrower when the screen has less room). 0 = 380.")]
