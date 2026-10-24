@@ -233,7 +233,7 @@ public class PixelSunRays : MonoBehaviour
 
     private void LateUpdate()
     {
-        Camera cam = Camera.main;
+        Camera cam = PixelClicker.ViewCameraOf(PixelFind.Cached<PixelClicker>());   // (the clicker's view camera, Camera.main without one)
         if (sr == null || cam == null || transform.parent == null) return;
         float sc = Mathf.Max(0.0001f, transform.parent.lossyScale.x);
         float worldUnit = unit * sc;
@@ -363,7 +363,7 @@ public class OldPixelSolarAura : MonoBehaviour
         bool show = alpha > 0.005f;
         if (sr.gameObject.activeSelf != show) sr.gameObject.SetActive(show);
         if (!show) return;
-        Camera cam = Camera.main;
+        Camera cam = PixelClicker.ViewCameraOf(PixelFind.Cached<PixelClicker>());   // (the clicker's view camera, Camera.main without one)
         if (cam == null) return;
         float size = Mathf.Max(0.05f, transform.lossyScale.x);
         Transform t = sr.transform;
