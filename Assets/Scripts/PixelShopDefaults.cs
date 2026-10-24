@@ -1331,12 +1331,17 @@ public partial class PixelShop
 
 #if UNITY_EDITOR
     [ContextMenu("Reset Built-in Pack Prices")]
-    private void ResetBuiltInPackPricesFromMenu()
+    private void ResetBuiltInPackPricesFromMenu() => EditorResetBuiltInPackPrices(false);
+
+    /// <summary>Resets the built-in packs' prices with Undo and says how many changed: the context menu above and the Inspector's
+    /// 'Reset Built-in Prices Now' tick box (fromCheckbox: the tick box is cleared too, inside the same Undo step) both use it.</summary>
+    private void EditorResetBuiltInPackPrices(bool fromCheckbox)
     {
         UnityEditor.Undo.RecordObject(this, "Reset Built-in Pack Prices");
+        if (fromCheckbox) resetBuiltInPricesNow = false;
         int count = ResetBuiltInPackPrices();
         UnityEditor.EditorUtility.SetDirty(this);
-        Debug.Log("PixelShop: reset the prices of " + count + " built-in packs to their defaults.", this);
+        PixelDebug.Info("PixelShop: reset the prices of " + count + " built-in packs to their defaults.", this);
     }
 
     /// <summary>Right-click the component header &gt; Add Missing Default Packs, to fill in any built-in pack that is not in the list.</summary>

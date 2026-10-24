@@ -260,6 +260,20 @@ public partial class PixelShop
     private PackRow BuildPlainRow(Transform parent, string objectName)
     {
         PackRow row = new PackRow();
+        RectTransform rr = CreateRowBox(parent, objectName, rowHeight);
+        row.rect = rr;
+
+        float inset = buyButtonSize.x + 40f;
+
+        AddRowLabels(row, rr, "", "", inset);
+        AddRowBuyButton(row, rr, ultraButtonText);
+        LayoutRowHeader(row, inset);
+        return row;
+    }
+
+    /// <summary>A row's box: a styled panel stretched across the list, anchored at the top, 'height' tall (pack rows, plain rows, trackers).</summary>
+    private RectTransform CreateRowBox(Transform parent, string objectName, float height)
+    {
         GameObject rowGo = new GameObject(objectName, typeof(RectTransform), typeof(Image));
         rowGo.transform.SetParent(parent, false);
         rowGo.GetComponent<Image>().color = rowColor;
@@ -268,39 +282,45 @@ public partial class PixelShop
         rr.anchorMin = new Vector2(0f, 1f);
         rr.anchorMax = new Vector2(1f, 1f);
         rr.pivot = new Vector2(0.5f, 1f);
-        rr.sizeDelta = new Vector2(0f, rowHeight);
-        row.rect = rr;
+        rr.sizeDelta = new Vector2(0f, height);
+        return rr;
+    }
 
-        float inset = buyButtonSize.x + 40f;
-
-        row.nameLabel = CreateText(rowGo.transform, "Name", "", nameFontSize, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
+    /// <summary>A row's name, description and cost lines: each in its band, kept 'inset' clear of the Buy button, and long texts
+    /// (names, descriptions, six-currency cost lists) shrink to fit their band instead of spilling over the lines below.</summary>
+    private void AddRowLabels(PackRow row, Transform rowParent, string rowName, string rowDescription, float inset)
+    {
+        row.nameLabel = CreateText(rowParent, "Name", rowName, nameFontSize, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
         row.nameLabel.richText = true;
         row.nameLabel.enableAutoSizing = true;
         row.nameLabel.fontSizeMax = nameFontSize;
         row.nameLabel.fontSizeMin = Mathf.Min(16f, nameFontSize);
         SetBand(row.nameLabel.rectTransform, 0.74f, 1f, inset);
 
-        row.descLabel = CreateText(rowGo.transform, "Description", "", descriptionFontSize, TextAlignmentOptions.TopLeft, FontStyles.Normal);
+        row.descLabel = CreateText(rowParent, "Description", rowDescription, descriptionFontSize, TextAlignmentOptions.TopLeft, FontStyles.Normal);
         row.descLabel.color = new Color(textColor.r, textColor.g, textColor.b, 0.75f);
         row.descLabel.enableAutoSizing = true;
         row.descLabel.fontSizeMax = descriptionFontSize;
         row.descLabel.fontSizeMin = Mathf.Min(12f, descriptionFontSize);
         SetBand(row.descLabel.rectTransform, 0.38f, 0.74f, inset);
 
-        row.costLabel = CreateText(rowGo.transform, "Cost", "", costFontSize, TextAlignmentOptions.TopLeft, FontStyles.Normal);
+        row.costLabel = CreateText(rowParent, "Cost", "", costFontSize, TextAlignmentOptions.TopLeft, FontStyles.Normal);
         row.costLabel.richText = true;
         row.costLabel.enableAutoSizing = true;
         row.costLabel.fontSizeMax = costFontSize;
         row.costLabel.fontSizeMin = Mathf.Min(14f, costFontSize);
         SetBand(row.costLabel.rectTransform, 0.04f, 0.36f, inset);
+    }
 
-        row.buyButton = CreateButton(rowGo.transform, "Buy", ultraButtonText, buyButtonSize, ButtonRole.Success, textColor, buyFontSize,
+    /// <summary>A row's green Buy button at the right edge, centred on the row; returns its rect (a pack with upgrades moves it up).</summary>
+    private RectTransform AddRowBuyButton(PackRow row, Transform rowParent, string label)
+    {
+        row.buyButton = CreateButton(rowParent, "Buy", label, buyButtonSize, ButtonRole.Success, textColor, buyFontSize,
                                      out row.buyLabel, out row.buyImage);
         RectTransform br = row.buyButton.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0.5f);
         br.anchoredPosition = new Vector2(-20f, 0f);
-        LayoutRowHeader(row, inset);
-        return row;
+        return br;
     }
 
     /// <summary>Makes sure there is a Value row for every pixel type (the shop can add pixel types after the UI was built).</summary>
@@ -686,16 +706,8 @@ public partial class PixelShop
         string rowDescription = potion ? consumables.ItemDescription(index) : packs[index].description;
         PackRow row = new PackRow { isPotion = potion };
 
-        GameObject rowGo = new GameObject((potion ? "Potion " : "Pack ") + index, typeof(RectTransform), typeof(Image));
-        rowGo.transform.SetParent(parent, false);
-        rowGo.GetComponent<Image>().color = rowColor;
-        PixelUIKit.StyleBox(rowGo.GetComponent<Image>());
-
-        RectTransform rr = rowGo.GetComponent<RectTransform>();
-        rr.anchorMin = new Vector2(0f, 1f);
-        rr.anchorMax = new Vector2(1f, 1f);
-        rr.pivot = new Vector2(0.5f, 1f);
-        rr.sizeDelta = new Vector2(0f, rowHeight);
+        RectTransform rr = CreateRowBox(parent, (potion ? "Potion " : "Pack ") + index, rowHeight);
+        GameObject rowGo = rr.gameObject;
         rr.anchoredPosition = new Vector2(0f, -(index * (rowHeight + rowSpacing))); // re-laid out in RefreshRows
         row.rect = rr;
 
@@ -703,41 +715,8 @@ public partial class PixelShop
         float textRightInset = buyButtonSize.x + 40f; // keep text clear of the Buy button
         // (a pack's upgrade arrow now sits under the Buy button, so every row's boxes end at the same place)
 
-        TMP_Text name = CreateText(rowGo.transform, "Name", rowName, nameFontSize,
-                                   TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
-        name.richText = true;
-        row.nameLabel = name;
-        // Long names / descriptions shrink to fit their band instead of spilling over the lines below.
-        name.enableAutoSizing = true;
-        name.fontSizeMax = nameFontSize;
-        name.fontSizeMin = Mathf.Min(16f, nameFontSize);
-        SetBand(name.rectTransform, 0.74f, 1f, textRightInset);
-
-        TMP_Text desc = CreateText(rowGo.transform, "Description", rowDescription, descriptionFontSize,
-                                   TextAlignmentOptions.MidlineLeft, FontStyles.Normal);
-        desc.color = new Color(textColor.r, textColor.g, textColor.b, 0.75f);
-        desc.enableAutoSizing = true;
-        desc.fontSizeMax = descriptionFontSize;
-        desc.fontSizeMin = Mathf.Min(12f, descriptionFontSize);
-        desc.alignment = TextAlignmentOptions.TopLeft;
-        SetBand(desc.rectTransform, 0.38f, 0.74f, textRightInset);
-        row.descLabel = desc;
-
-        row.costLabel = CreateText(rowGo.transform, "Cost", "", costFontSize,
-                                   TextAlignmentOptions.MidlineLeft, FontStyles.Normal);
-        row.costLabel.richText = true;
-        // Long cost lists (six currencies) shrink to fit instead of overflowing.
-        row.costLabel.enableAutoSizing = true;
-        row.costLabel.fontSizeMax = costFontSize;
-        row.costLabel.fontSizeMin = Mathf.Min(14f, costFontSize);
-        row.costLabel.alignment = TextAlignmentOptions.TopLeft;
-        SetBand(row.costLabel.rectTransform, 0.04f, 0.36f, textRightInset);
-
-        row.buyButton = CreateButton(rowGo.transform, "Buy", buyText, buyButtonSize, ButtonRole.Success, textColor,
-                                     buyFontSize, out row.buyLabel, out row.buyImage);
-        RectTransform br = row.buyButton.GetComponent<RectTransform>();
-        br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0.5f);
-        br.anchoredPosition = new Vector2(-20f, 0f);
+        AddRowLabels(row, rowGo.transform, rowName, rowDescription, textRightInset);
+        RectTransform br = AddRowBuyButton(row, rowGo.transform, buyText);
 
         LayoutRowHeader(row, textRightInset);
         if (!potion) AddPackPicture(row, index);
@@ -781,16 +760,8 @@ public partial class PixelShop
     private TrackerUI BuildTracker(Transform parent, string objectName, string title, string description)
     {
         TrackerUI t = new TrackerUI();
-        t.go = new GameObject(objectName, typeof(RectTransform), typeof(Image));
-        t.go.transform.SetParent(parent, false);
-        t.go.GetComponent<Image>().color = rowColor;
-        PixelUIKit.StyleBox(t.go.GetComponent<Image>());
-
-        t.rect = t.go.GetComponent<RectTransform>();
-        t.rect.anchorMin = new Vector2(0f, 1f);
-        t.rect.anchorMax = new Vector2(1f, 1f);
-        t.rect.pivot = new Vector2(0.5f, 1f);
-        t.rect.sizeDelta = new Vector2(0f, trackerRowHeight);
+        t.rect = CreateRowBox(parent, objectName, trackerRowHeight);
+        t.go = t.rect.gameObject;
 
         TMP_Text titleLabel = CreateText(t.go.transform, "Title", title, nameFontSize,
                                          TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
@@ -979,6 +950,26 @@ public partial class PixelShop
         }
         bool showGeneral = !onUpgrades || upgradesSubTab == 0;
 
+        RefreshPackRows(searching, showGeneral, ref y, ref visibleCount, ref subY, ref subVisibleCount);
+
+        // Pixels and Consumables tabs: their tile pages replace the scrolling list.
+        RefreshTilePages(searching);
+
+        // Upgrades > Value: one row per unlocked pixel type, paid for with that pixel's own currency.
+        RefreshValueRows(onUpgrades, ref y, ref visibleCount);
+
+        // Upgrades > Operation: the consumables and their upgrade window.
+        RefreshOperation(onUpgrades, ref y, ref visibleCount, ref subY, ref subVisibleCount);
+
+
+        // The scroll content is as tall as the visible rows; the panel itself stays a fixed size.
+        ApplyContentHeight(contentRect, emptyLabel, y, visibleCount);
+        ApplyContentHeight(subContentRect, subEmptyLabel, subY, subVisibleCount);
+    }
+
+    /// <summary>RefreshRows step: the pack rows of the open tab (and of the upgrades window), stacked from the top of their list.</summary>
+    private void RefreshPackRows(bool searching, bool showGeneral, ref float y, ref int visibleCount, ref float subY, ref int subVisibleCount)
+    {
         // (the Pixels tab is a tile page, PixelShopPixels.cs: its packs' rows only show while searching)
         int[] packOrder = new int[Mathf.Min(packs.Length, rows.Length)];
         for (int o = 0; o < packOrder.Length; o++) packOrder[o] = o;
@@ -1047,11 +1038,11 @@ public partial class PixelShop
                 if (row.arrowButton.gameObject.activeSelf != showArrow) row.arrowButton.gameObject.SetActive(showArrow);
             }
         }
+    }
 
-        // Pixels and Consumables tabs: their tile pages replace the scrolling list.
-        RefreshTilePages(searching);
-
-        // Upgrades > Value: one row per unlocked pixel type, paid for with that pixel's own currency.
+    /// <summary>RefreshRows step: the Upgrades > Value rows (one per unlocked pixel type, paid for with that pixel's own currency).</summary>
+    private void RefreshValueRows(bool onUpgrades, ref float y, ref int visibleCount)
+    {
         EnsureValueRows();
         for (int t = 0; t < valueRows.Length && t < clicker.Tiers.Length; t++)
         {
@@ -1088,14 +1079,6 @@ public partial class PixelShop
             row.buyLabel.text = maxed ? maxedText : capped ? valueCappedButtonText : valueButtonText;
             SetShopRole(row.buyImage, canBuy ? ButtonRole.Success : ButtonRole.Neutral);
         }
-
-        // Upgrades > Operation: the consumables and their upgrade window.
-        RefreshOperation(onUpgrades, ref y, ref visibleCount, ref subY, ref subVisibleCount);
-
-
-        // The scroll content is as tall as the visible rows; the panel itself stays a fixed size.
-        ApplyContentHeight(contentRect, emptyLabel, y, visibleCount);
-        ApplyContentHeight(subContentRect, subEmptyLabel, subY, subVisibleCount);
     }
 
     /// <summary>Which Pixels-tab section a pack belongs to: 0 = the RGB pack (listed above the sections, hidden once bought), 1 = single toggleable pixels (Glass, Luminescent, Obsidian...), 2 = skill packs (many pixels at once).</summary>
