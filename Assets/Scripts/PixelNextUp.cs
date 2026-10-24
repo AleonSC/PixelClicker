@@ -89,7 +89,7 @@ public class PixelNextUp : MonoBehaviour
 
     private void Update()
     {
-        if (clicker == null) clicker = PixelFind.First<PixelClicker>();
+        if (clicker == null) clicker = PixelFind.Cached<PixelClicker>();
         bool show = clicker != null && Enabled && (!requireTreeNode || PixelSkills.HasStandardNode("nextup"))
                     && !PixelGameMode.OnTitle && clicker.Tiers != null && clicker.Tiers.Length > 0;
         if (!show)

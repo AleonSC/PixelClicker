@@ -418,6 +418,13 @@ public partial class PixelPets
         Transform t = parts.Root.transform;   // (the content below starts at y 100, under the header)
         Color box2 = new Color(0.2f, 0.2f, 0.27f, 1f);
 
+        BuildStudioLeft(t, box2);    // the 3D view, the dummy choice, Wear / Done
+        BuildStudioRight(t, box2);   // the outfit, its shapes and their sliders / colour / buttons
+    }
+
+    /// <summary>The Outfit Studio's left side: the 3D view (drag to turn, wheel to zoom, click a shape to move it), the dummy drop-down and the Wear / Done buttons.</summary>
+    private void BuildStudioLeft(Transform t, Color box2)
+    {
         // ---- Left: the 3D view + the dummy ----
         GameObject view = new GameObject("View", typeof(RectTransform), typeof(RawImage), typeof(EventTrigger));
         view.transform.SetParent(t, false);
@@ -458,7 +465,11 @@ public partial class PixelPets
 
         StudioButton(t, "Wear this outfit", 30f, 880f, 390f, 70f, ButtonRole.Success, WearStudioOutfit, 28f);
         StudioButton(t, "Done", 440f, 880f, 390f, 70f, ButtonRole.Success, CloseStudio, 28f);
+    }
 
+    /// <summary>The Outfit Studio's right side: the outfit drop-down / name / 'Fits', new / delete outfit, add-a-shape buttons, the piece list, the shape sliders, colours, opacity and mirror / duplicate / delete.</summary>
+    private void BuildStudioRight(Transform t, Color box2)
+    {
         // ---- Right: outfits ----
         float rx = 860f;
         outfitDropdown = PixelUIKit.CreateDropdown(font, t, "Outfit", new Vector2(420f, 46f), box2, box2, Color.white, 24f);

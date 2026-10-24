@@ -269,6 +269,22 @@ public class PixelTermiteSwarm : MonoBehaviour
         if (barBack != null) Destroy(barBack);
     }
 
+    private readonly HashSet<Rigidbody> existingHusks = new HashSet<Rigidbody>();   // (reused by FreeGoneTargets)
+
+    /// <summary>Husks that went away some other way (despawned, vacuumed) end their target; one picked up by the player is saved.</summary>
+    private void FreeGoneTargets()
+    {
+        existingHusks.Clear();
+        existingHusks.UnionWith(clicker.OldPixels);
+        foreach (Target tg in targets)
+        {
+            if (tg.done) continue;
+            OldPixelInfo info = tg.rb != null ? tg.rb.GetComponent<OldPixelInfo>() : null;
+            if (tg.rb == null || !existingHusks.Contains(tg.rb)) EndTarget(tg);
+            else if (info != null && info.heldByPlayer) Save(tg);   // (picked up: safe)
+        }
+    }
+
     private void Update()
     {
         float dt = Time.deltaTime;
@@ -283,14 +299,7 @@ public class PixelTermiteSwarm : MonoBehaviour
         if (hunting && checkTimer <= 0f)
         {
             checkTimer = 0.4f;
-            HashSet<Rigidbody> existing = new HashSet<Rigidbody>(clicker.OldPixels);
-            foreach (Target tg in targets)
-            {
-                if (tg.done) continue;
-                OldPixelInfo info = tg.rb != null ? tg.rb.GetComponent<OldPixelInfo>() : null;
-                if (tg.rb == null || !existing.Contains(tg.rb)) EndTarget(tg);
-                else if (info != null && info.heldByPlayer) Save(tg);   // (picked up: safe)
-            }
+            FreeGoneTargets();
         }
 
         for (int i = termites.Count - 1; i >= 0; i--)

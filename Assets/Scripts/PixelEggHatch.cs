@@ -140,16 +140,7 @@ public class PixelEggHatch : MonoBehaviour
 
         // Hop targets for the jump around.
         int hops = Mathf.Max(2, Mathf.RoundToInt(jumpT / 0.55f));
-        float reach = Mathf.Min(size.x / 200f * 0.6f, 6.5f);
-        List<Vector2> spots = new List<Vector2>();
-        float sideSign = Random.value < 0.5f ? -1f : 1f;
-        float minX = S * 0.5f + P * 0.5f + 0.3f;   // never land on the shell
-        reach = Mathf.Max(reach, minX + 0.6f);
-        for (int i = 0; i < hops; i++)
-        {
-            spots.Add(new Vector2(centre.x + sideSign * Mathf.Lerp(minX, reach, Random.value), groundY));
-            sideSign = -sideSign;
-        }
+        List<Vector2> spots = HopSpots(hops, size, centre, groundY, S, P);
 
         float t = 0f, bump = 0f, flashAmt = 0f;
         bool popped = false, stashed = false, named = false;
@@ -174,22 +165,7 @@ public class PixelEggHatch : MonoBehaviour
 
             if (t < tPop)
             {
-                // Egg: zooms in, then shakes with growing force while the cracks fill with light.
-                float zk = Smooth(t / zoomT);
-                float sk = Mathf.Clamp01((t - zoomT) / shakeT);
-                Vector2 pos = Vector2.Lerp(start, centre, EaseOut(t / zoomT));
-                float scale = Mathf.Lerp(0.25f, 1f, EaseOut(t / zoomT));
-                float amp = sk * sk;
-                eggRoot.position = studioRoot.transform.position + new Vector3(pos.x + Mathf.Sin(t * 57f) * 0.07f * amp * S, pos.y + Mathf.Abs(Mathf.Sin(t * 33f)) * 0.05f * amp * S, 0f);
-                eggRoot.localScale = Vector3.one * scale * (1f + 0.03f * Mathf.Sin(t * 20f) * amp);
-                eggRoot.localRotation = Quaternion.Euler(Mathf.Sin(t * 29f) * 5f * amp, 0f, Mathf.Sin(t * 41f) * 9f * amp + Mathf.Sin(t * 5f) * 3f * sk);
-                int visible = Mathf.RoundToInt(cracks.Count * Mathf.Clamp01(sk * 1.15f));
-                for (int i = 0; i < cracks.Count; i++) cracks[i].gameObject.SetActive(i < visible);
-                darkAmount = Smooth(t / (zoomT * 0.9f));
-                textAlpha = Smooth((t - zoomT * 0.5f) / 0.5f) * (1f - Smooth((t - tPop + 0.3f) / 0.3f));
-                packAlpha = 0f;
-                if (sk > 0.5f && Random.value < dt * 14f * sk) ThrowChip(eggRoot.position, S * 0.05f);
-                if (sk > 0.3f && Random.value < dt * 9f * sk) PixelAudio.Play("hit");
+                EggPhase(t, dt, zoomT, shakeT, tPop, start, centre, S, out darkAmount, out textAlpha, out packAlpha);
                 petPos = inside; petScale = 0f;
             }
             else
@@ -198,18 +174,7 @@ public class PixelEggHatch : MonoBehaviour
                 {
                     popped = true;
                     flashAmt = 1f;
-                    PixelAudio.Play("achievement");
-                    // The lid flies off, shell chips burst out, the pet is revealed.
-                    wholePart.gameObject.SetActive(false);
-                    shellPart.gameObject.SetActive(true);
-                    lidMesh.gameObject.SetActive(true);
-                    lidPart.SetParent(studioRoot.transform, true);
-                    lidVel = new Vector3(Random.Range(-1.5f, 1.5f), 9f, -1f);
-                    lidSpin = new Vector3(Random.Range(-200f, 200f), Random.Range(-120f, 120f), Random.Range(-260f, 260f));
-                    for (int i = 0; i < 14; i++) ThrowChip(eggRoot.position + new Vector3(0f, rim, 0f), S * 0.12f, true);
-                    eggRoot.localRotation = Quaternion.identity;
-                    for (int i = 0; i < cracks.Count; i++) cracks[i].gameObject.SetActive(true);
-                    sparkles.Burst(CanvasOf(centre + new Vector2(0f, S * 0.3f), size), 60, 160f, 600f, 1f);
+                    PopEgg(rim, S, centre, size, out lidVel, out lidSpin);
                 }
                 darkAmount = 1f; packAlpha = 1f; textAlpha = 1f;
                 eggRoot.position = studioRoot.transform.position + new Vector3(centre.x, centre.y, 0f);
@@ -262,16 +227,7 @@ public class PixelEggHatch : MonoBehaviour
                 if (petModel != null) petModel.localScale = modelScale;
                 ApplyPet(petPos, petScale, petEuler);
             }
-            if (popped && shellPart != null && t >= tHop)
-            {
-                float crumble = Mathf.Clamp01((t - tHop) / 0.35f);   // the empty shell shrinks away as the pet hops out
-                shellPart.localScale = new Vector3(S, S * 0.55f, S) * (1f - Smooth(crumble));
-                if (crumble >= 1f && shellPart.gameObject.activeSelf)
-                {
-                    shellPart.gameObject.SetActive(false);
-                    foreach (Transform crack in cracks) if (crack != null && crack.parent == eggRoot) crack.gameObject.SetActive(false);   // the cracks went with it
-                }
-            }
+            if (popped && shellPart != null && t >= tHop) CrumbleShell(t, tHop, S);
             AnimateDebris(dt, ref lidVel, lidSpin, popped);
             bump = Mathf.Max(0f, bump - dt * 3.5f);
             flashAmt = Mathf.Max(0f, flashAmt - dt * 3.5f);
@@ -290,6 +246,72 @@ public class PixelEggHatch : MonoBehaviour
         Cleanup();
         playing = false;
         onDone?.Invoke();
+    }
+
+    /// <summary>Where the pet lands on each of its 'hops' (left and right of the egg in turn, never on the shell).</summary>
+    private static List<Vector2> HopSpots(int hops, Vector2 size, Vector2 centre, float groundY, float S, float P)
+    {
+        float reach = Mathf.Min(size.x / 200f * 0.6f, 6.5f);
+        List<Vector2> spots = new List<Vector2>();
+        float sideSign = Random.value < 0.5f ? -1f : 1f;
+        float minX = S * 0.5f + P * 0.5f + 0.3f;   // never land on the shell
+        reach = Mathf.Max(reach, minX + 0.6f);
+        for (int i = 0; i < hops; i++)
+        {
+            spots.Add(new Vector2(centre.x + sideSign * Mathf.Lerp(minX, reach, Random.value), groundY));
+            sideSign = -sideSign;
+        }
+        return spots;
+    }
+
+    /// <summary>One frame of the egg before it pops ('t' &lt; tPop): it zooms in, then shakes with growing force while the cracks fill with light (chips and taps as it shakes).</summary>
+    private void EggPhase(float t, float dt, float zoomT, float shakeT, float tPop, Vector2 start, Vector2 centre, float S, out float darkAmount, out float textAlpha, out float packAlpha)
+    {
+        // Egg: zooms in, then shakes with growing force while the cracks fill with light.
+        float zk = Smooth(t / zoomT);
+        float sk = Mathf.Clamp01((t - zoomT) / shakeT);
+        Vector2 pos = Vector2.Lerp(start, centre, EaseOut(t / zoomT));
+        float scale = Mathf.Lerp(0.25f, 1f, EaseOut(t / zoomT));
+        float amp = sk * sk;
+        eggRoot.position = studioRoot.transform.position + new Vector3(pos.x + Mathf.Sin(t * 57f) * 0.07f * amp * S, pos.y + Mathf.Abs(Mathf.Sin(t * 33f)) * 0.05f * amp * S, 0f);
+        eggRoot.localScale = Vector3.one * scale * (1f + 0.03f * Mathf.Sin(t * 20f) * amp);
+        eggRoot.localRotation = Quaternion.Euler(Mathf.Sin(t * 29f) * 5f * amp, 0f, Mathf.Sin(t * 41f) * 9f * amp + Mathf.Sin(t * 5f) * 3f * sk);
+        int visible = Mathf.RoundToInt(cracks.Count * Mathf.Clamp01(sk * 1.15f));
+        for (int i = 0; i < cracks.Count; i++) cracks[i].gameObject.SetActive(i < visible);
+        darkAmount = Smooth(t / (zoomT * 0.9f));
+        textAlpha = Smooth((t - zoomT * 0.5f) / 0.5f) * (1f - Smooth((t - tPop + 0.3f) / 0.3f));
+        packAlpha = 0f;
+        if (sk > 0.5f && Random.value < dt * 14f * sk) ThrowChip(eggRoot.position, S * 0.05f);
+        if (sk > 0.3f && Random.value < dt * 9f * sk) PixelAudio.Play("hit");
+    }
+
+    /// <summary>The egg pops: the lid flies off ('lidVel' / 'lidSpin'), shell chips burst out, the cracks all show and the pet is revealed.</summary>
+    private void PopEgg(float rim, float S, Vector2 centre, Vector2 size, out Vector3 lidVel, out Vector3 lidSpin)
+    {
+        PixelAudio.Play("achievement");
+        // The lid flies off, shell chips burst out, the pet is revealed.
+        wholePart.gameObject.SetActive(false);
+        shellPart.gameObject.SetActive(true);
+        lidMesh.gameObject.SetActive(true);
+        lidPart.SetParent(studioRoot.transform, true);
+        lidVel = new Vector3(Random.Range(-1.5f, 1.5f), 9f, -1f);
+        lidSpin = new Vector3(Random.Range(-200f, 200f), Random.Range(-120f, 120f), Random.Range(-260f, 260f));
+        for (int i = 0; i < 14; i++) ThrowChip(eggRoot.position + new Vector3(0f, rim, 0f), S * 0.12f, true);
+        eggRoot.localRotation = Quaternion.identity;
+        for (int i = 0; i < cracks.Count; i++) cracks[i].gameObject.SetActive(true);
+        sparkles.Burst(CanvasOf(centre + new Vector2(0f, S * 0.3f), size), 60, 160f, 600f, 1f);
+    }
+
+    /// <summary>The empty shell shrinks away as the pet hops out (and is hidden, with its cracks, once gone).</summary>
+    private void CrumbleShell(float t, float tHop, float S)
+    {
+        float crumble = Mathf.Clamp01((t - tHop) / 0.35f);   // the empty shell shrinks away as the pet hops out
+        shellPart.localScale = new Vector3(S, S * 0.55f, S) * (1f - Smooth(crumble));
+        if (crumble >= 1f && shellPart.gameObject.activeSelf)
+        {
+            shellPart.gameObject.SetActive(false);
+            foreach (Transform crack in cracks) if (crack != null && crack.parent == eggRoot) crack.gameObject.SetActive(false);   // the cracks went with it
+        }
     }
 
     private Vector2 CanvasOf(Vector2 studio, Vector2 size) => studio * 100f + size * 0.5f;

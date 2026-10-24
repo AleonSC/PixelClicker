@@ -34,7 +34,7 @@ public class PixelSapField : MonoBehaviour
     [Tooltip("Seconds between checks of which husks are inside the circles.")]
     [SerializeField] private float checkSeconds = 0.2f;
 
-    private class Sap { public Rigidbody body; public GameObject circle; public readonly HashSet<Rigidbody> counted = new HashSet<Rigidbody>(); }
+    private class Sap { public Rigidbody body; public Collider col; /* (the body's collider, fetched once) */ public GameObject circle; public readonly HashSet<Rigidbody> counted = new HashSet<Rigidbody>(); }
 
     private PixelClicker clicker;
     private readonly Dictionary<Rigidbody, Sap> saps = new Dictionary<Rigidbody, Sap>();
@@ -92,7 +92,8 @@ public class PixelSapField : MonoBehaviour
         foreach (Sap s in saps.Values)
         {
             if (s.body == null || s.circle == null) continue;
-            Collider c = s.body.GetComponent<Collider>();
+            if (s.col == null) s.col = s.body.GetComponent<Collider>();
+            Collider c = s.col;
             float y = c != null ? c.bounds.min.y + 0.01f : s.body.position.y;
             s.circle.transform.position = new Vector3(s.body.position.x, y, s.body.position.z);
         }

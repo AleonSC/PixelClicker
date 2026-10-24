@@ -240,6 +240,9 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
 
     private static int hotFrame = -10;
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { hotFrame = -10; }   // (a fresh play-mode start: no button is hot)
+
     /// <summary>True while the pointer is over a Recycler's button (clicks there belong to the Recycler, not the cube or Pixel Grabbing).</summary>
     public static bool ButtonHot => Time.frameCount - hotFrame <= 1;
 

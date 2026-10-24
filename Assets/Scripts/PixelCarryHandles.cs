@@ -182,7 +182,7 @@ public class PixelCarryHandles : MonoBehaviour
             if (aimOpenings == null) aimOpenings = GetComponentsInChildren<PixelAimOpening>(true);   // (its marked holes: a wide beam each - found once)
             PixelAimLaser.Openings(transform, aimOpenings);
             PixelHandCursor.Request(PixelHandCursor.Shape.Closed);
-            if (consumables == null) consumables = PixelFind.First<PixelConsumables>();
+            if (consumables == null) consumables = PixelFind.Cached<PixelConsumables>();
             float turn = consumables != null ? consumables.TurnInput() : 0f;
             if (!Mathf.Approximately(turn, 0f))
             {

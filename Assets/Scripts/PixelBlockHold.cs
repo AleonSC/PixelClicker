@@ -266,7 +266,7 @@ public class PixelBlockHold : MonoBehaviour
 
     private void Update()
     {
-        if (clicker == null) clicker = PixelFind.First<PixelClicker>();
+        if (clicker == null) clicker = PixelFind.Cached<PixelClicker>();
         if (!Active || clicker == null) { if (canvasRoot != null && canvasRoot.activeSelf) canvasRoot.SetActive(false); return; }
         if (PixelCalm.InMenu)
         {

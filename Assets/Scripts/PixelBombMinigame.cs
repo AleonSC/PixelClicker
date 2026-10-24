@@ -361,46 +361,7 @@ public class PixelBombMinigame : PixelMinigame
         root.transform.position = position;
         root.transform.rotation = cam.transform.rotation; // faces the camera
 
-        // Casing, a darker panel on the front, metal end blocks and an indicator light.
-        Material bodyMat = MakeMaterial(casingColor, casingGlow);
-        Material panelMat = MakeMaterial(new Color(casingColor.r * 0.45f, casingColor.g * 0.45f, casingColor.b * 0.5f, 1f), 0f);
-        Material blockMat = MakeMaterial(new Color(casingColor.r * 0.7f, casingColor.g * 0.7f, casingColor.b * 0.75f, 1f), casingGlow * 0.5f);
-        if (bodyMat != null)
-        {
-            if (bodyMat.HasProperty("_Metallic")) bodyMat.SetFloat("_Metallic", 0.6f);
-            if (bodyMat.HasProperty("_Smoothness")) bodyMat.SetFloat("_Smoothness", 0.5f);
-            if (bodyMat.HasProperty("_Glossiness")) bodyMat.SetFloat("_Glossiness", 0.5f);
-        }
-        AddBox("Casing", root.transform, Vector3.zero, new Vector3(bw, bh, bd), bodyMat);
-        AddBox("Front Panel", root.transform, new Vector3(0f, 0f, -(bd * 0.5f + 0.01f)), new Vector3(bw * 0.9f, bh * 0.82f, 0.04f), panelMat);
-        AddBox("Left Block", root.transform, new Vector3(-(bw * 0.5f + bw * 0.03f), 0f, 0f), new Vector3(bw * 0.07f, bh * 0.7f, bd * 1.15f), blockMat);
-        AddBox("Right Block", root.transform, new Vector3(bw * 0.5f + bw * 0.03f, 0f, 0f), new Vector3(bw * 0.07f, bh * 0.7f, bd * 1.15f), blockMat);
-        GameObject spark = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        spark.name = "Indicator Light";
-        Destroy(spark.GetComponent<Collider>());
-        spark.transform.SetParent(root.transform, false);
-        spark.transform.localPosition = new Vector3(bw * 0.4f, bh * 0.5f + bombSize * 0.06f, 0f);
-        float sparkBase = bombSize * 0.09f;
-        spark.transform.localScale = Vector3.one * sparkBase;
-        Material sparkMat = MakeMaterial(new Color(1f, 0.35f, 0.2f, 1f), 2.5f);
-        if (sparkMat != null) spark.GetComponent<Renderer>().sharedMaterial = sparkMat;
-
-        // Fancy details: corner screws and a pair of darker rails.
-        Material screwMat = MakeMaterial(new Color(0.75f, 0.77f, 0.8f, 1f), 0f);
-        float sx = bw * 0.45f, sy = bh * 0.43f;
-        for (int i = 0; i < 4; i++)
-        {
-            GameObject screw = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            screw.name = "Screw " + i;
-            Destroy(screw.GetComponent<Collider>());
-            screw.transform.SetParent(root.transform, false);
-            screw.transform.localPosition = new Vector3(i % 2 == 0 ? -sx : sx, i < 2 ? sy : -sy, -(bd * 0.5f + 0.045f));
-            screw.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            screw.transform.localScale = new Vector3(bombSize * 0.07f, 0.02f, bombSize * 0.07f);
-            if (screwMat != null) screw.GetComponent<Renderer>().sharedMaterial = screwMat;
-        }
-        AddBox("Rail L", root.transform, new Vector3(-bw * 0.36f, 0f, -(bd * 0.5f + 0.035f)), new Vector3(bw * 0.025f, bh * 0.7f, 0.02f), blockMat);
-        AddBox("Rail R", root.transform, new Vector3(bw * 0.36f, 0f, -(bd * 0.5f + 0.035f)), new Vector3(bw * 0.025f, bh * 0.7f, 0.02f), blockMat);
+        BuildCasing(root.transform, bw, bh, bd, out GameObject spark, out float sparkBase);
 
         // The LCD timer low on the front, under the wires: a dark bezel, a lit screen and dark digits (the screen goes red when time is nearly up).
         float frontZ = -(bd * 0.5f + 0.06f);
@@ -412,27 +373,9 @@ public class PixelBombMinigame : PixelMinigame
         TextMeshPro timer = MakeText(root.transform, "Timer", string.Format(timerFormat, timeLimit), timerTextSize, digitColor,
                                      new Vector3(0f, lcdY, frontZ - 0.035f), bw * 0.56f);
 
-        // Three wires run straight across the top of the front panel: red, green, blue. Each is two pieces that meet in the middle.
-        Color[] colors = { redWireColor, greenWireColor, blueWireColor };
-        float wireSpan = bw * 0.84f;
-        Collider[][] hitboxes = new Collider[3][];
-        Transform[] leftPivots = new Transform[3], rightPivots = new Transform[3];
+        // Three wires run straight across the top of the front panel: red, green, blue.
+        BuildWires(root.transform, bw, bh, frontZ, out Collider[][] hitboxes, out Transform[] leftPivots, out Transform[] rightPivots);
         bool[] cut = new bool[3];
-        wireHitMax = bh * wireGap * 0.8f; // click boxes stay clearly apart
-        for (int i = 0; i < 3; i++)
-        {
-            float y = bh * 0.30f - i * bh * wireGap; // red on top, blue lowest, all above the timer
-            Material wm = MakeMaterial(colors[i], 0.45f);
-            BuildWire("Wire " + i, root.transform, y, frontZ - wireThickness * 0.5f, wireSpan, wm, out leftPivots[i], out rightPivots[i], out hitboxes[i]);
-
-            // Colour-blind support (Settings): a letter at the end of each wire.
-            if (PixelDisplaySettings.ColorBlind)
-            {
-                string[] letters = { "R", "G", "B" };
-                MakeText(root.transform, "Wire Letter " + letters[i], letters[i], hintTextSize * 1.3f, Color.white,
-                         new Vector3(-(wireSpan * 0.5f + bw * 0.045f), y, frontZ), bombSize);
-            }
-        }
 
         // Count down.
         float left = timeLimit;
@@ -504,6 +447,76 @@ public class PixelBombMinigame : PixelMinigame
 
         spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
         bombActive = false;
+    }
+
+    /// <summary>The bomb's body under 'root' (bw x bh x bd): the casing, the darker front panel, metal end blocks, the blinking indicator light ('spark', its base size 'sparkBase'), corner screws and two rails.</summary>
+    private void BuildCasing(Transform root, float bw, float bh, float bd, out GameObject spark, out float sparkBase)
+    {
+        // Casing, a darker panel on the front, metal end blocks and an indicator light.
+        Material bodyMat = MakeMaterial(casingColor, casingGlow);
+        Material panelMat = MakeMaterial(new Color(casingColor.r * 0.45f, casingColor.g * 0.45f, casingColor.b * 0.5f, 1f), 0f);
+        Material blockMat = MakeMaterial(new Color(casingColor.r * 0.7f, casingColor.g * 0.7f, casingColor.b * 0.75f, 1f), casingGlow * 0.5f);
+        if (bodyMat != null)
+        {
+            if (bodyMat.HasProperty("_Metallic")) bodyMat.SetFloat("_Metallic", 0.6f);
+            if (bodyMat.HasProperty("_Smoothness")) bodyMat.SetFloat("_Smoothness", 0.5f);
+            if (bodyMat.HasProperty("_Glossiness")) bodyMat.SetFloat("_Glossiness", 0.5f);
+        }
+        AddBox("Casing", root, Vector3.zero, new Vector3(bw, bh, bd), bodyMat);
+        AddBox("Front Panel", root, new Vector3(0f, 0f, -(bd * 0.5f + 0.01f)), new Vector3(bw * 0.9f, bh * 0.82f, 0.04f), panelMat);
+        AddBox("Left Block", root, new Vector3(-(bw * 0.5f + bw * 0.03f), 0f, 0f), new Vector3(bw * 0.07f, bh * 0.7f, bd * 1.15f), blockMat);
+        AddBox("Right Block", root, new Vector3(bw * 0.5f + bw * 0.03f, 0f, 0f), new Vector3(bw * 0.07f, bh * 0.7f, bd * 1.15f), blockMat);
+        spark = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        spark.name = "Indicator Light";
+        Destroy(spark.GetComponent<Collider>());
+        spark.transform.SetParent(root, false);
+        spark.transform.localPosition = new Vector3(bw * 0.4f, bh * 0.5f + bombSize * 0.06f, 0f);
+        sparkBase = bombSize * 0.09f;
+        spark.transform.localScale = Vector3.one * sparkBase;
+        Material sparkMat = MakeMaterial(new Color(1f, 0.35f, 0.2f, 1f), 2.5f);
+        if (sparkMat != null) spark.GetComponent<Renderer>().sharedMaterial = sparkMat;
+
+        // Fancy details: corner screws and a pair of darker rails.
+        Material screwMat = MakeMaterial(new Color(0.75f, 0.77f, 0.8f, 1f), 0f);
+        float sx = bw * 0.45f, sy = bh * 0.43f;
+        for (int i = 0; i < 4; i++)
+        {
+            GameObject screw = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            screw.name = "Screw " + i;
+            Destroy(screw.GetComponent<Collider>());
+            screw.transform.SetParent(root, false);
+            screw.transform.localPosition = new Vector3(i % 2 == 0 ? -sx : sx, i < 2 ? sy : -sy, -(bd * 0.5f + 0.045f));
+            screw.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            screw.transform.localScale = new Vector3(bombSize * 0.07f, 0.02f, bombSize * 0.07f);
+            if (screwMat != null) screw.GetComponent<Renderer>().sharedMaterial = screwMat;
+        }
+        AddBox("Rail L", root, new Vector3(-bw * 0.36f, 0f, -(bd * 0.5f + 0.035f)), new Vector3(bw * 0.025f, bh * 0.7f, 0.02f), blockMat);
+        AddBox("Rail R", root, new Vector3(bw * 0.36f, 0f, -(bd * 0.5f + 0.035f)), new Vector3(bw * 0.025f, bh * 0.7f, 0.02f), blockMat);
+    }
+
+    /// <summary>The three wires (red, green, blue) across the front panel under 'root', each two pieces meeting in the middle ('leftPivots' / 'rightPivots', click boxes 'hitboxes'), plus the colour-blind letters.</summary>
+    private void BuildWires(Transform root, float bw, float bh, float frontZ, out Collider[][] hitboxes, out Transform[] leftPivots, out Transform[] rightPivots)
+    {
+        // Three wires run straight across the top of the front panel: red, green, blue. Each is two pieces that meet in the middle.
+        Color[] colors = { redWireColor, greenWireColor, blueWireColor };
+        float wireSpan = bw * 0.84f;
+        hitboxes = new Collider[3][];
+        leftPivots = new Transform[3]; rightPivots = new Transform[3];
+        wireHitMax = bh * wireGap * 0.8f; // click boxes stay clearly apart
+        for (int i = 0; i < 3; i++)
+        {
+            float y = bh * 0.30f - i * bh * wireGap; // red on top, blue lowest, all above the timer
+            Material wm = MakeMaterial(colors[i], 0.45f);
+            BuildWire("Wire " + i, root, y, frontZ - wireThickness * 0.5f, wireSpan, wm, out leftPivots[i], out rightPivots[i], out hitboxes[i]);
+
+            // Colour-blind support (Settings): a letter at the end of each wire.
+            if (PixelDisplaySettings.ColorBlind)
+            {
+                string[] letters = { "R", "G", "B" };
+                MakeText(root, "Wire Letter " + letters[i], letters[i], hintTextSize * 1.3f, Color.white,
+                         new Vector3(-(wireSpan * 0.5f + bw * 0.045f), y, frontZ), bombSize);
+            }
+        }
     }
 
     private static GameObject AddBox(string objectName, Transform parent, Vector3 localPosition, Vector3 size, Material material)

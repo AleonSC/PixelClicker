@@ -310,31 +310,53 @@ public class PixelStats : MonoBehaviour
     /// <summary>Every stat row in order. 'number' formats counts the way the player chose (abbreviated or not).</summary>
     public List<Line> GetLines(Func<double, string> number)
     {
-        List<Line> lines = new List<Line>();
-        void Head(string text) => lines.Add(new Line { label = text, header = true });
-        void Row(string label, string value) => lines.Add(new Line { label = label, value = value });
-        void Num(string label, double value) => Row(label, number(value));
-        void Cnt(string label, string key) => Num(label, Counter(key));
+        StatLines w = new StatLines { lines = new List<Line>(), number = number };
+        AddGeneralLines(w);
+        AddPixelLines(w);
+        AddHuskAndSkillLines(w);
+        AddComboItemDeviceLines(w);
+        AddRareAndPetLines(w);
+        AddMinigameLines(w);
+        return w.lines;
+    }
+
+    /// <summary>The row list GetLines fills, with its small writers (a heading, a row, a number row, a counter row).</summary>
+    private class StatLines
+    {
+        public List<Line> lines;
+        public Func<double, string> number;
+        public void Head(string text) => lines.Add(new Line { label = text, header = true });
+        public void Row(string label, string value) => lines.Add(new Line { label = label, value = value });
+        public void Num(string label, double value) => Row(label, number(value));
+        public void Cnt(string label, string key) => Num(label, S.Get(key));
         // A minigame's rows appear once it is running or has something recorded.
-        bool Seen(string id, params string[] keys)
+        public bool Seen(string id, params string[] keys)
         {
             PixelMinigame g = PixelMinigame.Find(id);
             if (g != null && g.Running) return true;
-            foreach (string k in keys) if (Counter(k) > 0d) return true;
+            foreach (string k in keys) if (S.Get(k) > 0d) return true;
             return false;
         }
+    }
 
-        Head("General");
-        Num("Total clicks", TotalClicks);
-        Num("   Your clicks", S.manualClicks);
-        Num("   Auto clicker", S.autoClicks);
-        Row("Time played", FormatTime(S.playSeconds));
-        Row("Longest session", FormatTime(Counter("session.longest")));
-        Num("Sessions played", Counter("sessions"));
+    /// <summary>Stats rows: General: clicks, time played, sessions, achievements.</summary>
+    private void AddGeneralLines(StatLines w)
+    {
+        w.Head("General");
+        w.Num("Total clicks", TotalClicks);
+        w.Num("   Your clicks", S.manualClicks);
+        w.Num("   Auto clicker", S.autoClicks);
+        w.Row("Time played", FormatTime(S.playSeconds));
+        w.Row("Longest session", FormatTime(Counter("session.longest")));
+        w.Num("Sessions played", Counter("sessions"));
         PixelAchievements ach = PixelFind.First<PixelAchievements>();
-        if (ach != null && ach.TierTotal > 0) Row("Achievements", ach.EarnedTierTotal + " / " + ach.TierTotal);
+        if (ach != null && ach.TierTotal > 0) w.Row("Achievements", ach.EarnedTierTotal + " / " + ach.TierTotal);
+    }
 
-        Head("Pixels");
+    /// <summary>Stats rows: Pixels: earned per type, spent, rates, upgrades; then the clicks per pixel type.</summary>
+    private void AddPixelLines(StatLines w)
+    {
+        w.Head("Pixels");
         double earned = 0d, rarestWeight = double.MaxValue;
         string rarest = null;
         int highestValue = 0, valueLevels = 0;
@@ -348,22 +370,22 @@ public class PixelStats : MonoBehaviour
                 if (t.totalCollected > 0d && t.spawnWeight > 0f && t.spawnWeight < rarestWeight) { rarestWeight = t.spawnWeight; rarest = t.displayName; }
             }
         }
-        Num("Pixels earned", earned);
+        w.Num("Pixels earned", earned);
         if (clicker != null)
             foreach (PixelClicker.PixelTier t in clicker.Tiers)
-                if (t.totalCollected > 0d) Num("   " + t.displayName, t.totalCollected);
-        Num("Pixels spent", S.pixelsSpent);
+                if (t.totalCollected > 0d) w.Num("   " + t.displayName, t.totalCollected);
+        w.Num("Pixels spent", S.pixelsSpent);
         double best = Counter("rate.best");
-        Row("Best earn rate", best > 0d ? number(best) + " / min" : "-");
-        Row("Rarest pixel collected", rarest ?? "-");
-        Num("Value upgrade levels bought", valueLevels);
-        Num("Highest Value level", highestValue);
-        Cnt("Shop purchases", "shop.purchases");
-        Cnt("Consumables bought", "shop.items");
+        w.Row("Best earn rate", best > 0d ? w.number(best) + " / min" : "-");
+        w.Row("Rarest pixel collected", rarest ?? "-");
+        w.Num("Value upgrade levels bought", valueLevels);
+        w.Num("Highest Value level", highestValue);
+        w.Cnt("Shop purchases", "shop.purchases");
+        w.Cnt("Consumables bought", "shop.items");
 
 
         // How many times each pixel type was CLICKED (the Log's old Clicks tab). A gold "+N" shows beside a count while clicks are coming in.
-        Head("Clicks per pixel");
+        w.Head("Clicks per pixel");
         if (clicker != null)
         {
             double clickTotal = 0d;
@@ -373,65 +395,73 @@ public class PixelStats : MonoBehaviour
                 if (!t.unlocked) continue;
                 clickTotal += t.timesCollected;
                 int recent = RecentClicks(i);
-                Row("   " + t.displayName, number(t.timesCollected) + (recent > 0 ? "  <color=#FFD24D>+" + recent + "</color>" : ""));
+                w.Row("   " + t.displayName, w.number(t.timesCollected) + (recent > 0 ? "  <color=#FFD24D>+" + recent + "</color>" : ""));
             }
-            Row("All pixels", number(clickTotal));
+            w.Row("All pixels", w.number(clickTotal));
         }
+    }
 
-        Head("Husks");
-        Cnt("Vacuumed up", "old.vacuumed");
-        Cnt("Stored in the bank", "old.banked");
-        Cnt("Grabbed", "old.grabbed");
-        Cnt("Shattered (glass)", "old.shattered");
+    /// <summary>Stats rows: Husks, Block Hold and the Skills.</summary>
+    private void AddHuskAndSkillLines(StatLines w)
+    {
+        w.Head("Husks");
+        w.Cnt("Vacuumed up", "old.vacuumed");
+        w.Cnt("Stored in the bank", "old.banked");
+        w.Cnt("Grabbed", "old.grabbed");
+        w.Cnt("Shattered (glass)", "old.shattered");
         if (Counter("recycler.cycles") > 0d)
         {
-            Cnt("Recycled", "recycler.husks");
-            Cnt("   Recycler cycles", "recycler.cycles");
-            Cnt("   Pixels paid back", "recycler.paid");
+            w.Cnt("Recycled", "recycler.husks");
+            w.Cnt("   Recycler cycles", "recycler.cycles");
+            w.Cnt("   Pixels paid back", "recycler.paid");
         }
-        if (Counter("old.shredded") > 0d) Cnt("Shredded (Wood Chipper)", "old.shredded");
+        if (Counter("old.shredded") > 0d) w.Cnt("Shredded (Wood Chipper)", "old.shredded");
 
-        Head("Block Hold");
-        Cnt("Blocks held", "hold.count");
-        Cnt("Stakes won", "stake.won");
-        Cnt("Stakes lost", "stake.lost");
+        w.Head("Block Hold");
+        w.Cnt("Blocks held", "hold.count");
+        w.Cnt("Stakes won", "stake.won");
+        w.Cnt("Stakes lost", "stake.lost");
         double bestStake = Counter("stake.best");
-        Row("Best stake", bestStake > 0d ? "x" + bestStake.ToString("0.0") : "-");
+        w.Row("Best stake", bestStake > 0d ? "x" + bestStake.ToString("0.0") : "-");
 
         PixelSkills skills = PixelSkills.Instance;
         if (skills != null && skills.Packs != null)
         {
             // Every skill you can train (Standard always) with its level, and the hazards of its pack set off / cleared.
-            Head("Skills");
+            w.Head("Skills");
             foreach (PixelSkills.SkillPack sp in skills.Packs)
             {
                 if (sp == null || (sp.id != PixelSkills.StandardId && !skills.IsAvailable(sp))) continue;
-                Row(sp.displayName, "Level " + skills.LevelOf(sp));
-                if (Counter("hazards.triggered." + sp.id) > 0d) Cnt("   Hazards set off", "hazards.triggered." + sp.id);
-                if (Counter("hazards.defused." + sp.id) > 0d) Cnt("   Hazards cleared", "hazards.defused." + sp.id);
+                w.Row(sp.displayName, "Level " + skills.LevelOf(sp));
+                if (Counter("hazards.triggered." + sp.id) > 0d) w.Cnt("   Hazards set off", "hazards.triggered." + sp.id);
+                if (Counter("hazards.defused." + sp.id) > 0d) w.Cnt("   Hazards cleared", "hazards.defused." + sp.id);
             }
         }
+    }
 
-        Head("Combo and time");
-        Num("Highest combo", S.highestCombo);
-        Num("Highest combo tier", Counter("combo.tier"));
+    /// <summary>Stats rows: Combo and time, Crafting and items, Devices placed.</summary>
+    private void AddComboItemDeviceLines(StatLines w)
+    {
+        w.Head("Combo and time");
+        w.Num("Highest combo", S.highestCombo);
+        w.Num("Highest combo tier", Counter("combo.tier"));
         if (Counter("timestop.uses") > 0d || Counter("timeslow.uses") > 0d)
         {
-            Row("Time stopped", FormatTime(Counter("timestop.seconds")));
-            Cnt("   Times used", "timestop.uses");
-            Row("Time slowed", FormatTime(Counter("timeslow.seconds")));
-            Cnt("   Times used", "timeslow.uses");
+            w.Row("Time stopped", FormatTime(Counter("timestop.seconds")));
+            w.Cnt("   Times used", "timestop.uses");
+            w.Row("Time slowed", FormatTime(Counter("timeslow.seconds")));
+            w.Cnt("   Times used", "timeslow.uses");
         }
 
-        Head("Crafting and items");
-        Cnt("Items crafted", "crafts");
-        Num("Potions used", TotalPotionsUsed);
-        if (Counter("fuel.used") > 0d) Cnt("Combo Fuel used", "fuel.used");
-        if (Counter("bait.used") > 0d) Cnt("Ghost Bait used", "bait.used");
-        if (Counter("treat.used") > 0d) Cnt("Pet Treats used", "treat.used");
+        w.Head("Crafting and items");
+        w.Cnt("Items crafted", "crafts");
+        w.Num("Potions used", TotalPotionsUsed);
+        if (Counter("fuel.used") > 0d) w.Cnt("Combo Fuel used", "fuel.used");
+        if (Counter("bait.used") > 0d) w.Cnt("Ghost Bait used", "bait.used");
+        if (Counter("treat.used") > 0d) w.Cnt("Pet Treats used", "treat.used");
 
         // Every device kind that has been placed at least once (the fan / vacuum device keep their old typed counters; retired kinds are skipped).
-        Head("Devices placed");
+        w.Head("Devices placed");
         bool anyDevice = false;
         foreach (PixelConsumables.DeviceKind kind in (PixelConsumables.DeviceKind[])Enum.GetValues(typeof(PixelConsumables.DeviceKind)))
         {
@@ -441,10 +471,14 @@ public class PixelStats : MonoBehaviour
                           : Counter("device.placed." + kind);
             if (placed <= 0d) continue;
             anyDevice = true;
-            Num(kind == PixelConsumables.DeviceKind.Vacuum ? "Vacuum Device" : SpacedName(kind.ToString()), placed);
+            w.Num(kind == PixelConsumables.DeviceKind.Vacuum ? "Vacuum Device" : SpacedName(kind.ToString()), placed);
         }
-        if (!anyDevice) Row("None yet", "-");
+        if (!anyDevice) w.Row("None yet", "-");
+    }
 
+    /// <summary>Stats rows: Rare finds (Dragon / God / Prime Cubes, the Snitch) and the Pets.</summary>
+    private void AddRareAndPetLines(StatLines w)
+    {
         // The rare finds: how many of each set you have ever found (the Collection Log shows which).
         if (clicker != null)
         {
@@ -456,112 +490,116 @@ public class PixelStats : MonoBehaviour
                 else if (t.type == PixelClicker.PixelType.GodSlifer || t.type == PixelClicker.PixelType.GodRa || t.type == PixelClicker.PixelType.GodObelisk) gods++;
                 else if ((int)t.type >= (int)PixelClicker.PixelType.StoneSpace && (int)t.type < (int)PixelClicker.PixelType.InfinityCubelette) primes++;
             }
-            Head("Rare finds");
-            Row("Dragon Cubes found", dragons + " / 7");
-            if (Counter("dragon.summons") > 0d) Cnt("   Dragons summoned", "dragon.summons");
-            if (Counter("dragon.wishes") > 0d) Cnt("   Wishes made", "dragon.wishes");
-            Row("God Cubes found", gods + " / 3");
-            Row("Prime Cubes found", primes + " / 6");
-            if (Counter("infinity.forged") > 0d) Cnt("   Prime Cubelettes forged", "infinity.forged");
+            w.Head("Rare finds");
+            w.Row("Dragon Cubes found", dragons + " / 7");
+            if (Counter("dragon.summons") > 0d) w.Cnt("   Dragons summoned", "dragon.summons");
+            if (Counter("dragon.wishes") > 0d) w.Cnt("   Wishes made", "dragon.wishes");
+            w.Row("God Cubes found", gods + " / 3");
+            w.Row("Prime Cubes found", primes + " / 6");
+            if (Counter("infinity.forged") > 0d) w.Cnt("   Prime Cubelettes forged", "infinity.forged");
             if (Counter("snitch.seen") > 0d)
             {
-                Cnt("Golden Snitches seen", "snitch.seen");
-                Cnt("   Caught", "snitch.caught");
-                Cnt("   Escaped", "snitch.escaped");
+                w.Cnt("Golden Snitches seen", "snitch.seen");
+                w.Cnt("   Caught", "snitch.caught");
+                w.Cnt("   Escaped", "snitch.escaped");
                 double fastest = Counter("snitch.fastest");
-                if (fastest > 0d) Row("   Fastest catch", fastest.ToString("0.0") + "s");
+                if (fastest > 0d) w.Row("   Fastest catch", fastest.ToString("0.0") + "s");
             }
         }
 
         PixelPets petSystem = PixelPets.Instance;
         if (petSystem != null && clicker != null)
         {
-            Head("Pets");
+            w.Head("Pets");
             int petTypes = 0;
             foreach (PixelClicker.PixelTier t in clicker.Tiers) if (PixelPets.CanHavePet(t.type)) petTypes++;
-            Row("Pets found", petSystem.OwnedCount + " / " + petTypes);
+            w.Row("Pets found", petSystem.OwnedCount + " / " + petTypes);
             foreach (PixelClicker.PixelTier t in clicker.Tiers)
-                if (PixelPets.CanHavePet(t.type)) Row("   " + (petSystem.IsOwned(t.type) ? petSystem.NameOf(t.type) : "???"), petSystem.IsOwned(t.type) ? (petSystem.IsOn(t.type) ? "Roaming" : "Switched off") : "-");
+                if (PixelPets.CanHavePet(t.type)) w.Row("   " + (petSystem.IsOwned(t.type) ? petSystem.NameOf(t.type) : "???"), petSystem.IsOwned(t.type) ? (petSystem.IsOn(t.type) ? "Roaming" : "Switched off") : "-");
             if (petSystem.IsOwned(PixelClicker.PixelType.Vacuum) || Counter("pet.vacuum") > 0d)
-                Cnt("Husks sucked by the Vacuum Pet", "pet.vacuum");
+                w.Cnt("Husks sucked by the Vacuum Pet", "pet.vacuum");
         }
+    }
 
-        Head("Minigames");
+    /// <summary>Stats rows: Minigames: Ultra earned and each minigame's rows.</summary>
+    private void AddMinigameLines(StatLines w)
+    {
+        w.Head("Minigames");
         double ultra = clicker != null ? clicker.UltraEarned : 0d;
-        Num("Ultra pixels earned", ultra);
+        w.Num("Ultra pixels earned", ultra);
         foreach (PixelMinigame g in PixelMinigame.All)   // (every minigame that has given any: a new Ultra source is listed by itself)
-            if (g != null && Counter("ultra." + g.Id) > 0d) Num("   from " + g.DisplayName, Counter("ultra." + g.Id));
-        if (Seen("weakspot", "weakspot.rounds"))
+            if (g != null && Counter("ultra." + g.Id) > 0d) w.Num("   from " + g.DisplayName, Counter("ultra." + g.Id));
+        if (w.Seen("weakspot", "weakspot.rounds"))
         {
-            Cnt("Weak Spots rounds", "weakspot.rounds");
-            Cnt("Weak Spots won", "weakspot.wins");
+            w.Cnt("Weak Spots rounds", "weakspot.rounds");
+            w.Cnt("Weak Spots won", "weakspot.wins");
         }
-        if (Seen("ghost", "ghost.kept") || S.ghostsClicked > 0)
+        if (w.Seen("ghost", "ghost.kept") || S.ghostsClicked > 0)
         {
-            Num("Ghosts clicked", S.ghostsClicked);
-            Cnt("   Potions kept in the backpack", "ghost.kept");
+            w.Num("Ghosts clicked", S.ghostsClicked);
+            w.Cnt("   Potions kept in the backpack", "ghost.kept");
         }
-        if (Seen("meteor") || S.meteorsSpawned > 0)
+        if (w.Seen("meteor") || S.meteorsSpawned > 0)
         {
-            Num("Meteors spawned", S.meteorsSpawned);
-            Num("Meteors clicked", S.meteorsClicked);
+            w.Num("Meteors spawned", S.meteorsSpawned);
+            w.Num("Meteors clicked", S.meteorsClicked);
         }
         PixelMinigame stardust = PixelMinigame.Find("stardust");
-        if (stardust != null && stardust.TrackerCount > 0d) Num("Stardust collected", stardust.TrackerCount);
-        if (Seen("blackhole", "holes.fed") || S.blackHolesSpawned > 0)
+        if (stardust != null && stardust.TrackerCount > 0d) w.Num("Stardust collected", stardust.TrackerCount);
+        if (w.Seen("blackhole", "holes.fed") || S.blackHolesSpawned > 0)
         {
-            Num("Black holes opened", S.blackHolesSpawned);
-            Cnt("   Pixels fed to them", "holes.fed");
-            Num("   Singularities fed", S.singularitiesFed);
+            w.Num("Black holes opened", S.blackHolesSpawned);
+            w.Cnt("   Pixels fed to them", "holes.fed");
+            w.Num("   Singularities fed", S.singularitiesFed);
         }
-        if (Seen("snake", "snake.win", "snake.loss"))
+        if (w.Seen("snake", "snake.win", "snake.loss"))
         {
-            Cnt("Snake rounds won", "snake.win");
-            Cnt("Snake rounds lost", "snake.loss");
-            Num("Longest snake", Counter("snake.length"));
+            w.Cnt("Snake rounds won", "snake.win");
+            w.Cnt("Snake rounds lost", "snake.loss");
+            w.Num("Longest snake", Counter("snake.length"));
         }
-        if (Seen("sort", "sort.win", "sort.loss"))
+        if (w.Seen("sort", "sort.win", "sort.loss"))
         {
-            Cnt("Sorting races won", "sort.win");
-            Cnt("Sorting races lost", "sort.loss");
+            w.Cnt("Sorting races won", "sort.win");
+            w.Cnt("Sorting races lost", "sort.loss");
             double fastest = Counter("sort.fastest");
-            Row("Fastest sorting race", fastest > 0d ? FormatTime(fastest) : "-");
+            w.Row("Fastest sorting race", fastest > 0d ? FormatTime(fastest) : "-");
         }
-        if (Seen("dash", "dash.rounds", "dash.clicks"))
+        if (w.Seen("dash", "dash.rounds", "dash.clicks"))
         {
-            Cnt("Cube Dash rounds", "dash.rounds");
-            Cnt("Cube Dash clicks", "dash.clicks");
-            Row("Best Cube Dash", PixelClicker.FormatNumber(Counter("dash.best")) + " clicks");
+            w.Cnt("Cube Dash rounds", "dash.rounds");
+            w.Cnt("Cube Dash clicks", "dash.clicks");
+            w.Row("Best Cube Dash", PixelClicker.FormatNumber(Counter("dash.best")) + " clicks");
         }
-        if (Seen("traffic", "traffic.rounds", "traffic.best"))
+        if (w.Seen("traffic", "traffic.rounds", "traffic.best"))
         {
-            Cnt("Red Light Green Light rounds", "traffic.rounds");
-            Row("Best Red Light Green Light", PixelClicker.FormatNumber(Counter("traffic.best")) + " points");
+            w.Cnt("Red Light Green Light rounds", "traffic.rounds");
+            w.Row("Best Red Light Green Light", PixelClicker.FormatNumber(Counter("traffic.best")) + " points");
         }
-        if (Seen("evade", "evade.rounds", "evade.clicks"))
+        if (w.Seen("evade", "evade.rounds", "evade.clicks"))
         {
-            Cnt("Cube Evasion rounds", "evade.rounds");
-            Cnt("Cube Evasion clicks", "evade.clicks");
-            Row("Best Cube Evasion", PixelClicker.FormatNumber(Counter("evade.best")) + " clicks");
+            w.Cnt("Cube Evasion rounds", "evade.rounds");
+            w.Cnt("Cube Evasion clicks", "evade.clicks");
+            w.Row("Best Cube Evasion", PixelClicker.FormatNumber(Counter("evade.best")) + " clicks");
         }
-        if (Seen("blink", "blink.rounds", "blink.clicks"))
+        if (w.Seen("blink", "blink.rounds", "blink.clicks"))
         {
-            Cnt("Cube Blink rounds", "blink.rounds");
-            Cnt("Cube Blink clicks", "blink.clicks");
-            Row("Best Cube Blink", PixelClicker.FormatNumber(Counter("blink.best")) + " clicks");
+            w.Cnt("Cube Blink rounds", "blink.rounds");
+            w.Cnt("Cube Blink clicks", "blink.clicks");
+            w.Row("Best Cube Blink", PixelClicker.FormatNumber(Counter("blink.best")) + " clicks");
         }
-        if (Seen("breakout", "breakout.win", "breakout.loss"))
+        if (w.Seen("breakout", "breakout.win", "breakout.loss"))
         {
-            Cnt("Breakout games won", "breakout.win");
-            Cnt("Breakout games lost", "breakout.loss");
+            w.Cnt("Breakout games won", "breakout.win");
+            w.Cnt("Breakout games lost", "breakout.loss");
         }
         PixelMinigame bomb = PixelMinigame.Find("bomb");
-        if (Seen("bomb", "bomb.defused", "bomb.exploded"))
+        if (w.Seen("bomb", "bomb.defused", "bomb.exploded"))
         {
-            Cnt("Bombs defused", "bomb.defused");
-            Cnt("Bombs exploded", "bomb.exploded");
-            if (bomb != null) Num("Bomb parts earned", bomb.TrackerCount);
+            w.Cnt("Bombs defused", "bomb.defused");
+            w.Cnt("Bombs exploded", "bomb.exploded");
+            if (bomb != null) w.Num("Bomb parts earned", bomb.TrackerCount);
         }
-        return lines;
     }
 }
+

@@ -765,10 +765,20 @@ public partial class PixelPets : MonoBehaviour
         p.hopTimer = Random.Range(hopInterval.x, hopInterval.y);
     }
 
+    private GameObject heldRbOf;   // (the held pet's body whose Rigidbody is remembered in heldRb)
+    private Rigidbody heldRb;
+
+    /// <summary>The held pet body's Rigidbody, looked up again only when the held body changes.</summary>
+    private Rigidbody HeldBody()
+    {
+        if (held.body != heldRbOf) { heldRbOf = held.body; heldRb = held.body.GetComponent<Rigidbody>(); }
+        return heldRb;
+    }
+
     private void FixedUpdate()
     {
         if (held == null || held.body == null || dragCamera == null) return;
-        Rigidbody rb = held.body.GetComponent<Rigidbody>();
+        Rigidbody rb = HeldBody();
         if (rb == null) return;
         if (rb.isKinematic) { held.planted = false; rb.isKinematic = false; } // a planted Seed pet is uprooted the moment it is picked up
         Ray ray = dragCamera.ScreenPointToRay(PointerPosition());

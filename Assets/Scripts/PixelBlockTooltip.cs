@@ -62,6 +62,8 @@ public class PixelBlockTooltip : MonoBehaviour
 
     private PixelClicker clicker;
     private PixelGrab grab;
+    private Rigidbody heldInfoBody;      // (the held body whose OldPixelInfo is remembered in heldInfoCache)
+    private OldPixelInfo heldInfoCache;
     private GameObject canvasObject;
     private Canvas canvas;
     private RectTransform card;
@@ -289,6 +291,18 @@ public class PixelBlockTooltip : MonoBehaviour
     /// <summary>True this frame when the pointer is on a block / husk (or a world object's ShowFor) that this card shows: the device card (PixelDeviceCard) stays hidden then.</summary>
     public static bool HoveringBlock { get; private set; }
 
+    /// <summary>The OldPixelInfo of the grabbed body (null when nothing is held); looked up again only when the held body changes or had none.</summary>
+    private OldPixelInfo HeldInfo(Rigidbody heldBody)
+    {
+        if (heldBody == null) return null;
+        if (heldBody != heldInfoBody || heldInfoCache == null)
+        {
+            heldInfoBody = heldBody;
+            heldInfoCache = heldBody.GetComponent<OldPixelInfo>();
+        }
+        return heldInfoCache;
+    }
+
     private void Update()
     {
         HoveringBlock = false;
@@ -303,7 +317,7 @@ public class PixelBlockTooltip : MonoBehaviour
         bool hovering = false;
         bool external = ExternalActive && clicker.IsValidTierIndex(externalTier) && !disableTooltip && !PixelCalm.InMenu && !PointerOverUI();
         Rigidbody heldBody = grab != null ? grab.HeldBody : null;
-        OldPixelInfo heldInfo = heldBody != null ? heldBody.GetComponent<OldPixelInfo>() : null;
+        OldPixelInfo heldInfo = HeldInfo(heldBody);
         if (external) { pinned = false; tier = externalTier; hovering = true; }   // (a world object's small card: never docked)
         else if (heldInfo != null && clicker.IsValidTierIndex(heldInfo.tierIndex) && !Suppressed(true, pinned))
         {
