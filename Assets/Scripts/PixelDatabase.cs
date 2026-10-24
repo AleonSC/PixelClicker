@@ -261,107 +261,125 @@ public static class PixelDatabase
     private static void BuiltInSteps(Steps steps)
     {
         // ---- Minigames and vendors: each minigame describes itself (PixelMinigame.AddToDatabase; a vendor also lists its wares) ----
-        steps.Add(MinigamesOrder, b =>
-        {
-            foreach (PixelMinigame m in PixelMinigame.All) if (m != null) m.AddToDatabase(b);
-        });
+        steps.Add(MinigamesOrder, AddMinigameEntries);
 
         // ---- Consumables ----
-        steps.Add(ConsumablesOrder, b =>
-        {
-            PixelShop shop = PixelFind.First<PixelShop>();
-            PixelConsumables consumables = shop != null ? shop.Consumables : PixelFind.First<PixelConsumables>();
-            if (consumables == null) return;
-            for (int i = 0; i < consumables.ItemCount; i++)
-            {
-                // Only items a player can meet: the thousands of craft-only combo potions / attuned devices show up once you hold one.
-                if (!consumables.ItemListable(i)) continue;
-                try
-                {
-                    string name = consumables.ItemName(i);
-                    if (string.IsNullOrEmpty(name)) continue;
-                    Entry ie = b.Add("Consumable", name, Plain(consumables.ItemDescription(i)));
-                    ie.discovered = b.Clicker != null && b.Clicker.IsUnlocked(consumables.ItemRequiredType(i));
-                    ie.pinType = "fav"; ie.pinKey = "item:" + name;
-                    b.Items[name] = ie;
-                    PixelShop.PackCost[] costs = consumables.ItemCosts(i);
-                    if (costs != null) foreach (PixelShop.PackCost c in costs) if (c != null && string.IsNullOrEmpty(c.minigameCurrency)) b.Link(ie, "Costs " + c.amount, b.Pixel(c.type), "Pays for consumable");
-                }
-                catch (Exception e) { Debug.LogError("PixelDatabase: could not list consumable " + i + " - " + e.Message); }   // (shown, not hidden: a broken item should be noticed)
-            }
-        });
+        steps.Add(ConsumablesOrder, AddConsumableEntries);
 
         // ---- Vendors' wares (a vendor's entry lists what it sells; the consumable points back) ----
-        steps.Add(VendorWaresOrder, b =>
-        {
-            foreach (KeyValuePair<Entry, List<string>> vw in b.VendorWares)
-                foreach (string wareName in vw.Value)
-                    if (b.Items.TryGetValue(wareName, out Entry wareEntry)) b.Link(vw.Key, "Sells", wareEntry, "Sold by");
-        });
+        steps.Add(VendorWaresOrder, LinkVendorWares);
 
         // ---- Floors and skies (the looks the Settings pickers list) ----
-        steps.Add(LooksOrder, b =>
-        {
-            System.Action<string, IPixelLookSource, string> addLooks = (cat, src, where) =>
-            {
-                if (src == null) return;
-                for (int i = 0; i < src.StyleCount; i++)
-                {
-                    string styleName = src.StyleName(i);
-                    if (string.IsNullOrEmpty(styleName)) continue;
-                    b.Add(cat, styleName, "A " + cat.ToLowerInvariant() + " style for the game. Pick it in Settings > Gameplay > " + where + "." + (src.Current == i ? "\nIn use now." : ""));
-                }
-            };
-            addLooks("Floor", PixelFloor.Instance, "Floor style");
-            addLooks("Sky", PixelSkybox.Instance, "Sky style");
-        });
+        steps.Add(LooksOrder, AddLookEntries);
 
         // ---- Settings: every row of the pause menu's Settings screen (labels, choices and current values read from the built rows) ----
-        steps.Add(SettingsOrder, b =>
-        {
-            PixelPauseMenu pauseMenu = PixelFind.First<PixelPauseMenu>();
-            if (pauseMenu == null) return;
-            foreach (PixelPauseMenu.SettingInfo st in pauseMenu.SettingsCatalog())
-            {
-                string label = Plain(st.label).Trim();
-                string where = "Settings > " + (string.IsNullOrEmpty(st.section) ? "" : Plain(st.section).Trim() + " > ") + label;
-                string text = "Found in " + where + ". A " + st.kind.ToLowerInvariant() + ".";
-                string lookCategory = st.look == null ? null : (ReferenceEquals(st.look, PixelSkybox.Instance) ? "Sky" : "Floor");
-                if (st.choices != null && st.choices.Length > 0) text += "\nChoices: " + string.Join(", ", st.choices) + ".";
-                if (lookCategory != null) text += "\nChoices: every " + lookCategory.ToLowerInvariant() + " style (each has its own entry under " + (lookCategory == "Sky" ? "Skies" : "Floors") + ").";
-                if (!string.IsNullOrEmpty(st.current)) text += "\nNow: " + Plain(st.current) + ".";
-                Entry se = b.Add("Setting", label, text);
-                if (lookCategory != null)
-                    for (int i = 0; i < st.look.StyleCount; i++) b.Link(se, "Lists", b.Find(lookCategory, st.look.StyleName(i)), "Picked in setting");
-            }
-        });
+        steps.Add(SettingsOrder, AddSettingEntries);
 
         // ---- Tips and the in-game guides: text that MENTIONS other entries (everything added before this step can be mentioned) ----
-        steps.Add(TipsOrder, b =>
+        steps.Add(TipsOrder, AddTipEntriesAndMentions);
+    }
+
+    /// <summary>Built-in database step (BuiltInSteps): Minigames and vendors: each minigame describes itself (PixelMinigame.AddToDatabase; a vendor also lists its wares).</summary>
+    private static void AddMinigameEntries(Builder b)
+    {
+        foreach (PixelMinigame m in PixelMinigame.All) if (m != null) m.AddToDatabase(b);
+    }
+
+    /// <summary>Built-in database step (BuiltInSteps): Consumables.</summary>
+    private static void AddConsumableEntries(Builder b)
+    {
+        PixelShop shop = PixelFind.First<PixelShop>();
+        PixelConsumables consumables = shop != null ? shop.Consumables : PixelFind.First<PixelConsumables>();
+        if (consumables == null) return;
+        for (int i = 0; i < consumables.ItemCount; i++)
         {
-            PixelHints hints = PixelFind.First<PixelHints>();
-            if (hints != null)
-                foreach (PixelHints.Hint h in hints.AllHints)
-                    if (h != null && !string.IsNullOrEmpty(h.text)) b.Texts.Add(b.Add("Tip", h.id, Plain(h.text)));
-            foreach (string resource in new[] { "HowToPlay", "Controls" })
+            // Only items a player can meet: the thousands of craft-only combo potions / attuned devices show up once you hold one.
+            if (!consumables.ItemListable(i)) continue;
+            try
             {
-                TextAsset asset = Resources.Load<TextAsset>(resource);
-                if (asset == null) continue;
-                foreach (string raw in asset.text.Split('\n'))
-                {
-                    string line = raw.Trim();
-                    if (line.Length < 8 || line.StartsWith("//") || line.StartsWith("#")) continue;
-                    line = Plain(line).Replace(" | ", ":  ");
-                    string title = (resource == "HowToPlay" ? "Guide: " : "Controls: ") + (line.Length > 46 ? line.Substring(0, 46) + "..." : line);
-                    b.Texts.Add(b.Add("Tip", title, line));
-                }
+                string name = consumables.ItemName(i);
+                if (string.IsNullOrEmpty(name)) continue;
+                Entry ie = b.Add("Consumable", name, Plain(consumables.ItemDescription(i)));
+                ie.discovered = b.Clicker != null && b.Clicker.IsUnlocked(consumables.ItemRequiredType(i));
+                ie.pinType = "fav"; ie.pinKey = "item:" + name;
+                b.Items[name] = ie;
+                PixelShop.PackCost[] costs = consumables.ItemCosts(i);
+                if (costs != null) foreach (PixelShop.PackCost c in costs) if (c != null && string.IsNullOrEmpty(c.minigameCurrency)) b.Link(ie, "Costs " + c.amount, b.Pixel(c.type), "Pays for consumable");
             }
-            List<Entry> mentionable = new List<Entry>();
-            foreach (Entry e in entries) if (!NotMentioned.Contains(e.category) && e.name.Length >= 3) mentionable.Add(e);
-            foreach (Entry t in b.Texts)
-                foreach (Entry target in mentionable)
-                    if (ContainsWord(t.detail, target.name) || ContainsWord(t.name, target.name)) b.Link(t, "Mentions", target, "Mentioned in tip / guide");
-        });
+            catch (Exception e) { Debug.LogError("PixelDatabase: could not list consumable " + i + " - " + e.Message); }   // (shown, not hidden: a broken item should be noticed)
+        }
+    }
+
+    /// <summary>Built-in database step (BuiltInSteps): Vendors' wares (a vendor's entry lists what it sells; the consumable points back).</summary>
+    private static void LinkVendorWares(Builder b)
+    {
+        foreach (KeyValuePair<Entry, List<string>> vw in b.VendorWares)
+            foreach (string wareName in vw.Value)
+                if (b.Items.TryGetValue(wareName, out Entry wareEntry)) b.Link(vw.Key, "Sells", wareEntry, "Sold by");
+    }
+
+    /// <summary>Built-in database step (BuiltInSteps): Floors and skies (the looks the Settings pickers list).</summary>
+    private static void AddLookEntries(Builder b)
+    {
+        System.Action<string, IPixelLookSource, string> addLooks = (cat, src, where) =>
+        {
+            if (src == null) return;
+            for (int i = 0; i < src.StyleCount; i++)
+            {
+                string styleName = src.StyleName(i);
+                if (string.IsNullOrEmpty(styleName)) continue;
+                b.Add(cat, styleName, "A " + cat.ToLowerInvariant() + " style for the game. Pick it in Settings > Gameplay > " + where + "." + (src.Current == i ? "\nIn use now." : ""));
+            }
+        };
+        addLooks("Floor", PixelFloor.Instance, "Floor style");
+        addLooks("Sky", PixelSkybox.Instance, "Sky style");
+    }
+
+    /// <summary>Built-in database step (BuiltInSteps): Settings: every row of the pause menu's Settings screen (labels, choices and current values read from the built rows).</summary>
+    private static void AddSettingEntries(Builder b)
+    {
+        PixelPauseMenu pauseMenu = PixelFind.First<PixelPauseMenu>();
+        if (pauseMenu == null) return;
+        foreach (PixelPauseMenu.SettingInfo st in pauseMenu.SettingsCatalog())
+        {
+            string label = Plain(st.label).Trim();
+            string where = "Settings > " + (string.IsNullOrEmpty(st.section) ? "" : Plain(st.section).Trim() + " > ") + label;
+            string text = "Found in " + where + ". A " + st.kind.ToLowerInvariant() + ".";
+            string lookCategory = st.look == null ? null : (ReferenceEquals(st.look, PixelSkybox.Instance) ? "Sky" : "Floor");
+            if (st.choices != null && st.choices.Length > 0) text += "\nChoices: " + string.Join(", ", st.choices) + ".";
+            if (lookCategory != null) text += "\nChoices: every " + lookCategory.ToLowerInvariant() + " style (each has its own entry under " + (lookCategory == "Sky" ? "Skies" : "Floors") + ").";
+            if (!string.IsNullOrEmpty(st.current)) text += "\nNow: " + Plain(st.current) + ".";
+            Entry se = b.Add("Setting", label, text);
+            if (lookCategory != null)
+                for (int i = 0; i < st.look.StyleCount; i++) b.Link(se, "Lists", b.Find(lookCategory, st.look.StyleName(i)), "Picked in setting");
+        }
+    }
+
+    /// <summary>Built-in database step (BuiltInSteps): Tips and the in-game guides: text that MENTIONS other entries (everything added before this step can be mentioned).</summary>
+    private static void AddTipEntriesAndMentions(Builder b)
+    {
+        PixelHints hints = PixelFind.First<PixelHints>();
+        if (hints != null)
+            foreach (PixelHints.Hint h in hints.AllHints)
+                if (h != null && !string.IsNullOrEmpty(h.text)) b.Texts.Add(b.Add("Tip", h.id, Plain(h.text)));
+        foreach (string resource in new[] { "HowToPlay", "Controls" })
+        {
+            TextAsset asset = Resources.Load<TextAsset>(resource);
+            if (asset == null) continue;
+            foreach (string raw in asset.text.Split('\n'))
+            {
+                string line = raw.Trim();
+                if (line.Length < 8 || line.StartsWith("//") || line.StartsWith("#")) continue;
+                line = Plain(line).Replace(" | ", ":  ");
+                string title = (resource == "HowToPlay" ? "Guide: " : "Controls: ") + (line.Length > 46 ? line.Substring(0, 46) + "..." : line);
+                b.Texts.Add(b.Add("Tip", title, line));
+            }
+        }
+        List<Entry> mentionable = new List<Entry>();
+        foreach (Entry e in entries) if (!NotMentioned.Contains(e.category) && e.name.Length >= 3) mentionable.Add(e);
+        foreach (Entry t in b.Texts)
+            foreach (Entry target in mentionable)
+                if (ContainsWord(t.detail, target.name) || ContainsWord(t.name, target.name)) b.Link(t, "Mentions", target, "Mentioned in tip / guide");
     }
 
     private static bool ContainsWord(string text, string word)

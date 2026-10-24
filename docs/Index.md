@@ -141,6 +141,7 @@ One line per script / system: what it is and where its details are. Search it (`
 | `PixelSkillsMinigames.cs` | Part of partial class PixelSkills: the minigame XP multiplier. | in the header comment of `PixelSkillsMinigames.cs` |
 | `PixelSkillsBonus.cs` | Part of partial class PixelSkills: the bonus XP bank. | in the header comment of `PixelSkillsBonus.cs` |
 | `PixelSkillsTracker.cs` | Part of partial class PixelSkills: the pinned skill tracker. | in the header comment of `PixelSkillsTracker.cs` |
+| `PixelSkillsSavedPacks.cs` | Part of partial class PixelSkills: the fix-ups EnsureDefaults runs on every saved skill pack (FixSavedPackContents: blocks, fillers, hazards, perks and tree nodes added since it was saved; FixSavedPackTexts: older wording), each cut into named steps run in order. | in the header comment of `PixelSkillsSavedPacks.cs` |
 | `PixelSkillLevelPopup.cs` | Skill level-up popup: a round badge in the skill's colour with its icon spinning inside, 'SKILL LEVEL N' + '+1 skill point', tiny fireworks around it; queued from PixelSkills.AddXpFlat, waits while a menu is open. | in the header comment of `PixelSkillLevelPopup.cs` |
 | `PixelSkillsPopups.cs` | Part of partial class PixelSkills: the '+n XP' popups - skill XP in a movable XP dock above the bottom bar (hold + drag, per save), husk crush scores where the husk broke, crush bonuses stacked by the mouse. | in the header comment of `PixelSkillsPopups.cs` |
 | `PixelTube.cs` | Static PixelTube.Build(points, radius, sides, mesh): | in the header comment of `PixelTube.cs` |
