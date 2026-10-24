@@ -131,7 +131,18 @@ public static class PixelBalanceReport
     private static string Compose(PixelSkills skills, List<PackReport> reports, float manualCps, float autoCps, int[] levels)
     {
         var sb = new StringBuilder(16384);
-        int refLevel = levels[Math.Min(1, levels.Length - 1)];   // the level the outlier check judges (the second reference level)
+        AppendIntro(sb, skills, manualCps, autoCps);
+        AppendComparison(sb, skills, reports, manualCps, autoCps, levels);
+        AppendOutliers(sb, reports, levels);
+        AppendPerSkill(sb, reports, levels);
+        AppendLevers(sb, skills, reports);
+        AppendCsv(sb, skills, reports, manualCps, autoCps, levels);
+        return sb.ToString();
+    }
+
+    // Compose step: the title, the read-me for the AI and the assumptions.
+    private static void AppendIntro(StringBuilder sb, PixelSkills skills, float manualCps, float autoCps)
+    {
         sb.AppendLine("# Pixel Clicker - skill balance report  (" + DateTime.UtcNow.ToString("u") + ", build " + UnityEngine.Application.version + ")");
         sb.AppendLine();
         sb.AppendLine("## READ ME FIRST (instructions for the AI reading this)");
@@ -158,8 +169,11 @@ public static class PixelBalanceReport
         sb.AppendLine("  Fishing's Weak Spots round, special blocks (e.g. Great Oak) not unlocked in the save, and Standard's blocks beyond what the save has unlocked.");
         sb.AppendLine("- Hazards: their clicks are counted (you hit them) but they pay nothing and give no XP.");
         sb.AppendLine();
+    }
 
-        // ---- Cross-skill comparison ----
+    // Compose step: the cross-skill comparison table at each reference level.
+    private static void AppendComparison(StringBuilder sb, PixelSkills skills, List<PackReport> reports, float manualCps, float autoCps, int[] levels)
+    {
         sb.AppendLine("## Cross-skill comparison");
         foreach (int lv in levels)
         {
@@ -175,8 +189,12 @@ public static class PixelBalanceReport
                               + F(s.xpPerClick * autoCps * 60d * skills.AutoXpFactor, "0.#") + " | " + F(s.payPerClick, "0.###") + " | " + Pct(s.fillerShare) + " | " + Pct(s.hazardShare) + " | " + to + " |");
             }
         }
+    }
 
-        // ---- Outliers ----
+    // Compose step: skills more than 50% above or below the median at the second reference level.
+    private static void AppendOutliers(StringBuilder sb, List<PackReport> reports, int[] levels)
+    {
+        int refLevel = levels[Math.Min(1, levels.Length - 1)];   // the level the outlier check judges (the second reference level)
         sb.AppendLine();
         sb.AppendLine("## Outliers (judged at level " + refLevel + "; flagged when more than 50% above or below the median)");
         var xp = new List<double>(); var tl = new List<double>();
@@ -194,8 +212,11 @@ public static class PixelBalanceReport
             if (medT > 0d && r.minutesManual.TryGetValue(refLevel, out double m) && (m > medT * 1.5d || m < medT * 0.5d)) { sb.AppendLine("- " + r.pack.displayName + ": " + F(m, "0.#") + " min to level " + refLevel + " vs median " + F(medT, "0.#") + " (" + F(m / medT, "0.#") + "x)"); flagged++; }
         }
         if (flagged == 0) sb.AppendLine("- none");
+    }
 
-        // ---- Per skill ----
+    // Compose step: each skill's block table at each reference level.
+    private static void AppendPerSkill(StringBuilder sb, List<PackReport> reports, int[] levels)
+    {
         foreach (PackReport r in reports)
         {
             PixelSkills.SkillPack p = r.pack;
@@ -212,8 +233,11 @@ public static class PixelBalanceReport
                 foreach (Row row in s.rows) sb.AppendLine("| " + row.name + " | " + row.role + " | " + Pct(row.share) + " | " + F(row.clicks) + " | " + F(row.pay) + " |");
             }
         }
+    }
 
-        // ---- Levers ----
+    // Compose step: the Inspector fields that tune each skill.
+    private static void AppendLevers(StringBuilder sb, PixelSkills skills, List<PackReport> reports)
+    {
         sb.AppendLine();
         sb.AppendLine("## Levers (Inspector fields; 0 = the coded default shown)");
         sb.AppendLine("| Skill | baseXp (XP for level 2) | xpGrowth (x per level) | levelCap | filler (start / end share, fade level) | hazard (base / per level / max) | perks built | tree nodes built (points) |");
@@ -229,8 +253,11 @@ public static class PixelBalanceReport
             sb.AppendLine("| " + p.displayName + " | " + F(skills.BaseXpOf(p)) + " | " + F(p.xpGrowth) + " | " + skills.LevelCapOf(p) + " | " + filler + " | " + hazard + " | " + perksOn + "/" + perks + " | " + nodesOn + "/" + nodes + " (" + pts + ") |");
         }
         sb.AppendLine("Global: autoXpFactor " + F(skills.AutoXpFactor) + " (PixelSkills). Per-block numbers (amountPerClick, clicksToCollect, spawnWeight) are on the PixelClicker tier list.");
+    }
 
-        // ---- CSV ----
+    // Compose step: the same numbers as CSV.
+    private static void AppendCsv(StringBuilder sb, PixelSkills skills, List<PackReport> reports, float manualCps, float autoCps, int[] levels)
+    {
         sb.AppendLine();
         sb.AppendLine("## CSV (skill,level,avg_clicks_per_block,xp_per_click,xp_per_min_manual,xp_per_min_auto,pay_per_click,filler_share,hazard_share,minutes_to_level_manual,minutes_to_level_auto)");
         foreach (PackReport r in reports)
@@ -241,7 +268,6 @@ public static class PixelBalanceReport
                 sb.AppendLine(r.pack.id + "," + lv + "," + F(s.avgClicks, "0.###") + "," + F(s.xpPerClick, "0.####") + "," + F(s.xpPerClick * manualCps * 60d, "0.##") + "," + F(s.xpPerClick * autoCps * 60d * skills.AutoXpFactor, "0.##")
                               + "," + F(s.payPerClick, "0.####") + "," + F(s.fillerShare, "0.###") + "," + F(s.hazardShare, "0.###") + "," + a + "," + b);
             }
-        return sb.ToString();
     }
 
     private static double Median(List<double> v)

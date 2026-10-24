@@ -421,6 +421,33 @@ public partial class PixelFloor
         return ShadeExtra(s, u, v, x, y, n, cells);
     }
 
+    /// <summary>ShadeTiles' Circuit Board pattern: traces, ring pads and a chip now and then (per texel, no allocations).</summary>
+    private static Color ShadeCircuitBoard(FloorStyle s, float u, float v, int x, int y, int cells)
+    {
+        float gx = u * cells - 0.5f, gy = v * cells - 0.5f;      // pads sit on whole numbers
+        float w = 0.09f;
+        Color c = s.colorA * (0.85f + 0.25f * Fbm(u, v, 8, 3, s.seed));
+        int r = Mathf.RoundToInt(gy), cx = Mathf.FloorToInt(gx);
+        int q = Mathf.RoundToInt(gx), cy = Mathf.FloorToInt(gy);
+        bool trace = (Mathf.Abs(gy - r) < w && Seg(cx, r, cells, s.seed)) ||
+                     (Mathf.Abs(gx - q) < w && Seg(q, cy, cells, s.seed + 50));
+        // Pads on joints that have a trace.
+        float pd = Vector2.Distance(new Vector2(gx, gy), new Vector2(q, r));
+        bool joint = Seg(q, r, cells, s.seed) || Seg(q - 1, r, cells, s.seed) || Seg(q, r, cells, s.seed + 50) || Seg(q, r - 1, cells, s.seed + 50);
+        if (trace) c = s.colorB * (0.85f + 0.15f * Hash(x, y, s.seed));
+        if (joint && pd < 0.22f) c = pd < 0.1f ? s.colorA * 0.4f : s.colorB * 1.1f; // ring pad with a hole
+        // A chip now and then, on top of everything.
+        int chipX = Mathf.FloorToInt(gx + 0.5f), chipY = Mathf.FloorToInt(gy + 0.5f);
+        if (Hash(Wrap(chipX, cells), Wrap(chipY, cells), s.seed + 9) > 0.86f)
+        {
+            float lu = gx + 0.5f - chipX, lv = gy + 0.5f - chipY;
+            if (lu > 0.18f && lu < 0.82f && lv > 0.25f && lv < 0.75f) c = s.colorC * (0.9f + 0.2f * Hash(x, y, s.seed + 3));
+            else if (lu > 0.22f && lu < 0.78f && (lv > 0.18f && lv < 0.25f || lv > 0.75f && lv < 0.82f) && Frac(lu * 10f) < 0.5f)
+                c = new Color(0.8f, 0.8f, 0.82f); // pins
+        }
+        return c;
+    }
+
     /// <summary>Part of Shade (one group of floor patterns, same pixel maths): Honeycomb to TreadPlate (8 patterns).</summary>
     private static Color ShadeTiles(FloorStyle s, float u, float v, int x, int y, int n, int cells)
     {
@@ -455,30 +482,7 @@ public partial class PixelFloor
             }
 
             case FloorPattern.CircuitBoard:
-            {
-                float gx = u * cells - 0.5f, gy = v * cells - 0.5f;      // pads sit on whole numbers
-                float w = 0.09f;
-                Color c = s.colorA * (0.85f + 0.25f * Fbm(u, v, 8, 3, s.seed));
-                int r = Mathf.RoundToInt(gy), cx = Mathf.FloorToInt(gx);
-                int q = Mathf.RoundToInt(gx), cy = Mathf.FloorToInt(gy);
-                bool trace = (Mathf.Abs(gy - r) < w && Seg(cx, r, cells, s.seed)) ||
-                             (Mathf.Abs(gx - q) < w && Seg(q, cy, cells, s.seed + 50));
-                // Pads on joints that have a trace.
-                float pd = Vector2.Distance(new Vector2(gx, gy), new Vector2(q, r));
-                bool joint = Seg(q, r, cells, s.seed) || Seg(q - 1, r, cells, s.seed) || Seg(q, r, cells, s.seed + 50) || Seg(q, r - 1, cells, s.seed + 50);
-                if (trace) c = s.colorB * (0.85f + 0.15f * Hash(x, y, s.seed));
-                if (joint && pd < 0.22f) c = pd < 0.1f ? s.colorA * 0.4f : s.colorB * 1.1f; // ring pad with a hole
-                // A chip now and then, on top of everything.
-                int chipX = Mathf.FloorToInt(gx + 0.5f), chipY = Mathf.FloorToInt(gy + 0.5f);
-                if (Hash(Wrap(chipX, cells), Wrap(chipY, cells), s.seed + 9) > 0.86f)
-                {
-                    float lu = gx + 0.5f - chipX, lv = gy + 0.5f - chipY;
-                    if (lu > 0.18f && lu < 0.82f && lv > 0.25f && lv < 0.75f) c = s.colorC * (0.9f + 0.2f * Hash(x, y, s.seed + 3));
-                    else if (lu > 0.22f && lu < 0.78f && (lv > 0.18f && lv < 0.25f || lv > 0.75f && lv < 0.82f) && Frac(lu * 10f) < 0.5f)
-                        c = new Color(0.8f, 0.8f, 0.82f); // pins
-                }
-                return c;
-            }
+                return ShadeCircuitBoard(s, u, v, x, y, cells);
 
             case FloorPattern.SandDunes:
             {

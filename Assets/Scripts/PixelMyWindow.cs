@@ -68,9 +68,12 @@ public partial class PixelMyWindow : MonoBehaviour
     [Tooltip("Seconds between value refreshes. 0 = the coded default (0.4).")]
     [SerializeField] private float refreshSeconds = 0f;
 
+    [Tooltip("Background colour of each row card in the window.")]
     [SerializeField] private Color rowColor = new Color(0.16f, 0.2f, 0.3f, 0.9f);
     private Color textColor => PixelUITheme.TextColor;   // (the theme: PixelUITheme)
+    [Tooltip("Colour of the dim detail text (row details, empty-list notes).")]
     [SerializeField] private Color dimTextColor = new Color(0.7f, 0.76f, 0.88f, 1f);
+    [Tooltip("Fill colour of the progress bars (unfinished ones; finished bars turn gold).")]
     [SerializeField] private Color barColor = new Color(0.3f, 0.8f, 0.45f, 1f);
 
     // ------------------------------------------------------------------
@@ -597,6 +600,29 @@ public partial class PixelMyWindow : MonoBehaviour
         bool hoverMini = HoverDocked && minimized;   // minimized: the small card (block + name) hangs just under the header
         float hoverH = hoverOn ? Mathf.Max(hoverShownH, 64f) + 8f : 0f;   // the pinned hover card (or its hint) sits under the header / tabs
         hoverLaidH = hoverShownH;
+        LayoutHoverSlot(hoverOn, hoverMini, hoverH, tabs);
+        float top = HeaderHeight + 4f + tabs + hoverH + (editing && !logTab && !keysTab ? 170f : 0f);
+        scroll.gameObject.SetActive(!minimized && !logTab && !keysTab);
+        if (pickerRoot != null && !scroll.gameObject.activeSelf) pickerRoot.SetActive(false);
+        if (logScroll != null) logScroll.gameObject.SetActive(!minimized && logTab);
+        LayoutTabs(docked, logTab, keysTab, tabs);
+        if (resizeHandleObject != null) resizeHandleObject.SetActive(!minimized);
+        RectTransform vr = scroll.GetComponent<RectTransform>();
+        vr.anchorMin = Vector2.zero;
+        vr.anchorMax = Vector2.one;
+        vr.offsetMin = new Vector2(12f, 34f);
+        vr.offsetMax = new Vector2(-12f, -top);
+        LayoutLogArea(top, logTab);
+        addBar.anchoredPosition = new Vector2(0f, -(HeaderHeight + 4f + tabs + hoverH));
+        addBar.gameObject.SetActive(editing && !minimized && !logTab && !keysTab);
+        if (editLabel != null) PixelUIKit.SetText(editLabel, editing ? "Done" : "Edit");
+        LayoutHeaderButtons();
+        UpdateContentHeight();
+    }
+
+    // Layout step: the pinned hover card's slot under the header / tabs, and the pin button's colour.
+    private void LayoutHoverSlot(bool hoverOn, bool hoverMini, float hoverH, float tabs)
+    {
         if (hoverSlot != null)
         {
             hoverSlot.gameObject.SetActive(hoverOn || hoverMini);
@@ -609,10 +635,11 @@ public partial class PixelMyWindow : MonoBehaviour
             shownHoverDocked = HoverDocked;
             PixelUIKit.SetRole(hoverDockImage, HoverDocked ? ButtonRole.Success : ButtonRole.Neutral);
         }
-        float top = HeaderHeight + 4f + tabs + hoverH + (editing && !logTab && !keysTab ? 170f : 0f);
-        scroll.gameObject.SetActive(!minimized && !logTab && !keysTab);
-        if (pickerRoot != null && !scroll.gameObject.activeSelf) pickerRoot.SetActive(false);
-        if (logScroll != null) logScroll.gameObject.SetActive(!minimized && logTab);
+    }
+
+    // Layout step: the tab bar, its three tabs (Pinned / Event log / Keys) and the Keys tab's page.
+    private void LayoutTabs(bool docked, bool logTab, bool keysTab, float tabs)
+    {
         if (tabBar != null) tabBar.SetActive(!minimized);
         if (tabLogButton != null) tabLogButton.gameObject.SetActive(docked);
         SetTabAnchors(tabPinnedButton, 0f, docked ? 1f / 3f : 0.5f);
@@ -633,12 +660,11 @@ public partial class PixelMyWindow : MonoBehaviour
             PixelUIKit.SetRole(tabLogImage, tabNow == 1 ? ButtonRole.Selected : ButtonRole.Neutral);
             PixelUIKit.SetRole(tabKeysImage, tabNow == 2 ? ButtonRole.Selected : ButtonRole.Neutral);
         }
-        if (resizeHandleObject != null) resizeHandleObject.SetActive(!minimized);
-        RectTransform vr = scroll.GetComponent<RectTransform>();
-        vr.anchorMin = Vector2.zero;
-        vr.anchorMax = Vector2.one;
-        vr.offsetMin = new Vector2(12f, 34f);
-        vr.offsetMax = new Vector2(-12f, -top);
+    }
+
+    // Layout step: the docked event log's list and its 'show on screen' button ('top' = where the lists start under the header).
+    private void LayoutLogArea(float top, bool logTab)
+    {
         if (logScroll != null)
         {
             RectTransform lr = logScroll.GetComponent<RectTransform>();
@@ -653,11 +679,6 @@ public partial class PixelMyWindow : MonoBehaviour
             br.offsetMin = new Vector2(12f, -(top + 44f)); br.offsetMax = new Vector2(-12f, -top);
             if (logTab) UpdateScreenLogLabel();
         }
-        addBar.anchoredPosition = new Vector2(0f, -(HeaderHeight + 4f + tabs + hoverH));
-        addBar.gameObject.SetActive(editing && !minimized && !logTab && !keysTab);
-        if (editLabel != null) PixelUIKit.SetText(editLabel, editing ? "Done" : "Edit");
-        LayoutHeaderButtons();
-        UpdateContentHeight();
     }
 
     /// <summary>The docked event log: every line of PixelHints' history, oldest at the top and the newest at the bottom (the list opens scrolled to it); a click shows the line's full tip.</summary>

@@ -356,143 +356,155 @@ public class PixelLookStudio : MonoBehaviour
         Row r = NewRow(s, f.Name, labelOverride ?? Nice(f.Name), tip);
         Type t = f.FieldType;
 
-        if (t == typeof(bool))
+        if (t == typeof(bool)) AddBoolRow(f, owner, r);
+        else if (t == typeof(float) || t == typeof(int)) AddNumberRow(f, owner, r, t);
+        else if (t == typeof(Color)) AddColourRow(s, f, owner, r);
+        else if (t.IsEnum) AddChoiceRow(f, owner, r, t);
+    }
+
+    // AddFieldRow step for a bool field: a tick box.
+    private void AddBoolRow(FieldInfo f, Func<object> owner, Row r)
+    {
+        Toggle tb = PixelUIKit.CreateTickBox(r.rect, 32f, Box, Accent);
+        PlaceTL(tb.GetComponent<RectTransform>(), RowW - 44f, 4f, 32f, 32f);
+        tb.onValueChanged.AddListener(on => { PixelAudio.Play("ui_click"); Set(f, owner, on); });
+        r.refresh = () => { object o = owner(); if (o != null) tb.SetIsOnWithoutNotify((bool)f.GetValue(o)); };
+    }
+
+    // AddFieldRow step for a float / int field: a slider and a number box ([Range] / [Min] set its ends).
+    private void AddNumberRow(FieldInfo f, Func<object> owner, Row r, Type t)
+    {
+        bool whole = t == typeof(int);
+        RangeAttribute range = f.GetCustomAttribute<RangeAttribute>();
+        MinAttribute min = f.GetCustomAttribute<MinAttribute>();
+        float lo = range != null ? range.min : min != null ? min.min : 0f;
+        float hi = range != null ? range.max : SoftMax.TryGetValue(f.Name, out float sm) ? sm : Mathf.Max(lo + 1f, 10f);
+        bool capped = range != null;
+
+        Slider slider = PixelUIKit.CreateSlider(r.rect, "Slider", Box, Accent, Color.white);
+        PlaceTL(slider.GetComponent<RectTransform>(), 318f, 6f, 240f, 28f);
+        slider.minValue = lo; slider.maxValue = hi; slider.wholeNumbers = whole;
+        TMP_InputField box = PixelUIKit.CreateInputField(font, r.rect, "Number", new Vector2(90f, 32f), Box, TextColor, FontSize - 3f, "");
+        PlaceTL(box.GetComponent<RectTransform>(), RowW - 98f, 4f, 90f, 32f);
+
+        Action show = () =>
         {
-            Toggle tb = PixelUIKit.CreateTickBox(r.rect, 32f, Box, Accent);
-            PlaceTL(tb.GetComponent<RectTransform>(), RowW - 44f, 4f, 32f, 32f);
-            tb.onValueChanged.AddListener(on => { PixelAudio.Play("ui_click"); Set(f, owner, on); });
-            r.refresh = () => { object o = owner(); if (o != null) tb.SetIsOnWithoutNotify((bool)f.GetValue(o)); };
-        }
-        else if (t == typeof(float) || t == typeof(int))
+            object o = owner();
+            if (o == null) return;
+            float v = whole ? (int)f.GetValue(o) : (float)f.GetValue(o);
+            slider.SetValueWithoutNotify(Mathf.Clamp(v, lo, hi));
+            box.SetTextWithoutNotify(whole ? ((int)v).ToString(CultureInfo.InvariantCulture) : v.ToString("0.###", CultureInfo.InvariantCulture));
+        };
+        slider.onValueChanged.AddListener(v =>
         {
-            bool whole = t == typeof(int);
-            RangeAttribute range = f.GetCustomAttribute<RangeAttribute>();
-            MinAttribute min = f.GetCustomAttribute<MinAttribute>();
-            float lo = range != null ? range.min : min != null ? min.min : 0f;
-            float hi = range != null ? range.max : SoftMax.TryGetValue(f.Name, out float sm) ? sm : Mathf.Max(lo + 1f, 10f);
-            bool capped = range != null;
-
-            Slider slider = PixelUIKit.CreateSlider(r.rect, "Slider", Box, Accent, Color.white);
-            PlaceTL(slider.GetComponent<RectTransform>(), 318f, 6f, 240f, 28f);
-            slider.minValue = lo; slider.maxValue = hi; slider.wholeNumbers = whole;
-            TMP_InputField box = PixelUIKit.CreateInputField(font, r.rect, "Number", new Vector2(90f, 32f), Box, TextColor, FontSize - 3f, "");
-            PlaceTL(box.GetComponent<RectTransform>(), RowW - 98f, 4f, 90f, 32f);
-
-            Action show = () =>
-            {
-                object o = owner();
-                if (o == null) return;
-                float v = whole ? (int)f.GetValue(o) : (float)f.GetValue(o);
-                slider.SetValueWithoutNotify(Mathf.Clamp(v, lo, hi));
-                box.SetTextWithoutNotify(whole ? ((int)v).ToString(CultureInfo.InvariantCulture) : v.ToString("0.###", CultureInfo.InvariantCulture));
-            };
-            slider.onValueChanged.AddListener(v =>
-            {
-                if (whole) Set(f, owner, Mathf.RoundToInt(v)); else Set(f, owner, (float)Math.Round(v, 3));
-                show();
-            });
-            box.onEndEdit.AddListener(text =>
-            {
-                if (float.TryParse(text.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out float v))
-                {
-                    v = Mathf.Max(lo, capped ? Mathf.Min(v, hi) : v);   // [Range] fields stay inside it; [Min] fields can go past the slider's end
-                    if (whole) Set(f, owner, Mathf.RoundToInt(v)); else Set(f, owner, v);
-                }
-                show();
-            });
-            r.refresh = show;
-        }
-        else if (t == typeof(Color))
+            if (whole) Set(f, owner, Mathf.RoundToInt(v)); else Set(f, owner, (float)Math.Round(v, 3));
+            show();
+        });
+        box.onEndEdit.AddListener(text =>
         {
-            // (the swatch SHOWS the colour being edited, so it stays a plain colour, not a role)
-            Button swatch = PixelUIKit.CreateButton(font, r.rect, "Swatch", "", new Vector2(150f, 32f), Color.white, Color.black, FontSize - 4f);
-            PlaceTL(swatch.GetComponent<RectTransform>(), 318f, 4f, 150f, 32f);
-            Image swatchImage = swatch.GetComponent<Image>();
-            TMP_InputField hex = PixelUIKit.CreateInputField(font, r.rect, "Hex", new Vector2(130f, 32f), Box, TextColor, FontSize - 4f, "#RRGGBBAA");
-            PlaceTL(hex.GetComponent<RectTransform>(), 476f, 4f, 130f, 32f);
-            Button dropper = PixelUIKit.CreateButton(font, r.rect, "Eyedropper", "", new Vector2(42f, 32f), ButtonRole.Neutral, FontSize);
-            PlaceTL(dropper.GetComponent<RectTransform>(), RowW - 50f, 4f, 42f, 32f);
-            GameObject icon = new GameObject("Icon", typeof(RectTransform), typeof(Image));
-            icon.transform.SetParent(dropper.transform, false);
-            icon.GetComponent<Image>().sprite = PixelUIKit.EyedropperSprite();
-            icon.GetComponent<Image>().preserveAspect = true;
-            icon.GetComponent<Image>().raycastTarget = false;
-            PixelUIKit.Stretch(icon.GetComponent<RectTransform>());
-            icon.GetComponent<RectTransform>().offsetMin = new Vector2(6f, 4f);
-            icon.GetComponent<RectTransform>().offsetMax = new Vector2(-6f, -4f);
-            PixelDevTools.Tip(dropper.gameObject, "Pick a colour from anywhere on the screen (right click cancels).");
-
-            Func<Color> get = () => { object o = owner(); return o != null ? (Color)f.GetValue(o) : Color.white; };
-            Action<Color, bool> put = (c, keepHue) =>
+            if (float.TryParse(text.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out float v))
             {
-                if (!keepHue) { Color.RGBToHSV(c, out float hh, out float ss, out float vv); if (ss > 0.001f && vv > 0.001f) r.h = hh; r.s = ss; r.v = vv; }
-                Set(f, owner, c);
-            };
-            List<Action> childShows = new List<Action>();
-            r.refresh = () =>
-            {
-                Color c = get();
-                swatchImage.color = new Color(c.r, c.g, c.b, Mathf.Max(0.25f, c.a));
-                hex.SetTextWithoutNotify("#" + ColorUtility.ToHtmlStringRGBA(c));
-                Color.RGBToHSV(c, out float hh, out float ss, out float vv);
-                if (ss > 0.001f && vv > 0.001f) r.h = hh;
-                r.s = ss; r.v = vv;
-                foreach (Action a in childShows) a();
-            };
-            swatch.onClick.AddListener(() => { r.expanded = !r.expanded; Layout(); });
-            hex.onEndEdit.AddListener(text =>
-            {
-                string h = text.Trim();
-                if (!h.StartsWith("#")) h = "#" + h;
-                if (ColorUtility.TryParseHtmlString(h, out Color c)) put(c, false);
-                r.refresh();
-            });
-            dropper.onClick.AddListener(() => PixelEyedropper.Begin(c => { c.a = get().a; put(c, false); r.refresh(); }));
-
-            // The four sliders under it (shown while the swatch is unfolded).
-            string[] parts = { "Hue", "Saturation", "Brightness", "Opacity" };
-            for (int p = 0; p < 4; p++)
-            {
-                int part = p;
-                Row child = NewRow(s, f.Name + "." + parts[p], parts[p], "", 28f);
-                child.parent = r;
-                child.search = r.search;
-                Slider sl = PixelUIKit.CreateSlider(child.rect, "Slider", Box, Accent, Color.white);
-                PlaceTL(sl.GetComponent<RectTransform>(), 318f, 6f, RowW - 330f, 28f);
-                childShows.Add(() =>
-                {
-                    float v = part == 0 ? r.h : part == 1 ? r.s : part == 2 ? r.v : get().a;
-                    sl.SetValueWithoutNotify(v);
-                });
-                sl.onValueChanged.AddListener(v =>
-                {
-                    if (part == 0) r.h = v; else if (part == 1) r.s = v; else if (part == 2) r.v = v;
-                    Color c = part == 3 ? get() : Color.HSVToRGB(r.h, r.s, r.v);
-                    c.a = part == 3 ? v : get().a;
-                    Set(f, owner, c);
-                    Color shown = get();
-                    swatchImage.color = new Color(shown.r, shown.g, shown.b, Mathf.Max(0.25f, shown.a));
-                    hex.SetTextWithoutNotify("#" + ColorUtility.ToHtmlStringRGBA(shown));
-                });
+                v = Mathf.Max(lo, capped ? Mathf.Min(v, hi) : v);   // [Range] fields stay inside it; [Min] fields can go past the slider's end
+                if (whole) Set(f, owner, Mathf.RoundToInt(v)); else Set(f, owner, v);
             }
-        }
-        else if (t.IsEnum)
+            show();
+        });
+        r.refresh = show;
+    }
+
+    // AddFieldRow step for a Color field: a swatch, a hex box, an eyedropper and four HSV / opacity sliders under it.
+    private void AddColourRow(Section s, FieldInfo f, Func<object> owner, Row r)
+    {
+        // (the swatch SHOWS the colour being edited, so it stays a plain colour, not a role)
+        Button swatch = PixelUIKit.CreateButton(font, r.rect, "Swatch", "", new Vector2(150f, 32f), Color.white, Color.black, FontSize - 4f);
+        PlaceTL(swatch.GetComponent<RectTransform>(), 318f, 4f, 150f, 32f);
+        Image swatchImage = swatch.GetComponent<Image>();
+        TMP_InputField hex = PixelUIKit.CreateInputField(font, r.rect, "Hex", new Vector2(130f, 32f), Box, TextColor, FontSize - 4f, "#RRGGBBAA");
+        PlaceTL(hex.GetComponent<RectTransform>(), 476f, 4f, 130f, 32f);
+        Button dropper = PixelUIKit.CreateButton(font, r.rect, "Eyedropper", "", new Vector2(42f, 32f), ButtonRole.Neutral, FontSize);
+        PlaceTL(dropper.GetComponent<RectTransform>(), RowW - 50f, 4f, 42f, 32f);
+        GameObject icon = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+        icon.transform.SetParent(dropper.transform, false);
+        icon.GetComponent<Image>().sprite = PixelUIKit.EyedropperSprite();
+        icon.GetComponent<Image>().preserveAspect = true;
+        icon.GetComponent<Image>().raycastTarget = false;
+        PixelUIKit.Stretch(icon.GetComponent<RectTransform>());
+        icon.GetComponent<RectTransform>().offsetMin = new Vector2(6f, 4f);
+        icon.GetComponent<RectTransform>().offsetMax = new Vector2(-6f, -4f);
+        PixelDevTools.Tip(dropper.gameObject, "Pick a colour from anywhere on the screen (right click cancels).");
+
+        Func<Color> get = () => { object o = owner(); return o != null ? (Color)f.GetValue(o) : Color.white; };
+        Action<Color, bool> put = (c, keepHue) =>
         {
-            Array values = Enum.GetValues(t);
-            TMP_Dropdown dd = PixelUIKit.CreateDropdown(font, r.rect, "Choice", new Vector2(RowW - 326f, 34f), Box, Box, TextColor, FontSize - 3f, escapeMasks: true);
-            PlaceTL(dd.GetComponent<RectTransform>(), 318f, 3f, RowW - 326f, 34f);
-            List<string> names = new List<string>();
-            foreach (object v in values) names.Add(Nice(v.ToString()));
-            dd.ClearOptions();
-            dd.AddOptions(names);
-            dd.onValueChanged.AddListener(i => { if (i >= 0 && i < values.Length) Set(f, owner, values.GetValue(i)); });
-            r.refresh = () =>
+            if (!keepHue) { Color.RGBToHSV(c, out float hh, out float ss, out float vv); if (ss > 0.001f && vv > 0.001f) r.h = hh; r.s = ss; r.v = vv; }
+            Set(f, owner, c);
+        };
+        List<Action> childShows = new List<Action>();
+        r.refresh = () =>
+        {
+            Color c = get();
+            swatchImage.color = new Color(c.r, c.g, c.b, Mathf.Max(0.25f, c.a));
+            hex.SetTextWithoutNotify("#" + ColorUtility.ToHtmlStringRGBA(c));
+            Color.RGBToHSV(c, out float hh, out float ss, out float vv);
+            if (ss > 0.001f && vv > 0.001f) r.h = hh;
+            r.s = ss; r.v = vv;
+            foreach (Action a in childShows) a();
+        };
+        swatch.onClick.AddListener(() => { r.expanded = !r.expanded; Layout(); });
+        hex.onEndEdit.AddListener(text =>
+        {
+            string h = text.Trim();
+            if (!h.StartsWith("#")) h = "#" + h;
+            if (ColorUtility.TryParseHtmlString(h, out Color c)) put(c, false);
+            r.refresh();
+        });
+        dropper.onClick.AddListener(() => PixelEyedropper.Begin(c => { c.a = get().a; put(c, false); r.refresh(); }));
+
+        // The four sliders under it (shown while the swatch is unfolded).
+        string[] parts = { "Hue", "Saturation", "Brightness", "Opacity" };
+        for (int p = 0; p < 4; p++)
+        {
+            int part = p;
+            Row child = NewRow(s, f.Name + "." + parts[p], parts[p], "", 28f);
+            child.parent = r;
+            child.search = r.search;
+            Slider sl = PixelUIKit.CreateSlider(child.rect, "Slider", Box, Accent, Color.white);
+            PlaceTL(sl.GetComponent<RectTransform>(), 318f, 6f, RowW - 330f, 28f);
+            childShows.Add(() =>
             {
-                object o = owner();
-                if (o == null) return;
-                dd.SetValueWithoutNotify(Mathf.Max(0, Array.IndexOf(values, f.GetValue(o))));
-            };
+                float v = part == 0 ? r.h : part == 1 ? r.s : part == 2 ? r.v : get().a;
+                sl.SetValueWithoutNotify(v);
+            });
+            sl.onValueChanged.AddListener(v =>
+            {
+                if (part == 0) r.h = v; else if (part == 1) r.s = v; else if (part == 2) r.v = v;
+                Color c = part == 3 ? get() : Color.HSVToRGB(r.h, r.s, r.v);
+                c.a = part == 3 ? v : get().a;
+                Set(f, owner, c);
+                Color shown = get();
+                swatchImage.color = new Color(shown.r, shown.g, shown.b, Mathf.Max(0.25f, shown.a));
+                hex.SetTextWithoutNotify("#" + ColorUtility.ToHtmlStringRGBA(shown));
+            });
         }
+    }
+
+    // AddFieldRow step for an enum field: a drop-down of the enum's values.
+    private void AddChoiceRow(FieldInfo f, Func<object> owner, Row r, Type t)
+    {
+        Array values = Enum.GetValues(t);
+        TMP_Dropdown dd = PixelUIKit.CreateDropdown(font, r.rect, "Choice", new Vector2(RowW - 326f, 34f), Box, Box, TextColor, FontSize - 3f, escapeMasks: true);
+        PlaceTL(dd.GetComponent<RectTransform>(), 318f, 3f, RowW - 326f, 34f);
+        List<string> names = new List<string>();
+        foreach (object v in values) names.Add(Nice(v.ToString()));
+        dd.ClearOptions();
+        dd.AddOptions(names);
+        dd.onValueChanged.AddListener(i => { if (i >= 0 && i < values.Length) Set(f, owner, values.GetValue(i)); });
+        r.refresh = () =>
+        {
+            object o = owner();
+            if (o == null) return;
+            dd.SetValueWithoutNotify(Mathf.Max(0, Array.IndexOf(values, f.GetValue(o))));
+        };
     }
 
     /// <summary>Places the section headers and the rows that should show (open sections, or every row matching the filter).</summary>

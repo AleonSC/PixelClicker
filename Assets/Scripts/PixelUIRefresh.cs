@@ -165,6 +165,23 @@ public partial class PixelUI
         float y = 0f; // lines are laid out inside the scrolling list (its top = just below the tabs)
 
         // The Ultra pixel row comes first, set apart from the pixel counts by a thin line.
+        y = LayoutUltraRow(showCurrency, names, y);
+
+        // Pass 1: which rows show, and what they say.
+        bool[] shown = FillTierRows(tiers, showCurrency, names);
+
+        // Pass 2 (automatic mode): lay the rows out in groups - Pure, Composite (one per skill), Exotic - each under a header you can fold.
+        if (autoMode) y = LayoutCurrencyGroups(tiers, shown, compact, y);
+
+        if (autoMode) y = RefreshTabContent(compact, y);
+
+        // Box height follows the number of visible lines.
+        if (autoMode && boxRect != null) SizeBox(compact, y);
+    }
+
+    // Refresh step: the Ultra pixel row at the top, set apart by a thin line; returns the next row's y.
+    private float LayoutUltraRow(bool showCurrency, bool names, float y)
+    {
         bool showUltra = autoMode && showCurrency && clicker.UltraEarned > 0;
         if (ultraLabel != null)
         {
@@ -181,8 +198,12 @@ public partial class PixelUI
             ultraDivider.rectTransform.anchoredPosition = new Vector2(0f, -(y + 4f));
             y += 12f;
         }
+        return y;
+    }
 
-        // Pass 1: which rows show, and what they say.
+    // Refresh step (pass 1): which tier rows show, and what they say.
+    private bool[] FillTierRows(PixelClicker.PixelTier[] tiers, bool showCurrency, bool names)
+    {
         bool[] shown = new bool[tierLabels.Length];
         for (int i = 0; i < tierLabels.Length && i < tiers.Length; i++)
         {
@@ -200,55 +221,61 @@ public partial class PixelUI
             if (names) SetRow(label, ShortName(tier.displayName), amount, tier.UIColor, !tier.unlocked && !holding);
             else SetRow(label, amount, "", tier.UIColor, !tier.unlocked && !holding);   // swatch + number; the name is in the hover tip
         }
+        return shown;
+    }
 
-        // Pass 2 (automatic mode): lay the rows out in groups - Pure, Composite (one per skill), Exotic - each under a header you can fold.
-        if (autoMode)
+    // Refresh step (pass 2, automatic mode): lays the rows out in groups - Pure, Composite (one per skill), Exotic - each under a header you can fold; returns y.
+    private float LayoutCurrencyGroups(PixelClicker.PixelTier[] tiers, bool[] shown, bool compact, float y)
+    {
+        List<string> groupOrder = new List<string> { "pure" };
+        Dictionary<string, string> groupTitles = new Dictionary<string, string> { { "pure", "Pure" }, { "exotic", "Exotic" } };
+        Dictionary<string, List<int>> groupRows = new Dictionary<string, List<int>> { { "pure", new List<int>() }, { "exotic", new List<int>() } };
+        for (int i = 0; i < shown.Length && i < tiers.Length; i++)
         {
-            List<string> groupOrder = new List<string> { "pure" };
-            Dictionary<string, string> groupTitles = new Dictionary<string, string> { { "pure", "Pure" }, { "exotic", "Exotic" } };
-            Dictionary<string, List<int>> groupRows = new Dictionary<string, List<int>> { { "pure", new List<int>() }, { "exotic", new List<int>() } };
-            for (int i = 0; i < shown.Length && i < tiers.Length; i++)
-            {
-                if (!shown[i]) continue;
-                string key = CurrencyGroup(tiers[i], out string title);
-                if (!groupRows.ContainsKey(key)) { groupRows[key] = new List<int>(); groupTitles[key] = title; groupOrder.Add(key); }
-                groupRows[key].Add(i);
-            }
-            groupOrder.Add("exotic");
-
-            int header = 0;
-            foreach (string key in groupOrder)
-            {
-                List<int> rows = groupRows[key];
-                if (rows.Count == 0) continue;
-                bool folded = !compact && CurrencyFolded(key);
-                if (!compact)
-                {
-                    TMP_Text h = CurrencyHeader(header++);
-                    h.gameObject.SetActive(true);
-                    PixelUIKit.SetText(h, (folded ? "+ " : "- ") + groupTitles[key]);
-                    h.rectTransform.anchoredPosition = new Vector2(0f, -y);
-                    currencyHeaderKeys[header - 1] = key;
-                    y += LinePitch * 0.85f;
-                }
-                foreach (int i in rows)
-                {
-                    TMP_Text label = tierLabels[i];
-                    if (folded) { if (label.gameObject.activeSelf) label.gameObject.SetActive(false); continue; }
-                    label.rectTransform.anchoredPosition = new Vector2(0f, -y);
-                    y += LinePitch;
-                }
-            }
-            for (int k = header; k < currencyHeaders.Count; k++) if (currencyHeaders[k].gameObject.activeSelf) currencyHeaders[k].gameObject.SetActive(false);
+            if (!shown[i]) continue;
+            string key = CurrencyGroup(tiers[i], out string title);
+            if (!groupRows.ContainsKey(key)) { groupRows[key] = new List<int>(); groupTitles[key] = title; groupOrder.Add(key); }
+            groupRows[key].Add(i);
         }
+        groupOrder.Add("exotic");
 
-        if (autoMode && compact)
+        int header = 0;
+        foreach (string key in groupOrder)
+        {
+            List<int> rows = groupRows[key];
+            if (rows.Count == 0) continue;
+            bool folded = !compact && CurrencyFolded(key);
+            if (!compact)
+            {
+                TMP_Text h = CurrencyHeader(header++);
+                h.gameObject.SetActive(true);
+                PixelUIKit.SetText(h, (folded ? "+ " : "- ") + groupTitles[key]);
+                h.rectTransform.anchoredPosition = new Vector2(0f, -y);
+                currencyHeaderKeys[header - 1] = key;
+                y += LinePitch * 0.85f;
+            }
+            foreach (int i in rows)
+            {
+                TMP_Text label = tierLabels[i];
+                if (folded) { if (label.gameObject.activeSelf) label.gameObject.SetActive(false); continue; }
+                label.rectTransform.anchoredPosition = new Vector2(0f, -y);
+                y += LinePitch;
+            }
+        }
+        for (int k = header; k < currencyHeaders.Count; k++) if (currencyHeaders[k].gameObject.activeSelf) currencyHeaders[k].gameObject.SetActive(false);
+        return y;
+    }
+
+    // Refresh step (automatic mode): the Consumables / Materials tabs (or the compact view's pinned consumables); returns y.
+    private float RefreshTabContent(bool compact, float y)
+    {
+        if (compact)
         {
             HideMaterialWidgets();
             HideConsumableWidgets(keepRows: CompactMode == 2);   // the pinned consumable rows stay active: switching them off and on each refresh would kill their hover and clicks
             if (CompactMode == 2) y = RefreshCompactConsumables(y);
         }
-        else if (autoMode)
+        else
         {
             if (inventoryTab == 1)
             {
@@ -264,29 +291,30 @@ public partial class PixelUI
             if (inventoryTab == 2) y = RefreshMaterials(0f);
             else HideMaterialWidgets();
         }
+        return y;
+    }
 
-        // Box height follows the number of visible lines.
-        if (autoMode && boxRect != null)
-        {
-            float boxHeight = compact ? (compactSmall ? CompactTop + panelPadding * 0.5f : Mathf.Min(maxPanelHeight, ContentTop + y + panelPadding + 4f))   // the simplified one is only as tall as its lines (minimised: just the button row)
-                                      : maxPanelHeight;   // one fixed size on every tab, so the window never changes shape
-            ApplyRowMargins(compact);
-            boxRect.sizeDelta = new Vector2(compact ? FitCompactWidth() : panelWidth, boxHeight);
+    // Refresh step (automatic mode): the box height follows the number of visible lines; the list scrolls when it is taller.
+    private void SizeBox(bool compact, float y)
+    {
+        float boxHeight = compact ? (compactSmall ? CompactTop + panelPadding * 0.5f : Mathf.Min(maxPanelHeight, ContentTop + y + panelPadding + 4f))   // the simplified one is only as tall as its lines (minimised: just the button row)
+                                  : maxPanelHeight;   // one fixed size on every tab, so the window never changes shape
+        ApplyRowMargins(compact);
+        boxRect.sizeDelta = new Vector2(compact ? FitCompactWidth() : panelWidth, boxHeight);
 
-            // Keep the list just below the tabs (the header height can change after the box is built).
-            listViewport.offsetMin = new Vector2(0f, panelPadding);
-            listViewport.offsetMax = new Vector2(0f, -ContentTop);
-            if (listViewport.gameObject.activeSelf == (compact && compactSmall)) listViewport.gameObject.SetActive(!(compact && compactSmall));
+        // Keep the list just below the tabs (the header height can change after the box is built).
+        listViewport.offsetMin = new Vector2(0f, panelPadding);
+        listViewport.offsetMax = new Vector2(0f, -ContentTop);
+        if (listViewport.gameObject.activeSelf == (compact && compactSmall)) listViewport.gameObject.SetActive(!(compact && compactSmall));
 
-            // The list scrolls when it is taller than the room the box has for it.
-            float viewHeight = boxHeight - ContentTop - panelPadding;
-            listContent.sizeDelta = new Vector2(0f, Mathf.Max(y, 1f));
-            bool scrolls = y > viewHeight + 0.5f;
-            if (listBarObject != null && listBarObject.activeSelf != scrolls) listBarObject.SetActive(scrolls);
-            if (!scrolls) listContent.anchoredPosition = Vector2.zero;
-            ScrollRect sr = listViewport.GetComponent<ScrollRect>();
-            if (sr != null) sr.enabled = !compact || scrolls;   // a pinned list that doesn't scroll lets the drag through, so the whole window can be moved
-        }
+        // The list scrolls when it is taller than the room the box has for it.
+        float viewHeight = boxHeight - ContentTop - panelPadding;
+        listContent.sizeDelta = new Vector2(0f, Mathf.Max(y, 1f));
+        bool scrolls = y > viewHeight + 0.5f;
+        if (listBarObject != null && listBarObject.activeSelf != scrolls) listBarObject.SetActive(scrolls);
+        if (!scrolls) listContent.anchoredPosition = Vector2.zero;
+        ScrollRect sr = listViewport.GetComponent<ScrollRect>();
+        if (sr != null) sr.enabled = !compact || scrolls;   // a pinned list that doesn't scroll lets the drag through, so the whole window can be moved
     }
 
     // ---- Currency groups: Pure (the base colours), Composite (a skill's mixed goods, one group per skill) and Exotic (everything else) ----

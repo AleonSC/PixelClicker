@@ -411,39 +411,7 @@ public class OldPixelGravityWell : MonoBehaviour
         {
             Rigidbody other = list[i];
             if (other == null || other.gameObject == gameObject) continue;
-            if (clicker.IsFlyingPixel(other))
-            {
-                // A streaking meteor pixel is bent towards the well from far beyond the ring (it flies up and away from the floor,
-                // so it would never come near otherwise) and slowed; once inside the ring it is captured and dragged in.
-                float reach = radius * (look != null && look.wellFlyReach > 0f ? look.wellFlyReach : 4f);
-                float sqr = (centre - other.position).sqrMagnitude;
-                if (sqr > reach * reach) continue;
-                if (sqr > radius * radius)
-                {
-                    // Never dips below the floor: a trigger-collider pixel has nothing to stop it, so keep it at or above the well's height.
-                    if (other.position.y < centre.y)
-                    {
-                        Vector3 p = other.position;
-                        p.y = centre.y;
-                        other.position = p;
-                        Vector3 low = PixelBody.Velocity(other);
-                        if (low.y < 0f) { low.y = 0f; PixelBody.Steer(other, low); }
-                    }
-                    Vector3 fv = PixelBody.Velocity(other);
-                    float fs = fv.magnitude;
-                    if (fs > 0.01f)
-                    {
-                        Vector3 steered = Vector3.RotateTowards(fv.normalized, (centre - other.position).normalized, 5f * Time.fixedDeltaTime, 0f);
-                        if (steered.y < 0f && other.position.y <= centre.y + 0.3f) steered.y = 0f; // skim along the floor, not into it
-                        PixelBody.Steer(other, steered * (fs * Mathf.Clamp01(1f - 1.2f * Time.fixedDeltaTime)));
-                    }
-                    OldPixelDespawn fd = PixelHuskQuery.Get(other).despawn;
-                    if (fd != null) fd.KeepAlive();
-                    continue;
-                }
-                clicker.LandFlyingPixel(other);
-                PixelBody.Steer(other, PixelBody.Velocity(other) * 0.2f);
-            }
+            if (clicker.IsFlyingPixel(other) && BendFlyingPixel(other, centre)) continue;
             if (other.isKinematic) continue;
             if ((centre - other.position).sqrMagnitude > radius * radius) continue;   // (the distance first: most husks are out of reach)
             OldPixelDespawn despawn = PixelHuskQuery.Get(other).despawn;
@@ -493,6 +461,43 @@ public class OldPixelGravityWell : MonoBehaviour
             float towards = Vector3.Dot(v, dir);
             if (towards < pullSpeed) PixelBody.Steer(other, v + dir * ((pullSpeed - towards) * blend));
         }
+    }
+
+    // FixedUpdate step for a streaking (flying) pixel: true = it is only bent towards the well this step (skip it),
+    // false = it was inside the ring and has been landed (it is then handled like any other husk).
+    private bool BendFlyingPixel(Rigidbody other, Vector3 centre)
+    {
+        // A streaking meteor pixel is bent towards the well from far beyond the ring (it flies up and away from the floor,
+        // so it would never come near otherwise) and slowed; once inside the ring it is captured and dragged in.
+        float reach = radius * (look != null && look.wellFlyReach > 0f ? look.wellFlyReach : 4f);
+        float sqr = (centre - other.position).sqrMagnitude;
+        if (sqr > reach * reach) return true;
+        if (sqr > radius * radius)
+        {
+            // Never dips below the floor: a trigger-collider pixel has nothing to stop it, so keep it at or above the well's height.
+            if (other.position.y < centre.y)
+            {
+                Vector3 p = other.position;
+                p.y = centre.y;
+                other.position = p;
+                Vector3 low = PixelBody.Velocity(other);
+                if (low.y < 0f) { low.y = 0f; PixelBody.Steer(other, low); }
+            }
+            Vector3 fv = PixelBody.Velocity(other);
+            float fs = fv.magnitude;
+            if (fs > 0.01f)
+            {
+                Vector3 steered = Vector3.RotateTowards(fv.normalized, (centre - other.position).normalized, 5f * Time.fixedDeltaTime, 0f);
+                if (steered.y < 0f && other.position.y <= centre.y + 0.3f) steered.y = 0f; // skim along the floor, not into it
+                PixelBody.Steer(other, steered * (fs * Mathf.Clamp01(1f - 1.2f * Time.fixedDeltaTime)));
+            }
+            OldPixelDespawn fd = PixelHuskQuery.Get(other).despawn;
+            if (fd != null) fd.KeepAlive();
+            return true;
+        }
+        clicker.LandFlyingPixel(other);
+        PixelBody.Steer(other, PixelBody.Velocity(other) * 0.2f);
+        return false;
     }
 
     private void LateUpdate()

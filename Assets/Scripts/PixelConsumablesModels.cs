@@ -303,57 +303,70 @@ public partial class PixelConsumables
             }
     }
 
+    /// <summary>BuildDeviceObject step: the devices that build their own object (funnel, recycler, generators, junction box...); false for the rest.</summary>
+    private bool TryBuildSelfBuiltDevice(Device d, bool isPreview, out GameObject built)
+    {
+        if (d.kind == DeviceKind.Funnel)
+        {
+            built = isPreview ? PixelFunnel.CreateGhost(clicker) : displayOnly ? PixelFunnel.CreateDisplay(clicker) : PixelFunnel.Place(clicker, Vector3.zero, 0f);
+            return true;
+        }
+        if (d.kind == DeviceKind.WoodChipper)
+        {
+            built = isPreview ? PixelWoodChipper.CreateGhost(clicker) : displayOnly ? PixelWoodChipper.CreateDisplay(clicker) : PixelWoodChipper.Place(clicker, Vector3.zero, 0f);
+            return true;
+        }
+        if (d.kind == DeviceKind.Recycler)
+        {
+            if (isPreview)
+            {
+                GameObject ghost = PixelRecycler.CreateGhost(clicker);
+                ghost.transform.localScale = Vector3.one * Mathf.Max(0.5f, d.radius > 0f ? d.radius : 1f);   // the placing ghost shows the real size (Operation: Bin Size), like Place does
+                built = ghost;
+                return true;
+            }
+            built = displayOnly ? PixelRecycler.CreateDisplay(clicker) : PixelRecycler.Place(clicker, Vector3.zero, 0f);
+            return true;
+        }
+        if (IsGeneratorKind(d.kind))
+        {
+            float size = d.bodyDiameter > 0f ? d.bodyDiameter : 1f;
+            built = isPreview ? PixelBiomassGenerator.CreateGhost(clicker, size) : PixelBiomassGenerator.CreateDisplay(clicker, size);
+            return true;
+        }
+        if (d.kind == DeviceKind.PowerBank)
+        {
+            built = isPreview ? PixelPowerBank.CreateGhost(clicker) : PixelPowerBank.CreateDisplay(clicker);
+            return true;
+        }
+        if (d.kind == DeviceKind.JunctionBox)
+        {
+            built = isPreview ? PixelJunctionBox.CreateGhost(clicker) : displayOnly ? PixelJunctionBox.CreateDisplay(clicker) : PixelJunctionBox.Place(clicker, Vector3.zero, 0f);
+            return true;
+        }
+        if (d.kind == DeviceKind.Sweeper)
+        {
+            built = isPreview ? PixelSweeper.CreateGhost(clicker) : displayOnly ? PixelSweeper.CreateDisplay(clicker) : PixelSweeper.Place(clicker, Vector3.zero, 0f);
+            return true;
+        }
+        if (d.kind == DeviceKind.SortingHopper)
+        {
+            built = isPreview ? PixelSortingHopper.CreateGhost(clicker) : displayOnly ? PixelSortingHopper.CreateDisplay(clicker) : PixelSortingHopper.Place(clicker, Vector3.zero, 0f);
+            return true;
+        }
+        built = null;
+        return false;
+    }
+
     /// <summary>
     /// Builds the cylinder (and range disc, and for a real device the timer text) with its origin on the floor.
     /// </summary>
     private GameObject BuildDeviceObject(Device d, bool isPreview, out Transform suckPoint, out TextMeshPro timer)
     {
-        if (d.kind == DeviceKind.Funnel)
+        if (TryBuildSelfBuiltDevice(d, isPreview, out GameObject selfBuilt))
         {
             suckPoint = null; timer = null;
-            return isPreview ? PixelFunnel.CreateGhost(clicker) : displayOnly ? PixelFunnel.CreateDisplay(clicker) : PixelFunnel.Place(clicker, Vector3.zero, 0f);
-        }
-        if (d.kind == DeviceKind.WoodChipper)
-        {
-            suckPoint = null; timer = null;
-            return isPreview ? PixelWoodChipper.CreateGhost(clicker) : displayOnly ? PixelWoodChipper.CreateDisplay(clicker) : PixelWoodChipper.Place(clicker, Vector3.zero, 0f);
-        }
-        if (d.kind == DeviceKind.Recycler)
-        {
-            suckPoint = null; timer = null;
-            if (isPreview)
-            {
-                GameObject ghost = PixelRecycler.CreateGhost(clicker);
-                ghost.transform.localScale = Vector3.one * Mathf.Max(0.5f, d.radius > 0f ? d.radius : 1f);   // the placing ghost shows the real size (Operation: Bin Size), like Place does
-                return ghost;
-            }
-            return displayOnly ? PixelRecycler.CreateDisplay(clicker) : PixelRecycler.Place(clicker, Vector3.zero, 0f);
-        }
-        if (IsGeneratorKind(d.kind))
-        {
-            suckPoint = null; timer = null;
-            float size = d.bodyDiameter > 0f ? d.bodyDiameter : 1f;
-            return isPreview ? PixelBiomassGenerator.CreateGhost(clicker, size) : PixelBiomassGenerator.CreateDisplay(clicker, size);
-        }
-        if (d.kind == DeviceKind.PowerBank)
-        {
-            suckPoint = null; timer = null;
-            return isPreview ? PixelPowerBank.CreateGhost(clicker) : PixelPowerBank.CreateDisplay(clicker);
-        }
-        if (d.kind == DeviceKind.JunctionBox)
-        {
-            suckPoint = null; timer = null;
-            return isPreview ? PixelJunctionBox.CreateGhost(clicker) : displayOnly ? PixelJunctionBox.CreateDisplay(clicker) : PixelJunctionBox.Place(clicker, Vector3.zero, 0f);
-        }
-        if (d.kind == DeviceKind.Sweeper)
-        {
-            suckPoint = null; timer = null;
-            return isPreview ? PixelSweeper.CreateGhost(clicker) : displayOnly ? PixelSweeper.CreateDisplay(clicker) : PixelSweeper.Place(clicker, Vector3.zero, 0f);
-        }
-        if (d.kind == DeviceKind.SortingHopper)
-        {
-            suckPoint = null; timer = null;
-            return isPreview ? PixelSortingHopper.CreateGhost(clicker) : displayOnly ? PixelSortingHopper.CreateDisplay(clicker) : PixelSortingHopper.Place(clicker, Vector3.zero, 0f);
+            return selfBuilt;
         }
 
         GameObject root = new GameObject(isPreview ? d.displayName + " (Preview)" : d.displayName);

@@ -335,7 +335,12 @@ public class PixelBlockTooltip : MonoBehaviour
             return;
         }
         if (wasDocked) Undock();
+        UpdateFloating(hovering, tier, live, body, external);
+    }
 
+    // Update step: the floating card that follows the mouse (hover delay, fade in / out, the toast, refresh).
+    private void UpdateFloating(bool hovering, int tier, bool live, Rigidbody body, bool external)
+    {
         bool same = hovering && tier == shownTier && live == shownLive && body == shownBody && external == shownExternal;
         if (hovering && !same)
         {

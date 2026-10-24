@@ -935,68 +935,9 @@ public partial class PixelClicker : MonoBehaviour
         }
 
         RunLookFixups();   // brings the saved Pixel Looks list up to date (PixelClickerLookFixups.cs)
-        if (tierDataVersion < 1)
-        {
-            // Monochrome takes longer (2026-10-16): Gray needs 250 White, Black 250 Gray (was 100 each). Only an untouched 100 is changed.
-            foreach (PixelTier t in tiers)
-                if (t != null && (t.type == PixelType.Gray || t.type == PixelType.Black) && t.unlockMode == TierUnlockMode.PreviousTierThreshold && t.unlockThreshold == 100d)
-                    t.unlockThreshold = 250d;
-            tierDataVersion = 1;
-        }
-        if (tierDataVersion < 2)
-        {
-            // Fewer of each later tier (2026-10-16): the spawn pool gets more mixed with every tier, so Gray needs 300 White, Black 200 Gray
-            // (and the RGB step asks 100 Black). Only an untouched 100 / 250 is changed.
-            foreach (PixelTier t in tiers)
-            {
-                if (t == null || t.unlockMode != TierUnlockMode.PreviousTierThreshold || (t.unlockThreshold != 100d && t.unlockThreshold != 250d)) continue;
-                if (t.type == PixelType.Gray) t.unlockThreshold = 300d;
-                else if (t.type == PixelType.Black) t.unlockThreshold = 200d;
-            }
-            tierDataVersion = 2;
-        }
-        if (tierDataVersion < 3)
-        {
-            // The early goals ARE the unlocks (2026-10-18): Gray and Black are unlocked by goal rewards (PixelGoals: Crush 10 husks, Recycle 20 husks),
-            // not by earning 300 White / 200 Gray. Their thresholds stay as the fallback when no goal unlocks them.
-            foreach (PixelTier t in tiers)
-                if (t != null && (t.type == PixelType.Gray || t.type == PixelType.Black) && t.unlockMode == TierUnlockMode.PreviousTierThreshold)
-                    t.unlockMode = TierUnlockMode.ByGoal;
-            tierDataVersion = 3;
-        }
-        if (huskSettleVersion < 1)
-        {
-            // Husks settle into small heaps (2026-10-17): less bounce, a little more grip, quick sleep. Only untouched old defaults are changed.
-            if (Mathf.Approximately(bounciness, 0.3f)) bounciness = 0.08f;
-            if (Mathf.Approximately(friction, 0.5f)) friction = 0.65f;
-            if (huskSleepThreshold <= 0f) huskSleepThreshold = 0.03f;
-            huskSettleVersion = 1;
-        }
-        if (huskSettleVersion < 2)
-        {
-            // Husks wait (2026-10-18, 'Early game feel 1'): they last 35 s and the floor holds 120. Only untouched old defaults are changed.
-            if (Mathf.Approximately(oldPixelLifetime, 15f)) oldPixelLifetime = 35f;
-            if (baseOldPixelCap == 50) baseOldPixelCap = 120;
-            huskSettleVersion = 2;
-        }
-
-        if (pixelRenderer != null)
-        {
-            // A deleted / missing material shows as pink: build a plain one so the game still works.
-            Material current = pixelRenderer.sharedMaterial;
-            if (current == null || current.shader == null || !current.shader.isSupported || current.shader.name == "Hidden/InternalErrorShader")
-            {
-                Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-                if (shader == null) shader = Shader.Find("Standard");
-                if (shader != null)
-                {
-                    Debug.LogWarning("PixelClicker: the pixel had no working material - created a temporary one. " +
-                                     "Assign a real Lit material to the Pixel (and its prefab) to fix this properly.", this);
-                    pixelRenderer.sharedMaterial = new Material(shader) { name = "Pixel (generated)" };
-                }
-            }
-            defaultMaterial = pixelRenderer.sharedMaterial;
-        }
+        RunTierDataFixups();
+        RunHuskSettleFixups();
+        FixMissingPixelMaterial();
 
         baseScale = pixelTransform.localScale;
         basePosition = pixelTransform.position;
@@ -1036,6 +977,82 @@ public partial class PixelClicker : MonoBehaviour
 #if UNITY_EDITOR
         PixelTextOverrides.AppendMissing(this);   // (the file lists every pixel type, new ones too)
 #endif
+    }
+
+    // Awake step: upgrades the saved tier list's unlock rules (tierDataVersion; only untouched old defaults are changed).
+    private void RunTierDataFixups()
+    {
+        if (tierDataVersion < 1)
+        {
+            // Monochrome takes longer (2026-10-16): Gray needs 250 White, Black 250 Gray (was 100 each). Only an untouched 100 is changed.
+            foreach (PixelTier t in tiers)
+                if (t != null && (t.type == PixelType.Gray || t.type == PixelType.Black) && t.unlockMode == TierUnlockMode.PreviousTierThreshold && t.unlockThreshold == 100d)
+                    t.unlockThreshold = 250d;
+            tierDataVersion = 1;
+        }
+        if (tierDataVersion < 2)
+        {
+            // Fewer of each later tier (2026-10-16): the spawn pool gets more mixed with every tier, so Gray needs 300 White, Black 200 Gray
+            // (and the RGB step asks 100 Black). Only an untouched 100 / 250 is changed.
+            foreach (PixelTier t in tiers)
+            {
+                if (t == null || t.unlockMode != TierUnlockMode.PreviousTierThreshold || (t.unlockThreshold != 100d && t.unlockThreshold != 250d)) continue;
+                if (t.type == PixelType.Gray) t.unlockThreshold = 300d;
+                else if (t.type == PixelType.Black) t.unlockThreshold = 200d;
+            }
+            tierDataVersion = 2;
+        }
+        if (tierDataVersion < 3)
+        {
+            // The early goals ARE the unlocks (2026-10-18): Gray and Black are unlocked by goal rewards (PixelGoals: Crush 10 husks, Recycle 20 husks),
+            // not by earning 300 White / 200 Gray. Their thresholds stay as the fallback when no goal unlocks them.
+            foreach (PixelTier t in tiers)
+                if (t != null && (t.type == PixelType.Gray || t.type == PixelType.Black) && t.unlockMode == TierUnlockMode.PreviousTierThreshold)
+                    t.unlockMode = TierUnlockMode.ByGoal;
+            tierDataVersion = 3;
+        }
+    }
+
+    // Awake step: upgrades the saved husk physics defaults (huskSettleVersion; only untouched old defaults are changed).
+    private void RunHuskSettleFixups()
+    {
+        if (huskSettleVersion < 1)
+        {
+            // Husks settle into small heaps (2026-10-17): less bounce, a little more grip, quick sleep. Only untouched old defaults are changed.
+            if (Mathf.Approximately(bounciness, 0.3f)) bounciness = 0.08f;
+            if (Mathf.Approximately(friction, 0.5f)) friction = 0.65f;
+            if (huskSleepThreshold <= 0f) huskSleepThreshold = 0.03f;
+            huskSettleVersion = 1;
+        }
+        if (huskSettleVersion < 2)
+        {
+            // Husks wait (2026-10-18, 'Early game feel 1'): they last 35 s and the floor holds 120. Only untouched old defaults are changed.
+            if (Mathf.Approximately(oldPixelLifetime, 15f)) oldPixelLifetime = 35f;
+            if (baseOldPixelCap == 50) baseOldPixelCap = 120;
+            huskSettleVersion = 2;
+        }
+    }
+
+    // Awake step: a deleted / missing pixel material is replaced by a plain generated one; remembers the default material.
+    private void FixMissingPixelMaterial()
+    {
+        if (pixelRenderer != null)
+        {
+            // A deleted / missing material shows as pink: build a plain one so the game still works.
+            Material current = pixelRenderer.sharedMaterial;
+            if (current == null || current.shader == null || !current.shader.isSupported || current.shader.name == "Hidden/InternalErrorShader")
+            {
+                Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+                if (shader == null) shader = Shader.Find("Standard");
+                if (shader != null)
+                {
+                    Debug.LogWarning("PixelClicker: the pixel had no working material - created a temporary one. " +
+                                     "Assign a real Lit material to the Pixel (and its prefab) to fix this properly.", this);
+                    pixelRenderer.sharedMaterial = new Material(shader) { name = "Pixel (generated)" };
+                }
+            }
+            defaultMaterial = pixelRenderer.sharedMaterial;
+        }
     }
 
     /// <summary>Gives every tier its name from Assets/Resources/PixelTexts.txt (PixelTextOverrides); Dev Hub's 'Reload pixel texts' calls it after a Reload.</summary>
