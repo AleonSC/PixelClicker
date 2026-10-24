@@ -1644,3 +1644,4 @@
 [2026-10-24 13:18 UTC] Container Hose looks much better: a see-through ribbed tube wound with a reinforcing wire spiral, and the coupling at each end now grows a form-fitting hose adapter (rubber sleeve, flared bell, clamp) that the hose runs straight out of.
 [2026-10-24 14:32 UTC] Shop: item tiles show only their picture and name (no price); select one and its price shows in the detail panel on the right, and the pictures grew into the freed space.
 [2026-10-24 15:33 UTC] The Wizard's first visit has its own talk: he scoffs at Cubie calling him a friend when he owes Cubie a fortune, then realises you got a bill too and that you're in the same boat (it waits for next time if you turn him away).
+[2026-10-24 15:51 UTC] New built-in music cue 'Cubie': give it a song in PixelAudio's Music Cues list and it plays while Cubie is on screen (his visits, narration and shop peek), fading back to the playlist when he leaves.

@@ -460,6 +460,19 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
     private float savedTimeScale = 1f;
     private bool froze;
     private GameObject canvasRoot;
+    private bool musicCueOn;   // the 'Cubie' music cue is switched on (see SyncMusicCue)
+
+    /// <summary>
+    /// Cubie's music: the Manual music cue "Cubie" (PixelAudio's Music Cues list: give it a clip) plays while he is on screen - a visit, a
+    /// narration or the shop-hold peek (his canvas exists) - and fades back to the playlist when he leaves. (Not his tiny idle peeks behind panels.)
+    /// </summary>
+    private void SyncMusicCue()
+    {
+        bool on = canvasRoot != null;
+        if (on == musicCueOn) return;
+        musicCueOn = on;
+        PixelAudio.SetMusicCue("Cubie", on);
+    }
     private RectTransform characterRect, panel, giftBox, pupilL, pupilR;
     private TMP_Text message;
     private Button nextButton;
@@ -515,6 +528,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
 
     private void OnDestroy()
     {
+        if (musicCueOn) { musicCueOn = false; PixelAudio.SetMusicCue("Cubie", false); }
         Unfreeze();
         if (ShopHold) { ShopHold = false; if (Time.timeScale <= 0f) Time.timeScale = holdScale; }
         PixelWindows.Unregister(this);
@@ -558,6 +572,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
 
     private void Update()
     {
+        SyncMusicCue();   // (his song while he is on screen)
         // Cubie switched off (disableGuide): RGB still unlocks at the same point, quietly, so the game can go on.
         if (disableGuide && clicker != null && !ShopThere && Visit2Ready && shop != null) shop.GrantPackRewarding(PixelClicker.PixelType.Red);
         if (disableGuide && clicker != null && PixelStats.Total(Stage1Key) < 1d && Visit1Ready) { PixelStats.Best(Stage1Key, 1d); GiveRecycler(); }   // (Cubie off: his Recycler still arrives - the 'Recycle 20 husks' goal needs it)
