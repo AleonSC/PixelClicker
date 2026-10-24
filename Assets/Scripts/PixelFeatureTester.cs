@@ -242,7 +242,7 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].export = PixelHuskSource.ExportState;
         features[features.Count - 1].import = PixelHuskSource.ImportState;
         Register("Kiln",
-                 "A brick kiln with a glowing mouth on its front. Anything that goes into the mouth from the side burns (lead a conveyor belt into it, or throw things in): each burnt pixel makes a Charcoal husk that comes out of the chute at the back. Charcoal despawns like any husk, for now.",
+                 "A brick kiln with a glowing mouth on its front. Anything that goes into the mouth from the side burns (lead a conveyor belt into it, or throw things in): each burnt pixel gives you 1 Charcoal (a material, in the Inventory's Materials tab). Charcoal buys the Charcoal Pixel in the shop, whose husks are generator fuel.",
                  c => PixelKiln.CreateGhost(c), (c, p, yw) => PixelKiln.Place(c, p, yw));
         features[features.Count - 1].export = PixelKiln.ExportState;
         features[features.Count - 1].import = PixelKiln.ImportState;

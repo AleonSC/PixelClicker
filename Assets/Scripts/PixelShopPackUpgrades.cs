@@ -688,6 +688,20 @@ public partial class PixelShop
             changed = true;
         }
 
+        if (packDataVersion < 41)
+        {
+            // Charcoal is its own shop pixel now (2026-10-24, bought with the Kiln's charcoal material): the Firemaker's Pack no longer rewards it.
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || p.rewardTiers == null || !Rewards(p, PixelClicker.PixelType.Fire)) continue;
+                    p.rewardTiers = Array.FindAll(p.rewardTiers, t => t == null || t.type != PixelClicker.PixelType.Charcoal);
+                    if (p.description != null) p.description = p.description.Replace("Ember, Fire and Charcoal", "Ember and Fire");
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 41);
+            changed = true;
+        }
+
         if (packDataVersion < 40)
         {
             // RGB is an unlock now (2026-10-16): Cubie's second visit gives the RGB Pack (hidden from the shop), the shop opens with it, and the Auto

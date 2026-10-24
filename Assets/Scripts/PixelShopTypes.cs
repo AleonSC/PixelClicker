@@ -28,7 +28,7 @@ public partial class PixelShop
         [Tooltip("How much of it is spent.")]
         public double amount = 100;
 
-        [Tooltip("Spend a minigame's goal counter instead of a pixel: the minigame's id (bomb = bomb parts). Empty = spend the pixel type above.")]
+        [Tooltip("Spend something that is not a pixel: a MATERIAL id (charcoal - PixelMaterials) or a minigame's id (bomb = bomb parts). Empty = spend the pixel type above.")]
         public string minigameCurrency = "";
     }
 

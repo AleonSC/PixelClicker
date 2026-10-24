@@ -37,6 +37,7 @@ public partial class PixelShop : IPixelDatabaseSource
                 if (p.costs != null)
                     foreach (PackCost c in p.costs)
                     {
+                        if (!string.IsNullOrEmpty(c.minigameCurrency) && PixelMaterials.IsMaterial(c.minigameCurrency)) continue;   // (materials have no Database entry yet)
                         if (!string.IsNullOrEmpty(c.minigameCurrency)) { b.Minigames.TryGetValue(c.minigameCurrency, out PixelDatabase.Entry mg); b.Link(pe, "Costs " + c.amount + " of minigame currency", mg, "Spent on shop pack"); }
                         else b.Link(pe, "Costs " + c.amount, b.Pixel(c.type), "Pays for shop pack");
                     }

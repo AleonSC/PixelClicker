@@ -748,26 +748,18 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     private bool CanAfford(PixelShop.PackCost c)
     {
         if (string.IsNullOrEmpty(c.minigameCurrency)) return clicker.CanAfford(c.type, c.amount);
-        if (PixelClicker.InfiniteResources) return true;
-        PixelMinigame m = Find(c.minigameCurrency);
-        return m != null && m.HasTracker && m.SpendableCount >= c.amount;
+        return PixelMaterials.CostAffordable(c.minigameCurrency, c.amount);
     }
 
     private void Spend(PixelShop.PackCost c)
     {
         if (string.IsNullOrEmpty(c.minigameCurrency)) { clicker.TrySpend(c.type, c.amount); return; }
-        if (PixelClicker.InfiniteResources) return;
-        PixelMinigame m = Find(c.minigameCurrency);
-        if (m != null) m.TrySpendTracker(c.amount);
+        PixelMaterials.CostSpend(c.minigameCurrency, c.amount);
     }
 
     private string CostName(PixelShop.PackCost c)
     {
-        if (!string.IsNullOrEmpty(c.minigameCurrency))
-        {
-            PixelMinigame m = Find(c.minigameCurrency);
-            return m != null && !string.IsNullOrEmpty(m.TrackerTitle) ? m.TrackerTitle : c.minigameCurrency;
-        }
+        if (!string.IsNullOrEmpty(c.minigameCurrency)) return PixelMaterials.CostName(c.minigameCurrency);
         int t = clicker.IndexOf(c.type);
         return t >= 0 ? clicker.Tiers[t].displayName : c.type.ToString();
     }

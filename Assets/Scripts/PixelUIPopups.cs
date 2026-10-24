@@ -237,6 +237,20 @@ public partial class PixelUI
         ui.ShowPopup(text, color, PopupAnchor.Fixed, local, Vector2.zero, 0.75f, 0f);
     }
 
+    /// <summary>A small text popup rising from a world point (e.g. the Kiln's "+1 Charcoal"). Nothing when popups are off.</summary>
+    public static void ShowWorldText(string text, Color color, Vector3 world)
+    {
+        PixelUI ui = inventoryInstance;
+        if (ui == null || ui.clicker == null || string.IsNullOrEmpty(text)) return;
+        if (!PopupsEnabled || !ui.showGainPopups || ui.popupCanvasRect == null) return;
+        Camera cam = ui.clicker.ViewCamera;
+        if (cam == null) return;
+        Vector3 screen = cam.WorldToScreenPoint(world);
+        if (screen.z < 0f) return;
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(ui.popupCanvasRect, screen, null, out Vector2 local);
+        ui.ShowPopup(text, color, PopupAnchor.Fixed, local, Vector2.zero, 0.75f, 0f);
+    }
+
     /// <summary>Shows (and adds up) "+X" next to a pixel's entry for each click's payout.</summary>
     private void AddGainDelta(int tierIndex, double amount)
     {
