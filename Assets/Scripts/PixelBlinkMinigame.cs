@@ -187,11 +187,7 @@ public class PixelBlinkMinigame : PixelMinigame
 
     private void Update()
     {
-        if (resultTimer > 0f)
-        {
-            resultTimer -= Time.unscaledDeltaTime;
-            if (resultTimer <= 0f && !activeRound && uiRoot != null) { Destroy(uiRoot); uiRoot = null; statusLabel = null; }
-        }
+        if (ResultShownLong(ref resultTimer, activeRound, uiRoot)) { Destroy(uiRoot); uiRoot = null; statusLabel = null; }
         if (activeRound) { Tick(Time.deltaTime); return; }
         if (!running || UserDisabled) return;
 

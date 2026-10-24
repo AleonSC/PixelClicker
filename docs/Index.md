@@ -49,6 +49,7 @@ One line per script / system: what it is and where its details are. Search it (`
 | `PixelMinigame.cs` | Abstract base for minigames (registry PixelMinigame.All/Find(id), Id, Running, Activate/Deactivate, optional goal tracker: | in the header comment of `PixelMinigame.cs` |
 | `PixelBlackholeMinigame.cs` | Black hole minigame (Minigames tab, a pack with unlocksMinigame = "blackhole"): | in the header comment of `PixelBlackholeMinigame.cs` |
 | `PixelMinigameLimits.cs` | Limits how many minigames have something on screen together (minAtOnce 2 / maxAtOnce 3, limitAtOnce, quietSecondsAfterPlay 30 (nothing spawns that soon after Play; | in the header comment of `PixelMinigameLimits.cs` |
+| `PixelBystanders.cs` | Takeover rounds' bystander husks (Snake, Sorting Race, Breakout): the husks not in the round freeze and shrink away while it runs and grow back after (a plain helper a minigame keeps in a field). | in the header comment of `PixelBystanders.cs` |
 | `PixelGhostMinigame.cs` | Ghost minigame (bought in the shop's Minigames tab via a pack with unlocksMinigame = "ghost"): | in the header comment of `PixelGhostMinigame.cs` |
 | `PixelMeteorMinigame.cs` | Meteor minigame (pack unlocksMinigame = "meteor", Minigames tab): | in the header comment of `PixelMeteorMinigame.cs` |
 | `PixelMeteorSynth.cs` | Code-made Meteor minigame sounds: meteor_spawn, the meteor_rumble loop, meteor_hit and meteor_click (replaceable by clips in the Sounds list). | in the header comment of `PixelMeteorSynth.cs` |

@@ -233,8 +233,7 @@ public class PixelSnakeMinigame : PixelMinigame
         base.OnDestroy();
         PixelHuskPool.HuskReleasing -= OnHuskReleasing;
         if (activeRound) EndRound(false, null);
-        bystanderFactor = 1f;
-        UpdateBystanders();
+        bystanders.Restore();   // put the other husks back at once
     }
 
     // (PixelHuskPool: the husk is going away and may be reused - let go of it, as if it had been destroyed; the round-end restore skips it)
@@ -242,7 +241,7 @@ public class PixelSnakeMinigame : PixelMinigame
     {
         foreach (Piece p in targets) if (p.body == body) { p.body = null; p.tf = null; p.despawn = null; }   // (dropped from the targets in the next step, like a destroyed one)
         foreach (Piece p in bodyPieces) if (p.body == body) { p.body = null; p.tf = null; p.despawn = null; }
-        for (int i = bystanders.Count - 1; i >= 0; i--) if (bystanders[i].body == body) bystanders.RemoveAt(i);
+        bystanders.Forget(body);
     }
 
     protected override void OnDespawned()
@@ -258,64 +257,21 @@ public class PixelSnakeMinigame : PixelMinigame
         if (Application.isPlaying && !activeRound) TryStart(true);
     }
 
-    // The old pixels that are not part of the round shrink away while it runs and grow back afterwards, so every pixel you can
+    // The husks that are not part of the round shrink away while it runs and grow back afterwards, so every husk you can
     // still see is one you can eat.
-    private class Bystander { public Rigidbody body; public Transform tf; public Vector3 baseScale; public Collider[] colliders; public Behaviour[] paused; }
-    private readonly List<Bystander> bystanders = new List<Bystander>();
-    private float bystanderFactor = 1f;
+    private readonly PixelBystanders bystanders = new PixelBystanders();   // the husks not in the round shrink away while it runs
 
     private void ShrinkBystanders()
     {
-        bystanders.Clear();
-        bystanderFactor = 1f;
         var inRound = new HashSet<Rigidbody>();
         foreach (Piece t in targets) inRound.Add(t.body);
-        var all = clicker.OldPixels;
-        for (int i = 0; i < all.Count; i++)
-        {
-            Rigidbody rb = all[i];
-            if (rb == null || inRound.Contains(rb) || clicker.IsFlyingPixel(rb)) continue;
-            OldPixelDespawn d = rb.GetComponent<OldPixelDespawn>();
-            if (d != null && (d.IsDespawning || d.Held)) continue;
-            bystanders.Add(new Bystander
-            {
-                body = rb, tf = rb.transform, baseScale = rb.transform.localScale,
-                colliders = rb.GetComponents<Collider>(),
-                paused = new Behaviour[] { rb.GetComponent<OldPixelGravityWell>(), rb.GetComponent<OldPixelFloat>() },
-            });
-        }
-        foreach (Bystander b in bystanders)
-        {
-            SetVelocities(b.body, Vector3.zero);
-            b.body.isKinematic = true;
-            foreach (Collider c in b.colliders) if (c != null) c.enabled = false;
-            foreach (Behaviour x in b.paused) if (x != null) x.enabled = false;
-        }
+        bystanders.Shrink(clicker, inRound);
     }
 
-    private void UpdateBystanders()
-    {
-        if (bystanders.Count == 0) return;
-        bystanderFactor = Mathf.MoveTowards(bystanderFactor, activeRound ? 0f : 1f, Time.unscaledDeltaTime / 0.6f);
-        bool done = !activeRound && bystanderFactor >= 1f;
-        for (int i = bystanders.Count - 1; i >= 0; i--)
-        {
-            Bystander b = bystanders[i];
-            if (b.body == null || b.tf == null) { bystanders.RemoveAt(i); continue; }
-            b.tf.localScale = b.baseScale * Mathf.Max(0.001f, bystanderFactor);
-            if (done)
-            {
-                foreach (Collider c in b.colliders) if (c != null) c.enabled = true;
-                foreach (Behaviour x in b.paused) if (x != null) x.enabled = true;
-                b.body.isKinematic = false;
-            }
-        }
-        if (done) bystanders.Clear();
-    }
 
     private void Update()
     {
-        UpdateBystanders();
+        bystanders.Tick(activeRound, 0.6f);
         if (activeRound) { Tick(Time.deltaTime); return; }
         if (!running) return;
 
@@ -421,7 +377,7 @@ public class PixelSnakeMinigame : PixelMinigame
         ShrinkBystanders();
         foreach (Piece p in targets)
         {
-            SetVelocities(p.body, Vector3.zero);
+            PixelBody.Steer(p.body, Vector3.zero, true);
             p.body.isKinematic = true;
             foreach (Behaviour b in p.paused) if (b != null) b.enabled = false;
         }
@@ -639,7 +595,7 @@ public class PixelSnakeMinigame : PixelMinigame
             else
             {
                 // They simply drop and age normally again.
-                SetVelocities(p.body, Vector3.zero);
+                PixelBody.Steer(p.body, Vector3.zero, true);
                 if (p.despawn != null) p.despawn.AddLifetime(3f);
             }
         }
@@ -762,14 +718,4 @@ public class PixelSnakeMinigame : PixelMinigame
 
     // ------------------------------------------------------------------
 
-    private static void SetVelocities(Rigidbody rb, Vector3 v)
-    {
-        if (rb == null || rb.isKinematic) return;
-#if UNITY_6000_0_OR_NEWER
-        rb.linearVelocity = v;
-#else
-        rb.velocity = v;
-#endif
-        rb.angularVelocity = Vector3.zero;
-    }
 }

@@ -191,9 +191,8 @@ public class PixelBreakoutMinigame : PixelMinigame
         public Vector2 pos; public bool alive;
     }
 
-    private class Bystander { public Rigidbody body; public Transform tf; public Vector3 baseScale; public Collider[] colliders; public Behaviour[] paused; }
-    private readonly System.Collections.Generic.List<Bystander> bystanders = new System.Collections.Generic.List<Bystander>();
-    private float bystanderFactor = 1f, slideT;
+    private readonly PixelBystanders bystanders = new PixelBystanders();   // the husks not in the round shrink away while it runs
+    private float slideT;
     private double earned;
     private float serveDelayExtra;
 
@@ -255,8 +254,7 @@ public class PixelBreakoutMinigame : PixelMinigame
         base.OnDestroy();
         PixelHuskPool.HuskReleasing -= OnHuskReleasing;
         if (activeRound) EndRound(false, null);
-        bystanderFactor = 1f;
-        UpdateBystanders();
+        bystanders.Restore();   // put the other husks back at once
     }
 
     // (PixelHuskPool: the husk is going away and may be reused - let go of it, as if it had been destroyed; the round-end restore skips it)
@@ -268,7 +266,7 @@ public class PixelBreakoutMinigame : PixelMinigame
             if (br.alive) { br.alive = false; bricksLeft = Mathf.Max(0, bricksLeft - 1); }
             br.body = null; br.tf = null; br.despawn = null;
         }
-        for (int i = bystanders.Count - 1; i >= 0; i--) if (bystanders[i].body == body) bystanders.RemoveAt(i);
+        bystanders.Forget(body);
     }
 
     protected override void OnDespawned()
@@ -283,67 +281,9 @@ public class PixelBreakoutMinigame : PixelMinigame
         if (Application.isPlaying && !activeRound) TryStart(true);
     }
 
-    private void ShrinkBystanders(System.Collections.Generic.HashSet<Rigidbody> inWall)
-    {
-        bystanders.Clear();
-        bystanderFactor = 1f;
-        var all = clicker.OldPixels;
-        for (int i = 0; i < all.Count; i++)
-        {
-            Rigidbody rb = all[i];
-            if (rb == null || inWall.Contains(rb) || clicker.IsFlyingPixel(rb)) continue;
-            OldPixelDespawn d = rb.GetComponent<OldPixelDespawn>();
-            if (d != null && (d.IsDespawning || d.Held)) continue;
-            bystanders.Add(new Bystander
-            {
-                body = rb, tf = rb.transform, baseScale = rb.transform.localScale,
-                colliders = rb.GetComponents<Collider>(),
-                paused = new Behaviour[] { rb.GetComponent<OldPixelGravityWell>(), rb.GetComponent<OldPixelFloat>() },
-            });
-        }
-        foreach (Bystander b in bystanders)
-        {
-            SetVelocities(b.body, Vector3.zero);
-            b.body.isKinematic = true;
-            foreach (Collider c in b.colliders) if (c != null) c.enabled = false;
-            foreach (Behaviour x in b.paused) if (x != null) x.enabled = false;
-        }
-    }
-
-    private void UpdateBystanders()
-    {
-        if (bystanders.Count == 0) return;
-        bystanderFactor = Mathf.MoveTowards(bystanderFactor, activeRound ? 0f : 1f, Time.unscaledDeltaTime / Mathf.Max(0.05f, bystanderSeconds));
-        bool done = !activeRound && bystanderFactor >= 1f;
-        for (int i = bystanders.Count - 1; i >= 0; i--)
-        {
-            Bystander b = bystanders[i];
-            if (b.body == null || b.tf == null) { bystanders.RemoveAt(i); continue; }
-            b.tf.localScale = b.baseScale * Mathf.Max(0.001f, bystanderFactor);
-            if (done)
-            {
-                foreach (Collider c in b.colliders) if (c != null) c.enabled = true;
-                foreach (Behaviour x in b.paused) if (x != null) x.enabled = true;
-                b.body.isKinematic = false;
-            }
-        }
-        if (done) bystanders.Clear();
-    }
-
-    private static void SetVelocities(Rigidbody rb, Vector3 v)
-    {
-        if (rb == null || rb.isKinematic) return;
-#if UNITY_6000_0_OR_NEWER
-        rb.linearVelocity = v;
-#else
-        rb.velocity = v;
-#endif
-        rb.angularVelocity = Vector3.zero;
-    }
-
     private void Update()
     {
-        UpdateBystanders();
+        bystanders.Tick(activeRound, bystanderSeconds);
         if (activeRound) { Tick(Time.deltaTime); return; }
         if (!running) return;
 
@@ -415,12 +355,12 @@ public class PixelBreakoutMinigame : PixelMinigame
         OldPixelDespawn.HoldAll = true;
         foreach (Brick br in bricks)
         {
-            SetVelocities(br.body, Vector3.zero);
+            PixelBody.Steer(br.body, Vector3.zero, true);
             br.body.isKinematic = true;
             foreach (Collider c in br.colliders) if (c != null) c.enabled = false;
             foreach (Behaviour x in br.paused) if (x != null) x.enabled = false;
         }
-        ShrinkBystanders(inWall);
+        bystanders.Shrink(clicker, inWall);
         slideT = 0f;
         earned = 0d;
 
@@ -695,7 +635,7 @@ public class PixelBreakoutMinigame : PixelMinigame
             foreach (Collider c in br.colliders) if (c != null) c.enabled = true;
             foreach (Behaviour x in br.paused) if (x != null) x.enabled = true;
             br.body.isKinematic = false;
-            SetVelocities(br.body, Vector3.zero);
+            PixelBody.Steer(br.body, Vector3.zero, true);
             if (br.despawn != null) br.despawn.AddLifetime(3f);
         }
         // Broken bricks: let go of physics only once they are gone (their despawn handles it).

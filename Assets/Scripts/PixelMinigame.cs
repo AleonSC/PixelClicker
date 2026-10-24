@@ -15,6 +15,8 @@
 //   spawn timer (DespawnNow() stops its coroutines and destroys the tracked objects).
 //   SPAWN STEP: a subclass's Update counts its spawn timer with SpawnDue(ref spawnTimer, blocked) - due + PixelMinigameLimits.AllowAnother + its own
 //   'blocked' reason, else the limits' retry time (2026-10-24: was a copied block in 13 minigames). The Visitor rolls its own way.
+//   RESULT TEXT: ResultShownLong(ref resultTimer, roundRunning, uiRoot) says when a round's result text should go (Blink, Dash, Evade, Traffic).
+//   Takeover rounds' bystander husks (shrink away during the round): PixelBystanders.
 //   TakeoverActive, AutoClickerPaused and the floor area claims are cleared on every scene unload (Settings > Restart).
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -300,6 +302,15 @@ public abstract class PixelMinigame : MonoBehaviour
 
     /// <summary>After a load: e.g. a goal already reached is not announced again.</summary>
     protected virtual void OnProgressLoaded() { }
+
+    /// <summary>The shared result-text step: counts a round's result timer down (real time) and says when its text should go -
+    /// the timer just ran out, no new round started and the text is still there. The subclass then destroys its UI.</summary>
+    protected static bool ResultShownLong(ref float timer, bool roundRunning, GameObject ui)
+    {
+        if (timer <= 0f) return false;
+        timer -= Time.unscaledDeltaTime;
+        return timer <= 0f && !roundRunning && ui != null;
+    }
 
     /// <summary>The shared spawn step for a subclass's Update: counts the timer down and says whether a round may start NOW.
     /// When it is due but PixelMinigameLimits says no (or 'blocked' - the subclass's own reason, like the pause menu or a takeover),
