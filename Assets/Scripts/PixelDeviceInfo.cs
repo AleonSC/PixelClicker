@@ -7,7 +7,7 @@
 //     (name, time / uses left with the progress bar, 'Click to start', powered, attuned; Full: run time, reach, Operation levels), then its own
 //     virtual AddInfo (subclasses: Storage Crate, Quantum Organizer...), then every IPixelDeviceInfo on the same object (the behaviour components
 //     next to a thin device stub: PixelRecycler, PixelSortingHopper, PixelSweeper).
-//   * ACTIONS (2026-10-18): a device can add its own buttons to the right-click panel with info.AddAction(label, onClick, role) when info.Full
+//   * ACTIONS (2026-10-18): a device can add its own buttons to the right-click panel with info.AddAction(label, onClick, role, onHover) when info.Full (onHover, optional: told when the pointer goes on / off the button)
 //     (the Sorting Hopper's 'Select filter' / 'Empty out'); the panel shows them two to a row above Remove / Upgrades.
 //   * STEPPERS (2026-10-18): '- value +' rows in the panel (info.AddStepper): the Operation upgrades' level in use (PixelShop.AddOperationLevels),
 //     so a player with every level bought can go back to level 3.
@@ -74,13 +74,14 @@ public sealed class PixelDeviceInfo
     public void AddStepper(string label, string value, System.Action onMinus, System.Action onPlus) => Steppers.Add(new DeviceStepper { Label = label, Value = value, OnMinus = onMinus, OnPlus = onPlus });
 
     /// <summary>A button of the device's own in the right-click panel.</summary>
-    public struct DeviceAction { public string Label; public ButtonRole Role; public System.Action OnClick; }
+    public struct DeviceAction { public string Label; public ButtonRole Role; public System.Action OnClick; public System.Action<bool> OnHover; }
 
     /// <summary>The device's own buttons (only used by the panel: add them when Full).</summary>
     public readonly List<DeviceAction> Actions = new List<DeviceAction>();
 
     /// <summary>Adds a button of the device's own to the right-click panel (call it when Full).</summary>
-    public void AddAction(string label, System.Action onClick, ButtonRole role = ButtonRole.Primary) => Actions.Add(new DeviceAction { Label = label, Role = role, OnClick = onClick });
+    /// <param name="onHover">Optional: told true when the pointer goes onto the button and false when it leaves (or the panel closes) - e.g. to show what the button acts on.</param>
+    public void AddAction(string label, System.Action onClick, ButtonRole role = ButtonRole.Primary, System.Action<bool> onHover = null) => Actions.Add(new DeviceAction { Label = label, Role = role, OnClick = onClick, OnHover = onHover });
 
     /// <summary>A 'label: value' line.</summary>
     public void Add(string label, string value) => Lines.Add("<color=#9FB0CC>" + label + ":</color> <b>" + value + "</b>");

@@ -1592,3 +1592,4 @@
 [2026-10-24 07:01 UTC] Cut the long save fix-up methods (block looks, shop pack data, floor styles, skill packs) and the Database's built-in steps into smaller named steps; every check still runs once, in the same order, so nothing changes in game.
 [2026-10-24 07:03 UTC] Code cleanup: 18 very long, branchy methods (Block Hold meter, Inventory refresh, Skills window, God Find stones and others) were cut into smaller named steps that run in the same order, and the unexplained settings in My Window and the Skills window now have Inspector tooltips.
 [2026-10-24 07:09 UTC] Placing conveyor belts: a right click now cancels the ghost (stops placing) instead of taking the last laid piece back; the pieces already laid stay.
+[2026-10-24 07:11 UTC] Belt panel: hovering 'Remove this piece' now makes only that belt piece glow (red) so you can see which one it removes; device panel buttons can now react to hovering.

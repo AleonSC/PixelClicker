@@ -544,7 +544,7 @@ public class PixelConveyor : MonoBehaviour
         RecordTrimParts();
         ApplyTrims();
         ApplySelection();
-        if (highlighted) { highlighted = false; SetHighlight(true); }   // (the panel's glow, rebuilt at the new size)
+        if (highlighted) { highlighted = false; SetHighlight(true, highlightRed); }   // (the panel's glow, rebuilt at the new size)
         PlaceRibs();
     }
 
@@ -944,13 +944,16 @@ public class PixelConveyor : MonoBehaviour
         ApplySelection();
     }
 
-    private bool highlighted;
+    private bool highlighted, highlightRed;
 
-    /// <summary>Shows or hides the warm glow round the belt: the section the belt panel is editing (PixelConveyorPanel).</summary>
-    public void SetHighlight(bool on)
+    /// <summary>Shows or hides the warm glow round the belt: the section the belt panel is editing (PixelConveyorPanel); 'removing' = a RED glow instead
+    /// (the piece a Remove button would take away, while the pointer is on it).</summary>
+    public void SetHighlight(bool on, bool removing = false)
     {
-        if (on == highlighted) return;
+        if (!on) removing = false;
+        if (on == highlighted && removing == highlightRed) return;
         highlighted = on;
+        highlightRed = removing;
         for (int i = transform.childCount - 1; i >= 0; i--)
         {
             Transform child = transform.GetChild(i);
@@ -959,7 +962,7 @@ public class PixelConveyor : MonoBehaviour
         if (!on || ghostMode) return;
         PixelFactoryKit k = new PixelFactoryKit(clicker, true, true);
         k.alpha = 0.45f;
-        k.Box("Panel Highlight", transform, new Vector3(0f, height * 0.5f + 0.1f * unit, 0f), new Vector3(width + 0.6f * unit, height + 0.55f * unit, length + 0.2f * unit), new Color(1f, 0.8f, 0.25f, 1f));
+        k.Box("Panel Highlight", transform, new Vector3(0f, height * 0.5f + 0.1f * unit, 0f), new Vector3(width + 0.6f * unit, height + 0.55f * unit, length + 0.2f * unit), removing ? new Color(1f, 0.2f, 0.15f, 1f) : new Color(1f, 0.8f, 0.25f, 1f));
     }
 
     private void ApplySelection()
