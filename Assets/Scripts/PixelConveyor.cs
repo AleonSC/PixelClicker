@@ -19,7 +19,7 @@
 //   the belt panel's SIZE stepper (2026-10-20) sets a belt's own lane count up to that maximum (SetLanes / WantedLanes, saved with the belt). Each rider travels in a LANE (belt-local x, PixelConveyor.LaneOffset / NearestLane): a pixel is
 //   captured into the lane it landed in, riders keep their gap per lane, and a hand-on to the next belt picks the nearest lane there.
 //   CONVEYOR BELT (a Dev Hub > Tester feature, PixelFeatureTester 'Conveyor Belt'). Placing: click a point, then click another: a belt is built between the two (the second point
-//   starts the next belt, so a series of short straight pieces makes a curve; right click ends the chain, a second right click stops placing). Clicks near the end of an existing belt
+//   starts the next belt, so a series of short straight pieces makes a curve; a right click stops placing; the pieces already laid stay). Clicks near the end of an existing belt
 //   snap to it. RIGHT CLICK a placed belt (not while placing) to reverse its direction (PixelConveyorSystem). A belt is a low solid slab with side rails and moving chevrons that show
 //   the way. LOCKED RIDING (no physics): an old pixel that lands on a belt (not held, not glued into a build, not flying, and there is room: riders keep a gap of 1.1 cube widths)
 //   is CAPTURED by PixelConveyorSystem - made kinematic, centred on the line and carried along it at beltSpeedCubes (0 = 1.6 cube widths per second) by position, like the Storage Crate

@@ -3,7 +3,7 @@
 Both are Dev Hub > Tester features (PixelFeatureTester), built from primitives in code with `PixelFactoryKit` (shared materials / boxes / cylinders / ghost versions). Not saved.
 
 ## Conveyor belt (PixelConveyor.cs)
-- Place: click a point, click another: a belt between them; the second point starts the next piece (short pieces = a curve); right click ends the chain, right click again (or Esc) stops. Clicks near a belt end snap to it (`PixelConveyor.Snap`). Two-point features are `RegisterLine` in the tester (marker ghost, then a preview piece).
+- Place: click a point, click another: a belt between them; the second point starts the next piece (short pieces = a curve); right click (or Esc) stops placing; the pieces already laid stay. Clicks near a belt end snap to it (`PixelConveyor.Snap`). Two-point features are `RegisterLine` in the tester (marker ghost, then a preview piece).
 - Quick right click a placed belt (not while placing): opens the BELT PANEL on its section (`PixelConveyorPanel`: speed, lanes, status, Reverse, Remove); a right HOLD removes that piece (`PixelFeatureTester`).
 - `PixelConveyorSystem.FixedUpdate` LOCKS every husk that lands on a belt (not held, not kinematic, not glued into a build, not flying, room for it) onto the belt and carries it along by position at `beltSpeedCubes` (0 = 1.6 cubes/s), no physics (like the Storage Crate). At the end it is handed to a belt that starts there, otherwise (an end is detected) it is ejected with physics back on, flying on in the belt direction. Riders keep a gap (queue when blocked). Flipping a belt flips its riders; grabbing one frees it.
 
