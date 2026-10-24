@@ -65,31 +65,7 @@ public partial class PixelCrafting
     /// <summary>The level bar along the bottom of the window: 'Level N' and the XP into the level, with a filling bar.</summary>
     private void BuildLevelBar()
     {
-        GameObject track = new GameObject("Level Bar", typeof(RectTransform), typeof(Image));
-        track.transform.SetParent(windowObject.transform, false);
-        Image trackImage = track.GetComponent<Image>();
-        trackImage.color = new Color(0.05f, 0.05f, 0.08f, 1f);
-        trackImage.raycastTarget = false;
-        PixelUIKit.StyleBox(trackImage, true);
-        RectTransform tr = track.GetComponent<RectTransform>();
-        tr.anchorMin = new Vector2(0f, 0f);
-        tr.anchorMax = new Vector2(1f, 0f);
-        tr.pivot = new Vector2(0.5f, 0f);
-        tr.offsetMin = new Vector2(28f, 22f);
-        tr.offsetMax = new Vector2(-28f, 22f + 46f);
-
-        GameObject fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
-        fill.transform.SetParent(track.transform, false);
-        Image fillImage = fill.GetComponent<Image>();
-        fillImage.color = levelBarColor;
-        fillImage.raycastTarget = false;
-        levelFill = fill.GetComponent<RectTransform>();
-        levelFill.anchorMin = Vector2.zero;
-        levelFill.anchorMax = new Vector2(0f, 1f);
-        levelFill.pivot = new Vector2(0f, 0.5f);
-        levelFill.offsetMin = new Vector2(3f, 3f);
-        levelFill.offsetMax = new Vector2(-3f, -3f);
-
+        Image track = PixelUIKit.CreateBottomBar(windowObject.transform, "Level Bar", levelBarColor, 28f, 22f, 46f, out levelFill);
         levelLabel = MakeLabel(track.transform, "Text", "", fontSize * 0.8f, TextAlignmentOptions.Center, FontStyles.Bold);
         levelLabel.raycastTarget = false;
         PixelUIKit.Caps(levelLabel);

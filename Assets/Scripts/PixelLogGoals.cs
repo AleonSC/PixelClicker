@@ -109,46 +109,18 @@ public partial class PixelLog
         vr.sizeDelta = new Vector2(-(panelPadding * 2f), viewHeight);   // exactly as wide as the tab row above: the rows line up with the tabs
         vr.anchoredPosition = new Vector2(0f, -viewTop);
 
-        GameObject contentGo = new GameObject("Content", typeof(RectTransform));
-        contentGo.transform.SetParent(view.transform, false);
-        contentRect = contentGo.GetComponent<RectTransform>();
-        contentRect.anchorMin = new Vector2(0f, 1f);
-        contentRect.anchorMax = new Vector2(1f, 1f);
-        contentRect.pivot = new Vector2(0.5f, 1f);
-        contentRect.sizeDelta = Vector2.zero;
-        contentRect.anchoredPosition = Vector2.zero;
+        contentRect = PixelUIKit.CreateScrollContent(view.transform);
 
         // Scrollbar
-        GameObject barGo = new GameObject("Scrollbar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
-        barGo.transform.SetParent(group.transform, false);
-        barGo.GetComponent<Image>().color = scrollbarTrackColor;
-        RectTransform br = barGo.GetComponent<RectTransform>();
+        Scrollbar scrollbar = PixelUIKit.CreateScrollBar(group.transform, scrollbarTrackColor);
+        RectTransform br = scrollbar.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 1f);
         float barWidth = PixelUIKit.ScrollBarWidth;                               // slim, rounded, and centred in the margin beside the rows
         br.sizeDelta = new Vector2(barWidth, viewHeight);
         br.anchoredPosition = new Vector2(-(panelPadding - barWidth) * 0.5f, -viewTop);
 
-        GameObject handleGo = new GameObject("Handle", typeof(RectTransform), typeof(Image));
-        handleGo.transform.SetParent(barGo.transform, false);
-        Image handleImage = handleGo.GetComponent<Image>();
-        PixelUIKit.StyleScrollBar(barGo.GetComponent<Image>(), handleImage);
-        RectTransform hr = handleGo.GetComponent<RectTransform>();
-        hr.offsetMin = hr.offsetMax = Vector2.zero;
-
-        Scrollbar scrollbar = barGo.GetComponent<Scrollbar>();
-        scrollbar.handleRect = hr;
-        scrollbar.targetGraphic = handleImage;
-        scrollbar.direction = Scrollbar.Direction.BottomToTop;
-
         ScrollRect scroll = view.GetComponent<ScrollRect>();
-        scroll.gameObject.AddComponent<PixelScrollSound>();
-        scroll.content = contentRect;
-        scroll.horizontal = false;
-        scroll.vertical = true;
-        scroll.movementType = ScrollRect.MovementType.Clamped;
-        scroll.scrollSensitivity = achievementScrollSpeed;
-        scroll.verticalScrollbar = scrollbar;
-        scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+        PixelUIKit.SetupVerticalScroll(scroll, contentRect, scrollbar, achievementScrollSpeed);
 
         empty = CreateText(view.transform, "Empty", emptyMessage.ToUpperInvariant(), rowFontSize, // capitals, centred in the window
                                          TextAlignmentOptions.Center, FontStyles.Bold,

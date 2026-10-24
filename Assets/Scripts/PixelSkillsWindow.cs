@@ -562,23 +562,7 @@ public partial class PixelSkills
 
     private void BuildTip()
     {
-        GameObject go = new GameObject("Skill Tip", typeof(RectTransform), typeof(Image));
-        go.transform.SetParent(canvasRoot.transform, false);
-        Image bg = go.GetComponent<Image>();
-        bg.color = new Color(0.05f, 0.05f, 0.08f, 0.97f);
-        bg.raycastTarget = false;
-        PixelUIKit.StyleBox(bg);
-        tipRect = go.GetComponent<RectTransform>();
-        tipRect.anchorMin = tipRect.anchorMax = new Vector2(0.5f, 0.5f);
-        tipRect.pivot = new Vector2(0f, 1f);
-        tipText = PixelUIKit.CreateText(Font, go.transform, "Text", "", 22f, TextAlignmentOptions.TopLeft, FontStyles.Normal, textColor);
-        tipText.richText = true;
-        tipText.raycastTarget = false;
-        RectTransform tr = tipText.rectTransform;
-        tr.anchorMin = tr.anchorMax = new Vector2(0f, 1f);
-        tr.pivot = new Vector2(0f, 1f);
-        tr.anchoredPosition = new Vector2(14f, -10f);
-        go.SetActive(false);
+        tipRect = PixelUIKit.CreateTipBox(Font, canvasRoot.transform, "Skill Tip", textColor, out tipText);
     }
 
     private string tipMeasured;

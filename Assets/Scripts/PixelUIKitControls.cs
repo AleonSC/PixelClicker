@@ -1,7 +1,7 @@
 // ---- System notes ----
 // PixelUIKitControls.cs
 //   Part of PixelUIKit (static partial class): the input controls - CreateDropdown / CreateLookDropdown (+ their icons and preview sprites),
-//   CreateInputField + AddSearchIcon, CreateScrollView / StyleScrollBar / UpdateScrollView, CreateTickBox, CreateSlider. The notes are in PixelUIKit.cs.
+//   CreateInputField + AddSearchIcon, CreateScrollView / CreateScrollContent / CreateScrollBar / SetupVerticalScroll / StyleScrollBar / UpdateScrollView, CreateTickBox, CreateSlider. The notes are in PixelUIKit.cs.
 // ---------------------------------------------------
 using TMPro;
 using UnityEngine;
@@ -282,14 +282,7 @@ public static partial class PixelUIKit
         view.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f); // invisible, but takes wheel / drag input
         RectTransform viewport = view.GetComponent<RectTransform>();
 
-        GameObject contentGo = new GameObject("Content", typeof(RectTransform));
-        contentGo.transform.SetParent(view.transform, false);
-        content = contentGo.GetComponent<RectTransform>();
-        content.anchorMin = new Vector2(0f, 1f);
-        content.anchorMax = new Vector2(1f, 1f);
-        content.pivot = new Vector2(0.5f, 1f);
-        content.sizeDelta = Vector2.zero;
-        content.anchoredPosition = Vector2.zero;
+        content = CreateScrollContent(view.transform);
 
         barObject = new GameObject("Scroll Bar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
         barObject.transform.SetParent(view.transform, false);
@@ -326,6 +319,58 @@ public static partial class PixelUIKit
         hide.scroll = scroll;
         hide.bar = barObject;
         return scroll;
+    }
+
+    /// <summary>A scroll view's CONTENT rect: anchored to the top, full width, zero height (the owner sets the height as it fills it).</summary>
+    public static RectTransform CreateScrollContent(Transform parent)
+    {
+        GameObject contentGo = new GameObject("Content", typeof(RectTransform));
+        contentGo.transform.SetParent(parent, false);
+        RectTransform content = contentGo.GetComponent<RectTransform>();
+        content.anchorMin = new Vector2(0f, 1f);
+        content.anchorMax = new Vector2(1f, 1f);
+        content.pivot = new Vector2(0.5f, 1f);
+        content.sizeDelta = Vector2.zero;
+        content.anchoredPosition = Vector2.zero;
+        return content;
+    }
+
+    /// <summary>
+    /// A vertical SCROLL BAR named "Scrollbar" under 'parent' (for windows that build their own ScrollRect, e.g. the Log's Goals tab and the Shop):
+    /// the track and a handle in the StyleScrollBar look, scrolling bottom to top. The caller positions its RectTransform and hands it to
+    /// <see cref="SetupVerticalScroll"/>.
+    /// </summary>
+    public static Scrollbar CreateScrollBar(Transform parent, Color trackColor)
+    {
+        GameObject barGo = new GameObject("Scrollbar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
+        barGo.transform.SetParent(parent, false);
+        barGo.GetComponent<Image>().color = trackColor;
+
+        GameObject handleGo = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+        handleGo.transform.SetParent(barGo.transform, false);
+        Image handleImage = handleGo.GetComponent<Image>();
+        StyleScrollBar(barGo.GetComponent<Image>(), handleImage);
+        RectTransform hr = handleGo.GetComponent<RectTransform>();
+        hr.offsetMin = hr.offsetMax = Vector2.zero;
+
+        Scrollbar scrollbar = barGo.GetComponent<Scrollbar>();
+        scrollbar.handleRect = hr;
+        scrollbar.targetGraphic = handleImage;
+        scrollbar.direction = Scrollbar.Direction.BottomToTop;
+        return scrollbar;
+    }
+
+    /// <summary>Sets a ScrollRect up to scroll its content up and down only (clamped, with the scroll sound), its bar fading in only when needed.</summary>
+    public static void SetupVerticalScroll(ScrollRect scroll, RectTransform content, Scrollbar scrollbar, float wheelSpeed)
+    {
+        scroll.gameObject.AddComponent<PixelScrollSound>();
+        scroll.content = content;
+        scroll.horizontal = false;
+        scroll.vertical = true;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.scrollSensitivity = wheelSpeed;
+        scroll.verticalScrollbar = scrollbar;
+        scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
     }
 
     /// <summary>The one look for every scroll bar: a slim rounded dark track with a lighter rounded handle.</summary>
