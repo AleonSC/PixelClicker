@@ -1642,3 +1642,4 @@
 [2026-10-24 13:07 UTC] Shop: the Saving up for card only shows while you have pinned something to save for; with nothing pinned the item grid moves up to fill its space (it used to leave an empty gap).
 [2026-10-24 13:37 UTC] Shop: item tiles show their price as colour squares only (which pixels it costs), and the detail panel lists just the cost without what you hold (the pinned Inventory shows that).
 [2026-10-24 13:18 UTC] Container Hose looks much better: a see-through ribbed tube wound with a reinforcing wire spiral, and the coupling at each end now grows a form-fitting hose adapter (rubber sleeve, flared bell, clamp) that the hose runs straight out of.
+[2026-10-24 14:32 UTC] Shop: item tiles show only their picture and name (no price); select one and its price shows in the detail panel on the right, and the pictures grew into the freed space.

@@ -2,8 +2,8 @@
 // PixelShopTilePage.cs
 //   Part of partial class PixelShop: the shop's tile page (one, the CATALOG: PixelShopCatalog.cs fills it). Since 2026-10-24 (the 'A' redesign) the
 //   whole shop is this one page: the category rail picks what it lists (page.chip = the rail entry; no chip buttons), the search box lists matches.
-//   - a scrolling grid of tiles (tileWidth x tileHeight, 4 to a row at the defaults): still 3D picture, the NAME, the price as colour squares
-//     only - which pixels it costs, no numbers (CostStrip.swatchesOnly; SetCosts / SetCostMessage), a small corner badge, a 'Locked' mark over the picture and a green
+//   - a scrolling grid of tiles (tileWidth x tileHeight, 4 to a row at the defaults): still 3D picture and the NAME - no price (CostStrip.hidden:
+//     select a tile and the detail panel shows it), a small corner badge, a 'Locked' mark over the picture and a green
 //     bar along the bottom when you can buy it now. Click a tile = select it, Shift-click = quick buy, hover = its description as the shop tooltip.
 //   - the DETAIL PANEL on the right for the selected tile (BuildDetailPanel, replaced the bottom buy bar): spinning picture, name, where it is listed,
 //     the full description, the cost ('75 White'; red = can't afford; what you hold is in the pinned Inventory beside the shop), an amount row (- count +) and quick amounts (x1 x5 x10 MAX) for
@@ -49,7 +49,7 @@ public partial class PixelShop
         public int maxColumns;    // slots per row (the rest wrap onto more rows)
         public bool withNames;    // "75 White" instead of "75" (the detail panel has room)
         public bool listed;       // a left-aligned list (the detail panel) instead of centred rows
-        public bool swatchesOnly; // only the colour squares, no numbers (the tiles: the detail panel shows the amounts)
+        public bool hidden;       // not shown at all (the tiles: a tile shows only its name, the price is in the detail panel)
         public float fontSize;
     }
 
@@ -284,7 +284,7 @@ public partial class PixelShop
         return id >= 0 && page.tiles.TryGetValue(id, out ItemTile tile) && tile.key != null ? tile.key() : null;
     }
 
-    /// <summary>A tile: still picture on top, the name, the price line, a badge in the top right corner, a 'Locked' mark and the can-buy bar.</summary>
+    /// <summary>A tile: still picture on top, the name (no price: the detail panel shows it), a badge in the top right corner, a 'Locked' mark and the can-buy bar.</summary>
     private ItemTile BuildTile(TilePage page, int id)
     {
         GameObject go = new GameObject("Tile " + id, typeof(RectTransform), typeof(Image));
@@ -296,7 +296,7 @@ public partial class PixelShop
         tile.rect.sizeDelta = new Vector2(tileWidth, tileHeight);
 
         float lineH = tileFontSize * 1.3f;
-        float pic = Mathf.Max(40f, Mathf.Min(tileWidth - 36f, tileHeight - lineH * 2f - 26f));
+        float pic = Mathf.Max(40f, Mathf.Min(tileWidth - 36f, tileHeight - lineH - 26f));   // (no price line: the picture takes its room)
         float y = 8f;
         if (!hidePictures && tile.key != null)
             tile.picture = AddPictureSlot(tile.rect, pic, new Vector2((tileWidth - pic) * 0.5f, y), false, tile.key, true, page.scroll.viewport, true);
@@ -308,8 +308,10 @@ public partial class PixelShop
         PlaceTopLeft(tile.name.rectTransform, 6f, y, tileWidth - 12f, lineH);
         y += lineH;
 
-        tile.costs = BuildCostStrip(go.transform, 6f, y, tileWidth - 12f, Mathf.Max(lineH, tileHeight - y - 10f), 6, 6, tileFontSize * 0.9f, false);
-        tile.costs.swatchesOnly = true;   // (just which pixels it costs: the amounts are in the detail panel, what you hold in the pinned Inventory)
+        // The price is not on the tile (only the name): select it and the detail panel shows it. The strip is built hidden so the fill code stays shared.
+        tile.costs = BuildCostStrip(go.transform, 6f, y, tileWidth - 12f, lineH, 1, 1, tileFontSize * 0.9f, false);
+        tile.costs.hidden = true;
+        tile.costs.root.gameObject.SetActive(false);
 
         tile.badge = CreateText(go.transform, "Badge", "", tileFontSize * 0.8f, TextAlignmentOptions.TopRight, FontStyles.Bold);
         tile.badge.richText = true;
@@ -422,6 +424,7 @@ public partial class PixelShop
     /// <summary>Shows a price: one swatch (the currency's colour) + number per cost, laid out in centred rows. 'locked' greys the numbers.</summary>
     private void SetCosts(CostStrip strip, PackCost[] costs, bool locked)
     {
+        if (strip.hidden) return;
         if (costs == null || costs.Length == 0) { SetCostMessage(strip, "Free", affordableColor); return; }
         if (strip.message.gameObject.activeSelf) strip.message.gameObject.SetActive(false);
 
@@ -447,16 +450,6 @@ public partial class PixelShop
             if (strip.withNames) text += " " + ShortCostName(cost);
             if (i == shown - 1 && costs.Length > shown) text += " +" + (costs.Length - shown);   // (more than fit: '+n')
             TMP_Text number = strip.numbers[i];
-            if (strip.swatchesOnly)
-            {
-                // Just the squares, side by side in one centred row (dimmed while locked).
-                if (number.gameObject.activeSelf) number.gameObject.SetActive(false);
-                float sq = Mathf.Min(size.y * 0.8f, strip.fontSize * 1.1f), gapX = sq * 0.45f;
-                float left = (size.x - (shown * sq + (shown - 1) * gapX)) * 0.5f;
-                if (locked) strip.swatches[i].color *= new Color(0.5f, 0.5f, 0.5f, 1f);
-                PlaceTopLeft((RectTransform)strip.swatches[i].transform, left + i * (sq + gapX), (size.y - sq) * 0.5f, sq, sq);
-                continue;
-            }
             PixelUIKit.SetText(number, text);
             number.color = locked ? lockedItemColor : CanAffordCost(cost) ? textColor : unaffordableColor;
 
@@ -483,6 +476,7 @@ public partial class PixelShop
     /// <summary>Shows one line of text instead of a price ('Full', 'Owned', what it still needs...).</summary>
     private static void SetCostMessage(CostStrip strip, string text, Color colour)
     {
+        if (strip.hidden) return;
         for (int i = 0; i < strip.swatches.Length; i++)
         {
             if (strip.swatches[i].gameObject.activeSelf) strip.swatches[i].gameObject.SetActive(false);
