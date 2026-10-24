@@ -1,0 +1,284 @@
+<title>Pixel Clicker First Hour</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one vertical spine of numbered steps (the order the player meets them), grouped by phase; steps that can happen at any point in a
+   phase hang off a dashed side rail; problems are flagged red and collected in their own tab. */
+:root {
+  --bg: #eef0f6; --panel: #ffffff; --ink: #1b1d2b; --dim: #5b5f78; --line: #d3d7e4; --accent: #b81f78; --spine: #9aa0bb;
+  --k-screen: #5b6bd6; --k-tip: #1f9fb8; --k-goal: #2e9e5b; --k-cubie: #14a38f; --k-visitor: #c46a1f; --k-tutorial: #8a5cc7;
+  --k-popup: #c0398a; --k-unlock: #c99a16; --k-announce: #7d8796; --k-choice: #d0453a; --bad: #d0453a; --bad-bg: #fbe9e7;
+  --display: "Silkscreen", "Courier New", monospace; --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e0c18; --panel: #181528; --ink: #ecebf6; --dim: #a29fc0; --line: #2d2948; --accent: #ff5cb7; --spine: #4a4670; --bad-bg: #3a1716; color-scheme: dark } }
+:root[data-theme="dark"] { --bg: #0e0c18; --panel: #181528; --ink: #ecebf6; --dim: #a29fc0; --line: #2d2948; --accent: #ff5cb7; --spine: #4a4670; --bad-bg: #3a1716; color-scheme: dark }
+[hidden] { display: none !important; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 26px 60px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 18px; }
+h1 { font: 700 clamp(22px, 3.4vw, 34px)/1.1 var(--display); margin: 0; text-wrap: balance; }
+h1 span { color: var(--accent); }
+.sub { margin: 6px 0 0; color: var(--dim); max-width: 74ch; }
+.bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.bar input[type=search] { flex: 1 1 240px; min-width: 0; font: 15px var(--body); padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); }
+.bar label { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; color: var(--dim); cursor: pointer; }
+.bar label input { accent-color: var(--accent); }
+.tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.tabs button { font: 700 13px var(--display); letter-spacing: .03em; background: none; border: 0; border-bottom: 3px solid transparent; color: var(--dim); padding: 10px 12px; cursor: pointer; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font: 700 11px var(--body); text-transform: uppercase; letter-spacing: .06em; padding: 3px 9px; border-radius: 99px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+.chip i { width: 9px; height: 9px; border-radius: 50%; }
+.chip.off { opacity: .35; }
+button:focus-visible, .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.phase { display: grid; gap: 10px; }
+.phase > header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+.phase h2 { font: 700 17px var(--display); margin: 0; }
+.phase h2 b { color: var(--accent); }
+.phase header small { color: var(--dim); font-size: 13px; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr); gap: 18px; align-items: start; }
+.spine { position: relative; display: grid; gap: 0; padding-left: 26px; }
+.spine::before { content: ""; position: absolute; left: 10px; top: 8px; bottom: 8px; width: 3px; border-radius: 2px; background: var(--spine); }
+.step { position: relative; padding-bottom: 10px; }
+.step::before { content: ""; position: absolute; left: -22px; top: 16px; width: 13px; height: 13px; border-radius: 50%; background: var(--kc); border: 3px solid var(--bg); }
+.step::after { content: "▼"; position: absolute; left: -21px; bottom: -3px; font-size: 9px; color: var(--spine); }
+.step:last-child::after { content: none; }
+.rail { display: grid; gap: 10px; border-left: 3px dashed var(--spine); padding-left: 14px; }
+.rail-title { font: 700 12px var(--body); text-transform: uppercase; letter-spacing: .08em; color: var(--dim); }
+.card { background: var(--panel); border: 1px solid var(--line); border-left: 5px solid var(--kc); border-radius: 9px; padding: 10px 12px; display: grid; gap: 5px; cursor: pointer; min-width: 0; }
+.card.bad { border-color: var(--bad); border-left-color: var(--bad); background: var(--bad-bg); }
+.card .top { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.card .num { font: 700 12px var(--mono); color: var(--dim); }
+.card .kind { font: 700 10.5px var(--body); text-transform: uppercase; letter-spacing: .07em; color: var(--kc); }
+.card .t { font-weight: 700; font-size: 15px; }
+.card .say { font-size: 13.5px; color: var(--ink); opacity: .9; overflow-wrap: anywhere; }
+.card .flag { font: 700 11px var(--body); color: #fff; background: var(--bad); border-radius: 4px; padding: 1px 7px; }
+.ids { display: flex; gap: 5px; flex-wrap: wrap; }
+.id { font: 700 11.5px var(--mono); background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; cursor: copy; color: var(--accent); }
+.id.ui { color: var(--k-screen); }
+.more { display: none; gap: 4px; font-size: 13px; color: var(--dim); border-top: 1px dashed var(--line); padding-top: 6px; margin-top: 2px; }
+.card.open .more { display: grid; }
+.more b { color: var(--ink); }
+.more code { font: 12px var(--mono); overflow-wrap: anywhere; }
+.issues { display: grid; gap: 10px; }
+.issue { background: var(--panel); border: 1px solid var(--line); border-left: 5px solid var(--bad); border-radius: 9px; padding: 12px 14px; display: grid; gap: 6px; }
+.issue b { font-size: 15px; }
+.issue p { margin: 0; font-size: 14px; }
+.issue button { justify-self: start; font: 700 12px var(--body); background: none; border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; color: var(--accent); cursor: pointer; }
+.rules { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.rules ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; }
+.note { font-size: 13px; color: var(--dim); max-width: 90ch; }
+.toast { position: fixed; bottom: max(16px, env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 6px 12px; border-radius: 6px; font-size: 13px; }
+.hit { outline: 3px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 820px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: no-preference) { .card { transition: border-color .12s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Pixel Clicker <span>First Hour</span></h1>
+    <p class="sub">Every screen, box, goal, Cubie page and popup a new player meets, in order, from launch to buying the first skill pack. Traced from the code on 24 Oct 2026. Click a step for its trigger and source; click an ID to copy it and quote it in chat (e.g. "reword C1.8").</p>
+  </header>
+  <div class="tabs" role="tablist">
+    <button role="tab" data-tab="flow" aria-selected="true">The flow</button>
+    <button role="tab" data-tab="issues" aria-selected="false">Problems found</button>
+    <button role="tab" data-tab="rules" aria-selected="false">Always-on rules</button>
+  </div>
+
+  <section id="tab-flow" style="display:grid;gap:14px">
+    <div class="bar">
+      <input type="search" id="q" placeholder="Search a step, a line of text or an ID (C1.8, T73, W7)..." aria-label="Search the steps">
+      <label><input type="checkbox" id="onlyBad"> Only steps with a problem</label>
+      <label><input type="checkbox" id="openAll"> Show all details</label>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div id="flow" style="display:grid;gap:18px"></div>
+  </section>
+
+  <section id="tab-issues" class="issues" hidden></section>
+
+  <section id="tab-rules" hidden>
+    <div class="rules">
+      <b>Rules that apply the whole time</b>
+      <ul>
+        <li>Only one box shows at a time (PixelTipQueue). Order of priority: tutorials, then perk popups, then first-time tips, then Did you know.</li>
+        <li>First-time tips do NOT wait for a calm moment, so the husk tip (T73) can show while Cubie is about to visit. Perk popups and tutorials do wait.</li>
+        <li>Cubie waits for calm: no tip box, no open window, not paused, no takeover minigame, no pet popup, then 1.5 s.</li>
+        <li>Vendors wait for their own calm check (no tip box or pending tips, time running, not in a menu), with one shared 180 s gap between any two visitors.</li>
+        <li>Goals and the guide line are hidden during the intro box. The event log fades while any window is open.</li>
+        <li>Cubie peeks out from behind the pause menu's Save / Load, Settings and Key bindings screens at any time.</li>
+        <li>With "Show first-time tips" off: no intro, no Cubie visits (the Recycler and RGB arrive quietly), no tutorials and no perk popups.</li>
+      </ul>
+    </div>
+  </section>
+
+  <p class="note">Kinds: screen, intro tip, tip, goal, Cubie page, visitor, tutorial step, popup, unlock, event-log line (announce), choice. Steps on the dashed side rail can happen at any time in that phase (their trigger says when). Dialogue IDs come from docs/DialogueMap.md, UI IDs from docs/UIMap.md. Rebuild this page by asking Claude to retrace the flow after big changes.</p>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const KINDS = {
+  screen: ['Screen', '--k-screen'], intro: ['Intro tip', '--k-tip'], tip: ['Tip', '--k-tip'], goal: ['Goal', '--k-goal'], cubie: ['Cubie page', '--k-cubie'],
+  visitor: ['Visitor', '--k-visitor'], tutorial: ['Tutorial step', '--k-tutorial'], popup: ['Popup', '--k-popup'], unlock: ['Unlock', '--k-unlock'],
+  announce: ['Event log line', '--k-announce'], choice: ['Choice', '--k-choice'],
+};
+// [num, kind, title, what the player sees, trigger, dialogue IDs, UI IDs, source, problem (or '')]
+const PHASES = [
+  { t: 'Launch', d: 'Before the game starts', main: [
+    ['1', 'screen', 'Studio intro (Galactic Arcade)', 'Earth, then the galaxy, GAME OVER, an arcade cabinet; the cube alien presses START: "presents" (~11 s).', 'Every launch while Settings "Studio intro" is on. Any key or click skips it.', '', 'M1', 'PixelTitleIntro.IntroRoutine -> PixelStudioIntro.PlayAtLaunch', ''],
+    ['2', 'screen', 'Launch intro', 'Black screen folds into the middle bar, the bar thumps, the logo drops and the buttons pop in.', 'Right after the studio intro. Any key skips it.', '', 'M2', 'PixelTitleIntro.cs', ''],
+    ['3', 'screen', 'Title screen', 'PIXEL CLICKER logo; the menu cube changes type on the beat; vendors wander; music player; Floor / Sky pickers.', 'The game is frozen; the camera holds a close-up of the cube.', '', 'M2 M3', 'PixelTitleScreen.Build', ''],
+    ['4', 'choice', 'Play button', '"New Game" when there is no save; "Continue" (loads the newest save) when there is one.', 'With saves, a new game starts from Load > an empty slot.', '', 'M2.2', 'PixelTitleScreen.OnPlay', ''],
+    ['5', 'screen', 'Play transition', 'The menu cube pops off as a fake husk, the player\'s block appears, the blur fades, game_start sound.', 'Pressing Play on a new game.', '', '', 'PixelTitleScreen.PlayRoutine', ''],
+    ['6', 'screen', 'Camera intro', 'The camera swings from the close-up to the play view over 3.4 s.', '0.5 s after Play. Clicks are locked during it on a new game.', '', '', 'PixelCameraIntro.cs', ''],
+  ], side: [] },
+  { t: 'First clicks', d: 'The intro box and the first goal', main: [
+    ['7', 'intro', 'Log intro (the only box before the first click)', 'The Log window opens, with a box beside it: "Click the cube to earn pixels: they\'re your money. Your goals are in the Log (bottom left)..."', '0.8 s after the camera intro, on a new game with tips on. Clicks on the cube are blocked until "Got it".', 'G1.1', 'W7 N1', 'PixelHints.TryStartIntro', 'The box says "your goals are in the Log", but goals are not checked until after Got it, so the Log probably shows no goals while the box is up.'],
+    ['7a', 'intro', 'Right-click intro (skipped)', '"Try the right mouse button too: HOLD it on the block on the cube..."', 'Only if Block Hold is already unlocked, which never happens in a new game.', 'G1.3', 'N1', 'PixelHints.cs', 'Dead text on a new game: it can never show here.'],
+    ['8', 'screen', 'First playable moment', 'The Log closes; the guide line reads: "Click 50 blocks (0 / 50) - a visitor drops by".', 'Got it on the intro box.', '', 'H15', 'PixelUIGuide.BuildGuideText', ''],
+    ['9', 'goal', 'Click 50 blocks', 'Goals tab row; reward "a visitor drops by".', 'Appears on the first goal check (0.25 s) after the intro; counts manual clicks from then.', '', 'W7.3', 'PixelGoals (click50)', ''],
+    ['10', 'screen', 'First click', '+1 White popup, the block falls as a husk, the next block rolls (White only). A "???" bar appears bottom left ("Something is growing...").', 'Left-click the cube.', '', 'N7 H20', 'PixelClicker.CollectInternal; PixelSkillsTracker', ''],
+  ], side: [
+    ['P1', 'tip', 'Husk crush tip', 'Small box at the right edge, time keeps running: "The blocks that fall off the cube are husks: leftover material from extracting..."', '12 manual clicks AND a crushable husk on the floor (about 4 s after the first click).', 'T73.1 T73.2', 'N1 N2 H16', 'PixelHuskCrush.UpdateTip', ''],
+    ['P2', 'goal', 'Crush 10 husks', 'Goals row; reward "Gray Pixels unlock". The guide line only switches to it after Click 50 is done.', 'Appears when 20 or more husks lie on the floor; usually during Click 50.', '', 'W7.3 H15', 'PixelGoals (crush10)', ''],
+  ] },
+  { t: 'Cubie, visit 1', d: 'The Recycler', main: [
+    ['11', 'announce', 'Click 50 done', '"Goal complete: Click 50 blocks (a visitor drops by)" + achievement sound.', '50 manual clicks since the goal appeared.', '', 'H16', 'PixelGoals.Complete', ''],
+    ['12', 'cubie', 'Visit 1, page 1', 'Cubie slides in at the bottom right and time freezes: "Psst... over here. The name\'s Cubie. I deal in pixels..."', 'Click 50 done + 1.5 s of calm (an open husk tip box or the Log window delays him).', 'C1.6', 'N20', 'PixelGuideVendor -> Visit(1)', ''],
+    ['13', 'cubie', 'Visit 1, page 2', '"Pixels are money around here. Why those and not the shiny ones?..."', 'Next button or Escape.', 'C1.7', 'N20', 'PixelGuideVendor (DefaultOne)', ''],
+    ['14', 'cubie', 'Visit 1, page 3: the Recycler', '"Those leftover bits on the floor? Don\'t let them rot..." + "+1 Recycler (in your Consumables)".', 'Next. The Recycler goes into Consumables with a purchase sound.', 'C1.8 C1.4', 'N20', 'PixelGuideVendor.GiveRecycler', ''],
+    ['14a', 'announce', 'Recycler given', '"Cubie gave you a Recycler! It is in your Consumables."', 'Same moment as page 3.', '', 'H16', 'PixelGuideVendor.GiveRecycler', ''],
+    ['15', 'cubie', 'Visit 1, page 4', '"Oh, don\'t mind the tag. Standard paperwork. Consider it a gift. Ish..." (button "Okay!")', 'Next. The last page.', 'C1.9 C1.3', 'N20', 'PixelGuideVendor (DefaultOne)', 'He mentions the tag before the player has placed the Recycler, so they have not seen it yet.'],
+    ['16', 'intro', 'Inventory intro (the Recycler popup)', 'The Inventory opens on Consumables, with a box: "Your Inventory: devices like this Recycler live in Consumables. Right-click one to place it."', 'Visit 1 ends.', 'G1.2', 'W1 W1.2 N1', 'PixelHints.ShowInventoryIntro', ''],
+    ['17', 'goal', 'Recycle 20 husks', 'Goals row; reward "Black Pixels unlock".', 'Right after visit 1.', '', 'W7.3 H15', 'PixelGoals (recycle20)', ''],
+  ], side: [] },
+  { t: 'Recycler, Gray and Black', d: 'The first unlocks', main: [
+    ['18', 'screen', 'Placing the Recycler', 'Status box: "Scroll or Q / E to turn the Recycler, click the floor to place it (right-click to cancel)". The placed bin wears Cubie\'s paper tag.', 'Right-click the Recycler in Consumables. It lasts 300 s once placed.', '', 'H13 H13.2 O1 O11', 'PixelConsumablesDefaults', 'Stuck risk: the gift Recycler lasts 5 minutes. If 20 husks are not recycled in time there is no second one (the shop is not open yet), so Black, visit 2 and the shop can stall.'],
+    ['18a', 'tip', 'Recycler placed tip (missing)', 'Nothing shows.', 'Placing a device asks for a "device_Recycler" tip, but none exists (only an editor warning).', '', '', 'PixelHints.OnDevice', 'No first-placement tip for the Recycler: the player is not told how it works.'],
+    ['18b', 'announce', 'Recycled batches', '"Recycled N husks: +x White..."', 'Each time the bin recycles a batch (repeats).', '', 'H16', 'PixelRecycler', ''],
+    ['19', 'unlock', 'Black unlocks', '"New pixel unlocked: Black Pixels!" + "Goal complete: Recycle 20 husks (Black Pixels unlock)" + banner "Black pixel unlocked".', '20 husks recycled since the goal appeared.', '', 'H16 H15', 'PixelGoals (recycle20)', ''],
+    ['20', 'goal', 'Earn 120 Black', 'Goals row; reward "Red, Green, Blue + the shop".', 'Same moment Recycle 20 completes. Counts Black earned by clicking from then (Recycler money does not count).', '', 'W7.3 H15', 'PixelGoals (earnblack)', ''],
+  ], side: [
+    ['P3', 'unlock', 'Gray unlocks (Crush 10 done)', 'In the log: "New pixel unlocked: Gray Pixels!", then "This is the Event Log - click this line to read about it", then "Goal complete: Crush 10 husks"; banner "Gray pixel unlocked"; unlock sound.', '10 crushes since Crush 10 appeared. Can come before or after visit 1.', 'T10.2', 'H16 H15', 'PixelGoals.Complete -> PixelHints.OnTierUnlocked', ''],
+    ['P4', 'tip', 'Event log tip', 'Only a log line (clicking it opens the full tip T10.1), never a box by itself.', 'The first pixel unlock of the save, normally Gray.', 'T10.1 T10.2', 'H16.2', 'PixelHints.Enqueue', 'It is meant to be the very first log line, but it arrives at the Gray unlock, after "Goal complete: Click 50" and the Recycler line.'],
+    ['P5', 'goal', 'Get a crush streak of 5', 'Goals row; reward "+60 ??? XP" (Standard\'s name is still hidden).', 'Appears at 3 minutes of play.', '', 'W7.3', 'PixelGoals (crushstreak5)', 'It reads the best streak ever, so it can complete the instant it appears.'],
+    ['P6', 'announce', 'Standard revealed', '"??? is Standard!" + two sounds, a gold punch on the bar.', 'Standard reaches 1,200 XP (about 3 minutes).', '', 'H16 H20', 'PixelSkillsStandard.RevealStandard', ''],
+    ['P7', 'popup', 'Standard level 2', 'The Skills window opens on Standard, time frozen: "That ??? bar was a skill all along: STANDARD - and it just reached level 2!..."', 'Level 2, at a calm moment (not while Cubie is visiting or about to).', 'P1.1', 'W9 N1 N26', 'PixelSkills.ShowNextPerkNotice', ''],
+    ['P8', 'unlock', 'Skills tab appears', 'The Skills tab shows; the "???" bar becomes the normal pinned tracker.', 'After the level 2 popup.', '', 'H8 H20', 'PixelSkills.SkillsTabUnlocked', ''],
+    ['P9', 'choice', 'First skill point', 'Standard tree: Block Hold OR Power Click; log "Standard: Block Hold" (or Power Click).', 'The player spends the level 2 point.', '', 'W10', 'PixelSkills', ''],
+    ['P10', 'tip', 'Stake intro', '"Try this: HOLD the right mouse button on a basic block (black, gray, white, red..."', 'Block Hold owned AND 25+ manual clicks, so right after picking Block Hold.', 'T74.1', 'N1', 'PixelBlockHold.LateUpdate', 'Never shows if the player picks Power Click first.'],
+    ['P11', 'popup', 'Standard level 3', '"SKILL LEVEL 3" badge + popup: "Standard level 3 - another skill point! Take the move you skipped..."', '3,000 Standard XP (about 8 minutes).', 'P2.1', 'N6 W9 H16', 'PixelSkills.AddXpFlat', ''],
+    ['P12', 'tip', 'Aimed Clicks', '"Aimed Clicks! Click near the EDGE of the cube..."', 'Buying the Aimed Clicks node (level 3+).', 'T72.1 T72.2', 'N1', 'PixelSkills', ''],
+    ['P13', 'tip', 'Did you know?', 'A box slides out at the docked edge with a random line from DidYouKnow.txt.', 'After 3 minutes of play, then every 2.5-5 minutes; lowest priority.', '', 'N4', 'PixelDidYouKnow', ''],
+  ] },
+  { t: 'Cubie, visit 2', d: 'Red, Green, Blue and the shop', main: [
+    ['21', 'announce', 'Earn 120 Black done', '"Goal complete: Earn 120 Black (Red, Green, Blue + the shop)".', '120 Black earned since the goal appeared.', '', 'H16', 'PixelGoals.Complete', ''],
+    ['22', 'cubie', 'Visit 2, page 1', '"Well, well... look at that pile of black. White, gray, black: you\'ve got the basics down."', 'Earn 120 Black done + 1.5 s of calm.', 'C1.10', 'N20', 'PixelGuideVendor -> Visit(2)', ''],
+    ['23', 'cubie', 'Visit 2, page 2: RGB', '"Here\'s the other half of the pure stuff: red, green and blue..." + "Red, Green and Blue pixels unlocked!" + 30-50 of each; a gift box in his hand.', 'Next.', 'C1.11', 'N20', 'PixelGuideVendor.GiveGift', ''],
+    ['23a', 'announce', 'RGB unlock lines', '"New pixel unlocked: Red Pixels!" / Green / Blue (no banner).', 'Same moment as page 2.', '', 'H16', 'PixelHints.OnTierUnlocked', 'The Red pixel tip (T67) never shows on this path: the gift unlocks RGB without triggering it.'],
+    ['23b', 'unlock', 'Shop button appears', 'The Shop button at the top right.', 'Red unlocked.', '', 'H5', 'PixelShopBuying', ''],
+    ['24', 'cubie', 'Visit 2, page 3', '"And my shop\'s open, top right. Save up for an Auto Clicker first..."', 'Next.', 'C1.12', 'N20', 'PixelGuideVendor (DefaultTwo)', ''],
+    ['25', 'cubie', 'Visit 2, page 4', '"Other peddlers will wander through. My friend the Wizard might drop by first..."', 'Next / Okay!', 'C1.13', 'N20', 'PixelGuideVendor (DefaultTwo)', 'The Wizard is not guaranteed to be first: the Tinkerer and Farmer start at the same moment with similar timers.'],
+    ['26', 'popup', 'Shop hold + nudge (does not fire)', 'Would be: time stays frozen, a gold frame on the Shop button and Cubie peeking under it.', 'Needs the shop tutorial not done, but with auto-start off the tutorial is marked done the moment the shop appears.', '', 'H5.1 N26', 'PixelGuideVendor.Visit; PixelShopTutorial.Update', 'Never fires as the code stands, so nothing points the player at the shop except Cubie\'s line and the goal.'],
+    ['27', 'tutorial', 'Shop tutorial (not automatic)', '"Welcome to the Shop! Prices are paid in the pixels listed on the left..." and 4 more steps.', 'Only from the Shop\'s blue "?" hold button or Settings > Replay tutorial.', 'G2.1 G2.2 G2.3 G2.4 G2.5', 'N22 W4', 'PixelShopTutorial', 'Does not start by itself, so most players never see it.'],
+    ['28', 'unlock', 'Vendors started (invisible)', 'Nothing visible yet.', 'Visit 2 ends: with 6 pixel types unlocked, the Wizard (60-100 s), Tinkerer and Farmer (60-120 s), Egg (10-20 min) and Bean (15-25 min) all start.', '', '', 'PixelGuideVendor.StartVendors', ''],
+    ['29', 'goal', 'Purchase the Auto Clicker', 'Goals row "Purchase the Auto Clicker": "Open the Shop and buy it"; the bar fills towards 150 of each pure colour.', 'The shop is open and the Auto Clicker is not bought.', '', 'W7.3', 'PixelLogGoals', ''],
+  ], side: [
+    ['P14', 'visitor', 'First vendor peek', 'Log "The Wizard is here!" (or Tinkerer / Farmer); the vendor leans in from the right: "Psst! {0} is here. Click me to see what I\'ve got!" for 20 s.', 'Whichever vendor\'s timer runs out first, at a calm moment; 180 s between visitors.', 'C3.4 C3.10', 'N21', 'PixelVisitorMinigame.VisitRoutine', ''],
+    ['P15', 'visitor', 'Vendor greeting / wares', 'Screen dims, time stops: "Ah, a customer! I am the Wizard, brewer of fine potions. For you, a mere {0}% off..."', 'The player clicks the peek.', 'C3.2', 'N21', 'PixelVisitorMinigame', ''],
+    ['P16', 'announce', 'Vendor missed', '"Wizard stopped by and left."', 'The peek is ignored for 20 s or closed; they come back sooner.', 'C3.11', 'H16', 'PixelVisitorMinigame', ''],
+    ['P17', 'tip', 'Potion tip', 'Small box at the top right: "Potion drunk! For a while only that pixel type spawns..."', 'The first potion drunk (e.g. bought from the Wizard).', 'T19.1', 'N1', 'PixelHints.OnPotion', ''],
+  ] },
+  { t: 'Auto Clicker and Toggles', d: 'Automation', main: [
+    ['30', 'announce', 'Auto Clicker bought', '"You bought Auto Clicker!" then "You unlocked the Auto Clicker!"', 'Buying it. It starts switched OFF; the Toggles tutorial is queued.', '', 'H16', 'PixelShopBuying', ''],
+    ['31', 'tutorial', 'Toggles tutorial 1', 'Dim + pause; Cubie narrates and points at the Toggles tab: "Psst - you bought the Auto Clicker! It starts switched OFF..."', 'Queued, the shop window is closed, the Toggles tab is visible, a calm moment, 2 s.', 'G3.1', 'N24 N25 H9', 'PixelTogglesTutorial', 'The text says the Toggles tab is "on the right edge", but it sits in the bottom-right corner.'],
+    ['32', 'tutorial', 'Toggles tutorial 2', 'The Toggles window on Upgrades: "Upgrades: here is your Auto Clicker. Tick it to start it..."', 'Got it.', 'G3.2', 'N24 W12', 'PixelTogglesTutorial', ''],
+    ['33', 'tutorial', 'Toggles tutorial 3', 'The window on Pixels: "Only things you own are listed. Pixels: some special pixels (like Glass)..."', 'Got it; then the window closes.', 'G3.3', 'N24 W12', 'PixelTogglesTutorial', ''],
+    ['34', 'goal', 'Purchase the Lumberjack\'s Pack', 'Goals row "Purchase the Lumberjack\'s Pack" (250 of each pure colour).', 'Auto Clicker bought AND the Toggles tutorial done (or tips off).', '', 'W7.3', 'PixelLogGoals', ''],
+  ], side: [] },
+  { t: 'The first skill', d: 'Buying the Lumberjack\'s Pack', main: [
+    ['35', 'announce', 'Lumberjack\'s Pack bought', '"You bought Lumberjack\'s Pack!" then about 10-12 lines "New pixel unlocked: Wood Pixels!" / Bark / Sap / Leaf / Heartwood / Twig / Pinecone / Moss / Acorn...', 'Buying the pack. No banner and no Got it box.', '', 'H16', 'PixelShopBuying', 'The log floods with ~11 unlock lines, and the Lumberjack\'s Pack tip (T57) never shows.'],
+    ['36', 'unlock', 'Woodcutting card + Lumberjack started', 'The Woodcutting card appears in Skills; the Lumberjack is started (first visit in 30-60 s, but only while Woodcutting is trained).', 'A trainable skill exists.', 'C7', 'W9', 'PixelGuideVendor.StartVendors', ''],
+    ['37', 'tutorial', 'Skills tutorial (not automatic)', '"Welcome to Skills! Every pixel you collect now trains a skill..." (9 steps).', 'Only from the Skills window\'s "?" or Settings > Replay tutorial.', 'G4.1 G4.2 G4.3 G4.4 G4.5 G4.6 G4.7 G4.8 G4.9', 'N23 W9.2', 'PixelSkillsTutorial', 'Does not start by itself, and nothing sends the player to the Skills window after buying the pack.'],
+    ['38', 'choice', 'Woodcutting guide question', 'A small box over the Skills window: "First time chopping? Want a quick tutorial on how Woodcutting works?"', 'The first time the Woodcutting card is shown in the open Skills window (the player has to open it themselves).', 'G5.1', 'W11 W11.1', 'PixelSkillsGuide.MaybeAskGuide', ''],
+    ['38a', 'tutorial', 'Yes: the Woodcutting guide', '7 dimmed boxes: "Woodcutting is a skill. Press Train and the cube stops showing pure pixels..."', 'Yes.', 'G5.3 G5.4 G5.5 G5.6 G5.7 G5.8 G5.9', 'W11 N25', 'PixelSkillsGuide', ''],
+    ['38b', 'tip', 'No: the book hint', '"No problem! Whenever you want it, the guide book next to the skill\'s name..." + a gold frame on the book.', 'No.', 'G5.2', 'W11 N26', 'PixelSkillsGuide', ''],
+  ], side: [] },
+];
+
+(function () {
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const hidden = new Set();
+  const all = [];
+  PHASES.forEach((p, pi) => { p.main.forEach(s => all.push({ s, pi, side: false })); p.side.forEach(s => all.push({ s, pi, side: true })); });
+
+  // legend (click to show / hide a kind)
+  const legend = document.getElementById('legend');
+  function drawLegend() {
+    legend.innerHTML = Object.entries(KINDS).map(([k, [label, v]]) => `<button class="chip${hidden.has(k) ? ' off' : ''}" data-k="${k}" aria-pressed="${!hidden.has(k)}"><i style="background:var(${v})"></i>${label}</button>`).join('');
+    legend.querySelectorAll('button').forEach(b => b.onclick = () => { const k = b.dataset.k; hidden.has(k) ? hidden.delete(k) : hidden.add(k); drawLegend(); draw(); });
+  }
+
+  function ids(list, cls) { return (list || '').split(' ').filter(Boolean).map(x => `<span class="id ${cls}" data-copy="${esc(x)}" title="Click to copy">${esc(x)}</span>`).join(''); }
+  function card(s) {
+    const [num, kind, t, say, trig, dlg, ui, src, bad] = s;
+    const [label, v] = KINDS[kind];
+    return `<div class="card${bad ? ' bad' : ''}" tabindex="0" id="step-${esc(num)}" style="--kc:var(${v})">
+      <div class="top"><span class="num">${esc(num)}</span><span class="kind">${label}</span><span class="t">${esc(t)}</span>${bad ? '<span class="flag">problem</span>' : ''}</div>
+      <div class="say">${esc(say)}</div>
+      ${dlg || ui ? `<div class="ids">${ids(dlg, '')}${ids(ui, 'ui')}</div>` : ''}
+      <div class="more"><div><b>When:</b> ${esc(trig)}</div><div><b>Code:</b> <code>${esc(src)}</code></div>${bad ? `<div style="color:var(--bad)"><b style="color:var(--bad)">Problem:</b> ${esc(bad)}</div>` : ''}</div>
+    </div>`;
+  }
+  const flow = document.getElementById('flow');
+  function draw() {
+    const q = document.getElementById('q').value.trim().toLowerCase(), onlyBad = document.getElementById('onlyBad').checked, openAll = document.getElementById('openAll').checked;
+    const keep = s => !hidden.has(s[1]) && (!onlyBad || s[8]) && (!q || s.join(' ').toLowerCase().includes(q));
+    flow.innerHTML = PHASES.map((p, i) => {
+      const m = p.main.filter(keep), sd = p.side.filter(keep);
+      if (!m.length && !sd.length) return '';
+      return `<section class="phase"><header><h2><b>${i + 1}.</b> ${esc(p.t)}</h2><small>${esc(p.d)}</small></header>
+        <div class="cols"><div class="spine">${m.map(s => `<div class="step" style="--kc:var(${KINDS[s[1]][1]})">${card(s)}</div>`).join('') || '<div class="note">No main steps match.</div>'}</div>
+        ${sd.length ? `<div class="rail"><div class="rail-title">Any time in this phase</div>${sd.map(card).join('')}</div>` : '<div></div>'}</div></section>`;
+    }).join('') || '<p class="note">No step matches.</p>';
+    flow.querySelectorAll('.card').forEach(c => {
+      if (openAll) c.classList.add('open');
+      c.addEventListener('click', e => { if (e.target.dataset.copy) return; c.classList.toggle('open'); });
+      c.addEventListener('keydown', e => { if (e.key === 'Enter') c.classList.toggle('open'); });
+    });
+  }
+  ['q', 'onlyBad', 'openAll'].forEach(id => document.getElementById(id).addEventListener('input', draw));
+  drawLegend(); draw();
+
+  // copy an ID
+  const toast = document.getElementById('toast');
+  document.addEventListener('click', e => {
+    const id = e.target.dataset && e.target.dataset.copy; if (!id) return;
+    const done = () => { toast.textContent = 'Copied ' + id; toast.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => toast.hidden = true, 1200); };
+    try { navigator.clipboard.writeText(id).then(done, () => { toast.textContent = id; toast.hidden = false; }); } catch (err) { toast.textContent = id; toast.hidden = false; }
+  });
+
+  // problems tab
+  const bad = all.filter(x => x.s[8]);
+  document.getElementById('tab-issues').innerHTML = `<p class="note">${bad.length} steps have a problem. The biggest: the shop hold and the Shop / Skills tutorials never start by themselves, so after Cubie's second visit nothing guides the player into the shop or the Skills window; and the gift Recycler can run out before Black unlocks.</p>`
+    + bad.map(({ s, pi }) => `<div class="issue"><b>${esc(s[0])} · ${esc(s[2])}</b><p>${esc(s[8])}</p><span class="note">${esc(PHASES[pi].t)}</span><button data-go="${esc(s[0])}">Show in the flow</button></div>`).join('');
+  document.querySelectorAll('#tab-issues button[data-go]').forEach(b => b.onclick = () => {
+    showTab('flow'); document.getElementById('onlyBad').checked = false; draw();
+    const el = document.getElementById('step-' + b.dataset.go); if (!el) return;
+    el.classList.add('open', 'hit'); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => el.classList.remove('hit'), 1800);
+  });
+
+  // tabs (#flow #issues #rules)
+  const tabs = ['flow', 'issues', 'rules'];
+  function showTab(t) {
+    if (!tabs.includes(t)) t = 'flow';
+    tabs.forEach(x => document.getElementById('tab-' + x).hidden = x !== t);
+    document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
+    try { history.replaceState(null, '', '#' + t); } catch (e) {}
+  }
+  document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+  showTab((location.hash || '#flow').slice(1));
+})();
+</script>
