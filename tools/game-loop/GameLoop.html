@@ -148,8 +148,8 @@ const N = [
     d: 'The block\'s leftover body. Husks wait on the floor (lifetime, floor cap) and are the material for everything husk-based: crushing, recycling, machines, storage.',
     miss: [] },
   { id: 'shop', x: 330, y: 90, t: 'Cubie\'s shop', s: 'packs, upgrades, devices', st: 'built',
-    d: 'Pixel packs (new blocks), Value levels, Operation upgrades, consumables and devices, skill packs, minigame packs - all for pure currency.',
-    miss: ['Skill pack price ladder (~2-3x each, second at ~25-30 min) not set yet.', 'Many early-development shop pixels / devices still need deciding: shop-only or unlocked later.'] },
+    d: 'Pixel packs (new blocks), Value levels, Operation upgrades, consumables and devices, minigame packs, and the gathering skill packs on one price ladder (250 of each pure colour for the Lumberjack\'s Pack, then 630 / 1.6K / 3.9K / 9.8K for the 2nd-5th pack you buy) - all for pure currency.',
+    miss: ['Many early-development shop pixels / devices still need deciding: shop-only or unlocked later.'] },
   { id: 'bill', x: 105, y: 165, t: 'Cubie\'s bill', s: 'trust tiers 0-3', st: 'built',
     d: 'Revealed at ~60 min. Paying 25K / 2.5M / 250M / 25B of each pure colour raises Cubie\'s trust, and each tier opens more machines and stock in his shop. Trust never gates skills or caps levels.',
     miss: ['Milestone amounts are placeholders until session reports cover hours of play.', 'The price-tag foreshadowing needs a rework (the tag sits on an item you have not placed yet).'] },
@@ -183,9 +183,9 @@ const N = [
   { id: 'goods', x: 200, y: 600, t: 'Skill goods', s: 'wood, ore, fish... currencies', st: 'built',
     d: 'Skill blocks pay their own currencies (Wood, Copper, Fish...). Used for skill tools from vendors and sold for pure currency.',
     miss: ['Few sinks inside their own skill; Composite Value upgrades (paid in the skill pixel) not built.'] },
-  { id: 'vendors', x: 105, y: 450, t: 'Vendors', s: 'Big Tim, Prospector, Farmer...', st: 'partial',
-    d: 'Visitors buy skill goods for pure currency and sell skill tools. Cubie calls them peddlers.',
-    miss: ['They buy at ~0.8x of the rarity rate: training a skill earns LESS pure currency than clicking, so skills slow Cubie\'s bill. The value ladder (~1.2x raw goods, ~2x products, ~3x orders) and market saturation are not built - a Tier 0 priority.', 'Only Big Tim has a full Sell tab.'] },
+  { id: 'vendors', x: 105, y: 450, t: 'Vendors', s: 'Big Tim, Prospector, Farmer...', st: 'built',
+    d: 'Visitors buy skill goods for pure currency and sell skill tools. One shared price rule (PixelMarket): a good is worth the clicks it took x 1.2 of what clicking pure blocks earns, and a vendor pays less for a good you sell a lot of, recovering over time. Cubie calls them peddlers.',
+    miss: ['The higher rungs wait for their systems: products (~2x) and vendor orders (~3x).', 'Only Big Tim and the Prospector show the market price and trend; the other vendors\' selling is thinner.'] },
   { id: 'minigames', x: 330, y: 720, t: 'Minigames', s: 'takeover + side games', st: 'partial',
     d: 'Black Hole, Ghost, Meteor, Stardust, Evil Tree, Snake, Dash, Breakout, Bomb and more. They pay currency, raise the minigame XP multiplier and drop materials / Ultra pixels.',
     miss: ['Most only pay currency; each should feed one skill the way the Evil Tree feeds Woodcutting.', 'Minigame progression rework (base-coin packs, goal-gated minigame pixels) not done.'] },
@@ -193,8 +193,8 @@ const N = [
     d: 'From minigames and the dragon\'s blessing. Spent on Ultra boosts per pixel type.',
     miss: ['Thin sink: the cosmetics shop (floors / skies behind Ultra, Wardrobe tab) is designed only; other uses still to decide.'] },
   { id: 'collect', x: 1075, y: 680, t: 'Collectibles', s: 'Dragon, God, Prime Cubes', st: 'built',
-    d: 'Super-rare drops with their own shows, the wish and the Gauntlet; the Collection Log and gallery track them.',
-    miss: ['Rare-set table cleanup (one data entry per family) not done; super-rare gear is post-1.0.'] },
+    d: 'Super-rare drops with their own shows, the wish and the Gauntlet, all driven by one table (PixelRareSets); the Collection Log and gallery track them. Super-rare gear is a post-1.0 maybe.',
+    miss: [] },
 ];
 
 // ---- Arrows: from, to, label, status, bend (curvature) ----
@@ -206,11 +206,11 @@ const E = [
   ['pure', 'bill', 'pay Cubie', 'built', 0.1],
   ['bill', 'shop', 'trust opens machines + stock', 'built', 0.1],
   ['bill', 'prestige', 'settle at 25B', 'open', 0],
-  ['shop', 'skills', 'skill packs (price ladder not set)', 'partial', 0.35],
+  ['shop', 'skills', 'skill packs on a price ladder', 'built', 0.35],
   ['skills', 'cube', 'swap the cube\'s blocks', 'built', -0.1],
   ['skills', 'goods', 'skill blocks pay goods', 'built', 0],
-  ['goods', 'vendors', 'sell', 'partial', 0.15],
-  ['vendors', 'pure', 'pure back (0.8x - too low)', 'partial', 0.15],
+  ['goods', 'vendors', 'sell (prices saturate)', 'built', 0.15],
+  ['vendors', 'pure', 'pure back (1.2x of clicking)', 'built', 0.15],
   ['husks', 'crush', 'right-click', 'built', -0.1],
   ['crush', 'standard', 'Standard XP + refunds', 'built', -0.12],
   ['standard', 'cube', 'Block Hold, Power Click...', 'built', 0.12],
@@ -234,8 +234,6 @@ const E = [
 
 // ---- Gaps (ranked) ----
 const GAPS = [
-  { sev: 'critical', node: 'vendors', t: 'Skills earn less pure currency than clicking', d: 'Training a skill swaps out the basic cubes, and vendors pay only ~0.8x for skill goods, so every skill slows Cubie\'s bill. The value ladder (raw goods ~1.2x, products ~2x, orders ~3x) with market saturation fixes it.', loop: 'Skills -> goods -> vendors -> pure', todo: 'Vendor value ladder + market saturation (PRIORITY)' },
-  { sev: 'critical', node: 'shop', t: 'No skill pack price ladder', d: 'Tier 0 needs the gathering packs priced so the second is affordable at ~25-30 min, the third at ~45 and the fourth at ~70 - the first real choice between skills.', loop: 'Pure -> shop -> skills', todo: 'Skill packs sold in the main shop for Pure currency' },
   { sev: 'critical', node: 'prestige', t: 'Nothing after the bill is settled', d: 'The spine ends at 25B of each colour (~25-30 h). Prestige - what resets, what stays, what Cubie\'s Goodwill gives - is undecided.', loop: 'Bill -> prestige -> a new run', todo: 'Design question Q2' },
   { sev: 'major', node: 'orders', t: 'The factory has no customer', d: 'Belts and machines move husks well, but nothing asks for their output. Vendor orders (and rapport) give a reason to build.', loop: 'Factory -> products -> orders -> pure', todo: 'Vendor orders; Vendor rapport' },
   { sev: 'major', node: 'products', t: 'Products and Discovery are not built', d: 'Machine outputs should be products that can discover new blocks - the way making skills get their blocks. Today only the Charcoal material exists and the Charcoal Pixel is bought in the shop.', loop: 'Materials -> products -> new blocks', todo: 'Products as a new item kind; Discovery; Move Wood Chips and Charcoal to products' },
@@ -257,7 +255,7 @@ const RES = [
   ['Husks', 'every click', 'crush, Recycler, Chipper, Kiln, generators, Crafting Cube, Bank, Lightning Rod, despawn', 'healthy', 'built'],
   ['Standard XP', 'crushes, clicks, goals', 'levels: abilities, tree twists, level-gated tools', 'healthy (curve to tune)', 'built'],
   ['Skill XP', 'skill blocks, Chipper, minigame multiplier', 'levels, perks, tree nodes (partly text only)', 'partial', 'partial'],
-  ['Skill goods', 'skill blocks', 'vendors (0.8x), skill tools', 'weak sink, low rate', 'partial'],
+  ['Skill goods', 'skill blocks', 'vendors (1.2x of clicking, saturating), skill tools', 'ok (few sinks inside their skill)', 'built'],
   ['Trust', 'paying the bill', 'opens machines + stock', 'built, numbers to tune', 'built'],
   ['Charcoal', 'Kiln', 'Biomass fuel (x8), Charcoal Pixel pack, Lumberjack', 'ok', 'built'],
   ['Wood Chips', 'Wood Chipper', 'Biomass fuel (x4), Lumberjack', 'ok', 'built'],
@@ -270,9 +268,9 @@ const RES = [
 
 // ---- Phases ----
 const PH = [
-  { t: 'Tier 0', when: '0 - ~1.5 h', built: 0.7, part: 0.2,
-    does: ['Pure colours, Cubie\'s Recycler, the shop, the Auto Clicker', 'First skill (Woodcutting) at 10-20 min, the rest on a price ladder', 'Husk Crush, Standard abilities, Hopper and Sweeper', 'Cubie\'s bill at ~60 min, then pay vs. skill'],
-    miss: ['Skill pack price ladder', 'Vendor value ladder (skills must pay back)', 'Tag / tab foreshadowing rework'] },
+  { t: 'Tier 0', when: '0 - ~1.5 h', built: 0.85, part: 0.1,
+    does: ['Pure colours, Cubie\'s Recycler, the shop, the Auto Clicker', 'First skill (Woodcutting) at 10-20 min, the rest on a price ladder', 'Husk Crush, Standard abilities, Hopper and Sweeper', 'Cubie\'s bill at ~60 min, then pay vs. skill (vendors pay 1.2x of clicking)'],
+    miss: ['Tag / tab foreshadowing rework', 'Playtest the ladder and market numbers against a session report'] },
   { t: 'Tier 1', when: '~1.5 - 6 h', built: 0.45, part: 0.3,
     does: ['Factory parts: belts, sorters, Junction Box', 'More gathering skills levelling', 'Generators and charcoal fuel'],
     miss: ['A reason to build: vendor orders', 'Products and Discovery', 'Build mode + free cam', 'Making skills\' way in'] },
