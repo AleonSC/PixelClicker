@@ -35,6 +35,8 @@
 //   button, drop-down choices, current value), so screen filters, day / night length, floor off modes and every other option can be found by searching; the Floor / Sky rows link to each look.
 //   PIN: Entry.pinType / pinKey (pixel = currency row, skill, achievement, listable consumable = favorite) drive the window's 'Pin to My Window' button (PixelMyWindow.CanPin / IsPinned / TogglePin).
 //   Known leak: a discovered entry's reference text still contains the hidden name, so searching for that exact name finds the discovered entry.
+//   CHARACTERS (2026-10-23): every visitor (PixelVisitorMinigame) is a 'Character' entry under its own name (who they are, when they visit, a greeting line,
+//   what they sell; discovered once started), and Cubie adds his own (PixelGuideVendor, ExtrasOrder: visits, his bill, links to the Recycler and the visitors). Tab 'People'.
 //   MYSTERY BAR (2026-10-18): while PixelSkills.StandardHidden (Standard below level 2) every entry whose name or text says 'Standard' is undiscovered.
 // ---------------------------------------------------
 using System;
