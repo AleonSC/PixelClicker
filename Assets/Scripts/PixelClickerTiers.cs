@@ -204,6 +204,7 @@ public partial class PixelClicker
                 if (list[i].rareDrop) { insertAt = i; break; }
         list.Insert(insertAt, copy);
         tiers = list.ToArray();
+        copy.MakeLive();   // (its progress is the GameState's from now on; a type a loaded save already has keeps the saved values)
         return insertAt;
     }
 

@@ -14,7 +14,7 @@ using System.Collections.Generic;
 public class GameState
 {
     /// <summary>The systems whose progress lives here (they must not implement IPixelSaved or register restart resets: tools/compile-check/rules.sh checks it). Add a system's class name when it moves.</summary>
-    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab", "PixelBaitBucket", "PixelCubieBill", "PixelCombo", "PixelHints", "PixelRobotWorker", "PixelPets", "PixelAchievements", "PixelConsumables", "PixelSkills", "PixelMinigame", "PixelShop" };
+    public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab", "PixelBaitBucket", "PixelCubieBill", "PixelCombo", "PixelHints", "PixelRobotWorker", "PixelPets", "PixelAchievements", "PixelConsumables", "PixelSkills", "PixelMinigame", "PixelShop", "PixelClicker" };
 
     public BankState bank = new BankState();
     public StatsState stats = new StatsState();
@@ -33,6 +33,7 @@ public class GameState
     public SkillsState skills = new SkillsState();
     public MinigamesState minigames = new MinigamesState();
     public ShopState shop = new ShopState();
+    public ClickerState clicker = new ClickerState();
 
     /// <summary>Fills in sub-states missing from an older save file (JsonUtility leaves a part the file lacks null in some cases).</summary>
     public void Repair()
@@ -61,6 +62,8 @@ public class GameState
         minigames.Repair();
         if (shop == null) shop = new ShopState();
         shop.Repair();
+        if (clicker == null) clicker = new ClickerState();
+        clicker.Repair();
         baitBucket.Repair();
         cubieBill.Repair();
         bank.Repair();
@@ -522,4 +525,65 @@ public class ShopState
         index[name] = found;
         return found;
     }
+}
+
+/// <summary>The currencies (PixelClicker): per pixel type how much you hold, the lifetime total, unlocked, spawning switched off, times collected and
+/// the Ultra / Value upgrade levels; and the Ultra pixels held and ever earned. Every live PixelTier of the clicker binds to its entry here (by type).</summary>
+[Serializable]
+public class ClickerState
+{
+    [Serializable]
+    public class Tier
+    {
+        public int type;              // PixelClicker.PixelType
+        public double count;          // spendable amount
+        public double total;          // ever collected
+        public bool unlocked;
+        public bool spawnDisabled;    // switched off by the player
+        public long timesCollected;
+        public int ultraLevel;
+        public int valueLevel;
+    }
+
+    public List<Tier> tiers = new List<Tier>();
+    public long ultraHeld;
+    public long ultraEarned;
+
+    [NonSerialized] private Dictionary<int, Tier> index;   // (a lookup made on first use; never saved)
+
+    public void Repair()
+    {
+        if (tiers == null) tiers = new List<Tier>();
+        tiers.RemoveAll(t => t == null);
+        HashSet<int> seen = new HashSet<int>();
+        tiers.RemoveAll(t => !seen.Add(t.type));   // (one entry per type)
+        foreach (Tier t in tiers)
+        {
+            if (t.count < 0d) t.count = 0d;
+            if (t.total < 0d) t.total = 0d;
+            if (t.timesCollected < 0L) t.timesCollected = 0L;
+            if (t.ultraLevel < 0) t.ultraLevel = 0;
+            if (t.valueLevel < 0) t.valueLevel = 0;
+        }
+        if (ultraHeld < 0L) ultraHeld = 0L;
+        if (ultraEarned < ultraHeld) ultraEarned = ultraHeld;
+        index = null;
+    }
+
+    public Tier Find(int type, bool create)
+    {
+        if (index == null || index.Count != tiers.Count)
+        {
+            index = new Dictionary<int, Tier>();
+            foreach (Tier t in tiers) if (t != null) index[t.type] = t;
+        }
+        if (index.TryGetValue(type, out Tier found) || !create) return found;
+        found = new Tier { type = type };
+        tiers.Add(found);
+        index[type] = found;
+        return found;
+    }
+
+    /// <summary>Everything ever collected, all types together (the save slots' 'pixels collected' summary).</summary>
+    public double TotalCollected { get { double sum = 0d; foreach (Tier t in tiers) sum += t.total; return sum; } }
 }

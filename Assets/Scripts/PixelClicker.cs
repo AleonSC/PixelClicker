@@ -64,7 +64,7 @@ public partial class PixelClicker : MonoBehaviour
         FlyAwayLaunched = null;
         abbreviateCache = -1;
         WishMultiplier = 1f;
-        PixelStatics.ResetOnRestart(OnSceneUnloaded);
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);   // restart-reset-not-progress: unsaved run effects (charges, boosts, the wish multiplier, click blocks)
     }
 
     // Settings > Restart reloads the scene but statics survive it: game state from the old game (a Capacitor charge, a Transistor boost,
@@ -1000,7 +1000,8 @@ public partial class PixelClicker : MonoBehaviour
         if (PixelPrefs.HasKey(PrefBackground)) Application.runInBackground = PixelPrefs.GetInt(PrefBackground) != 0;
         colorPropertyId = Shader.PropertyToID(colorPropertyName);
 
-        // Apply start-unlocked flags.
+        // The clicker's tiers keep their progress in the GameState from here on (PixelTier.MakeLive), then the start-unlocked flags.
+        MakeTiersLive();
         for (int i = 0; i < tiers.Length; i++)
         {
             if (tiers[i].unlockedAtStart) tiers[i].unlocked = true;
@@ -1035,6 +1036,7 @@ public partial class PixelClicker : MonoBehaviour
 
     private void Update()
     {
+        MakeTiersLive();   // (a tier object the Inspector re-created while playing joins the GameState again; a plain flag check per tier)
         AnimatePixel();
 
         CleanOldPixels();
@@ -1565,16 +1567,18 @@ public partial class PixelClicker : MonoBehaviour
         return taken;
     }
 
-    private long ultraEarned;
+    // ---- progress: the Ultra pixels (held, ever earned) live in the GameState (PixelGameState.Current.clicker), like every tier's counts ----
+    private static ClickerState CS => PixelGameState.Current.clicker;
+    private static long ultraEarned { get => CS.ultraEarned; set => CS.ultraEarned = value; }
 
     /// <summary>Ultra pixels ever earned (spending them on boosts does not lower this). The Ultra Pad's goal counter uses it.</summary>
     public long UltraEarned => ultraEarned;
 
-    /// <summary>Restores the lifetime Ultra count when loading a save (never below what you currently hold).</summary>
+    /// <summary>Sets the lifetime Ultra count (never below what you currently hold): the Ultra Holes' goal counter / the Dev Hub.</summary>
     public void SetUltraEarned(long value) => ultraEarned = System.Math.Max(System.Math.Max(0L, value), TotalUltra);
 
     // Ultra pixels are ONE general currency now (not per pixel type): minigames reward them, upgrades will spend them.
-    private long ultraPixels;
+    private static long ultraPixels { get => CS.ultraHeld; set => CS.ultraHeld = value; }
 
     /// <summary>The shared Ultra roll used by the minigames: a 'chance' (0..1) of giving one Ultra pixel. Returns true if it did.</summary>
     public bool RollUltra(float chance)
@@ -1594,13 +1598,6 @@ public partial class PixelClicker : MonoBehaviour
         UltraGained?.Invoke();
     }
 
-    /// <summary>Restores the Ultra pixels held when loading a save.</summary>
-    public void RestoreUltra(long held)
-    {
-        ultraPixels = System.Math.Max(0L, held);
-        ultraEarned = System.Math.Max(ultraEarned, ultraPixels);
-        NotifyChanged();
-    }
 
     /// <summary>How much each Ultra boost level adds to a pixel type's payout multiplier.</summary>
     public float UltraBonusPerLevel => ultraBonusPerLevel;
@@ -1688,20 +1685,24 @@ public partial class PixelClicker : MonoBehaviour
         RefreshUI();
     }
 
-    /// <summary>Replaces one tier's saved numbers (used by PixelSaveGame). Tiers unlocked at start stay unlocked.</summary>
-    public void LoadTierState(PixelType type, double count, double totalCollected, bool unlocked, bool spawnDisabled = false, long timesCollected = 0, int ultraLevel = 0, int valueLevel = 0)
+    /// <summary>Every tier of the clicker keeps its progress in the GameState (call after the tier list changed; cheap when nothing is new).</summary>
+    private void MakeTiersLive()
     {
-        int index = IndexOf(type);
-        if (index < 0) return;
+        if (tiers == null) return;
+        for (int i = 0; i < tiers.Length; i++) if (tiers[i] != null && !tiers[i].IsLive) tiers[i].MakeLive();
+    }
 
-        PixelTier tier = tiers[index];
-        tier.count = System.Math.Max(0d, count);
-        tier.totalCollected = System.Math.Max(0d, totalCollected);
-        tier.unlocked = unlocked || tier.unlockedAtStart;
-        tier.spawnDisabled = spawnDisabled;
-        tier.timesCollected = System.Math.Max(0L, timesCollected);
-        tier.ultraLevel = System.Math.Max(0, ultraLevel);
-        tier.valueLevel = System.Math.Max(0, valueLevel);
+    /// <summary>
+    /// A save was loaded (PixelSaveGame calls this at its old fixed step, FIRST: the shop and everything after it read the currencies): the tiers
+    /// read the loaded GameState from now on (they bind to it by themselves); here the start-unlocked ones stay unlocked and Ultra ever earned is never
+    /// below Ultra held. Then FinishLoad, as before.
+    /// </summary>
+    public void ApplyLoadedTiers()
+    {
+        MakeTiersLive();
+        for (int i = 0; i < tiers.Length; i++) if (tiers[i].unlockedAtStart) tiers[i].unlocked = true;
+        ultraEarned = System.Math.Max(ultraEarned, ultraPixels);
+        NotifyChanged();
     }
 
     /// <summary>Adds to a tier's "times collected" (used for offline progress, which pays without clicking).</summary>
@@ -1722,7 +1723,7 @@ public partial class PixelClicker : MonoBehaviour
         }
     }
 
-    /// <summary>Call after <see cref="LoadTierState"/>: re-rolls the pixel on screen and refreshes every display.</summary>
+    /// <summary>Call after <see cref="ApplyLoadedTiers"/>: re-rolls the pixel on screen and refreshes every display.</summary>
     public void FinishLoad()
     {
         ClearForcedSpawnTier();

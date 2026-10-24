@@ -26,18 +26,6 @@ public class PixelSaveGame : MonoBehaviour
     // Save data (what ends up in the JSON file)
     // ------------------------------------------------------------------
 
-    [Serializable]
-    private class TierSave
-    {
-        public int type;
-        public double count;
-        public double total;
-        public bool unlocked;
-        public bool spawnDisabled;
-        public long timesCollected;
-        public int ultraLevel;
-        public int valueLevel;
-    }
 
     [Serializable]
     private class SaveData
@@ -47,8 +35,7 @@ public class PixelSaveGame : MonoBehaviour
         public string slotName = "";   // the save's own name (Save / Load window > Rename): lives in the file, so it travels with it
         public long savedAtTicks;   // UTC, used for offline progress
         public double playSeconds;  // time played, for the slot list's summary (the stats part keeps the real one)
-        public TierSave[] tiers;
-        public long ultraPixels;   // Ultra pixels held
+        public double totalPixels;  // everything ever collected, for the slot list's summary (the GameState keeps the real numbers)
         public GameState state;   // the player's progress for the systems moved to GameState (PixelGameState; GameState.MovedSystems lists them)
         public PixelSaveRegistry.Part[] parts;   // systems that still save themselves (IPixelSaved) - none left since 2026-10-24: everything moved to the GameState
         public PixelFeatureTester.TesterSave[] testerObjects;   // the Dev Hub tester machines (Wood Chipper, belts + their riders, Kiln, Solar Panels)
@@ -209,7 +196,7 @@ public class PixelSaveGame : MonoBehaviour
             if (data == null) return false;
             savedAt = data.savedAt;
             playSeconds = data.playSeconds;
-            if (data.tiers != null) foreach (TierSave t in data.tiers) totalPixels += t.total;
+            totalPixels = data.totalPixels;
             return true;
         }
         catch (Exception)
@@ -538,21 +525,6 @@ public class PixelSaveGame : MonoBehaviour
             SaveData data = new SaveData { savedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), savedAtTicks = DateTime.UtcNow.Ticks };
             if (slot > 0) data.slotName = GetSlotName(slot);   // the save keeps its own name (a name waiting from a rename of an empty slot, or the one already in the file)
 
-            PixelClicker.PixelTier[] tiers = clicker.Tiers;
-            data.tiers = new TierSave[tiers.Length];
-            data.ultraPixels = clicker.TotalUltra;
-            for (int i = 0; i < tiers.Length; i++)
-                data.tiers[i] = new TierSave
-                {
-                    type = (int)tiers[i].type,
-                    count = tiers[i].count,
-                    total = tiers[i].totalCollected,
-                    unlocked = tiers[i].unlocked,
-                    spawnDisabled = tiers[i].spawnDisabled,
-                    timesCollected = tiers[i].timesCollected,
-                    ultraLevel = tiers[i].ultraLevel,
-                    valueLevel = tiers[i].valueLevel,
-                };
 
 
             data.testerObjects = PixelFeatureTester.ExportAll();
@@ -561,6 +533,7 @@ public class PixelSaveGame : MonoBehaviour
             PixelGameState.RaiseSaving();   // (world objects - placed devices, the running potion - copy themselves into the state first)
             data.state = PixelGameState.Current;   // (the moved systems' progress, whole)
             data.playSeconds = data.state.stats.playSeconds;
+            data.totalPixels = data.state.clicker.TotalCollected;
             data.parts = PixelSaveRegistry.ExportAll();   // (inventory, achievements, pets, UFO, toggles, event log...: each system's own part)
             // A minigame that moved the old pixels around (Breakout, Sorting Race...) is running: their positions aren't real now.
             if (!PixelMinigame.TakeoverActive) data.oldPixels = clicker.GetOldPixelStates().ToArray();
@@ -589,8 +562,7 @@ public class PixelSaveGame : MonoBehaviour
             }
             else
             {
-                double totalPixels = 0d;
-                if (data.tiers != null) foreach (TierSave ts in data.tiers) totalPixels += ts.total;
+                double totalPixels = data.totalPixels;
                 string autoShot = PixelAutosaves.Add(json, new PixelAutosaves.Meta { savedAt = data.savedAt, totalPixels = totalPixels, playSeconds = data.playSeconds },
                                                      keepAutosaveHistory ? autosaveHistorySize : 1);
                 if (autoShot != null) shots.Add(autoShot);
@@ -653,17 +625,13 @@ public class PixelSaveGame : MonoBehaviour
         try
         {
             SaveData data = JsonUtility.FromJson<SaveData>(File.ReadAllText(pathOverride ?? FilePath));
-            if (data == null || data.tiers == null) throw new Exception("the file is empty or damaged");
+            if (data == null || data.state == null) throw new Exception("the file is empty or damaged");
 
             // The moved systems' progress goes in first, whole (GameState); their views refresh at the end (PixelGameState.Loaded).
             PixelGameState.Replace(data.state);
 
-            // Pixels. Anything the save doesn't mention goes back to nothing / locked.
-            foreach (PixelClicker.PixelTier tier in clicker.Tiers)
-                clicker.LoadTierState(tier.type, 0d, 0d, false);
-            foreach (TierSave t in data.tiers)
-                clicker.LoadTierState((PixelClicker.PixelType)t.type, t.count, t.total, t.unlocked, t.spawnDisabled, t.timesCollected, t.ultraLevel, t.valueLevel);
-            clicker.RestoreUltra(data.ultraPixels);
+            // Pixels: the currencies are in the GameState now (a type the save never had: nothing held, locked); the clicker settles them FIRST.
+            clicker.ApplyLoadedTiers();
 
             // Shop: the packs bought are in the GameState; their effects are switched on / off HERE, before the rest of the load (a fixed core step).
             if (shop != null) shop.ApplyLoadedPackStates();

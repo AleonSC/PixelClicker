@@ -1555,3 +1555,5 @@
 [2026-10-24 00:41 UTC] The skill choices (the skill in training, the guest blocks switched on, the offline task) now live in the GameState instead of per-save settings, saved, loaded and reset with it (skill XP, nodes and Mastery were already there with the Stats); to-do updated.
 [2026-10-24 00:47 UTC] The minigames' on / off switches and goal counters (singularities, ghosts, meteor chunks, stardust, magic wood, bomb parts, ectoplasm) now live in the GameState, saved, loaded and reset with it; to-do updated.
 [2026-10-24 00:54 UTC] The shop packs you bought (and each upgrade's level) now live in the GameState, saved, loaded and reset with it; their effects still switch on / off at the same point of a load; to-do updated.
+[2026-10-24 00:59 UTC] The currencies (every pixel type's amount, lifetime total, unlocked, spawn switch, times collected, Ultra / Value levels, and the Ultra pixels held and ever earned) now live in the GameState: the move of the player's progress into one GameState is complete.
+[2026-10-24 00:59 UTC] To-do: the GameState move is marked done; a follow-up line lists retiring the old save registry and checking the remaining restart resets.
