@@ -1548,3 +1548,5 @@
 [2026-10-23 23:59 UTC] Dev Hub time control now goes up to 10x speed (the mouse wheel moves in 0.5x steps above 2x, and Fast has a 10x preset).
 [2026-10-23 23:59 UTC] The Junction Box shows a wide red aim beam straight up out of its top opening while you place or carry it, so it lines up under a spout (any device with a hole can get one through PixelAimOpening).
 [2026-10-23 23:59 UTC] Game Database: Cubie and every visitor (Wizard, Tinkerer, Entrepreneur, Farmer, Big Tim, the Prospector, Egg, Bean) now have Character entries saying who they are, when they visit and what they do, under a new People tab.
+[2026-10-24 07:20 UTC] Design: Cubie's trust tiers gate machines and stock only - every skill pack is on sale from Tier 0 and trust never caps skill levels; the skill packs were taken out of his Tier 1 stock and his Tier 1 line now talks about belts and machinery.
+[2026-10-24 07:20 UTC] Design + to-do: Tier 0 (the buildup to Cubie's Tier 1) written up - gathering skills on a price ladder in the first hour, the bill at ~60 min, then the juggle between paying and skilling; the vendor value ladder is marked as a Tier 0 priority.

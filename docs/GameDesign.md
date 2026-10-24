@@ -424,16 +424,29 @@ vendors take goods (orders) and buy skill currency and products for pure currenc
 | Milestone | Per colour | Target play time | Unlocks |
 |---|---|---|---|
 | The bill appears | - | ~1 h (end of the early game) | the Bill window |
-| 1 | 25K | ~1.5-2 h | Tier 1 Gathering - "A regular, then." |
-| 2 | 2.5M | ~4-6 h | Tier 2 Making - "Back room's open." |
-| 3 | 250M | ~12-15 h | Tier 3 Operation - "Don't tell the others." |
+| 1 | 25K | ~1.5-2 h | Tier 1 "A regular, then." - factory parts (belts, sorters, Junction Box) |
+| 2 | 2.5M | ~4-6 h | Tier 2 "Back room's open." - power and bigger machines (generators, Power Bank) |
+| 3 | 250M | ~12-15 h | Tier 3 "Don't tell the others." - premium stock, rare-hunting gear |
 | Settled | 25B | ~25-30 h (first run) | prestige |
 
 - A milestone may also ask for one light condition (e.g. Standard level 10).
 - **Interest is only talk:** he inflates the number in his speech; the real amount only grows at prestige (the next bill is x10).
-- **Trust opens his shop:** each tier opens more of his stock (Tier 0 starter stock; Tier 1 skill packs, factory parts, better potions;
-  Tier 2 bigger upgrades, generators, rarer consumables; Tier 3 premium stock, cosmetics, rare-hunting gear). Locked items show 'Tier N',
-  through the shop's shared requirement check.
+- **Trust opens his shop - MACHINES AND STOCK ONLY (decided 2026-10-24):** each tier opens more of his machines and stock (Tier 0 starter
+  stock + the basic husk tools; Tier 1 factory parts; Tier 2 power, bigger machines and upgrades, rarer consumables; Tier 3 premium stock,
+  cosmetics, rare-hunting gear). **Trust never gates skills and never caps a skill's level:** every gathering skill is on sale from Tier 0,
+  and the making / operation skills open by their input skills' levels (to-do 'Skill tiers'), not by Cubie. Locked items show
+  'Cubie's trust: Tier N', through the shop's shared requirement check.
+
+**Tier 0 - the buildup to Tier 1 (agreed 2026-10-24, numbers to tune)**
+- **0-10 min:** as built - the pure colours, Cubie's Recycler, the shop, the Auto Clicker.
+- **10-20 min:** the first skill (Woodcutting stays the cheap, nudged one).
+- **20-60 min:** every other gathering skill is ALREADY on sale, on a price ladder (each pack ~2-3x the last: the second affordable at ~25-30
+  min, the third ~45, the fourth ~70) - the player's first real choice between skills happens here.
+- **~60 min:** Cubie's bill - now there is a target: 25K of every pure colour.
+- **60-90+ min:** the juggle - pay the bill by clicking pure blocks, or train skills and SELL their goods for pure currency; level Standard,
+  add husk tools (Sorting Hopper at Standard 3, Sweeper at 5, Storage Crate).
+- **The must-have:** training a skill swaps out the basic cubes, so skills must pay back pure currency or every skill delays Tier 1 (the smart
+  play would be to ignore skills). The **vendor value ladder** (below; to-do item) is therefore part of Tier 0, not a later extra.
 
 **The tag and the reveal** (no inventory item - decided against a receipt item)
 - Visit 1: the Recycler he gives has a paper PRICE TAG on its rim: 'Property of Cubie.' Hovering it / the device card: 'Terms: see
@@ -449,8 +462,8 @@ vendors take goods (orders) and buy skill currency and products for pure currenc
 - **As built (2026-10-23):** the reveal goal is 'Earn 2,000 Blue' (appears at minute 40, after 'Earn 120 Black') - a placeholder for ~1 h.
   Every Recycler wears the tag until then (they are timed, so the visit-1 one alone would vanish). Locked stock is hidden before the reveal
   and shows 'Cubie's trust: Tier N' after it. The DRAFT stock table (on PixelCubieBill, Inspector): Tier 1 belts, Belt Sorter, Elevator,
-  Belt Jump, Combiner, Junction Box + the Forager / Angler / Farmer / Prospector / Electrician packs (Woodcutting stays open: it is the
-  first skill); Tier 2 Biomass Generators, Solar Panel, Power Bank, Quantum Organizer + the Fire / Nuclear packs; Tier 3 the Treasure
+  Belt Jump, Combiner, Junction Box (the skill packs that the first draft put here were taken out 2026-10-24: every skill is open from
+  Tier 0); Tier 2 Biomass Generators, Solar Panel, Power Bank, Quantum Organizer + the Fire / Nuclear packs; Tier 3 the Treasure
   pack. Potions and cosmetics are not tiered yet. Vendors still sell their own wares whatever the tier (they are the 'peddlers').
 
 **Where the pure money comes from - the value ladder (agreed, not built):** training a skill replaces the basic cubes, so skills must pay

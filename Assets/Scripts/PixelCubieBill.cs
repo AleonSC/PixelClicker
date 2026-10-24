@@ -8,6 +8,8 @@
 //     because income grows exponentially), an optional light condition (a skill level), what it opens, and Cubie's lines. Reaching
 //     milestone n = TRUST TIER n: CurrentTier is the ONE query everything asks; TierUnlocked(tier) is raised once per tier (Cubie talks:
 //     PixelGuideVendor.RequestTalk; the event log announces it). The last milestone = the bill is settled (prestige later, not built).
+//   - TRUST = MACHINES AND STOCK ONLY (decided 2026-10-24): every skill pack is on sale from Tier 0 (gathering skills in the first hour; making /
+//     operation skills open by their input skills' levels, not by trust), and trust NEVER caps a skill's level.
 //   - TRUST OPENS HIS SHOP: itemStock (device kind -> tier) and packStock (a pack by its reward pixel type or skill id -> tier) are the ONE
 //     table of what each tier puts on sale. The shop asks TierListed (hidden until the bill is revealed, so the early shop shows no
 //     mystery locks) and TierMet (on sale) through its shared requirement checks (PixelShop.IsPackRequirementMet / IsRequirementMet,
@@ -105,7 +107,7 @@ public class PixelCubieBill : MonoBehaviour
     [SerializeField] private bool lockShopByTier = true;
     [Tooltip("Shop items and the tier that puts each on sale. Items not listed are on sale from the start. An empty list is filled with the built-in draft.")]
     [SerializeField] private List<ItemStock> itemStock = new List<ItemStock>();
-    [Tooltip("Shop packs and the tier that puts each on sale. Packs not listed are on sale from the start. An empty list is filled with the built-in draft.")]
+    [Tooltip("Shop packs and the tier that puts each on sale. Packs not listed are on sale from the start. An empty list is filled with the built-in draft. Never list SKILL packs here: every skill is open from Tier 0 (trust gates machines and stock, not skills).")]
     [SerializeField] private List<PackStock> packStock = new List<PackStock>();
     [Tooltip("Text on a locked shop row. {0} = the tier needed.")]
     [SerializeField] private string lockedFormat = "Cubie's trust: Tier {0}";
@@ -269,10 +271,13 @@ public class PixelCubieBill : MonoBehaviour
 
     // ---- built-in data ----
 
+    private const string OpensTier1 = "belts, sorters, the Junction Box and other factory parts";
+    private const string Tier1Line = "I've put a few more things on the shelf for you. Belts, sorters, proper machinery. Don't make me regret it.";
+
     private static List<Milestone> DefaultMilestones() => new List<Milestone>
     {
-        new Milestone { name = "A regular", perColour = 25000d, opens = "skill packs and factory parts",
-            cubieLines = new[] { "Well, look who pays their bills. A regular, then.", "I've put a few more things on the shelf for you. Skill packs, belts, the works. Don't make me regret it." } },
+        new Milestone { name = "A regular", perColour = 25000d, opens = OpensTier1,
+            cubieLines = new[] { "Well, look who pays their bills. A regular, then.", Tier1Line } },
         new Milestone { name = "Back room", perColour = 2500000d, opens = "generators, bigger upgrades, rarer stock",
             cubieLines = new[] { "Back room's open. Mind the boxes. They're... inventory.", "Generators, the bigger upgrades, the good stuff. Trusted customers only. That's you. For now." } },
         new Milestone { name = "Inner circle", perColour = 250000000d, opens = "premium stock",
@@ -301,12 +306,7 @@ public class PixelCubieBill : MonoBehaviour
 
     private static List<PackStock> DefaultPackStock() => new List<PackStock>
     {
-        // Tier 1 - skill packs (Woodcutting, the first skill, stays on sale from the start)
-        new PackStock { label = "Forager's Pack", rewardType = PixelClicker.PixelType.Berry, tier = 1 },
-        new PackStock { label = "Angler's Pack", rewardType = PixelClicker.PixelType.Fish, tier = 1 },
-        new PackStock { label = "Farmer's Pack", rewardType = PixelClicker.PixelType.Dirt, tier = 1 },
-        new PackStock { label = "Prospector's Pack", rewardType = PixelClicker.PixelType.Copper, tier = 1 },
-        new PackStock { label = "Electrician", skillId = PixelSkills.ElectricianId, tier = 1 },
+        // (NO skill packs here - decided 2026-10-24: every skill is open from Tier 0; trust gates machines and stock only, and never caps skill levels)
         // Tier 2 - bigger blocks
         new PackStock { label = "Fire Pixel Pack", rewardType = PixelClicker.PixelType.Fire, tier = 2 },
         new PackStock { label = "Nuclear Pixel Pack", rewardType = PixelClicker.PixelType.Nuclear, tier = 2 },
@@ -314,8 +314,24 @@ public class PixelCubieBill : MonoBehaviour
         new PackStock { label = "Treasure Pixel Pack", rewardType = PixelClicker.PixelType.Treasure, tier = 3 },
     };
 
+    [SerializeField, HideInInspector] private int stockDataVersion;   // 1 = skill packs taken out of the trust table (2026-10-24)
+
     private void EnsureDefaults()
     {
+        if (stockDataVersion < 1)
+        {
+            // 2026-10-24: every skill is open from Tier 0 - the first draft put the gathering / Electrician packs at Tier 1; a saved list drops those rows.
+            if (packStock != null)
+                packStock.RemoveAll(r => r != null && (r.skillId == PixelSkills.ElectricianId ||
+                    (string.IsNullOrEmpty(r.skillId) && (r.rewardType == PixelClicker.PixelType.Berry || r.rewardType == PixelClicker.PixelType.Fish ||
+                                                         r.rewardType == PixelClicker.PixelType.Dirt || r.rewardType == PixelClicker.PixelType.Copper))));
+            if (milestones != null && milestones.Count > 0 && milestones[0] != null && milestones[0].opens == "skill packs and factory parts")
+            {
+                milestones[0].opens = OpensTier1;
+                if (milestones[0].cubieLines != null && milestones[0].cubieLines.Length > 1) milestones[0].cubieLines[1] = Tier1Line;
+            }
+            stockDataVersion = 1;
+        }
         if (milestones == null || milestones.Count == 0) milestones = DefaultMilestones();
         if (itemStock == null || itemStock.Count == 0) itemStock = DefaultItemStock();
         if (packStock == null || packStock.Count == 0) packStock = DefaultPackStock();
