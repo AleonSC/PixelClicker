@@ -29,32 +29,13 @@ using static PixelInput;
 /// balls, or run out of time, and nothing is lost. The court is drawn in a plane facing the camera. Add this to any GameObject
 /// (PixelShop adds it automatically if it is missing).
 /// </summary>
-public class PixelBreakoutMinigame : PixelMinigame
+public class PixelBreakoutMinigame : PixelScheduledMinigame
 {
     [Header("References")]
     [Tooltip("The PixelClicker (camera, husks, payouts). Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
 
-    [Header("State")]
-    [Tooltip("Run from the start without buying it in the shop (for testing).")]
-    [SerializeField] private bool startRunning = false;
-
-    [Tooltip("Is the minigame running? (The shop turns this on when Breakout is bought.)")]
-    [SerializeField] private bool running = false;
-
     [Header("When it starts")]
-    [Min(0f)]
-    [Tooltip("Seconds after the minigame is switched on before the first game can start.")]
-    [SerializeField] private float firstRoundDelay = 75f;
-
-    [Min(1f)]
-    [Tooltip("Shortest wait between games (seconds).")]
-    [SerializeField] private float minInterval = 150f;
-
-    [Min(1f)]
-    [Tooltip("Longest wait between games (seconds).")]
-    [SerializeField] private float maxInterval = 300f;
-
     [Min(1)]
     [Tooltip("A game only starts when at least this many husks are lying around: they become the bricks.")]
     [SerializeField] private int minPixels = 30;
@@ -196,7 +177,7 @@ public class PixelBreakoutMinigame : PixelMinigame
     private double earned;
     private float serveDelayExtra;
 
-    private float spawnTimer, timeLeft, serveTimer;
+    private float timeLeft, serveTimer;
     private bool activeRound, setBlock;
     private Camera cam;
     private GameObject root, uiRoot;
@@ -215,22 +196,22 @@ public class PixelBreakoutMinigame : PixelMinigame
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetBreakoutStatics() { Active = false; }
 
+    // This minigame's own defaults for the shared round schedule (PixelScheduledMinigame; a scene's values override them).
+    public PixelBreakoutMinigame()
+    {
+        firstRoundDelay = 75f;
+        minInterval = 150f;
+        maxInterval = 300f;
+    }
+
     public override string Id => "breakout";
     public override string DisplayName => "Breakout";
-    public override bool Running => running;
     public override bool Busy => activeRound;
     public override bool Takeover => true;
 
-    public override void Activate()
-    {
-        if (running) return;
-        running = true;
-        spawnTimer = firstRoundDelay;
-    }
-
     public override void Deactivate()
     {
-        running = false;
+        base.Deactivate();
         if (activeRound) EndRound(false, null);
     }
 
@@ -245,8 +226,7 @@ public class PixelBreakoutMinigame : PixelMinigame
             enabled = false;
             return;
         }
-        if (startRunning) running = true;
-        spawnTimer = firstRoundDelay;
+        StartSchedule();
     }
 
     protected override void OnDestroy()
@@ -272,7 +252,7 @@ public class PixelBreakoutMinigame : PixelMinigame
     protected override void OnDespawned()
     {
         if (activeRound) EndRound(false, null);
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
     }
 
     [ContextMenu("Start A Breakout Game Now")]
@@ -648,7 +628,7 @@ public class PixelBreakoutMinigame : PixelMinigame
         if (uiRoot != null) Destroy(uiRoot);
         uiRoot = null;
         statusLabel = null;
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
 
         if (win)
         {

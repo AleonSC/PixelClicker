@@ -24,31 +24,11 @@ using UnityEngine;
 /// <see cref="rewardMultiplier"/> x the pixel's worth for every point you ended with (nothing if you ended below zero). The clicks still pay as usual.
 /// Sounds are code-made (PixelTrafficSynth) until you put clips on the traffic_* sounds.
 /// </summary>
-public class PixelTrafficMinigame : PixelMinigame
+public class PixelTrafficMinigame : PixelScheduledMinigame
 {
     [Header("References")]
     [Tooltip("The PixelClicker (camera, cube, payouts). Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
-
-    [Header("State")]
-    [Tooltip("Run from the start without buying it in the shop (for testing).")]
-    [SerializeField] private bool startRunning = false;
-
-    [Tooltip("Is the minigame running? (The shop turns this on when Red Light Green Light is bought.)")]
-    [SerializeField] private bool running = false;
-
-    [Header("When it starts")]
-    [Min(0f)]
-    [Tooltip("Seconds after the minigame is switched on before the first round can start.")]
-    [SerializeField] private float firstRoundDelay = 100f;
-
-    [Min(1f)]
-    [Tooltip("Shortest wait between rounds (seconds).")]
-    [SerializeField] private float minInterval = 150f;
-
-    [Min(1f)]
-    [Tooltip("Longest wait between rounds (seconds).")]
-    [SerializeField] private float maxInterval = 300f;
 
     [Header("Rules")]
     [Min(5f)]
@@ -120,7 +100,7 @@ public class PixelTrafficMinigame : PixelMinigame
 
     private static readonly Color RedColor = new Color(1f, 0.2f, 0.2f, 1f), YellowColor = new Color(1f, 0.85f, 0.2f, 1f), GreenColor = new Color(0.25f, 1f, 0.4f, 1f);
 
-    private float spawnTimer, timeLeft, lightTimer, yellowStart, resultTimer, flash;
+    private float timeLeft, lightTimer, yellowStart, resultTimer, flash;
     private bool activeRound, forcedByMe;
     private int points, tierIndex, lastGoodBeat, lastTickBeat;
     private Light lightState;
@@ -134,22 +114,22 @@ public class PixelTrafficMinigame : PixelMinigame
     private Material ringMaterial, housingMaterial;
     private LineRenderer ring;
 
+    // This minigame's own defaults for the shared round schedule (PixelScheduledMinigame; a scene's values override them).
+    public PixelTrafficMinigame()
+    {
+        firstRoundDelay = 100f;
+        minInterval = 150f;
+        maxInterval = 300f;
+    }
+
     public override string Id => "traffic";
     public override string DisplayName => "Red Light Green Light";
-    public override bool Running => running;
     public override bool Busy => activeRound;
     public override bool Takeover => true;   // no other minigame starts while it runs (the cube itself stays clickable: TakeoverActive is not set)
 
-    public override void Activate()
-    {
-        if (running) return;
-        running = true;
-        spawnTimer = firstRoundDelay;
-    }
-
     public override void Deactivate()
     {
-        running = false;
+        base.Deactivate();
         if (activeRound) EndRound(false);
     }
 
@@ -157,8 +137,7 @@ public class PixelTrafficMinigame : PixelMinigame
     {
         base.Awake();
         if (!HookCubeClicks(ref clicker, OnCollected, OnHit)) return;
-        if (startRunning) running = true;
-        spawnTimer = firstRoundDelay;
+        StartSchedule();
     }
 
     protected override void OnDestroy()
@@ -174,7 +153,7 @@ public class PixelTrafficMinigame : PixelMinigame
         if (activeRound) EndRound(false);
         DestroyLight();
         DropRoundUi(ref uiRoot, ref statusLabel);
-        spawnTimer = RandomBetween(minInterval, maxInterval);
+        ScheduleNext();
     }
 
     [ContextMenu("Start A Traffic Round Now")]
@@ -314,7 +293,7 @@ public class PixelTrafficMinigame : PixelMinigame
         activeRound = false;
         ReleaseCubeRound(clicker, ref forcedByMe);
         DestroyLight();
-        spawnTimer = RandomBetween(minInterval, maxInterval);
+        ScheduleNext();
 
         if (!paid) { DropRoundUi(ref uiRoot, ref statusLabel); return; }
 

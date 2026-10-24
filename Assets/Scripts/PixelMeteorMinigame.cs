@@ -23,7 +23,7 @@ using static PixelInput;
 ///
 /// Add this to any GameObject (e.g. the cube). PixelShop adds it automatically if it is missing.
 /// </summary>
-public class PixelMeteorMinigame : PixelMinigame
+public class PixelMeteorMinigame : PixelScheduledMinigame
 {
     /// <summary>The meteor only trains Mining, whatever skill is in training.</summary>
     protected override string SkillXpTarget => PixelSkills.MiningId;
@@ -31,13 +31,6 @@ public class PixelMeteorMinigame : PixelMinigame
     [Header("References")]
     [Tooltip("The PixelClicker (for the camera and the cube's position). Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
-
-    [Header("State")]
-    [Tooltip("Run from the start without buying it in the shop (for testing).")]
-    [SerializeField] private bool startRunning = false;
-
-    [Tooltip("Is the minigame running? (The shop turns this on when Meteor Strike is bought.)")]
-    [SerializeField] private bool running = false;
 
     [Header("Meteor Chunks (goal)")]
     [Min(1)]
@@ -64,19 +57,6 @@ public class PixelMeteorMinigame : PixelMinigame
 
     [Tooltip("Text on a locked shop pack that needs the goal. {0} = chunks collected, {1} = goal.")]
     [SerializeField] private string requirementFormat = "Requires: {0} / {1} meteor chunks";
-
-    [Header("When it appears")]
-    [Min(0f)]
-    [Tooltip("Seconds after the minigame starts before the first meteor.")]
-    [SerializeField] private float firstMeteorDelay = 10f;
-
-    [Min(1f)]
-    [Tooltip("Shortest wait between meteors (seconds).")]
-    [SerializeField] private float minInterval = 60f;
-
-    [Min(1f)]
-    [Tooltip("Longest wait between meteors (seconds). Each wait is random between shortest and longest.")]
-    [SerializeField] private float maxInterval = 120f;
 
     [Header("Movement")]
     [Min(2f)]
@@ -210,8 +190,15 @@ public class PixelMeteorMinigame : PixelMinigame
     [Tooltip("Fired once, when the chunk count first reaches the goal.")]
     public UnityEvent onThresholdReached;
 
-    private float spawnTimer;
     private bool meteorActive;
+
+    // This minigame's own defaults for the shared round schedule (PixelScheduledMinigame; a scene's values override them).
+    public PixelMeteorMinigame()
+    {
+        firstRoundDelay = 10f;
+        minInterval = 60f;
+        maxInterval = 120f;
+    }
 
     public override bool Busy => meteorActive;
 
@@ -219,14 +206,13 @@ public class PixelMeteorMinigame : PixelMinigame
     {
         PixelAudio.StopLoop("meteor_rumble");
         meteorActive = false;
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
     }
     private bool thresholdAnnounced;
     private AudioSource audioSource;
 
     public override string DisplayName => "Meteor Strike";
     public override string Id => "meteor";
-    public override bool Running => running;
 
     // --- Tracker: meteor chunks (see PixelMinigame) ---
     public override bool HasTracker => true;
@@ -260,8 +246,7 @@ public class PixelMeteorMinigame : PixelMinigame
             return;
         }
 
-        if (startRunning) running = true;
-        spawnTimer = firstMeteorDelay;
+        StartSchedule();
         thresholdAnnounced = chunks >= chunkGoal;
     }
 
@@ -271,15 +256,6 @@ public class PixelMeteorMinigame : PixelMinigame
 
         if (SpawnDue(ref spawnTimer)) StartCoroutine(MeteorRoutine());
     }
-
-    public override void Activate()
-    {
-        if (running) return;
-        running = true;
-        spawnTimer = firstMeteorDelay;
-    }
-
-    public override void Deactivate() => running = false;
 
     /// <summary>Sends a meteor right now (right-click the component &gt; Send Meteor Now).</summary>
     [ContextMenu("Send Meteor Now")]
@@ -390,7 +366,7 @@ public class PixelMeteorMinigame : PixelMinigame
         PixelAudio.StopLoop("meteor_rumble");
         Destroy(root);
         if (rockMat != null) Destroy(rockMat);
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
         meteorActive = false;
     }
 

@@ -20,31 +20,11 @@ using UnityEngine;
 /// your own clicks count. The cube stays the pixel it was when the round started. When time is up you are paid a bonus of
 /// <see cref="rewardMultiplier"/> x that pixel's worth for every click you landed. (The clicks themselves still pay as usual.)
 /// </summary>
-public class PixelDashMinigame : PixelMinigame
+public class PixelDashMinigame : PixelScheduledMinigame
 {
     [Header("References")]
     [Tooltip("The PixelClicker (camera, cube, payouts). Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
-
-    [Header("State")]
-    [Tooltip("Run from the start without buying it in the shop (for testing).")]
-    [SerializeField] private bool startRunning = false;
-
-    [Tooltip("Is the minigame running? (The shop turns this on when Cube Dash is bought.)")]
-    [SerializeField] private bool running = false;
-
-    [Header("When it starts")]
-    [Min(0f)]
-    [Tooltip("Seconds after the minigame is switched on before the first round can start.")]
-    [SerializeField] private float firstRoundDelay = 70f;
-
-    [Min(1f)]
-    [Tooltip("Shortest wait between rounds (seconds).")]
-    [SerializeField] private float minInterval = 150f;
-
-    [Min(1f)]
-    [Tooltip("Longest wait between rounds (seconds).")]
-    [SerializeField] private float maxInterval = 300f;
 
     [Header("Rules")]
     [Min(5f)]
@@ -109,7 +89,7 @@ public class PixelDashMinigame : PixelMinigame
 
     private enum Phase { Dash, Dwell, Return }
 
-    private float spawnTimer, timeLeft, phaseT, dwellLength, noiseSeed, resultTimer;
+    private float timeLeft, phaseT, dwellLength, noiseSeed, resultTimer;
     private bool activeRound, forcedByMe;
     private int clicks, tierIndex;
     private Phase phase;
@@ -118,22 +98,22 @@ public class PixelDashMinigame : PixelMinigame
     private GameObject uiRoot;
     private TMP_Text statusLabel;
 
+    // This minigame's own defaults for the shared round schedule (PixelScheduledMinigame; a scene's values override them).
+    public PixelDashMinigame()
+    {
+        firstRoundDelay = 70f;
+        minInterval = 150f;
+        maxInterval = 300f;
+    }
+
     public override string Id => "dash";
     public override string DisplayName => "Cube Dash";
-    public override bool Running => running;
     public override bool Busy => activeRound;
     public override bool Takeover => true;   // no other minigame starts while it runs (the cube itself stays clickable: TakeoverActive is not set)
 
-    public override void Activate()
-    {
-        if (running) return;
-        running = true;
-        spawnTimer = firstRoundDelay;
-    }
-
     public override void Deactivate()
     {
-        running = false;
+        base.Deactivate();
         if (activeRound) EndRound(false);
     }
 
@@ -141,8 +121,7 @@ public class PixelDashMinigame : PixelMinigame
     {
         base.Awake();
         if (!HookCubeClicks(ref clicker, OnCollected, OnHit)) return;
-        if (startRunning) running = true;
-        spawnTimer = firstRoundDelay;
+        StartSchedule();
     }
 
     protected override void OnDestroy()
@@ -156,7 +135,7 @@ public class PixelDashMinigame : PixelMinigame
     {
         if (activeRound) EndRound(false);
         DropRoundUi(ref uiRoot, ref statusLabel);
-        spawnTimer = RandomBetween(minInterval, maxInterval);
+        ScheduleNext();
     }
 
     [ContextMenu("Start A Dash Now")]
@@ -288,7 +267,7 @@ public class PixelDashMinigame : PixelMinigame
         activeRound = false;
         ReleaseCubeRound(clicker, ref forcedByMe);
         clicker.SetCubeOffset(null);
-        spawnTimer = RandomBetween(minInterval, maxInterval);
+        ScheduleNext();
 
         if (!paid) { DropRoundUi(ref uiRoot, ref statusLabel); return; }
 

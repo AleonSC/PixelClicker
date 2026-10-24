@@ -13,6 +13,8 @@
 //   generically - a new minigame needs no changes to PixelShop or PixelSaveGame. For the dev tools' Despawn button a minigame must
 //   call Track(go) on everything it puts in the scene (roots, messages, effects) and override OnDespawned() to reset its busy flag /
 //   spawn timer (DespawnNow() stops its coroutines and destroys the tracked objects).
+//   ROUND SCHEDULE: a minigame that comes back on a timer derives from PixelScheduledMinigame (startRunning / running / firstRoundDelay /
+//   minInterval..maxInterval, Running / Activate / Deactivate, StartSchedule, ScheduleNext) instead of writing them again.
 //   SPAWN STEP: a subclass's Update counts its spawn timer with SpawnDue(ref spawnTimer, blocked) - due + PixelMinigameLimits.AllowAnother + its own
 //   'blocked' reason, else the limits' retry time (2026-10-24: was a copied block in 13 minigames). The Visitor rolls its own way.
 //   RESULT TEXT: ResultShownLong(ref resultTimer, roundRunning, uiRoot) says when a round's result text should go (Blink, Dash, Evade, Traffic).

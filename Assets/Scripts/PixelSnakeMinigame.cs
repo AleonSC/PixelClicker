@@ -34,32 +34,13 @@ using UnityEngine.InputSystem;
 /// until you turn. Everything is sized relative to the old pixels, so it works at any cube size. Add this to any GameObject
 /// (PixelShop adds it automatically if it is missing).
 /// </summary>
-public class PixelSnakeMinigame : PixelMinigame
+public class PixelSnakeMinigame : PixelScheduledMinigame
 {
     [Header("References")]
     [Tooltip("The PixelClicker (camera, husks, payouts). Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
 
-    [Header("State")]
-    [Tooltip("Run from the start without buying it in the shop (for testing).")]
-    [SerializeField] private bool startRunning = false;
-
-    [Tooltip("Is the minigame running? (The shop turns this on when Snake is bought.)")]
-    [SerializeField] private bool running = false;
-
     [Header("When it starts")]
-    [Min(0f)]
-    [Tooltip("Seconds after the minigame is switched on before the first snake round can start.")]
-    [SerializeField] private float firstRoundDelay = 60f;
-
-    [Min(1f)]
-    [Tooltip("Shortest wait between rounds (seconds).")]
-    [SerializeField] private float minInterval = 120f;
-
-    [Min(1f)]
-    [Tooltip("Longest wait between rounds (seconds).")]
-    [SerializeField] private float maxInterval = 240f;
-
     [Min(2)]
     [Tooltip("A round only starts when at least this many husks are lying around.")]
     [SerializeField] private int minPixels = 8;
@@ -180,7 +161,6 @@ public class PixelSnakeMinigame : PixelMinigame
     private readonly List<Piece> bodyPieces = new List<Piece>();
     private readonly List<Vector3> trail = new List<Vector3>();
 
-    private float spawnTimer;
     private bool activeRound;
     private Camera cam;
     private GameObject head;
@@ -194,22 +174,22 @@ public class PixelSnakeMinigame : PixelMinigame
     private TMP_Text statusLabel;
     private bool setBlock;
 
+    // This minigame's own defaults for the shared round schedule (PixelScheduledMinigame; a scene's values override them).
+    public PixelSnakeMinigame()
+    {
+        firstRoundDelay = 60f;
+        minInterval = 120f;
+        maxInterval = 240f;
+    }
+
     public override string Id => "snake";
     public override string DisplayName => "Snake";
-    public override bool Running => running;
     public override bool Busy => activeRound;
     public override bool Takeover => true;
 
-    public override void Activate()
-    {
-        if (running) return;
-        running = true;
-        spawnTimer = firstRoundDelay;
-    }
-
     public override void Deactivate()
     {
-        running = false;
+        base.Deactivate();
         if (activeRound) EndRound(false, null);
     }
 
@@ -224,8 +204,7 @@ public class PixelSnakeMinigame : PixelMinigame
             enabled = false;
             return;
         }
-        if (startRunning) running = true;
-        spawnTimer = firstRoundDelay;
+        StartSchedule();
     }
 
     protected override void OnDestroy()
@@ -248,7 +227,7 @@ public class PixelSnakeMinigame : PixelMinigame
     {
         // The dev tools' Despawn: end the round quietly (everything goes back to normal).
         if (activeRound) EndRound(false, null);
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
     }
 
     [ContextMenu("Start A Snake Round Now")]
@@ -267,7 +246,6 @@ public class PixelSnakeMinigame : PixelMinigame
         foreach (Piece t in targets) inRound.Add(t.body);
         bystanders.Shrink(clicker, inRound);
     }
-
 
     private void Update()
     {
@@ -618,7 +596,7 @@ public class PixelSnakeMinigame : PixelMinigame
         uiRoot = null;
         statusLabel = null;
 
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
 
         if (win)
         {

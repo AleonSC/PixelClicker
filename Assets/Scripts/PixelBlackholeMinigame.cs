@@ -28,18 +28,11 @@ using UnityEngine.Events;
 ///
 /// Add this to any GameObject (e.g. the cube). PixelShop adds it automatically if it is missing.
 /// </summary>
-public class PixelBlackholeMinigame : PixelMinigame
+public class PixelBlackholeMinigame : PixelScheduledMinigame
 {
     [Header("References")]
     [Tooltip("The PixelClicker (camera, husks). Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
-
-    [Header("State")]
-    [Tooltip("Run from the start without buying it in the shop (for testing).")]
-    [SerializeField] private bool startRunning = false;
-
-    [Tooltip("Is the minigame running? (The shop turns this on when the Black Hole is bought.)")]
-    [SerializeField] private bool running = false;
 
     [Header("Singularity Tracker")]
     [Min(1)]
@@ -93,18 +86,6 @@ public class PixelBlackholeMinigame : PixelMinigame
     [SerializeField] private bool creditSwallowedPixels = false;
 
     [Header("When it opens")]
-    [Min(0f)]
-    [Tooltip("Seconds after the minigame starts before the first black hole can open.")]
-    [SerializeField] private float firstHoleDelay = 15f;
-
-    [Min(1f)]
-    [Tooltip("Shortest wait between black holes (seconds).")]
-    [SerializeField] private float minInterval = 60f;
-
-    [Min(1f)]
-    [Tooltip("Longest wait between black holes (seconds). Each wait is random between shortest and longest.")]
-    [SerializeField] private float maxInterval = 120f;
-
     [Min(1f)]
     [Tooltip("How long a black hole stays open (seconds).")]
     [SerializeField] private float durationSeconds = 20f;
@@ -243,8 +224,15 @@ public class PixelBlackholeMinigame : PixelMinigame
     [Tooltip("Fired once, when the singularity tracker first reaches the threshold.")]
     public UnityEvent onThresholdReached;
 
-    private float spawnTimer;
     private bool holeActive;
+
+    // This minigame's own defaults for the shared round schedule (PixelScheduledMinigame; a scene's values override them).
+    public PixelBlackholeMinigame()
+    {
+        firstRoundDelay = 15f;
+        minInterval = 60f;
+        maxInterval = 120f;
+    }
 
     public override bool Busy => holeActive;
 
@@ -252,7 +240,7 @@ public class PixelBlackholeMinigame : PixelMinigame
     {
         holeActive = false;
         OldPixelDespawn.Frozen = false; // time dilation ends with the hole
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
     }
     private Texture2D outerTexture, innerTexture;
     private Material outerMaterial, innerMaterial;
@@ -260,8 +248,6 @@ public class PixelBlackholeMinigame : PixelMinigame
 
     public override string DisplayName => "Black Hole";
     public override string Id => "blackhole";
-
-    public override bool Running => running;
 
     // --- Tracker: the singularity (see PixelMinigame) ---
     public override bool HasTracker => true;
@@ -297,8 +283,7 @@ public class PixelBlackholeMinigame : PixelMinigame
             return;
         }
 
-        if (startRunning) running = true;
-        spawnTimer = firstHoleDelay;
+        StartSchedule();
         thresholdAnnounced = ThresholdReached; // don't fire the event for a count that was already past it
     }
 
@@ -310,16 +295,7 @@ public class PixelBlackholeMinigame : PixelMinigame
     }
 
     /// <summary>Starts the minigame (the shop calls this when it is bought). Safe to call more than once.</summary>
-    public override void Activate()
-    {
-        if (running) return;
-        running = true;
-        spawnTimer = firstHoleDelay;
-    }
-
     /// <summary>Stops the minigame (the tracker keeps its count).</summary>
-    public override void Deactivate() => running = false;
-
     /// <summary>Sets the tracker (used when loading a save).</summary>
     public void SetSingularityCount(double value)
     {
@@ -448,7 +424,7 @@ public class PixelBlackholeMinigame : PixelMinigame
 
         Destroy(root);
         OldPixelDespawn.Frozen = false;
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
         holeActive = false;
     }
 

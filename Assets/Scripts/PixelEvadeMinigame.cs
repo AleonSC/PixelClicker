@@ -19,31 +19,11 @@ using UnityEngine;
 /// kept slow enough to follow, so you can corner it and click. The auto clicker is off meanwhile: only your own clicks count. When the round ends you
 /// are paid a bonus of <see cref="rewardMultiplier"/> x the pixel's worth for every click you landed (the clicks still pay as usual).
 /// </summary>
-public class PixelEvadeMinigame : PixelMinigame
+public class PixelEvadeMinigame : PixelScheduledMinigame
 {
     [Header("References")]
     [Tooltip("The PixelClicker (camera, cube, payouts). Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
-
-    [Header("State")]
-    [Tooltip("Run from the start without buying it in the shop (for testing).")]
-    [SerializeField] private bool startRunning = false;
-
-    [Tooltip("Is the minigame running? (The shop turns this on when Cube Evasion is bought.)")]
-    [SerializeField] private bool running = false;
-
-    [Header("When it starts")]
-    [Min(0f)]
-    [Tooltip("Seconds after the minigame is switched on before the first round can start.")]
-    [SerializeField] private float firstRoundDelay = 90f;
-
-    [Min(1f)]
-    [Tooltip("Shortest wait between rounds (seconds).")]
-    [SerializeField] private float minInterval = 150f;
-
-    [Min(1f)]
-    [Tooltip("Longest wait between rounds (seconds).")]
-    [SerializeField] private float maxInterval = 300f;
 
     [Header("Rules")]
     [Min(5f)]
@@ -98,7 +78,7 @@ public class PixelEvadeMinigame : PixelMinigame
     [Tooltip("How long the result stays on screen (seconds).")]
     [SerializeField] private float resultSeconds = 3f;
 
-    private float spawnTimer, timeLeft, resultTimer, returnT;
+    private float timeLeft, resultTimer, returnT;
     private bool activeRound, forcedByMe, returning;
     private int clicks, tierIndex;
     private Vector2 pos, vel, returnFrom, home;   // viewport coordinates
@@ -106,22 +86,22 @@ public class PixelEvadeMinigame : PixelMinigame
     private GameObject uiRoot;
     private TMP_Text statusLabel;
 
+    // This minigame's own defaults for the shared round schedule (PixelScheduledMinigame; a scene's values override them).
+    public PixelEvadeMinigame()
+    {
+        firstRoundDelay = 90f;
+        minInterval = 150f;
+        maxInterval = 300f;
+    }
+
     public override string Id => "evade";
     public override string DisplayName => "Cube Evasion";
-    public override bool Running => running;
     public override bool Busy => activeRound;
     public override bool Takeover => true;   // no other minigame starts while it runs (the cube itself stays clickable: TakeoverActive is not set)
 
-    public override void Activate()
-    {
-        if (running) return;
-        running = true;
-        spawnTimer = firstRoundDelay;
-    }
-
     public override void Deactivate()
     {
-        running = false;
+        base.Deactivate();
         if (activeRound) EndRound(false);
     }
 
@@ -129,8 +109,7 @@ public class PixelEvadeMinigame : PixelMinigame
     {
         base.Awake();
         if (!HookCubeClicks(ref clicker, OnCollected, OnHit)) return;
-        if (startRunning) running = true;
-        spawnTimer = firstRoundDelay;
+        StartSchedule();
     }
 
     protected override void OnDestroy()
@@ -144,7 +123,7 @@ public class PixelEvadeMinigame : PixelMinigame
     {
         if (activeRound) EndRound(false);
         DropRoundUi(ref uiRoot, ref statusLabel);
-        spawnTimer = RandomBetween(minInterval, maxInterval);
+        ScheduleNext();
     }
 
     [ContextMenu("Start An Evasion Round Now")]
@@ -286,7 +265,7 @@ public class PixelEvadeMinigame : PixelMinigame
         returning = false;
         ReleaseCubeRound(clicker, ref forcedByMe);
         clicker.SetCubeOffset(null);
-        spawnTimer = RandomBetween(minInterval, maxInterval);
+        ScheduleNext();
 
         if (!paid) { DropRoundUi(ref uiRoot, ref statusLabel); return; }
 

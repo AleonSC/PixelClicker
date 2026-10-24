@@ -26,18 +26,12 @@ using static PixelInput;
 ///
 /// Add this to any GameObject (e.g. the cube). PixelShop adds it automatically if it is missing.
 /// </summary>
-public class PixelBombMinigame : PixelMinigame
+public class PixelBombMinigame : PixelScheduledMinigame
 {
     [Header("References")]
     [Tooltip("The PixelClicker (for the camera, the cube's position and the pixel counts). Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
 
-    [Header("State")]
-    [Tooltip("Run from the start without buying it in the shop (for testing).")]
-    [SerializeField] private bool startRunning = false;
-
-    [Tooltip("Is the minigame running? (The shop turns this on when Bomb Defusal is bought.)")]
-    [SerializeField] private bool running = false;
     private double bombParts { get => SavedExtra; set => SavedExtra = value; }   // (progress: the GameState)
     private double bombPartsEarned { get => SavedCount; set => SavedCount = value; }   // (progress: the GameState)
 
@@ -63,19 +57,6 @@ public class PixelBombMinigame : PixelMinigame
 
     [Tooltip("Text on a locked shop pack that needs the goal. {0} = parts collected, {1} = goal.")]
     [SerializeField] private string requirementFormat = "Requires: {0} / {1} bomb parts";
-
-    [Header("When it appears")]
-    [Min(0f)]
-    [Tooltip("Seconds after the minigame starts before the first bomb.")]
-    [SerializeField] private float firstBombDelay = 20f;
-
-    [Min(1f)]
-    [Tooltip("Shortest wait between bombs (seconds).")]
-    [SerializeField] private float minInterval = 120f;
-
-    [Min(1f)]
-    [Tooltip("Longest wait between bombs (seconds). Each wait is random between shortest and longest.")]
-    [SerializeField] private float maxInterval = 240f;
 
     [Header("The Bomb")]
     [Min(1f)]
@@ -159,7 +140,6 @@ public class PixelBombMinigame : PixelMinigame
     [Tooltip("Colour of that text.")]
     [SerializeField] private Color explodedColor = new Color(1f, 0.45f, 0.25f, 1f);
 
-
     [Min(0.1f)]
     [Tooltip("How long the rising text lasts (seconds).")]
     [SerializeField] private float messageSeconds = 1.6f;
@@ -189,20 +169,26 @@ public class PixelBombMinigame : PixelMinigame
     [Tooltip("Fired when a bomb explodes (wrong wire or time ran out).")]
     public UnityEvent onExploded;
 
-    private float spawnTimer;
     private bool bombActive;
+
+    // This minigame's own defaults for the shared round schedule (PixelScheduledMinigame; a scene's values override them).
+    public PixelBombMinigame()
+    {
+        firstRoundDelay = 20f;
+        minInterval = 120f;
+        maxInterval = 240f;
+    }
 
     public override bool Busy => bombActive;
 
     protected override void OnDespawned()
     {
         bombActive = false;
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
     }
 
     public override string Id => "bomb";
     public override string DisplayName => "Bomb Defusal";
-    public override bool Running => running;
 
     // --- Tracker: bomb parts (see PixelMinigame) ---
     public override bool HasTracker => true;
@@ -248,8 +234,7 @@ public class PixelBombMinigame : PixelMinigame
             enabled = false;
             return;
         }
-        if (startRunning) running = true;
-        spawnTimer = firstBombDelay;
+        StartSchedule();
     }
 
     private void Update()
@@ -257,15 +242,6 @@ public class PixelBombMinigame : PixelMinigame
         if (!running || bombActive) return;
         if (SpawnDue(ref spawnTimer)) StartCoroutine(BombRoutine());
     }
-
-    public override void Activate()
-    {
-        if (running) return;
-        running = true;
-        spawnTimer = firstBombDelay;
-    }
-
-    public override void Deactivate() => running = false;
 
     /// <summary>Sends a bomb right now (right-click the component &gt; Spawn Bomb Now).</summary>
     [ContextMenu("Spawn Bomb Now")]
@@ -445,7 +421,7 @@ public class PixelBombMinigame : PixelMinigame
             Explode(position, cam);
         }
 
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
         bombActive = false;
     }
 

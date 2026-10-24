@@ -28,32 +28,13 @@ using static PixelInput;
 /// Like Snake it takes over the old pixels, so the two never run at once (see <see cref="PixelMinigame.Takeover"/>).
 /// Add this to any GameObject (PixelShop adds it automatically if it is missing).
 /// </summary>
-public class PixelSortMinigame : PixelMinigame
+public class PixelSortMinigame : PixelScheduledMinigame
 {
     [Header("References")]
     [Tooltip("The PixelClicker (camera, husks, payouts). Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
 
-    [Header("State")]
-    [Tooltip("Run from the start without buying it in the shop (for testing).")]
-    [SerializeField] private bool startRunning = false;
-
-    [Tooltip("Is the minigame running? (The shop turns this on when the Sorting Race is bought.)")]
-    [SerializeField] private bool running = false;
-
     [Header("When it starts")]
-    [Min(0f)]
-    [Tooltip("Seconds after the minigame is switched on before the first race can start.")]
-    [SerializeField] private float firstRoundDelay = 90f;
-
-    [Min(1f)]
-    [Tooltip("Shortest wait between races (seconds).")]
-    [SerializeField] private float minInterval = 150f;
-
-    [Min(1f)]
-    [Tooltip("Longest wait between races (seconds).")]
-    [SerializeField] private float maxInterval = 300f;
-
     [Min(4)]
     [Tooltip("A race only starts when at least this many husks (of at least two different types) are lying around.")]
     [SerializeField] private int minPixels = 8;
@@ -176,29 +157,29 @@ public class PixelSortMinigame : PixelMinigame
     private Piece[] order;           // order[slot] = the piece standing in that grid slot
     private Vector3[] slots;
     private bool activeRound, arranging;
-    private float spawnTimer, timeLeft, groundY, unit;
+    private float timeLeft, groundY, unit;
     private int selected = -1, distinctTypes;
     private Camera cam;
     private GameObject uiRoot;
     private TMP_Text statusLabel;
     private bool setBlock;
 
+    // This minigame's own defaults for the shared round schedule (PixelScheduledMinigame; a scene's values override them).
+    public PixelSortMinigame()
+    {
+        firstRoundDelay = 90f;
+        minInterval = 150f;
+        maxInterval = 300f;
+    }
+
     public override string Id => "sort";
     public override string DisplayName => "Sorting Race";
-    public override bool Running => running;
     public override bool Busy => activeRound;
     public override bool Takeover => true;
 
-    public override void Activate()
-    {
-        if (running) return;
-        running = true;
-        spawnTimer = firstRoundDelay;
-    }
-
     public override void Deactivate()
     {
-        running = false;
+        base.Deactivate();
         if (activeRound) EndRound(false, null);
     }
 
@@ -213,8 +194,7 @@ public class PixelSortMinigame : PixelMinigame
             enabled = false;
             return;
         }
-        if (startRunning) running = true;
-        spawnTimer = firstRoundDelay;
+        StartSchedule();
     }
 
     protected override void OnDestroy()
@@ -237,7 +217,7 @@ public class PixelSortMinigame : PixelMinigame
     protected override void OnDespawned()
     {
         if (activeRound) EndRound(false, null);
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
     }
 
     [ContextMenu("Start A Sorting Race Now")]
@@ -574,7 +554,7 @@ public class PixelSortMinigame : PixelMinigame
         if (uiRoot != null) Destroy(uiRoot);
         uiRoot = null;
         statusLabel = null;
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
 
         if (win)
         {

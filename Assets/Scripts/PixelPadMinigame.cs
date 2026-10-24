@@ -14,18 +14,11 @@ using UnityEngine.Events;
 ///
 /// Add this to any GameObject (e.g. the cube). PixelShop adds it automatically if it is missing.
 /// </summary>
-public class PixelPadMinigame : PixelMinigame
+public class PixelPadMinigame : PixelScheduledMinigame
 {
     [Header("References")]
     [Tooltip("The PixelClicker (for the camera, the husks and the pixel counts). Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
-
-    [Header("State")]
-    [Tooltip("Run from the start without buying it in the shop (for testing).")]
-    [SerializeField] private bool startRunning = false;
-
-    [Tooltip("Is the minigame running? (The shop turns this on when the Ultra Pad is bought.)")]
-    [SerializeField] private bool running = false;
 
     [Header("Ultra Pixels")]
     [Range(0f, 1f)]
@@ -45,19 +38,6 @@ public class PixelPadMinigame : PixelMinigame
 
     [Tooltip("Text on a locked shop pack that needs the goal. {0} = Ultra pixels, {1} = goal.")]
     [SerializeField] private string requirementFormat = "Requires: {0} / {1} Ultra pixels";
-
-    [Header("When it appears")]
-    [Min(0f)]
-    [Tooltip("Seconds after the minigame starts before the first round.")]
-    [SerializeField] private float firstPadDelay = 15f;
-
-    [Min(1f)]
-    [Tooltip("Shortest wait between rounds (seconds), counted from when the last one ended.")]
-    [SerializeField] private float minInterval = 45f;
-
-    [Min(1f)]
-    [Tooltip("Longest wait between rounds (seconds).")]
-    [SerializeField] private float maxInterval = 90f;
 
     [Header("The Round")]
     [Tooltip("How long the four holes stay open (seconds). 0 = 45.")]
@@ -141,9 +121,16 @@ public class PixelPadMinigame : PixelMinigame
 
     private readonly List<Hole> holes = new List<Hole>();
     private readonly object[] claimOwners = { new object(), new object(), new object(), new object() };   // one area claim per hole, reused every round
-    private float spawnTimer;
     private bool padActive, pulling;
     private float holeRadius;
+
+    // This minigame's own defaults for the shared round schedule (PixelScheduledMinigame; a scene's values override them).
+    public PixelPadMinigame()
+    {
+        firstRoundDelay = 15f;
+        minInterval = 45f;
+        maxInterval = 90f;
+    }
 
     public override bool Busy => padActive;
 
@@ -153,12 +140,11 @@ public class PixelPadMinigame : PixelMinigame
         pulling = false;
         holes.Clear();
         foreach (object owner in claimOwners) ReleaseArea(owner);
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
     }
 
     public override string Id => "pad";
     public override string DisplayName => "Ultra Holes";
-    public override bool Running => running;
 
     // --- Tracker: Ultra pixels ever earned ---
     public override bool HasTracker => true;
@@ -179,8 +165,7 @@ public class PixelPadMinigame : PixelMinigame
             enabled = false;
             return;
         }
-        if (startRunning) running = true;
-        spawnTimer = firstPadDelay;
+        StartSchedule();
     }
 
     private void Update()
@@ -188,15 +173,6 @@ public class PixelPadMinigame : PixelMinigame
         if (!running || padActive) return;
         if (SpawnDue(ref spawnTimer)) StartCoroutine(RoundRoutine());
     }
-
-    public override void Activate()
-    {
-        if (running) return;
-        running = true;
-        spawnTimer = firstPadDelay;
-    }
-
-    public override void Deactivate() => running = false;
 
     /// <summary>Opens the holes right now (right-click the component &gt; Spawn Pad Now).</summary>
     [ContextMenu("Spawn Pad Now")]
@@ -457,7 +433,7 @@ public class PixelPadMinigame : PixelMinigame
         Destroy(hudCanvas);
         if (dropped > 0) PixelHints.Announce("Ultra Holes: " + dropped + " correct" + (ultras > 0 ? ", " + ultras + " Ultra!" : "."));
 
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        ScheduleNext();
         padActive = false;
         foreach (object owner in claimOwners) ReleaseArea(owner);
     }
