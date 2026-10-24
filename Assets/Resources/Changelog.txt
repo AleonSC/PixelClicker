@@ -1615,3 +1615,4 @@
 [2026-10-24 10:07 UTC] Vendors' Sell view has a Gift button: give a vendor some of the picked good for rapport (his loved goods count much more, only three gifts a visit count); his step shows in his greeting box and Game Database entry.
 [2026-10-24 10:07 UTC] To-do: ticked 'Vendor rapport' and added the proposed unique unlockable per vendor (to decide first).
 [2026-10-24 10:10 UTC] Dialogue.txt rebuilt from the game's current built-in texts (the old 18 Oct snapshot was overriding newer lines): Cubie's new visit 1 and visit 3 pages, his invoice line, the Power Bank tip and the reworded Quantum Organizer / Sorting Hopper tips now show; the generator now covers visit 3 and the Forager / Angler; dialogue map rebuilt.
+[2026-10-24 10:21 UTC] Pixel Bank window now only lists the husk types currently stored inside it (an empty bank says 'Nothing stored yet').
