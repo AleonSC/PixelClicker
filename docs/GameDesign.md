@@ -474,12 +474,13 @@ a lot and recovers over time) instead of hard caps. Husks still never PAY curren
   Wizard trades them for things only he has (Ghost Bait, Ultra pixels) - built 2026-10-24; any buying vendor can also be CALLED
   from the Toggles window, once per 30 min of play (shared), so selling mostly still waits for their random visits.
 
-**Specialty buyers + Wizard trades (agreed 2026-10-24, not built):** every minigame material gets a vendor who pays extra for it, so
+**Specialty buyers + Wizard trades (agreed and built 2026-10-24):** every minigame material gets a vendor who pays extra for it, so
 minigames feed the economy and a vendor's visit becomes a payday: Ectoplasm, Magic Wood, Stardust -> the Wizard (Big Tim pays a little
 for Magic Wood); meteor chunks -> the Prospector; bomb parts -> the Tinkerer. One per-vendor specialty list in the market rule
-(`PixelMarket`), priced on the ~2x rung with the usual saturation. The Wizard also TRADES the same materials for things only he has, at a
-better deal than selling (Ectoplasm -> Ghost Bait / a phantom potion, Magic Wood -> a skill-boost wand, Stardust -> an Ultra pixel), so
-there is a choice: cash now or something special.
+(`PixelMarket`), priced on the ~2x rung with the usual saturation. The Wizard also TRADES materials for things only he has, at a better
+deal than selling (20 Ectoplasm -> Ghost Bait, 5 Stardust -> an Ultra pixel), so there is a choice: cash now or something special.
+Decided 2026-10-25: NO wand and NO phantom potion - Magic Wood stays a sell-only good (no Wizard trade for it unless an existing item fits).
+Materials come only from minigames and are sold through Sell tabs / Wizard trades, never through delivery jobs (husks go through jobs only).
 
 **Vendor rapport - the warm side of the economy (agreed 2026-10-24; BUILT 2026-10-24 except the unique unlockables and orders - `PixelRapport`, numbers in `docs/systems/PixelVisitorMinigame.md`):** Cubie is the cold side (you pay, he trusts you); the
 vendors are the warm side (you deal with them, they like you).

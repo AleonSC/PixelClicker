@@ -44,6 +44,9 @@ Idea for the look: husks could be slightly duller than the block on the cube (a 
 > **Vendors buy husks ONLY through delivery jobs (decided 2026-10-25).** No vendor ever takes husks off the floor (or out of a crate) in a
 > Sell tab or any other way: a husk reaches a vendor only by being routed into his delivery crate at his dock. Sell tabs trade currency
 > (and minigame materials) only. Applies to every husk-like good, Charcoal and Wood Chips included.
+>
+> **Materials come only from minigames** (Ectoplasm, Magic Wood, Stardust, Meteor Chunks, Bomb Parts) and reach vendors only through Sell
+> tabs (specialty goods) or Wizard trades - never through delivery jobs.
 
 This keeps the world consistent (a machine is processing husks, like every other machine) while clicking stays the real way to earn currency.
 
