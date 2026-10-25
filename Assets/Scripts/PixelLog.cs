@@ -384,6 +384,15 @@ public partial class PixelLog : MonoBehaviour
 
     public static bool LogOpen => logInstance != null && logInstance.panelObject != null && PixelPop.IsOpen(logInstance.panelObject);
 
+    /// <summary>Switches the Log to its Goals tab (the new-game intro box points at the goals).</summary>
+    public static void ShowGoalsTab()
+    {
+        PixelLog log = logInstance;
+        if (log == null) return;
+        log.currentTab = 2;
+        if (log.built) log.Refresh();
+    }
+
     public static void SetLogOpen(bool open)
     {
         PixelLog log = logInstance;

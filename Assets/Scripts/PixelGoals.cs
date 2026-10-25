@@ -7,7 +7,7 @@
 //   - Counter: StatSinceShown (a PixelStats counter, counted from the moment the goal appeared), StatValue (a counter as it is, e.g. a best
 //     value like husk.crush.streak) or ManualClicksSinceShown.
 //   - Appears: Always, HusksOnFloor (at least appearValue husks lying out), StatAtLeast (appearKey >= appearValue, e.g. guide.stage1 = Cubie's
-//     visit 1 handed over the Recycler) or MinutesPlayed. Never during the new-game intro or on the title screen. Built-in rows: Click 50 times
+//     visit 1 handed over the Recycler) or MinutesPlayed. Never on the title screen; during the new-game intro goals may APPEAR (the intro box points at the Log's Goals tab) but none completes until it closes. Built-in rows: Click 50 times
 //     (start), Crush 10 husks (20 husks lying out), Recycle 20 husks (after Cubie's Recycler), Get a crush streak of 5 (minute 3).
 //   - State is saved per save in PixelStats counters: goal.<id>.shown, goal.<id>.start (the counter when it appeared), goal.<id>.done.
 //     Checked every checkSeconds; on completion the reward is paid (PixelSkills.AddRewardXp / PixelClicker.AddBonusCurrency), the event log says
@@ -281,7 +281,8 @@ public class PixelGoals : MonoBehaviour, IPixelDatabaseSource
         checkTimer -= Time.unscaledDeltaTime;
         if (checkTimer > 0f) return;
         checkTimer = Mathf.Max(0.05f, checkSeconds);
-        if (PixelCalm.InMenu || PixelHints.IntroHoldsGuide || goals == null) return;
+        if (PixelCalm.InMenu || goals == null) return;
+        bool intro = PixelHints.IntroHoldsGuide;   // (the intro box says 'your goals are in the Log': goals may appear while it is up, but none completes until it closes)
         foreach (GoalDef g in goals)
         {
             if (g == null || !g.enabled || string.IsNullOrEmpty(g.id) || Done(g)) continue;
@@ -291,7 +292,7 @@ public class PixelGoals : MonoBehaviour, IPixelDatabaseSource
                 PixelStats.Best(Key(g, "start"), RawCounter(g));   // (counted from here: set once, when it appears)
                 PixelStats.Best(Key(g, "shown"), 1d);
             }
-            if (Progress(g) >= g.target) Complete(g);
+            if (!intro && Progress(g) >= g.target) Complete(g);
         }
     }
 

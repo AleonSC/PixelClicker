@@ -332,7 +332,6 @@ overlay line: You earned an Ultra pixel!
 [Intro tips]
 log: Click the cube to earn pixels: they're your money. Your goals are in the Log (bottom left). The first one brings a visitor.
 inventory: Your Inventory: devices like this Recycler live in Consumables. Right-click one to place it.
-right click: Try the right mouse button too: HOLD it on the block on the cube. It's each block's second action. On the pure pixels (black, gray, white, red, green and blue) it puts a stake on the block - the longer you hold (watch the meter by your cursor), the more it is worth when it comes round again, but the stake can also go bad and pay nothing. Skill blocks you meet later do their own thing when held.
 
 [Tutorial: Shop]
 step 1: Welcome to the Shop! Your pixels are listed along the top: prices are paid in them. Pick a section on the left; anything greyed out shows what it still needs.

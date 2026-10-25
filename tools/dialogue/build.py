@@ -38,7 +38,7 @@ shorts = {k: v[1:-1].replace('\\"', '"') for k, v in shorts.items()}
 for m in re.finditer(r'\bH\("([^"]+)",\s*', h):
     add("Tip: " + m.group(1), [("text", string_expr(h, m.end())), ("overlay line", shorts.get(m.group(1), ""))])
 add("Intro tips", [("log", field_default(h, "introLogMessage")), ("inventory", field_default(h, "introInventoryText")),
-                   ("earn", field_default(h, "introEarnText")), ("right click", field_default(h, "introRightClickText"))])
+                   ("earn", field_default(h, "introEarnText"))])
 
 # --- tutorials (only the text of each step) ---
 def steps(file, start):
