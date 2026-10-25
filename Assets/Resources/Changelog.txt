@@ -1662,3 +1662,4 @@
 [2026-10-25 12:20 UTC] Shop: a new pack requirement, machine discovery (a machine must have made N of something), locks the Charcoal Pixel until the Kiln has made 50 Charcoal; it then costs pure currency only and a notice announces the discovery.
 [2026-10-25 12:20 UTC] The Charcoal material is retired (PixelMaterials and the Materials tab stay for the minigame materials); the Tinkerer now loves Charcoal pixels as gifts instead.
 [2026-10-25 12:20 UTC] To-do: Charcoal plan ticked; the Discovery item now points at the new machine-discovery requirement.
+[2026-10-25 14:57 UTC] The skill tracker (the early '???' one) and the '+XP' popups moved to the LEFT side of the screen; the popups still ride on top of the tracker while it shows full.

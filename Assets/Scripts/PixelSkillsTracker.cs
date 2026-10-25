@@ -9,8 +9,8 @@
 //   padlock stick (trackerStuck: can't be dragged), downsize ('-' / '+': a one-line small version) and X (closes it; the Skills menu
 //   is NOT reopened). DOUBLE CLICKING the name (small or full; PixelDoubleClick) opens the Skills window on the skill in training with its tree beside it (never the expanded tree). Open / small / stuck / position are PlayerPrefs PixelClicker.Skills.Tracker* (global, not per save); hidden on
 //   the title screen and until the Skills button exists (SkillsTabUnlocked: Standard level 2), so Standard alone can be pinned.
-//   EARLY TRACKER (trackerBeforeSkills, UpdateTrackerIntro): before that, from the first Standard XP, the full tracker shows at the bottom RIGHT (PlaceTrackerBottomRight: above the
-//   bottom bar, trackerIntroMargin from the edge; since 2026-10-25, it was bottom left) with NO buttons and locked in place (name double click does nothing), so the player watches Standard level up.
+//   EARLY TRACKER (trackerBeforeSkills, UpdateTrackerIntro): before that, from the first Standard XP, the full tracker shows at the bottom LEFT (PlaceTrackerBottomLeft: above the
+//   bottom bar, trackerIntroMargin from the edge) with NO buttons and locked in place (name double click does nothing), so the player watches Standard level up.
 //   THE XP DOCK RIDES ON IT: while the tracker shows full (early or pinned, not the small one-line version) the '+n XP' dock stacks just above it and
 //   follows it when it is dragged (TrackerCarriesXpDock, used by PixelSkillsPopups.DockPosition; the dock can't be dragged on its own then).
 //   When Standard level 2's popup appears (SkillsTabUnlocked turns true at that moment) its buttons come back (arrows, lock, downsize, X) and it becomes the normal pinned tracker in that spot.
@@ -29,7 +29,7 @@ using UnityEngine.UI;
 public partial class PixelSkills
 {
     private const string TrackerOnPref = "PixelClicker.Skills.TrackerOn", TrackerSmallPref = "PixelClicker.Skills.TrackerSmall",
-                         TrackerStuckPref = "PixelClicker.Skills.TrackerStuck", TrackerXPref = "PixelClicker.Skills.TrackerX", TrackerYPref = "PixelClicker.Skills.TrackerY";
+                         TrackerStuckPref = "PixelClicker.Skills.TrackerStuck", TrackerXPref = "PixelClicker.Skills.TrackerX2", TrackerYPref = "PixelClicker.Skills.TrackerY2";
 
     private GameObject trackerCanvas, trackerPanel;
     private RectTransform trackerRect, trackerBarFill;
@@ -46,9 +46,9 @@ public partial class PixelSkills
     private float trackerTimer;
 
     [Header("Pinned skill tracker")]
-    [Tooltip("Before the Skills button exists (Standard level 2): once Standard XP starts coming in, show the tracker at the bottom right (the XP popups above it) so the player sees the level filling up. It has no buttons and can't be moved; when Standard level 2's popup appears its buttons (arrows, lock, downsize, X) come back and it stays pinned there.")]
+    [Tooltip("Before the Skills button exists (Standard level 2): once Standard XP starts coming in, show the tracker at the bottom left (the XP popups above it) so the player sees the level filling up. It has no buttons and can't be moved; when Standard level 2's popup appears its buttons (arrows, lock, downsize, X) come back and it stays pinned there.")]
     [SerializeField] private bool trackerBeforeSkills = true;
-    [Tooltip("Gap between that early tracker and the bottom black bar / the right edge of the screen (canvas units).")]
+    [Tooltip("Gap between that early tracker and the bottom black bar / the left edge of the screen (canvas units).")]
     [SerializeField] private float trackerIntroMargin = 16f;
     private bool trackerIntro;   // the early, button-less tracker is showing (see trackerBeforeSkills)
 
@@ -369,7 +369,7 @@ public partial class PixelSkills
 
     /// <summary>
     /// The early tracker (trackerBeforeSkills): from the first Standard XP until Standard level 2's popup appears (that is when SkillsTabUnlocked turns true),
-    /// a button-less, unmovable tracker sits at the bottom right (the XP dock above it). When the popup appears it becomes the normal pinned tracker, in the same spot.
+    /// a button-less, unmovable tracker sits at the bottom left (the XP dock above it). When the popup appears it becomes the normal pinned tracker, in the same spot.
     /// </summary>
     private void UpdateTrackerIntro()
     {
@@ -377,11 +377,11 @@ public partial class PixelSkills
         bool want = trackerBeforeSkills && !unlocked && clicker != null && Xp(Find(StandardId)) > 0d;
         if (want == trackerIntro)
         {
-            if (trackerIntro) PlaceTrackerBottomRight();   // (follows the screen size / the bars)
+            if (trackerIntro) PlaceTrackerBottomLeft();   // (follows the screen size / the bars)
             return;
         }
         trackerIntro = want;
-        if (want) { EnsureTracker(); PlaceTrackerBottomRight(); LayoutTracker(); return; }
+        if (want) { EnsureTracker(); PlaceTrackerBottomLeft(); LayoutTracker(); return; }
         if (!unlocked) { LayoutTracker(); return; }   // (switched off in the Inspector: just gone)
         // Standard level 2's popup is up: keep it pinned where it is, with its buttons back.
         PixelPrefs.SetFloat(TrackerXPref, trackerDesired.x);
@@ -390,27 +390,27 @@ public partial class PixelSkills
         LayoutTracker();
     }
 
-    /// <summary>The early tracker's spot: bottom RIGHT, above the bottom bar, trackerIntroMargin from the edge (the XP dock stacks above it).</summary>
-    private void PlaceTrackerBottomRight()
+    /// <summary>The early tracker's spot: bottom LEFT, above the bottom bar, trackerIntroMargin from the edge (the XP dock stacks above it).</summary>
+    private void PlaceTrackerBottomLeft()
     {
         RectTransform canvasRect = trackerCanvas.GetComponent<RectTransform>();
         float bars = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
         float margin = Mathf.Max(0f, trackerIntroMargin);
         Vector2 half = canvasRect.rect.size * 0.5f, size = trackerRect.sizeDelta * 0.5f;
-        trackerDesired = new Vector2(half.x - margin - size.x, -half.y + bars + margin + size.y);
+        trackerDesired = new Vector2(-half.x + margin + size.x, -half.y + bars + margin + size.y);
         KeepTrackerOnScreen();
     }
 
     /// <summary>
     /// The XP dock sits on top of the tracker while the tracker shows as a full window (the early '???' one or the pinned one, not the small one-line
-    /// version): 'topRight' = the tracker's top right corner in canvas units from the middle of the screen (the dock's popups line up on that right edge).
+    /// version): 'topLeft' = the tracker's top left corner in canvas units from the middle of the screen (the dock's popups line up on that left edge).
     /// </summary>
-    private bool TrackerCarriesXpDock(out Vector2 topRight)
+    private bool TrackerCarriesXpDock(out Vector2 topLeft)
     {
-        topRight = Vector2.zero;
+        topLeft = Vector2.zero;
         if (!trackerBuilt || trackerCanvas == null || !trackerCanvas.activeSelf || trackerRect == null) return false;
         if (!trackerIntro && (!trackerOn || trackerSmall)) return false;
-        topRight = trackerRect.anchoredPosition + trackerRect.sizeDelta * 0.5f;
+        topLeft = trackerRect.anchoredPosition + new Vector2(-trackerRect.sizeDelta.x, trackerRect.sizeDelta.y) * 0.5f;
         return true;
     }
 

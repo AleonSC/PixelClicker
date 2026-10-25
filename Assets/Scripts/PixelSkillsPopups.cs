@@ -3,8 +3,8 @@
 //   Part of partial class PixelSkills: the '+n <Skill> XP' popups (AddXp calls QueueXpPopup). Three places, so they never pile on top of each other
 //   (2026-10-19, the user's layout):
 //   * THE XP DOCK - every skill XP popup (clicks, the auto clicker, the Recycler, rewards...): XP is gathered xpPopupGatherSeconds (0 = 0.6 s) per
-//     skill and shown as whole numbers (fractions carry over) in a small stack at the BOTTOM RIGHT of the screen (xpDockRightMargin 90 from the edge, popups lined up on
-//     their right edges), just above the black bar (xpDockGap); WHILE THE SKILL TRACKER SHOWS FULL (the early '???' one or the pinned one, not the
+//     skill and shown as whole numbers (fractions carry over) in a small stack at the BOTTOM LEFT of the screen (since 2026-10-25; xpDockSideMargin from the edge, popups lined
+//     up on their LEFT edges), just above the black bar (xpDockGap); WHILE THE SKILL TRACKER SHOWS FULL (the early '???' one or the pinned one, not the
 //     small version) the dock sits just above the tracker instead and follows it (TrackerCarriesXpDock; no dragging the dock then); the newest at the bottom, older ones slide up and fade. HOLD the left mouse button on one (xpDockHoldSeconds, the shared ring,
 //     PixelHold) and drag to move the dock; the spot is saved PER SAVE (PixelClicker.Setting.XpDock2X / Y, PixelPrefs.DeclarePerSave); right-click
 //     a dock popup to put the dock back in its default spot. The dock popups catch the mouse (so a click on one never reaches the cube).
@@ -49,13 +49,13 @@ public partial class PixelSkills
     [Tooltip("Seconds an XP popup stays (it fades over the second half).")]
     [SerializeField] private float xpPopupSeconds = 2f;
 
-    [Header("XP Dock (skill XP, bottom right of the screen)")]
+    [Header("XP Dock (skill XP, bottom left of the screen)")]
     [Min(0f)]
     [Tooltip("Gap between the bottom black bar and the XP dock's newest popup (canvas units).")]
     [SerializeField] private float xpDockGap = 14f;
     [Min(0f)]
-    [Tooltip("Gap between the right edge of the screen and the XP dock (its popups line up on their right edges).")]
-    [SerializeField] private float xpDockRightMargin = 90f;
+    [Tooltip("Gap between the left edge of the screen and the XP dock (its popups line up on their left edges).")]
+    [SerializeField] private float xpDockSideMargin = 24f;
     [Min(0.05f)]
     [Tooltip("Seconds the left button is held on a dock popup (a ring fills) before the dock can be dragged.")]
     [SerializeField] private float xpDockHoldSeconds = 0.4f;
@@ -84,7 +84,7 @@ public partial class PixelSkills
         public int row;
     }
 
-    private const string PrefDockX = "PixelClicker.Setting.XpDock2X", PrefDockY = "PixelClicker.Setting.XpDock2Y";   // (2: the bottom-right dock; its saved spot is the right edge)
+    private const string PrefDockX = "PixelClicker.Setting.XpDock3X", PrefDockY = "PixelClicker.Setting.XpDock3Y";   // (3: the bottom-left dock; its saved spot is the LEFT edge)
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void DeclareXpDockPerSave()
@@ -241,7 +241,7 @@ public partial class PixelSkills
         switch (p.kind)
         {
             case PopupKind.Dock:
-                p.rect.pivot = new Vector2(1f, 0.5f);   // (the dock's popups line up on their right edges)
+                p.rect.pivot = new Vector2(0f, 0.5f);   // (the dock's popups line up on their left edges)
                 p.rect.anchoredPosition = DockPosition() + new Vector2(0f, p.dockY + p.height * 0.5f);
                 break;
             case PopupKind.World:
@@ -264,16 +264,16 @@ public partial class PixelSkills
         }
     }
 
-    // ---- The dock's spot (on the skill tracker while it shows full; else bottom right above the black bar, or where it was dragged, saved per save) ----
+    // ---- The dock's spot (on the skill tracker while it shows full; else bottom left above the black bar, or where it was dragged, saved per save) ----
 
-    /// <summary>The dock's bottom RIGHT corner (canvas units from the middle of the screen): on top of the skill tracker while it shows full, else the
-    /// saved spot, else the bottom right above the bar.</summary>
+    /// <summary>The dock's bottom LEFT corner (canvas units from the middle of the screen): on top of the skill tracker while it shows full, else the
+    /// saved spot, else the bottom left above the bar.</summary>
     private Vector2 DockPosition()
     {
-        if (TrackerCarriesXpDock(out Vector2 trackerTop)) return trackerTop + new Vector2(0f, xpDockGap);   // (riding on the skill tracker)
+        if (TrackerCarriesXpDock(out Vector2 trackerTop)) return trackerTop + new Vector2(0f, xpDockGap);   // (riding on the skill tracker, from its top left corner)
         Rect r = xpCanvasRect.rect;
         float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        Vector2 fallback = new Vector2(r.width * 0.5f - xpDockRightMargin, -r.height * 0.5f + bar + xpDockGap);
+        Vector2 fallback = new Vector2(-r.width * 0.5f + xpDockSideMargin, -r.height * 0.5f + bar + xpDockGap);
         if (!PixelPrefs.HasKey(PrefDockX) || !PixelPrefs.HasKey(PrefDockY)) return fallback;
         Vector2 p = new Vector2(PixelPrefs.GetFloat(PrefDockX, 0f), PixelPrefs.GetFloat(PrefDockY, fallback.y));
         float hx = r.width * 0.5f - 12f, lo = -r.height * 0.5f + bar + 4f, hi = r.height * 0.5f - bar - 60f;
@@ -297,7 +297,7 @@ public partial class PixelSkills
             RectTransformUtility.ScreenPointToLocalPointInRectangle(xpCanvasRect, PixelInput.PointerPosition(), null, out Vector2 local);
             float halfWidth = 0f;
             for (int i = xpPopups.Count - 1; i >= 0; i--) if (xpPopups[i].kind == PopupKind.Dock) { halfWidth = xpPopups[i].rect.sizeDelta.x * 0.5f; break; }
-            PixelPrefs.SetFloat(PrefDockX, local.x + halfWidth);   // (the pointer holds the newest popup by its middle)
+            PixelPrefs.SetFloat(PrefDockX, local.x - halfWidth);   // (the pointer holds the newest popup by its middle; the saved spot is its left edge)
             PixelPrefs.SetFloat(PrefDockY, local.y - PopupSize * 0.7f);   // (the pointer holds the newest popup)
             return;
         }
