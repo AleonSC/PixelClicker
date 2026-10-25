@@ -41,6 +41,10 @@ Idea for the look: husks could be slightly duller than the block on the cube (a 
 > (a delivery job) - that is a trade, like selling skill goods. The rule is about husks having no built-in payout, not about who may buy them.
 > Balance, not the rule, limits it: jobs are capped (one active job per vendor, a few per hour) and cost real effort.
 
+> **Vendors buy husks ONLY through delivery jobs (decided 2026-10-25).** No vendor ever takes husks off the floor (or out of a crate) in a
+> Sell tab or any other way: a husk reaches a vendor only by being routed into his delivery crate at his dock. Sell tabs trade currency
+> (and minigame materials) only. Applies to every husk-like good, Charcoal and Wood Chips included.
+
 This keeps the world consistent (a machine is processing husks, like every other machine) while clicking stays the real way to earn currency.
 
 ## What husks are for
@@ -94,13 +98,13 @@ discovered block's husks process into something new or higher, never back into t
 **Charcoal plan (2026-10-25).** Today (2026-10-24) the Kiln makes a held Charcoal MATERIAL that pays for the Charcoal Pixel (50 Charcoal +
 Gray + Black). That material has no use after the purchase and keeps piling up beside the Charcoal block's own currency and husks - a
 dead resource. Rule of thumb: anything that piles up needs an ongoing sink.
-- **Decided: Big Tim buys Charcoal ONLY through delivery jobs.** No more Charcoal entry in his Sell tab (he no longer takes loose husks
-  off the floor by magic); Charcoal joins his delivery-job requests once it exists, so it has to be routed to his dock. Its job worth
-  should come from its fuel value (one burns as long as 8 wood husks; his Sell tab still valued it at 3 Wood).
+- **Decided: Charcoal and Wood Chips reach Big Tim ONLY through delivery jobs** (the general rule above: no vendor buys husks off the
+  floor). Their entries leave his Sell tab; both join his delivery-job requests once they exist, so they have to be routed to his dock.
+  Their job worth comes from their fuel value (Charcoal = 8 wood husks, Wood Chips = 4; his Sell tab still valued them at 3 / 4 Wood).
 - **Proposed, not yet decided:** gate the Charcoal Pixel on the PROCESS, not on a held output - 'burn 50 Charcoal in the Kiln' is a
   discovery counter (shown on the Kiln's device card), reaching it puts the Charcoal Pixel in the shop for pure currency only; the Kiln
   goes back to a physical output on its chute (Biomass fuel, delivery jobs) instead of the material; the Charcoal material (and the
-  Materials tab, unless another material needs it) is retired. Open: Wood Chips probably follow the same two rules.
+  Materials tab, unless another material needs it) is retired.
 
 ## Delivery jobs (agreed 2026-10-24, built 2026-10-24: `PixelDeliveryJobs.cs`, `PixelDeliveryCrate.cs`, `PixelVisitorMinigameJobs.cs`)
 Vendors post DELIVERY JOBS for specific husks ('30 Bark + 10 Sap husks within 10 minutes'). The VENDOR DROPS the DELIVERY CRATE on a FIXED
