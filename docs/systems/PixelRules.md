@@ -91,6 +91,17 @@ packs - the factory becomes the gateway to new skills. Rules: discovery is ONE-T
 discovered block's husks process into something new or higher, never back into the product that discovered it); watch the currency count
 (group the Inventory by skill before there are dozens).
 
+**Charcoal plan (2026-10-25).** Today (2026-10-24) the Kiln makes a held Charcoal MATERIAL that pays for the Charcoal Pixel (50 Charcoal +
+Gray + Black). That material has no use after the purchase and keeps piling up beside the Charcoal block's own currency and husks - a
+dead resource. Rule of thumb: anything that piles up needs an ongoing sink.
+- **Decided: Big Tim buys Charcoal ONLY through delivery jobs.** No more Charcoal entry in his Sell tab (he no longer takes loose husks
+  off the floor by magic); Charcoal joins his delivery-job requests once it exists, so it has to be routed to his dock. Its job worth
+  should come from its fuel value (one burns as long as 8 wood husks; his Sell tab still valued it at 3 Wood).
+- **Proposed, not yet decided:** gate the Charcoal Pixel on the PROCESS, not on a held output - 'burn 50 Charcoal in the Kiln' is a
+  discovery counter (shown on the Kiln's device card), reaching it puts the Charcoal Pixel in the shop for pure currency only; the Kiln
+  goes back to a physical output on its chute (Biomass fuel, delivery jobs) instead of the material; the Charcoal material (and the
+  Materials tab, unless another material needs it) is retired. Open: Wood Chips probably follow the same two rules.
+
 ## Delivery jobs (agreed 2026-10-24, built 2026-10-24: `PixelDeliveryJobs.cs`, `PixelDeliveryCrate.cs`, `PixelVisitorMinigameJobs.cs`)
 Vendors post DELIVERY JOBS for specific husks ('30 Bark + 10 Sap husks within 10 minutes'). The VENDOR DROPS the DELIVERY CRATE on a FIXED
 SPOT (decided 2026-10-24: so players are forced to route) - each vendor has their own DOCK at the edge of the floor, always in the same
