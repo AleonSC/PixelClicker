@@ -869,7 +869,7 @@ public class PixelCombo : MonoBehaviour
     {
         if (glowImage == null) return;
         int liveTier = effectsEnabled && combo > 0 ? Tier : 0;
-        bool paused = PixelPauseMenu.IsPaused;
+        bool paused = PixelGameMode.PauseMenuOpen;
         float t = Time.unscaledTime;
         float dt = paused ? 0f : Mathf.Min(Time.unscaledDeltaTime, 0.05f);
 

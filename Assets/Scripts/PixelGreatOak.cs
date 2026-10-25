@@ -197,7 +197,7 @@ public class PixelGreatOak : MonoBehaviour
             foreach (Renderer r in n.renderers) if (r != null) r.enabled = !blink;
         }
 
-        if (!PixelInput.LeftPressed() || PixelPauseMenu.IsPaused) return;
+        if (!PixelInput.LeftPressed() || PixelGameMode.PauseMenuOpen) return;
         Ray ray;
         if (PixelFirstPerson.TryGetViewRay(out Ray fpRay)) ray = fpRay;
         else

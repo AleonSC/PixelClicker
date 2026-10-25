@@ -286,7 +286,7 @@ public partial class PixelClicker : MonoBehaviour
     [Tooltip("Each new pixel spawns as a random UNLOCKED tier (weighted by each tier's Spawn Weight). Clicking it gives that tier's currency. Overrides the two settings below.")]
     [SerializeField] private bool randomizeSpawnTier = true;
 
-    [Tooltip("If on, clicks always produce the highest unlocked tier. If off, use SetActiveTier() (e.g. from a button).")]
+    [Tooltip("If on, clicks always produce the highest unlocked tier. If off, clicks produce the Active Tier Index below.")]
     [SerializeField] private bool autoUseHighestTier = true;
 
     [Tooltip("Index of the tier clicks currently produce (used when Auto Use Highest Tier is off).")]
@@ -1076,9 +1076,9 @@ public partial class PixelClicker : MonoBehaviour
 
         CleanOldPixels();
         using (solarMarker.Auto()) UpdateSolarClusters();
-        if (Time.timeScale > 0f && !PixelPauseMenu.IsPaused) { UpdateWeevil(); UpdateHazardCharges(); UpdateHazardExpiry(); }
+        if (Time.timeScale > 0f && !PixelGameMode.PauseMenuOpen) { UpdateWeevil(); UpdateHazardCharges(); UpdateHazardExpiry(); }
 
-        if ((Time.timeScale <= 0f && !PixelTimeStop.IsStopped) || PixelPauseMenu.IsPaused) return; // paused (see PixelPauseMenu); Time Stop still lets the cube be clicked
+        if ((Time.timeScale <= 0f && !PixelTimeStop.IsStopped) || PixelGameMode.PauseMenuOpen) return; // paused (see PixelPauseMenu); Time Stop still lets the cube be clicked
         if (clicksBlocked || ExternalClickBlock || GodMode || PixelCameraIntro.ClicksLocked) return; // e.g. placing a device (PixelConsumables) or holding the hose (PixelBank)
         bool leftClick = WasClickedThisFrame();
         // A RIGHT click on a hazard block (Pest, Gas Pocket) works it away safely (see DefuseHazard).

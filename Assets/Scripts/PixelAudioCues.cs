@@ -116,12 +116,12 @@ public partial class PixelAudio
             case CueTrigger.Night: return PixelDayNight.Enabled && PixelDayNight.Level < 0.25f;
             case CueTrigger.FirstPerson: return PixelFirstPerson.Active;
             case CueTrigger.UfoRide: return PixelRobotWorker.Piloting;
-            case CueTrigger.TitleScreen: return PixelTitleScreen.Showing;
+            case CueTrigger.TitleScreen: return PixelGameMode.TitleShowing;
             case CueTrigger.Manual: return manualCues.Contains(c.name);
             case CueTrigger.GameStart:
             {
                 // True once the title screen has closed (the clicker loaded in); for 'param' seconds when that is a number, else until its music ends.
-                if (PixelTitleScreen.Showing) return false;
+                if (PixelGameMode.TitleShowing) return false;
                 float span = float.TryParse(c.param, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float s) ? s : 0f;
                 return span <= 0f || Time.unscaledTime - gameLoadedAt < span;
             }
@@ -152,7 +152,7 @@ public partial class PixelAudio
     private void UpdateCues()
     {
         float dt = Time.unscaledDeltaTime;
-        bool titleNow = PixelTitleScreen.Showing;
+        bool titleNow = PixelGameMode.TitleShowing;
         if (titleWasShowing && !titleNow) gameLoadedAt = Time.unscaledTime;   // the clicker just loaded in (the GameStart cue's clock)
         titleWasShowing = titleNow;
         cueEvalTimer -= dt;

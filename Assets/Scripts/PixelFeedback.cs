@@ -115,7 +115,7 @@ public class PixelFeedback : MonoBehaviour
     {
         if (!Open)
         {
-            if (!PixelTitleScreen.Showing && PixelKeys.Pressed(PixelAction.Feedback)) Show();
+            if (!PixelGameMode.TitleShowing && PixelKeys.Pressed(PixelAction.Feedback)) Show();
             return;
         }
 

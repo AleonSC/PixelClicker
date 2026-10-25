@@ -488,7 +488,7 @@ public class PixelAutosaveWindow : MonoBehaviour
     private void Update()
     {
         if (root == null || !root.activeSelf) return;
-        if (!PixelPauseMenu.IsPaused) { CloseIfOpen(); return; }   // the pause menu closed (a load resumed the game): the window goes too
+        if (!PixelGameMode.PauseMenuOpen) { CloseIfOpen(); return; }   // the pause menu closed (a load resumed the game): the window goes too
         if (hover < 0 || hover >= entries.Count) { if (tip.activeSelf) tip.SetActive(false); return; }
 
         PixelAutosaves.Entry e = entries[hover];

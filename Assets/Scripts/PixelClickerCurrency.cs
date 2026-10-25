@@ -218,15 +218,6 @@ public partial class PixelClicker
         return i >= 0 ? tiers[i].count : 0;
     }
 
-    /// <summary>Manually select which tier clicks produce (only used when Auto Use Highest Tier is off).</summary>
-    public void SetActiveTier(int index)
-    {
-        if (!IsValidTier(index) || !tiers[index].unlocked) return;
-        activeTierIndex = index;
-        ApplyTierLook(tiers[index]);
-        RefreshUI();
-    }
-
     /// <summary>Every tier of the clicker keeps its progress in the GameState (call after the tier list changed; cheap when nothing is new).</summary>
     private void MakeTiersLive()
     {

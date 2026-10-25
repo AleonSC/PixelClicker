@@ -284,7 +284,7 @@ public class PixelBlockTooltip : MonoBehaviour
     private bool Suppressed(bool whileHeld = false, bool pinned = false)
     {
         return disableTooltip || (EffectiveMode == ModeOff && !pinned) || clicker == null || PixelCalm.InMenu ||
-               PixelFirstPerson.Active || PixelRobotWorker.Piloting || PixelClicker.GodMode || PixelCameraIntro.Moving ||
+               PixelFirstPerson.Active || PixelRobotWorker.Piloting || PixelClicker.GodMode || PixelGameMode.IntroMoving ||
                (!whileHeld && (PointerOverUI() || (grab != null && grab.HeldBody != null))) || PixelBank.HoseOn;
     }
 

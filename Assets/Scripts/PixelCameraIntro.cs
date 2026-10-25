@@ -198,14 +198,14 @@ public class PixelCameraIntro : MonoBehaviour
             }
             return;
         }
-        if (done && canReverse && PixelTitleScreen.Showing) { done = false; moved = 0f; waited = 0f; }
+        if (done && canReverse && PixelGameMode.TitleShowing) { done = false; moved = 0f; waited = 0f; }
         Moving = !done;
         if (done) { ClicksLocked = false; return; }
         if (!prepared) Prepare();
         if (done) return;
 
         // Wait on the title screen (and a moment after) in the close-up pose.
-        if (PixelTitleScreen.Showing)
+        if (PixelGameMode.TitleShowing)
         {
             fresh = !AnyCollected();
             ClicksLocked = lockClicksOnNewGame && fresh;

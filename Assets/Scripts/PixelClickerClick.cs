@@ -41,7 +41,7 @@ public partial class PixelClicker
     /// </summary>
     public bool ManualClickFromAfar()
     {
-        if ((Time.timeScale <= 0f && !PixelTimeStop.IsStopped) || PixelPauseMenu.IsPaused) return false;
+        if ((Time.timeScale <= 0f && !PixelTimeStop.IsStopped) || PixelGameMode.PauseMenuOpen) return false;
         if (clicksBlocked || GodMode || PixelCameraIntro.ClicksLocked) return false;
         if (Time.unscaledTime - lastManualClickTime < minClickInterval) return false;
         lastManualClickTime = Time.unscaledTime;

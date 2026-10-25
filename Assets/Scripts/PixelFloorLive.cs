@@ -1128,7 +1128,7 @@ public class PixelFloorOverlay : MonoBehaviour
     {
         if (root == null || style == null) return;
         PixelFloor floor = PixelFloor.Instance;
-        if (floor == null || !floor.TryGetLiveFrame(out Vector3 centre, out float reach, out float alpha) || PixelTitleScreen.Showing && alpha <= 0.01f)
+        if (floor == null || !floor.TryGetLiveFrame(out Vector3 centre, out float reach, out float alpha) || PixelGameMode.TitleShowing && alpha <= 0.01f)
         {
             if (root.activeSelf) root.SetActive(false);
             return;

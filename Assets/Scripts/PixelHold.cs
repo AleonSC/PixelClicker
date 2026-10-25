@@ -45,7 +45,7 @@ public static class PixelHold
     /// <summary>Call every frame. 'target' = what the pointer is over right now (null = nothing). True when the hold completes.</summary>
     public static bool Update(object caller, object target, float seconds, string label, Color color, bool circle = false, string buildSound = null, bool useLeft = false, Vector2? at = null)
     {
-        if (target == null || PixelPauseMenu.IsPaused)
+        if (target == null || PixelGameMode.PauseMenuOpen)
         {
             if (ownerCaller == caller) Reset();
             return false;

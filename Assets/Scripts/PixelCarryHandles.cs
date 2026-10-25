@@ -159,7 +159,7 @@ public class PixelCarryHandles : MonoBehaviour
         return false;
     }
 
-    private Camera Cam => cameraSource != null && cameraSource() != null ? cameraSource() : Camera.main;
+    private Camera Cam => cameraSource != null && cameraSource() != null ? cameraSource() : PixelClicker.ViewCameraOf(PixelFind.Cached<PixelClicker>());
 
     private IPixelSocketDevice socketDevice;   // (the carried device's sockets: its aim beams)
 
@@ -170,7 +170,7 @@ public class PixelCarryHandles : MonoBehaviour
         if (handles.Count == 0) return;
         Camera cam = Cam;
         bool blocked = Blocked != null && Blocked();
-        if (cam == null || blocked || Time.timeScale <= 0f || PixelPauseMenu.IsPaused) { if (dragging) StopDrag(); return; }
+        if (cam == null || blocked || Time.timeScale <= 0f || PixelGameMode.PauseMenuOpen) { if (dragging) StopDrag(); return; }
 
         if (dragging)
         {

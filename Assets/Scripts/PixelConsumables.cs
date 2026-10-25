@@ -622,7 +622,7 @@ public partial class PixelConsumables : MonoBehaviour
     private void UpdateArming()
     {
         HoveringDisarmed = false;
-        if (IsPlacing || PixelBank.HoseOn || PixelClicker.GodMode || PixelFirstPerson.Active || PixelPauseMenu.IsPaused || Time.timeScale <= 0f || PointerOverUI()) return;
+        if (IsPlacing || PixelBank.HoseOn || PixelClicker.GodMode || PixelFirstPerson.Active || PixelGameMode.PauseMenuOpen || Time.timeScale <= 0f || PointerOverUI()) return;
         PixelPlacedDevice target = DeviceUnderPointer(true);
         if (target == null) return;
         HoveringDisarmed = true;

@@ -688,7 +688,7 @@ public class PixelDevInspector : MonoBehaviour
 
     private void PickUnderPointer()
     {
-        Camera cam = Camera.main;
+        Camera cam = PixelClicker.ViewCameraOf(PixelFind.Cached<PixelClicker>());
         if (cam == null) return;
         Ray ray = cam.ScreenPointToRay(PixelInput.PointerPosition());
         RaycastHit[] hits = Physics.RaycastAll(ray, 1000f, ~0, QueryTriggerInteraction.Collide);

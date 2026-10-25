@@ -749,7 +749,7 @@ public partial class PixelFloor
         craterFocus = new Vector2(0.5f, 0.56f);
         if (!UsesCraters(style.pattern)) return;
         if (floorRenderer == null) return;
-        Camera cam = Camera.main;
+        Camera cam = ViewCam();
         if (cam == null) return;
         Bounds b = floorRenderer.bounds;
         Plane plane = new Plane(Vector3.up, new Vector3(0f, b.max.y, 0f));

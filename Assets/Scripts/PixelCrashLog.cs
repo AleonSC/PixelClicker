@@ -362,7 +362,7 @@ public class PixelCrashLog : MonoBehaviour
         {
             StringBuilder sb = new StringBuilder();
             PixelClicker clicker = PixelFind.Cached<PixelClicker>();
-            sb.AppendLine("  Time scale: " + Time.timeScale.ToString("0.##") + "   Paused: " + PixelPauseMenu.IsPaused +
+            sb.AppendLine("  Time scale: " + Time.timeScale.ToString("0.##") + "   Paused: " + PixelGameMode.PauseMenuOpen +
                           "   Hose: " + PixelBank.HoseOn);
 
             PixelStats stats = PixelFind.Cached<PixelStats>();

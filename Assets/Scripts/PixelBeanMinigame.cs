@@ -355,7 +355,7 @@ public class PixelBeanstalk : MonoBehaviour
         foreach (Fruit f in fruits) if (f.model != null && !f.taken) f.model.transform.localRotation = Quaternion.Euler(15f, Time.time * 40f + f.segment * 30f, 0f);
 
         if (age >= WitherAfterSeconds) { Finish(true); return; }
-        if (grow < 1f || PixelPauseMenu.IsPaused || PointerOverUI()) return;
+        if (grow < 1f || PixelGameMode.PauseMenuOpen || PointerOverUI()) return;
         if (cam == null) cam = clicker.ViewCamera;
         if (cam == null) return;
 

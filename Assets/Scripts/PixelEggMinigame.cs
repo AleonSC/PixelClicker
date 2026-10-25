@@ -255,7 +255,7 @@ public class PixelEgg : MonoBehaviour
         body.localScale = Vector3.one * size * grow * (1f - punch * 0.12f);
 
         if (hatching) return;
-        if (PixelPauseMenu.IsPaused || Time.timeScale <= 0f || PointerOverUI()) return;
+        if (PixelGameMode.PauseMenuOpen || Time.timeScale <= 0f || PointerOverUI()) return;
         Vector3 screen = cam.WorldToScreenPoint(transform.position);
         if (screen.z <= 0f) return;
         Vector3 edge = cam.WorldToScreenPoint(transform.position + cam.transform.right * size * 0.75f);

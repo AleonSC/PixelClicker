@@ -447,7 +447,7 @@ public class PixelFeatureTester : MonoBehaviour
         Vector2 pointer = PixelInput.PointerPosition();
         if (consumables != null) return consumables.TryGetFloorPoint(pointer, out point);
         point = Vector3.zero;
-        Camera cam = Camera.main;
+        Camera cam = PixelClicker.ViewCameraOf(clicker);
         if (cam == null) return false;
         Ray ray = cam.ScreenPointToRay(pointer);
         Plane floor = new Plane(Vector3.up, Vector3.zero);
@@ -464,7 +464,7 @@ public class PixelFeatureTester : MonoBehaviour
     private void UpdateDelete()
     {
         GameObject target = null;
-        if (clicker != null && !PixelFirstPerson.Active && !PixelPauseMenu.IsPaused && (PixelInput.RightPressed() || PixelInput.RightHeld()) && !PixelInput.PointerOverUI())
+        if (clicker != null && !PixelFirstPerson.Active && !PixelGameMode.PauseMenuOpen && (PixelInput.RightPressed() || PixelInput.RightHeld()) && !PixelInput.PointerOverUI())
             target = ObjectUnderPointer();
         bool deleted = PixelHold.Update(this, target, DeleteHoldSeconds, "", new Color(0.9f, 0.3f, 0.3f, 1f), true, "remove_buildup");
         if (redTarget != null && redTarget != target) PixelRemoveTint.Set(redTarget, 0f);   // (the hold moved off it: back to normal)

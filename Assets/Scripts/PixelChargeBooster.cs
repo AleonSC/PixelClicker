@@ -179,7 +179,7 @@ public class PixelChargeBooster : PixelPlacedDevice
 
     protected override void OnTick()
     {
-        if (cam == null) cam = Camera.main;
+        if (cam == null) cam = PixelClicker.ViewCameraOf(clicker);
 
         if (Ready && cam != null && Time.timeScale > 0f)
         {

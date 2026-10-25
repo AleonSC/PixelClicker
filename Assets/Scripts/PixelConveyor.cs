@@ -1341,7 +1341,7 @@ public class PixelConveyorSystem : MonoBehaviour
             int wanted = PixelConveyor.LaneCount;
             if (wanted != lanesShown) { lanesShown = wanted; foreach (PixelConveyor each in PixelConveyor.All) if (each != null) each.RefreshLanes(); }   // the Electrician's width upgrade
         }
-        if (clicker == null || PixelPauseMenu.IsPaused || editorOpen) return;
+        if (clicker == null || PixelGameMode.PauseMenuOpen || editorOpen) return;
         bool fp = PixelFirstPerson.Active;
         if (PixelClicker.ExternalClickBlock && !fp) { flipTap.Update(null); return; }
         if (fp)

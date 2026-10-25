@@ -465,7 +465,7 @@ public partial class PixelDevTools : MonoBehaviour
     private void Update()
     {
         if (sessionLabel != null && (PixelSessionRecorder.Recording || sessionShownSecond != -1)) RefreshSessionLabel();
-        if (!PixelTitleScreen.Showing)
+        if (!PixelGameMode.TitleShowing)
         {
             if (PixelKeys.Pressed(PixelAction.DevTools)) { if (IsOpen) Close(); else Open(); }
             if (PixelKeys.Pressed(PixelAction.MarkMoment)) PixelDevProbe.MarkMoment();
@@ -473,7 +473,7 @@ public partial class PixelDevTools : MonoBehaviour
         }
         UpdateGod();
         UpdateMiddleSwap();
-        if (!clearKeyEnabled || clicker == null || PixelPauseMenu.IsPaused) return;
+        if (!clearKeyEnabled || clicker == null || PixelGameMode.PauseMenuOpen) return;
         if (IsTyping()) return;
         if (PixelInput.QPressed()) clicker.ClearOldPixels();
     }
@@ -714,13 +714,13 @@ public class PixelDevTip : MonoBehaviour
     }
 }
 
-/// <summary>Pictures for the dev tools, drawn in code: a plus, a paw print and a file, plus the window's rounded glowing frame.</summary>
+/// <summary>Pictures for the dev tools, drawn in code: a plus and a paw print, plus the window's rounded glowing frame.</summary>
 public static class DevIcons
 {
-    private static Sprite plus, paw, file;
+    private static Sprite plus, paw;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { plus = paw = file = null; }
+    private static void ResetStatics() { plus = paw = null; }
 
     private const int N = 64;
 
@@ -774,31 +774,5 @@ public static class DevIcons
                 return new Color(0.2f, 0.12f, 0.04f, Cover(d));
             }, "Paw");
         return paw;
-    }
-
-    /// <summary>A sheet of paper with a folded corner and a few lines of text.</summary>
-    public static Sprite FileSprite()
-    {
-        if (file == null)
-            file = Make((x, y) =>
-            {
-                // The page: x 13..51, y 4..60, top right corner folded (cut off along a diagonal).
-                float page = Box(x, y, 32f, 32f, 19f, 28f);
-                float cut = (x + y) - (51f + 60f - 14f);   // > 0 beyond the diagonal at the top right
-                float d = Mathf.Max(page, cut * 0.7071f);
-                if (d > 0.5f)
-                {
-                    // The fold: a small triangle under the cut.
-                    float fold = Mathf.Max(Mathf.Max(Box(x, y, 44f, 53f, 7f, 7f), -cut * 0.7071f), 0f);
-                    return new Color(0.75f, 0.78f, 0.85f, Cover(fold - 0f) * (cut > 0f ? 1f : 0f));
-                }
-                float edge = Mathf.Clamp01(-d / 2.2f);                       // dark outline
-                Color body = Color.Lerp(new Color(0.12f, 0.14f, 0.2f), new Color(0.96f, 0.97f, 1f), edge);
-                bool line = (Mathf.Abs(y - 20f) < 1.8f || Mathf.Abs(y - 29f) < 1.8f || Mathf.Abs(y - 38f) < 1.8f) && x > 20f && x < 44f;
-                if (line) body = new Color(0.45f, 0.5f, 0.62f);
-                body.a = Cover(d);
-                return body;
-            }, "File");
-        return file;
     }
 }

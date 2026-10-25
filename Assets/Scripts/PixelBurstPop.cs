@@ -62,7 +62,7 @@ public partial class PixelClicker
     {
         screenDir = Vector2.right;
         sharp = 0f;
-        Camera cam = targetCamera != null ? targetCamera : Camera.main;
+        Camera cam = ViewCamera;
         if (!edgeAiming || !AimingOwned || cam == null || pixelTransform == null || PixelFirstPerson.Active) return false;
         Vector3 centre = cam.WorldToScreenPoint(pixelTransform.position);
         Vector3 edge = cam.WorldToScreenPoint(pixelTransform.position + cam.transform.right * (PixelBaseSize * 0.5f));
@@ -76,7 +76,7 @@ public partial class PixelClicker
 
     private Vector2 AimedDirection(Vector2 random)
     {
-        Camera cam = targetCamera != null ? targetCamera : Camera.main;
+        Camera cam = ViewCamera;
         if (!TryGetAim(PointerPosition(), out Vector2 screenDir, out float sharp) || sharp <= 0f) return random;
         Vector2 offset = screenDir;
         // The screen direction of the click, laid flat on the floor (camera right / up projected onto the ground plane).

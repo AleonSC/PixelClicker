@@ -85,7 +85,7 @@ public class PixelDaylight : MonoBehaviour
         if (!built) Build();
         if (!built) return;
 
-        bool show = level > 0.004f && clicker.IsUnlocked(PixelClicker.PixelType.Solar) && !PixelTitleScreen.Showing;
+        bool show = level > 0.004f && clicker.IsUnlocked(PixelClicker.PixelType.Solar) && !PixelGameMode.TitleShowing;
         group.alpha = Mathf.MoveTowards(group.alpha, show ? 1f : 0f, Time.unscaledDeltaTime / 0.25f);
         if (group.alpha <= 0.001f) return;
         float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;

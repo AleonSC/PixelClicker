@@ -16,7 +16,7 @@ using UnityEngine.InputSystem;
 
 public partial class PixelClicker
 {
-    private static float AnimDelta => (PixelTimeStop.IsStopped || PixelTimeStop.IsSlowed || PixelTitleScreen.Showing) ? Time.unscaledDeltaTime : Time.deltaTime;
+    private static float AnimDelta => (PixelTimeStop.IsStopped || PixelTimeStop.IsSlowed || PixelGameMode.TitleShowing) ? Time.unscaledDeltaTime : Time.deltaTime;
 
     /// <summary>0..1 pulse that tells a brand-new player to click the cube: only while the guide text shows and nothing has been collected yet.</summary>
     private float ClickHintPulse(float time)

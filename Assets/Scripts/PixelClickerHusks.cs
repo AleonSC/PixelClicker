@@ -668,7 +668,7 @@ public partial class PixelClicker
         // The collider stays as a trigger so a slowed-down meteor can still be picked up (see LandFlyingPixel).
         box.isTrigger = true;
         copy.AddComponent<OldPixelFlight>();
-        Camera fc = targetCamera != null ? targetCamera : Camera.main;
+        Camera fc = ViewCamera;
         Vector2 d = tiers[tierIndex].flyDirection;
         if (tiers[tierIndex].flyRandomDirection)
         {

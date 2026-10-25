@@ -94,7 +94,7 @@ public class PixelAutoClicker : MonoBehaviour
 
     private void Update()
     {
-        if (!Working || PixelTitleScreen.Showing) return;
+        if (!Working || PixelGameMode.TitleShowing) return;
         if (PixelMinigame.TakeoverActive || PixelMinigame.AutoClickerPaused || PixelWhaleFight.Active || (clicker != null && clicker.CubeHidden)) return; // nothing to click while an event hides the cube
 
         timer += useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;

@@ -485,7 +485,7 @@ public class PixelBlockHold : MonoBehaviour
         // The block on the cube carries a stake: its aura glows green (it pays) or red (lost).
         float live = clicker.LiveStake;
         PixelClickerAura.StakeHighlight = Active && !Mathf.Approximately(live, 1f) ? (live > 1f ? new Color(0.3f, 1f, 0.45f, 1f) : new Color(1f, 0.25f, 0.2f, 1f)) : new Color(0f, 0f, 0f, 0f);
-        if (!introTried && Active && !disableStake && !PixelTitleScreen.Showing && !PixelHints.IntroHoldsGuide)
+        if (!introTried && Active && !disableStake && !PixelGameMode.TitleShowing && !PixelHints.IntroHoldsGuide)
         {
             PixelStats stats = PixelFind.Cached<PixelStats>();
             if (stats != null && stats.ManualClicks >= 25) { introTried = true; PixelHints.Trigger("stake_intro"); }   // (shown once)
@@ -630,7 +630,7 @@ public class PixelBlockHold : MonoBehaviour
     private void UpdateMeter()
     {
         bool full = meter >= 0.999f;
-        bool allowed = Active && !PixelTitleScreen.Showing;
+        bool allowed = Active && !PixelGameMode.TitleShowing;
         bool show = allowed && (holding || returning || flash > 0f || cooldown > 0f || !full || readyPop > 0f) && MeterHovered();
         // Fades in quickly and out over meterFadeSeconds (leaving the cube, or the meter filling up); gone at once on the title screen.
         float fadeDt = Time.unscaledDeltaTime;

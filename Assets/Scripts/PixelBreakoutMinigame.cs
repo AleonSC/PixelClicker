@@ -661,7 +661,7 @@ public class PixelBreakoutMinigame : PixelScheduledMinigame
         Track(text.gameObject);
         return PixelRisingText.Fade(text, messageSeconds, (tx, k) =>
         {
-            tx.transform.position = PixelUIKit.KeepOnScreen(cam != null ? cam : Camera.main, tx, start + rot * Vector3.up * (k * 0.8f));
+            tx.transform.position = PixelUIKit.KeepOnScreen(cam != null ? cam : PixelClicker.ViewCameraOf(clicker), tx, start + rot * Vector3.up * (k * 0.8f));
             tx.transform.rotation = rot;
         });
     }

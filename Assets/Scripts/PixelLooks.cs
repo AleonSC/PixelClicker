@@ -917,7 +917,7 @@ public class PixelFaceCamera : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (cam == null) cam = Camera.main;
+        if (cam == null) cam = PixelClicker.ViewCameraOf(PixelFind.Cached<PixelClicker>());
         if (cam != null) transform.rotation = cam.transform.rotation;
     }
 }

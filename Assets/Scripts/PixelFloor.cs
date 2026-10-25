@@ -291,27 +291,6 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     public string StyleName(int i) => i >= 0 && i < styles.Count ? styles[i].name : "";
     public bool Usable => HasFloor && styles.Count > 0;
 
-    /// <summary>
-    /// The floor cell (one square of the pattern's grid: the style's tile size divided by its 'cells') that contains a world point:
-    /// its centre on the floor and its side length. False when the floor has no steady grid (Classic, fitted or scrolling styles).
-    /// Used to line the Robot Worker up with the tiles.
-    /// </summary>
-    public bool TryGetCell(Vector3 world, out Vector3 centre, out float size)
-    {
-        centre = world; size = 0f;
-        if (floorRenderer == null || current < 0 || current >= styles.Count) return false;
-        FloorStyle st = styles[current];
-        if (st.pattern == FloorPattern.Classic || st.fitToView || st.stretchToFloor || st.scrollSpeed != Vector2.zero || st.cells < 1) return false;
-        float aspect = StyleAspect(st);
-        float cellX = st.tileWorldSize * aspect / st.cells, cellZ = st.tileWorldSize / st.cells;
-        if (cellX < 0.05f || cellZ < 0.05f) return false;
-        Vector3 c = floorRenderer.bounds.center;
-        float sh = (st.cells % 2 == 0) ? 0f : 0.5f;   // an even grid has a line through the floor's middle, an odd one a cell centre
-        centre = new Vector3(c.x + (Mathf.Floor((world.x - c.x) / cellX - sh) + 0.5f + sh) * cellX, world.y,
-                             c.z + (Mathf.Floor((world.z - c.z) / cellZ - sh) + 0.5f + sh) * cellZ);
-        size = Mathf.Min(cellX, cellZ);
-        return true;
-    }
     public Rect PreviewRect => new Rect(0f, 0f, 1f, 1f);
 
     private void Awake()
@@ -643,7 +622,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         if (style.pattern == FloorPattern.HauntedTiles && dt > 0f) UpdateHauntedFlicker();
 
         // An animated floor nobody can see (faded out on the main menu, or switched off in Settings) is not redrawn at all.
-        bool unseen = visibilityInit && visibility <= 0.001f && !(PixelTitleScreen.Showing && !PixelTitleWanderers.LiveBackground);
+        bool unseen = visibilityInit && visibility <= 0.001f && !(PixelGameMode.TitleShowing && !PixelTitleWanderers.LiveBackground);
         if (style.animateFps > 0f && dt > 0f && activeTexture != null && fillRoutine == null && !unseen)
         {
             animClock += dt * style.animSpeed;
@@ -769,7 +748,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     {
         if (floorRenderer == null) return;
         ApplyAreaScale();
-        if (exitHold && PixelTitleScreen.Showing) exitHold = false;
+        if (exitHold && PixelGameMode.TitleShowing) exitHold = false;
         bool hide = HidesOnTitle && (exitHold || (PixelTitleWanderers.LiveBackground && PixelGameMode.TitleOrIntro));
         // Old pixels and devices go first when leaving and come last when arriving: they fade out, THEN the floor; the floor fades in, THEN they do.
         // (Props only wait for the floor after a real arrival - the title screen / leaving it. A floor fade-in for any other reason, e.g. coming back
@@ -854,8 +833,9 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         flatBase.transform.localScale = new Vector3(thin == 0 ? fs.x : wide.x, thin == 1 ? fs.y : wide.y, thin == 2 ? fs.z : wide.z);
         // The sky's horizon colour, so the sky seems to fill the whole menu view (the floor picked in the menu only decides what loads in).
         Color flat;
+        Camera view = ViewCam();
         if (PixelSkybox.Instance != null && PixelSkybox.Instance.TryGetHorizonColor(out Color sky)) flat = sky;
-        else if (Camera.main != null && Camera.main.clearFlags == CameraClearFlags.SolidColor) flat = Camera.main.backgroundColor;
+        else if (view != null && view.clearFlags == CameraClearFlags.SolidColor) flat = view.backgroundColor;
         else flat = AverageColor();
         flat.a = 1f;
         flatMat.color = flat;
@@ -1063,13 +1043,16 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         return new Vector2((p.x - lb.min.x) / Mathf.Max(1e-4f, lb.size.x), (p.z - lb.min.z) / Mathf.Max(1e-4f, lb.size.z));
     }
 
+    /// <summary>The game's view camera (the clicker's target camera, else the main one).</summary>
+    private static Camera ViewCam() => PixelClicker.ViewCameraOf(PixelFind.Cached<PixelClicker>());
+
     /// <summary>
     /// Works out the floor's UVs at the bottom-left, bottom-right and top-left of the view (inside the black bars) and
     /// sets the tiling so one copy of the texture spans them. Returns true when the tiling changed.
     /// </summary>
     private bool FitToView(bool force)
     {
-        Camera cam = Camera.main;
+        Camera cam = ViewCam();
         if (cam == null || floorRenderer == null) return false;
         if (PixelOrbitCamera.HomeCamera != null) cam = PixelOrbitCamera.HomeCamera;   // orbiting: keep the fit of the normal view
         // While the camera intro moves the camera, fit to the pose it settles into instead of the live (close-up) one.

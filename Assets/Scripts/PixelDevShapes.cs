@@ -428,7 +428,7 @@ public class PixelDevShapes : MonoBehaviour
     private void Update()
     {
         if (!Active) return;
-        if (cam == null) cam = Camera.main;
+        if (cam == null) cam = PixelClicker.ViewCameraOf(clicker);
         if (cam == null) return;
 
         bool free = !PixelKeys.Typing && Time.timeScale > 0f && !PixelCalm.InMenu;

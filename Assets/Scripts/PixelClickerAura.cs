@@ -195,7 +195,7 @@ public class PixelClickerAura : MonoBehaviour
         comboBlend = Mathf.MoveTowards(comboBlend, ComboHighlight ? 1f : 0f, Time.unscaledDeltaTime * 5f);
         stakeBlend = Mathf.MoveTowards(stakeBlend, StakeHighlight.a > 0f ? 1f : 0f, Time.unscaledDeltaTime * 5f);
         bool on = (Enabled || comboBlend > 0.001f || stakeBlend > 0.001f) && clicker.PixelTransform.gameObject.activeInHierarchy
-                  && !PixelTitleScreen.Showing;   // (never on the title screen / main menu)
+                  && !PixelGameMode.TitleShowing;   // (never on the title screen / main menu)
         if (quad == null) { if (!on) return; Build(); if (quad == null) return; }
         if (quadRenderer.enabled != on) quadRenderer.enabled = on;
         UpdateMask(on);

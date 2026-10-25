@@ -201,9 +201,10 @@ public partial class PixelFloor
     private Color EdgeFadeColor()
     {
         Color flat;
+        Camera view = ViewCam();
         if (PixelSkybox.Instance != null && PixelSkybox.Instance.TryGetHorizonColor(out Color sky)) flat = sky;
         else if (PixelSkybox.Instance != null && PixelSkybox.Instance.Usable && PixelSkybox.Instance.Current >= 0) flat = PixelSkybox.Instance.PreviewColor(PixelSkybox.Instance.Current);
-        else if (Camera.main != null && Camera.main.clearFlags == CameraClearFlags.SolidColor) flat = Camera.main.backgroundColor;
+        else if (view != null && view.clearFlags == CameraClearFlags.SolidColor) flat = view.backgroundColor;
         else flat = AverageColor();
         flat.a = 1f;
         return flat;

@@ -49,10 +49,10 @@ public static class PixelDevProbe
     {
         var sb = new StringBuilder(2048);
         sb.AppendLine("Pixel Clicker - marked moment " + System.DateTime.UtcNow.ToString("u") + "  Unity " + Application.unityVersion + "  build " + Application.version);
-        sb.AppendLine("screen=" + Screen.width + "x" + Screen.height + " mode=" + PixelGameMode.Current + " paused=" + PixelPauseMenu.IsPaused + " title=" + PixelTitleScreen.Showing + " timeScale=" + Time.timeScale +
+        sb.AppendLine("screen=" + Screen.width + "x" + Screen.height + " mode=" + PixelGameMode.Current + " paused=" + PixelGameMode.PauseMenuOpen + " title=" + PixelGameMode.TitleShowing + " timeScale=" + Time.timeScale +
                       " fps=" + (1f / Mathf.Max(0.0001f, Time.unscaledDeltaTime)).ToString("F0"));
         sb.AppendLine("view=" + PixelViewWindow.CurrentView + " orbit=" + PixelOrbitCamera.Active + " zoomed=" + PixelZoom.Zoomed + " ortho=" + PixelOrthoView.Enabled);
-        Camera cam = Camera.main;
+        Camera cam = PixelClicker.ViewCameraOf(PixelFind.Cached<PixelClicker>());
         if (cam != null) sb.AppendLine("camera pos=" + cam.transform.position.ToString("F2") + " euler=" + cam.transform.eulerAngles.ToString("F1") + " fov=" + cam.fieldOfView.ToString("F1") + " ortho=" + cam.orthographic);
         sb.AppendLine("mouse=" + PixelInput.PointerPosition().ToString("F0"));
         sb.AppendLine();
@@ -180,9 +180,8 @@ public static class PixelDevProbe
             }
         }
 
-        Camera cam = Camera.main;
         PixelClicker clicker = PixelFind.First<PixelClicker>();
-        if (clicker != null && clicker.TargetCamera != null) cam = clicker.TargetCamera;
+        Camera cam = PixelClicker.ViewCameraOf(clicker);   // (its target camera, else the main one)
         if (cam != null)
         {
             Ray ray = cam.ScreenPointToRay(pointer);

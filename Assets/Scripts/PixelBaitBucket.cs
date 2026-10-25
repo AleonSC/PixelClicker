@@ -161,7 +161,7 @@ public class PixelBaitBucket : MonoBehaviour
                 models[i].Rotate(0f, 40f * Time.deltaTime, 0f, Space.Self);
             }
 
-        if (cam == null) cam = Camera.main;
+        if (cam == null) cam = PixelClicker.ViewCameraOf(clicker);
         if (Time.timeScale <= 0f) return;
         scanTimer -= dt;
         if (scanTimer <= 0f) { scanTimer = 0.08f; ScanPixels(); }

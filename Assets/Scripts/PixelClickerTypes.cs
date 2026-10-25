@@ -131,9 +131,6 @@ public partial class PixelClicker
         MarketCharm = 103,    // a RELIC: never drops; the Wizard gives it at Partner rapport
     }
 
-    /// <summary>The Firemaking skill pack's blocks (Fire, Tinder, Kindling, Firewood, Flint, Ember, the filler Ash; Wildfire is its hazard).</summary>
-    public static bool IsFireBlock(PixelType type) => PixelBlockTags.Has(type, PixelTag.Firemaking);   // (the tag table in PixelBlockTags.cs)
-
     /// <summary>The Fishing skill pack's blocks: Fish, Seaweed, Shell, Pearl and the filler Driftwood (the Jellyfish is its hazard).</summary>
     public static bool IsFishBlock(PixelType type) => PixelBlockTags.Has(type, PixelTag.Fish);   // (the tag table in PixelBlockTags.cs)
 
@@ -207,9 +204,6 @@ public partial class PixelClicker
 
     /// <summary>A Dragon Cube or a God Cube: the rare collectible drops kept out of potions, crafting, pets, achievements and the Value upgrades.</summary>
     public static bool IsRareCube(PixelType type) => IsDragonCube(type) || IsGodCube(type) || type == PixelType.GoldenSnitch;   // (the rare collectibles: no pets, potions, crafting or pixel achievements; the Golden Snitch too)
-
-    /// <summary>How many small cubes (1-7) a Dragon Cube carries; 0 for every other pixel type.</summary>
-    public static int DragonCubeStars(PixelType type) => PixelRareSets.Dragon.IndexOf(type) + 1;   // (its place in the set; 0 = not a Dragon Cube)
 
     /// <summary>Can the player switch this pixel's spawning off (tick box in the inventory)?</summary>
     public enum SpawnSwitch

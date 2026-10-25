@@ -45,9 +45,6 @@ public class PixelHighlight : MonoBehaviour
         if (instance != null && instance.owner == who) { instance.owner = null; instance.target = null; }
     }
 
-    /// <summary>Is 'who' highlighting something right now?</summary>
-    public static bool IsSetBy(object who) => instance != null && who != null && instance.owner == who;
-
     private void Update()
     {
         bool want = target != null && target.gameObject.activeInHierarchy;

@@ -552,7 +552,7 @@ public class PixelHints : MonoBehaviour
     /// <summary>The event log key (rebindable, Enter by default) opens the Log window on its Event log tab, or closes it when that tab is showing.</summary>
     private void UpdateLogKey()
     {
-        if (PixelPauseMenu.IsPaused || !PixelKeys.Pressed(PixelAction.EventLog)) return;   // (PixelKeys ignores presses while typing in a text box)
+        if (PixelGameMode.PauseMenuOpen || !PixelKeys.Pressed(PixelAction.EventLog)) return;   // (PixelKeys ignores presses while typing in a text box)
         UnityEngine.EventSystems.EventSystem es = UnityEngine.EventSystems.EventSystem.current;
         if (es != null && es.currentSelectedGameObject != null && es.currentSelectedGameObject.GetComponent<TMP_InputField>() != null) return;   // (don't steal Enter from a text box)
         if (PixelLog.LogOpen && PixelLog.EventLogTabShowing) PixelLog.SetLogOpen(false);
@@ -611,7 +611,7 @@ public class PixelHints : MonoBehaviour
     private void TryStartIntro()
     {
         if (introChecked) return;
-        if (PixelTitleScreen.Showing)
+        if (PixelGameMode.TitleShowing)
         {
             freshAtStart = !AnyCollected(); // judged on the title screen, before the player can click anything
             freshJudged = true;
@@ -623,7 +623,7 @@ public class PixelHints : MonoBehaviour
             freshAtStart = !AnyCollected();
             freshJudged = true;
         }
-        if (PixelCameraIntro.Moving || PixelCameraIntro.ClicksLocked) { introWait = 0f; return; }   // the intro tips wait until the camera animation is over
+        if (PixelGameMode.IntroMoving || PixelCameraIntro.ClicksLocked) { introWait = 0f; return; }   // the intro tips wait until the camera animation is over
         introWait += Time.unscaledDeltaTime; // counts from the moment the game starts (after Play) and the camera intro has finished
         if (introWait < introDelay) return;
         introChecked = true;

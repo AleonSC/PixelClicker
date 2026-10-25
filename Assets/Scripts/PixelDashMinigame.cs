@@ -160,7 +160,7 @@ public class PixelDashMinigame : PixelScheduledMinigame
         if (activeRound) { Tick(Time.deltaTime); return; }
         if (!running || UserDisabled) return;
 
-        if (SpawnDue(ref spawnTimer, PixelPauseMenu.IsPaused || clicker.CubeHidden || TakeoverActive) && !TryStart()) spawnTimer = 12f;
+        if (SpawnDue(ref spawnTimer, PixelGameMode.PauseMenuOpen || clicker.CubeHidden || TakeoverActive) && !TryStart()) spawnTimer = 12f;
     }
 
     // ------------------------------------------------------------------

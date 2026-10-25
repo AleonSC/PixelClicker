@@ -418,20 +418,6 @@ public class PixelHud : MonoBehaviour
         PixelMenuFx.DecorateHud(button.GetComponent<Button>());   // the shine on hover
     }
 
-    /// <summary>
-    /// Docks one button of a side-by-side GROUP on the middle of a side edge (e.g. the Bank tab with the square Hose button beside it).
-    /// 'leftOffset' = how far the button sits from the group's outer edge, 'groupWidth' = the group's total width; the whole group slides
-    /// as one and the button nearest the screen centre is the part that stays visible as the sliver.
-    /// </summary>
-    public void DockInGroup(RectTransform button, Vector2 anchor, Func<bool> keepOut, float sideOffsetY, float width, float leftOffset, float groupWidth)
-    {
-        Dock(button, anchor, keepOut, sideOffsetY);
-        button.sizeDelta = new Vector2(width, ButtonSize.y);
-        if (!Mathf.Approximately(anchor.y, 0.5f)) button.pivot = new Vector2(0f, anchor.y);   // a group on the top / bottom edge is placed by its left edge
-        PixelDockedButton dock = button.gameObject.GetComponent<PixelDockedButton>();
-        dock.Setup(this, button, anchor, keepOut, sideOffsetY, leftOffset, groupWidth);
-    }
-
     internal float Sliver => ButtonMode == 2 ? 0f : sliver;
 
     private const string PrefButtonMode = "PixelClicker.Setting.ButtonMode";
@@ -489,7 +475,7 @@ public class PixelDockedButton : MonoBehaviour
     public float SlideAmount => slide;
 
     private float cornerOffset; // a corner button sits this far along its bar from the corner, towards the middle (two buttons per corner: the second one is offset by the first one's width + the gap)
-    private float groupWidth; // > 0: this button is one of a side-by-side group that slides as a whole (see PixelHud.DockInGroup)
+    private float groupWidth; // > 0: this button is one of a side-by-side group that slides as a whole (see Setup's groupTotalWidth)
 
     public void Setup(PixelHud owner, RectTransform button, Vector2 corner, Func<bool> keepOutWhile, float offsetY = 0f, float offsetX = 0f, float groupTotalWidth = 0f, float cornerAlong = 0f)
     {

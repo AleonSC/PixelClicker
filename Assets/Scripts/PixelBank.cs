@@ -416,7 +416,7 @@ public class PixelBank : MonoBehaviour
         }
 
         // Equip / put away the hose.
-        if (!PixelPauseMenu.IsPaused && !IsTyping() && HoseKeyPressed()) SetHose(!HoseOn);
+        if (!PixelGameMode.PauseMenuOpen && !IsTyping() && HoseKeyPressed()) SetHose(!HoseOn);
 
         if (windowObject.activeSelf)
         {
@@ -768,7 +768,7 @@ public class PixelBank : MonoBehaviour
 
     private void HandleInput(Camera cam, Rigidbody candidate)
     {
-        if (PixelPauseMenu.IsPaused || Time.timeScale <= 0f)
+        if (PixelGameMode.PauseMenuOpen || Time.timeScale <= 0f)
         {
             StopArea();
             return;
@@ -1356,14 +1356,6 @@ public class PixelBank : MonoBehaviour
     private void CloseWindow() => PixelPop.Hide(windowObject);
 
     /// <summary>Closes the Bank window if it is open (the Inventory and the Log call this when they open).</summary>
-    /// <summary>Total width of the Bank tab + hose button pair on the left edge (the Skills tab under them matches it).</summary>
-    public static float DockGroupWidth(PixelHud hud)
-    {
-        PixelBank bank = PixelFind.First<PixelBank>();
-        float fraction = bank != null ? bank.bankTabWidthFraction : 0.5f;
-        return hud.ButtonSize.x * fraction + hud.ButtonSize.y;
-    }
-
     public static void CloseWindowIfOpen()
     {
         PixelBank bank = PixelFind.First<PixelBank>();

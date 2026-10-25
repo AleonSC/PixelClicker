@@ -117,8 +117,6 @@ public static class PixelKeys
         return current[(int)action];
     }
 
-    public static KeyCode DefaultOf(PixelAction action) => Defaults[(int)action];
-
     /// <summary>Binds a key to an action. If another action already uses that key, the two swap keys.</summary>
     public static void Set(PixelAction action, KeyCode key)
     {

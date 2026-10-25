@@ -437,7 +437,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
 
     private void UpdateHold()
     {
-        ShopHold = !PixelTitleScreen.Showing && PixelHints.TipsEnabled && shop != null && shop.ShopAvailable && !shop.WindowOpen
+        ShopHold = !PixelGameMode.TitleShowing && PixelHints.TipsEnabled && shop != null && shop.ShopAvailable && !shop.WindowOpen
                    && PixelStats.Total(Stage2Key) >= 1d && PixelStats.Total(PixelShopTutorial.OpenedKey) < 1d;
     }
 
@@ -533,14 +533,14 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
     private string CalmBlocker()
     {
         string why = null;
-        if (PixelTitleScreen.Showing) why = "the title screen is showing";
+        if (PixelGameMode.TitleShowing) why = "the title screen is showing";
         else if (PixelHints.IntroHoldsGuide) why = "the intro tips are still running";
         else if (PixelNotice.IsShowing) why = "a tip box is showing";
-        else if (PixelPauseMenu.IsPaused) why = "the game is paused";
+        else if (PixelGameMode.PauseMenuOpen) why = "the game is paused";
         else if (PixelMinigame.TakeoverActive) why = "a takeover minigame is running";
         else if (PixelPets.PopupOpen) why = "a pet popup is open";
         else if (PixelCameraIntro.ClicksLocked) why = "the camera intro has clicks locked";
-        else if (PixelCameraIntro.Moving) why = "the camera intro is moving";
+        else if (PixelGameMode.IntroMoving) why = "the camera intro is moving";
         else if (Time.timeScale <= 0f) why = "Time.timeScale is 0";
         else if (PixelWindows.AnyOpen()) why = "a registered window is open";   // (Cubie only turns up when no other window is open)
         else

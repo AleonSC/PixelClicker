@@ -373,16 +373,6 @@ public class PixelGhostMinigame : PixelScheduledMinigame
 
     private Transform ghostTransform;
 
-    /// <summary>Where the ghost is on screen (pixels), or null when none is out. The first-time tip box follows it.</summary>
-    public Vector2? GhostScreenPosition()
-    {
-        if (!ghostActive || ghostTransform == null) return null;
-        Camera cam = PixelClicker.ViewCameraOf(clicker);
-        if (cam == null) return null;
-        Vector3 sp = cam.WorldToScreenPoint(ghostTransform.position);
-        return sp.z > 0f ? new Vector2(sp.x, sp.y) : (Vector2?)null;
-    }
-
     private IEnumerator GhostRoutine()
     {
         ghostActive = true;
@@ -655,7 +645,7 @@ public class PixelGhostMinigame : PixelScheduledMinigame
         float t = 0f;
         while (!impact.Hit && (held || t < dropMaxSeconds))
         {
-            if (Time.timeScale > 0f && !PixelPauseMenu.IsPaused)
+            if (Time.timeScale > 0f && !PixelGameMode.PauseMenuOpen)
             {
                 if (!held)
                 {

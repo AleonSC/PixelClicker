@@ -914,7 +914,7 @@ public class PixelAchievements : MonoBehaviour, IPixelDatabaseSource
     private void TickPopup()
     {
         if (popupRect == null || !popupRect.gameObject.activeSelf) return;
-        if (PixelPauseMenu.IsPaused) return;
+        if (PixelGameMode.PauseMenuOpen) return;
 
         // The width eases between the open and the collapsed size; the texts show only while it is open enough for them.
         float targetWidth = popupCollapsed ? CollapsedWidth : popupExpandedSize.x;
