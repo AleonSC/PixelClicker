@@ -105,6 +105,7 @@ public partial class PixelRobotWorker : MonoBehaviour
     [SerializeField] private string clearJobText = "Stop working";
     [Tooltip("Message after choosing a device job. {0} = the device's name.")]
     [SerializeField] private string ufoJobSetFormat = "The UFO will keep a {0} running there";
+    [Tooltip("Message after picking a device job: where to drop it.")] [SerializeField] private string chooseDropText = "Choose where the UFO should drop it: click the floor";
     [Tooltip("Button for the 'abduct a pixel into the bank' job.")]
     [SerializeField] private string bankPixelsText = "Abduct a pixel into the bank";
     [Tooltip("The UFO's question when you pick which pixel to bank.")]
@@ -1151,7 +1152,7 @@ public partial class PixelRobotWorker : MonoBehaviour
     {
         CloseWindow();
         if (consumables.BeginRobotPlacement(index, OnSpotChosen))
-            PixelHints.Announce("Choose where the UFO should drop it: click the floor");
+            PixelHints.Announce(chooseDropText);
     }
 
     private void OnSpotChosen(int device, Vector3 point, float yaw)

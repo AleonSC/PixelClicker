@@ -46,6 +46,9 @@ public class PixelCollectionLog : MonoBehaviour
     [Tooltip("Brightness of each cube's light. 0 = 3.")]
     [SerializeField] private float galleryLightIntensity = 0f;
 
+    [Header("Texts")]
+    [Tooltip("The first page of the book. {0} = rare things found, {1} = all of them.")] [SerializeField] private string coverFormat = "Everything rare you have found, or have yet to find.\n\n<b>{0} / {1}</b> found\n\nTurn the page.";
+
     private struct Entry { public PixelClicker.PixelType type; public string section, flavour, hint; }
 
     private static readonly Entry[] Entries = BuildEntries();
@@ -300,7 +303,7 @@ public class PixelCollectionLog : MonoBehaviour
         {
             p.section.text = "";
             p.title.text = "Collection Log";
-            p.body.text = "Everything rare you have found, or have yet to find.\n\n<b>" + FoundCount() + " / " + Entries.Length + "</b> found\n\nTurn the page.";
+            p.body.text = string.Format(coverFormat, FoundCount(), Entries.Length);
             p.foot.text = "";
             return;
         }

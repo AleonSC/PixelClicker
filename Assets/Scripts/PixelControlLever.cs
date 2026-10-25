@@ -21,6 +21,9 @@ public class PixelControlLever : MonoBehaviour
     [Tooltip("Seconds between two checks of the belts it controls (while it is OFF it keeps them halted).")]
     [SerializeField] private float checkSeconds = 0.15f;
 
+    [Header("Texts")]
+    [Tooltip("Event log line when you switch the lever off. {0} = belts stopped, {1} = s when more than one.")] [SerializeField] private string leverOffFormat = "Lever OFF - {0} belt{1} stopped";
+
     private PixelClicker clicker;
     private bool ghost, on = true;
     private float unit = 0.5f, nextCheck, handleAngle = HandleOn;
@@ -68,7 +71,7 @@ public class PixelControlLever : MonoBehaviour
 
     public static GameObject Place(PixelClicker c, Vector3 point, float yaw)
     {
-        if (!Spot(c, point, out PixelConveyor belt, out Vector3 at, out float useYaw)) { PixelHints.Announce("Put the lever next to a conveyor belt."); return null; }
+        if (!Spot(c, point, out PixelConveyor belt, out Vector3 at, out float useYaw)) { PixelHints.Announce(PixelDialogue.File.Text("Device placing", "lever spot", "Put the lever next to a conveyor belt.")); return null; }
         GameObject root = Build(c, false);
         root.transform.SetPositionAndRotation(at, Quaternion.Euler(0f, useYaw, 0f));
         root.GetComponent<PixelControlLever>().belt = belt;
@@ -158,7 +161,7 @@ public class PixelControlLever : MonoBehaviour
         if (lamp != null && lampOnMat != null) lamp.sharedMaterial = on ? lampOnMat : lampOffMat;
         if (!byHand) return;
         PixelAudio.Play("ui_click", on ? 1.2f : 0.8f);
-        if (!on && belt != null) { belt.CollectSection(lineScratch); PixelHints.Announce("Lever OFF - " + lineScratch.Count + " belt" + (lineScratch.Count == 1 ? "" : "s") + " stopped"); }
+        if (!on && belt != null) { belt.CollectSection(lineScratch); PixelHints.Announce(string.Format(leverOffFormat, lineScratch.Count, lineScratch.Count == 1 ? "" : "s")); }
     }
 
     // ---------------- saving (PixelFeatureTester) ----------------

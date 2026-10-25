@@ -25,6 +25,7 @@ public class PixelInfinity : MonoBehaviour
     [SerializeField] private float forgeSeconds = 0f;
     [Tooltip("What the Wizard says in his second speech box when he offers the Gauntlet.")]
     [SerializeField] private string wizardAside = "Six cubes! In one pocket! Well, well, well... I have a little thing here, a Gauntlet, golden and rather shiny. Set them in its faces and something very small and very powerful will come out. For a fee, naturally.";
+    [Tooltip("Event log line when the Gauntlet could not be used up.")] [SerializeField] private string forgeFailedText = "The Gauntlet could not be used up. Try again";
 
     public static readonly string[] StoneNames = { "Space Cube", "Mind Cube", "Reality Cube", "Power Cube", "Time Cube", "Soul Cube" };
     private static readonly Color[] StoneColors =
@@ -277,7 +278,7 @@ public class PixelInfinity : MonoBehaviour
         bool ok = consumables != null && consumables.TryRemoveItem(gauntletItem, 1);
         for (int i = 0; i < 6 && ok; i++) ok = clicker.TrySpend(PixelClicker.PixelType.StoneSpace + i, 1d);
         forging = false;
-        if (!ok) { PixelHints.Announce("The Gauntlet could not be used up. Try again"); Refresh(); yield break; }
+        if (!ok) { PixelHints.Announce(forgeFailedText); Refresh(); yield break; }
         int cub = clicker.IndexOf(PixelClicker.PixelType.InfinityCubelette);
         if (cub >= 0) clicker.AddCurrency(cub, 1d);
         PixelStats.Count("infinity.forged");

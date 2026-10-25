@@ -27,6 +27,9 @@ public class PixelBeltSorter : MonoBehaviour, IPixelSocketDevice
     [Tooltip("How hard a kicked pixel is thrown out of the side, in cube widths per second. 0 = the coded default (3).")]
     [SerializeField] private float kickSpeedCubes = 0f;
 
+    [Header("Texts")]
+    [Tooltip("Event log line when the sorter's belt is removed and the sorter goes back into your backpack.")] [SerializeField] private string beltLostText = "Its belt was removed: the Belt Sorter went back into your backpack.";
+
     private float Kick => kickSpeedCubes > 0f ? kickSpeedCubes : 3f;
 
     private static readonly List<PixelBeltSorter> all = new List<PixelBeltSorter>();
@@ -75,7 +78,7 @@ public class PixelBeltSorter : MonoBehaviour, IPixelSocketDevice
 
     private static GameObject PlaceWith(PixelClicker c, Vector3 point, float yaw, bool withFilter, PixelClicker.PixelType type, double amount, bool makeJoint)
     {
-        if (!PixelConveyor.NearestOn(c, point, out PixelConveyor belt, out float s, 1.6f)) { PixelHints.Announce("Click a spot on a conveyor belt for the sorter."); return null; }
+        if (!PixelConveyor.NearestOn(c, point, out PixelConveyor belt, out float s, 1.6f)) { PixelHints.Announce(PixelDialogue.File.Text("Device placing", "belt sorter spot", "Click a spot on a conveyor belt for the sorter.")); return null; }
         if (makeJoint)
         {
             // A JOINT: placed mid-belt, the belt is split in two right here and the sorter sits at the start of the second piece - the line's power
@@ -259,7 +262,7 @@ public class PixelBeltSorter : MonoBehaviour, IPixelSocketDevice
             hasFilter = false;
         }
         PixelConsumables inv = PixelFind.Cached<PixelConsumables>();
-        if (inv != null && inv.GiveDevice(PixelConsumables.DeviceKind.BeltSorter)) PixelHints.Announce("Its belt was removed: the Belt Sorter went back into your backpack.");
+        if (inv != null && inv.GiveDevice(PixelConsumables.DeviceKind.BeltSorter)) PixelHints.Announce(beltLostText);
         PixelFeatureTester.RemovePlaced(gameObject);
     }
 

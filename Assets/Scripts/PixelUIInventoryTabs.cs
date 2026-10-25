@@ -15,6 +15,8 @@ using UnityEngine.InputSystem;
 
 public partial class PixelUI
 {
+    private const string GalleryButtonName = "3D View Button";   // (the button object's name in the hierarchy, not shown to the player)
+
     // ------------------------------------------------------------------
     // Inventory tabs / consumables
     // ------------------------------------------------------------------
@@ -109,7 +111,7 @@ public partial class PixelUI
         });
         consumableSearchField.gameObject.SetActive(false);
 
-        galleryButton = PixelUIKit.CreateButton(font, boxObject.transform, "3D View Button", "", new Vector2(square, square), ButtonRole.Neutral, 20f);
+        galleryButton = PixelUIKit.CreateButton(font, boxObject.transform, GalleryButtonName, "", new Vector2(square, square), ButtonRole.Neutral, 20f);
         RectTransform gbr = galleryButton.GetComponent<RectTransform>();
         gbr.anchorMin = gbr.anchorMax = new Vector2(0.5f, 1f);
         gbr.pivot = new Vector2(0.5f, 1f);

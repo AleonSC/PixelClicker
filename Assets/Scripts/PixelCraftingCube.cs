@@ -32,6 +32,9 @@ public class PixelCraftingCube : MonoBehaviour, IPixelSocketDevice, IPixelHuskFi
     [Tooltip("Seconds between two checks of its top (husks dropped on it) and whether it can craft.")]
     [SerializeField] private float checkSeconds = 0.15f;
 
+    [Header("Texts")]
+    [Tooltip("The sign over the cube when no recipe is chosen (rich text).")] [SerializeField] private string idleSignText = "<b>Crafting Cube</b>\n<size=75%>Right-click to choose a recipe</size>";
+
     private const float SideCubes = 2f;
     private static readonly Color Stone = new Color(0.36f, 0.3f, 0.42f, 1f), Trim = new Color(0.6f, 0.48f, 0.3f, 1f), Rune = new Color(0.75f, 0.5f, 1f, 1f),
                                   Leather = new Color(0.45f, 0.16f, 0.14f, 1f), Paper = new Color(0.96f, 0.93f, 0.82f, 1f), Gold = new Color(0.95f, 0.78f, 0.3f, 1f);
@@ -336,7 +339,7 @@ public class PixelCraftingCube : MonoBehaviour, IPixelSocketDevice, IPixelHuskFi
         if (!hovered) return;
         Camera cam = clicker.ViewCamera;
         if (cam != null) label.transform.rotation = Quaternion.LookRotation(label.transform.position - cam.transform.position, cam.transform.up);
-        if (priced == null) { label.text = "<b>Crafting Cube</b>\n<size=75%>Right-click to choose a recipe</size>"; return; }
+        if (priced == null) { label.text = idleSignText; return; }
         string text = "<b>" + crafting.MachineResultName(recipe) + "</b>";
         foreach (PixelCrafting.Ingredient ing in new[] { priced.a, priced.b })
         {

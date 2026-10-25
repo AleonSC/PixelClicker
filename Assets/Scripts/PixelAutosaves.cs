@@ -287,6 +287,9 @@ public static class PixelSaveShots
 /// <summary>The window with the list of autosaves (opened from the Save / Load window).</summary>
 public class PixelAutosaveWindow : MonoBehaviour
 {
+    [Header("Texts")]
+    [Tooltip("Shown in the window when an autosave could not be loaded.")] [SerializeField] private string loadFailedText = "Could not load that autosave.";
+
     private static PixelAutosaveWindow instance;
 
     public static bool IsOpen => instance != null && instance.root != null && instance.root.activeSelf;
@@ -482,7 +485,7 @@ public class PixelAutosaveWindow : MonoBehaviour
             afterLoad?.Invoke();
             return;
         }
-        statusLabel.text = "Could not load that autosave.";
+        statusLabel.text = loadFailedText;
     }
 
     private void Update()

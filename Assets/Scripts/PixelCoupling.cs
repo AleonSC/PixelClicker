@@ -373,7 +373,7 @@ public class PixelCoupling : MonoBehaviour
                 if (dist < best) { best = dist; bestDevice = d; bestSocket = s; }
             }
         }
-        if (bestDevice == null) { PixelHints.Announce("A coupling goes on a device's socket: bring it near one of the teal rings"); return null; }
+        if (bestDevice == null) { PixelHints.Announce(PixelDialogue.File.Text("Device placing", "coupling spot", "A coupling goes on a device's socket: bring it near one of the teal rings")); return null; }
         PixelCoupling made = Fit(bestDevice, bestSocket);
         if (made == null) return null;
         PixelAudio.Play("device_place");

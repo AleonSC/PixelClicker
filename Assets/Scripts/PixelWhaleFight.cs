@@ -37,6 +37,9 @@ public class PixelWhaleFight : MonoBehaviour, IPixelDatabaseSource
     [SerializeField, Tooltip("Colour of the fishing line (its alpha is the line's top opacity).")]
     private Color lineColor = new Color(0.96f, 0.98f, 1f, 0.9f);
 
+    [Header("Texts")]
+    [Tooltip("Event log line when a whale bites.")] [SerializeField] private string hookedText = "A whale is on the line!";
+
     private static PixelWhaleFight instance;
 
     /// <summary>True while a whale is fighting the line (the auto clicker waits).</summary>
@@ -137,7 +140,7 @@ public class PixelWhaleFight : MonoBehaviour, IPixelDatabaseSource
         restLeft = RollRest();
         driftChange = 0f;
         PixelAudio.Play("whale_hook");
-        PixelHints.Announce("A whale is on the line!");
+        PixelHints.Announce(hookedText);
         PixelStats.Count("whales.hooked");
     }
 

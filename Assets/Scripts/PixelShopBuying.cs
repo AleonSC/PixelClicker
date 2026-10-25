@@ -12,6 +12,10 @@ using UnityEngine.UI;
 
 public partial class PixelShop
 {
+    [Header("Texts (unlocks)")]
+    [Tooltip("Event log line when a pack unlocks Glass pixels.")] [SerializeField] private string glassUnlockedText = "You unlocked Glass Pixels!";
+    [Tooltip("Event log line when a pack unlocks the Auto Clicker.")] [SerializeField] private string autoClickerUnlockedText = "You unlocked the Auto Clicker!";
+
     private const string glassToggleHint = "Glass unlocked!\nIt is switched ON by default and now spawns with your other pixels. Open the Toggles window (the tab on the right edge of the screen), go to Pixels and untick Glass if you don't want it. Crafting is unlocked too!";
 
     private static bool IsLeveled(ShopPack pack) => pack.levels != null && pack.levels.Length > 0;
@@ -687,7 +691,7 @@ public partial class PixelShop
                     {
                         // Glass is switched on by default: a box beside the Toggles tab says where to switch it off.
                         PixelToggles.ShowHint(glassToggleHint);
-                        PixelHints.Announce("You unlocked Glass Pixels!", glassToggleHint);
+                        PixelHints.Announce(glassUnlockedText, glassToggleHint);
                         continue;
                     }
                     PixelHints.Trigger("pixel_" + reward.type);
@@ -699,7 +703,7 @@ public partial class PixelShop
                 autoClicker.UserDisabled = true;
                 if (PixelTogglesTutorial.WillRun) PixelTogglesTutorial.Request();   // Cubie explains the Toggles window (first-time tips)
                 else PixelToggles.ShowHint();
-                PixelHints.Announce("You unlocked the Auto Clicker!", PixelToggles.HintMessage);
+                PixelHints.Announce(autoClickerUnlockedText, PixelToggles.HintMessage);
             }
         }
 

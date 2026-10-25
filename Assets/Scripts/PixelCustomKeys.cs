@@ -113,7 +113,7 @@ public class PixelCustomKeys : MonoBehaviour
         for (int i = 0; i < consumables.ItemCount; i++)
         {
             if (consumables.ItemName(i) != name) continue;
-            if (consumables.ItemOwned(i) <= 0) { PixelHints.Announce("You have no " + name + " left"); return; }
+            if (consumables.ItemOwned(i) <= 0) { PixelHints.Announce(string.Format(PixelDialogue.File.Text("Messages", "item used up", "You have no {0} left"), name)); return; }
             consumables.TryUseItem(i);
             return;
         }

@@ -16,6 +16,9 @@ using UnityEngine.InputSystem;
 
 public partial class PixelClicker
 {
+    [Header("Texts (the click)")]
+    [Tooltip("Event log line when a hooked fish gets away.")] [SerializeField] private string fishGotAwayText = "The fish got away!";
+
     // ------------------------------------------------------------------
     // Core loop
     // ------------------------------------------------------------------
@@ -63,7 +66,7 @@ public partial class PixelClicker
             finally { fishingPass = false; }
             return;
         }
-        PixelHints.Announce("The fish got away!");
+        PixelHints.Announce(fishGotAwayText);
         hitsOnCurrentPixel = 0;
         if (randomizeSpawnTier) currentTierIndex = RollTier();
         Materialize(GetClickTier());

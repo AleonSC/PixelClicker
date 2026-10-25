@@ -46,6 +46,9 @@ public class PixelEggMinigame : PixelVisitorMinigame
     [Tooltip("...and at most this many.")]
     [SerializeField] private int giftClicksMax = 120;
 
+    [Header("Texts")]
+    [Tooltip("Event log line when Egg gives you an egg.")] [SerializeField] private string eggGiftText = "Egg gave you an egg. Click it until it hatches!";
+
     private bool restoreChecked;
 
     public override string Id => "egg";
@@ -86,7 +89,7 @@ public class PixelEggMinigame : PixelVisitorMinigame
         PixelStats.Count("egg.need", need);
         PixelStats.Clear("egg.clicks");
         PixelEgg.Spawn(clicker, need, 0);
-        PixelHints.Announce("Egg gave you an egg. Click it until it hatches!");
+        PixelHints.Announce(eggGiftText);
         PixelAudio.Play("purchase");
     }
 
@@ -287,7 +290,7 @@ public class PixelEgg : MonoBehaviour
         {
             ShellBurst();
             PixelStats.Clear("egg.pending");
-            PixelHints.Announce("The egg hatched, but nothing was inside...");
+            PixelHints.Announce(PixelDialogue.File.Text("Visitor: egg", "hatched empty", "The egg hatched, but nothing was inside..."));
             Destroy(gameObject);
             return;
         }
@@ -310,7 +313,7 @@ public class PixelEgg : MonoBehaviour
     {
         PixelStats.Clear("egg.pending");
         if (PixelPets.Instance != null) PixelPets.Instance.Award(type, !shown, startOff: true);   // the show replaces the found-a-pet popup; a pet from an egg starts switched OFF in Toggles
-        PixelHints.Announce("The egg hatched! A new pet: " + petName);
+        PixelHints.Announce(string.Format(PixelDialogue.File.Text("Visitor: egg", "hatched pet", "The egg hatched! A new pet: {0}"), petName));
         Destroy(gameObject);
     }
 

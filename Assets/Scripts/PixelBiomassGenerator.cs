@@ -54,6 +54,9 @@ public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHu
     [Tooltip("Colour the bar and the glow flash when it is empty.")]
     [SerializeField] private Color emptyColor = new Color(1f, 0.2f, 0.15f, 1f);
 
+    [Header("Texts")]
+    [Tooltip("Event log line when a generator runs out of fuel and shuts down.")] [SerializeField] private string outOfFuelText = "A Biomass Generator ran out of fuel and shut down";
+
     private static readonly List<PixelBiomassGenerator> all = new List<PixelBiomassGenerator>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -287,7 +290,7 @@ public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHu
             {
                 if (redLeft < 0f) { redLeft = redSeconds; PixelAudio.Play("ui_click"); }
                 redLeft -= Time.deltaTime;
-                if (redLeft <= 0f && device != null) { device.RemoveNow(); PixelHints.Announce("A Biomass Generator ran out of fuel and shut down"); return; }
+                if (redLeft <= 0f && device != null) { device.RemoveNow(); PixelHints.Announce(outOfFuelText); return; }
             }
         }
         empty = charge <= 0f;

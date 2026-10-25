@@ -582,7 +582,7 @@ public class PixelSnakeMinigame : PixelScheduledMinigame
         {
             clicker.AddUltra(1);
             ultraRoundCount++;
-            PixelHints.Announce("Ultra pixel gained!");
+            PixelHints.Announce(ultraGainedText);   // (the shared text field on PixelMinigame)
             Rigidbody last = bodyPieces[bodyPieces.Count - 1].body;
             PixelUltraFx.Play(clicker, last != null ? last.position : headPos);
         }

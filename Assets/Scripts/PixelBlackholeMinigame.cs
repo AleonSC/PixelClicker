@@ -53,6 +53,7 @@ public class PixelBlackholeMinigame : PixelScheduledMinigame
     [Header("Hints")]
     [Tooltip("The first time a black hole opens, show a tip box explaining what to do (once; remembered between sessions).")]
     [SerializeField] private bool showFirstHoleHint = true;
+    [Tooltip("Event log line the first time a black hole opens (the tip box text is below).")] [SerializeField] private string holeOpenedText = "A black hole opened!";
 
     [TextArea(2, 5)]
     [Tooltip("The tip. {0} = the goal.")]
@@ -676,7 +677,7 @@ public class PixelBlackholeMinigame : PixelScheduledMinigame
 
         string hintMessage = string.Format(PixelDialogue.File.Text("Minigame: Black Hole", "first hole", firstHoleMessage), PixelClicker.FormatNumber(singularityThreshold));
         PixelNotice.Show(hintMessage, small: true);
-        PixelHints.Announce("A black hole opened!", hintMessage);
+        PixelHints.Announce(holeOpenedText, hintMessage);
     }
 
     private void RegisterContribution()

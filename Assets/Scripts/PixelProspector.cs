@@ -28,7 +28,7 @@ public static class PixelProspector
     {
         if (richAnnounced) return;
         richAnnounced = true;
-        PixelHints.Announce("A rich vein! It glittered - and paid out big.");
+        PixelHints.Announce(PixelDialogue.File.Text("Visitor: prospector", "rich vein", "A rich vein! It glittered - and paid out big."));
     }
 }
 

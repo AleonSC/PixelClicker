@@ -54,6 +54,10 @@ public class PixelContainerHose : MonoBehaviour
     [Tooltip("How far the hose runs straight out of a coupling's adapter before it bends, in husk widths.")]
     [SerializeField] private float legHusks = 0.7f;
 
+    [Header("Texts")]
+    [Tooltip("Shown when you try to reverse a hose whose ends aren't both on couplings.")] [SerializeField] private string notConnectedText = "Connect both ends of the hose to couplings first";
+    [Tooltip("Shown when the hose is reversed.")] [SerializeField] private string reversedText = "Hose reversed: it now pulls from the other end";
+
     private PixelClicker clicker;
     private bool ghost;
     private float unit = 1f;
@@ -342,7 +346,7 @@ public class PixelContainerHose : MonoBehaviour
     /// </summary>
     private void Reverse()
     {
-        if (source == null || target == null) { PixelHints.Announce("Connect both ends of the hose to couplings first"); return; }
+        if (source == null || target == null) { PixelHints.Announce(notConnectedText); return; }
         bool newSourceOk = target.Socket.CanGiveOut && target.Device is IPixelHuskSource, newTargetOk = source.Socket.CanTakeIn;
         if (!newSourceOk || !newTargetOk)
         {
@@ -358,7 +362,7 @@ public class PixelContainerHose : MonoBehaviour
         bends.Reverse();
         Rebuild();
         PixelAudio.Play("ui_click");
-        PixelHints.Announce("Hose reversed: it now pulls from the other end");
+        PixelHints.Announce(reversedText);
     }
 
     // ------------------------------------------------------------------

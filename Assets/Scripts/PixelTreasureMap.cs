@@ -33,6 +33,9 @@ public class PixelTreasureMap : MonoBehaviour, IPixelDatabaseSource
     [SerializeField, Tooltip("Ground area for the X, in pixel widths from the cube: farthest. 0 = 7.")]
     private float spotFarthest;
 
+    [Header("Texts")]
+    [Tooltip("Event log line when an X appears on the ground.")] [SerializeField] private string markText = "An X marks the spot - click it to dig!";
+
     private static PixelTreasureMap instance;
 
     /// <summary>True while the mouse is over an X (the cube ignores the click then).</summary>
@@ -492,7 +495,7 @@ public class PixelTreasureMap : MonoBehaviour, IPixelDatabaseSource
         PixelAudio.Play("map_reveal");
         PixelFxRing.Spawn(pos + Vector3.up * size * 0.05f, new Color(1f, 0.3f, 0.2f, 0.9f), size * 0.3f, size * 2.6f, 0.9f, 2f);
         DirtFx(pos, size, 0.8f);
-        PixelHints.Announce("An X marks the spot - click it to dig!");
+        PixelHints.Announce(markText);
     }
 
     private void GlassFx(Vector3 at, float size)

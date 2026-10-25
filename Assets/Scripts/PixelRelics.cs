@@ -66,7 +66,7 @@ public class PixelRelics : MonoBehaviour
         if (market != null) market.ClearSaturation();
         PixelStats.Count("relic.charmCast");
         PixelAudio.Play("achievement");
-        PixelHints.Announce("The Market Charm glows: every vendor pays full price again.");
+        PixelHints.Announce(PixelDialogue.File.Text("Messages", "market charm", "The Market Charm glows: every vendor pays full price again."));
         return true;
     }
 }
