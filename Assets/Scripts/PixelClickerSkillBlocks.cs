@@ -211,7 +211,7 @@ public partial class PixelClicker
         if (SeedSprout.EatOne(out Vector3 at))
         {
             SeedDigFx.Play(at, PixelBaseSize * 0.6f, 0.5f);
-            if (!weevilTold) { weevilTold = true; PixelHints.Announce("A weevil is eating your sprouts! Click it!"); }
+            if (!weevilTold) { weevilTold = true; PixelHints.Announce(weevilText); }
         }
     }
 
@@ -346,7 +346,7 @@ public partial class PixelClicker
     private void DismissBottle()
     {
         PixelAudio.Play("fish_splash");
-        PixelHints.Announce("You let the bottle drift away");
+        PixelHints.Announce(bottleDriftText);
         hitsOnCurrentPixel = 0;
         if (randomizeSpawnTier) currentTierIndex = RollTier();
         Materialize(GetClickTier());
@@ -355,7 +355,7 @@ public partial class PixelClicker
     /// <summary>The whale tore itself off the hook (the fight ran out of time): no payout, the next pixel comes.</summary>
     public void WhaleGotAway()
     {
-        PixelHints.Announce("The whale broke the line and swam away!");
+        PixelHints.Announce(whaleEscapedText);
         hitsOnCurrentPixel = 0;
         if (randomizeSpawnTier) currentTierIndex = RollTier();
         Materialize(GetClickTier());
@@ -521,6 +521,11 @@ public partial class PixelClicker
     [Min(0f)]
     [Tooltip("How many times wider than a normal hazard blast a going-off Jellyfish stings (and it also zaps every bait pellet). 0 = the default (1.5).")]
     [SerializeField] private float jellyfishBlastFactor = 0f;
+
+    [Header("Texts (skill blocks)")]
+    [Tooltip("Event log line the first time a weevil eats your sprouts.")] [SerializeField] private string weevilText = "A weevil is eating your sprouts! Click it!";
+    [Tooltip("Event log line when you let a message bottle drift away.")] [SerializeField] private string bottleDriftText = "You let the bottle drift away";
+    [Tooltip("Event log line when the whale breaks the fishing line.")] [SerializeField] private string whaleEscapedText = "The whale broke the line and swam away!";
 
     public bool DisableBait => disableBait;
     public int BaitPellets => baitPellets > 0 ? baitPellets : 6;

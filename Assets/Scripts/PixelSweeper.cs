@@ -61,6 +61,10 @@ public class PixelSweeper : MonoBehaviour, IPixelDeviceInfo
     [Tooltip("The planned Electrician MOTOR (fitted through a future Power socket): on = it never runs down and needs no winding. Off for now.")]
     [SerializeField] private bool motorFitted = false;
 
+    [Header("Texts")]
+    [Tooltip("The label over an unwound Sweeper.")] [SerializeField] private string windText = "click to wind";
+    [Tooltip("Event log line when the Sweeper is fully wound.")] [SerializeField] private string woundText = "Sweeper wound up";
+
     private static readonly List<PixelSweeper> all = new List<PixelSweeper>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -171,7 +175,7 @@ public class PixelSweeper : MonoBehaviour, IPixelDeviceInfo
         GameObject lg = new GameObject("Wind Label");
         lg.transform.SetParent(transform, false);
         windLabel = lg.AddComponent<TMPro.TextMeshPro>();
-        windLabel.text = "click to wind";
+        windLabel.text = windText;
         windLabel.fontSize = 2.2f;
         windLabel.alignment = TMPro.TextAlignmentOptions.Center;
         windLabel.color = new Color(1f, 0.85f, 0.45f, 1f);
@@ -391,7 +395,7 @@ public class PixelSweeper : MonoBehaviour, IPixelDeviceInfo
         if (!PixelInput.LeftPressed()) return;
         windLeft = runSeconds;
         PixelAudio.Play("ui_click", 0.8f);
-        PixelHints.Announce("Sweeper wound up");
+        PixelHints.Announce(woundText);
     }
 
     private bool PointerOnBot(Camera cam)

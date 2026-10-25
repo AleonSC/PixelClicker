@@ -19,6 +19,8 @@ using UnityEngine.UI;
 
 public class PixelLogoView : MonoBehaviour
 {
+    private const string NameObject = "Logo Style Name";   // (the label object's name in the hierarchy, not shown to the player)
+
     private const string Pref = "PixelClicker.Setting.LogoStyle";
     /// <summary>The favourite logo style + 1 (0 = none); saved per save file (PixelSettingsSync).</summary>
     public const string FavoritePref = "PixelClicker.Setting.LogoFavorite";
@@ -321,7 +323,7 @@ public class PixelLogoView : MonoBehaviour
         starImages = new[] { MakeStar(arrowLeft), MakeStar(arrowRight) };
         RefreshStars();
 
-        nameLabel = PixelUIKit.CreateText(font, transform, "Logo Style Name", "", 26f, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 1f, 1f, 0.9f));
+        nameLabel = PixelUIKit.CreateText(font, transform, NameObject, "", 26f, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 1f, 1f, 0.9f));
         nameLabel.raycastTarget = false;
         RectTransform nr = nameLabel.rectTransform;
         nr.anchorMin = new Vector2(0.5f, 0f); nr.anchorMax = new Vector2(0.5f, 0f); nr.pivot = new Vector2(0.5f, 1f);

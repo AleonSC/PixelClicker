@@ -53,6 +53,9 @@ public class PixelPowerClick : MonoBehaviour
     [Tooltip("How far the cube trembles at full charge, as a share of its size.")]
     [SerializeField] private float shakeAtFull = 0.06f;
 
+    [Header("Texts")]
+    [Tooltip("The big popup when a Power Click fires. {0} = how many clicks it is worth.")] [SerializeField] private string popupFormat = "POWER CLICK  x{0}";
+
     // Standard tree branches: 'quick' charges 40% faster, 'aftershock' cuts the cooldown by a third.
     private float ChargeSeconds => chargeSeconds * (PixelSkills.HasStandardNode("quick") ? 0.6f : 1f);
     private float CooldownSeconds => cooldownSeconds * (PixelSkills.HasStandardNode("aftershock") ? 2f / 3f : 1f);
@@ -195,7 +198,7 @@ public class PixelPowerClick : MonoBehaviour
         flashT = 1f;
         waveT = 0f; waveCentre = centre;
         popupT = 0f; popupStart = centre + new Vector2(0f, radius * 1.1f);
-        if (popup != null) popup.text = "POWER CLICK  x" + clicksWorth;
+        if (popup != null) popup.text = string.Format(popupFormat, clicksWorth);
         clicker.SetCubeOffset(cam.transform.up * clicker.PixelBaseSize * 0.12f);   // a kick (it drifts back)
         shaking = true;
         fxTime = 0.12f;

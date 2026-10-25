@@ -38,6 +38,9 @@ public class PixelBeanMinigame : PixelVisitorMinigame
     [Tooltip("...and at most this many.")]
     [SerializeField] private int giftClicksMax = 120;
 
+    [Header("Texts")]
+    [Tooltip("Event log line when Bean gives you Magic Beans.")] [SerializeField] private string beanGiftText = "Bean gave you Magic Beans. Plant them in the Inventory's Seeds category!";
+
     private bool restoreChecked;
 
     public override string Id => "bean";
@@ -75,7 +78,7 @@ public class PixelBeanMinigame : PixelVisitorMinigame
         int item = consumables != null ? consumables.BeansItem() : -1;
         if (item < 0) return;
         consumables.AddItem(item, 1);
-        PixelHints.Announce("Bean gave you Magic Beans. Plant them in the Inventory's Seeds category!");
+        PixelHints.Announce(beanGiftText);
         PixelAudio.Play("purchase");
     }
 
@@ -407,7 +410,7 @@ public class PixelBeanstalk : MonoBehaviour
         {
             // Left too long: the stalk withers, but the Dragon Cube is still yours.
             foreach (Fruit f in fruits)
-                if (!f.taken && f.dragon) { clicker.AddCurrency(f.tier, 1d); f.taken = true; PixelStats.Clear("bean.pending"); PixelHints.Announce("The beanstalk withered, but its Dragon Cube is yours."); }
+                if (!f.taken && f.dragon) { clicker.AddCurrency(f.tier, 1d); f.taken = true; PixelStats.Clear("bean.pending"); PixelHints.Announce(PixelDialogue.File.Text("Visitor: bean", "withered dragon", "The beanstalk withered, but its Dragon Cube is yours.")); }
         }
         witheringAway = true;
         wither = 0f;

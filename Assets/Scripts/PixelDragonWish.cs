@@ -51,6 +51,12 @@ public class PixelDragonWish : MonoBehaviour, IPixelDatabaseSource
     [Tooltip("How many cubes the dragon's body is made of.")]
     [SerializeField] private int bodySegments = 28;
 
+    [Header("Texts")]
+    [Tooltip("Event log line when the Golden Hour wish ends.")] [SerializeField] private string goldenHourOverText = "The Golden Hour is over.";
+    [Tooltip("Event log line when the seven Dragon Cubes start the summoning.")] [SerializeField] private string summonText = "The seven Dragon Cubes begin to glow...";
+    [Tooltip("Event log line for the Dragon Cube pet wish. {0} = the pet's pixel.")] [SerializeField] private string dragonPetFormat = "A Dragon Cube pet joined you: {0} Pet!";
+    [Tooltip("Event log line for the new pet wish. {0} = the pet's pixel.")] [SerializeField] private string newPetFormat = "A new pet joined you: {0} Pet!";
+
     // ------------------------------------------------------------------
 
     private class Wish
@@ -98,7 +104,7 @@ public class PixelDragonWish : MonoBehaviour, IPixelDatabaseSource
             if (goldenLeft <= 0f)
             {
                 PixelClicker.WishMultiplier = 1f;
-                PixelHints.Announce("The Golden Hour is over.");
+                PixelHints.Announce(goldenHourOverText);
             }
         }
 
@@ -184,7 +190,7 @@ public class PixelDragonWish : MonoBehaviour, IPixelDatabaseSource
         Freeze();
         PixelWindows.Register(this, 160, () => busy, () => { }); // Escape does nothing during the wish (but doesn't open the pause menu)   // escape-only: blocks the pause menu during the wish
         PixelAudio.Play("dragon_summon");
-        PixelHints.Announce("The seven Dragon Cubes begin to glow...");
+        PixelHints.Announce(summonText);
 
         BuildScene();
         Image dim = Fill(sceneRect, "Dim", new Color(0f, 0f, 0f, 0f));
@@ -684,7 +690,7 @@ public class PixelDragonWish : MonoBehaviour, IPixelDatabaseSource
         PixelClicker.PixelType type = list[UnityEngine.Random.Range(0, list.Count)];
         PixelPets.Instance.Award(type, false);
         int tier = clicker.IndexOf(type);
-        PixelHints.Announce("A Dragon Cube pet joined you: " + (tier >= 0 ? clicker.Tiers[tier].displayName : type.ToString()) + " Pet!");
+        PixelHints.Announce(string.Format(dragonPetFormat, tier >= 0 ? clicker.Tiers[tier].displayName : type.ToString()));
     }
 
     private void GivePet()
@@ -694,7 +700,7 @@ public class PixelDragonWish : MonoBehaviour, IPixelDatabaseSource
         PixelClicker.PixelType type = list[UnityEngine.Random.Range(0, list.Count)];
         PixelPets.Instance.Award(type, false);
         int tier = clicker.IndexOf(type);
-        PixelHints.Announce("A new pet joined you: " + (tier >= 0 ? clicker.Tiers[tier].displayName : type.ToString()) + " Pet!");
+        PixelHints.Announce(string.Format(newPetFormat, tier >= 0 ? clicker.Tiers[tier].displayName : type.ToString()));
     }
 
     // ---- Game Database (IPixelDatabaseSource): the wish as a 'Special' entry listing every wish (text from AllWishes), linked to the seven Dragon Cubes;

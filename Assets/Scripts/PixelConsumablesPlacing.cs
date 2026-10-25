@@ -12,6 +12,13 @@ using static PixelInput;
 
 public partial class PixelConsumables
 {
+    [Header("Texts (planting seeds)")]
+    [Tooltip("Shown when you plant beans while a beanstalk is still growing.")] [SerializeField] private string beanstalkGrowingText = "A beanstalk is already growing - pick its cubes first";
+    [Tooltip("Shown when you plant beans while holding all seven Dragon Cubes.")] [SerializeField] private string beansAllDragonsText = "You already hold all seven Dragon Cubes - the beans have nothing to grow";
+    [Tooltip("Shown when you plant a Dragon Seed while holding all seven Dragon Cubes.")] [SerializeField] private string seedAllDragonsText = "You already hold all seven Dragon Cubes - the Dragon Seed has nothing left to grow";
+    [Tooltip("Shown when a seed is planted too close to another one.")] [SerializeField] private string seedTooCloseText = "There is already a seed there - plant it a little further away";
+    [Tooltip("Shown when there are too many sprouts to plant another.")] [SerializeField] private string tooManySproutsText = "Too many sprouts already - wait for some to finish growing";
+
     // ------------------------------------------------------------------
     // Placing devices
     // ------------------------------------------------------------------
@@ -189,12 +196,12 @@ public partial class PixelConsumables
         if (d.beans)
         {
             // Magic Beans: a beanstalk with a Dragon Cube (and a handful of other cubes) instead of a sprout.
-            if (PixelBeanstalk.Current != null) { PixelHints.Announce("A beanstalk is already growing - pick its cubes first"); return; }
+            if (PixelBeanstalk.Current != null) { PixelHints.Announce(beanstalkGrowingText); return; }
             int dragonTier = clicker.PickMissingDragonCube();
             if (dragonTier < 0 && Inf) dragonTier = clicker.PickAnyDragonCube();
             if (dragonTier < 0)
             {
-                PixelHints.Announce("You already hold all seven Dragon Cubes - the beans have nothing to grow");
+                PixelHints.Announce(beansAllDragonsText);
                 EndPlacement();
                 return;
             }
@@ -211,7 +218,7 @@ public partial class PixelConsumables
             if (tier < 0 && Inf) tier = clicker.PickAnyDragonCube();   // infinite resources (testing): any of the seven, even one you hold
             if (tier < 0)
             {
-                PixelHints.Announce("You already hold all seven Dragon Cubes - the Dragon Seed has nothing left to grow");
+                PixelHints.Announce(seedAllDragonsText);
                 EndPlacement();
                 return;
             }
@@ -219,12 +226,12 @@ public partial class PixelConsumables
         if ((!Inf && d.owned <= 0) || tier < 0) { EndPlacement(); return; }
         if (!clicker.SeedSpotFree(point))
         {
-            PixelHints.Announce("There is already a seed there - plant it a little further away");
+            PixelHints.Announce(seedTooCloseText);
             return;
         }
         if (!clicker.PlantSeedSproutAt(point, tier))
         {
-            PixelHints.Announce("Too many sprouts already - wait for some to finish growing");
+            PixelHints.Announce(tooManySproutsText);
             return;
         }
         if (!Inf) d.owned = Mathf.Max(0, d.owned - 1);

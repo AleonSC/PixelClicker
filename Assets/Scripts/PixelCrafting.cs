@@ -134,6 +134,8 @@ public partial class PixelCrafting : MonoBehaviour, IPixelDatabaseSource
 
     [Tooltip("Label of the window's button that places a Crafting Cube (a crafting machine fed with husks).")]
     [SerializeField] private string craftingCubeText = "Crafting Cube";
+    [Tooltip("Event log line after the Crafting Cube button: how to place it.")] [SerializeField] private string placeCubeText = "Click the floor to place the Crafting Cube. Right click stops";
+    private const string CubeButtonName = "Crafting Cube Button";   // (the button object's name in the hierarchy, not shown to the player)
 
     [Header("Recipes")]
     [Tooltip("Every recipe. Add your own: pick two ingredients and what they make.")]
@@ -728,14 +730,14 @@ public partial class PixelCrafting : MonoBehaviour, IPixelDatabaseSource
         y += fontSize * 1.3f + 8f;
 
         // The Crafting Cube: closes this window and starts placing one (a crafting machine fed with husks, PixelCraftingCube).
-        Button cubeButton = PixelUIKit.CreateButton(font, body.transform, "Crafting Cube Button", craftingCubeText, new Vector2(320f, 54f), ButtonRole.Neutral, fontSize * 0.85f);
+        Button cubeButton = PixelUIKit.CreateButton(font, body.transform, CubeButtonName, craftingCubeText, new Vector2(320f, 54f), ButtonRole.Neutral, fontSize * 0.85f);
         RectTransform cubr = cubeButton.GetComponent<RectTransform>();
         cubr.anchorMin = cubr.anchorMax = cubr.pivot = new Vector2(0.5f, 1f);
         cubr.anchoredPosition = new Vector2(0f, -y);
         cubeButton.onClick.AddListener(() =>
         {
             Close();
-            if (PixelFeatureTester.StartFeature("Crafting Cube")) PixelHints.Announce("Click the floor to place the Crafting Cube. Right click stops");
+            if (PixelFeatureTester.StartFeature("Crafting Cube")) PixelHints.Announce(placeCubeText);
         });
         y += 54f + 8f;
 

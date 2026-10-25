@@ -20,6 +20,9 @@ public class PixelConveyorCombiner : MonoBehaviour, IPixelSocketDevice
     [Tooltip("How many husks may wait at the inlets for a gap on the main belt (more = the feeding belt throws them off its end).")]
     [SerializeField] private int queueSize = 6;
 
+    [Header("Texts")]
+    [Tooltip("Event log line when the combiner's belt is removed and the combiner goes back into your backpack.")] [SerializeField] private string beltLostText = "Its belt was removed: the Conveyor Combiner went back into your backpack.";
+
     private static readonly List<PixelConveyorCombiner> all = new List<PixelConveyorCombiner>();
     public static IReadOnlyList<PixelConveyorCombiner> All => all;
 
@@ -63,7 +66,7 @@ public class PixelConveyorCombiner : MonoBehaviour, IPixelSocketDevice
 
     public static GameObject Place(PixelClicker c, Vector3 point, float yaw)
     {
-        if (!PixelConveyor.NearestOn(c, point, out PixelConveyor belt, out float s, 1.6f)) { PixelHints.Announce("Click a spot on a conveyor belt for the combiner."); return null; }
+        if (!PixelConveyor.NearestOn(c, point, out PixelConveyor belt, out float s, 1.6f)) { PixelHints.Announce(PixelDialogue.File.Text("Device placing", "combiner spot", "Click a spot on a conveyor belt for the combiner.")); return null; }
         GameObject root = Build(c, false, belt.Width);
         PixelConveyorCombiner b = root.GetComponent<PixelConveyorCombiner>();
         b.belt = belt; b.along = s;
@@ -183,7 +186,7 @@ public class PixelConveyorCombiner : MonoBehaviour, IPixelSocketDevice
     private void LoseBelt()
     {
         PixelConsumables inv = PixelFind.Cached<PixelConsumables>();   // (OnDestroy lets the waiting husks drop)
-        if (inv != null && inv.GiveDevice(PixelConsumables.DeviceKind.ConveyorCombiner)) PixelHints.Announce("Its belt was removed: the Conveyor Combiner went back into your backpack.");
+        if (inv != null && inv.GiveDevice(PixelConsumables.DeviceKind.ConveyorCombiner)) PixelHints.Announce(beltLostText);
         PixelFeatureTester.RemovePlaced(gameObject);
     }
 

@@ -83,6 +83,10 @@ public class PixelGoldenSnitch : MonoBehaviour
     [Tooltip("The wings' colour (see-through silver).")]
     [SerializeField] private Color wingColor = new Color(0.96f, 0.95f, 0.88f, 0.72f);
 
+    [Header("Texts")]
+    [Tooltip("Event log line when a Golden Snitch lands on the cube.")] [SerializeField] private string landedText = "A Golden Snitch landed on the cube!";
+    [Tooltip("Status line and event log line when you catch it (the payout follows).")] [SerializeField] private string caughtText = "You caught the Golden Snitch!";
+
     private enum State { Idle, OnCube, Sprouting, Chase, Capture, Escaping, Caught }
     private State state = State.Idle;
 
@@ -167,7 +171,7 @@ public class PixelGoldenSnitch : MonoBehaviour
         PixelStats.Count("snitch.seen");
         PixelAudio.Play("snitch_appear");
         PixelStatusLines.Set("snitch", "A GOLDEN SNITCH is on the cube! Click it to make it fly.", gold, 6f);
-        PixelHints.Announce("A Golden Snitch landed on the cube!");
+        PixelHints.Announce(landedText);
         // It already LOOKS like the snitch on the cube (wings folded away): the model sits over the clicker cube and follows it (LateUpdate -> FollowCube).
         BuildModel();
         spin = 0f;
@@ -396,8 +400,8 @@ public class PixelGoldenSnitch : MonoBehaviour
         double fastest = PixelStats.Total("snitch.fastest");
         if (fastest <= 0d || took < fastest) { PixelStats.Clear("snitch.fastest"); PixelStats.Count("snitch.fastest", took); }
         PixelAudio.Play("snitch_catch");
-        PixelStatusLines.Set("snitch", "You caught the Golden Snitch!" + paid, gold, 5f);
-        PixelHints.Announce("You caught the Golden Snitch!" + paid);
+        PixelStatusLines.Set("snitch", caughtText + paid, gold, 5f);
+        PixelHints.Announce(caughtText + paid);
         if (sparkles != null) sparkles.Emit(70);
         if (trail != null) trail.emitting = false;
     }

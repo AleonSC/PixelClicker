@@ -35,6 +35,9 @@ public class PixelHoldPress : MonoBehaviour, IPointerDownHandler, IPointerUpHand
 
 public class PixelViewWindow : MonoBehaviour
 {
+    /// <summary>Shown when a view can't start (the text is in Assets/Resources/Dialogue.txt, [Messages]).</summary>
+    private static string ViewFailedText => PixelDialogue.File.Text("Messages", "view failed", "That view can't start right now");
+
     [Header("View Window")]
     [Tooltip("Turn the View window (and its key) off.")]
     [SerializeField] private bool disableViewWindow = false;
@@ -118,7 +121,7 @@ public class PixelViewWindow : MonoBehaviour
             case PixelViewKind.TopDown: ok = orbit != null && orbit.Enter(true); break;
             case PixelViewKind.FreeCam: ok = PixelFreeCam.TryEnter(); break;
         }
-        if (!ok) { if (announceFailure) PixelHints.Announce("That view can't start right now"); return false; }
+        if (!ok) { if (announceFailure) PixelHints.Announce(ViewFailedText); return false; }
         return true;
     }
 
@@ -212,7 +215,7 @@ public class PixelViewWindow : MonoBehaviour
             if (IsOpen) Sync();
             return;
         }
-        PixelHints.Announce("That view can't start right now");
+        PixelHints.Announce(ViewFailedText);
     }
 
     private static string ViewName(PixelViewKind kind) =>

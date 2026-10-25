@@ -491,6 +491,7 @@ full label: Full
 peek bubble: Psst! {0} is here. Click me to see what I've got!
 missed log: {0} stopped by and left.
 job offer: I've got a buyer for ore and I'm short a few loads. Fill my crate and I'll make it worth your while.
+rich vein: A rich vein! It glittered - and paid out big.
 
 [Visitor: lumberjack]
 name: Big Tim the Lumberjack
@@ -548,6 +549,8 @@ peek bubble: Psst! {0} is here. Click me to see what I've got!
 missed log: {0} stopped by and left.
 farewell: Click it. Keep clicking. Something will hatch, and I won't tell you what. Mrrp. I'll stop by again. Maybe.
 gift farewell: Mrrp. You're welcome. Don't tell the other cats.
+hatched empty: The egg hatched, but nothing was inside...
+hatched pet: The egg hatched! A new pet: {0}
 
 [Visitor: bean]
 name: Bean
@@ -563,6 +566,7 @@ peek bubble: Psst! {0} is here. Click me to see what I've got!
 missed log: {0} stopped by and left.
 farewell: Find a nice open spot and plant them. Then stand back, dear. Don't wait too long to pick what grows. Mrrow!
 gift farewell: Mrrow! Fresh from the garden. I'll bring more if I find any.
+withered dragon: The beanstalk withered, but its Dragon Cube is yours.
 
 [Discovery]
 requirement: Discover {0} first: {1} / {2} made
@@ -577,3 +581,15 @@ goal text: Fill the crate on his dock: {0}. {1} left.
 
 [Minigame: Black Hole]
 first hole: A black hole has opened!\nIt is hungry for husks. Find a way to feed it - {0} pixels will unlock something new.
+
+[Device placing]
+belt sorter spot: Click a spot on a conveyor belt for the sorter.
+combiner spot: Click a spot on a conveyor belt for the combiner.
+lever spot: Put the lever next to a conveyor belt.
+coupling spot: A coupling goes on a device's socket: bring it near one of the teal rings
+
+[Messages]
+item used up: You have no {0} left
+market charm: The Market Charm glows: every vendor pays full price again.
+view failed: That view can't start right now
+ultra gain: +1 Ultra Pixel

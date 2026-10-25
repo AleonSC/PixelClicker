@@ -129,6 +129,9 @@ public abstract class PixelMinigame : MonoBehaviour
     [Tooltip("Bonus XP for the skill in training each time you succeed at this minigame (catch, defuse, win...). 0 = this minigame's own default.")]
     [SerializeField] private float skillXpReward = 0f;
 
+    [Header("Texts")]
+    [Tooltip("Event log line when this minigame gives an Ultra pixel.")] [SerializeField] protected string ultraGainedText = "Ultra pixel gained!";
+
     /// <summary>The coded default bonus XP per success, by minigame (frequent small events give little, big rounds give more).</summary>
     private float DefaultSkillXp()
     {
@@ -266,7 +269,7 @@ public abstract class PixelMinigame : MonoBehaviour
         if (!clicker.RollUltra((chance > 0f ? chance : defaultChance) * chanceMultiplier)) return false;
         ultraRoundCount++;
         PixelStats.Count("ultra." + Id);
-        PixelHints.Announce("Ultra pixel gained!");
+        PixelHints.Announce(ultraGainedText);
         if (at.HasValue) PixelUltraFx.Play(clicker, at.Value);
         return true;
     }

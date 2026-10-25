@@ -24,6 +24,8 @@ using UnityEngine.UI;
 /// </summary>
 public class PixelPixelGuide : MonoBehaviour
 {
+    private const string ButtonName = "Pixel Guide Button";   // (the button object's name in the hierarchy, not shown to the player)
+
     [Header("References")]
     [Tooltip("The PixelClicker whose pixels are listed. Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
@@ -144,7 +146,7 @@ public class PixelPixelGuide : MonoBehaviour
         canvasRoot = PixelUIKit.CreateCanvas("PixelGuide Canvas", sortingOrder, new Vector2(1920f, 1080f), true);
 
         // The button, docked on the middle of the right edge directly under the Toggles button.
-        Button open = PixelUIKit.CreateButton(Font, canvasRoot.transform, "Pixel Guide Button", buttonText, new Vector2(230f, 64f), buttonColor, Color.white, 30f);
+        Button open = PixelUIKit.CreateButton(Font, canvasRoot.transform, ButtonName, buttonText, new Vector2(230f, 64f), buttonColor, Color.white, 30f);
         PixelHud hud = PixelHud.Ensure(gameObject);
         // Bottom-right corner, beside the Toggles tab and its My Window button: [Pixel Guide][My Window][Toggles].
         float guideOffset = hud.ButtonSize.x + hud.CornerGap;

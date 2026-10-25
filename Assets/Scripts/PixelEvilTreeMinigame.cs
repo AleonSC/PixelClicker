@@ -75,6 +75,13 @@ public class PixelEvilTreeMinigame : PixelScheduledMinigame
     [Tooltip("Colour of the eyes and mouth glow.")]
     [SerializeField] private Color eyeColor = new Color(1f, 0.25f, 0.2f, 1f);
 
+    [Header("Texts")]
+    [Tooltip("Event log line when an evil tree sprouts.")] [SerializeField] private string sproutedText = "An evil tree sprouted!";
+    [Tooltip("The longer message when an evil tree sprouts.")] [SerializeField] private string sproutedHint = "An evil tree sprouted! Chop it down before it grows too strong. It flails, so aim carefully.";
+    [Tooltip("Event log line when you fell the tree. {0} = Magic Wood gained.")] [SerializeField] private string felledFormat = "Evil tree felled: +{0} Magic Wood";
+    [Tooltip("The longer message when you fell the tree. {0} = Magic Wood gained.")] [SerializeField] private string felledHintFormat = "You felled the evil tree and got {0} Magic Wood.";
+    [Tooltip("Event log line when the tree sinks back without being felled.")] [SerializeField] private string sankText = "The evil tree sank back into the ground.";
+
     private bool treeActive;
     private float lastHitTime;
 
@@ -216,7 +223,7 @@ public class PixelEvilTreeMinigame : PixelScheduledMinigame
         Camera cam = clicker.ViewCamera;
         if (cam == null || !TryPickSpot(cam, out Vector3 ground)) { treeActive = false; spawnTimer = PixelMinigameLimits.RetrySeconds; yield break; }
         Report(MinigameEvent.Spawned);
-        PixelHints.Announce("An evil tree sprouted!", "An evil tree sprouted! Chop it down before it grows too strong. It flails, so aim carefully.");
+        PixelHints.Announce(sproutedText, sproutedHint);
         PixelAudio.Play("wood_chop");
 
         float H = clicker.PixelBaseSize * heightInCubes;
@@ -337,10 +344,10 @@ public class PixelEvilTreeMinigame : PixelScheduledMinigame
             magicWood += wood;
             Report(MinigameEvent.Clicked);   // a success: Woodcutting XP (SkillXpTarget)
             PixelAudio.Play("purchase");
-            PixelHints.Announce("Evil tree felled: +" + wood + " Magic Wood", "You felled the evil tree and got " + wood + " Magic Wood.");
+            PixelHints.Announce(string.Format(felledFormat, wood), string.Format(felledHintFormat, wood));
             StartCoroutine(PopupRoutine(pos0 + Vector3.up * H * 0.5f, cam, "+" + wood + " Magic Wood"));
         }
-        else PixelHints.Announce("The evil tree sank back into the ground.");
+        else PixelHints.Announce(sankText);
 
         Destroy(root);
         Destroy(barRoot);

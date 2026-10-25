@@ -81,6 +81,9 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
     [Tooltip("How strongly the machine shakes while busy (machine units).")]
     [SerializeField] private float shakeAmount = 0.025f;
 
+    [Header("Texts")]
+    [Tooltip("Event log line when something that is not wood breaks the chipper.")] [SerializeField] private string brokeText = "The Wood Chipper broke - only wood goes in it. Clear it in the Tester tab and place a new one.";
+
     // ------------------------------------------------------------------
     // Placement helpers (used by PixelFeatureTester)
     // ------------------------------------------------------------------
@@ -380,7 +383,7 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
         PixelAudio.Play("device_arm", 0.5f, 0.8f);
         if (brokenLabel != null) brokenLabel.gameObject.SetActive(true);
         RefreshCondition();
-        PixelHints.Announce("The Wood Chipper broke - only wood goes in it. Clear it in the Tester tab and place a new one.");
+        PixelHints.Announce(brokeText);
     }
 
     /// <summary>Health bar + paint darkness follow the health.</summary>

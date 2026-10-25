@@ -28,6 +28,11 @@ public class PixelDatabaseWindow : MonoBehaviour
     [Tooltip("Most references listed for one entry.")]
     [SerializeField] private int maxReferences = 400;
 
+    [Header("Texts")]
+    [Tooltip("The detail box before you pick a result.")] [SerializeField] private string searchHelpText = "Search the whole game: a pixel, a pack, a skill, a potion, a tip... Then click a result to see what it is and every place in the game that refers to it.";
+    [Tooltip("The detail box for something you haven't discovered yet.")] [SerializeField] private string undiscoveredText = "You haven't discovered this yet. Keep playing to unlock it - or switch 'Show ???' on to look it up anyway.";
+    [Tooltip("The heading over the references list. {0} = how many.")] [SerializeField] private string referencesFormat = "References in the game ({0})";
+
     private PixelClicker clicker;
     private GameObject canvasRoot, windowObject;
     private TMP_InputField search;
@@ -266,7 +271,7 @@ public class PixelDatabaseWindow : MonoBehaviour
             tagLabel.text = "";
             SetPicture(-1);
             RefreshPin();
-            detailLabel.text = "Search the whole game: a pixel, a pack, a skill, a potion, a tip... Then click a result to see what it is and every place in the game that refers to it.";
+            detailLabel.text = searchHelpText;
             refHeader.text = "";
             refList.Fill(new List<RowData>());
             return;
@@ -275,7 +280,7 @@ public class PixelDatabaseWindow : MonoBehaviour
         if (!Open(e))
         {
             titleLabel.text = "???";
-            detailLabel.text = "You haven't discovered this yet. Keep playing to unlock it - or switch 'Show ???' on to look it up anyway.";
+            detailLabel.text = undiscoveredText;
             refHeader.text = "";
             SetPicture(-1);
             RefreshPin();
@@ -285,7 +290,7 @@ public class PixelDatabaseWindow : MonoBehaviour
         }
         titleLabel.text = e.name;
         detailLabel.text = string.IsNullOrEmpty(e.detail) ? "(no description)" : e.detail;
-        refHeader.text = "References in the game (" + e.refs.Count + ")";
+        refHeader.text = string.Format(referencesFormat, e.refs.Count);
         SetPicture(e.tierIndex);
         RefreshPin();
 

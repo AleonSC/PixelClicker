@@ -17,6 +17,8 @@ using UnityEngine.UI;
 /// </summary>
 public class PixelToggles : MonoBehaviour
 {
+    private const string MyWindowButtonName = "My Window Button";   // (the button object's name in the hierarchy, not shown to the player)
+
     private enum Group { Pixels = 0, Upgrades = 1, Minigames = 2, Vendors = 3, Pets = 4 }
 
     [Header("Search")]
@@ -632,7 +634,7 @@ public class PixelToggles : MonoBehaviour
         PixelHud hud = PixelHud.Ensure(gameObject);
         // The tab is narrower, with a square My Window button on its inner side (the Bank tab and its hose button work the same way on the left edge).
         float squareSize = hud.ButtonSize.y, tabWidth = hud.ButtonSize.x - squareSize;
-        myWindowButton = PixelUIKit.CreateButton(font, canvasRoot.transform, "My Window Button", "", new Vector2(squareSize, squareSize),
+        myWindowButton = PixelUIKit.CreateButton(font, canvasRoot.transform, MyWindowButtonName, "", new Vector2(squareSize, squareSize),
                                                  buttonColor, buttonTextColor, 20f);
         System.Func<bool> keepOut = () => (windowObject != null && windowObject.activeSelf) || (hintObject != null && hintObject.activeSelf)   // stays out while its hint is showing
                                           || (dock != null && dock.PointerNear()) || (myDock != null && myDock.PointerNear());

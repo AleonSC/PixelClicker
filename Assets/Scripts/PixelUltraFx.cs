@@ -63,7 +63,7 @@ public class PixelUltraFx : MonoBehaviour
             GameObject tgo = new GameObject("Ultra Gain Text");
             tgo.transform.SetParent(transform, false);
             label = tgo.AddComponent<TextMeshPro>();
-            label.text = "+1 Ultra Pixel";
+            label.text = PixelDialogue.File.Text("Messages", "ultra gain", "+1 Ultra Pixel");
             label.fontSize = 4f;
             label.fontStyle = FontStyles.Bold;
             label.alignment = TextAlignmentOptions.Center;

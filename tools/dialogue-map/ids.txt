@@ -14,6 +14,8 @@ C11 | Visitor: angler
 C12 | Delivery jobs
 C13 | Offer: Shop tour
 C14 | Discovery
+C15 | Device placing
+C16 | Messages
 G1 | Intro tips
 G2 | Tutorial: Shop
 G3 | Tutorial: Toggles

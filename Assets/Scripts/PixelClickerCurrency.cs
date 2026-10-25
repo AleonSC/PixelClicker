@@ -16,6 +16,9 @@ using UnityEngine.InputSystem;
 
 public partial class PixelClicker
 {
+    [Header("Texts (rare finds)")]
+    [Tooltip("Event log line for your first Golden Snitch.")] [SerializeField] private string firstSnitchText = "Your first Golden Snitch! It is in your Inventory now.";
+
     /// <summary>Adds to a tier's amount (use negative via <see cref="TrySpend"/> instead) and checks unlocks.</summary>
     /// <summary>
     /// Currency that does NOT count as earned: it is added to what you hold, but not to the lifetime total that unlocks the next tier (and shows
@@ -62,7 +65,7 @@ public partial class PixelClicker
         PixelTier tier = tiers[tierIndex];
         if (tier.type == PixelType.GoldenSnitch)
         {
-            PixelHints.Announce("Your first Golden Snitch! It is in your Inventory now.");
+            PixelHints.Announce(firstSnitchText);
             return;
         }
         PixelRareSets.Set set = PixelRareSets.Of(tier.type);
