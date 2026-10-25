@@ -106,7 +106,7 @@ public class PixelShuffleBonus : MonoBehaviour
     {
         if (chain > 0)
         {
-            if (PixelTitleScreen.Showing || !PixelSkills.TryGetFiller(out PixelClicker.PixelType filler, out float s) || filler != fillerType) EndCombo();
+            if (PixelGameMode.TitleShowing || !PixelSkills.TryGetFiller(out PixelClicker.PixelType filler, out float s) || filler != fillerType) EndCombo();
             else
             {
                 bar -= Time.deltaTime;   // (scaled: it waits while the game is paused or frozen)
@@ -140,7 +140,7 @@ public class PixelShuffleBonus : MonoBehaviour
 
     private void UpdateVisual()
     {
-        bool show = chain > 0 && !PixelTitleScreen.Showing;
+        bool show = chain > 0 && !PixelGameMode.TitleShowing;
         if (!show) { if (canvasObject != null && canvasObject.activeSelf) canvasObject.SetActive(false); return; }
         if (canvasObject == null) Build();
         if (!canvasObject.activeSelf) canvasObject.SetActive(true);

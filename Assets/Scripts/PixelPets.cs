@@ -679,7 +679,7 @@ public partial class PixelPets : MonoBehaviour
 
     private void UpdatePointer(bool hide)
     {
-        bool allowed = !hide && !PixelPauseMenu.IsPaused && !PixelBank.HoseOn && !PixelClicker.GodMode && !PixelPlacingBlocked();
+        bool allowed = !hide && !PixelGameMode.PauseMenuOpen && !PixelBank.HoseOn && !PixelClicker.GodMode && !PixelPlacingBlocked();
         if (held != null)
         {
             if (!LeftHeld() || !allowed) EndHold(true);

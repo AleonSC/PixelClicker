@@ -648,7 +648,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
         }
         bool hot = showButton && !processing && (carry == null || !carry.Dragging) && buttonCollider != null && cam != null && !PixelInput.PointerOverUI() && PointerOnButton(cam);
         if (hot) hotFrame = PixelPointerClaim.Claim();
-        if (hot && PixelInput.LeftPressed() && Time.timeScale > 0f && !PixelPauseMenu.IsPaused) StartCoroutine(Process());
+        if (hot && PixelInput.LeftPressed() && Time.timeScale > 0f && !PixelGameMode.PauseMenuOpen) StartCoroutine(Process());
 
         UpdateHatch();
         if (carry != null && carry.Dragging) KeepContentsWhileCarried();
@@ -1143,7 +1143,7 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
     /// <summary>First person: click the back hatch (crosshair on it, within reach) to open / shut it, so husks can be tossed in by hand.</summary>
     private void UpdateHatch()
     {
-        bool aimed = !processing && PixelFirstPerson.Active && !PixelPauseMenu.IsPaused && HatchAimed();
+        bool aimed = !processing && PixelFirstPerson.Active && !PixelGameMode.PauseMenuOpen && HatchAimed();
         UpdateHatchHighlight(aimed);
         if (!aimed || hatchMoving || !PixelInput.LeftPressed() || Time.timeScale <= 0f) return;
         StartCoroutine(MoveHatch(!hatchOpen));

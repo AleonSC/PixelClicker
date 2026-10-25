@@ -304,7 +304,6 @@ public class PixelRapport : MonoBehaviour
     public float StepPoints(int index) => StepAt(index).points;
     public string StepNameAt(int index) => StepAt(index).name;
     public Color StepColorAt(int index) => StepAt(index).color;
-    public string StepName(string vendorId) => StepOf(vendorId).name;
 
     /// <summary>"Regular (42 / 80 to Friend)", or "Partner" at the top.</summary>
     public string ProgressText(string vendorId)

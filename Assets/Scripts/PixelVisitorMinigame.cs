@@ -472,27 +472,8 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
 
     private IEnumerator VisitRoutine(bool dev)
     {
-        FirstVisitNow = !HasMet;
-        if (TracksMeeting && !dev && !RecordMeetingOnAccept) PixelStats.Best(Id + ".met", 1d);   // remembered, whatever you decide
-        visiting = true;
-        anyVisiting = true;
-        decision = 0;
-        RapportVisitStart();
-        asideDone = false;
-        AsideText = null;
-        waresDone = false;
-        Report(MinigameEvent.Spawned);
-        PixelHints.Announce(Pick(arrivedLog, DefaultArrivedLog));
-        PixelAudio.Play(Id + "_spawn");
-        BuildUI();
-
-        // The screen darkens and time stops for the whole visit (Escape = send them away).
-        dim = new GameObject("Dim", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
-        dim.transform.SetParent(canvasRoot.transform, false);
-        dim.color = new Color(0f, 0f, 0f, 0f);
-        dim.raycastTarget = false;
-        PixelUIKit.Stretch(dim.rectTransform);
-        dim.transform.SetAsFirstSibling();
+        BeginVisit(dev);
+        BuildVisitDim();
 
         float barH = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
         float visitorW = visitorRect.sizeDelta.x;
@@ -522,10 +503,7 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
                 visitorRect.anchoredPosition = new Vector2(peekX, barH + 24f + Mathf.Sin(Time.unscaledTime * 3f) * 4f);
                 yield return null;
             }
-            if (bubble != null) Destroy(bubble);
-            if (peekButton != null) Destroy(peekButton);   // (the click catcher only belongs to the peek)
-            if (peekCatcher != null) Destroy(peekCatcher);
-            peekButton = null; peekCatcher = null;
+            ClearPeek(bubble);
             if (choice != 1)
             {
                 // Left unanswered: they duck out, and come back sooner than usual.
@@ -536,13 +514,7 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
                     yield return null;
                 }
                 PixelHints.Announce(string.Format(missedLog, Pick(visitorName, DefaultName)));
-                if (canvasRoot != null) Destroy(canvasRoot);
-                canvasRoot = null;
-                dim = null;
-                visiting = false;
-                anyVisiting = false;
-                nextAnyVisitTime = Time.unscaledTime + sharedCooldownSeconds * missedReturnFactor;
-                spawnTimer = NextVisitWait() * missedReturnFactor;
+                EndVisit(missedReturnFactor);
                 yield break;
             }
             visitorRect.localRotation = Quaternion.identity;
@@ -589,9 +561,7 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
             }
         } while (again);
 
-        if (decision == 1) RapportVisitAccepted();   // (opening the visit counts towards his rapport)
-        if (decision == 1 && TracksMeeting && !dev && RecordMeetingOnAccept) PixelStats.Best(Id + ".met", 1d);   // (met once you have heard him out)
-        if (decision == 1 && IsGift) OnGift();
+        VisitAccepted(dev);
         if (decision == 1 && !IsGift)
         {
             RefreshWares();
@@ -611,13 +581,67 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
             yield return null;
         }
 
+        EndVisit(1f);
+    }
+
+    // ---- The visit's non-waiting steps (VisitRoutine calls them in this order) ----
+
+    /// <summary>The visit starts: the flags, his rapport visit, the arrival log / sound and the visit's UI.</summary>
+    private void BeginVisit(bool dev)
+    {
+        FirstVisitNow = !HasMet;
+        if (TracksMeeting && !dev && !RecordMeetingOnAccept) PixelStats.Best(Id + ".met", 1d);   // remembered, whatever you decide
+        visiting = true;
+        anyVisiting = true;
+        decision = 0;
+        RapportVisitStart();
+        asideDone = false;
+        AsideText = null;
+        waresDone = false;
+        Report(MinigameEvent.Spawned);
+        PixelHints.Announce(Pick(arrivedLog, DefaultArrivedLog));
+        PixelAudio.Play(Id + "_spawn");
+        BuildUI();
+    }
+
+    /// <summary>The screen darkens and time stops for the whole visit (Escape = send them away): the dim behind the visitor, clear to start.</summary>
+    private void BuildVisitDim()
+    {
+        dim = new GameObject("Dim", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+        dim.transform.SetParent(canvasRoot.transform, false);
+        dim.color = new Color(0f, 0f, 0f, 0f);
+        dim.raycastTarget = false;
+        PixelUIKit.Stretch(dim.rectTransform);
+        dim.transform.SetAsFirstSibling();
+    }
+
+    /// <summary>The peek is over: its bubble and the click catcher over the visitor go.</summary>
+    private void ClearPeek(GameObject bubble)
+    {
+        if (bubble != null) Destroy(bubble);
+        if (peekButton != null) Destroy(peekButton);   // (the click catcher only belongs to the peek)
+        if (peekCatcher != null) Destroy(peekCatcher);
+        peekButton = null; peekCatcher = null;
+    }
+
+    /// <summary>The player heard him out (decision 1): his rapport, the 'met' stat (for vendors that record it on accept) and a gift visitor's gift.</summary>
+    private void VisitAccepted(bool dev)
+    {
+        if (decision == 1) RapportVisitAccepted();   // (opening the visit counts towards his rapport)
+        if (decision == 1 && TracksMeeting && !dev && RecordMeetingOnAccept) PixelStats.Best(Id + ".met", 1d);   // (met once you have heard him out)
+        if (decision == 1 && IsGift) OnGift();
+    }
+
+    /// <summary>The visit is over: the UI goes and the next visit is timed ('returnFactor' below 1 = sooner, when the peek was left unanswered).</summary>
+    private void EndVisit(float returnFactor)
+    {
         if (canvasRoot != null) Destroy(canvasRoot);
         canvasRoot = null;
         dim = null;
         visiting = false;
         anyVisiting = false;
-        nextAnyVisitTime = Time.unscaledTime + sharedCooldownSeconds;
-        spawnTimer = NextVisitWait();
+        nextAnyVisitTime = Time.unscaledTime + sharedCooldownSeconds * returnFactor;
+        spawnTimer = NextVisitWait() * returnFactor;
     }
 
     private Image peekCatcher;
@@ -1010,21 +1034,7 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
     {
         // --- Wares window.
         float barH = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        trades = RollTrades();
-        tabsMode = BuySellTabs;
-        bool tradeMode = trades != null && !tabsMode;
-        List<int> wares = tradeMode ? new List<int>() : Wares();
-        stock.Clear();
-        int offered = OfferedWares > 0 ? OfferedWares + RapportExtraWares : 0;   // (his rapport step brings a bigger selection)
-        if (!tradeMode && offered > 0)
-            while (wares.Count > offered) wares.RemoveAt(Random.Range(0, wares.Count)); // a small random selection
-        if (!tradeMode) ModifyWares(wares);
-        if (!tradeMode && StockMax > 0)
-            foreach (int w in wares) { int n = StockFor(w); stock[w] = n > 0 && !Highlighted(w) ? n + RapportExtraStock : n; }   // (rapport: more of each; a highlighted rare ware stays as it is)
-        if (!tradeMode && StockMax > 0) wares.RemoveAll(w => stock.TryGetValue(w, out int n) && n <= 0);   // a stock of 0 = he didn't bring that one this time
-        visitPrice.Clear();
-        if (!tradeMode)
-            foreach (int w in wares) { PixelShop.PackCost[] own = RollVisitPrice(w); if (own != null) visitPrice[w] = own; }
+        List<int> wares = RollVisitWares(out bool tradeMode);
 
         // The rows: (item, trade). A buy / sell vendor lists the wares first, then the trades; the tabs show one group at a time.
         List<KeyValuePair<int, Trade>> entries = new List<KeyValuePair<int, Trade>>();
@@ -1049,24 +1059,7 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
                                               TextAlignmentOptions.Center, FontStyles.Italic, new Color(0.7f, 1f, 0.75f));
         Anchor(sale.rectTransform, 0f, 1f, 1f, 1f, new Vector2(20f, -(top + 38f)), new Vector2(-20f, -top));
 
-        // Buy / Sell tabs (only for a vendor that does both).
-        tabButtons = null;
-        if (tabsMode)
-        {
-            tabButtons = new Button[2];
-            string[] names = { "Buy", "Sell" };
-            for (int i = 0; i < 2; i++)
-            {
-                int captured = i;
-                Button tb = PixelUIKit.CreateButton(Font, waresPanel, "Tab " + names[i], names[i], new Vector2(220f, 52f), ButtonRole.Neutral, 30f);
-                PixelUIKit.Caps(tb);
-                RectTransform tr = tb.GetComponent<RectTransform>();
-                tr.anchorMin = tr.anchorMax = tr.pivot = new Vector2(0.5f, 1f);
-                tr.anchoredPosition = new Vector2(i == 0 ? -118f : 118f, -(top + 42f));
-                tb.onClick.AddListener(() => SetShopTab(captured));
-                tabButtons[i] = tb;
-            }
-        }
+        BuildBuySellTabs(top);
 
         waresScroll = PixelUIKit.CreateScrollView(waresPanel, "Wares List", new Color(1f, 1f, 1f, 0.35f), 12f, rowH * 0.6f, out waresContent, out waresBar);
         RectTransform vr = waresScroll.GetComponent<RectTransform>();
@@ -1075,18 +1068,7 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
         vr.offsetMin = new Vector2(24f, 110f);
         vr.offsetMax = new Vector2(-24f, -(top + 48f) - tabsH);
 
-        // A vendor's own Sell tab (in place of the trade rows), over the same area as the list.
-        sellPanelRoot = null;
-        if (tabsMode && CustomSellPanel)
-        {
-            GameObject sp = new GameObject("Sell Panel", typeof(RectTransform));
-            sp.transform.SetParent(waresPanel, false);
-            sellPanelRoot = sp.GetComponent<RectTransform>();
-            sellPanelRoot.anchorMin = Vector2.zero; sellPanelRoot.anchorMax = Vector2.one;
-            sellPanelRoot.offsetMin = vr.offsetMin; sellPanelRoot.offsetMax = vr.offsetMax;
-            BuildSellPanel(sellPanelRoot);
-            sp.SetActive(false);
-        }
+        BuildSellPanelRoot(vr);
 
         rows.Clear();
         float y = 0f;
@@ -1109,6 +1091,67 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
         done.onClick.AddListener(() => waresDone = true);
         BuildJobParts();   // (a vendor with a dock: the Delivery job button + its window, PixelVisitorMinigameJobs.cs)
         waresPanel.gameObject.SetActive(false);
+    }
+
+    // ---- BuildWaresPanel's steps (called in this order) ----
+
+    /// <summary>Rolls this visit's trades and wares: the selection, the stock (a stock of 0 drops the ware) and his own prices. 'tradeMode' = a trader with no wares.</summary>
+    private List<int> RollVisitWares(out bool tradeMode)
+    {
+        trades = RollTrades();
+        tabsMode = BuySellTabs;
+        tradeMode = trades != null && !tabsMode;
+        List<int> wares = tradeMode ? new List<int>() : Wares();
+        stock.Clear();
+        int offered = OfferedWares > 0 ? OfferedWares + RapportExtraWares : 0;   // (his rapport step brings a bigger selection)
+        if (!tradeMode && offered > 0)
+            while (wares.Count > offered) wares.RemoveAt(Random.Range(0, wares.Count)); // a small random selection
+        if (!tradeMode) ModifyWares(wares);
+        if (!tradeMode && StockMax > 0)
+            foreach (int w in wares) { int n = StockFor(w); stock[w] = n > 0 && !Highlighted(w) ? n + RapportExtraStock : n; }   // (rapport: more of each; a highlighted rare ware stays as it is)
+        if (!tradeMode && StockMax > 0) wares.RemoveAll(w => stock.TryGetValue(w, out int n) && n <= 0);   // a stock of 0 = he didn't bring that one this time
+        visitPrice.Clear();
+        if (!tradeMode)
+            foreach (int w in wares) { PixelShop.PackCost[] own = RollVisitPrice(w); if (own != null) visitPrice[w] = own; }
+        return wares;
+    }
+
+    /// <summary>The Buy / Sell tabs under the sale line (only for a vendor that does both).</summary>
+    private void BuildBuySellTabs(float top)
+    {
+        tabButtons = null;
+        if (tabsMode)
+        {
+            tabButtons = new Button[2];
+            string[] names = { "Buy", "Sell" };
+            for (int i = 0; i < 2; i++)
+            {
+                int captured = i;
+                Button tb = PixelUIKit.CreateButton(Font, waresPanel, "Tab " + names[i], names[i], new Vector2(220f, 52f), ButtonRole.Neutral, 30f);
+                PixelUIKit.Caps(tb);
+                RectTransform tr = tb.GetComponent<RectTransform>();
+                tr.anchorMin = tr.anchorMax = tr.pivot = new Vector2(0.5f, 1f);
+                tr.anchoredPosition = new Vector2(i == 0 ? -118f : 118f, -(top + 42f));
+                tb.onClick.AddListener(() => SetShopTab(captured));
+                tabButtons[i] = tb;
+            }
+        }
+    }
+
+    /// <summary>A vendor's own Sell tab (in place of the trade rows), over the same area as the list 'vr'; hidden until its tab is picked.</summary>
+    private void BuildSellPanelRoot(RectTransform vr)
+    {
+        sellPanelRoot = null;
+        if (tabsMode && CustomSellPanel)
+        {
+            GameObject sp = new GameObject("Sell Panel", typeof(RectTransform));
+            sp.transform.SetParent(waresPanel, false);
+            sellPanelRoot = sp.GetComponent<RectTransform>();
+            sellPanelRoot.anchorMin = Vector2.zero; sellPanelRoot.anchorMax = Vector2.one;
+            sellPanelRoot.offsetMin = vr.offsetMin; sellPanelRoot.offsetMax = vr.offsetMax;
+            BuildSellPanel(sellPanelRoot);
+            sp.SetActive(false);
+        }
     }
 
     /// <summary>One row of the wares list at 'y' (from the list's top): the item's (or trade's) name, cost, owned count, stock and its Buy / Trade button; a highlighted ware gets a pulsing glow.</summary>

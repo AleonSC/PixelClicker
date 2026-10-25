@@ -172,7 +172,7 @@ public class PixelViewWindow : MonoBehaviour
     {
         if (disableViewWindow || clicker == null) return;
         bool blocked = PixelCalm.InMenu;
-        if (!blocked && !PixelCameraIntro.Moving && !PixelMinigame.TakeoverActive)
+        if (!blocked && !PixelGameMode.IntroMoving && !PixelMinigame.TakeoverActive)
         {
             if (pendingApply) ApplySaved();
             else if (CurrentView == PixelViewKind.Default && Time.unscaledTime >= nextAuto)
@@ -200,7 +200,7 @@ public class PixelViewWindow : MonoBehaviour
     /// <summary>Shift + the View key: the next view in cycleOrder (skipping any that can't start now), named in the event log.</summary>
     private void CycleView()
     {
-        if (cycleOrder == null || cycleOrder.Length == 0 || PixelMinigame.TakeoverActive || PixelCameraIntro.Moving) return;   // (a takeover / the intro owns the camera)
+        if (cycleOrder == null || cycleOrder.Length == 0 || PixelMinigame.TakeoverActive || PixelGameMode.IntroMoving) return;   // (a takeover / the intro owns the camera)
         int at = System.Array.IndexOf(cycleOrder, CurrentView);
         for (int step = 1; step <= cycleOrder.Length; step++)
         {

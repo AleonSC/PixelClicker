@@ -104,9 +104,6 @@ public class PixelMarket : MonoBehaviour
         return perHarvest > 0d ? System.Math.Max(1, t.clicksToCollect) / perHarvest : 0d;
     }
 
-    /// <summary>Full price of one unit of a good, in pure units (paid 1:1 in any pure colour), before saturation.</summary>
-    public double FullPricePerUnit(int tier, Route route) => RateOf(route) * PurePerClick() * ClicksPerUnit(tier);
-
     // ---- Goods by KEY: a pixel tier ("tier:7") or a minigame material ("mat:ghost"); the saturation is kept per vendor + key ----
 
     /// <summary>The market key of a pixel currency.</summary>

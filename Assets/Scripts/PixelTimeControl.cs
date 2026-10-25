@@ -169,7 +169,7 @@ public class PixelTimeControl : MonoBehaviour
 
     private void Update()
     {
-        if (PixelTitleScreen.Showing) { if (Current != Mode.Normal) Play(); return; }
+        if (PixelGameMode.TitleShowing) { if (Current != Mode.Normal) Play(); return; }
         if (Current == Mode.Normal) return;
         if (!PixelCalm.InMenu)
         {

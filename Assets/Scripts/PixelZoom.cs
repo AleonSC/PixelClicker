@@ -156,7 +156,7 @@ public class PixelZoom : MonoBehaviour
         target = 1f;
         if (Zoomed || !Mathf.Approximately(factor, 1f))
         {
-            if (cam != null && Zoomed && !PixelCameraIntro.Moving)
+            if (cam != null && Zoomed && !PixelGameMode.IntroMoving)
             {
                 cam.transform.position = homePos;
                 if (cam.orthographic) cam.orthographicSize = homeOrtho;

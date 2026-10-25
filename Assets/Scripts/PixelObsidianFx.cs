@@ -132,7 +132,7 @@ public class FractureFx : MonoBehaviour
     /// <summary>The same crack / arc flash in other colours (the Electrician pixels use it for their lightning).</summary>
     public static void Play(Vector3 centre, float size, int lines, float reachInSizes, float seconds, Color core, Color glow)
     {
-        Camera cam = Camera.main;
+        Camera cam = PixelClicker.ViewCameraOf(PixelFind.Cached<PixelClicker>());
         if (cam == null || PixelFx.Material == null) return;
         FractureFx fx = null;
         while (pool.Count > 0 && fx == null) fx = pool.Pop();   // (a destroyed one reads as null: skip it)

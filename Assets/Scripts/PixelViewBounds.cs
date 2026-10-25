@@ -100,7 +100,7 @@ public class PixelViewBounds : MonoBehaviour
     private void FixedUpdate()
     {
         if (!boundsActive) return;
-        if (PixelCameraIntro.Moving) return; // the close-up view is tiny: don't squeeze loaded / resting pixels into it
+        if (PixelGameMode.IntroMoving) return; // the close-up view is tiny: don't squeeze loaded / resting pixels into it
 
         Camera cam = clicker.ViewCamera;
         if (PixelOrbitCamera.HomeCamera != null) cam = PixelOrbitCamera.HomeCamera;   // orbiting: pixels stay inside the NORMAL view

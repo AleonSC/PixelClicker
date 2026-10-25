@@ -134,7 +134,7 @@ public class PixelMold : MonoBehaviour
     private void Update()
     {
         if (disc == null && radius <= 0f) return;
-        if (!(Time.timeScale > 0f) || PixelPauseMenu.IsPaused) return;
+        if (!(Time.timeScale > 0f) || PixelGameMode.PauseMenuOpen) return;
 
         // Fade away on its own once it has not been fed for a while.
         float hold = zoneHoldSeconds > 0f ? zoneHoldSeconds : 30f, fade = zoneFadeSeconds > 0f ? zoneFadeSeconds : 25f;
@@ -294,7 +294,7 @@ public class PixelMoldy : MonoBehaviour
         }
     }
 
-    private static bool PixelOldGuard() => OldPixelDespawn.Frozen || OldPixelDespawn.HoldAll || PixelPauseMenu.IsPaused;
+    private static bool PixelOldGuard() => OldPixelDespawn.Frozen || OldPixelDespawn.HoldAll || PixelGameMode.PauseMenuOpen;
 
     private void Clean()
     {

@@ -55,7 +55,7 @@ public partial class PixelRobotWorker
     {
         if (!Active || clicker == null || consumables == null || Piloting) return false;
         if (PixelCalm.InMenu || PixelMinigame.TakeoverActive || PixelFirstPerson.Active || PixelBank.HoseOn) return false;
-        if (PixelCameraIntro.Moving || (Time.timeScale <= 0f && !PixelTimeStop.IsStopped)) return false;
+        if (PixelGameMode.IntroMoving || (Time.timeScale <= 0f && !PixelTimeStop.IsStopped)) return false;
         if (PixelPets.PopupOpen || PixelGuideVendor.Visiting) return false;
         return root != null && bodyT != null;
     }
@@ -127,7 +127,7 @@ public partial class PixelRobotWorker
     {
         if (cockpitCamera == null || cockpitRig == null || bodyT == null) { ExitCockpit(); return; }
         float dt = Time.deltaTime;
-        bool playable = !PixelPauseMenu.IsPaused && Time.timeScale > 0f && !PixelPets.PopupOpen && !PixelGuideVendor.Visiting;
+        bool playable = !PixelGameMode.PauseMenuOpen && Time.timeScale > 0f && !PixelPets.PopupOpen && !PixelGuideVendor.Visiting;
 
         // Looking round: the mouse always turns your head (the cursor is locked and hidden while you ride; Esc climbs out, a paused game frees the cursor).
         lookActive = playable;

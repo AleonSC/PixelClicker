@@ -172,7 +172,7 @@ public class PixelStats : MonoBehaviour
         }
 
         // Earn rate: pixels gained over the last minute, sampled once a second; the best one is kept.
-        if (!PixelTitleScreen.Showing)
+        if (!PixelGameMode.TitleShowing)
         {
             sampleTimer += dt;
             while (sampleTimer >= 1d)

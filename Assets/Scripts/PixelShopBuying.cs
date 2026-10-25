@@ -628,6 +628,7 @@ public partial class PixelShop
     }
 
     /// <summary>Dev tools: unlocks every shop pack (shop only: no pixels outside packs, no skill XP).</summary>
+    [ContextMenu("Dev: Unlock All Packs")]
     public void DevUnlockAllPacks() { for (int i = 0; i < packs.Length; i++) DevUnlockPack(i); }
 
     /// <summary>Dev tools: relocks every shop pack.</summary>

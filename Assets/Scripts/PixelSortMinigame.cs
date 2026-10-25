@@ -571,7 +571,7 @@ public class PixelSortMinigame : PixelScheduledMinigame
 
     private void ShowMessage(Vector3 at, string text)
     {
-        Camera c = cam != null ? cam : Camera.main;
+        Camera c = cam != null ? cam : PixelClicker.ViewCameraOf(clicker);
         if (c != null) StartCoroutine(MessageRoutine(at, c, text));
     }
 

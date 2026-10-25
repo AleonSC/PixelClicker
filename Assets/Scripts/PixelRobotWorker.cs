@@ -264,7 +264,7 @@ public partial class PixelRobotWorker : MonoBehaviour
         if (!show)
         {
             Hovering = false;
-            if (PixelCameraIntro.Moving) { hasPos = false; nextWander = 0f; }   // the camera is swinging about: it reappears once it settles
+            if (PixelGameMode.IntroMoving) { hasPos = false; nextWander = 0f; }   // the camera is swinging about: it reappears once it settles
             HideAll();
             return;
         }
@@ -405,7 +405,7 @@ public partial class PixelRobotWorker : MonoBehaviour
     private void UpdateHoverAndClick()
     {
         Camera cam = Cam;
-        bool blocked = cam == null || Time.timeScale <= 0f || PixelPauseMenu.IsPaused || consumables.IsPlacing ||
+        bool blocked = cam == null || Time.timeScale <= 0f || PixelGameMode.PauseMenuOpen || consumables.IsPlacing ||
                        (windowRoot != null && windowRoot.activeSelf) || PixelFirstPerson.Active || PixelClicker.GodMode;
         hovering = false;
         if (!blocked && !PointerOverUI())
