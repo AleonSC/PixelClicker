@@ -41,13 +41,19 @@ COLORS = {
 
 DECL = re.compile(r'^(?:public |internal |sealed |static |abstract |partial )*(?:class|struct|enum|interface)\s+(\w+)', re.M)
 
+# ONE left-to-right pass over comments, verbatim / normal strings and char literals, so each is recognised where it really starts
+# (a plain "@" or "//" inside a string no longer swallows the code after it). Line breaks inside are kept, so line numbers stay right.
+_TOKENS = re.compile(r'/\*.*?\*/|//[^\n]*|@"(?:[^"]|"")*"|\$?"(?:\\.|[^"\\\n])*"|\'(?:\\.|[^\'\\\n])\'', re.S)
+
 def strip_code(src):
-    src = re.sub(r'/\*.*?\*/', ' ', src, flags=re.S)
-    src = re.sub(r'@"(?:[^"]|"")*"', '""', src)
-    src = re.sub(r'"(?:\\.|[^"\\\n])*"', '""', src)
-    src = re.sub(r"'(?:\\.|[^'\\\n])'", "''", src)
-    src = re.sub(r'//[^\n]*', ' ', src)
-    return src
+    def blank(m):
+        t = m.group(0)
+        keep = '\n' * t.count('\n')
+        if t.startswith('/*'): return ' ' + keep
+        if t.startswith('//'): return ' '
+        if t.startswith("'"): return "''"
+        return '""' + keep
+    return _TOKENS.sub(blank, src)
 
 def header_summary(src):
     lines = []
