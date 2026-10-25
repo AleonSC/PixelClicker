@@ -101,7 +101,7 @@ public partial class PixelClicker
         Bottle = 73,      // Fishing's special block: a message in a bottle (breaking it gives a treasure map)
         Whale = 74,       // Fishing's special block: a whale that fights the line
         Mold = 75,        // one of Foraging's two hazard blocks (with the Toadstool): see PixelMold.cs
-        Charcoal = 81,    // the Charcoal pixel: bought in the shop with the Kiln's charcoal MATERIAL (PixelMaterials); its husks are Biomass Generator fuel
+        Charcoal = 81,    // the Charcoal pixel: a Kiln DISCOVERY (make 50 Charcoal, then buy it for pure currency); the Kiln also spits Charcoal husks; its husks are Biomass Generator fuel
         GodSlifer = 82,   // the three Egyptian God Cubes (PixelGodFind.cs): the rarest drops in the game, only one of each can be held
         GodRa = 83,
         GodObelisk = 84,

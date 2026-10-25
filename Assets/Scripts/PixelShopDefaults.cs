@@ -84,18 +84,18 @@ public partial class PixelShop
         };
     }
 
-    /// <summary>The Charcoal Pixel (2026-10-24): paid with Charcoal - the MATERIAL the Kiln makes (PixelMaterials) - plus pure currency. Its husks are Biomass Generator fuel.</summary>
+    /// <summary>The Charcoal Pixel: a machine DISCOVERY (2026-10-25) - buyable once the Kiln has made CharcoalToDiscover Charcoal (RequirementKind.Discovery on the
+    /// counter PixelKiln.CharcoalStat); pure currency only. Its husks are Biomass Generator fuel.</summary>
     private static ShopPack CreateCharcoalPixelPack(int requiresRgbIndex)
     {
         return new ShopPack
         {
             displayName = "Charcoal Pixel",
             tab = ShopTab.Pixels,
-            description = "Adds the Charcoal pixel to the random spawn pool. Its husks are the most efficient fuel: in a Biomass Generator one burns as long as 8 wood husks. Paid with the Charcoal the Kiln makes.",
-            requirements = Needs(requiresRgbIndex),
+            description = "Adds the Charcoal pixel to the random spawn pool. Its husks are the most efficient fuel: in a Biomass Generator one burns as long as 8 wood husks. Discovered by making Charcoal in the Kiln.",
+            requirements = AddDiscovery(Needs(requiresRgbIndex), PixelKiln.CharcoalStat, CharcoalToDiscover, "Charcoal"),
             costs = new[]
             {
-                new PackCost { minigameCurrency = PixelMaterials.CharcoalId, amount = 50 },
                 new PackCost { type = PixelClicker.PixelType.Gray,  amount = 1500 },
                 new PackCost { type = PixelClicker.PixelType.Black, amount = 1500 },
             },
@@ -952,6 +952,17 @@ public partial class PixelShop
                 },
             }
         };
+    }
+
+    /// <summary>How much Charcoal the Kiln must make to discover the Charcoal Pixel (the default; the pack's requirement 'count' in the Inspector wins).</summary>
+    public const double CharcoalToDiscover = 50d;
+
+    /// <summary>A requirements list plus a MACHINE DISCOVERY (RequirementKind.Discovery): the machine's counter 'statKey' must reach 'count'.</summary>
+    private static PackRequirement[] AddDiscovery(PackRequirement[] list, string statKey, double count, string label)
+    {
+        System.Collections.Generic.List<PackRequirement> all = new System.Collections.Generic.List<PackRequirement>(list ?? new PackRequirement[0]);
+        all.Add(new PackRequirement { kind = RequirementKind.Discovery, statKey = statKey, count = count, label = label });
+        return all.ToArray();
     }
 
     /// <summary>A requirements list: the pack at this index must be bought (-1 = none) and, optionally, a minigame's goal reached.</summary>

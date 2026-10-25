@@ -810,6 +810,25 @@ public partial class PixelShop
             changed = true;
         }
 
+        if (packDataVersion < 43)
+        {
+            // The Charcoal plan (2026-10-25): the Charcoal Pixel is a Kiln DISCOVERY (make 50 Charcoal) and costs pure currency only - the retired
+            // Charcoal MATERIAL price line goes, the discovery requirement comes in, the description follows.
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || p.displayName != "Charcoal Pixel") continue;
+                    ShopPack def = CreateCharcoalPixelPack(-1);
+                    if (p.costs != null) p.costs = Array.FindAll(p.costs, c => c == null || c.minigameCurrency != "charcoal");
+                    bool has = false;
+                    if (p.requirements != null) foreach (PackRequirement r in p.requirements) if (r != null && r.kind == RequirementKind.Discovery) has = true;
+                    if (!has) p.requirements = AddDiscovery(p.requirements, PixelKiln.CharcoalStat, CharcoalToDiscover, "Charcoal");
+                    p.description = def.description;
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 43);
+            changed = true;
+        }
+
         if (packDataVersion < 42)
         {
             // The Charcoal Pixel's husks are the most efficient fuel (8 wood husks in a Biomass Generator): its saved description says so.

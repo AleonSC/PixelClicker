@@ -77,13 +77,16 @@ public partial class PixelShop
         Pack = 0,
         /// <summary>A minigame's goal (e.g. ghosts caught) must have been reached.</summary>
         MinigameGoal = 1,
+        /// <summary>(2026-10-25) MACHINE DISCOVERY: a machine must have made enough of something (a PixelStats counter, e.g. the Kiln's Charcoal: 'kiln.charcoal' >= 50).
+        /// One-time: the counter never goes down, so the pack stays buyable even when the machine is gone. The next making skill's blocks use it too.</summary>
+        Discovery = 2,
     }
 
     /// <summary>One thing that must be true before a pack can be bought. A pack can have several; all must be met.</summary>
     [Serializable]
     public class PackRequirement
     {
-        [Tooltip("Pack = another pack must be bought first. Minigame Goal = a minigame's goal must be reached.")]
+        [Tooltip("Pack = another pack must be bought first. Minigame Goal = a minigame's goal must be reached. Discovery = a machine must have made enough of something (a stats counter).")]
         public RequirementKind kind = RequirementKind.Pack;
 
         [Tooltip("Pack: index (in the Packs list, starting at 0) of the pack that must be bought first.")]
@@ -91,6 +94,16 @@ public partial class PixelShop
 
         [Tooltip("Minigame Goal: id of the minigame (e.g. ghost, blackhole).")]
         public string minigameId = "";
+
+        [Tooltip("Discovery: the PixelStats counter the machine raises (e.g. kiln.charcoal = Charcoal the Kiln has made).")]
+        public string statKey = "";
+
+        [Min(1f)]
+        [Tooltip("Discovery: how many it must have made (the counter's target).")]
+        public double count = 50d;
+
+        [Tooltip("Discovery: what is discovered, in words (e.g. Charcoal): 'Charcoal: 14 / 50 to discover', 'You've discovered Charcoal!'.")]
+        public string label = "";
     }
 
     /// <summary>Something purchasable: a price and the tiers it unlocks.</summary>

@@ -204,7 +204,7 @@ public class PixelRapport : MonoBehaviour
         new Vendor { vendorId = "wizard", reward = "MarketCharm", rewardStep = 4, loves = new List<Love> { L("ghost", 6f), L("stardust", 20f) }, stepLines = new[] { "",
             "Ah, you again. The stars said you'd come.", "My favourite customer! The stars agree.", "A friend of the arcane is a friend of mine.",
             "Partner, a secret: Cubie wasn't always a cube. Don't ask what he was. I still have nightmares about the corners." } },
-        new Vendor { vendorId = "tinkerer", loves = new List<Love> { L("bomb", 10f), L("charcoal", 4f) }, stepLines = new[] { "",
+        new Vendor { vendorId = "tinkerer", loves = new List<Love> { L("bomb", 10f), L("Charcoal") }, stepLines = new[] { "",
             "Oh! You're the one with the clicking. Hello again.", "Regular customer! I tightened every bolt twice for you.", "Friend! I've got blueprints I don't show just anyone.",
             "Partner... Cubie's bill machine? I built it. He said it was a 'friendship counter'." } },
         new Vendor { vendorId = "prospector", loves = new List<Love> { L("Gold"), L("meteor", 1.5f) }, stepLines = new[] { "",

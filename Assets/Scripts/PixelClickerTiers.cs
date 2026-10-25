@@ -207,6 +207,24 @@ public partial class PixelClicker
         });
     }
 
+    /// <summary>The Charcoal tier, for the Kiln's Charcoal husks (2026-10-25): the Charcoal Pixel pack's reward tier when the shop has added it (it
+    /// usually has: shop reward tiers are added at start, locked until bought); otherwise made here with the same look, locked, no spawn. Returns its index.</summary>
+    public int EnsureCharcoalTier()
+    {
+        int index = IndexOf(PixelType.Charcoal);
+        if (index >= 0) return index;
+        return EnsureTier(new PixelTier
+        {
+            type = PixelType.Charcoal,
+            displayName = "Charcoal Pixels",
+            color = new Color(0.16f, 0.15f, 0.15f, 1f),
+            amountPerClick = 6,
+            clicksToCollect = 2,
+            spawnWeight = 0f,
+            unlockMode = TierUnlockMode.ShopOnly,
+        });
+    }
+
     /// <summary>A special block's tier (PixelBlockRules.SpecialRule): made on first use, no spawn weight, unlocked so the cube can show it. Returns its index.</summary>
     public int EnsureSpecialTier(PixelTier definition)
     {

@@ -166,7 +166,7 @@ public partial class PixelSkills : MonoBehaviour
     private static PixelClicker.PixelType[] FiremakingTypes() => new[]
     {
         PixelClicker.PixelType.Tinder, PixelClicker.PixelType.Kindling, PixelClicker.PixelType.Firewood, PixelClicker.PixelType.Flint, PixelClicker.PixelType.Ember,
-        PixelClicker.PixelType.Fire, PixelClicker.PixelType.Ash, PixelClicker.PixelType.Wildfire   // (Charcoal left 2026-10-24: it is its own shop pixel, bought with Kiln charcoal)
+        PixelClicker.PixelType.Fire, PixelClicker.PixelType.Ash, PixelClicker.PixelType.Wildfire   // (Charcoal left 2026-10-24: it is its own shop pixel, a Kiln discovery)
     };
 
     public const string MiningId = "mining";

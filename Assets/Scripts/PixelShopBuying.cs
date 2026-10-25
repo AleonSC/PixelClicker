@@ -141,7 +141,64 @@ public partial class PixelShop
     }
 
     /// <summary>True when the pack's required pack (if any) has been bought.</summary>
-    public bool IsRequirementMet(int packIndex) => IsPackRequirementMet(packIndex) && IsMinigameGoalMet(packIndex) && PixelCubieBill.TierMet(PixelCubieBill.PackTier(packs[packIndex]));
+    public bool IsRequirementMet(int packIndex) => IsPackRequirementMet(packIndex) && IsMinigameGoalMet(packIndex) && IsDiscoveryMet(packIndex) && PixelCubieBill.TierMet(PixelCubieBill.PackTier(packs[packIndex]));
+
+    // ---- MACHINE DISCOVERY (RequirementKind.Discovery, 2026-10-25): 'a machine has made N of something' (a PixelStats counter). ----
+    // The pack is listed but locked ('Discover Charcoal first: 14 / 50 made') until the counter reaches its target; the counter never
+    // goes down, so it is a one-time discovery. A machine calls NoteDiscovery(statKey) after raising its counter (the notice), and its
+    // device card shows DiscoveryProgress(statKey, ...). Built for the Kiln's Charcoal; the next making skill's blocks reuse it.
+
+    /// <summary>True unless the pack waits on a machine discovery that has not been reached.</summary>
+    public bool IsDiscoveryMet(int packIndex)
+    {
+        PackRequirement[] requirements = packs[packIndex].requirements;
+        if (requirements == null) return true;
+        foreach (PackRequirement r in requirements)
+            if (r.kind == RequirementKind.Discovery && !IsDiscovered(r)) return false;
+        return true;
+    }
+
+    private static bool IsDiscovered(PackRequirement r) => string.IsNullOrEmpty(r.statKey) || PixelStats.Total(r.statKey) >= r.count;
+
+    /// <summary>The discovery requirement on any pack that watches this counter (and that pack's index), or null.</summary>
+    private PackRequirement DiscoveryFor(string statKey, out int packIndex)
+    {
+        packIndex = -1;
+        if (packs == null || string.IsNullOrEmpty(statKey)) return null;
+        for (int i = 0; i < packs.Length; i++)
+        {
+            if (packs[i] == null || packs[i].requirements == null) continue;
+            foreach (PackRequirement r in packs[i].requirements)
+                if (r != null && r.kind == RequirementKind.Discovery && r.statKey == statKey) { packIndex = i; return r; }
+        }
+        return null;
+    }
+
+    /// <summary>A machine's discovery progress for its device card: made so far, needed, what it discovers. False when no pack watches this counter.</summary>
+    public static bool DiscoveryProgress(string statKey, out double have, out double need, out string label)
+    {
+        have = PixelStats.Total(statKey); need = 0d; label = "";
+        PixelShop shop = PixelFind.Cached<PixelShop>();
+        PackRequirement r = shop != null ? shop.DiscoveryFor(statKey, out _) : null;
+        if (r == null) return false;
+        need = r.count;
+        label = string.IsNullOrEmpty(r.label) ? statKey : r.label;
+        return true;
+    }
+
+    /// <summary>A machine raised its discovery counter by 'added': when that just reached the target, the notice ('You've discovered Charcoal! ...').</summary>
+    public static void NoteDiscovery(string statKey, double added = 1d)
+    {
+        PixelShop shop = PixelFind.Cached<PixelShop>();
+        int packIndex = -1;
+        PackRequirement r = shop != null ? shop.DiscoveryFor(statKey, out packIndex) : null;
+        if (r == null || packIndex < 0) return;
+        double now = PixelStats.Total(statKey);
+        if (now < r.count || now - added >= r.count) return;   // (not there yet, or reached before)
+        string label = string.IsNullOrEmpty(r.label) ? statKey : r.label;
+        PixelHints.Announce(string.Format(shop.discoveredFormat, label, shop.packs[packIndex].displayName));
+        PixelAudio.Play("achievement");
+    }
 
     /// <summary>True when every pack this pack requires (if any) has been bought.</summary>
     public bool IsPackRequirementMet(int packIndex)
@@ -191,6 +248,11 @@ public partial class PixelShop
             if (r.kind == RequirementKind.Pack)
             {
                 if (IsRequiredPackMissing(r, packIndex)) return string.Format(requiresFormat, packs[r.packIndex].displayName);
+            }
+            else if (r.kind == RequirementKind.Discovery)
+            {
+                if (!IsDiscovered(r)) return string.Format(discoveryRequirementFormat, string.IsNullOrEmpty(r.label) ? r.statKey : r.label,
+                                                           PixelClicker.FormatNumberShort(System.Math.Min(r.count, PixelStats.Total(r.statKey))), PixelClicker.FormatNumberShort(r.count));
             }
             else if (!IsGoalReached(r))
             {

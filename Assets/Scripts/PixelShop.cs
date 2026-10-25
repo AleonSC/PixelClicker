@@ -113,6 +113,12 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Text shown instead of the cost for a locked pack. {0} = name of the required pack.")]
     [SerializeField] private string requiresFormat = "Requires: {0}";
 
+    [Tooltip("Text instead of the cost for a pack waiting on a machine DISCOVERY. {0} = what is discovered, {1} = made so far, {2} = needed. Dialogue.txt [Discovery] wins.")]
+    [SerializeField] private string discoveryRequirementFormat = "Discover {0} first: {1} / {2} made";
+
+    [Tooltip("The notice when a machine discovery is reached. {0} = what is discovered, {1} = the pack now in the shop. Dialogue.txt [Discovery] wins.")]
+    [SerializeField] private string discoveredFormat = "You've discovered {0}! The {1} is now in the shop.";
+
 
     // ------------------------------------------------------------------
     // Shop button
@@ -600,6 +606,9 @@ public partial class PixelShop : MonoBehaviour
 
     private void Awake()
     {
+        PixelDialogue.File.Apply("Discovery", "requirement", ref discoveryRequirementFormat);   // (machine discovery texts: PixelShopBuying)
+        PixelDialogue.File.Apply("Discovery", "discovered", ref discoveredFormat);
+        PixelDialogue.File.Flush();
         if (clicker == null)
         {
             clicker = PixelFind.First<PixelClicker>();

@@ -2,17 +2,23 @@
 // PixelKiln.cs
 //   The KILN (a Dev Hub > Tester feature, PixelFeatureTester 'Kiln'): a brick kiln with a glowing mouth on its +X side, a chimney that smokes and a chute at the back. ANYTHING that goes
 //   into the mouth from the side burns: an old pixel (not held, not glued into a build) inside the mouth zone (a box just in front of the door, mouthCenter / mouthHalf in kiln units)
-//   is taken out of the game (PixelClicker.ClaimOldPixel, no payout), drawn in while it shrinks and flares, and CHARCOAL is queued: charcoalPerPixel of it comes out
-//   charcoalDelaySeconds after the burn, one every charcoalGapSeconds, as the MATERIAL Charcoal (PixelMaterials, id 'charcoal': a "+1 Charcoal" popup over the
-//   chimney, added to the Inventory's Materials tab; 2026-10-24 - it used to spit Charcoal husks out of a back chute). Charcoal buys the Charcoal Pixel in the shop,
-//   whose husks are Biomass Generator fuel. SOCKETS (PixelSockets.cs): 'mouth' (In, +X) - a belt / connector / hose ending at an In coupling there hands its husks
-//   straight in (AcceptHusk); the old 'chute' Out socket is gone. The kiln roars while it burns (light, ember sparks, thicker smoke). Saved with the tester save.
+//   is taken out of the game (PixelClicker.ClaimOldPixel, no payout), drawn in while it shrinks and flares, and CHARCOAL is queued: charcoalPerPixel CHARCOAL
+//   HUSKS (PixelType.Charcoal old pixels, PixelClicker.EnsureCharcoalTier) come out of the back CHUTE charcoalDelaySeconds after the burn, one every
+//   charcoalGapSeconds (Charcoal plan, 2026-10-25: back to husks - the held Charcoal MATERIAL of 2026-10-24 is retired). Charcoal husks are Biomass Generator
+//   fuel (8 wood husks each) and go to Big Tim through his delivery jobs.
+//   SOCKETS (PixelSockets.cs): 'mouth' (In, +X) - a belt / hose ending at an In coupling there hands its husks straight in (AcceptHusk); 'chute' (Out, -X) - with
+//   an Out coupling there the charcoal goes onto the belt that starts at it (PixelCouplings.Emit; a full belt there: the charcoal waits inside), else it drops out.
+//   DISCOVERY: every Charcoal it makes raises the per-save counter CharcoalStat ('kiln.charcoal', PixelStats / GameState); the Charcoal Pixel pack waits on it
+//   (a shop RequirementKind.Discovery, 50 by default) and PixelShop.NoteDiscovery announces the moment it is reached (one-time: it stays buyable without a Kiln).
+//   DEVICE CARD (2026-10-25): hover = the shared card (PixelDeviceCard.HoverSubject: burning / queued, 'Charcoal: 14 / 50 to discover'); a right TAP = the
+//   shared panel (Remove = take the Kiln away; a right HOLD still removes it like every tester object).
+//   The kiln roars while it burns (light, ember sparks, thicker smoke). Saved with the tester save.
 // ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelKiln : MonoBehaviour, IPixelSocketDevice
+public class PixelKiln : MonoBehaviour, IPixelSocketDevice, IPixelPanelSubject
 {
     [Header("Burning")]
     [Min(0f)]
@@ -20,7 +26,7 @@ public class PixelKiln : MonoBehaviour, IPixelSocketDevice
     [SerializeField] private float burnSeconds = 0f;
 
     [Min(0)]
-    [Tooltip("Charcoal (material) one burnt pixel makes. 0 = the coded default (1).")]
+    [Tooltip("Charcoal husks one burnt pixel makes. 0 = the coded default (1).")]
     [SerializeField] private int charcoalPerPixel = 0;
 
     [Min(0f)]
@@ -28,7 +34,7 @@ public class PixelKiln : MonoBehaviour, IPixelSocketDevice
     [SerializeField] private float charcoalDelaySeconds = 0f;
 
     [Min(0f)]
-    [Tooltip("Seconds between two '+1 Charcoal' payouts. 0 = the coded default (0.35).")]
+    [Tooltip("Seconds between two charcoal husks leaving the chute. 0 = the coded default (0.35).")]
     [SerializeField] private float charcoalGapSeconds = 0f;
 
     [Min(0)]
@@ -37,6 +43,10 @@ public class PixelKiln : MonoBehaviour, IPixelSocketDevice
 
     // Kiln units: 1 = one cube width. +X is the front (the mouth), -X the back (the chute).
     private static readonly Vector3 MouthCenter = new Vector3(1.75f, 0.75f, 0f), MouthHalf = new Vector3(0.65f, 0.85f, 0.75f);
+    private static readonly Vector3 OutletLocal = new Vector3(-1.95f, 0.65f, 0f);
+
+    /// <summary>The per-save counter of Charcoal the Kiln has made (PixelStats): the Charcoal Pixel's discovery (RequirementKind.Discovery).</summary>
+    public const string CharcoalStat = "kiln.charcoal";
 
     private PixelClicker clicker;
     private float unit;
@@ -53,10 +63,11 @@ public class PixelKiln : MonoBehaviour, IPixelSocketDevice
     private float Gap => charcoalGapSeconds > 0f ? charcoalGapSeconds : 0.35f;
     private int MaxQueued => maxQueued > 0 ? maxQueued : 30;
 
-    /// <summary>Its socket (the real kiln and its placing ghost's aim beams): the MOUTH (In, at the front edge of the stone apron, so a belt ending there does not run into it). Charcoal is a material now, so there is no output chute socket.</summary>
+    /// <summary>Its sockets (the real kiln and its placing ghost's aim beams): the MOUTH (In, at the front edge of the stone apron, so a belt ending there does not run into it) and the back CHUTE (Out: the charcoal husks).</summary>
     private static PixelSocket[] Ports(float u) => new[]
     {
         new PixelSocket("mouth", new Vector3(2.65f * u, 0f, 0f), Vector3.right, PixelSocketFlow.Intake),
+        new PixelSocket("chute", new Vector3((OutletLocal.x - 0.25f) * u, 0f, 0f), Vector3.left, PixelSocketFlow.Output),
     };
 
     // ---------------- placement (PixelFeatureTester) ----------------
@@ -125,6 +136,7 @@ public class PixelKiln : MonoBehaviour, IPixelSocketDevice
         kiln.unit = u;
         // Sockets (PixelSockets.cs): the MOUTH takes husks in (a belt / connector / hose ends at an In coupling there), the back CHUTE puts charcoal out.
         kiln.sockets = Ports(u);
+        foreach (Collider col in root.GetComponentsInChildren<Collider>()) kiln.body.Add(col);   // (hover / right tap: the device card)
         kiln.fireLight = MakeLight(t, new Vector3(fx + 0.5f * u, 0.7f * u, 0f), u);
         kiln.smoke = MakeSmoke(t, new Vector3(-0.65f * u, 3.9f * u, 0.45f * u), u);
         kiln.embers = MakeEmbers(t, new Vector3(fx + 0.1f * u, 0.7f * u, 0f), u);
@@ -285,8 +297,10 @@ public class PixelKiln : MonoBehaviour, IPixelSocketDevice
             var em = smoke.emission; em.rateOverTime = 4f + roar * 14f + (pendingCharcoal > 0 ? 6f : 0f);
         }
 
-        // Charcoal comes out one at a time.
-        if (pendingCharcoal > 0 && readyTimes.Count > 0 && Time.time >= readyTimes[0] && Time.time >= nextOutAt)
+        UpdateCard();
+
+        // Charcoal leaves the chute one at a time.
+        if (pendingCharcoal > 0 && readyTimes.Count > 0 && Time.time >= readyTimes[0] && Time.time >= nextOutAt && PixelCouplings.OutputHasRoom(this, "chute"))   // (a full belt on the chute: the charcoal waits inside)
         {
             readyTimes.RemoveAt(0);
             pendingCharcoal--;
@@ -295,13 +309,60 @@ public class PixelKiln : MonoBehaviour, IPixelSocketDevice
         }
     }
 
-    /// <summary>One Charcoal comes out: the MATERIAL goes straight into the Inventory, with a "+1 Charcoal" popup rising over the kiln.</summary>
+    /// <summary>One Charcoal HUSK comes out of the back chute (onto the belt starting at an Out coupling there, else it drops out); the discovery counter goes up.</summary>
     private void SpitCharcoal()
     {
-        PixelMaterials.Add(PixelMaterials.CharcoalId, 1d);
-        Vector3 over = transform.TransformPoint(new Vector3(0f, 2.4f, 0f) * unit);
-        PixelUI.ShowWorldText("+1 " + PixelMaterials.NameOf(PixelMaterials.CharcoalId), PixelMaterials.ColorOf(PixelMaterials.CharcoalId), over);
+        if (clicker == null) return;
+        int tier = clicker.EnsureCharcoalTier();
+        Vector3 pos = transform.TransformPoint(OutletLocal * unit);
+        Vector3 dir = (-transform.right + Vector3.up * 0.15f + Random.insideUnitSphere * 0.08f).normalized;
+        int before = clicker.OldPixels.Count;
+        clicker.SpawnStoredPixel(tier, 1, pos, dir * Random.Range(1.2f, 1.9f) * unit);
+        if (clicker.OldPixels.Count > before) PixelCouplings.Emit(this, "chute", clicker.OldPixels[clicker.OldPixels.Count - 1]);   // an Out coupling on the chute puts it on the belt there
+        PixelStats.Count(CharcoalStat);
+        PixelShop.NoteDiscovery(CharcoalStat);   // (the Charcoal Pixel's discovery: the notice when it is reached)
         PixelAudio.Play("drop", 1.2f, 0.5f);
         if (embers != null) embers.Emit(3);
     }
+
+    // ---------------- the device card (hover / right tap) ----------------
+
+    private readonly List<Collider> body = new List<Collider>();
+    private readonly PixelRightTap tap = new PixelRightTap();
+
+    /// <summary>Hovering shows the shared card; a quick right TAP opens the shared panel (a right HOLD is the tester's remove).</summary>
+    private void UpdateCard()
+    {
+        if (clicker == null || PixelCalm.InMenu || PixelFirstPerson.Active) return;
+        bool hovered = PixelPointerClaim.PointerOn(clicker, body);
+        if (hovered) PixelDeviceCard.HoverSubject(this);
+        if (PixelInput.RightPressed() || PixelInput.RightHeld() || tap.Pending)
+        {
+            bool usable = !PixelClicker.ExternalClickBlock && !PixelInput.PointerOverUI() && !PixelFeatureTester.Placing;
+            if (tap.Update(usable && hovered ? (object)this : null)) PixelDeviceCard.OpenSubject(this);
+        }
+    }
+
+    public bool PanelAlive => this != null && isActiveAndEnabled;
+
+    public void BuildPanelInfo(PixelDeviceInfo info)
+    {
+        info.Title = "Kiln";
+        info.Add("Burning", roar > 0.05f ? "yes" : "idle");
+        info.Add("Charcoal waiting", pendingCharcoal.ToString());
+        if (PixelShop.DiscoveryProgress(CharcoalStat, out double have, out double need, out string label))
+        {
+            bool found = have >= need;
+            info.Add(label, found ? "discovered" : PixelClicker.FormatNumberShort(have) + " / " + PixelClicker.FormatNumberShort(need) + " to discover");
+            if (!found) { info.Progress = need > 0d ? Mathf.Clamp01((float)(have / need)) : 0f; info.ProgressLabel = "Discovery"; }
+        }
+        info.Add("Made so far", PixelClicker.FormatNumberShort(PixelStats.Total(CharcoalStat)));
+        if (!info.Full) return;
+        info.Note("<color=#9FB0CC>Anything in its mouth burns. Charcoal husks leave the back chute: put a belt on its Out coupling to carry them (Biomass Generator fuel, Big Tim's delivery jobs).</color>");
+        PixelCouplings.AddPortRows(info, this);
+    }
+
+    public void PanelRemove() => PixelFeatureTester.RemovePlaced(gameObject);
+    public void PanelOpened() { PixelAudio.Play("ui_click", 1.1f); }
+    public void PanelClosed() { }
 }

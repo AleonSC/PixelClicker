@@ -1658,3 +1658,7 @@
 [2026-10-25 11:41 UTC] The event log is now the third tab of the Log window (Achievements, Goals, Event log); the on-screen event log box and the Pocket's Event log tab are gone, and the event log key opens the Log on that tab.
 [2026-10-25 11:41 UTC] The early '???' skill window now sits at the bottom right, and the '+XP' popups stack on top of the skill window (the early one and the pinned full one, not the small version) and follow it when it is moved.
 [2026-10-25 12:14 UTC] Design: the Charcoal plan is decided - burn 50 Charcoal in the Kiln to make the Charcoal Pixel buyable (pure currency only), the Kiln drops Charcoal husks again, and the Charcoal material is retired (the Materials tab stays for minigame materials).
+[2026-10-25 12:20 UTC] Charcoal plan: the Kiln spits Charcoal husks out of its back chute again (with an Out coupling for belts) instead of the Charcoal material, and every Charcoal it makes counts toward discovering the Charcoal Pixel (50, shown on the Kiln's new device card).
+[2026-10-25 12:20 UTC] Shop: a new pack requirement, machine discovery (a machine must have made N of something), locks the Charcoal Pixel until the Kiln has made 50 Charcoal; it then costs pure currency only and a notice announces the discovery.
+[2026-10-25 12:20 UTC] The Charcoal material is retired (PixelMaterials and the Materials tab stay for the minigame materials); the Tinkerer now loves Charcoal pixels as gifts instead.
+[2026-10-25 12:20 UTC] To-do: Charcoal plan ticked; the Discovery item now points at the new machine-discovery requirement.

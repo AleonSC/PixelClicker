@@ -1,7 +1,9 @@
 // ---- System notes ----
 // PixelMaterials.cs
-//   MATERIALS: things the player holds that are not pixel currency and not husks - made by machines (the Kiln's Charcoal, 2026-10-24),
-//   shown in the Inventory's Materials tab (with the minigame materials such as Bomb Parts) and spendable in shop prices.
+//   MATERIALS: things the player holds that are not pixel currency and not husks, shown in the Inventory's Materials tab (with the minigame
+//   materials such as Bomb Parts) and spendable in shop prices. (The Kiln's Charcoal was one from 2026-10-24 to 2026-10-25; the Charcoal plan
+//   retired it - the Kiln makes Charcoal HUSKS again and the Charcoal Pixel is a machine discovery - so there are no built-in kinds right now;
+//   a saved 'charcoal' entry is dropped at start: RetiredIds.)
 //   - The kinds of material are the Inspector list 'materials' (id, name, colour); the amounts held are progress: GameState.materials
 //     (MaterialsState, by id), so they save / load / reset with the game.
 //   - Add(id, n) / TrySpend(id, n) / Amount(id); Changed fires on every change.
@@ -25,7 +27,7 @@ public class PixelMaterials : MonoBehaviour
         public Color color = Color.white;
     }
 
-    [Tooltip("Every kind of material. Missing built-in ones (Charcoal) are added back at start.")]
+    [Tooltip("Every kind of material. Missing built-in ones are added back at start (there are none right now).")]
     [SerializeField] private List<MaterialDef> materials = new List<MaterialDef>();
 
     public static event Action Changed;
@@ -33,12 +35,10 @@ public class PixelMaterials : MonoBehaviour
     private static PixelMaterials instance;
     private static MaterialsState S => PixelGameState.Current.materials;
 
-    public const string CharcoalId = "charcoal";
+    private static MaterialDef[] BuiltIn() => new MaterialDef[0];
 
-    private static MaterialDef[] BuiltIn() => new[]
-    {
-        new MaterialDef { id = CharcoalId, displayName = "Charcoal", color = new Color(0.62f, 0.62f, 0.66f, 1f) },
-    };
+    /// <summary>Material ids that no longer exist (removed from the Inspector list at start).</summary>
+    private static readonly string[] RetiredIds = { "charcoal" };
 
     private void Awake()
     {
@@ -53,6 +53,7 @@ public class PixelMaterials : MonoBehaviour
     private void EnsureBuiltIns()
     {
         if (materials == null) materials = new List<MaterialDef>();
+        materials.RemoveAll(m => m != null && Array.IndexOf(RetiredIds, m.id) >= 0);
         foreach (MaterialDef d in BuiltIn())
             if (materials.Find(m => m != null && m.id == d.id) == null) materials.Add(d);
     }

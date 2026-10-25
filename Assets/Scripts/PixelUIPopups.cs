@@ -237,7 +237,7 @@ public partial class PixelUI
         ui.ShowPopup(text, color, PopupAnchor.Fixed, local, Vector2.zero, 0.75f, 0f);
     }
 
-    /// <summary>A small text popup rising from a world point (e.g. the Kiln's "+1 Charcoal"). Nothing when popups are off.</summary>
+    /// <summary>A small text popup rising from a world point (e.g. "+1" over a machine). Nothing when popups are off.</summary>
     public static void ShowWorldText(string text, Color color, Vector3 world)
     {
         PixelUI ui = inventoryInstance;

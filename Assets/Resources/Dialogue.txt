@@ -564,6 +564,10 @@ missed log: {0} stopped by and left.
 farewell: Find a nice open spot and plant them. Then stand back, dear. Don't wait too long to pick what grows. Mrrow!
 gift farewell: Mrrow! Fresh from the garden. I'll bring more if I find any.
 
+[Discovery]
+requirement: Discover {0} first: {1} / {2} made
+discovered: You've discovered {0}! The {1} is now in the shop.
+
 [Delivery jobs]
 accepted: {0} dropped a crate on his dock. Fill it with {1} within {2}!
 done: {0} hauls his crate away: {1}!

@@ -81,7 +81,7 @@ public class GameState
     }
 }
 
-/// <summary>Materials the player holds (PixelMaterials): amounts by material id ("charcoal"...). Not pixel currency: machines make them, shop prices can ask for them.</summary>
+/// <summary>Materials the player holds (PixelMaterials): amounts by material id. Not pixel currency: machines make them, shop prices can ask for them.</summary>
 [Serializable]
 public class MaterialsState
 {
