@@ -4,7 +4,7 @@
 // A blank line leaves a gap. Long lines wrap by themselves. Simple tags like <b>bold</b> and <i>italic</i> work.
 
 # The Goal
-Click the cube to collect pixels. Every pixel type is its own currency. The early colours are rewards of the goals in your Log (crush 10 husks for Gray, recycle 20 for Black); later ones come from Cubie and the Shop; spend your pixels in the Shop on new pixels, skills, upgrades, devices and minigames. There is always something new to unlock.
+Click the cube to collect pixels. Every pixel type is its own currency. The early colours are rewards of the goals in your Log (crush 10 husks for Gray, recycle 150 for Black); later ones come from Cubie and the Shop; spend your pixels in the Shop on new pixels, skills, upgrades, devices and minigames. There is always something new to unlock.
 
 # Collecting and Husks
 Each click breaks the block on the cube and pays its value in that pixel. Most blocks break in one click; tough ones (ores, chests, rare blocks) need several hits and only the last one pays.
@@ -20,7 +20,7 @@ The meter starts short; Standard skill perks make it longer, and every few of yo
 The <b>Next up</b> window (Standard skill tree: <b>What's Next</b>, after Block Hold and Power Click) shows the block coming next, the one on the cube and the one before; Look Further and Foresight show one more block ahead each (switch it off in Settings > Interface).
 
 # Cubie
-Cubie, a suspicious little cube, drops by now and then to show you around. The early goals in your Log bring him: after your first 50 clicks he pays his first visit and gives you a Recycler; once you have earned 120 Black pixels he comes back, unlocks Red, Green and Blue pixels, opens his Shop and introduces the other visitors. You can replay his visits with Settings > Replay tutorial.
+Cubie, a suspicious little cube, drops by now and then to show you around. The early goals in your Log bring him: after your first 50 clicks he pays his first visit and gives you a Recycler; once you have earned 300 Black pixels he comes back, unlocks Red, Green and Blue pixels, opens his Shop and introduces the other visitors. You can replay his visits with Settings > Replay tutorial.
 
 # The Shop
 The Shop button appears when Cubie opens his shop on his second visit. It has four tabs:

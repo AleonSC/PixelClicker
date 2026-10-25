@@ -8,7 +8,7 @@
 //     value like husk.crush.streak) or ManualClicksSinceShown.
 //   - Appears: Always, HusksOnFloor (at least appearValue husks lying out), StatAtLeast (appearKey >= appearValue, e.g. guide.stage1 = Cubie's
 //     visit 1 handed over the Recycler) or MinutesPlayed. Never on the title screen; during the new-game intro goals may APPEAR (the intro box points at the Log's Goals tab) but none completes until it closes. Built-in rows: Click 50 times
-//     (start), Crush 10 husks (20 husks lying out), Recycle 20 husks (after Cubie's Recycler), Get a crush streak of 5 (minute 3).
+//     (start), Crush 10 husks (after Cubie's visit 1), Recycle 150 husks (after Crush 10), Get a crush streak of 5 (minute 3).
 //   - State is saved per save in PixelStats counters: goal.<id>.shown, goal.<id>.start (the counter when it appeared), goal.<id>.done.
 //     Checked every checkSeconds; on completion the reward is paid (PixelSkills.AddRewardXp / PixelClicker.AddBonusCurrency), the event log says
 //     so with a sound, and the session recorder notes it on its timeline. A finished goal stays in the tab as complete for showDoneSeconds.
@@ -19,14 +19,15 @@
 //   (rewardCubieVisit 1 / 2 -> PixelGuideVendor.RequestVisit; Cubie's White / Black counts are only the fallback without such a row). afterGoal chains
 //   rows; TierTotal counts a pixel type's lifetime total. Built-in chain (goalDataVersion 1 replaced the earlier rows once):
 //     Click 50 blocks (start)                        -> Cubie's visit 1 (the Recycler)
-//     Crush 10 husks (20 husks on the floor)         -> Gray unlocks
-//     Recycle 20 husks (after visit 1)               -> Black unlocks
+//     Crush 10 husks (after visit 1)                 -> Gray unlocks
+//     Recycle 150 husks (after Crush 10; id recycle20) -> Black unlocks
 //     Get a crush streak of 5 (minute 3)             -> 60 Standard XP
-//     Earn 120 Black (after Recycle 20)              -> Cubie's visit 2: RGB + the shop
-//     Earn 2,000 Blue (minute 40, after Earn 120 Black) -> Cubie's visit 3: his BILL (PixelCubieBill; ~1 h, the end of the early game - tune it)
-//   PACE (sized for RGB + the shop at about 6 min, ~3.5 blocks a second, about 60% of the time clicking): click 50 ~0:20 + Cubie ~0:30; Gray ~1:00;
-//   Black ~2:30-3:00 (the Recycler is placed and 20 husks land in it); 120 Black at 1/3 of blocks ~ 2.5-3 min of mixed play -> visit 2 at ~5:30,
-//   the shop at ~6:00. Re-check against the next session report (the recorder's timeline lists 'Goal done: ...').
+//     Earn 300 Black (after Recycle 150)             -> Cubie's visit 2: RGB + the shop
+//     Earn 2,000 Blue (minute 40, after Earn 300 Black) -> Cubie's visit 3: his BILL (PixelCubieBill; ~1 h, the end of the early game - tune it)
+//   PACE (sized for RGB + the shop at about 6 min, ~3.5 blocks a second): click 50 ~0:20 + Cubie ~0:30; Gray ~1:10 (10 crushes after visit 1);
+//   Black ~2:30 (the Recycler's suction catches ~90% of husks, so 150 is about a minute of clicking); 300 Black at 1/3 of blocks ~ 900 blocks,
+//   2.5-3 min -> visit 2 at ~5:30, the shop at ~6:00. 2026-10-25 report before this retune (Crush 10 at 20 husks out, Recycle 20, Earn 120
+//   Black): Gray 0:27, Black 1:08, visit 2 at 2:10 - 2.5x too fast. Re-check against the next session report (the recorder's timeline lists 'Goal done: ...').
 //   The on-screen guide line follows the current goal (PixelUI.BuildGuideText, CurrentGuideGoal).
 //   A NEW goal = a new row (or a DefaultGoals line), no code.
 // ---------------------------------------------------
@@ -53,7 +54,7 @@ public class PixelGoals : MonoBehaviour, IPixelDatabaseSource
         public CounterKind counter = CounterKind.StatSinceShown;
         [Tooltip("The PixelStats counter it watches (husk.crushed, recycler.husks, husk.crush.streak...). Not used by ManualClicksSinceShown / TierTotal.")]
         public string counterKey = "";
-        [Tooltip("TierTotal: the pixel type whose lifetime total (earned by clicks) it counts, e.g. 'Earn 120 Black'.")]
+        [Tooltip("TierTotal: the pixel type whose lifetime total (earned by clicks) it counts, e.g. 'Earn 300 Black'.")]
         public PixelClicker.PixelType counterTier = PixelClicker.PixelType.Black;
         [Min(1f)]
         [Tooltip("How much of it completes the goal.")]
@@ -94,7 +95,7 @@ public class PixelGoals : MonoBehaviour, IPixelDatabaseSource
     [Tooltip("Add the built-in goals that are missing from the list.")]
     [SerializeField] private bool addDefaultGoals = true;
 
-    [Tooltip("Data version of the built-in rows (1 = 2026-10-18 'goals ARE the early unlocks': the built-in rows are replaced by the new ones once). Raised by code.")]
+    [Tooltip("Data version of the built-in rows (1 = 2026-10-18 'goals ARE the early unlocks': the built-in rows are replaced by the new ones once; 2 = 2026-10-25 slower intro: Crush 10 after visit 1, Recycle 150, Earn 300 Black). Raised by code.")]
     [SerializeField] private int goalDataVersion = 0;
 
     [Min(0.05f)]
@@ -121,15 +122,16 @@ public class PixelGoals : MonoBehaviour, IPixelDatabaseSource
     /// <summary>
     /// The built-in rows: the early game's progression (2026-10-18, design 'Early game feel' item 2 - the GOALS ARE THE UNLOCKS, each new colour
     /// rewards learning one action). Sized for RGB + the shop at about 6 minutes (see the header): Click 50 -> Cubie's visit 1 (the Recycler),
-    /// Crush 10 -> Gray, Recycle 20 -> Black, crush streak of 5 -> Standard XP, Earn 120 Black -> Cubie's visit 2 (RGB + the shop).
+    /// Crush 10 -> Gray, Recycle 150 -> Black, crush streak of 5 -> Standard XP, Earn 300 Black -> Cubie's visit 2 (RGB + the shop).
     /// </summary>
     private static GoalDef[] DefaultGoals() => new[]
     {
         new GoalDef { id = "click50", title = "Click 50 blocks", description = "Click the cube 50 times. Every click pays its pixel and drops a husk. Someone is watching...", counter = CounterKind.ManualClicksSinceShown, target = 50d, appear = AppearKind.Always, rewardCubieVisit = 1 },
-        new GoalDef { id = "crush10", title = "Crush 10 husks", description = "Husks are piling up! Right-click husks on the floor to crush them.", counter = CounterKind.StatSinceShown, counterKey = "husk.crushed", target = 10d, appear = AppearKind.HusksOnFloor, appearValue = 20d, rewardUnlocksTier = true, rewardTier = PixelClicker.PixelType.Gray },
-        new GoalDef { id = "recycle20", title = "Recycle 20 husks", description = "Place Cubie's Recycler (in your Consumables) where husks land: every husk that falls in turns back into a little currency.", counter = CounterKind.StatSinceShown, counterKey = "recycler.husks", target = 20d, appear = AppearKind.StatAtLeast, appearKey = "guide.stage1", appearValue = 1d, rewardUnlocksTier = true, rewardTier = PixelClicker.PixelType.Black },
+        new GoalDef { id = "crush10", title = "Crush 10 husks", description = "Husks are piling up! Right-click husks on the floor to crush them.", counter = CounterKind.StatSinceShown, counterKey = "husk.crushed", target = 10d, appear = AppearKind.StatAtLeast, appearKey = "guide.stage1", appearValue = 1d, rewardUnlocksTier = true, rewardTier = PixelClicker.PixelType.Gray },
+                // (id "recycle20" kept from when it was 20 husks: ids are saved state and earnblack chains on it)
+        new GoalDef { id = "recycle20", title = "Recycle 150 husks", description = "Place Cubie's Recycler (in your Consumables) where husks land: every husk that falls in turns back into a little currency.", counter = CounterKind.StatSinceShown, counterKey = "recycler.husks", target = 150d, appear = AppearKind.StatAtLeast, appearKey = "guide.stage1", appearValue = 1d, afterGoal = "crush10", rewardUnlocksTier = true, rewardTier = PixelClicker.PixelType.Black },
         new GoalDef { id = "crushstreak5", title = "Get a crush streak of 5", description = "Crush 5 husks in a row, each within a second of the last - every crush in a streak gives more XP.", counter = CounterKind.StatValue, counterKey = "husk.crush.streak", target = 5d, appear = AppearKind.MinutesPlayed, appearValue = 3d, rewardXp = 60d },
-        new GoalDef { id = "earnblack", title = "Earn 120 Black", description = "Click Black blocks until you have earned 120 Black pixels. Cubie wants to see a real pile.", counter = CounterKind.TierTotal, counterTier = PixelClicker.PixelType.Black, target = 120d, appear = AppearKind.Always, afterGoal = "recycle20", rewardCubieVisit = 2 },
+        new GoalDef { id = "earnblack", title = "Earn 300 Black", description = "Click Black blocks until you have earned 300 Black pixels. Cubie wants to see a real pile.", counter = CounterKind.TierTotal, counterTier = PixelClicker.PixelType.Black, target = 300d, appear = AppearKind.Always, afterGoal = "recycle20", rewardCubieVisit = 2 },
         new GoalDef { id = "billreveal", title = "Earn 2,000 Blue", description = "Keep clicking and build up the pure colours. Cubie keeps glancing at that tag on your Recycler...", counter = CounterKind.TierTotal, counterTier = PixelClicker.PixelType.Blue, target = 2000d, appear = AppearKind.MinutesPlayed, appearValue = 40d, afterGoal = "earnblack", rewardCubieVisit = 3 },
     };
 
@@ -154,6 +156,18 @@ public class PixelGoals : MonoBehaviour, IPixelDatabaseSource
             // The early goals became the unlocks (2026-10-18): the older built-in rows (XP / currency rewards) are replaced by the new ones once.
             foreach (GoalDef def in DefaultGoals()) goals.RemoveAll(g => g != null && g.id == def.id);
             goalDataVersion = 1;
+        }
+        if (goalDataVersion < 2)
+        {
+            // Slower intro (2026-10-25, session report: RGB + the shop came at 2:10 instead of ~6:00): Crush 10 waits for Cubie's visit 1,
+            // Recycle 20 -> 150 (after Crush 10), Earn 120 -> 300 Black. Those rows are swapped for the new ones once, keeping their place in the list.
+            foreach (GoalDef def in DefaultGoals())
+            {
+                if (def.id != "crush10" && def.id != "recycle20" && def.id != "earnblack") continue;
+                int at = goals.FindIndex(g => g != null && g.id == def.id);
+                if (at >= 0) goals[at] = def;
+            }
+            goalDataVersion = 2;
         }
         foreach (GoalDef def in DefaultGoals())
             if (!goals.Exists(g => g != null && g.id == def.id)) goals.Add(def);

@@ -229,7 +229,7 @@ public partial class PixelClicker
         PreviousTierThreshold = 0,
         /// <summary>Never unlocks on its own. Unlocked by a shop purchase (or code calling UnlockTier).</summary>
         ShopOnly = 1,
-        /// <summary>Unlocked by a goal's reward (PixelGoals, the Log's Goals tab: Gray = Crush 10 husks, Black = Recycle 20). If no enabled goal unlocks it, it falls back to the threshold like PreviousTierThreshold so the game never stalls.</summary>
+        /// <summary>Unlocked by a goal's reward (PixelGoals, the Log's Goals tab: Gray = Crush 10 husks, Black = Recycle 150). If no enabled goal unlocks it, it falls back to the threshold like PreviousTierThreshold so the game never stalls.</summary>
         ByGoal = 2,
     }
 

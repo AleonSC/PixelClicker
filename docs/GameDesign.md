@@ -159,7 +159,7 @@ and the developer likes that pace - it leaves room for the tutorials. Do not low
 
 | Time | Step | What it teaches |
 |---|---|---|
-| 0:00-~2:00 | **White** (Gray now unlocks by the 'Crush 10 husks' goal, Black by 'Recycle 20' - see 'Early game feel'). Cubie's first visit after the 'Click 50' goal: the Recycler. | Clicking, husks, edge-click aiming. |
+| 0:00-~2:00 | **White** (Gray now unlocks by the 'Crush 10 husks' goal, Black by 'Recycle 150' - see 'Early game feel'). Cubie's first visit after the 'Click 50' goal: the Recycler. | Clicking, husks, edge-click aiming. |
 | ~2:00-4:20 | **Gray** (200 to unlock Black). Standard level 2 (~5:00): the first skill point - Block Hold or Power Click. | The first choice. |
 | ~4:20-6:10 | **Black**: earn 100. | The last plain grind. |
 | ~6:10 | **Cubie's second visit:** RGB is UNLOCKED (not bought - he gives the RGB Pack), a taste of Red / Green / Blue, the shop opens. "The rest of the pure currency: grind it and you're ready to branch off." | Six currencies. |
@@ -198,12 +198,12 @@ bunch, build a pile, then get told to crush it.
 | Goal | Reward | Teaches |
 |---|---|---|
 | Click 50 blocks | Cubie's 1st visit: the Recycler | the core click |
-| Crush 10 husks (shows once ~20 husks lie on the floor) | **Gray unlocks** | crushing |
-| Recycle 20 husks | **Black unlocks** | the money route |
+| Crush 10 husks (shows after Cubie's first visit) | **Gray unlocks** | crushing |
+| Recycle 150 husks (after Crush 10) | **Black unlocks** | the money route |
 | Get a crush streak of 5 | a chunk of Standard XP (the "???" bar jumps; level 2 is close) | bursts and streaks |
 | Earn 100 Black | Cubie's 2nd visit: RGB + the shop | earning still matters |
 
-   **Built 2026-10-18** (`PixelGoals` rows + `TierUnlockMode.ByGoal` + `PixelGuideVendor.RequestVisit`; the Black goal is **Earn 120 Black**,
+   **Built 2026-10-18** (`PixelGoals` rows + `TierUnlockMode.ByGoal` + `PixelGuideVendor.RequestVisit`; the Black goal is **Earn 300 Black** (120 until the 2026-10-25 retune),
    sized with the others for the shop at ~6 min - pace notes in the `PixelGoals.cs` header).
    Size the goals to keep the pace the developer likes (RGB and the shop at about 6 minutes). Build it on the goal table that now exists
    (`PixelGoals`, built 2026-10-18): add reward types 'unlock a tier' and 'start a Cubie visit', and a new tier unlock mode 'by goal'
@@ -455,7 +455,7 @@ vendors take goods (orders) and buy skill currency and products for pure currenc
 - **The bill (~60 min, triggered by a goal in the goal table):** "Remember all those gifts? The Recycler, the colours, the friendly advice?
   Nothing's free." - "I keep receipts." and a long invoice unrolls down the screen ("Interest. It compounds. Like my disappointment."),
   then the monopoly speech ("I own the only shop in existence...") and "I'll *let* you buy some of my newer, better stock." The Bill window opens.
-- **As built (2026-10-23):** the reveal goal is 'Earn 2,000 Blue' (appears at minute 40, after 'Earn 120 Black') - a placeholder for ~1 h.
+- **As built (2026-10-23):** the reveal goal is 'Earn 2,000 Blue' (appears at minute 40, after 'Earn 300 Black') - a placeholder for ~1 h.
   Locked stock is hidden before the reveal
   and shows 'Cubie's trust: Tier N' after it. The DRAFT stock table (on PixelCubieBill, Inspector): Tier 1 belts, Belt Sorter, Elevator,
   Belt Jump, Combiner, Junction Box (the skill packs that the first draft put here were taken out 2026-10-24: every skill is open from

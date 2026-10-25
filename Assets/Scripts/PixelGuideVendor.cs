@@ -21,9 +21,9 @@
 //   vendor the player switched off in Toggles is never restarted; PixelVisitorMinigame.ScheduleFirstVisit). All texts / numbers are
 //   Inspector fields (disableGuide turns it all off). The page lists (visitOnePages / visitTwoPages) are filled with the built-in lines when empty
 //   (EnsureDefaultPages in Awake and the editor's OnValidate, like PixelHints), so Cubie's lines are edited in the Inspector.
-//   GOAL-DRIVEN (2026-10-18): visit 1 and visit 2 are REWARDS of the early goals (PixelGoals: Click 50 blocks -> visit 1, Earn 120 Black -> visit 2;
+//   GOAL-DRIVEN (2026-10-18): visit 1 and visit 2 are REWARDS of the early goals (PixelGoals: Click 50 blocks -> visit 1, Earn 300 Black -> visit 2;
 //   RequestVisit sets guide.visit<n>.due, Visit1Ready / Visit2Ready read it). Only when no enabled goal grants a visit does the old count below apply.
-//   With Cubie off or tips off the Recycler still arrives when visit 1 would have come (the 'Recycle 20 husks' goal needs it).
+//   With Cubie off or tips off the Recycler still arrives when visit 1 would have come (the 'Recycle 150 husks' goal needs it).
 //   Fallback: visit 1 waits until visitOneAfterWhiteClicks (100) White pixels have been clicked (the White tier's timesCollected). A visit-1 page containing {recycler} hands over a Recycler
 //   (PixelConsumables.GiveDevice; text recyclerGiftText); a page list without the token still gets it when the visit ends.
 //   The speech box is the standard window as a dialog (PixelUIKit.CreateWindow, no X), teal, at the right edge beside Cubie.
@@ -564,7 +564,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
         SyncMusicCue();   // (his song while he is on screen)
         // Cubie switched off (disableGuide): RGB still unlocks at the same point, quietly, so the game can go on.
         if (disableGuide && clicker != null && !ShopThere && Visit2Ready && shop != null) shop.GrantPackRewarding(PixelClicker.PixelType.Red);
-        if (disableGuide && clicker != null && PixelStats.Total(Stage1Key) < 1d && Visit1Ready) { PixelStats.Best(Stage1Key, 1d); GiveRecycler(); }   // (Cubie off: his Recycler still arrives - the 'Recycle 20 husks' goal needs it)
+        if (disableGuide && clicker != null && PixelStats.Total(Stage1Key) < 1d && Visit1Ready) { PixelStats.Best(Stage1Key, 1d); GiveRecycler(); }   // (Cubie off: his Recycler still arrives - the 'Recycle 150 husks' goal needs it)
         UpdateHold();
         if (ShopHold && !peeking && !disableGuide && !visiting && !narrating) StartCoroutine(PeekRoutine());
         if (disableGuide || clicker == null || visiting) { if (disableGuide && lastBlocker != "disabled") { lastBlocker = "disabled"; PixelDebug.Info("Cubie is off: disableGuide is ticked", this); } return; }
@@ -608,7 +608,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
         {
             PixelDebug.Info("Cubie skips his visits: Show first-time tips is off", this);
             // 'Show first-time tips' is off: Cubie does not turn up with his intros. The game carries on as if they had happened, and the starter gift still arrives once the shop is there.
-            if (!s1 && Visit1Ready) { PixelStats.Best(Stage1Key, 1d); GiveRecycler(); }   // (no visit, but the Recycler still arrives: the 'Recycle 20 husks' goal needs it)
+            if (!s1 && Visit1Ready) { PixelStats.Best(Stage1Key, 1d); GiveRecycler(); }   // (no visit, but the Recycler still arrives: the 'Recycle 150 husks' goal needs it)
             if (Visit2Due)
             {
                 PixelStats.Best(Stage2Key, 1d);

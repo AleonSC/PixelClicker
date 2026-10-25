@@ -280,7 +280,7 @@ public partial class PixelClicker : MonoBehaviour
         new PixelTier { type = PixelType.Gray,  displayName = "Gray Pixels",  color = new Color(0.5f, 0.5f, 0.5f),
                         amountPerClick = 1, unlockThreshold = 300, unlockMode = TierUnlockMode.ByGoal },   // (unlocked by the goal 'Crush 10 husks', PixelGoals; the threshold is only the fallback)
         new PixelTier { type = PixelType.Black, displayName = "Black Pixels", color = Color.black,
-                        amountPerClick = 1, unlockThreshold = 200, unlockMode = TierUnlockMode.ByGoal },   // (unlocked by 'Recycle 20 husks')
+                        amountPerClick = 1, unlockThreshold = 200, unlockMode = TierUnlockMode.ByGoal },   // (unlocked by 'Recycle 150 husks')
     };
 
     [Tooltip("Each new pixel spawns as a random UNLOCKED tier (weighted by each tier's Spawn Weight). Clicking it gives that tier's currency. Overrides the two settings below.")]
@@ -1003,7 +1003,7 @@ public partial class PixelClicker : MonoBehaviour
         }
         if (tierDataVersion < 3)
         {
-            // The early goals ARE the unlocks (2026-10-18): Gray and Black are unlocked by goal rewards (PixelGoals: Crush 10 husks, Recycle 20 husks),
+            // The early goals ARE the unlocks (2026-10-18): Gray and Black are unlocked by goal rewards (PixelGoals: Crush 10 husks, Recycle 150 husks),
             // not by earning 300 White / 200 Gray. Their thresholds stay as the fallback when no goal unlocks them.
             foreach (PixelTier t in tiers)
                 if (t != null && (t.type == PixelType.Gray || t.type == PixelType.Black) && t.unlockMode == TierUnlockMode.PreviousTierThreshold)
