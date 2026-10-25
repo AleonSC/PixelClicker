@@ -12,11 +12,14 @@
 //                               ({0} = the discount %), wares title, buttons, arrival log line, peek bubble, missed log, and their extra lines
 //                               (farewell, gift farewell, dragon aside, gauntlet aside)
 //     [Minigame: Black Hole]    its first-hole message ({0} = a number)
+//     [Device placing]          the hints while placing a belt sorter / combiner / control lever / coupling on a belt
+//     [Messages]                one-off event-log / notice lines said by code with no Inspector (item used up, market charm, view failed, Ultra gain)
 //   'File wins': each owner copies the file's text over its Inspector / built-in text where it sets up its defaults (Awake), so the display
 //   code is unchanged. Empty / missing = the game's own text. The file was first built from the code's built-in texts by tools/dialogue/build.py
 //   (python3 tools/dialogue/build.py - it OVERWRITES the file, so only for a fresh start); in the editor the game also adds any missing text on play (PixelTextFile.Flush)
 //   and new texts are appended later. Dev Hub > Events > 'Reload pixel texts' also reloads this file (texts set in Awake take a new play).
-//   NOT in it: Did-you-know lines (Assets/Resources/DidYouKnow.txt), Big Tim's live offer sentences (built from numbers), event-log lines.
+//   NOT in it: Did-you-know lines (Assets/Resources/DidYouKnow.txt), Big Tim's live offer sentences (built from numbers). Most event-log lines
+//   are Inspector text fields on their own script; only the ones from code with no Inspector are here ([Messages]).
 // ---------------------------------------------------
 public static class PixelDialogue
 {
