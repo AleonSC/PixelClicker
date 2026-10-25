@@ -126,7 +126,7 @@ public class PixelWhaleFight : MonoBehaviour, IPixelDatabaseSource
         return FindCamera() != null;
     }
 
-    private Camera FindCamera() { cam = clicker.TargetCamera != null ? clicker.TargetCamera : UnityEngine.Camera.main; return cam; }
+    private Camera FindCamera() { cam = clicker.ViewCamera; return cam; }
 
     private void BeginFight()
     {
@@ -196,8 +196,8 @@ public class PixelWhaleFight : MonoBehaviour, IPixelDatabaseSource
     {
         if (!fighting) return;
         if (clicker == null || clicker.PixelTransform == null || cam == null) { EndFight(false); return; }
-        if (clicker.LiveType != PixelClicker.PixelType.Whale || clicker.LiveHits <= 0 || clicker.CubeHidden || PixelTitleScreen.Showing) { EndFight(false); return; }
-        if ((Time.timeScale <= 0f && !PixelTimeStop.IsStopped) || PixelPauseMenu.IsPaused) return;
+        if (clicker.LiveType != PixelClicker.PixelType.Whale || clicker.LiveHits <= 0 || clicker.CubeHidden || PixelGameMode.TitleShowing) { EndFight(false); return; }
+        if ((Time.timeScale <= 0f && !PixelTimeStop.IsStopped) || PixelGameMode.PauseMenuOpen) return;
 
         float dt = Mathf.Min(Time.unscaledDeltaTime, 0.05f);
         fightLeft -= dt;

@@ -14,7 +14,7 @@
 //     upgrades (ValueBase + tier; bought in numbers like consumables: x1 / x5 / x10 / MAX), Operation devices (OperationBase + kind: Buy opens
 //     their upgrades window). Ids by range as in PixelShopSearch.cs, which also lists the search results.
 //   The old tab bar and scrolling row list are not built for the main window any more; the rows still serve the pack Upgrades window.
-//   TutorialOpen(tab, subTab) / SelectTab map onto rail entries.
+//   TutorialOpen(tab, subTab) maps onto rail entries.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using TMPro;

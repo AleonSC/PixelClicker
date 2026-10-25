@@ -358,7 +358,7 @@ public partial class PixelSkills
 
     private void ApplyTrackerVisibility()
     {
-        bool show = trackerBuilt && !PixelTitleScreen.Showing && (trackerIntro || (trackerOn && SkillsTabUnlocked));   // (from Standard level 2, like the Skills button; before that only the early tracker)
+        bool show = trackerBuilt && !PixelGameMode.TitleShowing && (trackerIntro || (trackerOn && SkillsTabUnlocked));   // (from Standard level 2, like the Skills button; before that only the early tracker)
         if (trackerCanvas != null && trackerCanvas.activeSelf != show) trackerCanvas.SetActive(show);
         if (trackerPinImage != null && trackerPinShownOn != trackerOn)   // (runs every frame: only re-role on a change)
         {

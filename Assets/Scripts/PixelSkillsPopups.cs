@@ -109,7 +109,7 @@ public partial class PixelSkills
 
     private void QueueXpPopup(SkillPack pack, double xp)
     {
-        if (hideXpPopups || pack == null || xp <= 0d || PixelTitleScreen.Showing) return;
+        if (hideXpPopups || pack == null || xp <= 0d || PixelGameMode.TitleShowing) return;
         if (xpPopupDecimals)
         {
             // A husk crush: its own popup right away, where the husk broke (small amounts with decimals, so every crush is seen).
@@ -137,7 +137,7 @@ public partial class PixelSkills
     {
         xpGatherTimer = 0f;
         int whole = (int)System.Math.Floor(xpPending);
-        if (whole < 1 || xpPendingPack == null || PixelTitleScreen.Showing)
+        if (whole < 1 || xpPendingPack == null || PixelGameMode.TitleShowing)
         {
             if (force) { xpPending = 0d; xpPendingPack = null; }
             return;

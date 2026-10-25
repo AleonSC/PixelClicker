@@ -212,7 +212,7 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
 
     public void Step(int direction) => SetStyle((current < 0 ? 0 : current) + direction);
 
-    private Camera Cam => targetCamera != null ? targetCamera : Camera.main;
+    private Camera Cam => targetCamera != null ? targetCamera : PixelClicker.ViewCameraOf(PixelFind.Cached<PixelClicker>());
 
     private void Capture()
     {

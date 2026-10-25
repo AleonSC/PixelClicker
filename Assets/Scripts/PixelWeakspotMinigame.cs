@@ -259,8 +259,8 @@ public class PixelWeakspotMinigame : PixelMinigame
         }
 
         // Anything that takes over the clock or the screen ends the round at once.
-        if (PixelTimeStop.IsStopped || PixelTimeStop.IsSlowed || PixelTitleScreen.Showing) { Finish(); return; }
-        if (PixelPauseMenu.IsPaused || PixelTutorialDim.Active) return;   // the pause menu / a frozen tip box owns timeScale; our clocks wait
+        if (PixelTimeStop.IsStopped || PixelTimeStop.IsSlowed || PixelGameMode.TitleShowing) { Finish(); return; }
+        if (PixelGameMode.PauseMenuOpen || PixelTutorialDim.Active) return;   // the pause menu / a frozen tip box owns timeScale; our clocks wait
         if (phase != Phase.ZoomOut && slowed && !Mathf.Approximately(Time.timeScale, slowScale)) ApplySlow(true);
 
         float dt = Time.unscaledDeltaTime;
@@ -293,7 +293,7 @@ public class PixelWeakspotMinigame : PixelMinigame
     private bool CanStartNow(bool playerStarted = false)
     {
         return PixelMinigameLimits.AllowAnother(this, playerStarted) && !PixelCalm.InMenu && !TakeoverActive && !clicker.CubeHidden
-            && !PixelCameraIntro.Moving && !PixelCameraIntro.ClicksLocked
+            && !PixelGameMode.IntroMoving && !PixelCameraIntro.ClicksLocked
             && !PixelTimeStop.IsStopped && !PixelTimeStop.IsSlowed && !PixelFirstPerson.Active && !PixelRobotWorker.Piloting
             && Mathf.Approximately(Time.timeScale, 1f);
     }
@@ -708,7 +708,7 @@ public class PixelWeakspotMinigame : PixelMinigame
         if (surface != null) { Destroy(surface.gameObject); surface = null; }
         foreach (Spot s in spots) DestroySpot(s);
         spots.Clear();
-        if (slowed || !Mathf.Approximately(Time.timeScale, 1f) && !PixelPauseMenu.IsPaused && !PixelTimeStop.IsStopped && !PixelTimeStop.IsSlowed)
+        if (slowed || !Mathf.Approximately(Time.timeScale, 1f) && !PixelGameMode.PauseMenuOpen && !PixelTimeStop.IsStopped && !PixelTimeStop.IsSlowed)
             ApplySlow(false);
         slowed = false;
         if (mainCam != null && phase != Phase.Idle) mainCam.cullingMask = savedMask;

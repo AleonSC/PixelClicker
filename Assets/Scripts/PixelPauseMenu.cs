@@ -885,7 +885,7 @@ public partial class PixelPauseMenu : MonoBehaviour
     /// <summary>Freezes or unfreezes time to match 'menu open' and the 'Pausing stops the game' setting.</summary>
     private void ApplyFreeze()
     {
-        bool freeze = IsPaused && pauseStopsGame && !PixelTitleScreen.Showing; // the title screen already holds time at 0
+        bool freeze = IsPaused && pauseStopsGame && !PixelGameMode.TitleShowing; // the title screen already holds time at 0
 
         if (freeze && !GameStopped)
         {
@@ -1002,7 +1002,7 @@ public partial class PixelPauseMenu : MonoBehaviour
         // The music player, at the main menu's spot (bottom centre) but without the caption: shown when the menu opens and while hovered, gone quickly otherwise.
         if (showMusicPlayer)
             PixelTitleMusic.Create(canvasRoot.transform, font, pauseMusicHideSeconds > 0f ? pauseMusicHideSeconds : 1.5f, false,
-                                   pauseMusicFadeSeconds > 0f ? pauseMusicFadeSeconds : 0.15f, () => IsPaused && !PixelTitleScreen.Showing);
+                                   pauseMusicFadeSeconds > 0f ? pauseMusicFadeSeconds : 0.15f, () => IsPaused && !PixelGameMode.TitleShowing);
         if (PixelFind.First<PixelFeedback>() == null) gameObject.AddComponent<PixelFeedback>();   // the Give feedback window
 
         // On-screen Pause button

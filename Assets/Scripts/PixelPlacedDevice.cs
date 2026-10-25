@@ -257,12 +257,6 @@ public abstract class PixelPlacedDevice : MonoBehaviour
     /// <summary>Raised once when the device's time is up and it starts shrinking away (also when it is removed by hand).</summary>
     public event System.Action<PixelPlacedDevice> Ended;
 
-    /// <summary>Adds (or, negative, takes) seconds to the countdown. No effect once the device is shrinking away.</summary>
-    public void AddSeconds(float seconds)
-    {
-        if (!dying && !usesMode) remaining += seconds;
-    }
-
     private float powerUntil = -1f;
 
     /// <summary>Called every frame by the Electric links while a group of charged Electric pixels powers this device: its countdown pauses (it runs on 'batteries').</summary>
@@ -458,7 +452,7 @@ public abstract class PixelPlacedDevice : MonoBehaviour
 
         // The timer always faces the camera.
         if (timerText == null) return;
-        if (cam == null) cam = Camera.main;
+        if (cam == null) cam = PixelClicker.ViewCameraOf(clicker);
         if (cam != null) timerText.transform.rotation = cam.transform.rotation;
     }
 

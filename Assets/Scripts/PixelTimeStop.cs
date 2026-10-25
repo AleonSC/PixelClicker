@@ -258,7 +258,7 @@ public class PixelTimeStop : MonoBehaviour
             return;
         }
 
-        bool paused = PixelPauseMenu.IsPaused;
+        bool paused = PixelGameMode.PauseMenuOpen;
 
         if (!paused && StopKeyPressed())
         {
@@ -279,7 +279,7 @@ public class PixelTimeStop : MonoBehaviour
         }
 
         // Something else (the pause menu closing...) put the time scale back: keep time slowed.
-        if (slowed && !paused && !PixelPets.PopupOpen && !PixelPauseMenu.GameStopped && !PixelTitleScreen.Showing && !Mathf.Approximately(Time.timeScale, slowTimeScale))
+        if (slowed && !paused && !PixelPets.PopupOpen && !PixelPauseMenu.GameStopped && !PixelGameMode.TitleShowing && !Mathf.Approximately(Time.timeScale, slowTimeScale))
             Time.timeScale = slowTimeScale;
 
         // The pause menu restores its own saved time scale when it closes; put the freeze back if that happened.
@@ -355,7 +355,7 @@ public class PixelTimeStop : MonoBehaviour
         else
         {
             Time.fixedDeltaTime = baseFixedDelta;
-            if (!PixelPauseMenu.GameStopped && !stopped && !PixelTitleScreen.Showing) Time.timeScale = 1f;
+            if (!PixelPauseMenu.GameStopped && !stopped && !PixelGameMode.TitleShowing) Time.timeScale = 1f;
         }
 
         if (!slowed && energy >= 1f) fullTimer = hideDelaySeconds;

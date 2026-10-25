@@ -608,16 +608,6 @@ public partial class PixelShop
     /// <summary>Does this text match the search (case-insensitive substring)?</summary>
     private bool TextMatches(string text) => shopSearch.Length == 0 || (text ?? "").ToLowerInvariant().Contains(shopSearch);
 
-    /// <summary>Opens a tab's first rail entry (Pixels: Toggleables, Consumables: Utilities, Upgrades: Features, Minigames).</summary>
-    public void SelectTab(ShopTab tab)
-    {
-        if (tab == ShopTab.Automatic) tab = ShopTab.Pixels;
-        if (catalog != null) { SelectRailEntry(Mathf.Max(0, EntryOf(tab, 0))); return; }
-        if (shopSearch.Length > 0) { shopSearch = ""; if (searchField != null) searchField.SetTextWithoutNotify(""); }
-        currentTab = tab;
-        if (rows != null) RefreshRows();
-    }
-
     /// <summary>The tab a pack is listed on (resolves 'Automatic').</summary>
     private ShopTab TabOf(ShopPack pack)
     {

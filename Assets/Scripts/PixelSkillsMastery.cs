@@ -57,6 +57,7 @@ public partial class PixelSkills
     }
 
     /// <summary>Dev tools: gives every skill (except Standard) the XP up to its level cap. No popups or perk notices.</summary>
+    [ContextMenu("Dev: Max All Skills")]
     public void DevMaxAllSkills()
     {
         foreach (SkillPack p in packs)

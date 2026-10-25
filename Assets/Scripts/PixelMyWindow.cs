@@ -734,7 +734,7 @@ public partial class PixelMyWindow : MonoBehaviour
             hudTimer = 0.5f;
             bool show = ShowButton();
             buttonAvailable = show;
-            if (PixelTitleScreen.Showing != !canvasRoot.activeSelf) canvasRoot.SetActive(!PixelTitleScreen.Showing);
+            if (PixelGameMode.TitleShowing != !canvasRoot.activeSelf) canvasRoot.SetActive(!PixelGameMode.TitleShowing);
         }
         saveTimer -= Time.unscaledDeltaTime;
         if (geometryDirty && saveTimer <= 0f && !PixelInput.LeftHeld()) { SaveGeometry(); saveTimer = 0.5f; }

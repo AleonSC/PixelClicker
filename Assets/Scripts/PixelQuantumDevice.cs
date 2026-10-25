@@ -158,7 +158,7 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
 
     protected override void OnTick()
     {
-        if (cam == null) cam = Camera.main;
+        if (cam == null) cam = PixelClicker.ViewCameraOf(clicker);
         if (label != null && cam != null) label.transform.rotation = cam.transform.rotation;
         if (labelDirty) RefreshLabel();
         if (Time.timeScale <= 0f || IsEnding) return;

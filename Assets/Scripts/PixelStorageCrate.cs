@@ -195,7 +195,7 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelSocketDevice, IPixelHu
 
     protected override void OnTick()
     {
-        if (cam == null) cam = Camera.main;
+        if (cam == null) cam = PixelClicker.ViewCameraOf(clicker);
         float spin = 35f * Time.deltaTime;
         foreach (Section s in sections) if (s.model != null) s.model.Rotate(0f, spin, 0f, Space.Self);
         if (Time.timeScale <= 0f || IsEnding || cam == null) return;

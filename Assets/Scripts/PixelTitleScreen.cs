@@ -445,7 +445,7 @@ public partial class PixelTitleScreen : MonoBehaviour
         if (bar != null && titleBarVersion != PixelHud.BarColorVersion) { titleBarVersion = PixelHud.BarColorVersion; bar.color = PixelHud.BarTint(barColor); }
 
         // While the pause menu's views are open on top of the title, hide the title's own widgets and drop below the menu.
-        bool menuOpen = PixelPauseMenu.IsPaused;
+        bool menuOpen = PixelGameMode.PauseMenuOpen;
         canvas.sortingOrder = menuOpen ? 400 : sortingOrder;
         if (foreground != null && foreground.activeSelf == menuOpen) foreground.SetActive(!menuOpen);
 
@@ -870,7 +870,7 @@ public partial class PixelTitleScreen : MonoBehaviour
         if (live)
         {
             // The real scene, unblurred, drawn at full size into its own picture.
-            Camera cam = Camera.main != null ? Camera.main : PixelFind.First<Camera>();
+            Camera cam = Camera.main != null ? Camera.main : PixelFind.First<Camera>();   // direct-flag: the title backdrop draws whatever camera renders the scene, even before / without the clicker
             if (cam == null) return;
             if (sharpTexture == null || sharpTexture.width != Screen.width || sharpTexture.height != Screen.height)
             {
@@ -952,7 +952,7 @@ public partial class PixelTitleScreen : MonoBehaviour
         UpdateBackgroundFade();
         bool live = PixelTitleWanderers.LiveBackground || PixelFloor.Instance == null;
         if (!PixelTitleWanderers.BlurBackground) { UpdateSharp(live); return; }
-        Camera cam = Camera.main != null ? Camera.main : PixelFind.First<Camera>();
+        Camera cam = Camera.main != null ? Camera.main : PixelFind.First<Camera>();   // direct-flag: the title backdrop draws whatever camera renders the scene, even before / without the clicker
         if (live && cam == null) return;
         EnsureChain();
 

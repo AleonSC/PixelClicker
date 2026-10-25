@@ -950,7 +950,7 @@ public partial class PixelSkills : MonoBehaviour
             if (id != ActiveId)
             {
                 PackSetting = id; changed = true;   // takes effect from the NEXT spawn: the cube you are clicking stays until it is collected
-                if (!disableSkillSwitchBlock && !PixelTitleScreen.Showing)
+                if (!disableSkillSwitchBlock && !PixelGameMode.TitleShowing)
                 {
                     if (clicker == null) clicker = PixelFind.First<PixelClicker>();
                     if (clicker != null) clicker.ShowSkillSwitchBlock();   // ...except for this test: a Glass 'skill switch' block replaces it right away
@@ -993,13 +993,6 @@ public partial class PixelSkills : MonoBehaviour
             foreach (TreeNode n in pack.nodes) if (n != null && n.id == id) { list.Add(n); break; }
         }
         return list;
-    }
-
-    /// <summary>The first node this one needs (null for a root node).</summary>
-    public TreeNode ParentOf(SkillPack pack, TreeNode node)
-    {
-        var parents = ParentsOf(pack, node);
-        return parents.Count > 0 ? parents[0] : null;
     }
 
     /// <summary>Column of a node: the longest chain of parents above it, or its own 'column' if that is further along (a node's children follow it).</summary>

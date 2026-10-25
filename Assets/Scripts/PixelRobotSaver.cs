@@ -87,7 +87,7 @@ public partial class PixelRobotWorker
             if (saverMode != SaverMode.None) { saverMode = SaverMode.None; nextWander = 0f; }
             return;
         }
-        if (Time.timeScale <= 0f || PixelPauseMenu.IsPaused) return;   // paused: the clock stands still too
+        if (Time.timeScale <= 0f || PixelGameMode.PauseMenuOpen) return;   // paused: the clock stands still too
         bool activity = SaverActivity();
         bool busy = WorkingSpot() || (windowRoot != null && windowRoot.activeSelf) || hovering;
 

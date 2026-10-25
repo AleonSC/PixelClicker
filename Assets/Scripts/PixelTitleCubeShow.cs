@@ -100,7 +100,7 @@ public partial class PixelTitleScreen
 
     private IEnumerator HuskFlight(GameObject husk, float size)
     {
-        Camera cam = Camera.main;
+        Camera cam = PixelClicker.ViewCameraOf(PixelFind.Cached<PixelClicker>());
         Vector3 side = cam != null ? cam.transform.right : Vector3.right;
         Vector3 vel = (side * (Random.value < 0.5f ? -1f : 1f) * Random.Range(1.6f, 2.4f) + Vector3.up * Random.Range(2.2f, 3f)) * size;
         Vector3 spin = Random.onUnitSphere * Random.Range(360f, 720f);

@@ -221,7 +221,7 @@ public class PixelOrbitCamera : MonoBehaviour
     {
         if (disableOrbit || Active || clicker == null || clicker.PixelTransform == null) return false;
         PixelZoom.ResetNow();   // (the orbit starts from the normal view, not a zoomed one)
-        if (PixelPauseMenu.IsPaused || PixelCalm.CameraBusy) return false;
+        if (PixelGameMode.PauseMenuOpen || PixelCalm.CameraBusy) return false;
         foreach (PixelMinigame m in PixelMinigame.All) if (m != null && m.Busy && m.NeedsNormalCamera) return false;
         cam = clicker.ViewCamera;
         if (cam == null) return false;
@@ -289,7 +289,7 @@ public class PixelOrbitCamera : MonoBehaviour
         if (orbitHome != null) orbitHome.aspect = cam.aspect;
         if (returning) return;
 
-        bool playable = !PixelPauseMenu.IsPaused && !PixelKeys.Typing && (Time.timeScale > 0f || PixelTimeStop.IsStopped);
+        bool playable = !PixelGameMode.PauseMenuOpen && !PixelKeys.Typing && (Time.timeScale > 0f || PixelTimeStop.IsStopped);
         Vector2 pointer = PixelInput.PointerPosition();
         if (playable)
         {

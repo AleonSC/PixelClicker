@@ -260,7 +260,7 @@ public class PixelSolarPanel : MonoBehaviour
     private void LateUpdate()
     {
         if (clicker == null || !(PixelInput.RightPressed() || PixelInput.RightHeld() || relinkTap.Pending)) return;
-        bool usable = !PixelClicker.ExternalClickBlock && !PixelPauseMenu.IsPaused && !PixelInput.PointerOverUI() && !PixelFirstPerson.Active;
+        bool usable = !PixelClicker.ExternalClickBlock && !PixelGameMode.PauseMenuOpen && !PixelInput.PointerOverUI() && !PixelFirstPerson.Active;
         if (relinkTap.Update(usable && PointerOnThis() ? (object)this : null)) PixelFeatureTester.BeginLink(gameObject);
     }
 

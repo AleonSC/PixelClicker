@@ -76,11 +76,6 @@ public partial class PixelSkills
         }
     }
 
-    /// <summary>Tooltip text for the bank: what fills and drains it.</summary>
-    public string BonusHelp(SkillPack pack) =>
-        "Bonus XP bank: consume good pixels (ores for Mining, plants for Farming, conductors for Electrician) to fill it, any other pixel drains it. " +
-        "While it holds anything, every XP you earn is doubled and the extra comes out of the bank.";
-
     /// <summary>An old pixel of this tier was consumed (vacuumed, swallowed...). Adds to or drains the bonus bank of the pack in play.</summary>
     public static double OldPixelConsumed(int tierIndex)
     {
@@ -103,17 +98,6 @@ public partial class PixelSkills
         }
         s.SetBonus(pack, System.Math.Max(0d, bank));
         return System.Math.Max(0d, bank) - before;   // how much the bank changed (negative = it drained)
-    }
-
-    /// <summary>Adds a flat amount to the bonus bank of the pack in play (the woodchipper's Twig). Returns what was added.</summary>
-    public static double AddBonusXp(double amount)
-    {
-        PixelSkills s = Instance;
-        if (s == null || s.disableBonusXp || s.clicker == null || amount <= 0d) return 0d;
-        SkillPack pack = s.Find(s.ActiveId);
-        if (pack == null || pack.id == StandardId) return 0d;
-        s.SetBonus(pack, s.Bonus(pack) + amount);
-        return amount;
     }
 
     /// <summary>Doubling: returns the extra XP to add to 'xp' (taken out of the pack's bank).</summary>

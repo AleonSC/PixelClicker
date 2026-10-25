@@ -51,13 +51,6 @@ public class PixelTipQueue : MonoBehaviour
     /// <summary>Removes every source of this owner (call from OnDestroy).</summary>
     public static void Unregister(object owner) { sources.RemoveAll(s => s.owner == owner); }
 
-    /// <summary>The name of the source that is ready and would show next (the Dev Hub / debugging), or null.</summary>
-    public static string NextReady()
-    {
-        foreach (Source s in sources) if (s.ready != null && s.ready()) return s.name;
-        return null;
-    }
-
     private void Update()
     {
         if (Busy) { gap = gapSeconds; return; }

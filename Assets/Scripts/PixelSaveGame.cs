@@ -379,7 +379,7 @@ public class PixelSaveGame : MonoBehaviour
         bool keepDefaults = AutoStartNewGame || NewGameKeepsDefaults;
         NewGameKeepsDefaults = false;
         // With the main menu showing, nothing loads by itself: its Continue button (or the Load window) does.
-        if (PixelTitleScreen.Showing)
+        if (PixelGameMode.TitleShowing)
         {
             if (keepDefaults) { }   // a fresh start (Restart / New Game): the defaults stay
             else
@@ -503,7 +503,7 @@ public class PixelSaveGame : MonoBehaviour
     /// <summary>An AUTOSAVE (the timer, the save on quit / losing focus / Quit > Main menu): goes into the autosave list only - the numbered slots are only ever written by a manual save.</summary>
     public bool Save(bool showMessage)
     {
-        if (PixelTitleScreen.Showing) return false;   // no autosaving from the main menu
+        if (PixelGameMode.TitleShowing) return false;   // no autosaving from the main menu
         if (!autoSaveCall && Time.realtimeSinceStartup - lastAutosaveTime < 5f) return true;   // (quit + focus loss + main menu in quick succession: one is enough)
         return WriteSave(0, showMessage);
     }
@@ -517,7 +517,7 @@ public class PixelSaveGame : MonoBehaviour
         if (suppressSaving || clicker == null) return false;
         // On the main menu before anything was loaded or started, the game in memory is a blank one: an autosave / quit save / focus-loss save would write it over the real save in the current slot
         // (and fill the autosave list with blank games). Once a save is loaded or a new game started, or after Quit > Main menu (HasLoadedSave stays true), saving is fine.
-        if (PixelTitleScreen.Showing && !HasLoadedSave) return false;
+        if (PixelGameMode.TitleShowing && !HasLoadedSave) return false;
 
         try
         {
@@ -647,7 +647,7 @@ public class PixelSaveGame : MonoBehaviour
 
             clicker.FinishLoad();
             HasLoadedSave = true;
-            if (PixelFloor.Instance != null && !PixelTitleScreen.Showing) PixelFloor.Instance.PropsFadeIn();   // pixels and devices fade in after a load
+            if (PixelFloor.Instance != null && !PixelGameMode.TitleShowing) PixelFloor.Instance.PropsFadeIn();   // pixels and devices fade in after a load
             if (data.oldPixels != null) clicker.RestoreOldPixels(data.oldPixels); // older saves leave the pixels alone
 
             PixelGameState.RaiseLoaded();   // (the moved systems' views refresh and their world objects - placed devices... - are rebuilt, BEFORE the tester machines)
