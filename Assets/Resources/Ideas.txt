@@ -28,6 +28,7 @@ Loose ideas that are NOT on the to-do yet. Claude adds to this when an idea come
 - Drone courier (UFO Helper theme): flies batches between two pads every few seconds, over everything.
 
 # Cubie
+- Foreshadowing Cubie's bill visually (the Recycler price tag was removed 2026-10-25): a 'TAB ???' in the shop header where the IOU button will go ('put it on your tab'), or Cubie scribbling in a little ledger on every visit and gift.
 - Take over the shop (late endgame, after enough prestiges): you end up running the only shop and Cubie has to visit YOU as a vendor - his 'maybe one day you'll run things around here' line paid off. Mundane, transactional, no story twist.
 
 # Code clean-ups worth doing some day

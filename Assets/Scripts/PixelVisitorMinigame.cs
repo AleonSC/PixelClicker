@@ -257,7 +257,7 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
             case "angler": return new[] { "Cubie charges a fee to look at the sea. I've seen it. Not worth it.", "He tried to bill a fish for swimming past his shop." };
             case "prospector": return new[] { "He charged me rent for standing near his shop.", "Cubie says he owns the only shop. I say he owns the only shop that owns a shop." };
             case "wizard": return new[] { "I offered to turn Cubie's ledger into a frog. He invoiced me for the frog.", "Mind that teal fellow. His numbers have more zeroes than my spells." };
-            case "tinkerer": return new[] { "That Recycler of yours? I built the prototype. Cubie built the price tag.", "Cubie calls us peddlers. At least peddlers don't charge interest on gifts." };
+            case "tinkerer": return new[] { "That Recycler of yours? I built the prototype. Cubie built the markup.", "Cubie calls us peddlers. At least peddlers don't charge interest on gifts." };
             case "entrepreneur": return new[] { "A monopoly with one customer. Bold business model. I'm taking notes.", "Between us? Cubie's 'only shop in existence' has a back door. I'm standing in it." };
             case "farmer": return new[] { "Cubie wanted a cut of my harvest. Of the weather, I mean. He billed the rain.", "If his bill grows any faster I'll start planting it." };
             default: return null;

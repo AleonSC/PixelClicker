@@ -14,14 +14,13 @@
 //     table of what each tier puts on sale. The shop asks TierListed (hidden until the bill is revealed, so the early shop shows no
 //     mystery locks) and TierMet (on sale) through its shared requirement checks (PixelShop.IsPackRequirementMet / IsRequirementMet,
 //     PixelShopConsumables.ItemLocked); a locked row says 'Cubie's trust: Tier N'. lockShopByTier off = everything on sale.
-//   - THE TAG AND THE REVEAL: until the bill is revealed every Recycler wears Cubie's paper price tag ('Property of Cubie.', device card:
-//     'Terms: see reverse. Amount owed: ???'; PixelRecycler builds it while TagShown). The reveal is Cubie's visit 3, the reward of a goal
-//     (PixelGoals rewardCubieVisit 3, built-in row 'billreveal'; without such a row: revealAfterMinutes of play after visit 2). He yanks
-//     the tag, it unrolls into an absurd invoice, he explains the monopoly, and the Bill window opens (Reveal). With Cubie or tips off
+//   - THE REVEAL: Cubie's visit 3, the reward of a goal (PixelGoals rewardCubieVisit 3, built-in row 'billreveal'; without such a row:
+//     revealAfterMinutes of play after visit 2). He reminds you of his 'gifts', pulls out an absurd invoice that unrolls down the screen,
+//     explains the monopoly, and the Bill window opens (Reveal). (The Recycler's paper price tag that foreshadowed it was removed 2026-10-25.) With Cubie or tips off
 //     the bill still arrives at the same point, quietly. Interest is only talk: the amounts never grow by themselves.
 //   - The Log's Goals tab pins the next milestone (PixelLog.CollectGoals -> NextGoal). The shop's header has an 'IOU' button once revealed.
 //   - PROGRESS (paid per colour by pixel type, tier, revealed) lives in PixelGameState.Current.cubieBill (GameState.cs, moved 2026-10-24): saved / loaded /
-//     reset with it; it is in place at the START of a load, so Recyclers rebuilt during the load already see TagShown right. Dev Hub widget 'Cubie's bill': Reveal / next tier / reset.
+//     reset with it; it is in place at the START of a load. Dev Hub widget 'Cubie's bill': Reveal / next tier / reset.
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -116,7 +115,7 @@ public class PixelCubieBill : MonoBehaviour
 
     /// <summary>A trust tier opened (raised once per tier, with the tier number).</summary>
     public static event Action<int> TierUnlocked;
-    /// <summary>The bill was revealed (the Recyclers lose their tag).</summary>
+    /// <summary>The bill was revealed.</summary>
     public static event Action Revealed;
     /// <summary>Something was paid (the Bill window and the Log's goal refresh).</summary>
     public static event Action Paid;
@@ -143,8 +142,6 @@ public class PixelCubieBill : MonoBehaviour
     public static int CurrentTier => Instance == null || Instance.disableBill ? int.MaxValue : Instance.tier;
     /// <summary>Has Cubie handed over the bill (the Bill window exists)?</summary>
     public static bool IsRevealed => Instance != null && !Instance.disableBill && Instance.revealed;
-    /// <summary>Do the Recyclers still wear Cubie's price tag (until the reveal)?</summary>
-    public static bool TagShown => Instance != null && !Instance.disableBill && !Instance.revealed;
     /// <summary>Is the reveal due now (its goal done, or the fallback time) and still to happen? PixelGuideVendor plays visit 3 then.</summary>
     public static bool RevealDue => Instance != null && Instance.RevealDueNow();
 
@@ -246,14 +243,13 @@ public class PixelCubieBill : MonoBehaviour
         }
     }
 
-    /// <summary>Cubie hands over the bill (the end of his visit 3, or quietly with Cubie / tips off): the tags come off, the Bill window opens.</summary>
+    /// <summary>Cubie hands over the bill (the end of his visit 3, or quietly with Cubie / tips off): the Bill window opens.</summary>
     public static void Reveal(bool quiet)
     {
         PixelCubieBill b = Instance;
         if (b == null || b.disableBill || b.revealed) return;
         b.revealed = true;
         PixelStats.Best(Visit3DueKey, 1d);
-        PixelRecycler.RemoveTags();
         PixelSessionRecorder.Note("Cubie's bill revealed");
         if (quiet) PixelHints.Announce(b.quietRevealText);
         Revealed?.Invoke();
@@ -381,11 +377,10 @@ public class PixelCubieBill : MonoBehaviour
         else if (RevealDueNow() && !PixelGuideVendor.WillReveal) Reveal(true);   // (Cubie or tips off: the bill still arrives, quietly)
     }
 
-    // A save was loaded: its bill is in the state now (from the START of the load, so rebuilt Recyclers saw the tag rule already).
+    // A save was loaded: its bill is in the state now (from the START of the load).
     private void OnLoaded()
     {
         tier = Mathf.Clamp(tier, 0, milestones.Count);
-        if (revealed) PixelRecycler.RemoveTags();
         Paid?.Invoke();
     }
 
@@ -413,7 +408,7 @@ public class PixelCubieBill : MonoBehaviour
         Paid?.Invoke();
     }
 
-    /// <summary>Dev: back to no bill (nothing paid, tier 0, not revealed: the tags come back on new Recyclers).</summary>
+    /// <summary>Dev: back to no bill (nothing paid, tier 0, not revealed).</summary>
     public void DevReset()
     {
         S.paid.Clear();

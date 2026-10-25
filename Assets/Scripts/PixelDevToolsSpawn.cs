@@ -122,7 +122,7 @@ public partial class PixelDevTools
         billReset.onClick.AddListener(() => { if (PixelCubieBill.Instance != null) PixelCubieBill.Instance.DevReset(); });
         AddTip(billReveal.gameObject, "Reveal Cubie's bill now: he comes with his invoice at the next calm moment (quietly with Cubie / tips off). Once revealed: opens the Bill window.");
         AddTip(billTier.gameObject, "Pay every pure colour up to the next milestone for free: the next trust tier opens (Cubie talks, more shop stock).");
-        AddTip(billReset.gameObject, "Reset the bill: nothing paid, tier 0, not revealed (new Recyclers wear the tag again).");
+        AddTip(billReset.gameObject, "Reset the bill: nothing paid, tier 0, not revealed.");
         Widget(root, board, "cubiebill", start, y);
 
         // ---- Shop unlocks: pick a shop pack (or All), Unlock it for free or Relock it. Shop packs only; 'Unlock everything' also unlocks pixels and maxes skills. ----

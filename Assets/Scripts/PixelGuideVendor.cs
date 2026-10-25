@@ -27,10 +27,10 @@
 //   Fallback: visit 1 waits until visitOneAfterWhiteClicks (100) White pixels have been clicked (the White tier's timesCollected). A visit-1 page containing {recycler} hands over a Recycler
 //   (PixelConsumables.GiveDevice; text recyclerGiftText); a page list without the token still gets it when the visit ends.
 //   The speech box is the standard window as a dialog (PixelUIKit.CreateWindow, no X), teal, at the right edge beside Cubie.
-//   CUBIE'S BILL (2026-10-23, PixelCubieBill): visit 1's pages hint at his monopoly and the Recycler's price tag, visit 2 adds 'Don't worry about the tag. Yet.'
-//   (cubieDataVersion 3 replaced the saved pages once). VISIT 3 (visitThreePages) = the bill reveal, due when PixelCubieBill.RevealDue (its goal, PixelGoals
+//   CUBIE'S BILL (2026-10-23, PixelCubieBill): visit 1's pages hint at his monopoly ('Consider it a gift. Ish.'); the Recycler's price tag was REMOVED 2026-10-25
+//   (cubieDataVersion 4 replaced the saved pages and invoice line once). VISIT 3 (visitThreePages) = the bill reveal, due when PixelCubieBill.RevealDue (its goal, PixelGoals
 //   rewardCubieVisit 3): the {invoice} page unrolls a long paper invoice (UnrollInvoice, invoiceExtraLines), and when the visit ends PixelCubieBill.Reveal
-//   takes the tags off and opens the Bill window. RequestTalk(pages) = a short visit (kind 4) when a trust tier opens. Visit(kind, pages) plays all four kinds.
+//   opens the Bill window. RequestTalk(pages) = a short visit (kind 4) when a trust tier opens. Visit(kind, pages) plays all four kinds.
 //   With Cubie or tips off the bill arrives quietly (WillReveal false: PixelCubieBill reveals it itself).
 // ---------------------------------------------------
 using System.Collections;
@@ -164,7 +164,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
     [SerializeField] private string[] visitThreePages = new string[0];
 
     [Tooltip("Text that replaces {invoice} on the reveal page (the invoice itself unrolls beside the speech box).")]
-    [SerializeField] private string invoiceText = "<i>*rrrrrrip*</i>";
+    [SerializeField] private string invoiceText = "<i>*unrolls... and unrolls...*</i>";
 
     [Tooltip("The lines on the unrolling invoice (one per line; {total} = the bill per colour). The pure colours' rows come first.")]
     [TextArea(3, 8)]
@@ -510,7 +510,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
         if (cubieDataVersion < 1) { if (visitOneAfterWhiteClicks == 50) visitOneAfterWhiteClicks = 100; cubieDataVersion = 1; }   // (2026-10-16: Cubie comes after 100 White clicks)
         if (cubieDataVersion < 2) { visitTwoPages = DefaultTwo; cubieDataVersion = 2; }   // (2026-10-16: visit 2 now unlocks RGB - the saved shop-intro lines are replaced)
         if (cubieDataVersion < 3) { visitOnePages = DefaultOne; visitTwoPages = DefaultTwo; cubieDataVersion = 3; }   // (2026-10-23: Cubie's bill - the monopoly hints and the price tag lines)
-        if (cubieDataVersion < 4) { visitOnePages = DefaultOne; visitTwoPages = DefaultTwo; visitThreePages = DefaultThree; cubieDataVersion = 4; }   // (2026-10-24: the shorter visits)
+        if (cubieDataVersion < 4) { visitOnePages = DefaultOne; visitTwoPages = DefaultTwo; visitThreePages = DefaultThree; invoiceText = "<i>*unrolls... and unrolls...*</i>"; cubieDataVersion = 4; }   // (2026-10-25: the Recycler's price tag is gone - his lines no longer mention it)
         // The user's own lines (Assets/Resources/Dialogue.txt, PixelDialogue) win over the Inspector / built-in ones.
         PixelTextFile f = PixelDialogue.File;
         f.Apply("Cubie", "name", ref characterName);
@@ -681,22 +681,22 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
         "Psst... over here. The name's Cubie. I deal in pixels. The *only* dealer, really, but who's counting.",
         "Pixels are money around here. Why those and not the shiny ones? Nobody knows. That's just what we're all told.",
         "Those leftover bits on the floor? Don't let them rot. Crush them for practice, or toss them in this. Same colour in a row pays better.\n\n{recycler}",
-        "Oh, don't mind the tag. Standard paperwork. Consider it a gift. Ish. Come find me when you've got a pile worth my time.",
+        "Consider it a gift. Ish. Come find me when you've got a pile worth my time.",
     };
 
     private string[] DefaultTwo => new[]
     {
         "Well, well... look at that pile of black. White, gray, black: you've got the basics down.",
-        "Here's the other half of the pure stuff: red, green and blue. They'll turn up on your cube from now on. A loan. A friendly one. Don't worry about the tag. Yet.\n\n{gift}",
+        "Here's the other half of the pure stuff: red, green and blue. They'll turn up on your cube from now on. A loan. A friendly one. Mostly.\n\n{gift}",
         "And my shop's open, top right. Save up for an Auto Clicker first. The clicking never stops, it just starts doing itself.",
         "Other peddlers will wander through. My friend the Wizard might drop by first. Keep him away from my stock. Be seeing you...",
     };
 
-    /// <summary>Visit 3: the bill reveal (PixelCubieBill). He yanks the Recycler's tag and it unrolls into the invoice ({invoice}); the Bill window opens after.</summary>
+    /// <summary>Visit 3: the bill reveal (PixelCubieBill). He pulls out a long invoice that unrolls down the screen ({invoice}); the Bill window opens after.</summary>
     private string[] DefaultThree => new[]
     {
-        "Remember that tag? The one you weren't supposed to worry about? Time to worry. Just a little.",
-        "Terms: see reverse.\n\n{invoice}",
+        "Remember all those gifts? The Recycler, the colours, the friendly advice? Nothing's free. Time to settle up. Just a little.",
+        "I keep receipts.\n\n{invoice}",
         "Interest. It compounds. Like my disappointment.",
         "I own the only shop in existence. So what I say goes. Those other guys? Peddlers. I run the show.",
         "Look, I know it's rough out here. I was in your position once. So I'll tell you what: every time you prove you're still in this, I'll *let* you buy some of my newer, better stock. Pay a bit, earn a bit of trust. Fair's fair.",
@@ -744,7 +744,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
             }
             if (text.Contains("{invoice}"))
             {
-                if (invoice == null) StartCoroutine(UnrollInvoice());   // (the tag comes off the Recyclers and unrolls into the bill)
+                if (invoice == null) StartCoroutine(UnrollInvoice());   // (his invoice unrolls down the screen)
                 text = text.Replace("{invoice}", invoiceText);
             }
             if (text.Contains("{gift}"))
@@ -823,7 +823,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
         invoice = null;
         visiting = false;
         calmTimer = 0f;
-        if (kind == 3) PixelCubieBill.Reveal(false);   // (the tags come off for good and the Bill window opens)
+        if (kind == 3) PixelCubieBill.Reveal(false);   // (the Bill window opens)
     }
 
     private RectTransform invoice;
@@ -890,7 +890,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
                 : "";
             PixelDatabase.Entry e = b.Add("Character", characterName,
                 "A suspicious teal cube who runs the only shop in existence. He takes pure pixels only (White, Gray, Black, Red, Green, Blue) and calls every other vendor a peddler."
-                + "\nVisits: when the early goals are done - visit 1 hands over a Recycler (with a price tag on it), visit 2 unlocks Red, Green and Blue and opens his shop"
+                + "\nVisits: when the early goals are done - visit 1 hands over a Recycler, visit 2 unlocks Red, Green and Blue and opens his shop"
                 + ", later visits deliver his bill and drop by when his trust in you grows. He also narrates the shop, Skills and Toggles tutorials." + bill
                 + "\nSwitch him off: untick 'Show first-time tips' (the game carries on as if his visits happened).");
             e.discovered = PixelStats.Total(Stage1Key) >= 1d;

@@ -396,17 +396,17 @@ name: Cubie
 next button: Next
 last button: Okay!
 recycler gift: <b>+1 Recycler</b> (in your Consumables)
-invoice: <i>*rrrrrrip*</i>
+invoice: <i>*unrolls... and unrolls...*</i>
 visit 1 page 1: Psst... over here. The name's Cubie. I deal in pixels. The *only* dealer, really, but who's counting.
 visit 1 page 2: Pixels are money around here. Why those and not the shiny ones? Nobody knows. That's just what we're all told.
 visit 1 page 3: Those leftover bits on the floor? Don't let them rot. Crush them for practice, or toss them in this. Same colour in a row pays better.\n\n{recycler}
-visit 1 page 4: Oh, don't mind the tag. Standard paperwork. Consider it a gift. Ish. Come find me when you've got a pile worth my time.
+visit 1 page 4: Consider it a gift. Ish. Come find me when you've got a pile worth my time.
 visit 2 page 1: Well, well... look at that pile of black. White, gray, black: you've got the basics down.
-visit 2 page 2: Here's the other half of the pure stuff: red, green and blue. They'll turn up on your cube from now on. A loan. A friendly one. Don't worry about the tag. Yet.\n\n{gift}
+visit 2 page 2: Here's the other half of the pure stuff: red, green and blue. They'll turn up on your cube from now on. A loan. A friendly one. Mostly.\n\n{gift}
 visit 2 page 3: And my shop's open, top right. Save up for an Auto Clicker first. The clicking never stops, it just starts doing itself.
 visit 2 page 4: Other peddlers will wander through. My friend the Wizard might drop by first. Keep him away from my stock. Be seeing you...
-visit 3 page 1: Remember that tag? The one you weren't supposed to worry about? Time to worry. Just a little.
-visit 3 page 2: Terms: see reverse.\n\n{invoice}
+visit 3 page 1: Remember all those gifts? The Recycler, the colours, the friendly advice? Nothing's free. Time to settle up. Just a little.
+visit 3 page 2: I keep receipts.\n\n{invoice}
 visit 3 page 3: Interest. It compounds. Like my disappointment.
 visit 3 page 4: I own the only shop in existence. So what I say goes. Those other guys? Peddlers. I run the show.
 visit 3 page 5: Look, I know it's rough out here. I was in your position once. So I'll tell you what: every time you prove you're still in this, I'll *let* you buy some of my newer, better stock. Pay a bit, earn a bit of trust. Fair's fair.

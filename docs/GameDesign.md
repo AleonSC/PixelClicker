@@ -448,19 +448,15 @@ vendors take goods (orders) and buy skill currency and products for pure currenc
 - **The must-have:** training a skill swaps out the basic cubes, so skills must pay back pure currency or every skill delays Tier 1 (the smart
   play would be to ignore skills). The **vendor value ladder** (below; to-do item) is therefore part of Tier 0, not a later extra.
 
-**The tag and the reveal** (no inventory item - decided against a receipt item)
-- Visit 1: the Recycler he gives has a paper PRICE TAG on its rim: 'Property of Cubie.' Hovering it / the device card: 'Terms: see
-  reverse. Amount owed: ???'. His visit-1 pages hint at the monopoly ("The *only* operation, really, but who's counting."; "Oh, don't
-  mind the tag. Standard paperwork. Consider it a gift. Ish."; "I'm *always* around.").
-- Visit 2 adds: "Don't worry about the tag. Yet." (his existing 'a loan... mostly' joke now points at it). Between visits the tag's '???'
-  shivers on each visit, and vendors make jabs at him.
-- **The bill (~60 min, triggered by a goal in the goal table):** Cubie yanks the tag off and it UNROLLS across the screen into an absurdly
-  long invoice ("Interest. It compounds. Like my disappointment."), then: "I own the only shop in existence. So what I say goes. Those
-  other guys? Peddlers. I run the show." and "Look, I know it's rough out here. I was in your position once. Maybe one day you'll run
-  things around here, if you're lucky. So I'll tell you what: every time you prove you're still in this, I'll *let* you buy some of my
-  newer, better stock." The Bill window opens.
+**The foreshadowing and the reveal** (no inventory item, no price tag)
+- **The price tag on the Recycler was REMOVED (2026-10-25, the developer did not like it).** The foreshadowing now lives in Cubie's lines
+  only: visit 1 "The *only* dealer, really, but who's counting." and "Consider it a gift. Ish."; visit 2 "A loan. A friendly one. Mostly.";
+  and the vendors' jabs at him. A stronger visual hint is still open (ideas in Ideas.txt: a "TAB ???" in the shop header, Cubie's ledger).
+- **The bill (~60 min, triggered by a goal in the goal table):** "Remember all those gifts? The Recycler, the colours, the friendly advice?
+  Nothing's free." - "I keep receipts." and a long invoice unrolls down the screen ("Interest. It compounds. Like my disappointment."),
+  then the monopoly speech ("I own the only shop in existence...") and "I'll *let* you buy some of my newer, better stock." The Bill window opens.
 - **As built (2026-10-23):** the reveal goal is 'Earn 2,000 Blue' (appears at minute 40, after 'Earn 120 Black') - a placeholder for ~1 h.
-  Every Recycler wears the tag until then (they are timed, so the visit-1 one alone would vanish). Locked stock is hidden before the reveal
+  Locked stock is hidden before the reveal
   and shows 'Cubie's trust: Tier N' after it. The DRAFT stock table (on PixelCubieBill, Inspector): Tier 1 belts, Belt Sorter, Elevator,
   Belt Jump, Combiner, Junction Box (the skill packs that the first draft put here were taken out 2026-10-24: every skill is open from
   Tier 0); Tier 2 Biomass Generators, Solar Panel, Power Bank, Quantum Organizer + the Fire / Nuclear packs; Tier 3 the Treasure
