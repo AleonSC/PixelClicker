@@ -6,11 +6,11 @@
 //   LUMBERJACK'S FOCUS item (DeviceKind.FocusPotion, 1-2 in stock), and every visit the PESTICIDE SPRAY (DeviceKind.PesticideSpray: right-click = +3 Pesticide charges;
 //   1-3 in stock, costs 3-8 Pesticide + 50-150 of one random pure pixel). PRICES (RollVisitPrice, once per visit): a potion costs some of its own material
 //   (potionMaterialRange 10-30) + ONE random pure pixel (potionPureFraction 30-60% of its normal price); Focus costs focusHiveCost (3) Termite Hives + TWO
-//   different random pure pixels (focusPureRange 100-300 each) + some of one random woodcutting pixel you have unlocked (focusWoodRange 10-30). Each potion comes 0-2 times (potionStockLow / High) - 0 = not on sale this visit. SELL tab (2026-10-16, its own panel - PixelVisitorMinigame.CustomSellPanel): pick ANY woodcutting currency you hold
-//   (drop-down) - or (2026-10-20) CHARCOAL / WOOD CHIPS HUSKS lying loose on the floor (the Kiln's and the Wood Chipper's products; HuskWorthInWood:
-//   charcoalWorthInWood 3 / woodChipsWorthInWood 4 Wood each; on Accept he takes that many off the floor, TakeHusks) - the AMOUNT (slider + 10% / 25% / 50% / All), what to be paid in (a pure pixel you have unlocked), then 'Ask for an offer' - he names a RANDOM price; Accept or Decline.
+//   different random pure pixels (focusPureRange 100-300 each) + some of one random woodcutting pixel you have unlocked (focusWoodRange 10-30). Each potion comes 0-2 times (potionStockLow / High) - 0 = not on sale this visit.
 //   SELL tab = the shared Sell view (PixelVisitorMinigameSell.cs: pick the good and amount, live price = PixelMarket.Quote x mood x roll, his market trend)
 //     x OfferBonus (1 + Woodcutting level x levelBonusPerLevel 1%, max 30%). He also buys MAGIC WOOD (Evil Tree) a little (PixelMarket specialty, rate 1).
+//   NO HUSKS here (decided 2026-10-25, docs/systems/PixelRules.md 'Vendors buy husks ONLY through delivery jobs'): Charcoal and Wood Chips husks
+//   reach him only through his DELIVERY JOBS (PixelDeliveryJobs: routed into the crate at his dock, priced by fuel value). He used to take them off the floor.
 //   Only visits while Woodcutting is the skill in training (CanVisit); started by PixelGuideVendor.StartVendors as soon as Woodcutting is available; counters lumberjack.bought / lumberjack.sold.
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -30,13 +30,6 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
     [Tooltip("Better prices per Woodcutting level (0.01 = +1% a level, at most +30%).")]
     [SerializeField] private float levelBonusPerLevel = 0.01f;
 
-    [Header("Buying your Charcoal and Wood Chips husks (Sell tab)")]
-    [Min(0f)]
-    [Tooltip("What one CHARCOAL husk (from the Kiln) is worth to him, in Wood (his fair rate: x the Wood block's value, then his cut, mood and roll). 0 = he doesn't buy them.")]
-    [SerializeField] private float charcoalWorthInWood = 3f;
-    [Min(0f)]
-    [Tooltip("What one WOOD CHIPS husk (from the Wood Chipper) is worth to him, in Wood. 0 = he doesn't buy them.")]
-    [SerializeField] private float woodChipsWorthInWood = 4f;
 
     [Header("Focus potions")]
     [Range(0f, 1f)]
@@ -174,37 +167,10 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
     protected override string VisitSkillId => PixelSkills.WoodcuttingId;   // only visits while it is in training (and says so in Toggles)
 
 
-    /// <summary>Husk goods he buys straight off the floor (Charcoal, Wood Chips: they only exist as husks): what one is worth in Wood, 0 = not a husk good.</summary>
-    private float HuskWorthInWood(PixelClicker.PixelType t) =>
-        t == PixelClicker.PixelType.Charcoal ? charcoalWorthInWood : t == PixelClicker.PixelType.WoodChips ? woodChipsWorthInWood : 0f;
-
-    /// <summary>How many of the thing in this tier you can sell him: your currency for a wood block, the loose husks on the floor for a husk good.</summary>
-    private double HeldToSell(int tier)
-    {
-        PixelClicker.PixelTier t = clicker.Tiers[tier];
-        if (HuskWorthInWood(t.type) <= 0f) return System.Math.Floor(t.count);
-        int n = 0;
-        foreach (Rigidbody b in clicker.OldPixels)
-            if (b != null && PixelHuskQuery.Get(b).Tier == tier && PixelHuskHolder.Takeable(clicker, b)) n++;
-        return n;
-    }
-
-    /// <summary>He takes 'amount' loose husks of this tier off the floor (they shrink away upwards). False if fewer are left.</summary>
-    private bool TakeHusks(int tier, double amount)
-    {
-        if (HeldToSell(tier) < amount) return false;
-        List<Rigidbody> take = new List<Rigidbody>();
-        foreach (Rigidbody b in clicker.OldPixels)
-            if (take.Count < amount && b != null && PixelHuskQuery.Get(b).Tier == tier && PixelHuskHolder.Takeable(clicker, b)) take.Add(b);
-        foreach (Rigidbody b in take)
-            if (clicker.ReleaseOldPixel(b, false)) StartCoroutine(PixelHuskHolder.FlyIn(b.gameObject, null, b.position + Vector3.up * 1.5f, false, 0.4f));
-        return true;
-    }
-
     private static bool IsPure(PixelClicker.PixelType type) => PixelMarket.IsPure(type);
 
     // ------------------------------------------------------------------
-    // Sell tab: the shared Sell view (PixelVisitorMinigameSell.cs) - his Woodcutting goods + Magic Wood (a little) + his husk goods
+    // Sell tab: the shared Sell view (PixelVisitorMinigameSell.cs) - his Woodcutting goods + Magic Wood (a little). No husks: he buys those only through delivery jobs.
     // ------------------------------------------------------------------
 
     protected override bool BuysGoods => true;
@@ -213,27 +179,6 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
 
     /// <summary>His Woodcutting level makes his prices better (levelBonusPerLevel a level, at most +30%).</summary>
     protected override double OfferBonus => 1d + System.Math.Min(0.3, levelBonusPerLevel * PixelSkills.LevelOfId(PixelSkills.WoodcuttingId));
-
-    /// <summary>The shared goods, plus Charcoal / Wood Chips HUSKS lying loose on the floor: each sold as that much Wood (his market for Wood).</summary>
-    protected override void CollectSellGoods(List<SellGood> list)
-    {
-        base.CollectSellGoods(list);
-        PixelMarket market = PixelMarket.Instance;
-        int woodBlock = clicker.IndexOf(PixelClicker.PixelType.Wood);
-        if (market == null || woodBlock < 0) return;
-        for (int i = 0; i < clicker.Tiers.Length; i++)
-        {
-            float worth = HuskWorthInWood(clicker.Tiers[i].type);
-            if (worth <= 0f) continue;
-            int tier = i;
-            list.Add(new SellGood
-            {
-                marketKey = PixelMarket.TierKey(woodBlock), name = clicker.Tiers[tier].displayName + " husks", color = clicker.Tiers[tier].UIColor,
-                clicksPerUnit = worth * market.ClicksPerUnit(woodBlock), rate = market.RateOf(PixelMarket.Route.RawGoods),
-                held = () => HeldToSell(tier), take = n => TakeHusks(tier, n),
-            });
-        }
-    }
 
     /// <summary>A cube like Cubie in a red plaid shirt: a big beard, a green beanie, an axe and friendly eyes.</summary>
     protected override void DrawVisitor(Transform art)

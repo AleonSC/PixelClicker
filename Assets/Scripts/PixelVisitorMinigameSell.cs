@@ -3,7 +3,7 @@
 //   Part of PixelVisitorMinigame: the SELL VIEW every vendor who buys from you shows on his Sell tab (BuysFromPlayer; was Big Tim's own panel).
 //   - Goods (CollectSellGoods): his skill's currencies you hold (GoodsSkillId, at the raw-goods rate 1.2x) + his SPECIALTY goods from the market's
 //     one table (PixelMarket.SpecialtiesOf: minigame materials at ~2x, read / spent through PixelMaterials.CostHeld / CostSpend). A vendor can add
-//     his own (Big Tim: Charcoal / Wood Chips husks off the floor, valued as Wood).
+//     his own currencies / materials - NEVER HUSKS: vendors buy husks only through delivery jobs (docs/systems/PixelRules.md).
 //   - Pick the good, the amount (slider + 10 / 25 / 50% / All) and what to be paid in (a pure colour); the big button shows the live price
 //     ("Sell for 1.2K Red") and the line above it his market for that good (PixelMarket.TrendText). Price = PixelMarket.Quote (rate x what a click
 //     on pure blocks earns x the effort behind the goods, less as his market fills up) x his mood (once per visit, moodRange) x a roll (once per

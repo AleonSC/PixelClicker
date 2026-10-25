@@ -62,7 +62,7 @@ Three read-only passes: device code, consumable code, and game design. The desig
 - **Vacuum Device (dev-only):** really an automatic Husk Crush. Rework it into a permanent "Crusher" that auto-crushes for about 0.35 of a click's XP, so the Recycler automates money and the Crusher automates XP.
 - **Storage Crate:** stored husks have no use until the Workbench exists (to-do lines 109-111); it costs more than the Hopper and does less. Prioritise the Workbench, or cheapen the Crate meanwhile.
 - **Quantum Organizer (dev-only):** a storage device on a timer that empties it. Make it permanent at Standard 12+ (as planned).
-- **Dead outputs:** (Done 2026-10-20: Biomass Generators burn Charcoal x3 and Wood Chips x4, and the Lumberjack buys both husks off the floor.) Charcoal (Kiln) and Wood Chips have no use. Make them Biomass fuel (planned, to-do line 120, but it fits the existing generator now).
+- **Dead outputs:** (Done 2026-10-20: Biomass Generators burn Charcoal x3 and Wood Chips x4, and the Lumberjack bought both husks off the floor - 2026-10-25: no longer; he buys them only through delivery jobs.) Charcoal (Kiln) and Wood Chips have no use. Make them Biomass fuel (planned, to-do line 120, but it fits the existing generator now).
 - **Unreachable recipes:** the Magnetized Sorter and the attuned Vacuum need the dev-only Sorter / Vacuum. Re-recipe them (for example Magnet + Junction Box).
 - **Bait Bucket:** Fishing is on sale but its only tool is dev-only.
 

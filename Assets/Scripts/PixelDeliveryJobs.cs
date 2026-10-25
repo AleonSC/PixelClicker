@@ -8,10 +8,12 @@
 //     job. A faint DOCK MARKER (a disc + ring in his colour with his initial) shows on the floor once he has POSTED a job (offered one at a visit),
 //     so lines can be planned before accepting.
 //   - THE OFFER (PixelVisitorMinigameJobs.cs): during a visit, beside his wares / Sell view, a 'Delivery job' button opens the offer (RollOffer):
-//     husks of HIS skill (his dock's huskTypes, only unlocked types), a SIZE from the sizes table (bigger / mixed ones need Cubie's trust tier and
+//     husks of HIS skill (his dock's huskTypes, only unlocked types - a husk that never spawns, like Wood Chips, counts once a machine has made
+//     one: its tier exists), a SIZE from the sizes table (bigger / mixed ones need Cubie's trust tier and
 //     his rapport step; weights pick among the allowed ones), the time limit, the pay and maybe a reward item (one of his wares).
 //   - PAY (fixed when offered): pure currency = PixelMarket.JobQuote (husksRate x what a click on pure blocks earns x the clicks behind each husk,
-//     x his rapport price bonus), in the unlocked pure colour you hold least of; + RAPPORT (the size's points: the biggest rapport source) + sometimes
+//     x his rapport price bonus) - FUEL husks (Big Tim's Charcoal and Wood Chips, 2026-10-25) are priced by FUEL VALUE instead: one is worth
+//     charcoalWorthInWood (8) / woodChipsWorthInWood (4) Wood husks, like in the Biomass Generator (JobPay); in the unlocked pure colour you hold least of; + RAPPORT (the size's points: the biggest rapport source) + sometimes
 //     an ITEM. Expired: no penalty; the husks pop back out and he leaves a share of the rapport (expiredRapportShare x how full the crate was).
 //   - ACCEPTED: the job goes into GameState.delivery (DeliveryState) and his DELIVERY CRATE (PixelDeliveryCrate) drops onto his dock. The crate is
 //     only a view of the job: this component rebuilds missing crates (after a load) every check, so the state is the one truth.
@@ -104,6 +106,17 @@ public class PixelDeliveryJobs : MonoBehaviour
     [Min(0.1f)]
     [Tooltip("Husks in a job pay this many times what the clicks behind them would earn on pure blocks (selling the goods pays 1.2x; products in a crate will be ~3x later).")]
     [SerializeField] private float husksRate = 2f;
+
+    [Header("Fuel husks (Big Tim's jobs: priced by fuel value, not by the clicks behind them)")]
+    [Min(0f)]
+    [Tooltip("One CHARCOAL husk in a job pays like this many Wood husks (its fuel value: the Biomass Generator burns it as long as 8 wood husks).")]
+    [SerializeField] private float charcoalWorthInWood = 8f;
+    [Min(0f)]
+    [Tooltip("One WOOD CHIPS husk in a job pays like this many Wood husks (its fuel value in the Biomass Generator: 4).")]
+    [SerializeField] private float woodChipsWorthInWood = 4f;
+    [Tooltip("Version of the built-in dock husk lists copied in (raised when a built-in type is added, so an existing dock row gets it once).")]
+    [SerializeField, HideInInspector] private int dockTypesVersion = 0;
+    private const int DockTypesVersion = 1;   // 1 = Charcoal and Wood Chips in Big Tim's jobs (2026-10-25)
     [Range(0f, 1f)]
     [Tooltip("Out of time: he still gives this share of the rapport, times how full the crate was.")]
     [SerializeField] private float expiredRapportShare = 0.5f;
@@ -177,7 +190,7 @@ public class PixelDeliveryJobs : MonoBehaviour
     /// <summary>The built-in docks (8 vendors, 45 degrees apart, none straight in front of / behind the cube) and sizes.</summary>
     private void EnsureDefaults()
     {
-        AddDock("lumberjack", 22.5f, new Color(0.62f, 0.4f, 0.2f), "T", "Wood, Bark, Sap, Leaf, Heartwood");
+        AddDock("lumberjack", 22.5f, new Color(0.62f, 0.4f, 0.2f), "T", "Wood, Bark, Sap, Leaf, Heartwood, Charcoal, WoodChips");
         AddDock("prospector", 67.5f, new Color(0.75f, 0.72f, 0.66f), "P", "Rock, Copper, Tin, Iron, Silver, Gold");
         AddDock("farmer", 112.5f, new Color(0.95f, 0.8f, 0.3f), "F", "Wheat, Seed, Water, Fertilizer");
         AddDock("forager", 157.5f, new Color(0.75f, 0.3f, 0.55f), "H", "Berry, Mushroom, Herb, Truffle");
@@ -185,6 +198,13 @@ public class PixelDeliveryJobs : MonoBehaviour
         AddDock("wizard", 247.5f, new Color(0.6f, 0.4f, 1f), "W", "Glass, Luminescent");
         AddDock("tinkerer", 292.5f, new Color(1f, 0.6f, 0.2f), "K", "Electric, Wire, Battery, Gray");
         AddDock("entrepreneur", 337.5f, new Color(0.35f, 0.85f, 0.55f), "E", "Red, Green, Blue");
+        if (dockTypesVersion < DockTypesVersion)
+        {
+            Dock tim = DockOf("lumberjack");   // (a dock row saved before 2026-10-25 gets the fuel husks, once)
+            if (tim != null && !tim.huskTypes.Contains("Charcoal")) tim.huskTypes += ", Charcoal";
+            if (tim != null && !tim.huskTypes.Contains("WoodChips")) tim.huskTypes += ", WoodChips";
+            dockTypesVersion = DockTypesVersion;
+        }
         if (sizes.Count > 0) return;
         sizes.Add(new Size { name = "Small", amounts = new[] { 15 }, minutes = 8f, rapportPoints = 8f, itemChance = 0.1f, minTrustTier = 0, minRapportStep = 0, weight = 1f });
         sizes.Add(new Size { name = "Large", amounts = new[] { 30 }, minutes = 10f, rapportPoints = 12f, itemChance = 0.15f, minTrustTier = 1, minRapportStep = 0, weight = 1.2f });
@@ -284,13 +304,25 @@ public class PixelDeliveryJobs : MonoBehaviour
             left.RemoveAt(pick);
             int need = Mathf.Max(1, s.amounts[i]);
             o.lines.Add(new DeliveryState.Line { type = (int)clicker.Tiers[tier].type, need = need });
-            if (market != null) o.pay += market.JobQuote(vendor, tier, need, husksRate);
+            if (market != null) o.pay += JobPay(market, vendor, tier, need);
         }
         o.pay = System.Math.Max(1d, System.Math.Round(o.pay));
         o.payType = (int)LeastHeldPure();
         if (rollReward != null && UnityEngine.Random.value < s.itemChance) o.rewardItem = rollReward() ?? "";
         if (!D.docks.Contains(vendor)) { D.docks.Add(vendor); RefreshMarkers(); }   // (he has posted a job: his dock shows from now on)
         return o;
+    }
+
+    /// <summary>A fuel husk's worth in Wood husks (Charcoal, Wood Chips: their fuel value), 0 = not a fuel husk (priced by the clicks behind it).</summary>
+    private float FuelWorthInWood(PixelClicker.PixelType type) =>
+        type == PixelClicker.PixelType.Charcoal ? charcoalWorthInWood : type == PixelClicker.PixelType.WoodChips ? woodChipsWorthInWood : 0f;
+
+    /// <summary>What 'need' husks of this tier pay in a job: a fuel husk as that many Wood husks, any other by the clicks behind it (PixelMarket.JobQuote).</summary>
+    private double JobPay(PixelMarket market, string vendor, int tier, int need)
+    {
+        float fuel = FuelWorthInWood(clicker.Tiers[tier].type);
+        int wood = fuel > 0f ? clicker.IndexOf(PixelClicker.PixelType.Wood) : -1;
+        return wood >= 0 ? market.JobQuote(vendor, wood, need * (double)fuel, husksRate) : market.JobQuote(vendor, tier, need, husksRate);
     }
 
     /// <summary>His husk types that are unlocked now, as tier indices, in his list's order.</summary>
@@ -303,7 +335,10 @@ public class PixelDeliveryJobs : MonoBehaviour
         {
             if (!Enum.TryParse(part.Trim(), out PixelClicker.PixelType type)) continue;
             int tier = clicker.IndexOf(type);
-            if (tier >= 0 && clicker.Tiers[tier].unlocked && !list.Contains(tier)) list.Add(tier);
+            if (tier < 0 || list.Contains(tier)) continue;
+            PixelClicker.PixelTier t = clicker.Tiers[tier];
+            bool madeByMachine = t.spawnWeight <= 0f && !t.rareDrop;   // (Wood Chips: never spawns; its tier exists once the Wood Chipper has made one)
+            if (t.unlocked || madeByMachine) list.Add(tier);
         }
         return list;
     }

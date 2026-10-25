@@ -103,7 +103,8 @@ Gray + Black). That material has no use after the purchase and keeps piling up b
 dead resource. Rule of thumb: anything that piles up needs an ongoing sink.
 - **Decided: Charcoal and Wood Chips reach Big Tim ONLY through delivery jobs** (the general rule above: no vendor buys husks off the
   floor). Their entries leave his Sell tab; both join his delivery-job requests once they exist, so they have to be routed to his dock.
-  Their job worth comes from their fuel value (Charcoal = 8 wood husks, Wood Chips = 4; his Sell tab still valued them at 3 / 4 Wood).
+  Their job worth comes from their fuel value (Charcoal = 8 wood husks, Wood Chips = 4; his Sell tab used to value them at 3 / 4 Wood).
+  **Built 2026-10-25:** his Sell tab no longer lists them; both are in his job husk list (`PixelDeliveryJobs`, priced by fuel value).
 - **Proposed, not yet decided:** gate the Charcoal Pixel on the PROCESS, not on a held output - 'burn 50 Charcoal in the Kiln' is a
   discovery counter (shown on the Kiln's device card), reaching it puts the Charcoal Pixel in the shop for pure currency only; the Kiln
   goes back to a physical output on its chute (Biomass fuel, delivery jobs) instead of the material; the Charcoal material (and the
@@ -121,10 +122,10 @@ the same crates take PRODUCTS later (the ~3x rung of the value ladder) once prod
 
 **Built (2026-10-24), the numbers (all Inspector values on `PixelDeliveryJobs`):**
 - **Docks:** 8 vendors, 45 degrees apart round the floor's centre (clockwise from the far side, +Z), at 0.8 of the usable floor's radius (the circle husks are kept inside, where the floor fades out; at least 3 husk widths in from its edge): Big Tim 22.5, Prospector 67.5, Farmer 112.5, Forager 157.5, Angler 202.5, Wizard 247.5, Tinkerer 292.5, Entrepreneur 337.5 - none straight in front of or behind the cube. A faint marker (disc + ring in his colour, his initial) shows once he has posted a job.
-- **What he asks for:** his own skill's husks (Big Tim: Wood, Bark, Sap, Leaf, Heartwood; Prospector: Rock, Copper, Tin, Iron, Silver, Gold; Farmer: Wheat, Seed, Water, Fertilizer; Forager: Berry, Mushroom, Herb, Truffle; Angler: Fish, Seaweed, Shell, Pearl; Wizard: Glass, Luminescent; Tinkerer: Electric, Wire, Battery, Gray; Entrepreneur: Red, Green, Blue), only unlocked types, the first listed most often.
+- **What he asks for:** his own skill's husks (Big Tim: Wood, Bark, Sap, Leaf, Heartwood, then Charcoal and Wood Chips - his fuel husks, 2026-10-25; Prospector: Rock, Copper, Tin, Iron, Silver, Gold; Farmer: Wheat, Seed, Water, Fertilizer; Forager: Berry, Mushroom, Herb, Truffle; Angler: Fish, Seaweed, Shell, Pearl; Wizard: Glass, Luminescent; Tinkerer: Electric, Wire, Battery, Gray; Entrepreneur: Red, Green, Blue), only unlocked types, the first listed most often. A husk that never spawns on the cube (Wood Chips) counts once a machine has made one (its tier exists).
 - **Sizes:** Small 15 of one type, 8 min, 8 rapport (from the start); Large 30 of one type, 10 min, 12 rapport (trust Tier 1); Mixed 30 + 10, 12 min, 16 rapport (Tier 1 + Regular); Big mixed 40 + 20 + 10, 15 min, 22 rapport (Tier 2 + Friend). Item chance 10 / 15 / 25 / 40%.
 - **Limits:** one running job per vendor, 3 taken per play hour (all vendors), an 80% chance he has one at a visit when the limits allow.
-- **Pay:** 2x what the clicks behind the husks would earn on pure blocks (`PixelMarket.JobQuote`; selling goods is 1.2x), x his rapport price bonus, in the unlocked pure colour you hold least of; + the size's rapport (a visit's deals give 8 at most); + sometimes one of his wares. Expired: 50% of the rapport x how full the crate was; the husks pop back out with their worth.
+- **Pay:** 2x what the clicks behind the husks would earn on pure blocks (`PixelMarket.JobQuote`; selling goods is 1.2x), x his rapport price bonus - except FUEL husks, priced by fuel value: a Charcoal husk pays like 8 Wood husks, a Wood Chips husk like 4 (`charcoalWorthInWood` / `woodChipsWorthInWood`, matching the Biomass Generator), in the unlocked pure colour you hold least of; + the size's rapport (a visit's deals give 8 at most); + sometimes one of his wares. Expired: 50% of the rapport x how full the crate was; the husks pop back out with their worth.
 
 ## Crafting uses husks (agreed 2026-10-18, not built)
 
