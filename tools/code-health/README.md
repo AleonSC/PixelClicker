@@ -19,6 +19,11 @@ Rebuild it after changes (each rebuild whose score changed adds a point to `hist
   - **no-tooltip** (Rules): a `[SerializeField]` private / protected field with no `[Tooltip]` (CLAUDE.md: every variable editable and explained).
   - **complex-method** (Size): more than `COMPLEX_BRANCHES` (40) branch points (if / for / foreach / while / case / catch / && / || / ?) in one method. A plain switch table (over half its branches are `case` labels) is not counted.
   - **doc-drift** (Docs): a name in `backticks` in a script's docs/systems page or its docs/Index.md line that no code (strings included) contains - a note pointing at renamed or removed code.
+- Checks added 2026-10-25:
+  - **one-place** now also covers the game's flags and camera (`ONE_PLACE`, each with the files allowed to use it): `PixelPauseMenu.IsPaused`, `PixelTitleScreen.Showing / Reversing` and `PixelCameraIntro.Moving` read by hand (use `PixelCalm.InMenu` / `PixelGameMode`), and `Camera.main` (use `clicker.ViewCamera` / `PixelClicker.ViewCameraOf`). A line that really needs one screen's own flag says so with `// direct-flag: <why>`.
+  - **dead-method** (Size): a method whose name appears nowhere else in the code (Unity messages, overrides and `[ContextMenu]` / `[MenuItem]` / `RuntimeInitializeOnLoadMethod` entry points skipped).
+  - **hardcoded-text** (Rules): a quoted phrase of 3+ words handed to a text / message call (`Announce`, `SetText`, `.text =`, `CreateText`, `CreateButton`...): player text belongs in an Inspector field or `Dialogue.txt`. The Dev Hub tools are exempt (`PLAYER_TEXT_EXEMPT`).
+- **Changed together** (on the page, not scored): pairs of scripts (not parts of one class) that git shows in the same commits 3+ times in the last `CHURN_DAYS` days - links the code doesn't show.
 - **Hot spots** (on the page, not scored): the scripts changed most often in the last `CHURN_DAYS` (30) days by git, weighted by their findings - where the next bug most likely comes from.
   - Adding checks lowers the score at first (they find what was never counted); the trend chart shows the step.
 - It reads the code as text (no Unity), so a finding is a place to look, not proof. "Every frame" = inside Update / LateUpdate /

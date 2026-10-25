@@ -48,16 +48,34 @@ CHECKS = {
     'no-tooltip':  ('Project rules', 'Inspector field without a tooltip', 'Every Inspector field explains itself with a [Tooltip] (CLAUDE.md: every variable editable and explained).', 1, 5, 'custom', None),
     'complex-method': ('Size and structure', 'Very branchy method', 'Over 40 branches (if / case / loops / && / ||) in one method: hard to follow even when short. Split the decisions into named steps. (A plain switch table, mostly case labels, is not counted.)', 3, 9, 'custom', None),
     'doc-drift':   ('Docs', 'Docs name missing code', 'The script\'s docs (its docs/systems page or Index line) name a field / method / type in `backticks` that no longer exists anywhere in the code: notes that point at renamed or removed code send the next reader the wrong way. Rename or remove the stale name.', 2, 10, 'custom', None),
+    'dead-method': ('Size and structure', 'Method nothing calls', 'A method whose name appears nowhere else in the code (Editor scripts included): dead code still has to be read and kept compiling. Remove it, or mark a dev-only entry point with [ContextMenu].', 2, 6, 'custom', None),
+    'hardcoded-text': ('Project rules', 'Player text written into code', 'A message the player reads is typed into the code: it belongs in an Inspector field ([SerializeField] + [Tooltip]) or Assets/Resources/Dialogue.txt, so it can be edited without a code change. (The Dev Hub tools are exempt.)', 1, 5, 'custom', None),
     'no-index':    ('Docs', 'Not in docs/Index.md', 'Every script / system gets one line in docs/Index.md so it can be found.', 8, 8, 'docs', None),
 }
 CATEGORIES = ['Performance', 'Size and structure', 'Project rules', 'Docs']
 CAT_CAP = {'Performance': 45, 'Size and structure': 30, 'Project rules': 25, 'Docs': 20}
 # 'one-place': the pattern and the one script allowed to use it.
+# (pattern, file-name prefixes allowed to use it, what it is, the helper to use). A line marked '// direct-flag: <why>' is allowed
+# (code that cares about exactly one screen's own flag, CLAUDE.md); a camera line that already goes through ViewCamera is skipped.
 ONE_PLACE = [
-    (re.compile(r'new\s+Physic(?:s)?Material\s*\('), 'PixelPhysicsMaterials.cs', 'physics material made by hand'),
-    (re.compile(r'\b(?:FindObjectOfType|FindFirstObjectByType|FindAnyObjectByType|FindObjectsOfType|FindObjectsByType)\s*[<(]'), 'PixelFind.cs', 'Unity scene search called directly'),
-    (re.compile(r'\b(?:GetInstanceID|GetEntityId)\s*\('), 'PixelObjectId.cs', 'object id read directly'),
+    (re.compile(r'new\s+Physic(?:s)?Material\s*\('), ('PixelPhysicsMaterials.cs',), 'physics material made by hand', 'PixelPhysicsMaterials'),
+    (re.compile(r'\b(?:FindObjectOfType|FindFirstObjectByType|FindAnyObjectByType|FindObjectsOfType|FindObjectsByType)\s*[<(]'), ('PixelFind.cs',), 'Unity scene search called directly', 'PixelFind'),
+    (re.compile(r'\b(?:GetInstanceID|GetEntityId)\s*\('), ('PixelObjectId.cs',), 'object id read directly', 'PixelObjectId'),
+    (re.compile(r'\bPixelPauseMenu\.IsPaused\b'), ('PixelPauseMenu', 'PixelGameMode.cs', 'PixelCalm.cs'), 'pause flag read by hand', 'PixelCalm.InMenu / PixelGameMode'),
+    (re.compile(r'\bPixelTitleScreen\.(?:Showing|Reversing)\b'), ('PixelTitleScreen', 'PixelTitle', 'PixelGameMode.cs', 'PixelCalm.cs'), 'title flag read by hand', 'PixelGameMode.OnTitle / TitleOrIntro'),
+    (re.compile(r'\bPixelCameraIntro\.Moving\b'), ('PixelCameraIntro', 'PixelGameMode.cs', 'PixelCalm.cs'), 'camera intro flag read by hand', 'PixelGameMode.TitleOrIntro'),
+    (re.compile(r'\bCamera\.main\b'), ('PixelClicker.cs', 'PixelOrbitCamera.cs'), 'Camera.main used directly', 'clicker.ViewCamera / PixelClicker.ViewCameraOf'),
 ]
+# Player-facing text written straight into code: a quoted phrase of 3+ words handed to a text / message call. The Dev Hub's own tools are exempt.
+PLAYER_TEXT = re.compile(r'(?:\bAnnounce|\bSetText|\.text\s*=|\bShowNotice|\bCreateText\([^"\n]*|\bCreateButton\([^"\n]*)\s*\(?\s*"([^"\n]{12,})"')
+PLAYER_TEXT_EXEMPT = ('PixelDev', 'PixelBalanceReport', 'PixelSessionRecorder', 'PixelCrashLog', 'PixelLookStudio', 'PixelModelEditor', 'PixelFeatureTester', 'PixelTimeControl')
+UNITY_MESSAGES = set('''Awake Start Update LateUpdate FixedUpdate OnEnable OnDisable OnDestroy OnValidate Reset OnGUI OnDrawGizmos OnDrawGizmosSelected
+OnTriggerEnter OnTriggerExit OnTriggerStay OnCollisionEnter OnCollisionExit OnCollisionStay OnApplicationQuit OnApplicationFocus OnApplicationPause
+OnPointerEnter OnPointerExit OnPointerDown OnPointerUp OnPointerClick OnBeginDrag OnDrag OnEndDrag OnDrop OnScroll OnSelect OnDeselect OnSubmit OnCancel
+OnMove OnInitializePotentialDrag OnRectTransformDimensionsChange OnPopulateMesh OnMouseDown OnBecameVisible OnBecameInvisible OnRenderImage OnPreRender
+OnPostRender OnTransformParentChanged OnCanvasGroupChanged OnDidApplyAnimationProperties Rebuild GraphicUpdateComplete LayoutComplete ResetStatics Main
+OnControllerColliderHit OnParticleCollision OnParticleTrigger OnAudioFilterRead OnAnimatorMove OnAnimatorIK OnJointBreak OnMouseEnter OnMouseExit
+OnMouseUp OnMouseOver OnMouseDrag OnMouseUpAsButton OnWillRenderObject OnRenderObject OnServerInitialized OnLevelWasLoaded'''.split())
 COMPLEX_BRANCHES = 40   # branch points in one method before 'complex-method'
 CHURN_DAYS = 30   # 'hot spots' list: how often a script changed in this many days
 DUP_WINDOW = 8   # lines of real code (not braces / blank) that must match for a 'duplicate' finding
@@ -133,10 +151,18 @@ def analyse(f, src, code, node_desc, in_index):
             if 'PixelStatics.ResetOnRestart(' in l and 'restart-reset-not-progress:' not in lines[i]:
                 add('restart-reset', i + 1, lines[i])
     # Version-split APIs outside their one helper.
-    for rx, home, what in ONE_PLACE:
-        if f == home: continue
+    for rx, homes, what, use in ONE_PLACE:
+        if f.startswith(homes): continue
         for i, l in enumerate(code_lines):
-            if rx.search(l): add('one-place', i + 1, what + ' (use ' + home[:-3] + '): ' + lines[i].strip())
+            if not rx.search(l) or 'direct-flag:' in lines[i]: continue
+            if 'Camera.main' in what and 'ViewCamera' in l: continue   # (the fallback inside a ViewCamera read)
+            add('one-place', i + 1, what + ' (use ' + use + '): ' + lines[i].strip())
+    # Player text written straight into code (it belongs in an Inspector field or Assets/Resources/Dialogue.txt so it can be edited)
+    if not f.startswith(PLAYER_TEXT_EXEMPT):
+        for i, l in enumerate(lines):
+            if code_lines[i].lstrip().startswith('['): continue   # (attributes: tooltips)
+            m = PLAYER_TEXT.search(l)
+            if m and len(m.group(1).split()) >= 3 and '//' not in l[:m.start()]: add('hardcoded-text', i + 1, '"' + m.group(1)[:80] + '"')
     n = len(lines)
     if n > 1500: add('big-file', 1, f'{n:,} lines')
     for name, a, b in meths:
@@ -240,6 +266,22 @@ def unused_fields(code_lines, word_count, assign_count):
         if total <= 1 or total == assigns: out.append((i + 1, f'{name} is never read'))
     return out
 
+METHOD_DECL = re.compile(r'^[ \t]+(?:(?:public|private|protected|internal|static|virtual|sealed|new)\s+)+(?!override\b)[\w<>\[\],.?]+\s+(\w+)\s*\(')
+
+def dead_methods(code_lines, lines, word_count):
+    """Methods whose name appears only once in the whole codebase (their own declaration). Unity messages, overrides, [ContextMenu] /
+    [MenuItem] / RuntimeInitializeOnLoadMethod entry points and interface methods are skipped."""
+    out = []
+    for i, l in enumerate(code_lines):
+        m = METHOD_DECL.match(l)
+        if not m: continue
+        name = m.group(1)
+        if name in UNITY_MESSAGES or word_count.get(name, 0) > 1: continue
+        above = ' '.join(lines[max(0, i - 3):i + 1])
+        if re.search(r'ContextMenu|MenuItem|RuntimeInitializeOnLoad|InitializeOnLoad', above): continue
+        out.append((i + 1, f'{name}() is never called'))
+    return out
+
 def missing_tooltips(lines):
     """[SerializeField] private / protected fields (not hidden) with no [Tooltip] on them or the attribute lines just above."""
     out = []
@@ -281,6 +323,23 @@ def churn(days):
     c = collections.Counter(os.path.basename(l) for l in out.split('\n') if l.startswith('Assets/Scripts/') and l.endswith('.cs'))
     return dict(c)
 
+def changed_together(days, limit=12):
+    """Pairs of scripts (not parts of the same class) that git shows changing in the same commits most often in the last 'days' days."""
+    import subprocess, itertools
+    try:
+        out = subprocess.run(['git', '-C', ROOT, 'log', f'--since={days} days ago', '--name-only', '--pretty=format:@@'],
+                             capture_output=True, text=True, timeout=60).stdout
+    except Exception:
+        return []
+    family = lambda f: re.sub(r'(?<=[a-z])[A-Z][a-z]+$', '', f[:-3]) if f.startswith('Pixel') else f
+    pairs = collections.Counter()
+    for commit in out.split('@@'):
+        fs = sorted({os.path.basename(l) for l in commit.split('\n') if l.startswith('Assets/Scripts/') and l.endswith('.cs')})
+        if not 2 <= len(fs) <= 8: continue   # (a big sweep says nothing about real links)
+        for a, b in itertools.combinations(fs, 2):
+            if not (a.startswith(b[:-3]) or b.startswith(a[:-3])): pairs[(a, b)] += 1
+    return [{'a': a, 'b': b, 'n': n} for (a, b), n in pairs.most_common(limit) if n >= 3]
+
 def main():
     files = sorted(x for x in os.listdir(SCRIPTS) if x.endswith('.cs'))
     idx = codemap.index_lines()
@@ -315,6 +374,7 @@ def main():
     raw_all = '\n'.join(src.values())
     idx_text = open(os.path.join(ROOT, 'docs', 'Index.md'), encoding='utf-8').read().split('\n')
     changes = churn(CHURN_DAYS)
+    together = changed_together(CHURN_DAYS)
     scripts = []
     for f in files:
         base = f[:-3]
@@ -327,6 +387,7 @@ def main():
         for line, text in complex_methods(code_lines, meths): findings.append({'check': 'complex-method', 'line': line, 'text': text})
         for line, text in unused_fields(code_lines, word_count, assign_count): findings.append({'check': 'unused-field', 'line': line, 'text': text})
         for line, text in missing_tooltips(src[f].split('\n')): findings.append({'check': 'no-tooltip', 'line': line, 'text': text})
+        for line, text in dead_methods(code_lines, src[f].split('\n'), word_count): findings.append({'check': 'dead-method', 'line': line, 'text': text})
         for ident in doc_drift(base, idx_text, raw_all): findings.append({'check': 'doc-drift', 'line': 1, 'text': f'`{ident}` is named in its docs but not found in the code'})
         total, cats = score(findings, n, fan)
         short = base[5:] if base.startswith('Pixel') else base
@@ -354,7 +415,7 @@ def main():
         'built': today, 'overall': overall, 'cats': cat_scores, 'categories': CATEGORIES, 'scripts': scripts,
         'checks': {k: {'cat': v[0], 'title': v[1], 'why': v[2]} for k, v in CHECKS.items()},
         'counts': counts, 'colors': codemap.COLORS, 'history': history or [entry],
-        'totals': {'scripts': len(scripts), 'lines': total_lines, 'perFrame': per_frame}, 'churnDays': CHURN_DAYS,
+        'totals': {'scripts': len(scripts), 'lines': total_lines, 'perFrame': per_frame}, 'churnDays': CHURN_DAYS, 'together': together,
     }
     html = open(TEMPLATE, encoding='utf-8').read().replace('/*__DATA__*/null', json.dumps(data, separators=(',', ':')))
     open(OUT, 'w', encoding='utf-8').write(html)

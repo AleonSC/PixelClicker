@@ -116,6 +116,12 @@ button:focus-visible, input:focus-visible, select:focus-visible, tr:focus-visibl
   </section>
 
   <section class="panel">
+    <h2>Changed together (pairs of scripts in the same commits, last <span id="togetherDays">30</span> days)</h2>
+    <p class="fwhy">Scripts that keep changing together are linked more than their code shows: a feature spread over two files, or one file that knows too much about the other.</p>
+    <div class="fix" id="together"></div>
+  </section>
+
+  <section class="panel">
     <h2>Every script by area (size = lines, colour = score; click one)</h2>
     <svg id="tree" role="img" aria-label="Treemap of scripts by area, coloured by health score"></svg>
     <div class="legend"><span><i style="background:var(--bad)"></i>below 60</span><span><i style="background:var(--warn)"></i>60-84</span><span><i style="background:var(--good)"></i>85+</span></div>
@@ -220,6 +226,14 @@ const DATA = /*__DATA__*/null;
     `<button data-file="${esc(s.file)}"><span class="pill" style="background:${tone(s.score)}">${s.score.toFixed(0)}</span><span><div class="fname">${esc(s.file)}</div><div class="fwhy">changed ${s.churn}× · ${s.n} finding${s.n === 1 ? '' : 's'} · ${fmt(s.lines)} lines</div></span></button>`).join('')
     : '<p class="fwhy">No git history found.</p>';
   document.querySelectorAll('#hot button').forEach(b => b.onclick = () => openFile(b.dataset.file));
+
+  // ---- changed together ----
+  document.getElementById('togetherDays').textContent = DATA.churnDays || 30;
+  const tog = DATA.together || [];
+  document.getElementById('together').innerHTML = tog.length ? tog.map(p =>
+    `<button data-file="${esc(p.a)}"><span class="pill" style="background:var(--accent)">${p.n}×</span><span><div class="fname">${esc(p.a)} + ${esc(p.b)}</div><div class="fwhy">changed in the same commit ${p.n} times</div></span></button>`).join('')
+    : '<p class="fwhy">No pairs changed together 3+ times.</p>';
+  document.querySelectorAll('#together button').forEach(b => b.onclick = () => openFile(b.dataset.file));
 
   // ---- treemap ----
   function drawTree() {

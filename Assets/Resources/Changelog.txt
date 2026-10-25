@@ -1664,3 +1664,4 @@
 [2026-10-25 12:20 UTC] To-do: Charcoal plan ticked; the Discovery item now points at the new machine-discovery requirement.
 [2026-10-25 14:57 UTC] The skill tracker (the early '???' one) and the '+XP' popups moved to the LEFT side of the screen; the popups still ride on top of the tracker while it shows full.
 [2026-10-25 15:47 UTC] Slower intro from the session report (RGB + shop came at 2:10 instead of ~6:00): 'Crush 10 husks' now appears after Cubie's first visit, 'Recycle 20' became 'Recycle 150 husks' (after the crush goal), and 'Earn 120 Black' became 'Earn 300 Black'; existing goal rows update once.
+[2026-10-25 16:12 UTC] Code Health report: three more checks (pause / title / camera-intro flags and Camera.main read by hand instead of through PixelCalm / PixelGameMode / ViewCamera, methods nothing calls, player text written into code instead of the Inspector or Dialogue.txt) and a Changed-together list of scripts that keep changing in the same commits.
