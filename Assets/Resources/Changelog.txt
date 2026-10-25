@@ -1654,3 +1654,4 @@
 [2026-10-25 10:44 UTC] Design: no wand and no phantom potion - Magic Wood stays a sell-only good; materials come only from minigames and are sold through Sell tabs / Wizard trades, never delivery jobs; the specialty buyers to-do is ticked (built 2026-10-24) and the wand to-do removed.
 [2026-10-25 10:48 UTC] Vendors buy husks only through delivery jobs now: Big Tim's Sell tab no longer takes Charcoal or Wood Chips husks off the floor; instead both join his delivery jobs (once you have them), paying by fuel value - a Charcoal husk like 8 Wood husks, a Wood Chips husk like 4.
 [2026-10-25 10:48 UTC] To-do: ticked 'No vendor buys husks off the floor - only through delivery jobs'.
+[2026-10-25 11:31 UTC] Block hover tooltips now start switched OFF (turn them on in Settings > Interface or with a tap of Alt).

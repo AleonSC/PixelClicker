@@ -1,7 +1,7 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelBlockTooltip.cs
 //   Block hover tooltip (added by PixelClicker.Awake; Settings > Interface 'Block tooltips', PixelBlockTooltip.Enabled, PlayerPrefs
-//   PixelClicker.Setting.BlockTips, default on, per save; disableTooltip, hoverDelay 0 = 0.18, cardWidth 0 = 560):
+//   PixelClicker.Setting.BlockTips, default OFF since 2026-10-25 (Mode default ModeOff), per save; disableTooltip, hoverDelay 0 = 0.18, cardWidth 0 = 560):
 //   PixelClicker.TryGetBlockAt(screen, ...) finds the nearest of the clickable cube / an old pixel under the pointer; after the hover
 //   delay a card (canvas 655, glow + fancy window + accent strip in the pixel colour, real turning 3D model (PixelTierPicture), name, rarity tag from
 //   SpawnShare, worth, a bar for hits (GetLiveProgress) or old-pixel time left, PixelGuideTexts.Describe / OldPixel text, a sheen
@@ -35,7 +35,7 @@ public class PixelBlockTooltip : MonoBehaviour
     /// <summary>0 = full card, 1 = minimal (3D icon + name), 2 = off.</summary>
     public static int Mode
     {
-        get => Mathf.Clamp(PixelPrefs.GetInt(PrefMode, 0), 0, 2);
+        get => Mathf.Clamp(PixelPrefs.GetInt(PrefMode, ModeOff), 0, 2);   // (default Off since 2026-10-25: turn on in Settings > Interface or tap Alt)
         set { PixelPrefs.SetInt(PrefMode, Mathf.Clamp(value, 0, 2)); PixelPrefs.Save(); }
     }
 
