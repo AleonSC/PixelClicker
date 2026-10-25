@@ -46,7 +46,7 @@ text: A meteor pixel knocked a star out of the sky! Click it to collect stardust
 overlay line: A star fell from the sky!
 
 [Tip: event_log]
-text: This is the Event Log. It records what happens in the game, like unlocks. Scroll it with the mouse wheel, click a line to read its full tip, and press {key:EventLog} to show or hide it. You can switch it off in Settings > Interface > Event log.
+text: This is the Event Log, the third tab of the Log window. It records what happens in the game, like unlocks. Click a line to read its full tip, and press {key:EventLog} to open or close it.
 overlay line: This is the Event Log - click this line to read about it
 
 [Tip: crafting]

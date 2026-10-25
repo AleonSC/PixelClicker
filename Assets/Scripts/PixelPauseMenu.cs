@@ -266,8 +266,6 @@ public partial class PixelPauseMenu : MonoBehaviour
 
     [Tooltip("Text of the Settings button that opens the feedback window.")]
     [SerializeField] private string feedbackText = "Give feedback";
-    [Tooltip("Settings row: show the event log.")]
-    [SerializeField] private string eventLogLabel = "Event log";
     [Tooltip("Settings row: text size of the event log.")]
     [SerializeField] private string eventLogSizeLabel = "Event log text size";
     [Tooltip("Settings row: show the +N number popups on clicks.")]

@@ -4,7 +4,8 @@
 //   (2026-10-19, the user's layout):
 //   * THE XP DOCK - every skill XP popup (clicks, the auto clicker, the Recycler, rewards...): XP is gathered xpPopupGatherSeconds (0 = 0.6 s) per
 //     skill and shown as whole numbers (fractions carry over) in a small stack at the BOTTOM RIGHT of the screen (xpDockRightMargin 90 from the edge, popups lined up on
-//     their right edges - the mirror of the early skill tracker at the bottom left), just above the black bar (xpDockGap); the newest at the bottom, older ones slide up and fade. HOLD the left mouse button on one (xpDockHoldSeconds, the shared ring,
+//     their right edges), just above the black bar (xpDockGap); WHILE THE SKILL TRACKER SHOWS FULL (the early '???' one or the pinned one, not the
+//     small version) the dock sits just above the tracker instead and follows it (TrackerCarriesXpDock; no dragging the dock then); the newest at the bottom, older ones slide up and fade. HOLD the left mouse button on one (xpDockHoldSeconds, the shared ring,
 //     PixelHold) and drag to move the dock; the spot is saved PER SAVE (PixelClicker.Setting.XpDock2X / Y, PixelPrefs.DeclarePerSave); right-click
 //     a dock popup to put the dock back in its default spot. The dock popups catch the mouse (so a click on one never reaches the cube).
 //   * HUSK CRUSH SCORES: a crush's '+0.25 Standard XP' (AddHuskXp crushed, 'at' = where the husk broke) shows at once, decimals and all, AT THAT
@@ -263,12 +264,13 @@ public partial class PixelSkills
         }
     }
 
-    // ---- The dock's spot (bottom middle above the black bar by default; hold + drag to move it, saved per save) ----
+    // ---- The dock's spot (on the skill tracker while it shows full; else bottom right above the black bar, or where it was dragged, saved per save) ----
 
-    /// <summary>The dock's bottom RIGHT corner (canvas units from the middle of the screen): by default the bottom right, above the bar, the way the early
-    /// skill tracker sits at the bottom left.</summary>
+    /// <summary>The dock's bottom RIGHT corner (canvas units from the middle of the screen): on top of the skill tracker while it shows full, else the
+    /// saved spot, else the bottom right above the bar.</summary>
     private Vector2 DockPosition()
     {
+        if (TrackerCarriesXpDock(out Vector2 trackerTop)) return trackerTop + new Vector2(0f, xpDockGap);   // (riding on the skill tracker)
         Rect r = xpCanvasRect.rect;
         float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
         Vector2 fallback = new Vector2(r.width * 0.5f - xpDockRightMargin, -r.height * 0.5f + bar + xpDockGap);
@@ -288,6 +290,7 @@ public partial class PixelSkills
 
     private void UpdateDockMove()
     {
+        if (TrackerCarriesXpDock(out _)) { xpDockDragging = false; return; }   // (on the tracker: it moves with the tracker, not by itself)
         if (xpDockDragging)
         {
             if (!PixelInput.LeftHeld()) { xpDockDragging = false; return; }

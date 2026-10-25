@@ -24,7 +24,7 @@ public static class PixelNotice
     /// <summary>Shows a message. 'seconds' = 0 keeps it until the player closes it.</summary>
     /// <summary>'compact' = the small text-sized box at the top of the screen (tutorial tips next to the buttons), even if a fixed size is set.</summary>
     /// <summary>'small' = a much smaller box (narrow, small text and button) at the top of the screen: for quick "this just happened" tips.</summary>
-    /// <summary>'nearLog' = a small box at the bottom left, next to the event log.</summary>
+    /// <summary>'nearLog' = a small box at the bottom left, above the bottom bar.</summary>
     /// <summary>'aboveCombo' = a small box at the bottom of the screen, just above the combo meter.</summary>
     /// <summary>'nearScreen' = the box follows a point on screen (pixels; null = nowhere), sitting beside it, e.g. next to the ghost. 'freezeTime' = Time.timeScale is 0 until the box is closed.</summary>
     /// <summary>'onBack' = a small back arrow appears at the box's top left; holding it closes this box (without running onClosed) and calls onBack (tutorial steps go to the previous step).</summary>
@@ -251,9 +251,9 @@ public class PixelNoticeBox : MonoBehaviour
             boxRect.sizeDelta = new Vector2(width, Mathf.Max(minHeight, textHeight + (small ? 100f : 130f)));   // (minHeight keeps a series of tips - the tutorials - the same size, so Got it never moves)
             if (nearLog)
             {
-                // Bottom left, right next to the event log.
+                // Bottom left, above the bottom bar (where the on-screen event log was until 2026-10-25).
                 boxRect.anchorMin = boxRect.anchorMax = boxRect.pivot = new Vector2(0f, 0f);
-                boxRect.anchoredPosition = new Vector2(PixelHints.LogRightEdge, bar + 24f);
+                boxRect.anchoredPosition = new Vector2(24f, bar + 24f);
             }
             else if (aboveCombo)
             {

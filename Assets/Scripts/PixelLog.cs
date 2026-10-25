@@ -8,7 +8,7 @@ using UnityEngine.UI;
 /// <summary>
 /// "Log" button for Pixel Clicker.
 ///
-/// A button sits in a screen corner (bottom-left by default). Clicking it opens a panel with two tabs:
+/// A button sits in a screen corner (bottom-left by default). Clicking it opens a panel with three tabs (Achievements, Goals, Event log):
 ///  - PIXELS: every UNLOCKED pixel type with the total collected of each (lifetime total, spending
 ///    doesn't reduce it). Locked types stay hidden until they're unlocked.
 ///  - ACHIEVEMENTS: a scrolling list of achievements with progress bars and a spinning cube icon
@@ -19,7 +19,8 @@ using UnityEngine.UI;
 /// kept at its HUD corner instead of the centre.
 /// GOALS tab (CollectGoals): the next pixel unlock, then the data-driven goals of PixelGoals (AddTableGoals: crush / recycle / streak goals with
 /// their own rewards, 2026-10-18), then the hand-built shop / skill goals and the minigame trackers.
-/// Part files (partial class): PixelLogAchievements.cs (the Achievements tab), PixelLogGoals.cs (the Goals tab).
+/// EVENT LOG tab (PixelLogEvents.cs, since 2026-10-25): every event line, a click shows its full tip; the event log key opens the Log on it.
+/// Part files (partial class): PixelLogAchievements.cs (the Achievements tab), PixelLogGoals.cs (the Goals tab), PixelLogEvents.cs (the Event log tab).
 /// </summary>
 public partial class PixelLog : MonoBehaviour
 {
@@ -88,6 +89,16 @@ public partial class PixelLog : MonoBehaviour
 
     [Tooltip("Text when the Goals tab has nothing to show yet.")]
     [SerializeField] private string noGoalsText = "No goals yet.";
+
+    [Header("Event Log Tab")]
+    [Tooltip("Label of the Event log tab: every event line (unlocks, level-ups, tips...); a click on one shows its full text.")]
+    [SerializeField] private string eventsTabText = "Event log";
+
+    [Tooltip("Text size of the event lines (Settings > Accessibility > Event log size scales it).")]
+    [SerializeField] private float eventLogFontSize = 24f;
+
+    [Tooltip("Text when nothing has happened yet.")]
+    [SerializeField] private string noEventsText = "Nothing has happened yet.";
 
     [Tooltip("Title of the 'next pixel unlock' goal. {0} = the pixel's name.")]
     [SerializeField] private string nextPixelGoalFormat = "Unlock {0}";
@@ -290,7 +301,7 @@ public partial class PixelLog : MonoBehaviour
         public int achIndex = -1;
     }
 
-    private int currentTab = 1; // 0 = Pixels (no longer reachable: moved to Settings > Stats), 1 = Achievements, 2 = Goals
+    private int currentTab = 1; // 0 = Pixels (no longer reachable: moved to Settings > Stats), 1 = Achievements, 2 = Goals, 3 = Event log (PixelLogEvents.cs)
     private Image[] tabImages;
     private GameObject achievementsGroup, goalsGroup;
     private RectTransform achievementsContent, goalsContent;
@@ -692,6 +703,7 @@ public partial class PixelLog : MonoBehaviour
         BuildTabs();
         BuildAchievementsGroup();
         BuildGoalsGroup();
+        BuildEventsGroup();
 
         // The Pixels tab's rows live in a scroll view under the tabs.
         pixelsScroll = PixelUIKit.CreateScrollView(panelObject.transform, "Pixels List", scrollbarHandleColor, 12f,
@@ -733,7 +745,7 @@ public partial class PixelLog : MonoBehaviour
 
     private void BuildTabs()
     {
-        string[] names = { achievementsTabText, goalsTabText };   // the click counts moved to Settings > Stats
+        string[] names = { achievementsTabText, goalsTabText, eventsTabText };   // the click counts moved to Settings > Stats
         tabImages = new Image[names.Length + 1];                  // [0] (the old Clicks tab) stays empty
 
         const float gap = 8f;
@@ -885,10 +897,12 @@ public partial class PixelLog : MonoBehaviour
         bool pixelsTab = currentTab == 0;
         achievementsGroup.SetActive(currentTab == 1);
         goalsGroup.SetActive(currentTab == 2);
+        if (eventsGroup != null) eventsGroup.SetActive(currentTab == EventsTab);
         pixelsViewport.gameObject.SetActive(pixelsTab);
 
         if (pixelsTab) RefreshPixelsTab();
         else if (currentTab == 1) RefreshAchievementsTab();
+        else if (currentTab == EventsTab) RefreshEventsTab();
         else RefreshGoalsTab();
     }
 

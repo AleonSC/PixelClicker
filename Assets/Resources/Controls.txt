@@ -24,7 +24,7 @@ Esc | Pause menu / close the top window
 {key:TimeStop} | Stop / resume time (Time Stop upgrade)
 {key:TimeSlow} | Slow time / back to normal (Time Slow upgrade)
 {key:Hose} | Equip / put away the Pixel Bank hose
-{key:EventLog} | Show the whole event log (again to hide)
+{key:EventLog} | Open the Log on its Event log tab (again to close)
 {key:Feedback} | Give feedback (text box + screenshots)
 Alt (tap) | Cycle block tooltips: Full / Minimal / Off
 Alt (hold) | Peek at the other tooltip kind

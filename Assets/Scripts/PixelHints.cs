@@ -30,7 +30,7 @@ public class PixelHints : MonoBehaviour
         [Tooltip("The message in the tip box.")]
         public string text = "";
 
-        [Tooltip("The short line shown in the bottom-left overlay when this happens (click it, or press Enter, to reopen the full tip). Empty = no overlay line.")]
+        [Tooltip("The short line added to the event log (the Log window's Event log tab) when this happens (click it there to reopen the full tip). Empty = no line.")]
         public string shortText = "";
     }
 
@@ -49,62 +49,11 @@ public class PixelHints : MonoBehaviour
     [Tooltip("Close a tip by itself after this many seconds (0 = it stays until the player clicks Got it).")]
     [SerializeField] private float autoCloseSeconds = 0f;
 
-    [Tooltip("Open the full tip box by itself when something happens (the overlay line always shows). Untick to only show the short line and let the player open the tip.")]
+    [Tooltip("Open the full tip box by itself when something happens (the event log line is always added). Untick to only add the line and let the player open the tip from the Log's Event log tab.")]
     [SerializeField] private bool autoOpenTips = true;
 
     [Tooltip("Ignore events during the first few seconds after the game starts (loading a save re-triggers unlocks).")]
     [SerializeField] private float startupQuietSeconds = 3f;
-
-    [Header("Overlay (bottom-left line)")]
-    [Tooltip("Show the short event line at the bottom left, above the black bar.")]
-    [SerializeField] private bool showOverlay = true;
-
-    [Min(0f)]
-    [Tooltip("Seconds the line stays fully visible before fading.")]
-    [SerializeField] private float overlayVisibleSeconds = 5f;
-
-    [Min(0f)]
-    [Tooltip("Seconds the line takes to fade away.")]
-    [SerializeField] private float overlayFadeSeconds = 1.2f;
-
-    [Tooltip("Font size of the overlay line.")]
-    [SerializeField] private float logFontSize = 20f;
-
-    [Tooltip("Text colour of the overlay line.")]
-    [SerializeField] private Color overlayTextColor = new Color(1f, 0.95f, 0.7f, 1f);
-
-    [Tooltip("Draw the dark box behind the log and the coloured block behind each line. Off = just the text.")]
-    [SerializeField] private bool showLogBackground = false;
-
-    [Tooltip("Background colour behind the overlay line (used when Show Log Background is on).")]
-    [SerializeField] private Color overlayBackColor = new Color(0f, 0f, 0f, 0.3f);
-
-    [Tooltip("Distance from the left edge and from the black bar (canvas units).")]
-    [SerializeField] private Vector2 overlayMargin = new Vector2(24f, 16f);
-
-    [Min(100f)]
-    [Tooltip("Width of the event log box (canvas units). Its height runs from above the bottom black bar up to the top black bar.")]
-    [SerializeField] private float logWidth = 420f;
-
-    [Tooltip("Sorting order of the event log's canvas. Kept below every other window (Inventory, Log, Shop, Crafting, Bank...). Renamed so scenes saved with an older, higher value pick up the new default.")]
-    [SerializeField] private int eventLogSortingOrder = 5;
-
-    [Tooltip("Background colour of each line (used when Show Log Background is on).")]
-    [SerializeField] private Color overlayRowColor = new Color(0.1f, 0.18f, 0.28f, 0.8f);
-
-    [Tooltip("Pixels the box scrolls per mouse-wheel notch.")]
-    [SerializeField] private float overlayScrollSpeed = 70f;
-
-    [Tooltip("Lines in the upper part of the event log slowly fade out towards the top of the box.")]
-    [SerializeField] private bool fadeUpperLines = true;
-
-    [Range(0f, 1f)]
-    [Tooltip("Where the fade begins, as a fraction of the box's height from the bottom (0.5 = halfway up).")]
-    [SerializeField] private float fadeStartFraction = 0.5f;
-
-    [Range(0f, 1f)]
-    [Tooltip("How visible a line is at the very top of the box (0 = gone).")]
-    [SerializeField] private float fadeTopAlpha = 0f;
 
     [Min(1)]
     [Tooltip("How many events the log keeps (saved with the save file).")]
@@ -140,9 +89,6 @@ public class PixelHints : MonoBehaviour
     private bool wasShowing;
 
     private const string PrefPrefix = "PixelClicker.Hint.";
-
-    /// <summary>Distance from the left of the screen to the right edge of the event log (canvas units), for boxes placed beside it.</summary>
-    public static float LogRightEdge => instance != null ? instance.overlayMargin.x + instance.logWidth + 20f : 440f;
 
     private static Hint H(string id, string text) => new Hint { id = id, text = text, shortText = ShortFor(id) };
 
@@ -243,7 +189,7 @@ public class PixelHints : MonoBehaviour
         H("minigame_sort", "Sorting race! Some husks froze in a jumbled grid. Click one pixel, then another, to swap them. Get every colour together in one unbroken group before the timer runs out - finishing early pays extra."),
         H("minigame_snake", "Snake! Every husk froze and stopped despawning. Steer the snake with the arrow keys (or the on-screen arrows) and eat every pixel without biting yourself - you are paid 10x their worth. Run out of time or bite yourself and they just drop."),
         H("minigame_stardust", "A meteor pixel knocked a star out of the sky! Click it to collect stardust before it fades. Enough stardust unlocks something new."),
-        H("event_log", "This is the Event Log. It records what happens in the game, like unlocks. Scroll it with the mouse wheel, click a line to read its full tip, and press {key:EventLog} to show or hide it. You can switch it off in Settings > Interface > Event log."),
+        H("event_log", "This is the Event Log, the third tab of the Log window. It records what happens in the game, like unlocks. Click a line to read its full tip, and press {key:EventLog} to open or close it."),
         H("crafting", "Crafting unlocked! Open the Crafting button at the bottom right, drag two items into the boxes and press Craft. A pixel + Glass makes that pixel's potion."),
         H("grab", "Pixel Grabbing unlocked! Hold the left mouse button on a husk to pick it up, then let go to throw it."),
         H("timestop", "Time Stop unlocked! Press T to freeze time and T again to resume. It drains an energy meter, but you can still click the cube - the husks pile up and burst out when time resumes."),
@@ -436,13 +382,6 @@ public class PixelHints : MonoBehaviour
         set { PixelPrefs.SetInt(PrefTips, value ? 1 : 0); PixelPrefs.Save(); }
     }
 
-    /// <summary>Show the event log overlay at the bottom left? (Events are still recorded and saved.)</summary>
-    public static bool EventLogEnabled
-    {
-        get => PixelPrefs.GetInt(PrefEventLog, 1) != 0;
-        set { PixelPrefs.SetInt(PrefEventLog, value ? 1 : 0); PixelPrefs.Save(); RefreshLog(); }
-    }
-
     public static readonly string[] LogSizeNames = { "Small", "Medium", "Large" };
     private static readonly float[] LogSizeScale = { 0.8f, 1f, 1.3f };
 
@@ -453,13 +392,11 @@ public class PixelHints : MonoBehaviour
         set { PixelPrefs.SetInt(PrefLogSize, Mathf.Clamp(value, 0, LogSizeNames.Length - 1)); PixelPrefs.Save(); RefreshLog(); }
     }
 
-    /// <summary>Rebuilds the event log lines (new text size) and hides it if it was switched off.</summary>
-    public static void RefreshLog()
-    {
-        if (instance == null) return;
-        instance.rowsDirty = true;
-        if (!EventLogEnabled && instance.overlayRoot != null) instance.overlayRoot.SetActive(false);
-    }
+    /// <summary>Redraws the Log window's Event log tab (a new text size, a loaded settings file).</summary>
+    public static void RefreshLog() => PixelLog.RefreshEventLog();
+
+    /// <summary>The text size multiplier for the event log lines (Settings > Accessibility > Event log size).</summary>
+    public static float LogSizeScaleNow => LogSizeScale[LogSizeChoice];
 
     private bool forceIntro; // "Replay tutorial": run the intro even though this is not a brand-new game
 
@@ -556,10 +493,10 @@ public class PixelHints : MonoBehaviour
     }
 
     // ------------------------------------------------------------------
-    // The event log (bottom-left box)
+    // The event log (its lines; the Log window's Event log tab draws them: PixelLogEvents.cs)
     // ------------------------------------------------------------------
 
-    /// <summary>Goes up whenever the event log's lines change (My Window's docked Event log tab redraws on it).</summary>
+    /// <summary>Goes up whenever the event log's lines change (the Log window's Event log tab redraws on it).</summary>
     public static int HistoryVersion { get; private set; }
 
     public static int HistoryCount => instance != null ? history.Count : 0;
@@ -574,25 +511,15 @@ public class PixelHints : MonoBehaviour
         return true;
     }
 
-    private float overlayTimer;
-    private float scrollOffset;       // pixels scrolled up from the newest line
     private float suppressUntil;
-    private bool rowsDirty;
-    private GameObject overlayRoot;
-    private CanvasGroup overlayGroup;
-    private RectTransform boxRect, listRect, handleRect;
-    private TMP_FontAsset overlayFont;
-    private float contentHeight, viewHeight;
-    private readonly List<RectTransform> rowRects = new List<RectTransform>();
-    private readonly List<CanvasGroup> rowGroups = new List<CanvasGroup>();
 
     /// <summary>
-    /// Adds a short line to the event log at the bottom left ("You unlocked the Auto Clicker!") and shows the box.
-    /// Clicking the line shows 'fullText' in the tip box. Ignored right after the game starts or loads.
+    /// Adds a short line to the event log ("You unlocked the Auto Clicker!"), shown in the Log window's Event log tab.
+    /// Clicking the line there shows 'fullText' in the tip box. Ignored right after the game starts or loads.
     /// </summary>
     public static void Announce(string shortText, string fullText = null)
     {
-        if (instance != null) instance.ShowOverlay(shortText, fullText);
+        if (instance != null) instance.AddEvent(shortText, fullText);
     }
 
     /// <summary>Ignores announcements for a moment (loading a save re-fires unlocks).</summary>
@@ -601,15 +528,11 @@ public class PixelHints : MonoBehaviour
         if (instance != null) instance.suppressUntil = Time.realtimeSinceStartup + seconds;
     }
 
-    // A save was loaded: its log is in the state now - redraw it from the top, no box shown.
+    // A save was loaded: its log is in the state now (the Event log tab redraws on the version change).
     private void OnLoaded()
     {
         HistoryVersion++;
         TrimHistory();
-        rowsDirty = true;
-        scrollOffset = 0f;
-        overlayTimer = 0f;
-        if (overlayRoot != null) overlayRoot.SetActive(false);
     }
 
     private void TrimHistory()
@@ -617,242 +540,23 @@ public class PixelHints : MonoBehaviour
         while (history.Count > historyMax) history.RemoveAt(0);
     }
 
-    private void ShowOverlay(string shortText, string fullText)
+    private void AddEvent(string shortText, string fullText)
     {
         if (!hintsEnabled || string.IsNullOrEmpty(shortText)) return;
         if (Time.timeSinceLevelLoad < startupQuietSeconds || Time.realtimeSinceStartup < suppressUntil) return;
         history.Add(new EventLogState.Entry { text = shortText, full = fullText ?? "" });
         HistoryVersion++;
         TrimHistory();
-        rowsDirty = true;
-        scrollOffset = 0f;
-        if (showOverlay) DisplayOverlay();
     }
 
-    /// <summary>True while the whole log is showing (the player opened it); false = only the newest entry (a new event just happened).</summary>
-    private bool fullView;
-
-    private void DisplayOverlay(bool showAll = false)
+    /// <summary>The event log key (rebindable, Enter by default) opens the Log window on its Event log tab, or closes it when that tab is showing.</summary>
+    private void UpdateLogKey()
     {
-        if (history.Count == 0 || !EventLogEnabled) return;
-        if (PixelMyWindow.LogTabShowing) return;   // the log is on show in My Window's Event log tab
-        if (overlayRoot == null) BuildOverlay();
-        if (fullView != showAll) { fullView = showAll; rowsDirty = true; }
-        forceFade = false;
-        overlayTimer = overlayVisibleSeconds + overlayFadeSeconds;
-        overlayGroup.alpha = 1f;
-        overlayRoot.SetActive(true);
-        Canvas.ForceUpdateCanvases();
-        RebuildRows();
-    }
-
-    private void BuildOverlay()
-    {
-        PixelClicker clicker = PixelFind.First<PixelClicker>();
-        overlayFont = clicker != null ? clicker.UIFont : null;
-        PixelUIKit.EnsureEventSystem();
-        overlayRoot = PixelUIKit.CreateCanvas("Pixel Event Log", eventLogSortingOrder, new Vector2(1920f, 1080f), true);
-        overlayRoot.transform.SetParent(transform, false);
-        overlayGroup = overlayRoot.AddComponent<CanvasGroup>();
-
-        float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image), typeof(RectMask2D));
-        box.transform.SetParent(overlayRoot.transform, false);
-        Image img = box.GetComponent<Image>();
-        img.color = showLogBackground ? overlayBackColor : Color.clear;
-        img.raycastTarget = false; // empty space in the box never blocks clicks
-        boxRect = box.GetComponent<RectTransform>();
-        boxRect.anchorMin = new Vector2(0f, 0f);
-        boxRect.anchorMax = new Vector2(0f, 1f);
-        boxRect.pivot = new Vector2(0f, 0.5f);
-        boxRect.offsetMin = new Vector2(overlayMargin.x, bar + overlayMargin.y);
-        boxRect.offsetMax = new Vector2(overlayMargin.x + logWidth, -(bar + overlayMargin.y));
-
-        GameObject list = new GameObject("List", typeof(RectTransform));
-        list.transform.SetParent(box.transform, false);
-        listRect = list.GetComponent<RectTransform>();
-        listRect.anchorMin = new Vector2(0f, 0f);
-        listRect.anchorMax = new Vector2(1f, 0f);
-        listRect.pivot = new Vector2(0.5f, 0f);
-        listRect.anchoredPosition = Vector2.zero;
-        listRect.sizeDelta = Vector2.zero;
-
-        GameObject handle = new GameObject("Scroll Handle", typeof(RectTransform), typeof(Image));
-        handle.transform.SetParent(box.transform, false);
-        handle.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.35f);
-        handle.GetComponent<Image>().raycastTarget = false;
-        handleRect = handle.GetComponent<RectTransform>();
-        handleRect.anchorMin = new Vector2(1f, 0f);
-        handleRect.anchorMax = new Vector2(1f, 0f);
-        handleRect.pivot = new Vector2(1f, 0f);
-        handleRect.sizeDelta = new Vector2(6f, 40f);
-        handleRect.anchoredPosition = new Vector2(-3f, 0f);
-    }
-
-    private void RebuildRows()
-    {
-        rowsDirty = false;
-        if (listRect == null) return;
-        for (int i = listRect.childCount - 1; i >= 0; i--) Destroy(listRect.GetChild(i).gameObject);
-        rowRects.Clear();
-        rowGroups.Clear();
-
-        float width = logWidth - 40f;
-        float y = 8f;
-        int oldest = fullView ? 0 : history.Count - 1; // a new event shows only the newest line; the whole list is for when the player opens the log
-        for (int i = history.Count - 1; i >= oldest; i--) // newest at the bottom
-        {
-            EventLogState.Entry entry = history[i];
-                        string text = entry.text;
-
-            GameObject row = new GameObject("Row", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
-            row.transform.SetParent(listRect, false);
-            rowRects.Add(row.GetComponent<RectTransform>());
-            rowGroups.Add(row.GetComponent<CanvasGroup>());
-            row.GetComponent<Image>().color = showLogBackground ? overlayRowColor : Color.clear; // clear still takes clicks
-            RectTransform rr = row.GetComponent<RectTransform>();
-            rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(0f, 0f);
-
-            TMP_Text label = PixelUIKit.CreateText(overlayFont, row.transform, "Text", text, logFontSize * LogSizeScale[LogSizeChoice],
-                                                   TextAlignmentOptions.TopLeft, FontStyles.Bold, overlayTextColor);
-            label.overflowMode = TextOverflowModes.Overflow;
-            float h = Mathf.Ceil(label.GetPreferredValues(text, width, 0f).y) + 12f;
-            RectTransform lr = label.rectTransform;
-            lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one;
-            lr.offsetMin = new Vector2(10f, 6f); lr.offsetMax = new Vector2(-10f, -6f);
-
-            rr.sizeDelta = new Vector2(width, h);
-            rr.anchoredPosition = new Vector2(8f, y);
-            y += h + 6f;
-
-            string full = entry.full;
-            bool opens = !string.IsNullOrEmpty(full);
-            Button b = PixelUIKit.MakeClickable(row, opens ? () => PixelNotice.Show(full, autoCloseSeconds) : (UnityEngine.Events.UnityAction)null, sound: opens);
-            b.interactable = opens;
-        }
-
-        contentHeight = y + 4f;
-        listRect.sizeDelta = new Vector2(0f, contentHeight);
-        ApplyScroll();
-    }
-
-    private void ApplyScroll()
-    {
-        if (boxRect == null) return;
-        // The box's height computed from the screen (its own rect isn't valid until the canvas has updated once).
-        Canvas canvas = overlayRoot.GetComponent<Canvas>();
-        float scale = canvas != null && canvas.scaleFactor > 0.01f ? canvas.scaleFactor : 1f;
-        float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        viewHeight = Mathf.Max(0f, Screen.height / scale - 2f * (bar + overlayMargin.y));
-        float max = Mathf.Max(0f, contentHeight - viewHeight);
-        scrollOffset = Mathf.Clamp(scrollOffset, 0f, max);
-        // The list's bottom edge sits at the box's bottom (newest line); scrolling up (offset > 0) slides it DOWN to reveal older lines.
-        listRect.anchoredPosition = new Vector2(0f, -scrollOffset);
-
-        bool scrolls = max > 0.5f;
-        if (handleRect.gameObject.activeSelf != scrolls) handleRect.gameObject.SetActive(scrolls);
-        if (scrolls)
-        {
-            float handleH = Mathf.Max(30f, viewHeight * viewHeight / contentHeight);
-            handleRect.sizeDelta = new Vector2(6f, handleH);
-            handleRect.anchoredPosition = new Vector2(-3f, (viewHeight - handleH) * (scrollOffset / max));
-        }
-        UpdateRowFade();
-    }
-
-    /// <summary>Fades each line by how high it sits in the box: full below the start fraction, fading out towards the top.</summary>
-    private void UpdateRowFade()
-    {
-        float start = viewHeight * fadeStartFraction;
-        float span = Mathf.Max(1f, viewHeight - start);
-        for (int i = 0; i < rowRects.Count; i++)
-        {
-            RectTransform r = rowRects[i];
-            CanvasGroup g = rowGroups[i];
-            if (r == null || g == null) continue;
-            float alpha = 1f;
-            if (fadeUpperLines && viewHeight > 1f)
-            {
-                float centre = r.anchoredPosition.y + r.sizeDelta.y * 0.5f - scrollOffset; // height above the box's bottom
-                float t = Mathf.Clamp01((centre - start) / span);
-                alpha = Mathf.Lerp(1f, fadeTopAlpha, Mathf.SmoothStep(0f, 1f, t));
-            }
-            g.alpha = alpha;
-            g.blocksRaycasts = alpha > 0.15f; // nearly invisible lines don't catch clicks
-        }
-    }
-
-    private bool forceFade;
-
-    /// <summary>Makes the open log fade away now, even while the mouse is over it.</summary>
-    private void FadeNow()
-    {
-        forceFade = true;
-        overlayTimer = Mathf.Min(overlayTimer, overlayFadeSeconds);
-    }
-
-    private bool ReopenKeyPressed()
-    {
-        return PixelKeys.Pressed(PixelAction.EventLog); // rebindable in Settings
-    }
-
-    private static float ScrollWheel()
-    {
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
-        return UnityEngine.InputSystem.Mouse.current != null ? UnityEngine.InputSystem.Mouse.current.scroll.ReadValue().y / 120f : 0f;
-#else
-        return Input.mouseScrollDelta.y;
-#endif
-    }
-
-    private void UpdateOverlay()
-    {
-        if (PixelPauseMenu.IsPaused || history.Count == 0) return;
-
-        // Don't steal Enter from a text box.
+        if (PixelPauseMenu.IsPaused || !PixelKeys.Pressed(PixelAction.EventLog)) return;   // (PixelKeys ignores presses while typing in a text box)
         UnityEngine.EventSystems.EventSystem es = UnityEngine.EventSystems.EventSystem.current;
-        bool typing = es != null && es.currentSelectedGameObject != null && es.currentSelectedGameObject.GetComponent<TMP_InputField>() != null;
-
-        bool visible = overlayRoot != null && overlayRoot.activeSelf;
-        if (!typing && !EventLogEnabled && PixelMyWindow.Available && ReopenKeyPressed())
-        {
-            PixelMyWindow.ShowLogTab();   // the on-screen log is off: the log key opens My Window on its Event log tab
-            return;
-        }
-        if (PixelMyWindow.LogTabShowing)
-        {
-            if (visible) overlayRoot.SetActive(false);
-            return;
-        }
-        if (!EventLogEnabled)
-        {
-            if (overlayRoot != null && overlayRoot.activeSelf) overlayRoot.SetActive(false);
-            return;
-        }
-        if (!typing && ReopenKeyPressed())
-        {
-            if (visible && fullView) FadeNow();                   // the full log is open: close it
-            else { scrollOffset = 0f; DisplayOverlay(true); }     // closed, or showing just the newest line: open the whole log
-            return;
-        }
-        if (visible && PixelInput.RightPressed()) FadeNow(); // right-click anywhere closes the log
-
-        if (!visible) return;
-        if (rowsDirty) RebuildRows();
-
-        // Hovering the box keeps it open and the mouse wheel scrolls it.
-        bool hover = !forceFade && RectTransformUtility.RectangleContainsScreenPoint(boxRect, PixelInput.PointerPosition(), null);
-        if (hover)
-        {
-            float wheel = ScrollWheel();
-            if (Mathf.Abs(wheel) > 0.001f) { scrollOffset += wheel * overlayScrollSpeed; ApplyScroll(); }
-            overlayTimer = overlayVisibleSeconds + overlayFadeSeconds;
-        }
-
-        overlayTimer -= Time.unscaledDeltaTime;
-        overlayGroup.alpha = overlayFadeSeconds > 0f ? Mathf.Clamp01(overlayTimer / overlayFadeSeconds) : (overlayTimer > 0f ? 1f : 0f);
-        overlayGroup.blocksRaycasts = overlayGroup.alpha > 0.3f;
-        if (overlayTimer <= 0f) overlayRoot.SetActive(false);
+        if (es != null && es.currentSelectedGameObject != null && es.currentSelectedGameObject.GetComponent<TMP_InputField>() != null) return;   // (don't steal Enter from a text box)
+        if (PixelLog.LogOpen && PixelLog.EventLogTabShowing) PixelLog.SetLogOpen(false);
+        else PixelLog.ShowEventLogTab();
     }
 
     private void Start()
@@ -865,7 +569,7 @@ public class PixelHints : MonoBehaviour
     {
         PixelClicker clicker = PixelFind.First<PixelClicker>();
         if (clicker == null || !clicker.IsValidTierIndex(index)) return;
-        ShowOverlay("New pixel unlocked: " + clicker.Tiers[index].displayName + "!", "");
+        AddEvent("New pixel unlocked: " + clicker.Tiers[index].displayName + "!", "");
         Trigger("event_log"); // the very first line of the log: explain what the log is
     }
 
@@ -970,27 +674,20 @@ public class PixelHints : MonoBehaviour
         PixelNotice.Show(instance.introInventoryText, 0f, compact: true, beside: PixelUI.WindowRect);
     }
 
-    /// <summary>Shows the event log (bottom left) and the small tip beside it explaining it.</summary>
+    /// <summary>Opens the Log on its Event log tab with the tip's line in it (the tutorial replay's last step: what the event log is).</summary>
     private void ShowEventLogTip()
     {
         Hint hint = hints != null ? hints.Find(h => h != null && h.id == "event_log") : null;
         if (hint == null || !hint.enabled || string.IsNullOrEmpty(hint.text)) return;
         MarkSeen("event_log"); // so the first pixel unlock doesn't repeat it
         Announce(hint.shortText, hint.text); // a line in the log; clicking it opens the tip
-        DisplayOverlay(true);
-        overlayTimer = Mathf.Max(overlayTimer, 20f); // keep the log up so the line can be seen
+        PixelLog.ShowEventLogTab();
     }
-
-    private bool windowWasOpen;
 
     private void Update()
     {
         TryStartIntro();
-        // The event log steps aside the moment any window opens.
-        bool windowOpen = PixelWindows.AnyOpen();
-        if (windowOpen && !windowWasOpen && overlayRoot != null && overlayRoot.activeSelf) FadeNow();
-        windowWasOpen = windowOpen;
-        UpdateOverlay();
+        UpdateLogKey();
         bool showing = PixelNotice.IsShowing;
         if (introRunning)
         {

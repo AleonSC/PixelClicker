@@ -19,14 +19,12 @@
 //   Layout (current): opens as a tall window (defaultSize 0 = 450 x 660) at the right side just above the bottom black bar (layout version 2 ignores older saved
 //   geometry). WINDOW: a standard Tool window (PixelUIKit.CreateWindow, prefKey PixelClicker.MyWindow): centred title, grey X, its PixelWindowChrome drags it by the header
 //   (kept between the black bars), minimizes it ('-') and docks it to a screen edge, saving X / Y / Min / Dock / DockY; this script only saves W / H / Open / Layout. MINIMIZED: only the
-//   header remains (still draggable); the full height is remembered. EVENT LOG TAB (always there, Pinned | Event log | Keybinds; the old header LOG dock button is gone):
-//   the log lines of PixelHints.TryGetHistory, newest at the bottom, a click shows the full tip; a switch at its top turns the IN-GAME (bottom-left) event log on / off (= PixelHints.EventLogEnabled,
-//   Settings > Event log). While the tab is showing the overlay stays away (LogTabShowing); with the in-game log off, the event log key opens the tab.
+//   header remains (still draggable); the full height is remembered. (The Event log tab moved to the Log window on 2026-10-25: PixelLogEvents.cs.)
 //   INFO button in the header (PixelMyWindow.HoverDocked, kept on this machine): pins the block HOVER TOOLTIP into the window (MINIMIZED window: a small card with
 //   the block and its name hangs just under the header instead - TryGetHoverSlot's 'compact'): while it is on and the window is open (Pinned tab) the tooltip card
 //   no longer follows the mouse - PixelBlockTooltip moves its card into the window's hover slot (TryGetHoverSlot / SetHoverHeight), scaled to the window's width, and it shows whatever the mouse hovers (and stays on the last
 //   one while the mouse is over the window); a hint shows until something was hovered.
-//   TABS (always shown under the header): Pinned | Event log (only while the log is docked) | Keybinds (PixelCustomKeys.BuildView: bind items / tools to your own keys).
+//   TABS (always shown under the header): Pinned | Keybinds (PixelCustomKeys.BuildView: bind items / tools to your own keys).
 //   Header buttons (LayoutHeaderButtons): Info sits in the first right slot after the X and the chrome's '-' (one slot further in while the chrome's undock arrow shows), Edit
 //   (hidden, no Edit mode) after it; the title stays centred clear of them. Layout reruns when the chrome minimizes / docks (its StateChanged event). The corner grip still
 //   changes the window's WIDTH / HEIGHT (ResizeBy -> PixelWindowParts.SetHeight), not its scale.
@@ -143,7 +141,7 @@ public partial class PixelMyWindow : MonoBehaviour
         slot = null; width = 0f; compact = false;
         PixelMyWindow w = instance;
         if (w == null || w.canvasRoot == null || w.hoverSlot == null || !w.open || !HoverDocked) return false;
-        if (!w.minimized && (w.showLogTab || w.showKeysTab)) return false;
+        if (!w.minimized && w.showKeysTab) return false;
         slot = w.hoverSlot;
         compact = w.minimized;
         width = Mathf.Max(200f, w.windowRect.sizeDelta.x - 24f);
@@ -157,20 +155,6 @@ public partial class PixelMyWindow : MonoBehaviour
         if (w == null) return;
         w.hoverShownH = height;
         if (Mathf.Abs(height - w.hoverLaidH) > 1f) w.Layout();
-    }
-
-    /// <summary>Is the window open on its Event log tab right now? (The bottom-left log overlay stays away meanwhile, so the log doesn't show twice.)</summary>
-    public static bool LogTabShowing => instance != null && instance.canvasRoot != null && instance.open && !instance.minimized && instance.showLogTab;
-
-    /// <summary>Opens My Window on its Event log tab (the event log key does this while the on-screen log is switched off).</summary>
-    public static void ShowLogTab()
-    {
-        if (instance == null || instance.canvasRoot == null) return;
-        instance.showLogTab = true;
-        if (instance.minimized) instance.chrome.SetMinimized(false);
-        if (!instance.open) { instance.open = true; instance.ApplyOpen(); }
-        instance.Layout();
-        instance.RebuildLog();
     }
 
     /// <summary>Can things be pinned to My Window right now (the window exists)? The Game Database's Pin button uses this.</summary>
@@ -219,20 +203,13 @@ public partial class PixelMyWindow : MonoBehaviour
     private PixelWindowChrome chrome;
     private bool minimized => chrome != null && chrome.Minimized;
     private float fullHeight = 660f;          // the window's height when not minimized (saved as H; the resize grip changes it)
-    private Button tabPinnedButton, tabLogButton, tabKeysButton;
+    private Button tabPinnedButton, tabKeysButton;
     private Image tabKeysImage;
     private RectTransform keysRoot;
     private bool showKeysTab;         // the Keybinds tab is showing (PixelCustomKeys builds its contents)
-    private Image tabPinnedImage, tabLogImage;
-    private Button screenLogButton;   // top of the Event log tab: the in-game event log on / off
+    private Image tabPinnedImage;
     private GameObject editButtonObject, resizeHandleObject, tabBar;
     private TMP_Text titleLabel;
-    private ScrollRect logScroll;
-    private RectTransform logContent;
-    private GameObject logScrollBar;
-    private bool showLogTab;          // the Event log tab is showing (only while the log is docked)
-    private int logVersionShown = -1;
-    private float logContentHeight;
     private const float TabBarHeight = 46f;
     private const float HeaderHeight = PixelUIKit.ToolHeaderHeight, EdgeMargin = 14f;
     private float refreshTimer, saveTimer, hudTimer;
@@ -371,7 +348,7 @@ public partial class PixelMyWindow : MonoBehaviour
         edit.onClick.AddListener(() => { editing = !editing; RebuildRows(); });
         editButtonObject = edit.gameObject;
 
-        // Tabs under the header while the log is docked: Pinned | Event log.
+        // Tabs under the header: Pinned | Keybinds.
         GameObject tabs = new GameObject("Tabs", typeof(RectTransform));
         tabs.transform.SetParent(windowObject.transform, false);
         tabBar = tabs;
@@ -380,11 +357,9 @@ public partial class PixelMyWindow : MonoBehaviour
         tbr.sizeDelta = new Vector2(-24f, TabBarHeight - 6f);
         tbr.anchoredPosition = new Vector2(0f, -(HeaderHeight + 4f));
         tabPinnedButton = MakeTab(tabs.transform, "Pinned", 0f, 0.5f, out tabPinnedImage);
-        tabLogButton = MakeTab(tabs.transform, "Event log", 0.5f, 1f, out tabLogImage);
         tabKeysButton = MakeTab(tabs.transform, "Keybinds", 0.5f, 1f, out tabKeysImage);
-        tabPinnedButton.onClick.AddListener(() => { showLogTab = false; showKeysTab = false; Layout(); });
-        tabLogButton.onClick.AddListener(() => { showLogTab = true; showKeysTab = false; Layout(); RebuildLog(); });
-        tabKeysButton.onClick.AddListener(() => { showLogTab = false; showKeysTab = true; Layout(); });
+        tabPinnedButton.onClick.AddListener(() => { showKeysTab = false; Layout(); });
+        tabKeysButton.onClick.AddListener(() => { showKeysTab = true; Layout(); });
         tabs.SetActive(false);
 
         // The place for the pinned hover card (under the header / tabs); PixelBlockTooltip puts its card in here.
@@ -430,16 +405,6 @@ public partial class PixelMyWindow : MonoBehaviour
         scroll = PixelUIKit.CreateScrollView(windowObject.transform, "List", new Color(1f, 1f, 1f, 0.35f), 12f, 60f, out listContent, out scrollBar);
         PixelScrollBarFade fade = scrollBar != null ? scrollBar.GetComponent<PixelScrollBarFade>() : null;
         if (fade != null) fade.hideBar = true;
-
-        // The docked event log's list (shown instead of the pinned list on the Event log tab).
-        logScroll = PixelUIKit.CreateScrollView(windowObject.transform, "Event Log List", new Color(1f, 1f, 1f, 0.35f), 12f, 60f, out logContent, out logScrollBar);
-        PixelScrollBarFade logFade = logScrollBar != null ? logScrollBar.GetComponent<PixelScrollBarFade>() : null;
-        if (logFade != null) logFade.hideBar = true;
-        logScroll.gameObject.SetActive(false);
-        screenLogButton = PixelUIKit.CreateButton(Font, windowObject.transform, "In-game Log", "", new Vector2(200f, 44f), ButtonRole.Neutral, 22f);
-        screenLogButton.onClick.AddListener(ToggleScreenLog);
-        FitOneLine(screenLogButton, 22f);
-        screenLogButton.gameObject.SetActive(false);
 
         // The Keybinds tab (PixelCustomKeys builds what is in it).
         GameObject keysGo = new GameObject("Keybinds", typeof(RectTransform));
@@ -540,22 +505,6 @@ public partial class PixelMyWindow : MonoBehaviour
         Layout();
     }
 
-    /// <summary>The switch at the top of the Event log tab: the in-game (bottom-left) event log on / off - the same setting as Settings > 'Event log'.</summary>
-    private void ToggleScreenLog()
-    {
-        PixelHints.EventLogEnabled = !PixelHints.EventLogEnabled;
-        UpdateScreenLogLabel();
-        PixelAudio.Play("ui_click");
-    }
-
-    private void UpdateScreenLogLabel()
-    {
-        if (screenLogButton == null) return;
-        bool on = PixelHints.EventLogEnabled;
-        PixelUIKit.SetText(screenLogButton.GetComponentInChildren<TMP_Text>(), "In-game event log: " + (on ? "ON" : "OFF"));
-        PixelUIKit.SetRole(screenLogButton, on ? ButtonRole.Success : ButtonRole.Neutral);
-    }
-
     /// <summary>
     /// The right header slots: the X and the chrome's '-' (and its undock arrow while docked) come first, then Info (hidden while minimized) and the
     /// (always hidden) Edit. The title stays centred, clear of the buttons on both sides.
@@ -587,34 +536,29 @@ public partial class PixelMyWindow : MonoBehaviour
         }
     }
 
-    /// <summary>Places the list under the header (and the add bar while editing), the tabs while the event log is docked, and the right list for the tab.</summary>
+    /// <summary>Places the list under the header (and the add bar while editing), the tabs, and the right page for the tab.</summary>
     private void Layout()
     {
         if (scroll == null) return;
-        const bool docked = true;   // (the Event log tab is always there now)
-        if (showLogTab) showKeysTab = false;
-        bool logTab = docked && showLogTab;
-        bool keysTab = showKeysTab && !logTab;
+        bool keysTab = showKeysTab;
         float tabs = TabBarHeight;
-        bool hoverOn = HoverDocked && !minimized && !logTab && !keysTab;
+        bool hoverOn = HoverDocked && !minimized && !keysTab;
         bool hoverMini = HoverDocked && minimized;   // minimized: the small card (block + name) hangs just under the header
         float hoverH = hoverOn ? Mathf.Max(hoverShownH, 64f) + 8f : 0f;   // the pinned hover card (or its hint) sits under the header / tabs
         hoverLaidH = hoverShownH;
         LayoutHoverSlot(hoverOn, hoverMini, hoverH, tabs);
-        float top = HeaderHeight + 4f + tabs + hoverH + (editing && !logTab && !keysTab ? 170f : 0f);
-        scroll.gameObject.SetActive(!minimized && !logTab && !keysTab);
+        float top = HeaderHeight + 4f + tabs + hoverH + (editing && !keysTab ? 170f : 0f);
+        scroll.gameObject.SetActive(!minimized && !keysTab);
         if (pickerRoot != null && !scroll.gameObject.activeSelf) pickerRoot.SetActive(false);
-        if (logScroll != null) logScroll.gameObject.SetActive(!minimized && logTab);
-        LayoutTabs(docked, logTab, keysTab, tabs);
+        LayoutTabs(keysTab, tabs);
         if (resizeHandleObject != null) resizeHandleObject.SetActive(!minimized);
         RectTransform vr = scroll.GetComponent<RectTransform>();
         vr.anchorMin = Vector2.zero;
         vr.anchorMax = Vector2.one;
         vr.offsetMin = new Vector2(12f, 34f);
         vr.offsetMax = new Vector2(-12f, -top);
-        LayoutLogArea(top, logTab);
         addBar.anchoredPosition = new Vector2(0f, -(HeaderHeight + 4f + tabs + hoverH));
-        addBar.gameObject.SetActive(editing && !minimized && !logTab && !keysTab);
+        addBar.gameObject.SetActive(editing && !minimized && !keysTab);
         if (editLabel != null) PixelUIKit.SetText(editLabel, editing ? "Done" : "Edit");
         LayoutHeaderButtons();
         UpdateContentHeight();
@@ -637,14 +581,12 @@ public partial class PixelMyWindow : MonoBehaviour
         }
     }
 
-    // Layout step: the tab bar, its three tabs (Pinned / Event log / Keys) and the Keys tab's page.
-    private void LayoutTabs(bool docked, bool logTab, bool keysTab, float tabs)
+    // Layout step: the tab bar, its two tabs (Pinned / Keys) and the Keys tab's page.
+    private void LayoutTabs(bool keysTab, float tabs)
     {
         if (tabBar != null) tabBar.SetActive(!minimized);
-        if (tabLogButton != null) tabLogButton.gameObject.SetActive(docked);
-        SetTabAnchors(tabPinnedButton, 0f, docked ? 1f / 3f : 0.5f);
-        SetTabAnchors(tabLogButton, 1f / 3f, 2f / 3f);
-        SetTabAnchors(tabKeysButton, docked ? 2f / 3f : 0.5f, 1f);
+        SetTabAnchors(tabPinnedButton, 0f, 0.5f);
+        SetTabAnchors(tabKeysButton, 0.5f, 1f);
         if (keysRoot != null)
         {
             keysRoot.gameObject.SetActive(!minimized && keysTab);
@@ -652,76 +594,13 @@ public partial class PixelMyWindow : MonoBehaviour
             PixelCustomKeys keysView = PixelCustomKeys.Instance;
             if (keysView != null) keysView.SetVisible(!minimized && keysTab);
         }
-        int tabNow = keysTab ? 2 : logTab ? 1 : 0;
+        int tabNow = keysTab ? 2 : 0;
         if (tabNow != shownTab)   // (only re-role on a change)
         {
             shownTab = tabNow;
             PixelUIKit.SetRole(tabPinnedImage, tabNow == 0 ? ButtonRole.Selected : ButtonRole.Neutral);
-            PixelUIKit.SetRole(tabLogImage, tabNow == 1 ? ButtonRole.Selected : ButtonRole.Neutral);
             PixelUIKit.SetRole(tabKeysImage, tabNow == 2 ? ButtonRole.Selected : ButtonRole.Neutral);
         }
-    }
-
-    // Layout step: the docked event log's list and its 'show on screen' button ('top' = where the lists start under the header).
-    private void LayoutLogArea(float top, bool logTab)
-    {
-        if (logScroll != null)
-        {
-            RectTransform lr = logScroll.GetComponent<RectTransform>();
-            lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one;
-            lr.offsetMin = new Vector2(12f, 34f); lr.offsetMax = new Vector2(-12f, -(top + 52f));
-        }
-        if (screenLogButton != null)
-        {
-            screenLogButton.gameObject.SetActive(!minimized && logTab);
-            RectTransform br = screenLogButton.GetComponent<RectTransform>();
-            br.anchorMin = new Vector2(0f, 1f); br.anchorMax = new Vector2(1f, 1f); br.pivot = new Vector2(0.5f, 1f);
-            br.offsetMin = new Vector2(12f, -(top + 44f)); br.offsetMax = new Vector2(-12f, -top);
-            if (logTab) UpdateScreenLogLabel();
-        }
-    }
-
-    /// <summary>The docked event log: every line of PixelHints' history, oldest at the top and the newest at the bottom (the list opens scrolled to it); a click shows the line's full tip.</summary>
-    private void RebuildLog()
-    {
-        if (logContent == null || logScroll == null) return;
-        logVersionShown = PixelHints.HistoryVersion;
-        for (int i = logContent.childCount - 1; i >= 0; i--) Destroy(logContent.GetChild(i).gameObject);
-        float width = Mathf.Max(200f, windowRect.sizeDelta.x - 24f - 28f);
-        float y = 4f;
-        int count = PixelHints.HistoryCount;
-        for (int i = 0; i < count; i++)
-        {
-            if (!PixelHints.TryGetHistory(i, out string text, out string full)) continue;
-            GameObject go = new GameObject("Line " + i, typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(logContent, false);
-            go.GetComponent<Image>().color = rowColor;
-            RectTransform rt = go.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(0f, 1f); rt.anchorMax = new Vector2(1f, 1f); rt.pivot = new Vector2(0.5f, 1f);
-            TMP_Text label = Text(rt, "Text", text, 20f, TextAlignmentOptions.TopLeft, textColor);
-            label.textWrappingMode = TextWrappingModes.Normal;
-            float h = Mathf.Ceil(label.GetPreferredValues(text, width - 20f, 0f).y) + 14f;
-            Stretch(label.rectTransform, 10f, 6f);
-            rt.sizeDelta = new Vector2(-8f, h);
-            rt.anchoredPosition = new Vector2(0f, -y);
-            y += h + 5f;
-            bool opens = !string.IsNullOrEmpty(full);
-            string tip = full;
-            Button b = PixelUIKit.MakeClickable(go, opens ? () => PixelNotice.Show(tip, 0f) : (UnityEngine.Events.UnityAction)null, sound: opens);
-            b.interactable = opens;
-        }
-        if (count == 0)
-        {
-            TMP_Text empty = Text(logContent, "Empty", "Nothing has happened yet.", 20f, TextAlignmentOptions.Center, dimTextColor);
-            RectTransform er0 = empty.rectTransform;
-            er0.anchorMin = new Vector2(0f, 1f); er0.anchorMax = new Vector2(1f, 1f); er0.pivot = new Vector2(0.5f, 1f);
-            er0.sizeDelta = new Vector2(0f, 60f); er0.anchoredPosition = new Vector2(0f, -10f);
-            y = 70f;
-        }
-        logContentHeight = y + 4f;
-        Canvas.ForceUpdateCanvases();
-        PixelUIKit.UpdateScrollView(logScroll, logScrollBar, logContentHeight, logScroll.GetComponent<RectTransform>().rect.height);
-        logScroll.verticalNormalizedPosition = 0f;   // the newest line is at the bottom
     }
 
     private float contentHeight;
@@ -867,7 +746,6 @@ public partial class PixelMyWindow : MonoBehaviour
         refreshTimer -= Time.unscaledDeltaTime;
         if (refreshTimer > 0f) return;
         refreshTimer = refreshSeconds > 0f ? refreshSeconds : 0.4f;
-        if (showLogTab && PixelHints.HistoryVersion != logVersionShown) RebuildLog();   // new events show up in the docked log
         if (Signature() != rowSignature) RebuildRows();
         else RefreshValues();
     }

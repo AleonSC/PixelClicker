@@ -278,7 +278,6 @@ public partial class PixelPauseMenu
         // ---- Interface ----
         AddSettingsSectionHeader(list, headerInterface, ref y);
         AddSettingToggle(list, tipsLabel, () => PixelHints.TipsEnabled, on => PixelHints.TipsEnabled = on, ref y);
-        AddSettingToggle(list, eventLogLabel, () => PixelHints.EventLogEnabled, on => PixelHints.EventLogEnabled = on, ref y);
         AddSettingToggle(list, popupsLabel, () => PixelUI.PopupsEnabled, on => PixelUI.PopupsEnabled = on, ref y);
         AddDropdownRow(list, blockTipsLabel, PixelBlockTooltip.ModeNames, () => PixelBlockTooltip.Mode, v => PixelBlockTooltip.Mode = v, ref y);   // Full / Minimal / Off (Alt cycles it in the game)
         Toggle auraToggle = AddToggleRow(list, clickerAuraLabel, PixelClickerAura.Enabled, on => PixelClickerAura.Enabled = on, ref y);
