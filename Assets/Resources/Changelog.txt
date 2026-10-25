@@ -1647,3 +1647,4 @@
 [2026-10-24 15:53 UTC] Achievement popup: its default spot is now the middle of the LEFT edge instead of the right (Inspector 'Popup On Left' switches it back; a pinned spot still wins).
 [2026-10-24 17:00 UTC] Added the First Hour page (tools/first-hour-flow/FirstHourFlow.html): every step a new player meets up to buying the first skill pack, traced from the code, with its trigger, Dialogue / UI IDs and 15 problems flagged (the shop hold and the Shop / Skills tutorials never start by themselves, the gift Recycler can run out before Black).
 [2026-10-25 01:26 UTC] To-do cleaned up: the first-hour husk machine and GameState follow-up items were closed, and every finished item was removed from the list (their history stays in this changelog and git).
+[2026-10-25 03:54 UTC] To-do: Husk Capacity as a Standard skill reward marked done and removed from the list.
