@@ -261,6 +261,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
         PixelStats.Clear(Stage1Key);
         PixelStats.Clear(Stage2Key);
         PixelStats.Clear(PixelShopTutorial.DoneKey);
+        PixelStats.Clear(PixelShopTutorial.OpenedKey);
         PixelStats.Clear(PixelSkills.TutorialDoneKey);
         PixelTogglesTutorial.Replay();
         instance.replaying = true;
@@ -366,12 +367,11 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
     public static bool Visiting => instance != null && instance.visiting;
 
     /// <summary>
-    /// After his second visit time stays frozen until the player opens the shop (the 'Buy the RGB Pack' line pulses and arrows point at the Shop button,
-    /// see PixelShopNudge); opening it starts the shop tutorial. Stops a player who fiddles too fast from skipping the tutorial.
+    /// After his second visit, until the shop is opened for the first time (PixelShopTutorial.OpenedKey): the Shop button gets the gold frame
+    /// (PixelShopNudge), its dock button stays slid out and Cubie peeks under it pointing up. Time keeps running (it used to freeze, until 2026-10-25).
+    /// Opening the shop then offers the tour (PixelShopTutorial).
     /// </summary>
     public static bool ShopHold { get; private set; }
-
-    private float holdScale = 1f;
 
     // ---- shop peek: while ShopHold is on Cubie sticks out from under the Shop button (top right) and points his stick up at it until the shop is opened ----
     private bool peeking;
@@ -437,19 +437,8 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
 
     private void UpdateHold()
     {
-        bool leave = PixelTitleScreen.Showing || !PixelHints.TipsEnabled || shop == null || !shop.ShopAvailable || PixelStats.Total(PixelShopTutorial.DoneKey) >= 1d;
-        if (leave || shop.WindowOpen)
-        {
-            ShopHold = false;
-            if (Time.timeScale <= 0f && !PixelCalm.InMenu) Time.timeScale = holdScale;
-            if (!leave) PixelShopTutorial.RequestStart();
-            return;
-        }
-        if (!PixelPauseMenu.IsPaused && Time.timeScale > 0f)
-        {
-            holdScale = Time.timeScale;
-            Time.timeScale = 0f;
-        }
+        ShopHold = !PixelTitleScreen.Showing && PixelHints.TipsEnabled && shop != null && shop.ShopAvailable && !shop.WindowOpen
+                   && PixelStats.Total(Stage2Key) >= 1d && PixelStats.Total(PixelShopTutorial.OpenedKey) < 1d;
     }
 
 
@@ -530,7 +519,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
     {
         if (musicCueOn) { musicCueOn = false; PixelAudio.SetMusicCue("Cubie", false); }
         Unfreeze();
-        if (ShopHold) { ShopHold = false; if (Time.timeScale <= 0f) Time.timeScale = holdScale; }
+        ShopHold = false;
         PixelWindows.Unregister(this);
         if (instance == this) instance = null;
         if (canvasRoot != null) Destroy(canvasRoot);
@@ -576,7 +565,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
         // Cubie switched off (disableGuide): RGB still unlocks at the same point, quietly, so the game can go on.
         if (disableGuide && clicker != null && !ShopThere && Visit2Ready && shop != null) shop.GrantPackRewarding(PixelClicker.PixelType.Red);
         if (disableGuide && clicker != null && PixelStats.Total(Stage1Key) < 1d && Visit1Ready) { PixelStats.Best(Stage1Key, 1d); GiveRecycler(); }   // (Cubie off: his Recycler still arrives - the 'Recycle 20 husks' goal needs it)
-        if (ShopHold) UpdateHold();
+        UpdateHold();
         if (ShopHold && !peeking && !disableGuide && !visiting && !narrating) StartCoroutine(PeekRoutine());
         if (disableGuide || clicker == null || visiting) { if (disableGuide && lastBlocker != "disabled") { lastBlocker = "disabled"; PixelDebug.Info("Cubie is off: disableGuide is ticked", this); } return; }
         if (shop == null) shop = PixelFind.Cached<PixelShop>();
@@ -612,6 +601,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
             PixelStats.Best(Stage1Key, 1d);
             PixelStats.Best(Stage2Key, 1d);
             PixelStats.Best(PixelShopTutorial.DoneKey, 1d);   // an older save: no tutorial
+            PixelStats.Best(PixelShopTutorial.OpenedKey, 1d); // (and no nudge toward the shop)
             StartVendors(true);
         }
         else if (!PixelHints.TipsEnabled && !replaying)
@@ -801,12 +791,7 @@ public class PixelGuideVendor : MonoBehaviour, IPixelDatabaseSource
         {
             if (giftLine == null && !replaying) GiveGift();   // (a page list without {gift} still unlocks RGB and hands the gift over)
             PixelStats.Best(Stage2Key, 1d);
-            if (shop != null && shop.ShopAvailable && PixelHints.TipsEnabled && PixelStats.Total(PixelShopTutorial.DoneKey) < 1d)
-            {
-                ShopHold = true;   // time stays frozen until the player opens the shop
-                holdScale = savedTimeScale > 0f ? savedTimeScale : 1f;
-                if (Time.timeScale > 0f) Time.timeScale = 0f;
-            }
+            // (Until the shop is first opened, UpdateHold nudges toward it - time keeps running.)
             replaying = false;
             StartVendors(false);
         }

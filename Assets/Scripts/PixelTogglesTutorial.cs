@@ -92,7 +92,7 @@ public class PixelTogglesTutorial : MonoBehaviour
         wanted = false;
         if (running || !Due) { ready = 0f; return; }
         PixelShop shop = PixelFind.Cached<PixelShop>();
-        bool shopTutorialDue = shop != null && shop.ShopAvailable && PixelStats.Total(PixelShopTutorial.DoneKey) < 1d;
+        bool shopTutorialDue = PixelShopTutorial.Busy;   // (the shop tour offer is up or the tour plays)
         if (shopTutorialDue || (shop != null && shop.WindowOpen) || !PixelToggles.TabVisible || !PixelCalm.ForTip ||
             PixelWindows.AnyOpen() || PixelFind.Cached<PixelSkills>() is PixelSkills sk && sk.TutorialRunning)
         {

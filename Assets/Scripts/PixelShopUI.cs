@@ -129,6 +129,7 @@ public partial class PixelShop
 
         // Help button (blue square with a question mark, in the standard right header slot just left of the X): hold it to replay the shop tutorial.
         Button help = parts.AddHeaderButton("Help", "?", false, ButtonRole.Primary);
+        helpButtonRect = help.GetComponent<RectTransform>();
         ShopButtonExtras(help);
 
         // Cubie's bill (PixelCubieBill): an 'IOU' button in the right header slots, just left of the ?, shown once he has handed the bill over.
@@ -557,6 +558,16 @@ public partial class PixelShop
     /// <summary>Switches to a tab and scrolls back to the top.</summary>
     /// <summary>The shop window's rectangle (used to place tutorial boxes next to it).</summary>
     public RectTransform PanelRect => panelRect;
+    private RectTransform helpButtonRect;
+    /// <summary>The blue '?' hold button in the shop's header (plays the tour; framed gold when the player turns the first-time tour down).</summary>
+    public RectTransform HelpButtonRect => helpButtonRect;
+
+    /// <summary>The first-time question box over the shop window (PixelUIKit.AskBox in the shop's font and colours); the shop tour offer uses it.</summary>
+    public GameObject AskBox(string title, string question, string yesText, string noText, System.Action onYes, System.Action onNo)
+    {
+        if (panelRect == null) return null;
+        return PixelUIKit.AskBox(font, panelRect, title, new Color(1f, 0.82f, 0.25f, 1f), question, textColor, yesText, noText, onYes, onNo);
+    }
 
     /// <summary>The Shop button (for the nudge that points the player at it).</summary>
     public RectTransform ShopButtonRect => shopButtonObject != null ? shopButtonObject.GetComponent<RectTransform>() : null;

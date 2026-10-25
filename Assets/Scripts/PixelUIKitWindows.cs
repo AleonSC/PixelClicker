@@ -16,6 +16,9 @@
 //   registers with PixelWindows (Escape) and builds its own content below HeaderHeight. Dialogs that close with their own
 //   Done / Continue / Next button pass closeButton: false (no X).
 //   Windows moved onto it so far: View (PixelViewWindow).
+//   AskBox(font, window, title, titleColor, question, textColor, yesText, noText, onYes, onNo): the first-time 'want a tour?' box - dims the
+//   window it sits in (catching clicks behind it), a 620 x 300 box with a title, the question and Yes (green) / No buttons; either button closes
+//   it before its callback runs. Used by the Woodcutting guide (PixelSkillsGuide) and the shop tour offer (PixelShopTutorial).
 //   FitBesideShop(window, shop, aloneSize): docks a right-edge window beside the open shop, (Pixel Guide, Toggles), as wide as the shop's docked-window width or narrower when the screen has less room.
 // ---------------------------------------------------
 using TMPro;
@@ -255,5 +258,49 @@ public static partial class PixelUIKit
         window.sizeDelta = new Vector2(width, (shopTop - shopBottom) / scale);
         window.anchoredPosition = new Vector2(-Mathf.Max(0f, rightEdge), ((shopTop + shopBottom) * 0.5f - Screen.height * 0.5f) / scale);
         return true;
+    }
+
+    /// <summary>
+    /// The first-time question box ('Want a quick tour?'): dims <paramref name="window"/>, shows a title, the question and Yes / No.
+    /// Either button closes the box, then runs its callback. Returns the box (destroy it to close it from outside).
+    /// </summary>
+    public static GameObject AskBox(TMP_FontAsset font, Transform window, string title, Color titleColor, string question, Color textColor,
+                                    string yesText, string noText, System.Action onYes, System.Action onNo)
+    {
+        GameObject root = new GameObject("Question", typeof(RectTransform), typeof(Image));
+        root.transform.SetParent(window, false);
+        root.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.55f);   // dims the window and catches clicks behind the box
+        Stretch(root.GetComponent<RectTransform>());
+
+        GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image));
+        box.transform.SetParent(root.transform, false);
+        StyleWindow(box.GetComponent<Image>(), new Color(0.1f, 0.12f, 0.18f, 0.98f));
+        RectTransform br = box.GetComponent<RectTransform>();
+        br.anchorMin = br.anchorMax = br.pivot = new Vector2(0.5f, 0.5f);
+        br.sizeDelta = new Vector2(620f, 300f);
+
+        TMP_Text t = CreateText(font, box.transform, "Title", title, 38f, TextAlignmentOptions.Center, FontStyles.Bold, titleColor);
+        RectTransform tr = t.rectTransform;
+        tr.anchorMin = new Vector2(0f, 1f); tr.anchorMax = new Vector2(1f, 1f); tr.pivot = new Vector2(0.5f, 1f);
+        tr.sizeDelta = new Vector2(-40f, 54f); tr.anchoredPosition = new Vector2(0f, -18f);
+        TMP_Text msg = CreateText(font, box.transform, "Question", question, 28f, TextAlignmentOptions.Center, FontStyles.Normal, textColor);
+        msg.textWrappingMode = TextWrappingModes.Normal;
+        msg.enableAutoSizing = true; msg.fontSizeMax = 28f; msg.fontSizeMin = 16f;
+        RectTransform mr = msg.rectTransform;
+        mr.anchorMin = Vector2.zero; mr.anchorMax = Vector2.one;
+        mr.offsetMin = new Vector2(30f, 100f); mr.offsetMax = new Vector2(-30f, -76f);
+
+        Button yes = CreateButton(font, box.transform, "Yes", yesText, new Vector2(240f, 64f), ButtonRole.Success, 26f);
+        RectTransform yr = yes.GetComponent<RectTransform>();
+        yr.anchorMin = yr.anchorMax = yr.pivot = new Vector2(0.5f, 0f);
+        yr.anchoredPosition = new Vector2(-135f, 24f);
+        yes.onClick.AddListener(() => { Object.Destroy(root); onYes?.Invoke(); });
+        Button no = CreateButton(font, box.transform, "No", noText, new Vector2(240f, 64f), ButtonRole.Neutral, 26f);
+        RectTransform nr = no.GetComponent<RectTransform>();
+        nr.anchorMin = nr.anchorMax = nr.pivot = new Vector2(0.5f, 0f);
+        nr.anchoredPosition = new Vector2(135f, 24f);
+        no.onClick.AddListener(() => { Object.Destroy(root); onNo?.Invoke(); });
+        PixelAudio.Play("ui_click");
+        return root;
     }
 }

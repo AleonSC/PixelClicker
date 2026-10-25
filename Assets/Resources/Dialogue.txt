@@ -334,11 +334,16 @@ log: Click the cube to earn pixels: they're your money. Your goals are in the Lo
 inventory: Your Inventory: devices like this Recycler live in Consumables. Right-click one to place it.
 
 [Tutorial: Shop]
-step 1: Welcome to the Shop! Your pixels are listed along the top: prices are paid in them. Pick a section on the left; anything greyed out shows what it still needs.
-step 2: Pixels: packs that unlock new pixel types. Every new type is its own currency. The card at the top shows what you are saving up for: pick any item and press Save up for this.
-step 3: Upgrades: Features are one-time unlocks like the Auto Clicker and Time Stop. Value makes a pixel type pay more; buy one level or x5, x10 or Max at once. Operation improves your consumables.
-step 4: Consumables: potions, devices, seeds and supplies. Choose how many with the amount buttons on the right, then use them from your Inventory.
-step 5: Minigames: events that start on their own once bought. They pay rewards and unlock rare pixels. Switch any of them off in the Toggles window.
+step 1: Welcome to my Shop! Pick a section from the list on the left. Your currency shows in the Inventory beside the shop: prices are paid in pixels.
+step 2: Every tile is something to buy. Click one and its price and details show on the right. If you can't afford it yet, the Buy button tells you what you're short of.
+step 3: Saving up? Pick the item and press <b>Save up for this</b>. It goes on the Saving up for card at the top, with a bar that fills as you earn. Click the card to jump back to it. Things bought in numbers have x1, x5, x10 and Max.
+step 4: Too much to look at? Switch on <b>Only what I can buy</b> to hide the rest, or type in the search box at the top to find anything by name.
+step 5: Pixels unlock new pixel types, Consumables are used from your Inventory, Upgrades make things better, and Minigames start on their own once bought. Hold the blue <b>?</b> any time to see this tour again.
+
+[Offer: Shop tour]
+title: CUBIE'S SHOP
+question: First time in my shop? Want a quick tour of how it works?
+later: No problem! Whenever you want the tour, hold the blue <b>?</b> button at the top of the shop.
 
 [Tutorial: Toggles]
 step 1: Psst - you bought the Auto Clicker! It starts switched OFF. See the Toggles tab on the right edge of the screen? Every on / off switch in the game lives there. Let me open it.

@@ -80,8 +80,7 @@ public partial class PixelSkills
         tutorialWanted = false;
         if (tutorialRunning || !enableTutorial || !autoStartTutorial || !available) { tutorialReady = 0f; return; }
         if (PixelStats.Total(TutorialDoneKey) >= 1d || !PixelHints.TipsEnabled) return;
-        PixelShop shop = PixelFind.Cached<PixelShop>();
-        bool shopTutorialDue = shop != null && shop.ShopAvailable && PixelStats.Total(PixelShopTutorial.DoneKey) < 1d;
+        bool shopTutorialDue = PixelShopTutorial.Busy;   // (the shop tour offer is up or the tour plays)
         if (shopTutorialDue || PixelTogglesTutorial.Due || PixelTogglesTutorial.Running || !PixelCalm.ForTip)
         {
             tutorialReady = 0f;

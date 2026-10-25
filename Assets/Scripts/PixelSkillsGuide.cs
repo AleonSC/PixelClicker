@@ -114,41 +114,8 @@ public partial class PixelSkills
 
     private void ShowGuideAsk()
     {
-        guideAskPanel = new GameObject("Guide Question", typeof(RectTransform), typeof(Image));
-        guideAskPanel.transform.SetParent(windowObject.transform, false);
-        Image dim = guideAskPanel.GetComponent<Image>();
-        dim.color = new Color(0f, 0f, 0f, 0.55f);   // dims the window and catches clicks behind the box
-        PixelUIKit.Stretch(guideAskPanel.GetComponent<RectTransform>());
-
-        GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image));
-        box.transform.SetParent(guideAskPanel.transform, false);
-        PixelUIKit.StyleWindow(box.GetComponent<Image>(), new Color(0.1f, 0.12f, 0.18f, 0.98f));
-        RectTransform br = box.GetComponent<RectTransform>();
-        br.anchorMin = br.anchorMax = br.pivot = new Vector2(0.5f, 0.5f);
-        br.sizeDelta = new Vector2(620f, 300f);
-
-        TMP_Text title = PixelUIKit.CreateText(Font, box.transform, "Title", "WOODCUTTING", 38f, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0.9f, 0.65f, 0.35f, 1f));
-        RectTransform tr = title.rectTransform;
-        tr.anchorMin = new Vector2(0f, 1f); tr.anchorMax = new Vector2(1f, 1f); tr.pivot = new Vector2(0.5f, 1f);
-        tr.sizeDelta = new Vector2(-40f, 54f); tr.anchoredPosition = new Vector2(0f, -18f);
-        TMP_Text msg = PixelUIKit.CreateText(Font, box.transform, "Question", woodGuideQuestion, 28f, TextAlignmentOptions.Center, FontStyles.Normal, textColor);
-        msg.textWrappingMode = TextWrappingModes.Normal;
-        msg.enableAutoSizing = true; msg.fontSizeMax = 28f; msg.fontSizeMin = 16f;
-        RectTransform mr = msg.rectTransform;
-        mr.anchorMin = Vector2.zero; mr.anchorMax = Vector2.one;
-        mr.offsetMin = new Vector2(30f, 100f); mr.offsetMax = new Vector2(-30f, -76f);
-
-        Button yes = PixelUIKit.CreateButton(Font, box.transform, "Yes", "Yes, show me", new Vector2(240f, 64f), ButtonRole.Success, 26f);
-        RectTransform yr = yes.GetComponent<RectTransform>();
-        yr.anchorMin = yr.anchorMax = yr.pivot = new Vector2(0.5f, 0f);
-        yr.anchoredPosition = new Vector2(-135f, 24f);
-        yes.onClick.AddListener(() => { CloseGuideAsk(); StartWoodGuide(); });
-        Button no = PixelUIKit.CreateButton(Font, box.transform, "No", "No thanks", new Vector2(240f, 64f), ButtonRole.Neutral, 26f);
-        RectTransform nr = no.GetComponent<RectTransform>();
-        nr.anchorMin = nr.anchorMax = nr.pivot = new Vector2(0.5f, 0f);
-        nr.anchoredPosition = new Vector2(135f, 24f);
-        no.onClick.AddListener(() => { CloseGuideAsk(); PointAtGuideBook(); });
-        PixelAudio.Play("ui_click");
+        guideAskPanel = PixelUIKit.AskBox(Font, windowObject.transform, "WOODCUTTING", new Color(0.9f, 0.65f, 0.35f, 1f), woodGuideQuestion, textColor,
+                                          "Yes, show me", "No thanks", () => { guideAskPanel = null; StartWoodGuide(); }, () => { guideAskPanel = null; PointAtGuideBook(); });
     }
 
     private void CloseGuideAsk()

@@ -12,6 +12,7 @@ C9 | Visitor: bean
 C10 | Visitor: forager
 C11 | Visitor: angler
 C12 | Delivery jobs
+C13 | Offer: Shop tour
 G1 | Intro tips
 G2 | Tutorial: Shop
 G3 | Tutorial: Toggles

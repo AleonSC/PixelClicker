@@ -60,7 +60,7 @@ public class PixelDevEvents : MonoBehaviour
             new Tutorial { name = "Whole tutorial (intro, Cubie, all)", play = () => { PixelHints.ReplayTutorial(); return "The new-game intro, Cubie's visits and every tutorial play again from the next calm moment."; } },
             new Tutorial { name = "Cubie's visits", play = () => { PixelGuideVendor.Replay(); return "Cubie's visits play again (this also re-arms the Toggles, Shop and Skills tutorials)."; } },
             new Tutorial { name = "Toggles tutorial", play = () => { PixelTogglesTutorial.Replay(); return PixelToggles.TabVisible ? "The Toggles tutorial plays at the next calm moment." : "Re-armed, but it only plays once the Toggles tab is showing (buy the Auto Clicker)."; } },
-            new Tutorial { name = "Shop tutorial", play = () => { PixelStats.Clear(PixelShopTutorial.DoneKey); PixelShopTutorial.RequestStart(); return "The Shop tutorial plays at the next calm moment (needs the shop to be available)."; } },
+            new Tutorial { name = "Shop tutorial", play = () => { PixelStats.Clear(PixelShopTutorial.DoneKey); PixelStats.Clear(PixelShopTutorial.OpenedKey); return "Close and reopen the shop: the first-time tour offer shows again (needs the shop to be available)."; } },
             new Tutorial { name = "Skills tutorial", play = () => { PixelStats.Clear(PixelSkills.TutorialDoneKey); return "The Skills tutorial plays when a skill pack is available and the screen is calm."; } },
             new Tutorial { name = "Woodcutting guide", play = () =>
             {

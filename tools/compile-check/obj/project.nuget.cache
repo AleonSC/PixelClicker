@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "LMXymrSSuggFvXDqF8TsG658fkuCGBTw9gY6qL4F2VaDj7DNLVu1c3aIIujJWvDuuSIQx5Q9S90lmktMn9soHw==",
+  "dgSpecHash": "V+rC2pwMAHmdSS8zK+5Snz0SAP1JwynC3NqcPcpubb+RMSjf0jj1rVkPAlVY7yMoe4ZXqM25AhvsVq8WHda3Pw==",
   "success": true,
   "projectFilePath": "/home/user/PixelClicker/tools/compile-check/CompileCheck.csproj",
   "expectedPackageFiles": [
