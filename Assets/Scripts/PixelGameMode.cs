@@ -56,6 +56,15 @@ public static class PixelGameMode
     /// <summary>Nothing in the way: no title, no opening camera move, no pause menu.</summary>
     public static bool Playing => Current == Mode.Playing;
 
+    // The owners' raw flags, read through here when code needs exactly one of them (not the combined mode above), so every read of
+    // them sits behind this one class (the Code Health 'one-place' check). Prefer InMenu / OnTitle / TitleOrIntro where they mean the same.
+    /// <summary>Exactly PixelPauseMenu.IsPaused: the pause menu is open (whatever else is going on; Current == Paused is false while Title wins).</summary>
+    public static bool PauseMenuOpen => PixelPauseMenu.IsPaused;
+    /// <summary>Exactly PixelTitleScreen.Showing: the title screen itself is up (not the swing back to it).</summary>
+    public static bool TitleShowing => PixelTitleScreen.Showing;
+    /// <summary>Exactly PixelCameraIntro.Moving: the opening camera move runs.</summary>
+    public static bool IntroMoving => PixelCameraIntro.Moving;
+
     /// <summary>Works the mode out again from the owners' flags; fires Changed if it moved. The flags' setters call this.</summary>
     public static void Refresh()
     {
