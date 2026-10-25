@@ -105,10 +105,10 @@ dead resource. Rule of thumb: anything that piles up needs an ongoing sink.
   floor). Their entries leave his Sell tab; both join his delivery-job requests once they exist, so they have to be routed to his dock.
   Their job worth comes from their fuel value (Charcoal = 8 wood husks, Wood Chips = 4; his Sell tab used to value them at 3 / 4 Wood).
   **Built 2026-10-25:** his Sell tab no longer lists them; both are in his job husk list (`PixelDeliveryJobs`, priced by fuel value).
-- **Proposed, not yet decided:** gate the Charcoal Pixel on the PROCESS, not on a held output - 'burn 50 Charcoal in the Kiln' is a
+- **Decided 2026-10-25 (to build):** gate the Charcoal Pixel on the PROCESS, not on a held output - 'burn 50 Charcoal in the Kiln' is a
   discovery counter (shown on the Kiln's device card), reaching it puts the Charcoal Pixel in the shop for pure currency only; the Kiln
-  goes back to a physical output on its chute (Biomass fuel, delivery jobs) instead of the material; the Charcoal material (and the
-  Materials tab, unless another material needs it) is retired.
+  goes back to Charcoal husks out of its chute (like the Wood Chipper's Wood Chips: Biomass fuel, Big Tim's delivery jobs) instead of the
+  material; the Charcoal material is retired (PixelMaterials and the Materials tab stay: they hold the minigame materials).
 
 ## Delivery jobs (agreed 2026-10-24, built 2026-10-24: `PixelDeliveryJobs.cs`, `PixelDeliveryCrate.cs`, `PixelVisitorMinigameJobs.cs`)
 Vendors post DELIVERY JOBS for specific husks ('30 Bark + 10 Sap husks within 10 minutes'). The VENDOR DROPS the DELIVERY CRATE on a FIXED

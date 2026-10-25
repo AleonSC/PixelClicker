@@ -1657,3 +1657,4 @@
 [2026-10-25 11:31 UTC] Block hover tooltips now start switched OFF (turn them on in Settings > Interface or with a tap of Alt).
 [2026-10-25 11:41 UTC] The event log is now the third tab of the Log window (Achievements, Goals, Event log); the on-screen event log box and the Pocket's Event log tab are gone, and the event log key opens the Log on that tab.
 [2026-10-25 11:41 UTC] The early '???' skill window now sits at the bottom right, and the '+XP' popups stack on top of the skill window (the early one and the pinned full one, not the small version) and follow it when it is moved.
+[2026-10-25 12:14 UTC] Design: the Charcoal plan is decided - burn 50 Charcoal in the Kiln to make the Charcoal Pixel buyable (pure currency only), the Kiln drops Charcoal husks again, and the Charcoal material is retired (the Materials tab stays for minigame materials).
