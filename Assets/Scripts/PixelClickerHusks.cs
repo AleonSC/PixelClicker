@@ -3,7 +3,7 @@
 //   Part of partial class PixelClicker: everything about HUSKS (the pixels that drop off the cube; code calls them old pixels) - spawning
 //   the falling copy after a click (SpawnFallingCopy / SpawnFallingCopyInner, SpawnStoredPixel; SpawnStoredHusk hands back the husk it made -
 //   never compare OldPixels.Count to tell, the floor cap keeps it the same: compile-check rule), how long they last
-//   (LifetimeFactor, AddDespawn), their amount (RollOldPixelAmount), the cap (CopyCap), the Vacuum pixel sucking them up (Vacuum,
+//   (LifetimeFactor, AddDespawn), their amount (RollOldPixelAmount), the cap (CopyCap; KeepFloorCap removes the oldest FREE husk - not belt riders or husks a machine / the hand holds), the Vacuum pixel sucking them up (Vacuum,
 //   SuckRoutine), husk XP, saving / restoring them (OldPixelState), claiming / absorbing / releasing them for devices, their physics
 //   materials, trails and fly-away landing, and display copies (CreateDisplayPixel). The components ON a husk are in PixelHusks.cs.
 //   Split out of PixelClicker.cs (no behaviour change).
@@ -621,12 +621,7 @@ public partial class PixelClicker
             routedInfo.amount = amount;
             oldPixels.Add(rb);
             lastSpawnedHusk = rb;   // (SpawnStoredHusk hands this back: the floor cap below may remove an OLDER husk, so the count can't tell)
-            while (CopyCap > 0 && oldPixels.Count > CopyCap)
-            {
-                Rigidbody oldest = oldPixels[0];
-                oldPixels.RemoveAt(0);
-                if (oldest != null) { DespawnOldPixel(oldest.gameObject); PixelStats.Count("old.capped"); }   // (removed by the floor cap: counted for the session recorder)
-            }
+            KeepFloorCap();
             return;
         }
 
@@ -836,12 +831,35 @@ public partial class PixelClicker
 
         oldPixels.Add(rb);
         lastSpawnedHusk = rb;   // (see above)
+        KeepFloorCap();
+    }
+
+    /// <summary>
+    /// The floor cap: while there are more husks than CopyCap, the OLDEST FREE husk goes (FreeForFloorCap). Belt riders and husks a machine or the
+    /// player holds sit longest, so plain "oldest first" threw them out first. If none is free, the oldest goes anyway so the cap still holds.
+    /// The newest husk (the one just added, at the end of the list) is never picked: SpawnStoredHusk hands it back.
+    /// </summary>
+    private void KeepFloorCap()
+    {
         while (CopyCap > 0 && oldPixels.Count > CopyCap)
         {
-            Rigidbody oldest = oldPixels[0];
-            oldPixels.RemoveAt(0);
-            if (oldest != null) { DespawnOldPixel(oldest.gameObject); PixelStats.Count("old.capped"); }
+            int pick = 0;
+            for (int i = 0; i < oldPixels.Count - 1; i++)
+                if (FreeForFloorCap(oldPixels[i])) { pick = i; break; }
+            Rigidbody oldest = oldPixels[pick];
+            oldPixels.RemoveAt(pick);
+            if (oldest != null) { DespawnOldPixel(oldest.gameObject); PixelStats.Count("old.capped"); }   // (removed by the floor cap: counted for the session recorder)
         }
+    }
+
+    /// <summary>May the floor cap remove this husk? Not while it rides a belt, is in the player's hand, or a machine keeps / reserves it (kinematic, timer Held, claimed). A destroyed entry is free (it just gets dropped).</summary>
+    private static bool FreeForFloorCap(Rigidbody body)
+    {
+        if (body == null) return true;
+        if (body.isKinematic || PixelConveyorSystem.IsRiding(body)) return false;
+        PixelHuskQuery.Husk h = PixelHuskQuery.Get(body);
+        if (h.info != null && (h.info.heldByPlayer || h.info.claimed)) return false;
+        return h.despawn == null || !h.despawn.Held;
     }
 
     /// <summary>

@@ -21,7 +21,7 @@
 //     coupling shows the block card (PixelBlockTooltip.ShowFor). Clicks on a coupling are claimed (PixelPointerClaim.ClaimButton).
 //   - The SWEEPER treats it as a container with room (IPixelStrayTarget + IPixelHuskRoom = buffer room).
 //   - Device card / panel (FillDeviceInfo): buffer n / size, each coupling's way and filter; panel actions Clear filters / Empty buffer (the buffer's husks
-//     pop out on top).
+//     pop out on top; the same happens by itself when the box is removed - not on a load).
 //   OVERLAP: it covers the old tester Splitter (round robin; removed 2026-10-18) and much of the tester Belt Sorter (one type to one side) - see PixelCouplings.md.
 //   Stats junction.routed, junction.buffered.
 // ---------------------------------------------------
@@ -232,6 +232,7 @@ public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoo
         if (husk == null || clicker == null) return false;
         OldPixelInfo info = PixelHuskQuery.Get(husk).info;
         if (info == null || !clicker.IsValidTierIndex(info.tierIndex) || !HasRoomFor(info.tierIndex, from)) return false;
+        if (clicker.Tiers[info.tierIndex].flyAway) return false;   // a fly-away type (Meteor) can't be spawned out again: it stays a husk
         int tier = info.tierIndex;
         double amount = info.amount;
         if (!clicker.ReleaseOldPixel(husk, false)) return false;
@@ -389,7 +390,11 @@ public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoo
     {
         if (clicker == null) return;
         if (device == null) device = GetComponent<PixelPlacedDevice>();
-        if (device != null && device.IsEnding) return;
+        if (device != null && device.IsEnding)   // being removed (shrinking away): its buffer is let out first, like the Sorting Hopper (a load destroys devices without IsEnding: nothing doubles)
+        {
+            if (buffer.Count > 0 && !PixelCalm.InMenu) EmptyBuffer();
+            return;
+        }
         SpinFilterModels();
         UpdateBand();
         if (!Fresh || PixelCalm.InMenu || Time.timeScale <= 0f) return;
