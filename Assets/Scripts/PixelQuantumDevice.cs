@@ -7,7 +7,7 @@ using Unity.Profiling;
 //   inside four low walls with corner posts). Placed like the Magnet, starts disarmed (click to switch on). While working, every 0.1 s
 //   it scans the old pixels: a loose pixel the PLAYER put on the pad (OldPixelInfo.RecentlyHeld, BindHeldSeconds) binds its type (up to 3 types, MaxTypes); every loose old pixel of a bound
 //   type within reach (not held / flying / despawning / kinematic, not one it just released) is taken out of the old-pixel list
-//   (ReleaseOldPixel(body, false)) and dematerialized with a glitch (GlitchOut: scripts and colliders off, jittering, stretching
+//   (ReleaseOldPixel(body, false)) and dematerialized with a glitch (GlitchOut, run on the persistent PixelHuskTicker.Run so it always finishes: scripts and colliders off, jittering, stretching
 //   slivers, flickering, then destroyed) while a small display model of that type glitches into the box (GlitchIn, AddModel: up to
 //   MaxVisible 18 models per type on a lane of the pad; the stored COUNT and total payout per type are kept in Slot). A floating label
 //   says 'Drop a pixel on the pad' until a type is bound; then a small ring (PixelWorldRing) shows how full it is and the device card
@@ -16,7 +16,7 @@ using Unity.Profiling;
 //   (SpawnStoredPixel, ignored by the organizer for 10 s); when its time runs out or it is removed (Ended) everything stored comes
 //   out. Saved in PlacedState.extra (ExportState/ImportState, 'Q,tier,count,total;'). It must not define its own Update / LateUpdate:
 //   per-frame work runs in OnTick. Tip device_QuantumOrganizer. SOCKET (PixelSockets.cs): one 'side' socket (Both): In = a hose / belt drops husks onto the pad
-//   (AcceptHusk), Out = a Container Hose pulls stored husks (TakeHuskOut / HuskRoom) and a belt starting there is fed one every 0.6 s (FeedBelt). Not part of the Operation tab or the UFO's placeable list yet.
+//   (AcceptHusk; only while switched on and only BOUND types: IPixelHuskFilter Takes, so other types wait on the belt / stay in the hose's source), Out = a Container Hose pulls stored husks (TakeHuskOut / HuskRoom) and a belt starting there is fed one every 0.6 s (FeedBelt). Not part of the Operation tab or the UFO's placeable list yet.
 // ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
@@ -33,7 +33,7 @@ using UnityEngine;
 /// text and shrink-away come from <see cref="PixelPlacedDevice"/>; the model is built by <see cref="PixelConsumables"/>.
 /// NOTE: it must not define its own Update / LateUpdate (they would hide the base's); per-frame work runs in <c>OnTick</c>.
 /// </summary>
-public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelHuskSource, IPixelHuskPicker, IPixelHuskRoom
+public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelHuskSource, IPixelHuskPicker, IPixelHuskRoom, IPixelHuskFilter
 {
     private const int MaxTypes = 3;          // pixel types one organizer can hold
     private const float BindHeldSeconds = 6f; // a husk binds its type only if the player held / threw it this recently
@@ -119,12 +119,17 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
         if (takeAny == null) takeAny = (out int t, out double a) => TakeOneForHose(out t, out a);
         PixelCouplings.EmitStored(this, "side", clicker, takeAny);
     }
-    public int HuskRoom(PixelSocket socket) => HoseRoom;
+    public int HuskRoom(PixelSocket socket) => Armed ? HoseRoom : 0;
 
-    /// <summary>A husk comes in through an In coupling: it is dropped onto the middle of the pad (the organizer binds / takes it like any husk lying there). Refused when full.</summary>
+    /// <summary>Only husks it can store come in (IPixelHuskFilter): switched on and of a type already bound. A belt / hose of other types waits instead of
+    /// dumping them on the pad (a hose from a mixed source pulls only these types).</summary>
+    public bool Takes(PixelSocket socket, int tier) => Armed && !IsEnding && SlotOf(tier) != null;
+
+    /// <summary>A husk comes in through an In coupling: it is dropped onto the middle of the pad (the organizer takes it like any husk lying there).
+    /// Refused when full, switched off, or not of a bound type (Takes).</summary>
     public bool AcceptHusk(PixelSocket socket, Rigidbody husk)
     {
-        if (husk == null || HoseRoom <= 0) return false;
+        if (husk == null || HoseRoom <= 0 || !Takes(socket, PixelHuskQuery.Get(husk).Tier)) return false;
         husk.isKinematic = false;
         husk.position = transform.TransformPoint(new Vector3(0f, wallHeight + 0.4f, 0f));
         PixelHuskHolder.SetVelocity(husk, Vector3.down * 1.2f);
@@ -226,7 +231,7 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
         stored++;
         sessionTaken++;
         labelDirty = true;
-        StartCoroutine(GlitchOut(go));
+        PixelHuskTicker.Run(GlitchOut(go));   // (on the persistent runner: it finishes even if the organizer is removed / a save loads meanwhile)
         AddModel(slot, true);
     }
 
@@ -286,7 +291,7 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
             {
                 Transform last = s.models[s.models.Count - 1];
                 s.models.RemoveAt(s.models.Count - 1);
-                if (last != null) { last.SetParent(null, true); StartCoroutine(GlitchOut(last.gameObject)); }
+                if (last != null) { last.SetParent(null, true); PixelHuskTicker.Run(GlitchOut(last.gameObject)); }
             }
             labelDirty = true;
             return true;
@@ -311,7 +316,7 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
                 {
                     Transform last = s.models[s.models.Count - 1];
                     s.models.RemoveAt(s.models.Count - 1);
-                    if (last != null) { last.SetParent(null, true); StartCoroutine(GlitchOut(last.gameObject)); }
+                    if (last != null) { last.SetParent(null, true); PixelHuskTicker.Run(GlitchOut(last.gameObject)); }
                 }
 
                 Vector3 p = transform.TransformPoint(new Vector3(Random.Range(-half * 0.6f, half * 0.6f), wallHeight + 0.9f, Random.Range(-half * 0.6f, half * 0.6f)));
@@ -346,8 +351,9 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
     // The glitch effects
     // ------------------------------------------------------------------
 
-    /// <summary>The old pixel stutters, stretches into slivers and flickers out where it lay.</summary>
-    private IEnumerator GlitchOut(GameObject go)
+    /// <summary>The old pixel stutters, stretches into slivers and flickers out where it lay. Run on PixelHuskTicker.Run (not on the organizer), so a husk
+    /// already switched off and taken off the list is always destroyed, even if the organizer goes away mid-animation.</summary>
+    private static IEnumerator GlitchOut(GameObject go)
     {
         if (go == null) yield break;
         foreach (MonoBehaviour mb in go.GetComponents<MonoBehaviour>()) if (mb != null) mb.enabled = false;   // nothing else may move or remove it now
@@ -370,7 +376,7 @@ public class PixelQuantumDevice : PixelPlacedDevice, IPixelSocketDevice, IPixelH
             foreach (Renderer r in renderers) if (r != null) r.enabled = on;
             yield return null;
         }
-        if (go != null) Destroy(go);
+        if (go != null) Object.Destroy(go);
     }
 
     /// <summary>A stored pixel's model glitches into being: stretched, jittery and flickering, settling into its normal shape.</summary>

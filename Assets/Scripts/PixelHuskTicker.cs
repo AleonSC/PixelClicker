@@ -6,6 +6,8 @@
 //   hidden runner calls their Tick methods. Order between husks is the same as before (none promised).
 //   Safe to change the lists while ticking: a helper removed mid-loop is skipped, one added mid-loop starts ticking next frame.
 //   An error in one husk's Tick is logged and the loop carries on with the others (as when each had its own Update).
+//   Run(coroutine): the same runner also runs short husk animations that must finish even if the device that started them is destroyed (the
+//   containers' FlyIn, the Quantum Organizer's GlitchOut): a coroutine on the device would stop with it and leave the husk frozen in the scene.
 //   The runner is made on first use (DontDestroyOnLoad, like the save-shot runner) - it is not a game system, so it is not in PixelSystems.
 // ---------------------------------------------------
 using System;
@@ -73,6 +75,15 @@ public static class PixelHuskTicker
     /// <summary>Call Tick once per physics step (from OnEnable; pair with RemovePhysics in OnDisable).</summary>
     public static void AddPhysics(IHuskTick t) { EnsureRunner(); physics.Add(t); }
     public static void RemovePhysics(IHuskTick t) => physics.Remove(t);
+
+    /// <summary>Runs a coroutine on the persistent runner (not on a device that may be destroyed first): the husk fly-in / glitch-out animations that
+    /// must always finish and destroy their husk (PixelHuskHolder.FlyIn, the Quantum Organizer's GlitchOut).</summary>
+    public static Coroutine Run(System.Collections.IEnumerator routine)
+    {
+        if (routine == null) return null;
+        EnsureRunner();
+        return runner.StartCoroutine(routine);
+    }
 
     private static void EnsureRunner()
     {

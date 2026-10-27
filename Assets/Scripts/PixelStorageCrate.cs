@@ -343,6 +343,7 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelSocketDevice, IPixelHu
         s.model = null; s.tier = -1; s.amount = 0;
 
         Rigidbody body = PixelHuskHolder.SpawnIntoHand(clicker, tier, amount, at);
+        if (ignoreUntil.Count > 40) ignoreUntil.Clear();   // (the entries only last 1.5 s: clear the old ones, as the Quantum Organizer / Vacuum Cleaner do)
         if (body != null) ignoreUntil[body] = Time.time + 1.5f;   // (not stored again the moment it is taken out)
     }
 

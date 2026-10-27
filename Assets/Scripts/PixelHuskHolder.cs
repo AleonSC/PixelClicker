@@ -11,7 +11,9 @@
 //   - Reserve / Unreserve(body): a husk on its way somewhere (the Sorting Hopper's slide): kinematic with its timer held but still ON the list,
 //     so Takeable says no and no other machine snatches it on the way.
 //   - FlyIn(go, target, point, growTarget): the "shrink into the container" animation for containers that keep a husk as DATA (Storage Crate,
-//     Bait Bucket): the body is switched off, slides to the target and is destroyed while the container's display model grows in its place.
+//     Bait Bucket): the body is switched off, slides to the target and is destroyed while the container's display model grows in its place. The
+//     animation runs on the persistent husk ticker runner (PixelHuskTicker.Run), not on the container, so removing the container or loading a save
+//     mid-flight never leaves a frozen, switched-off husk behind.
 //   - SpawnIntoHand(clicker, tier, amount, at): a stored husk taken back out straight into the mouse's hand (Pixel Grabbing).
 //   ONE OWNER PER HUSK (2026-10-17 Recycler rework): every machine that reaches for a husk - the Recycler's suction / suck-in / Capture, the Magnet, the
 //   Sweeper, the Sorting Hopper - asks Takeable first, and the one that takes it marks it (Capture or Reserve: its timer Held, kinematic while carried);
@@ -104,9 +106,17 @@ public static class PixelHuskHolder
 
     /// <summary>
     /// The husk (already taken off the list) is switched off and slides into the container, shrinking away; 'target' (if any) is where it goes and,
-    /// with growTarget, the container's display model that pops up from nothing as it arrives. Without a target it slides to 'point'. Run with StartCoroutine.
+    /// with growTarget, the container's display model that pops up from nothing as it arrives. Without a target it slides to 'point'. Run with StartCoroutine:
+    /// the first step hands the animation to the persistent husk ticker runner (PixelHuskTicker.Run), so it always finishes and destroys the husk even when
+    /// the container is removed (or a save loads) mid-flight - a husk already off the list and switched off is never left frozen in the scene.
     /// </summary>
     public static IEnumerator FlyIn(GameObject go, Transform target, Vector3 point, bool growTarget, float seconds = 0.28f)
+    {
+        if (go != null) PixelHuskTicker.Run(FlyInSteps(go, target, point, growTarget, seconds));
+        yield break;
+    }
+
+    private static IEnumerator FlyInSteps(GameObject go, Transform target, Vector3 point, bool growTarget, float seconds)
     {
         if (go == null) yield break;
         foreach (MonoBehaviour mb in go.GetComponents<MonoBehaviour>()) if (mb != null) mb.enabled = false;   // (its fade timer too)
@@ -119,14 +129,16 @@ public static class PixelHuskHolder
         Vector3 finalScale = grow ? target.localScale : Vector3.one;
         if (grow) target.localScale = Vector3.zero;
         float t = 0f, length = Mathf.Max(0.01f, seconds);
+        Vector3 end = target != null ? target.position : point;
         while (t < length)
         {
             if (go == null) yield break;
             t += Time.unscaledDeltaTime;
             float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / length));
-            go.transform.position = Vector3.Lerp(start, target != null ? target.position : point, k);
+            if (target != null) end = target.position;   // (the container may be gone mid-flight: it carries on to where the target last was)
+            go.transform.position = Vector3.Lerp(start, end, k);
             go.transform.localScale = scale * (1f - k);
-            if (grow) target.localScale = finalScale * k;
+            if (grow && target != null) target.localScale = finalScale * k;
             yield return null;
         }
         if (grow && target != null) target.localScale = finalScale;
