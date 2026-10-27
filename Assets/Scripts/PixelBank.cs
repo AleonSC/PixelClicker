@@ -18,7 +18,7 @@ using UnityEngine.InputSystem;
 /// With the hose equipped:
 ///   - the mouse wheel changes which stored pixel type is selected (shown as a small spinning cube by the nozzle),
 ///   - left-click spits one pixel of the selected type out of the nozzle,
-///   - right-click sucks up the old pixel under the nozzle (any type) and stores it, if there is room.
+///   - right-click sucks up the husk under the nozzle (any type but a fly-away one - Meteor - which could not be spat out again) and stores it, if there is room.
 /// Clicks on the cube are ignored while the hose is equipped.
 ///
 /// The window is the standard Fixed window (PixelUIKit.CreateWindow), anchored at the left edge, with the hose toggle in its
@@ -717,7 +717,7 @@ public class PixelBank : MonoBehaviour
         if (body == null) return true;
         OldPixelInfo info = PixelHuskQuery.Get(body).info;
         if (info == null || !clicker.IsValidTierIndex(info.tierIndex)) return true;
-        if (body.isKinematic || clicker.IsFlyingPixel(body)) return true;
+        if (body.isKinematic || clicker.IsFlyingPixel(body) || clicker.Tiers[info.tierIndex].flyAway) return true;   // (a fly-away type - Meteor - is never stored: it can't be spat out again)
         OldPixelDespawn despawn = PixelHuskQuery.Get(body).despawn;
         if (despawn != null && despawn.IsDespawning) return true;
         target = body;
@@ -959,21 +959,18 @@ public class PixelBank : MonoBehaviour
         int tier = selected;
         long held = CountAt(tier);
         double amount = held > 0 ? ValueAt(tier) / held : clicker.RollOldPixelAmount(tier);   // infinite resources: a type that was never stored pays its normal amount
+
+        // It drops straight down the beam onto the red dot. Only taken off the bank once the husk was really made (none is made for a fly-away type).
+        Rigidbody spat = clicker.SpawnStoredHusk(tier, amount, mouthPosition, mouthDirection * spitSpeed);
+        if (spat == null) { PixelAudio.Play("bank_empty"); return; }
         if (!PixelClicker.InfiniteResources) // dev tools "Infinite resources": the bank never runs out of what it holds
         {
             if (held > 0) B.Set(TypeAt(tier), held - 1, ValueAt(tier) - amount);
         }
 
-        // It drops straight down the beam onto the red dot.
-        clicker.SpawnStoredPixel(tier, amount, mouthPosition, mouthDirection * spitSpeed);
-
         // A vacuum pixel works again when it is spat out: every other old pixel swirls into IT (not into the cube) and pays out once more.
         if (clicker.Tiers[tier].vacuum)
-        {
-            var olds = clicker.OldPixels;
-            Rigidbody spat = olds.Count > 0 ? olds[olds.Count - 1] : null; // the pixel just spawned is the last one listed
-            clicker.Vacuum(tier, spat != null ? spat.transform : null, spat);
-        }
+            clicker.Vacuum(tier, spat.transform, spat);
 
         kick = 1f;
         PixelAudio.Play("bank_spit");
@@ -1007,6 +1004,7 @@ public class PixelBank : MonoBehaviour
         }
 
         OldPixelInfo info = PixelHuskQuery.Get(body).info;
+        if (info != null && clicker.IsValidTierIndex(info.tierIndex) && clicker.Tiers[info.tierIndex].flyAway) return false;   // a fly-away type (Meteor) can't be spat out again: never stored
         if (info == null || !clicker.ReleaseOldPixel(body, false)) return true; // gone already: not a reason to stop
 
         int storedType = TypeAt(info.tierIndex);

@@ -5,7 +5,7 @@
 //   - CHARGE IN: every Biomass Generator standing inside its radius feeds it (PixelBiomassGenerator.GiveCharge): up to chargeInPerSecond per generator,
 //     but only the generator's charge above keepInGenerator (a fraction of its max) - so a fed generator keeps running and never drains itself to death
 //     for the bank. A blue arc (a LineRenderer per feeding generator) runs from each feeding generator to the bank's top terminal while it flows.
-//   - POWER OUT: while it holds charge, every placed device within its radius (not generators, not other banks) is powered
+//   - POWER OUT: while it holds charge, every TIMED, switched-on placed device within its radius (not permanent ones, not generators / banks) is powered
 //     (PixelPlacedDevice.HoldPower(fraction, colour)): its countdown stops and the bank's ENERGY BAR shows over it. The charge drains drainPerDevice a second
 //     per device it powers (an idle bank keeps its charge). Empty = it just waits (it never shuts down or disappears).
 //   - Comes EMPTY. Radius / capacity come from its Device entry (radius, generatorMaxCharge). A faint ring on the floor shows the radius.
@@ -280,7 +280,7 @@ public class PixelPowerBank : MonoBehaviour, IPixelDeviceInfo
 
     private void HideArcs(int from) { for (int i = from; i < arcs.Count; i++) if (arcs[i] != null) arcs[i].gameObject.SetActive(false); }
 
-    /// <summary>Every placed device within the radius (not generators, not banks) runs on the bank's power: its countdown stops and it shows this bar.</summary>
+    /// <summary>Every timed, switched-on placed device within the radius (not generators, not banks) runs on the bank's power: its countdown stops and it shows this bar.</summary>
     private void PowerAround(float fraction)
     {
         powering = 0;
@@ -288,6 +288,7 @@ public class PixelPowerBank : MonoBehaviour, IPixelDeviceInfo
         foreach (PixelPlacedDevice d in PixelPlacedDevice.All)
         {
             if (d == null || d == device || d.IsEnding || PixelBiomassGenerator.IsPowerSource(d)) continue;
+            if (d.Permanent || !d.Armed) continue;   // (no countdown to stop: a permanent device, or one not switched on yet - no energy bar, no charge spent; as the Biomass Generator)
             Vector3 dv = d.transform.position - me; dv.y = 0f;
             if (dv.sqrMagnitude > radius * radius) continue;
             d.HoldPower(fraction, energyColor);
