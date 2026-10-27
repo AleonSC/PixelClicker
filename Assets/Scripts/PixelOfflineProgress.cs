@@ -1,6 +1,7 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelOfflineProgress.cs
 //   Offline progress: PixelSaveGame stores savedAtTicks (UTC) on every save and, on the startup load only, calls Grant(lastSaved).
+//   When Grant paid anything, PixelSaveGame autosaves right after the load (a new savedAtTicks), so a game killed before the next autosave can't pay the same time twice.
 //   Rare drops (Dragon Cubes) are not averaged but rolled with a Poisson count of pixels x their fixed chance per block (PixelClicker.RareChance,
 //   the live game's odds; RollPoisson). If the
 //   auto clicker is running it pays the average earnings for the (capped, scaled) time away - clicks = time x efficiency / interval x

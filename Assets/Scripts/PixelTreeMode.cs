@@ -21,7 +21,9 @@
 //   1%, up to 25% with 12 ACORN husks on the field) - acorns come from the Oak's Optional slot (50%, from level 3). Nothing new in the filler rotation.
 //   Not saved: a reload starts in the filler rotation. Not built yet (see the design doc): other species, the infested
 //   look and sound, lookahead past one block, Pesticide charges, Shuffle switched off inside a tree. A block pulled out with Block Hold loses its
-//   tree tag (pulling the tree's last block fires Timber early).
+//   tree tag (pulling the tree's last block fires Timber early). A pre-rolled block dropped from 'Next up' (PixelClicker.TrimUpcoming, e.g. a Focus potion
+//   drops a pre-rolled Termite Hive) hands its 'last block' mark to the block kept before it (DropsTreeEnd / WithLastMark), or fires Timber at once
+//   when no tree block is left to carry it (FinishLiveTree), so the tree still counts as felled (2026-10-27).
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -296,6 +298,29 @@ public class PixelTreeMode : MonoBehaviour
         tierIndex = -1;
         return Instance != null && Instance.Pick(clicker, out tierIndex);
     }
+
+    /// <summary>Pre-rolled blocks were dropped from 'Next up' (their tags in order): true when they hold the END of a tree that began before them
+    /// (e.g. a Focus potion dropped an infested tree's Termite Hive, its last block). The caller then moves the 'last block' mark onto the block
+    /// kept before them (WithLastMark), or finishes the tree at once (FinishLiveTree), so Timber still fires.</summary>
+    public static bool DropsTreeEnd(List<Vector2Int> blocks, int from)
+    {
+        for (int k = Mathf.Max(0, from); k < blocks.Count; k++)
+        {
+            int tag = blocks[k].y;
+            if ((tag & TagFirst) != 0) return false;   // a new tree starts in the dropped part: the one before it ended in the kept part already
+            if ((tag & TagLast) != 0) return true;
+        }
+        return false;
+    }
+
+    /// <summary>A tree block's tag with the 'last block' mark added (a non-tree tag stays as it is).</summary>
+    public static int WithLastMark(int tag) => (tag & TagTree) != 0 ? tag | TagLast : tag;
+
+    /// <summary>Is this a tree block's tag?</summary>
+    public static bool IsTreeTag(int tag) => (tag & TagTree) != 0;
+
+    /// <summary>The live tree's last block was dropped and no tree block is left to carry the mark: Timber now (same path as the last block leaving the cube).</summary>
+    public static void FinishLiveTree() => OnLiveChanged(TagLast, 0);
 
     /// <summary>The live block on the cube changed: counts tree blocks on the tree bar and fires Timber when the tree's last block left the cube.</summary>
     public static void OnLiveChanged(int outgoingTag, int incomingTag)

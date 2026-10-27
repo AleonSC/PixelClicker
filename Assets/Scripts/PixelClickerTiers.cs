@@ -346,7 +346,20 @@ public partial class PixelClicker
     private void TrimUpcoming()
     {
         for (int i = 0; i < upcoming.Count; i++)
-            if (!UpcomingValid(upcoming[i].x)) { upcoming.RemoveRange(i, upcoming.Count - i); return; }
+            if (!UpcomingValid(upcoming[i].x)) { KeepTreeEnd(i); upcoming.RemoveRange(i, upcoming.Count - i); return; }
+    }
+
+    /// <summary>Tree mode: the pre-rolled blocks from 'from' on are about to be dropped. If they hold the end of the tree being felled (a Focus potion
+    /// dropped the Termite Hive, the tree's last block), the 'last block' mark moves to the block kept before them, or Timber fires now if none can carry it.</summary>
+    private void KeepTreeEnd(int from)
+    {
+        if (!PixelTreeMode.DropsTreeEnd(upcoming, from)) return;
+        if (from > 0 && PixelTreeMode.IsTreeTag(upcoming[from - 1].y))
+            upcoming[from - 1] = new Vector2Int(upcoming[from - 1].x, PixelTreeMode.WithLastMark(upcoming[from - 1].y));
+        else if (from == 0 && PixelTreeMode.IsTreeTag(liveTreeTag))
+            liveTreeTag = PixelTreeMode.WithLastMark(liveTreeTag);   // the block on the cube is now the tree's last: Timber when it leaves
+        else
+            PixelTreeMode.FinishLiveTree();
     }
 
     /// <summary>The block 'ahead' places after the one on the cube (0 = next): blocks waiting in line from Block Hold first, then the pre-rolled ones (rolled now if

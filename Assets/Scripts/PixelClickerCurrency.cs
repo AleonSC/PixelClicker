@@ -35,6 +35,7 @@ public partial class PixelClicker
     public void AddCurrency(int tierIndex, double amount)
     {
         if (!IsValidTier(tierIndex) || amount <= 0) return;
+        if (BrokenAmount(amount, "AddCurrency", tierIndex)) return;
         if (IsGodCube(tiers[tierIndex].type))
         {
             if (tiers[tierIndex].OneOfEachTaken) return;   // one of each God / Prime Cube, ever (found before = never added again, even once spent)
@@ -111,6 +112,7 @@ public partial class PixelClicker
     public double RemoveCurrency(int tierIndex, double amount)
     {
         if (!IsValidTier(tierIndex) || amount <= 0) return 0d;
+        if (BrokenAmount(amount, "RemoveCurrency", tierIndex)) return 0d;
         double taken = System.Math.Min(tiers[tierIndex].count, amount);
         if (taken <= 0d) return 0d;
         tiers[tierIndex].count -= taken;
@@ -203,11 +205,20 @@ public partial class PixelClicker
     /// <summary>Spends currency if the player can afford it. Use this from shops later.</summary>
     public bool TrySpend(int tierIndex, double amount)
     {
+        if (BrokenAmount(amount, "TrySpend", tierIndex)) return false;
         if (InfiniteResources) return IsValidTier(tierIndex) && amount >= 0;
         if (!IsValidTier(tierIndex) || amount < 0 || tiers[tierIndex].count < amount) return false;
         tiers[tierIndex].count -= amount;
         if (amount > 0d) CurrencySpent?.Invoke(tierIndex, amount);
         NotifyChanged();
+        return true;
+    }
+
+    /// <summary>NaN / Infinity can't be a currency change (NaN slips past every '<= 0' check and would turn the count into NaN for good): refused, with a log line.</summary>
+    private bool BrokenAmount(double amount, string what, int tierIndex)
+    {
+        if (!double.IsNaN(amount) && !double.IsInfinity(amount)) return false;
+        PixelDebug.Info("PixelClicker." + what + ": refused a broken amount (" + amount + ") for tier " + tierIndex + ".", this);
         return true;
     }
 

@@ -705,11 +705,12 @@ public class PixelSaveGame : MonoBehaviour
 
 
             // Time away: only when the game has just started (loading by hand mid-game must not pay it again).
+            bool offlinePaid = false;
             if (grantOffline && data.savedAtTicks > 0)
             {
                 PixelOfflineProgress offline = PixelFind.First<PixelOfflineProgress>();
                 if (offline == null) offline = gameObject.AddComponent<PixelOfflineProgress>();
-                offline.Grant(new DateTime(data.savedAtTicks, DateTimeKind.Utc));
+                offlinePaid = offline.Grant(new DateTime(data.savedAtTicks, DateTimeKind.Utc));
             }
 
             clicker.FinishLoad();
@@ -719,6 +720,8 @@ public class PixelSaveGame : MonoBehaviour
 
             PixelGameState.RaiseLoaded();   // (the moved systems' views refresh and their world objects - placed devices... - are rebuilt, BEFORE the tester machines)
             PixelFeatureTester.ImportAll(data.testerObjects);   // after the devices (a solar panel links to one) and the old pixels (belt riders are made again)
+            // Offline progress was paid from the save's time: autosave at once (a new savedAtTicks), or a game killed before the next autosave would pay the same time away again.
+            if (offlinePaid) WriteSave(0, false);
 
             if (logToConsole) PixelDebug.Info("PixelSaveGame: loaded the save from " + data.savedAt + ".", this);
             if (showMessage) ShowMessage("Loaded slot " + CurrentSlot);
