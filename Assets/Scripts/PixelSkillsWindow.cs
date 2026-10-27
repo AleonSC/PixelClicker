@@ -110,6 +110,7 @@ public partial class PixelSkills
     private readonly List<Image> treeLines = new List<Image>();
     private readonly List<Button> pixelPackButtons = new List<Button>();
     private readonly List<TMP_Text> pixelPackLabels = new List<TMP_Text>();
+    private RectTransform pixelPackParent;   // (the detail panel the Offline task buttons sit in)
     private float refreshTimer;
     private bool built;
 
@@ -316,30 +317,58 @@ public partial class PixelSkills
         treeToggle.onClick.AddListener(ToggleTreeWindow);
         treeToggle.gameObject.SetActive(false);
 
-        // Offline Progression: which pack's pixels to play with.
-        for (int i = 0; i < 4; i++)
+        // Offline Progression: which pack's pixels to play with (one button per available pack, made as needed by RefreshOfflineTaskButtons).
+        pixelPackParent = detail as RectTransform;
+    }
+
+    /// <summary>Makes the next Offline task button (slot = its place among the available packs, Offline Progression left out).</summary>
+    private void AddPixelPackButton()
+    {
+        int slot = pixelPackButtons.Count;
+        Button b = PixelUIKit.CreateButton(Font, pixelPackParent, "Pixel Pack " + slot, "", new Vector2(10f, 50f), ButtonRole.Neutral, 26f);
+        RectTransform r = b.GetComponent<RectTransform>();
+        r.anchorMin = new Vector2(0f, 1f);
+        r.anchorMax = new Vector2(1f, 1f);
+        r.pivot = new Vector2(0.5f, 1f);
+        TMP_Text label = b.GetComponentInChildren<TMP_Text>();
+        label.enableAutoSizing = true;   // (shrinks a long name to fit when the buttons go two to a row)
+        label.fontSizeMax = 26f;
+        label.fontSizeMin = 14f;
+        b.onClick.AddListener(() =>
         {
-            Button b = PixelUIKit.CreateButton(Font, detail, "Pixel Pack " + i, "", new Vector2(10f, 50f), ButtonRole.Neutral, 26f);
-            RectTransform r = b.GetComponent<RectTransform>();
-            r.anchorMin = new Vector2(0f, 1f);
-            r.anchorMax = new Vector2(1f, 1f);
-            r.pivot = new Vector2(0.5f, 1f);
-            r.sizeDelta = new Vector2(-44f, 50f);
-            r.anchoredPosition = new Vector2(0f, -(128f + i * 58f));
-            int slot = i;
-            b.onClick.AddListener(() =>
+            int n = 0;
+            foreach (SkillPack pack in packs)
             {
-                int n = 0;
-                foreach (SkillPack pack in packs)
-                {
-                    if (pack.id == OfflineId || !IsAvailable(pack)) continue;
-                    if (n++ == slot) { OfflineTask = pack.id; break; }   // (what your character does while you are away)
-                }
-                RefreshWindow();
-            });
-            b.gameObject.SetActive(false);
-            pixelPackButtons.Add(b);
-            pixelPackLabels.Add(b.GetComponentInChildren<TMP_Text>());
+                if (pack.id == OfflineId || !IsAvailable(pack)) continue;
+                if (n++ == slot) { OfflineTask = pack.id; break; }   // (what your character does while you are away)
+            }
+            RefreshWindow();
+        });
+        b.gameObject.SetActive(false);
+        pixelPackButtons.Add(b);
+        pixelPackLabels.Add(label);
+    }
+
+    /// <summary>
+    /// Places the Offline task buttons between the info line and the Train button: one full-width column (50 high, 58 apart) while they fit,
+    /// else two columns, squeezed (down to 30 high) when even those run out of room.
+    /// </summary>
+    private void LayoutPixelPackButtons(int count)
+    {
+        const float top = 128f, bottom = 106f, pitch = 58f, gap = 8f, side = 22f;
+        float area = pixelPackParent != null && pixelPackParent.rect.height > 1f ? pixelPackParent.rect.height - top - bottom : count * pitch;
+        int columns = count * pitch <= area + gap ? 1 : 2;
+        int rows = Mathf.Max(1, (count + columns - 1) / columns);
+        float rowPitch = Mathf.Clamp((area + gap) / rows, 30f + gap, pitch);
+        for (int i = 0; i < count && i < pixelPackButtons.Count; i++)
+        {
+            RectTransform r = pixelPackButtons[i].GetComponent<RectTransform>();
+            int col = i % columns, row = i / columns;
+            r.anchorMin = new Vector2(col / (float)columns, 1f);
+            r.anchorMax = new Vector2((col + 1) / (float)columns, 1f);
+            float left = col == 0 ? side : gap * 0.5f, right = col == columns - 1 ? side : gap * 0.5f;
+            r.offsetMin = new Vector2(left, -(top + row * rowPitch + rowPitch - gap));
+            r.offsetMax = new Vector2(-right, -(top + row * rowPitch));
         }
     }
 
@@ -914,7 +943,15 @@ public partial class PixelSkills
     // RefreshWindow step: on Offline Progression, one button per playable pack (what your character does while you are away).
     private void RefreshOfflineTaskButtons(SkillPack p, bool available, bool showTree)
     {
-        // Offline Progression: one button per pack whose pixels you can play with.
+        // Offline Progression: one button per pack whose pixels you can play with (made as needed, so every pack gets one).
+        if (available && p.id == OfflineId && !showTree)
+        {
+            int wanted = 0;
+            foreach (SkillPack other in packs)
+                if (other.id != OfflineId && IsAvailable(other)) wanted++;
+            while (pixelPackButtons.Count < wanted) AddPixelPackButton();
+            LayoutPixelPackButtons(wanted);
+        }
         int slot = 0;
         foreach (SkillPack other in packs)
         {
