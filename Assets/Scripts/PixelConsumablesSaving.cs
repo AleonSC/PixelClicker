@@ -68,7 +68,7 @@ public partial class PixelConsumables
     public void ClearPlacedDevices()
     {
         foreach (PixelPlacedDevice placed in new System.Collections.Generic.List<PixelPlacedDevice>(PixelPlacedDevice.All))
-            if (placed != null) Destroy(placed.gameObject);
+            if (placed != null) { placed.TakeOutForClear(); Destroy(placed.gameObject); }   // (out of the All list now: Destroy waits for the end of the frame)
     }
 
     /// <summary>Puts a saved device back in the world with the time it had left.</summary>

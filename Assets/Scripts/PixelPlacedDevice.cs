@@ -312,6 +312,10 @@ public abstract class PixelPlacedDevice : MonoBehaviour
         if (!dying) StartCoroutine(ShrinkAway());
     }
 
+    /// <summary>A load is clearing the floor: the device counts as ending and leaves <see cref="All"/> AT ONCE (Destroy only happens at the end of the frame,
+    /// and a device restored in the same frame - a Solar Panel looking for the device it was linked to - must not find this old one).</summary>
+    public void TakeOutForClear() { dying = true; all.Remove(this); }
+
     private void OnEnable() => all.Add(this);
 
     private void OnDisable() => all.Remove(this);
