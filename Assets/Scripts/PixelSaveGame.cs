@@ -14,7 +14,9 @@ using UnityEngine.UI;
 /// (A potion that is currently active is not saved - it simply ends.)
 ///
 /// - Loads the save automatically when the game starts (optional), and pays offline progress (PixelOfflineProgress).
-/// - Saves automatically every N seconds, when the game closes and when the app loses focus (optional).
+/// - Saves automatically every N seconds, when the game closes and when the app loses focus (optional). The timer waits while a takeover
+///   round (Snake, Sorting Race, Breakout) runs and saves right after it; a quit / focus save is skipped only when another quit / focus
+///   save was written in the last 5 s (never just because the timer saved). Husks are always saved (during a takeover: where they are, with a small drop).
 /// - The pause menu gets Save / Load buttons when this component exists.
 /// - Other scripts can call Save(), Load() or DeleteSave().
 ///
@@ -91,6 +93,12 @@ public class PixelSaveGame : MonoBehaviour
 
     [Tooltip("Save when the app loses focus or is minimised (mobile / some builds).")]
     [SerializeField] private bool saveWhenAppPauses = true;
+
+    [Min(0.3f)]
+    [Tooltip("A save made while a takeover round (Snake, Sorting Race, Breakout) runs - quit, focus loss, a manual save - still keeps the husks, where they are now; " +
+             "the ones that were lying still get this small downward speed (m/s) in the save so they drop onto the floor and settle when it is loaded " +
+             "(a husk the round lifted - a Breakout brick - would otherwise load frozen in the air). Must stay above 0.25 (below that a loaded husk counts as resting).")]
+    [SerializeField] private float takeoverHuskDropSpeed = 0.5f;
 
     [Header("Messages")]
     [Tooltip("Show a short message on screen after saving or loading.")]
@@ -488,7 +496,8 @@ public class PixelSaveGame : MonoBehaviour
         if (PixelCalm.InMenu) return;
 
         autoSaveTimer += Time.unscaledDeltaTime;
-        if (autoSaveTimer >= interval)
+        // Not while a takeover round (Snake, Sorting Race, Breakout) has the husks: the timer stays due and the save happens as soon as the round ends.
+        if (autoSaveTimer >= interval && !PixelMinigame.TakeoverActive)
         {
             autoSaveTimer = 0f;
             autoSaveCall = true;
@@ -545,12 +554,15 @@ public class PixelSaveGame : MonoBehaviour
     public bool Save() => SaveToSlot(CurrentSlot, true);
 
     private float lastAutosaveTime = -999f;
+    private bool lastAutosaveWasQuick;   // the last autosave-list write was a quit / focus loss / Quit > Main menu save (not the timer)
 
     /// <summary>An AUTOSAVE (the timer, the save on quit / losing focus / Quit > Main menu): goes into the autosave list only - the numbered slots are only ever written by a manual save.</summary>
     public bool Save(bool showMessage)
     {
         if (PixelGameMode.TitleShowing) return false;   // no autosaving from the main menu
-        if (!autoSaveCall && Time.realtimeSinceStartup - lastAutosaveTime < 5f) return true;   // (quit + focus loss + main menu in quick succession: one is enough)
+        // (quit + focus loss + main menu in quick succession: one is enough. Only after another of THOSE - a timer autosave a moment ago doesn't count,
+        //  or what was earned since it would be lost on quit.)
+        if (!autoSaveCall && lastAutosaveWasQuick && Time.realtimeSinceStartup - lastAutosaveTime < 5f) return true;
         return WriteSave(0, showMessage);
     }
 
@@ -578,8 +590,16 @@ public class PixelSaveGame : MonoBehaviour
             data.state = PixelGameState.Current;   // (the moved systems' progress, whole)
             data.playSeconds = data.state.stats.playSeconds;
             data.totalPixels = data.state.clicker.TotalCollected;
-            // A minigame that moved the old pixels around (Breakout, Sorting Race...) is running: their positions aren't real now.
-            if (!PixelMinigame.TakeoverActive) data.oldPixels = clicker.GetOldPixelStates().ToArray();
+            data.oldPixels = clicker.GetOldPixelStates().ToArray();
+            // A takeover round (Snake, Sorting Race, Breakout) is running (the timer waits for it to end; this is a quit / focus / manual save): the husks are still
+            // saved - leaving them out would empty the floor on load - where they are now (the others are only shrunk in place; the round's own ones may be lifted,
+            // e.g. Breakout's bricks), and the still ones get a small drop so they fall and settle on load instead of loading frozen where the round held them.
+            if (PixelMinigame.TakeoverActive)
+            {
+                float drop = Mathf.Max(0.3f, takeoverHuskDropSpeed);
+                foreach (PixelClicker.OldPixelState h in data.oldPixels)
+                    if (h != null && h.velocity.sqrMagnitude < drop * drop) h.velocity = Vector3.down * drop;
+            }
             data.settings = PixelSettingsSync.Collect();
 
             string json = JsonUtility.ToJson(data, false);   // (no pretty print: smaller and quicker to write, every autosave)
@@ -610,6 +630,7 @@ public class PixelSaveGame : MonoBehaviour
                                                      keepAutosaveHistory ? autosaveHistorySize : 1);
                 if (autoShot != null) shots.Add(autoShot);
                 lastAutosaveTime = Time.realtimeSinceStartup;
+                lastAutosaveWasQuick = !autoSaveCall;
             }
             HasLoadedSave = true;
             PixelSaveShots.Request(shots);
