@@ -1,7 +1,8 @@
 // ---- System notes ----
 // PixelClickerHusks.cs
 //   Part of partial class PixelClicker: everything about HUSKS (the pixels that drop off the cube; code calls them old pixels) - spawning
-//   the falling copy after a click (SpawnFallingCopy / SpawnFallingCopyInner, SpawnStoredPixel), how long they last
+//   the falling copy after a click (SpawnFallingCopy / SpawnFallingCopyInner, SpawnStoredPixel; SpawnStoredHusk hands back the husk it made -
+//   never compare OldPixels.Count to tell, the floor cap keeps it the same: compile-check rule), how long they last
 //   (LifetimeFactor, AddDespawn), their amount (RollOldPixelAmount), the cap (CopyCap), the Vacuum pixel sucking them up (Vacuum,
 //   SuckRoutine), husk XP, saving / restoring them (OldPixelState), claiming / absorbing / releasing them for devices, their physics
 //   materials, trails and fly-away landing, and display copies (CreateDisplayPixel). The components ON a husk are in PixelHusks.cs.
@@ -132,7 +133,9 @@ public partial class PixelClicker
     [System.Serializable]
     public class OldPixelState
     {
-        public int tier;
+        public int type = -1;   // the husk's PixelType (as a number): what a load looks up. Saved by TYPE, not by tier index - an index means
+                                // another block when the tier list differs (2026-10-27 audit: Wood Chips came back as Dragon Cube husks)
+        public int tier;        // (the tier index at save time: only used when 'type' is missing)
         public double amount;
         public Vector3 position;
         public Quaternion rotation = Quaternion.identity;
@@ -155,6 +158,7 @@ public partial class PixelClicker
             if (d != null && d.IsDespawning) continue;
             list.Add(new OldPixelState
             {
+                type = IsValidTier(info.tierIndex) ? (int)tiers[info.tierIndex].type : -1,
                 tier = info.tierIndex,
                 amount = info.amount,
                 position = rb.position,
@@ -178,11 +182,9 @@ public partial class PixelClicker
         if (states == null) return;
         foreach (OldPixelState s in states)
         {
-            if (s == null || !IsValidTier(s.tier) || tiers[s.tier].flyAway) continue;
-            int before = oldPixels.Count;
-            SpawnStoredPixel(s.tier, s.amount, s.position, s.velocity);
-            if (oldPixels.Count <= before) continue;
-            Rigidbody rb = oldPixels[oldPixels.Count - 1];
+            int tier = s == null ? -1 : s.type >= 0 ? IndexOf((PixelType)s.type) : s.tier;
+            if (!IsValidTier(tier) || tiers[tier].flyAway) continue;
+            Rigidbody rb = SpawnStoredHusk(tier, s.amount, s.position, s.velocity);
             if (rb == null) continue;
             rb.position = s.position;
             rb.rotation = s.rotation;
@@ -499,6 +501,22 @@ public partial class PixelClicker
         return true;
     }
 
+    private Rigidbody lastSpawnedHusk;   // the body the last SpawnFallingCopy put on the floor list
+
+    /// <summary>
+    /// SpawnStoredPixel that hands back the husk it made (null when none was made). Use this, never "did OldPixels.Count go up?": at the
+    /// floor cap a new husk pushes the OLDEST one off the list, so the count stays the same although a husk was made (the 2026-10-27 audit:
+    /// machines read that as 'nothing came out', kept their husk and spawned it again - endless copies).
+    /// </summary>
+    public Rigidbody SpawnStoredHusk(int tierIndex, double amount, Vector3 position, Vector3 velocity)
+    {
+        lastSpawnedHusk = null;
+        if (!SpawnStoredPixel(tierIndex, amount, position, velocity)) return null;
+        Rigidbody rb = lastSpawnedHusk;
+        lastSpawnedHusk = null;
+        return rb != null && oldPixels.Contains(rb) ? rb : null;
+    }
+
     private static readonly ProfilerMarker spawnCopyMarker = new ProfilerMarker("Pixel.SpawnFallingCopy");
     private static readonly ProfilerMarker materializeMarker = new ProfilerMarker("Pixel.Materialize");
     private static MaterialPropertyBlock spawnBlock;
@@ -602,6 +620,7 @@ public partial class PixelClicker
             routedInfo.tierIndex = tierIndex;
             routedInfo.amount = amount;
             oldPixels.Add(rb);
+            lastSpawnedHusk = rb;   // (SpawnStoredHusk hands this back: the floor cap below may remove an OLDER husk, so the count can't tell)
             while (CopyCap > 0 && oldPixels.Count > CopyCap)
             {
                 Rigidbody oldest = oldPixels[0];
@@ -816,6 +835,7 @@ public partial class PixelClicker
         PixelMold.TryAttachGlow(copy, tiers[tierIndex].type);   // a Berry / Mushroom / Herb / Truffle is sometimes a glowing variant
 
         oldPixels.Add(rb);
+        lastSpawnedHusk = rb;   // (see above)
         while (CopyCap > 0 && oldPixels.Count > CopyCap)
         {
             Rigidbody oldest = oldPixels[0];

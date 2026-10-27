@@ -341,9 +341,8 @@ public class PixelSortingHopper : MonoBehaviour, IPixelDeviceInfo, IPixelTierPic
             if (PixelCouplings.EmitStored(this, id, clicker, (out int tier, out double amount) => { tier = h.tier; amount = h.amount; return true; })) return true;
             return false;
         }
-        int before = clicker.OldPixels.Count;
-        clicker.SpawnStoredPixel(h.tier, h.amount, transform.TransformPoint(MouthLocal(o, Unit(clicker))), Vector3.down * feedPush);
-        if (clicker.OldPixels.Count > before) PixelCouplings.Emit(this, id, clicker.OldPixels[clicker.OldPixels.Count - 1]);   // (an Out coupling with a device's In coupling in front: handed over; else it just drops)
+        Rigidbody made = clicker.SpawnStoredHusk(h.tier, h.amount, transform.TransformPoint(MouthLocal(o, Unit(clicker))), Vector3.down * feedPush);
+        if (made != null) PixelCouplings.Emit(this, id, made);   // (an Out coupling with a device's In coupling in front: handed over; else it just drops)
         return true;
     }
 

@@ -27,6 +27,15 @@ for f in $(grep -rl --include='*.cs' 'PixelWindows\.Register(' .); do
   done
 done
 
+# Rule: never tell 'was a husk made?' by comparing OldPixels.Count before / after a spawn - at the floor cap a new husk pushes the OLDEST off
+# the list, so the count stays the same although a husk WAS made (machines then kept their husk and spawned it again: endless copies, the
+# 2026-10-27 audit). Use PixelClicker.SpawnStoredHusk, which hands back the husk it made (null = none).
+HITS=$(grep -rnE --include='*.cs' 'OldPixels\.Count\s*(<=|>|==|!=)\s*before|before\s*=\s*[A-Za-z_.]*OldPixels\.Count' . | grep -vE '^[^:]+:[0-9]+:\s*//' | sed 's#^\./##')
+if [ -n "$HITS" ]; then
+  echo "$HITS" | sed -E 's#^([^:]+:[0-9]+):.*#\1: rule: a husk spawn checked by comparing OldPixels.Count - use PixelClicker.SpawnStoredHusk (returns the husk it made; the count does not change at the floor cap)#'
+  FAIL=1
+fi
+
 # Rule: object id numbers come from PixelObjectId.Of - GetInstanceID() is an error on newer Unity (6.3+: GetEntityId) and the offline check
 # compiles against older Unity, so it would not notice; the version switch lives only in PixelObjectId.cs.
 HITS=$(grep -rnE --include='*.cs' 'GetInstanceID\(|GetEntityId\(' . | grep -v '^\./PixelObjectId\.cs:' | grep -vE '^[^:]+:[0-9]+:\s*//' | sed 's#^\./##')

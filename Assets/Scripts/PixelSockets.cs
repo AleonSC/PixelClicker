@@ -378,10 +378,9 @@ public static class PixelCouplings
         if (clicker == null || take == null || !OutputConnected(d, socketId) || !OutputHasRoom(d, socketId)) return false;
         PixelCoupling c = PixelCoupling.On(d, socketId);
         if (c == null || !take(out int tier, out double amount)) return false;
-        int before = clicker.OldPixels.Count;
-        clicker.SpawnStoredPixel(tier, amount, c.PortWorld + Vector3.up * clicker.OldPixelWorldSize, Vector3.zero);
-        if (clicker.OldPixels.Count <= before) return false;
-        Emit(d, socketId, clicker.OldPixels[clicker.OldPixels.Count - 1]);
+        Rigidbody made = clicker.SpawnStoredHusk(tier, amount, c.PortWorld + Vector3.up * clicker.OldPixelWorldSize, Vector3.zero);
+        if (made == null) return false;
+        Emit(d, socketId, made);
         return true;
     }
 

@@ -17,6 +17,10 @@ public class GameState
     /// <summary>The systems whose progress lives here (they must not register restart resets for it: tools/compile-check/rules.sh checks it). Add a system's class name when it moves.</summary>
     public static readonly string[] MovedSystems = { "PixelBank", "PixelStats", "PixelAutoClicker", "PixelFocus", "PixelTimeStop", "PixelGrab", "PixelBaitBucket", "PixelCubieBill", "PixelCombo", "PixelHints", "PixelRobotWorker", "PixelPets", "PixelAchievements", "PixelConsumables", "PixelSkills", "PixelMinigame", "PixelShop", "PixelClicker", "PixelMaterials", "PixelRapport", "PixelDeliveryJobs" };
 
+    /// <summary>Which game this is (a new one per New Game / Restart): autosaves are tagged with it, so trimming the shared autosave list and
+    /// Restart only ever drop THIS game's copies, never another game's only ones (2026-10-27 audit).</summary>
+    public string gameId = System.Guid.NewGuid().ToString("N");
+
     public BankState bank = new BankState();
     public StatsState stats = new StatsState();
     public AutoClickerState autoClicker = new AutoClickerState();
@@ -42,6 +46,7 @@ public class GameState
     /// <summary>Fills in sub-states missing from an older save file (JsonUtility leaves a part the file lacks null in some cases).</summary>
     public void Repair()
     {
+        if (string.IsNullOrEmpty(gameId)) gameId = System.Guid.NewGuid().ToString("N");
         if (bank == null) bank = new BankState();
         if (stats == null) stats = new StatsState();
         if (autoClicker == null) autoClicker = new AutoClickerState();

@@ -1159,9 +1159,7 @@ public class PixelConveyorSystem : MonoBehaviour
         float s = Mathf.Clamp(save.s, 0f, belt.Length);
         int lane = Mathf.Clamp(save.lane, 0, belt.Lanes - 1);
         Vector3 p = belt.LanePointAt(lane, s) + Vector3.up * (belt.SurfaceHeight + belt.Unit * 0.5f);
-        int before = c.OldPixels.Count;
-        if (!c.SpawnStoredPixel(tier, save.amount, p, Vector3.zero) || c.OldPixels.Count <= before) return;
-        Rigidbody rb = c.OldPixels[c.OldPixels.Count - 1];
+        Rigidbody rb = c.SpawnStoredHusk(tier, save.amount, p, Vector3.zero);
         if (rb == null) return;
         OldPixelPopIn pop = rb.GetComponent<OldPixelPopIn>();
         if (pop != null) pop.Finish();

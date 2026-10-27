@@ -317,6 +317,20 @@ public class PixelBlockRules : MonoBehaviour, IPixelDatabaseSource
         return false;
     }
 
+    /// <summary>
+    /// Start-up (PixelClicker.Awake): makes the tier of EVERY special block now, locked, so no tier is ever inserted into the tier list
+    /// mid-session (an insert shifts the index of every rare drop after it while husks, the cube and machines still hold the old index -
+    /// the 2026-10-27 audit). EnsureSpecialTier then only unlocks it on first use.
+    /// </summary>
+    public static void EnsureAllSpecialTiers(PixelClicker clicker)
+    {
+        PixelBlockRules rules = Instance != null ? Instance : PixelFind.Cached<PixelBlockRules>();
+        if (rules == null || clicker == null) return;
+        if (rules.addDefaultRules) rules.AddMissingDefaults();   // (it may not have woken yet; adding the defaults twice is a no-op)
+        foreach (SpecialRule r in rules.specialRules)
+            if (r != null && r.tier != null && clicker.IndexOf(r.tier.type) < 0) clicker.EnsureTier(r.tier);
+    }
+
     /// <summary>Makes sure the tiers of the special blocks of the skill in play exist, so the Pixel Guide can list them before the first one has come up.</summary>
     public static void EnsureActiveSpecialTiers(PixelClicker clicker)
     {

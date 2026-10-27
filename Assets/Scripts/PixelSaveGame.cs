@@ -96,6 +96,9 @@ public class PixelSaveGame : MonoBehaviour
     [Tooltip("Show a short message on screen after saving or loading.")]
     [SerializeField] private bool showMessages = true;
 
+    [Tooltip("Event-log line when Continue (or the load at start) could not read the newest save and loaded the next newest one instead.")]
+    [SerializeField] private string damagedSaveText = "The newest save could not be read, so the one before it was loaded.";
+
     [Tooltip("Show a message after every autosave too (off = only manual saves).")]
     [SerializeField] private bool messageOnAutoSave = false;
 
@@ -205,41 +208,91 @@ public class PixelSaveGame : MonoBehaviour
     }
 
     /// <summary>
+    /// Every save, newest first: the manual slots (1..SlotCount) and every autosave (slot 0, 'path' = its file). "Newest" is the time stored
+    /// IN the save (savedAtTicks), not the file's write time - renaming an old slot rewrites its file and used to make it the one Continue
+    /// loaded (2026-10-27 audit). Autosaves use the time in their file name (written at the same moment).
+    /// </summary>
+    public List<KeyValuePair<int, string>> SavesNewestFirst()
+    {
+        var all = new List<KeyValuePair<long, KeyValuePair<int, string>>>();
+        for (int i = 1; i <= SlotCount; i++)
+            if (SlotHasSave(i)) all.Add(new KeyValuePair<long, KeyValuePair<int, string>>(SavedTicks(PathFor(i)), new KeyValuePair<int, string>(i, PathFor(i))));
+        foreach (var a in PixelAutosaves.FilesNewestFirst())
+            all.Add(new KeyValuePair<long, KeyValuePair<int, string>>(a.Value, new KeyValuePair<int, string>(0, a.Key)));
+        all.Sort((x, y) => y.Key.CompareTo(x.Key));
+        var list = new List<KeyValuePair<int, string>>();
+        foreach (var e in all) list.Add(e.Value);
+        return list;
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex TicksField = new System.Text.RegularExpressions.Regex("\"savedAtTicks\"\\s*:\\s*(\\d+)");
+
+    /// <summary>When a save file was saved (UTC ticks, read from its savedAtTicks field without parsing the whole file); its write time if missing.</summary>
+    private static long SavedTicks(string path)
+    {
+        try
+        {
+            System.Text.RegularExpressions.Match m = TicksField.Match(File.ReadAllText(path));
+            if (m.Success && long.TryParse(m.Groups[1].Value, out long t) && t > 0) return t;
+            return File.GetLastWriteTimeUtc(path).Ticks;
+        }
+        catch (Exception) { return 0; }
+    }
+
+    /// <summary>
     /// The newest save of all: a manual slot (1..SlotCount) or the newest autosave (slot 0, 'path' = its file in the autosave list). Manual saves only ever
     /// go to the numbered slots and autosaves only to the autosave list; 'Continue' picks whichever is newest. False when there are no saves at all.
     /// </summary>
     public bool TryGetLatest(out int slot, out string path)
     {
-        slot = 0;
-        path = null;
-        DateTime best = DateTime.MinValue;
-        for (int i = 1; i <= SlotCount; i++)
-        {
-            if (!SlotHasSave(i)) continue;
-            DateTime t = File.GetLastWriteTimeUtc(PathFor(i));
-            if (path == null || t > best) { best = t; slot = i; path = PathFor(i); }
-        }
-        string newestAuto = PixelAutosaves.NewestPath();
-        if (newestAuto != null)
-        {
-            DateTime t = File.GetLastWriteTimeUtc(newestAuto);
-            if (path == null || t > best) { slot = 0; path = newestAuto; }
-        }
+        var saves = SavesNewestFirst();
+        slot = saves.Count > 0 ? saves[0].Key : 0;
+        path = saves.Count > 0 ? saves[0].Value : null;
         return path != null;
+    }
+
+    /// <summary>Cheap: is there any save at all (just looks for the files - the title screen asks every second)?</summary>
+    public bool HasAnySave()
+    {
+        for (int i = 1; i <= SlotCount; i++) if (SlotHasSave(i)) return true;
+        return PixelAutosaves.NewestPath() != null;
     }
 
     /// <summary>Same, without the file: true when there is any save; 'slot' is 0 when the newest one is an autosave.</summary>
     public bool TryGetMostRecentSlot(out int slot) => TryGetLatest(out slot, out _);
 
-    /// <summary>Main menu 'Continue': loads the newest save, manual or autosave (and pays the time away). False if there is none or it can't be read.</summary>
-    public bool ContinueMostRecent()
+    /// <summary>Main menu 'Continue': loads the newest save, manual or autosave (and pays the time away). False if there is none or none can be read.</summary>
+    public bool ContinueMostRecent() => LoadNewestReadable(true);
+
+    /// <summary>
+    /// Loads the newest save that can be READ, newest first: a damaged newest file (a crash mid-write) falls back to the next one with a log
+    /// line, instead of failing quietly into a blank game that then autosaves over the real one (2026-10-27 audit). 'continuing' = the main
+    /// menu's Continue (keeps the settings it already shows).
+    /// </summary>
+    private bool LoadNewestReadable(bool continuing)
     {
-        if (!TryGetLatest(out int slot, out string path)) return false;
-        if (slot > 0) CurrentSlot = slot;
-        skipSettingsOnce = appliedProfilePath == path || PixelSettingsSync.ChangedSinceBaseline();   // the main menu already shows this profile's settings, or the player changed them there (after a New Game, say): keep them
-        bool ok = Load(false, true, path);
-        skipSettingsOnce = false;
-        return ok;
+        var saves = SavesNewestFirst();
+        for (int i = 0; i < saves.Count; i++)
+        {
+            int slot = saves[i].Key;
+            string path = saves[i].Value;
+            int oldSlot = CurrentSlot;
+            if (slot > 0) CurrentSlot = slot;
+            if (continuing) skipSettingsOnce = appliedProfilePath == path || PixelSettingsSync.ChangedSinceBaseline();   // the main menu already shows this profile's settings, or the player changed them there (after a New Game, say): keep them
+            bool ok = Load(false, true, path);
+            skipSettingsOnce = false;
+            if (ok)
+            {
+                if (i > 0)
+                {
+                    Debug.LogWarning("PixelSaveGame: the newest save (" + saves[0].Value + ") could not be read; loaded " + path + " instead.", this);
+                    PixelHints.Announce(damagedSaveText);
+                }
+                return true;
+            }
+            CurrentSlot = oldSlot;
+        }
+        return false;
     }
 
     private string appliedProfilePath;
@@ -386,11 +439,7 @@ public class PixelSaveGame : MonoBehaviour
             // The main menu shows the settings of the profile Continue would load (a brand-new game, with no save, keeps the defaults).
             if (TryGetLatest(out int _, out string latestPath)) ApplyProfileSettings(latestPath);
         }
-        else if (!keepDefaults && loadOnStart && TryGetLatest(out int latestSlot, out string startPath))
-        {
-            if (latestSlot > 0) CurrentSlot = latestSlot;
-            Load(false, true, startPath);
-        }
+        else if (!keepDefaults && loadOnStart) LoadNewestReadable(false);   // (the newest readable save: a damaged newest file falls back to the next)
     }
 
     private const string PrefAutoSave = "PixelClicker.Setting.AutoSave";
@@ -560,7 +609,7 @@ public class PixelSaveGame : MonoBehaviour
             else
             {
                 double totalPixels = data.totalPixels;
-                string autoShot = PixelAutosaves.Add(json, new PixelAutosaves.Meta { savedAt = data.savedAt, totalPixels = totalPixels, playSeconds = data.playSeconds },
+                string autoShot = PixelAutosaves.Add(json, new PixelAutosaves.Meta { savedAt = data.savedAt, totalPixels = totalPixels, playSeconds = data.playSeconds, gameId = PixelGameState.Current.gameId },
                                                      keepAutosaveHistory ? autosaveHistorySize : 1);
                 if (autoShot != null) shots.Add(autoShot);
                 lastAutosaveTime = Time.realtimeSinceStartup;
@@ -671,7 +720,7 @@ public class PixelSaveGame : MonoBehaviour
     {
         try
         {
-            PixelAutosaves.DeleteAll();   // (Restart: the autosaves of the old game go; manual saves in the slots stay)
+            PixelAutosaves.DeleteGame(PixelGameState.Current.gameId);   // (Restart: the restarted game's autosaves go - called before the state is reset; other games' autosaves and the manual slots stay)
             HasLoadedSave = false;
             if (logToConsole) PixelDebug.Info("PixelSaveGame: save deleted.", this);
         }

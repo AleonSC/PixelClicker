@@ -12,6 +12,7 @@ With one state object, saving writes it, loading replaces it and a new game make
 
 ## The pieces
 - **`GameState.cs`:**
+  - `gameId`: which game this is (new per New Game / Restart); autosaves are tagged with it (PixelAutosaves trims / deletes per game).
   - `GameState` is plain `[Serializable]` data with no `UnityEngine.Object` references. It holds one sub-state per system (`BankState`, `StatsState`, ... `ClickerState`).
   - `GameState.MovedSystems` lists the systems' class names (the compile-check rule reads it).
   - `Repair()` fills in missing parts after a load.

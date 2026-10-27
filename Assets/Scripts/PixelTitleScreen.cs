@@ -437,7 +437,7 @@ public partial class PixelTitleScreen : MonoBehaviour
             {
                 nextSaveCheck = Time.unscaledTime + 1f;
                 saveGame = PixelFind.Cached<PixelSaveGame>();
-                anySave = saveGame != null && saveGame.TryGetMostRecentSlot(out int _);
+                anySave = saveGame != null && saveGame.HasAnySave();
             }
             string want = PixelSaveGame.HasLoadedSave ? playText : anySave ? continueText : string.IsNullOrEmpty(newGameText) ? playText : newGameText;
             if (playLabel != null) PixelUIKit.SetText(playLabel, want);
@@ -1057,7 +1057,7 @@ public partial class PixelTitleScreen : MonoBehaviour
         {
             if (saveGame == null) saveGame = PixelFind.First<PixelSaveGame>();
             bool loaded = false;
-            if (saveGame != null && saveGame.TryGetMostRecentSlot(out int _) && !PixelSaveGame.AutoStartNewGame) loaded = saveGame.ContinueMostRecent();
+            if (saveGame != null && saveGame.HasAnySave() && !PixelSaveGame.AutoStartNewGame) loaded = saveGame.ContinueMostRecent();
             else PixelSaveGame.HasLoadedSave = true;   // a NEW game has started (New Game, or no save at all): from now on Play / Continue resumes it, it must not load the newest old save over it
             NewGameStarted = !loaded;   // (PixelHints plays the new-game intro from this - decided here, so early clicks can never change it)
         }

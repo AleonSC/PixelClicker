@@ -730,11 +730,8 @@ public class PixelRecycler : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoom, 
             double.TryParse(parts[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double amount);
             int col = n % perRow, row = (n / perRow) % Mathf.Max(1, Mathf.FloorToInt(DepthHusks)), layer = n / (perRow * Mathf.Max(1, Mathf.FloorToInt(DepthHusks)));
             Vector3 local = new Vector3((col - (perRow - 1) * 0.5f) * u, u * (0.8f + layer), (row - (DepthHusks - 1f) * 0.5f) * u);
-            int before = clicker.OldPixels.Count;
-            clicker.SpawnStoredPixel(tier, amount, transform.TransformPoint(local), Vector3.zero);
+            Rigidbody b = clicker.SpawnStoredHusk(tier, amount, transform.TransformPoint(local), Vector3.zero);
             n++;
-            if (clicker.OldPixels.Count <= before) continue;
-            Rigidbody b = clicker.OldPixels[clicker.OldPixels.Count - 1];
             if (b == null) continue;
             OldPixelPopIn pop = b.GetComponent<OldPixelPopIn>();
             if (pop != null) pop.Finish();   // full size and solid at once

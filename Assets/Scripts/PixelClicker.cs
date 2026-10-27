@@ -971,6 +971,10 @@ public partial class PixelClicker : MonoBehaviour
 
         EnsureRareSets();   // Dragon / God / Prime Cubes and the Cubelette (the table in PixelRareSets.cs)
         EnsureGoldenSnitch();
+        // Tiers that used to be made on first use are made NOW (locked), so nothing is inserted into the tier list mid-session: an insert
+        // shifts every rare drop's index while the cube, husks and machines still hold the old one (Wood Chips, the special blocks).
+        EnsureWoodChipsTier();
+        PixelBlockRules.EnsureAllSpecialTiers(this);
         foreach (PixelTier legacy in tiers) if (legacy != null && legacy.type == PixelType.HornetNest && legacy.displayName == "Hornet Nest") legacy.displayName = "Termite Hive";   // renamed
         ReapplyTextOverrides(false);
 #if UNITY_EDITOR

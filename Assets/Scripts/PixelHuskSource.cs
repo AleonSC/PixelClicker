@@ -124,9 +124,7 @@ public class PixelHuskSource : MonoBehaviour, IPixelSocketDevice, IPixelHuskSour
         if (c == null || !c.IsOut) return;
         bool belt = PixelCouplings.BeltStartingAt(c.PortWorld) != null;
         if (belt ? !PixelCouplings.OutputHasRoom(this, s.id) : PixelCouplings.IntakeAt(c.PortWorld + c.FacingWorld * 0.5f * unit, unit, this) == null) return;
-        int before = clicker.OldPixels.Count;
-        if (!clicker.SpawnStoredPixel(tier, System.Math.Max(1d, clicker.Tiers[tier].amountPerClick), c.PortWorld + Vector3.up * 0.6f * unit, Vector3.zero) || clicker.OldPixels.Count <= before) return;
-        Rigidbody rb = clicker.OldPixels[clicker.OldPixels.Count - 1];
+        Rigidbody rb = clicker.SpawnStoredHusk(tier, System.Math.Max(1d, clicker.Tiers[tier].amountPerClick), c.PortWorld + Vector3.up * 0.6f * unit, Vector3.zero);
         if (rb == null) return;
         OldPixelPopIn pop = rb.GetComponent<OldPixelPopIn>();
         if (pop != null) pop.Finish();

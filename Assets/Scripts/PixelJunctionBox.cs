@@ -257,9 +257,7 @@ public class PixelJunctionBox : MonoBehaviour, IPixelSocketDevice, IPixelHuskRoo
     /// <summary>Spits a new husk out of this Out coupling onto the belt starting there. False if it could not be made.</summary>
     private bool SpawnOut(PixelCoupling outlet, int tier, double amount)
     {
-        int before = clicker.OldPixels.Count;
-        if (!clicker.SpawnStoredPixel(tier, amount, outlet.PortWorld + Vector3.up * 0.6f * Unit(clicker), Vector3.zero) || clicker.OldPixels.Count <= before) return false;
-        Rigidbody body = clicker.OldPixels[clicker.OldPixels.Count - 1];
+        Rigidbody body = clicker.SpawnStoredHusk(tier, amount, outlet.PortWorld + Vector3.up * 0.6f * Unit(clicker), Vector3.zero);
         if (body == null) return false;
         OldPixelPopIn pop = body.GetComponent<OldPixelPopIn>();
         if (pop != null) pop.Finish();

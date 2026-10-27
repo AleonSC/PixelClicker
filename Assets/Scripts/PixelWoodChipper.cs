@@ -348,9 +348,8 @@ public class PixelWoodChipper : MonoBehaviour, IPixelSocketDevice, IPixelDeviceI
         float s = transform.lossyScale.x;
         Vector3 pos = transform.TransformPoint(OutletLocal);
         Vector3 dir = (transform.TransformDirection(OutletDirLocal).normalized + Vector3.up * 0.25f + Random.insideUnitSphere * 0.15f).normalized;
-        int before = clicker.OldPixels.Count;
-        clicker.SpawnStoredPixel(tier, 1, pos, dir * Random.Range(2.5f, 4f) * s);
-        bool onBelt = clicker.OldPixels.Count > before && PixelCouplings.Emit(this, "chute", clicker.OldPixels[clicker.OldPixels.Count - 1]);   // an Out coupling on the chute: straight onto its belt
+        Rigidbody made = clicker.SpawnStoredHusk(tier, 1, pos, dir * Random.Range(2.5f, 4f) * s);
+        bool onBelt = made != null && PixelCouplings.Emit(this, "chute", made);   // an Out coupling on the chute: straight onto its belt
         PixelAudio.Play("drop", onBelt ? 1.1f : 0.5f, onBelt ? 0.6f : 1.2f);
     }
 

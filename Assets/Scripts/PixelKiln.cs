@@ -316,9 +316,8 @@ public class PixelKiln : MonoBehaviour, IPixelSocketDevice, IPixelPanelSubject
         int tier = clicker.EnsureCharcoalTier();
         Vector3 pos = transform.TransformPoint(OutletLocal * unit);
         Vector3 dir = (-transform.right + Vector3.up * 0.15f + Random.insideUnitSphere * 0.08f).normalized;
-        int before = clicker.OldPixels.Count;
-        clicker.SpawnStoredPixel(tier, 1, pos, dir * Random.Range(1.2f, 1.9f) * unit);
-        if (clicker.OldPixels.Count > before) PixelCouplings.Emit(this, "chute", clicker.OldPixels[clicker.OldPixels.Count - 1]);   // an Out coupling on the chute puts it on the belt there
+        Rigidbody made = clicker.SpawnStoredHusk(tier, 1, pos, dir * Random.Range(1.2f, 1.9f) * unit);
+        if (made != null) PixelCouplings.Emit(this, "chute", made);   // an Out coupling on the chute puts it on the belt there
         PixelStats.Count(CharcoalStat);
         PixelShop.NoteDiscovery(CharcoalStat);   // (the Charcoal Pixel's discovery: the notice when it is reached)
         PixelAudio.Play("drop", 1.2f, 0.5f);

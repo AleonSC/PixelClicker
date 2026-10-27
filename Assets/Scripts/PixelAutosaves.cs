@@ -2,8 +2,9 @@
 // PixelAutosaves.cs
 //   Autosave history (for testing) + save screenshots. THREE parts in this file:
 //   PixelAutosaves (static): every TIMER autosave (not manual saves, quit saves) is also copied into <persistentDataPath>/Autosaves as autosave_<ticks>.json + .meta
-//   (when / total pixels / play time, so the list needs no big file read) + .jpg (the screenshot); PixelSaveGame.Save calls Add. At most PixelSaveGame.autosaveHistorySize (100) are
-//   kept: Trim deletes the OLDEST when a newer one comes in. List() gives them newest first.
+//   (when / total pixels / play time / the GAME it belongs to, so the list needs no big file read) + .jpg (the screenshot); PixelSaveGame.Save calls Add. Written to a .tmp and
+//   moved into place (a crash never leaves a cut-off newest autosave). At most PixelSaveGame.autosaveHistorySize (100) are kept: Trim deletes the OLDEST when a newer one
+//   comes in, but never the newest KeepPerGame (5) of any game; Restart deletes only the restarted game's (DeleteGame). List() gives them newest first.
 //   PixelSaveShots (static + a hidden runner): a screenshot of the game window (ScreenCapture, shrunk to 320 wide, JPG) next to EVERY save: slot saves go to <save file>.jpg, autosave
 //   history to its own .jpg. A rolling copy is taken every few seconds while the game is visible and used when a save happens while paused (the Save / Load window shows the
 //   pause menu, not the game). The rolling copy stays on the graphics card (CaptureScreenshotIntoRenderTexture, shrunk into a small RenderTexture): nothing waits for the GPU
@@ -30,7 +31,11 @@ public static class PixelAutosaves
         public string savedAt = "";
         public double totalPixels;
         public double playSeconds;
+        public string gameId = "";   // the GameState's game id (autosaves of several games share one folder)
     }
+
+    /// <summary>Trim never deletes the newest this-many autosaves of ANY game, so one game's autosaves can't push out another game's only copies.</summary>
+    public const int KeepPerGame = 5;
 
     public struct Entry
     {
@@ -48,8 +53,10 @@ public static class PixelAutosaves
             Directory.CreateDirectory(Folder);
             string stem = "autosave_" + DateTime.UtcNow.Ticks.ToString("D19");
             string path = Path.Combine(Folder, stem + ".json");
-            File.WriteAllText(path, json);
-            File.WriteAllText(Path.Combine(Folder, stem + ".meta"), JsonUtility.ToJson(meta));
+            // Written to a temp file and moved into place (as the slot saves are): a crash mid-write leaves the .tmp, never a cut-off newest
+            // autosave that Continue would pick (2026-10-27 audit).
+            WriteSafely(path, json);
+            WriteSafely(Path.Combine(Folder, stem + ".meta"), JsonUtility.ToJson(meta));
             Trim(Mathf.Max(1, keep));
             return PixelSaveShots.ThumbPath(path);
         }
@@ -58,6 +65,72 @@ public static class PixelAutosaves
             Debug.LogWarning("PixelAutosaves: could not keep the autosave - " + e.Message);
             return null;
         }
+    }
+
+    private static void WriteSafely(string path, string text)
+    {
+        string temp = path + ".tmp";
+        File.WriteAllText(temp, text);
+        if (File.Exists(path)) File.Delete(path);
+        File.Move(temp, path);
+    }
+
+    /// <summary>The autosave files, newest first, with the UTC time each was written (from the file name: autosave_<ticks>.json).</summary>
+    public static List<KeyValuePair<string, long>> FilesNewestFirst()
+    {
+        var list = new List<KeyValuePair<string, long>>();
+        try
+        {
+            if (!Directory.Exists(Folder)) return list;
+            foreach (string f in Directory.GetFiles(Folder, "autosave_*.json"))
+            {
+                string stem = Path.GetFileNameWithoutExtension(f).Substring("autosave_".Length);
+                long ticks = long.TryParse(stem, out long t) ? t : File.GetLastWriteTimeUtc(f).Ticks;
+                list.Add(new KeyValuePair<string, long>(f, ticks));
+            }
+            list.Sort((a, b) => b.Value.CompareTo(a.Value));
+        }
+        catch (Exception) { }
+        return list;
+    }
+
+    /// <summary>The game id an autosave belongs to ("" for one made before ids existed).</summary>
+    private static string GameOf(string jsonPath)
+    {
+        try
+        {
+            string metaPath = Path.ChangeExtension(jsonPath, ".meta");
+            if (!File.Exists(metaPath)) return "";
+            Meta m = JsonUtility.FromJson<Meta>(File.ReadAllText(metaPath));
+            return m != null && m.gameId != null ? m.gameId : "";
+        }
+        catch (Exception) { return ""; }
+    }
+
+    /// <summary>Deletes the autosaves of ONE game (Restart drops the game being restarted; other games' autosaves stay).</summary>
+    public static void DeleteGame(string gameId)
+    {
+        if (string.IsNullOrEmpty(gameId)) return;
+        try
+        {
+            foreach (var f in FilesNewestFirst())
+                if (GameOf(f.Key) == gameId) DeleteOne(f.Key);
+        }
+        catch (Exception) { }
+    }
+
+    /// <summary>Deletes one autosave and its info / screenshot files.</summary>
+    private static void DeleteOne(string jsonPath)
+    {
+        try
+        {
+            File.Delete(jsonPath);
+            string meta = Path.ChangeExtension(jsonPath, ".meta"), thumb = PixelSaveShots.ThumbPath(jsonPath);
+            if (File.Exists(meta)) File.Delete(meta);
+            if (File.Exists(thumb)) File.Delete(thumb);
+            PixelSaveShots.Forget(thumb);
+        }
+        catch (Exception) { }
     }
 
     /// <summary>The newest autosave's file, or null (cheap: just the file names).</summary>
@@ -107,24 +180,25 @@ public static class PixelAutosaves
         return list;
     }
 
-    /// <summary>Deletes the oldest autosaves beyond 'keep' (their screenshots and info too).</summary>
+    /// <summary>
+    /// Deletes the oldest autosaves beyond 'keep' (their screenshots and info too) - but never the newest KeepPerGame of ANY game: a game
+    /// that was never saved to a slot lives only here, and another game's autosaves must not push its last copies out (2026-10-27 audit).
+    /// </summary>
     private static void Trim(int keep)
     {
-        string[] files = Directory.GetFiles(Folder, "autosave_*.json");
-        if (files.Length <= keep) return;
-        Array.Sort(files, StringComparer.Ordinal);
-        for (int i = 0; i < files.Length - keep; i++)
+        var files = FilesNewestFirst();
+        if (files.Count <= keep) return;
+        var seenPerGame = new Dictionary<string, int>();
+        var removable = new List<string>();   // oldest last in 'files', so collected newest first
+        foreach (var f in files)
         {
-            try
-            {
-                File.Delete(files[i]);
-                string meta = Path.ChangeExtension(files[i], ".meta"), thumb = PixelSaveShots.ThumbPath(files[i]);
-                if (File.Exists(meta)) File.Delete(meta);
-                if (File.Exists(thumb)) File.Delete(thumb);
-                PixelSaveShots.Forget(thumb);
-            }
-            catch (Exception) { }
+            string game = GameOf(f.Key);
+            seenPerGame.TryGetValue(game, out int n);
+            seenPerGame[game] = n + 1;
+            if (n >= KeepPerGame) removable.Add(f.Key);
         }
+        int excess = files.Count - keep;
+        for (int i = removable.Count - 1; i >= 0 && excess > 0; i--, excess--) DeleteOne(removable[i]);   // the oldest removable first
     }
 }
 
