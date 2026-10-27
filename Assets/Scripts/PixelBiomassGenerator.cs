@@ -349,7 +349,7 @@ public class PixelBiomassGenerator : MonoBehaviour, IPixelSocketDevice, IPixelHu
         foreach (PixelPlacedDevice d in PixelPlacedDevice.All)
         {
             if (d == null || d == device || d.IsEnding || IsPowerSource(d)) continue;
-            if (d.Permanent || !d.Armed) continue;   // (no countdown to stop: a permanent device, or one not switched on yet - no energy bar, not counted)
+            if (!d.NeedsPower) continue;   // (no countdown to stop: a permanent device, or one not switched on yet - no energy bar, not counted)
             Vector3 dv = d.transform.position - me; dv.y = 0f;
             if (dv.sqrMagnitude > radius * radius) continue;
             d.HoldPower(fraction, energyColor);

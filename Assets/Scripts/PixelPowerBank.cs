@@ -288,7 +288,7 @@ public class PixelPowerBank : MonoBehaviour, IPixelDeviceInfo
         foreach (PixelPlacedDevice d in PixelPlacedDevice.All)
         {
             if (d == null || d == device || d.IsEnding || PixelBiomassGenerator.IsPowerSource(d)) continue;
-            if (d.Permanent || !d.Armed) continue;   // (no countdown to stop: a permanent device, or one not switched on yet - no energy bar, no charge spent; as the Biomass Generator)
+            if (!d.NeedsPower) continue;   // (no countdown to stop: a permanent device, or one not switched on yet - no energy bar, no charge spent; PixelPlacedDevice.NeedsPower, shared with the Biomass Generator)
             Vector3 dv = d.transform.position - me; dv.y = 0f;
             if (dv.sqrMagnitude > radius * radius) continue;
             d.HoldPower(fraction, energyColor);

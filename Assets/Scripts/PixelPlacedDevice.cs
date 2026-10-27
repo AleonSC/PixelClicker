@@ -338,6 +338,9 @@ public abstract class PixelPlacedDevice : MonoBehaviour
     /// <summary>True for a device that never runs out (the Wood Chipper, Sweeper, Sorting Hopper, Funnel... stubs: a countdown of 1e9 s).</summary>
     public bool Permanent => !usesMode && remaining > 1e8f;
 
+    /// <summary>Does power (a Biomass Generator / Power Bank in range) do anything for it? Only a switched-on device with a countdown - the one test both power sources use.</summary>
+    public bool NeedsPower => !Permanent && Armed;
+
     private static readonly List<IPixelDeviceInfo> infoScratch = new List<IPixelDeviceInfo>();
     private static PixelConsumables infoConsumables;
     private static PixelShop infoShop;
