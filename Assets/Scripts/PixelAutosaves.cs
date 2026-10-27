@@ -147,16 +147,6 @@ public static class PixelAutosaves
         catch (Exception) { return null; }
     }
 
-    /// <summary>Deletes every autosave (Restart).</summary>
-    public static void DeleteAll()
-    {
-        try
-        {
-            if (!Directory.Exists(Folder)) return;
-            foreach (string f in Directory.GetFiles(Folder, "autosave_*")) { File.Delete(f); if (f.EndsWith(".jpg")) PixelSaveShots.Forget(f); }
-        }
-        catch (Exception) { }
-    }
 
     /// <summary>The kept autosaves, newest first.</summary>
     public static List<Entry> List()

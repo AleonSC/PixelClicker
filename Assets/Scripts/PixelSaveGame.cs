@@ -258,9 +258,6 @@ public class PixelSaveGame : MonoBehaviour
         return PixelAutosaves.NewestPath() != null;
     }
 
-    /// <summary>Same, without the file: true when there is any save; 'slot' is 0 when the newest one is an autosave.</summary>
-    public bool TryGetMostRecentSlot(out int slot) => TryGetLatest(out slot, out _);
-
     /// <summary>Main menu 'Continue': loads the newest save, manual or autosave (and pays the time away). False if there is none or none can be read.</summary>
     public bool ContinueMostRecent() => LoadNewestReadable(true);
 
