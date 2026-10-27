@@ -4,7 +4,9 @@ using UnityEngine;
 /// <summary>
 /// The Pixel Entrepreneur (id "entrepreneur", Minigames tab, cheap): a visitor who stops time and offers a few pixel-for-pixel
 /// deals. Each offer asks for a random amount of a pixel type you hold and gives a random amount of another unlocked type. The
-/// exchange rate follows how rare each pixel is, multiplied by a random luck factor, so some deals are great and some are bad.
+/// exchange rate follows how rare each pixel is, multiplied by a random luck factor, so some deals are great and some are bad. When the
+/// fair amount would be under one (a common pixel for a rare one), he asks for enough to buy one instead; if you don't hold that many, that
+/// offer is dropped and another pixel type is rolled.
 /// All the behaviour (sliding in, greeting, accept / reject, the offers window) is in <see cref="PixelVisitorMinigame"/>.
 /// </summary>
 public class PixelEntrepreneurMinigame : PixelVisitorMinigame
@@ -76,7 +78,15 @@ public class PixelEntrepreneurMinigame : PixelVisitorMinigame
 
             double pay = System.Math.Max(1d, System.Math.Floor(tiers[payTier].count * Random.Range(minPayFraction, maxPayFraction)));
             double luck = Random.Range(minLuck, maxLuck);
-            double get = System.Math.Max(1d, System.Math.Floor(pay * PixelMarket.RarityValue(tiers[payTier]) / PixelMarket.RarityValue(tiers[getTier]) * luck));
+            double rate = PixelMarket.RarityValue(tiers[payTier]) / PixelMarket.RarityValue(tiers[getTier]) * luck;   // pixels he gives per pixel you pay
+            double get = System.Math.Floor(pay * rate);
+            if (get < 1d)
+            {
+                // The fair amount is under one (a common pixel for a rare one): ask for enough to buy ONE, never 1 for a fraction.
+                pay = System.Math.Ceiling(1d / rate);
+                if (pay > tiers[payTier].count) { n--; continue; }   // you don't hold that much: drop this offer and roll another pixel type
+                get = 1d;
+            }
             result.Add(new Trade { payTier = payTier, getTier = getTier, pay = pay, get = get });
         }
         return result;

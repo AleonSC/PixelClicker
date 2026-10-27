@@ -6,7 +6,8 @@
 //   FORMAT: '#' lines are comments. Each item is a block that starts with its key in brackets - '[Pack: <coded name>]' or
 //   '[Device: <coded name>]' (the coded default name, so renaming an item in 'Name:' keeps it matched) - followed by
 //     Name: ...           Description: ... (one line; write \n for a line break)
-//     Price: 75 White, 50 Green          (amount + pixel type, comma separated; K / M / B allowed: 1.5K; '@bomb' = a minigame's counter)
+//     Price: 75 White, 50 Green          (amount + pixel type, comma separated; K / M / B allowed: 1.5K; '@bomb' = a minigame's counter;
+//                                         a currency named twice is added up: '10 White, 5 White' = 15 White - MergeCosts)
 //     Price L1: ... / Price L2: ...      (upgrade packs: one line per level)
 //   Pixel types are written by their code name (White, HornetNest...); display names work too. Gathering skill packs (ShopPack.skillLadder)
 //   get their price from the shop's skill pack ladder, so their Price line is ignored.
@@ -113,7 +114,40 @@ public static class PixelShopText
             }
             costs.Add(new PixelShop.PackCost { type = type, amount = amount });
         }
-        return costs.ToArray();
+        return MergeCosts(costs.ToArray());   // "10 White, 5 White" = 15 White
+    }
+
+    /// <summary>The ONE place a price's lines are added up per currency: "10 White, 5 White" -> "15 White", so a price that names a currency
+    /// twice is checked and paid as its total (the shop's and the visitors' pay checks call this too). Null lines are dropped. Returns the same
+    /// array when no currency repeats (no allocation), otherwise new copies (the item's own price is never changed).</summary>
+    public static PixelShop.PackCost[] MergeCosts(PixelShop.PackCost[] costs)
+    {
+        if (costs == null) return null;
+        bool repeats = false;
+        for (int i = 0; i < costs.Length && !repeats; i++)
+        {
+            if (costs[i] == null) { repeats = true; break; }
+            for (int j = i + 1; j < costs.Length; j++)
+                if (costs[j] != null && SameCurrency(costs[i], costs[j])) { repeats = true; break; }
+        }
+        if (!repeats) return costs;
+        List<PixelShop.PackCost> merged = new List<PixelShop.PackCost>(costs.Length);
+        foreach (PixelShop.PackCost c in costs)
+        {
+            if (c == null) continue;
+            PixelShop.PackCost same = merged.Find(m => SameCurrency(m, c));
+            if (same != null) same.amount += c.amount;
+            else merged.Add(new PixelShop.PackCost { type = c.type, amount = c.amount, minigameCurrency = c.minigameCurrency });
+        }
+        return merged.ToArray();
+    }
+
+    /// <summary>Do two price lines spend the same thing (the same pixel type, or the same material / minigame id)?</summary>
+    private static bool SameCurrency(PixelShop.PackCost a, PixelShop.PackCost b)
+    {
+        bool aPixel = string.IsNullOrEmpty(a.minigameCurrency), bPixel = string.IsNullOrEmpty(b.minigameCurrency);
+        if (aPixel != bPixel) return false;
+        return aPixel ? a.type == b.type : string.Equals(a.minigameCurrency.Trim(), b.minigameCurrency.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool TryParseType(string name, PixelClicker clicker, out PixelClicker.PixelType type)

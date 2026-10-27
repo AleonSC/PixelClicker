@@ -810,10 +810,11 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
         return PixelMaterials.CostAffordable(c.minigameCurrency, c.amount);
     }
 
-    private void Spend(PixelShop.PackCost c)
+    private bool Spend(PixelShop.PackCost c)
     {
-        if (string.IsNullOrEmpty(c.minigameCurrency)) { clicker.TrySpend(c.type, c.amount); return; }
+        if (string.IsNullOrEmpty(c.minigameCurrency)) return clicker.TrySpend(c.type, c.amount);
         PixelMaterials.CostSpend(c.minigameCurrency, c.amount);
+        return true;
     }
 
     private string CostName(PixelShop.PackCost c)
@@ -827,9 +828,9 @@ public abstract partial class PixelVisitorMinigame : PixelMinigame
     {
         if (consumables.ItemRoom(item) < 1) return;
         if (stock.TryGetValue(item, out int left) && left < 1) return;
-        PixelShop.PackCost[] price = PriceOf(item);
+        PixelShop.PackCost[] price = PixelShopText.MergeCosts(PriceOf(item));   // a currency named twice is checked / paid as its total
         foreach (PixelShop.PackCost c in price) if (!CanAfford(c)) return;
-        foreach (PixelShop.PackCost c in price) Spend(c);
+        foreach (PixelShop.PackCost c in price) if (!Spend(c)) return;   // (a failed spend never gives the item)
         consumables.AddItem(item, 1);
         if (stock.ContainsKey(item)) stock[item]--;
         PixelRapport rapport = PixelRapport.Instance;

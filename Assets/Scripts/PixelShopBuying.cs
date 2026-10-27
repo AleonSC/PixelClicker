@@ -278,6 +278,7 @@ public partial class PixelShop
     private bool CanAffordCosts(PackCost[] costs)
     {
         if (costs == null) return true;
+        costs = PixelShopText.MergeCosts(costs);   // a currency named twice is checked as its total
         foreach (PackCost cost in costs)
             if (!CanAffordCost(cost)) return false;
         return true;
@@ -290,11 +291,22 @@ public partial class PixelShop
         return PixelMaterials.CostAffordable(cost.minigameCurrency, cost.amount);
     }
 
-    /// <summary>Pays one line of a price.</summary>
-    private void SpendCost(PackCost cost)
+    /// <summary>Pays one line of a price. False if a pixel line could not be paid.</summary>
+    private bool SpendCost(PackCost cost)
     {
-        if (string.IsNullOrEmpty(cost.minigameCurrency)) { clicker.TrySpend(cost.type, cost.amount); return; }
+        if (string.IsNullOrEmpty(cost.minigameCurrency)) return clicker.TrySpend(cost.type, cost.amount);
         PixelMaterials.CostSpend(cost.minigameCurrency, cost.amount);
+        return true;
+    }
+
+    /// <summary>Pays a whole price (its lines added up per currency first). False if any line could not be paid: the caller must then NOT
+    /// give the item. Call it after CanAffordCosts, so a failure only happens if something changed in between.</summary>
+    private bool PayCosts(PackCost[] costs)
+    {
+        if (costs == null) return true;
+        foreach (PackCost cost in PixelShopText.MergeCosts(costs))
+            if (!SpendCost(cost)) return false;
+        return true;
     }
 
     /// <summary>True once the Shop button is showing (its required pixel is unlocked).</summary>
@@ -374,7 +386,7 @@ public partial class PixelShop
         PackCost[] total = consumables.ItemCostsTotal(itemIndex, count);   // (a rising price adds up step by step)
         if (!CanAffordCosts(total)) return false;
 
-        foreach (PackCost cost in total) SpendCost(cost);
+        if (!PayCosts(total)) return false;
 
         consumables.AddItem(itemIndex, count);
         PixelStats.Count("shop.items", count);
@@ -646,10 +658,7 @@ public partial class PixelShop
 
         ShopPack pack = packs[packIndex];
 
-        PackCost[] costs = CurrentCosts(pack);
-        if (costs != null)
-            foreach (PackCost cost in costs)
-                SpendCost(cost);
+        if (!PayCosts(CurrentCosts(pack))) return false;   // (a failed spend never gives the pack)
 
         if (IsLeveled(pack))
         {
