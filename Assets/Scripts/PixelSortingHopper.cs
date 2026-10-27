@@ -16,7 +16,8 @@
 //   - OUTPUT SOCKETS (2026-10-20, sockets are the only husk connection path): every SHOWN output pipe (unlocked and switched on) has a Husk OUTPUT socket
 //     ('green', 'orange', 'blue', 'pink'; IPixelSocketDevice, NOT fitted) a husk below its mouth, facing out along the pipe. A belt STARTING there gets an
 //     Out coupling (auto-fit) and that output's husks go onto it (PixelCouplings.EmitStored) - and while that belt's start is full they WAIT in the bowl
-//     (the next held husk that can go somewhere goes instead). An Out coupling with another device's In coupling right in front hands them over (Emit).
+//     (the next held husk that can go somewhere goes instead; each output's room is asked once per pass, and a pass where everything waits retries
+//     after the normal feed gap, not every frame). An Out coupling with another device's In coupling right in front hands them over (Emit).
 //     Nothing attached = exactly as before: they drop out of the pipe's mouth. The bottom spout has no socket (rejects just drop). The socket list is
 //     rebuilt when the shown pipes change (couplings taken off, auto-fit puts them back where a belt still starts). AcceptHusk always refuses (no inputs).
 //   - OUTPUTS (Operation 'Outputs' +1 a level, 3 levels): side pipes on the LEFT, RIGHT and then BACK, each with its own filter (a block of that type spins
@@ -500,24 +501,28 @@ public class PixelSortingHopper : MonoBehaviour, IPixelDeviceInfo, IPixelTierPic
         bool anyFilter = filterTier >= 0 && OutputOn(0);
         for (int k = 0; k < sides; k++) if (sideFilters[k] >= 0 && OutputOn(k + 1)) anyFilter = true;
         if (!anyFilter) return;   // (no filter chosen on any output: it just holds)
+        int blocked = 0;   // (bit o = output o's belt is full this pass: asked once, not again for every held husk of its type)
         for (int i = 0; i < held.Count; i++)
         {
             Held h = held[i];
             bool filtered = h.tier == filterTier && OutputOn(0);
             int side = -1;
             if (!filtered) for (int k = 0; k < sides; k++) if (sideFilters[k] == h.tier && OutputOn(k + 1)) { side = k; break; }
-            if (filtered)
+            int o = filtered ? 0 : side + 1;
+            if (filtered || side >= 0)
             {
-                if (!SendOut(0, h)) continue;   // (its belt is full: it waits, the next held husk may go)
-                PixelStats.Count("hopper.husks"); sessionFed++;
+                if ((blocked & (1 << o)) != 0) continue;
+                if (!SendOut(o, h)) { blocked |= 1 << o; continue; }   // (its belt is full: it waits, the next held husk may go)
+                if (filtered) { PixelStats.Count("hopper.husks"); sessionFed++; }
+                else { PixelStats.Count("hopper.sided"); sessionSided++; }
             }
-            else if (side >= 0) { if (!SendOut(side + 1, h)) continue; PixelStats.Count("hopper.sided"); sessionSided++; }
             else { SendOutBottom(h, 1f); PixelStats.Count("hopper.rejected"); sessionRejected++; }
             held.RemoveAt(i);
             nextFeed = Time.time + FeedInterval;
             PixelSortingHopperWindow.Changed(this);
             return;
         }
+        nextFeed = Time.time + FeedInterval;   // (everything held waits on a full belt: try again after the normal gap, not every frame)
     }
 
     /// <summary>Shows the unlocked side pipes (the Outputs level in use can change at any time: bought, or turned down in the device panel).</summary>
