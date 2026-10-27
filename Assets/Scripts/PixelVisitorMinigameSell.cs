@@ -7,7 +7,8 @@
 //   - Pick the good, the amount (slider + 10 / 25 / 50% / All) and what to be paid in (a pure colour); the big button shows the live price
 //     ("Sell for 1.2K Red") and the line above it his market for that good (PixelMarket.TrendText). Price = PixelMarket.Quote (rate x what a click
 //     on pure blocks earns x the effort behind the goods, less as his market fills up) x his mood (once per visit, moodRange) x a roll (once per
-//     good per visit, the average of two in offerRollRange) x OfferBonus (Big Tim: + his Woodcutting level). Selling records the sale (saturation).
+//     good per visit, the average of two in offerRollRange) x OfferBonus (Big Tim: + his Woodcutting level), rounded DOWN with no minimum: an amount worth under 1 pure can't be sold
+//     (the button says 'Too little to sell'; pick more). Selling records the sale (saturation).
 //   - TRADE buttons under it (CollectTradeOffers; the Wizard): swap a fixed amount of the picked good for something only he has - shown beside the
 //     sell price so both choices are clear.
 //   - A vendor with no wares opens straight on this view (no Buy / Sell tabs).
@@ -274,7 +275,9 @@ public abstract partial class PixelVisitorMinigame
             roll = (UnityEngine.Random.Range(lo, hi) + UnityEngine.Random.Range(lo, hi)) * 0.5;
             visitRolls[g.marketKey] = roll;
         }
-        return System.Math.Max(1d, System.Math.Floor(market.Quote(Id, g.marketKey, g.clicksPerUnit, amount, g.rate) * mood * roll * OfferBonus));
+        // No forced minimum: a sale pays the floor of the real quote, so a few cheap goods (Bedrock is ~0.2 pure each) can pay 0
+        // and the Sell button then says 'Too little to sell' (RefreshSellPrice) instead of paying more than they are worth.
+        return System.Math.Floor(market.Quote(Id, g.marketKey, g.clicksPerUnit, amount, g.rate) * mood * roll * OfferBonus);
     }
 
     private void RefreshSellPrice()
@@ -287,7 +290,9 @@ public abstract partial class PixelVisitorMinigame
         PixelUIKit.SetText(marketLabel, market != null && g != null ? market.TrendText(Id, g.marketKey) : "");
         shownPrice = g != null && pay >= 0 ? SellPrice(g, amount) : 0d;
         bool can = g != null && pay >= 0 && amount >= 1d && shownPrice >= 1d;
-        PixelUIKit.SetText(sellLabel, can ? "Sell for " + PixelClicker.FormatNumberShort(shownPrice) + " " + clicker.Tiers[pay].displayName : g != null && g.giftOnly ? "Gift only" : "Sell");
+        bool tooLittle = !can && g != null && !g.giftOnly && pay >= 0 && amount >= 1d;   // the amount is worth less than 1 pure: sell more at once
+        PixelUIKit.SetText(sellLabel, can ? "Sell for " + PixelClicker.FormatNumberShort(shownPrice) + " " + clicker.Tiers[pay].displayName
+            : g != null && g.giftOnly ? "Gift only" : tooLittle ? "Too little to sell" : "Sell");
         sellButton.interactable = can;
         RefreshGiftButton(g);
         RefreshCharmButton();
@@ -341,6 +346,7 @@ public abstract partial class PixelVisitorMinigame
         double amount = System.Math.Floor(amountSlider.value);
         if (g == null || g.giftOnly || pay < 0 || amount < 1d) return;
         double price = SellPrice(g, amount);
+        if (price < 1d) return;   // worth less than 1 pure (the button is off then too)
         if (!g.take(amount)) { PixelUIKit.SetText(sayLabel, "Looks like you don't have that much any more."); RefreshSellLists(); return; }
         clicker.AddCurrency(pay, price);
         PixelMarket market = PixelMarket.Instance;

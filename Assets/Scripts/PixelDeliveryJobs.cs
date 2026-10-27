@@ -12,8 +12,8 @@
 //     one: its tier exists), a SIZE from the sizes table (bigger / mixed ones need Cubie's trust tier and
 //     his rapport step; weights pick among the allowed ones), the time limit, the pay and maybe a reward item (one of his wares).
 //   - PAY (fixed when offered): pure currency = PixelMarket.JobQuote (husksRate x what a click on pure blocks earns x the clicks behind each husk,
-//     x his rapport price bonus) - FUEL husks (Big Tim's Charcoal and Wood Chips, 2026-10-25) are priced by FUEL VALUE instead: one is worth
-//     charcoalWorthInWood (8) / woodChipsWorthInWood (4) Wood husks, like in the Biomass Generator (JobPay); in the unlocked pure colour you hold least of; + RAPPORT (the size's points: the biggest rapport source) + sometimes
+//     x his rapport price bonus; Big Tim's Charcoal and Wood Chips too, by their own clicks - their fuel value only counts in the Biomass
+//     Generator, 2026-10-27); in the unlocked pure colour you hold least of; + RAPPORT (the size's points: the biggest rapport source) + sometimes
 //     an ITEM. Expired: no penalty; the husks pop back out and he leaves a share of the rapport (expiredRapportShare x how full the crate was).
 //   - ACCEPTED: the job goes into GameState.delivery (DeliveryState) and his DELIVERY CRATE (PixelDeliveryCrate) drops onto his dock. The crate is
 //     only a view of the job: this component rebuilds missing crates (after a load) every check, so the state is the one truth.
@@ -107,13 +107,6 @@ public class PixelDeliveryJobs : MonoBehaviour
     [Tooltip("Husks in a job pay this many times what the clicks behind them would earn on pure blocks (selling the goods pays 1.2x; products in a crate will be ~3x later).")]
     [SerializeField] private float husksRate = 2f;
 
-    [Header("Fuel husks (Big Tim's jobs: priced by fuel value, not by the clicks behind them)")]
-    [Min(0f)]
-    [Tooltip("One CHARCOAL husk in a job pays like this many Wood husks (its fuel value: the Biomass Generator burns it as long as 8 wood husks).")]
-    [SerializeField] private float charcoalWorthInWood = 8f;
-    [Min(0f)]
-    [Tooltip("One WOOD CHIPS husk in a job pays like this many Wood husks (its fuel value in the Biomass Generator: 4).")]
-    [SerializeField] private float woodChipsWorthInWood = 4f;
     [Tooltip("Version of the built-in dock husk lists copied in (raised when a built-in type is added, so an existing dock row gets it once).")]
     [SerializeField, HideInInspector] private int dockTypesVersion = 0;
     private const int DockTypesVersion = 1;   // 1 = Charcoal and Wood Chips in Big Tim's jobs (2026-10-25)
@@ -304,25 +297,13 @@ public class PixelDeliveryJobs : MonoBehaviour
             left.RemoveAt(pick);
             int need = Mathf.Max(1, s.amounts[i]);
             o.lines.Add(new DeliveryState.Line { type = (int)clicker.Tiers[tier].type, need = need });
-            if (market != null) o.pay += JobPay(market, vendor, tier, need);
+            if (market != null) o.pay += market.JobQuote(vendor, tier, need, husksRate);   // (every husk, fuel ones too, by the clicks behind it)
         }
         o.pay = System.Math.Max(1d, System.Math.Round(o.pay));
         o.payType = (int)LeastHeldPure();
         if (rollReward != null && UnityEngine.Random.value < s.itemChance) o.rewardItem = rollReward() ?? "";
         if (!D.docks.Contains(vendor)) { D.docks.Add(vendor); RefreshMarkers(); }   // (he has posted a job: his dock shows from now on)
         return o;
-    }
-
-    /// <summary>A fuel husk's worth in Wood husks (Charcoal, Wood Chips: their fuel value), 0 = not a fuel husk (priced by the clicks behind it).</summary>
-    private float FuelWorthInWood(PixelClicker.PixelType type) =>
-        type == PixelClicker.PixelType.Charcoal ? charcoalWorthInWood : type == PixelClicker.PixelType.WoodChips ? woodChipsWorthInWood : 0f;
-
-    /// <summary>What 'need' husks of this tier pay in a job: a fuel husk as that many Wood husks, any other by the clicks behind it (PixelMarket.JobQuote).</summary>
-    private double JobPay(PixelMarket market, string vendor, int tier, int need)
-    {
-        float fuel = FuelWorthInWood(clicker.Tiers[tier].type);
-        int wood = fuel > 0f ? clicker.IndexOf(PixelClicker.PixelType.Wood) : -1;
-        return wood >= 0 ? market.JobQuote(vendor, wood, need * (double)fuel, husksRate) : market.JobQuote(vendor, tier, need, husksRate);
     }
 
     /// <summary>His husk types that are unlocked now, as tier indices, in his list's order.</summary>

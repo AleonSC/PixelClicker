@@ -75,7 +75,7 @@ Keep this map current: when a system gets a new link (or loses one), change its 
 | Conveyor Elevator | a belt's husks | lifts them to a higher belt | space | Electrician? | Built (tester) |
 | Container Hose | husks stored in a crate / organizer (Out coupling) | into any In coupling, routed through bend points | space | Electrician? | Built (tester) |
 | Belt Sorter | a belt's husks + one filter block | that type off the side | space, the rotation | Electrician? | Built (tester) |
-| Kiln | husks | Charcoal (Biomass fuel x8 as Charcoal pixel husks, Big Tim's delivery jobs at 8 Wood each) | despawn | ? | Built (tester) |
+| Kiln | husks | Charcoal (Biomass fuel x8 as Charcoal pixel husks, Big Tim's delivery jobs by its own clicks) | despawn | ? | Built (tester) |
 | Trash Can | loose husks | deletes them | space | ? | Built (tester) |
 | Sweeper | husks close to fading | into the nearest crate / hopper / Recycler with room | despawn, space | Standard 5 (motor: Electrician, planned) | Built |
 | Delivery crate (a vendor's job, on his dock) | the job's husk types (belt / hose through its In coupling, or dropped in) | pure currency (2x of the clicks behind the husks) + rapport + sometimes an item, to the vendor who posted it | despawn, a reason to build (the factory's customer) | Vendors (every skill's buyer) | Built 2026-10-24 |
