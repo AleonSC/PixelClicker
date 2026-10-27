@@ -3,7 +3,8 @@
 //   Meteor minigame (pack unlocksMinigame = "meteor", Minigames tab): a large glowing meteor (runtime-built: lumpy noise-displaced
 //   rock mesh lumpiness, lava-crack albedo/emission textures lavaCracks, a camera-facing glow sprite haloOpacity, a two-layer tail
 //   incl. a white-hot hotCoreTail, a particle-system ember stream embersPerSecond, flickering light) drifts slowly across the screen;
-//   each click gives chunksPerClick meteor chunks but never destroys it. Tracker "Meteor Chunks" (saved generically); the Meteor Pixel
+//   each click gives chunksPerClick meteor chunks but never destroys it. Tracker "Meteor Chunks" (saved generically; the goal counts chunks EVER
+//   collected, so selling / spending held chunks never re-locks it); the Meteor Pixel
 //   pack has a MinigameGoal requirement for meteor. Extends PixelMinigame (id meteor). It speeds up gradually across the screen (disableSpeedUp / speedUpAmount, same total time), a rumble loop
 //   (meteor_rumble) plays while it crosses, every click plays meteor_hit and throws mining effects (sparks, rock chips, dust: BuildImpactFx / EmitImpact, disableImpactFx, impactChips / impactSparks)
 //   and the glow flashes; a chunk plays meteor_click. The sounds are code-made (PixelMeteorSynth) and replaceable in the PixelAudio Sounds list.
@@ -36,7 +37,8 @@ public class PixelMeteorMinigame : PixelScheduledMinigame
     [Min(1)]
     [Tooltip("Chunks you need in total before the Meteor Pixel can be bought. The count keeps going afterwards.")]
     [SerializeField] private double chunkGoal = 1000;
-    private double chunks { get => SavedCount; set => SavedCount = value; }   // (progress: the GameState)
+    private double chunks => SavedCount;                 // chunks held (spent on prices / sold to vendors; progress: the GameState)
+    private double chunksEarned => SavedEverEarned;      // chunks ever collected = the goal counter (never goes down, see PixelMinigame)
 
     [Min(1)]
     [Tooltip("Chunks gained by each click on the meteor.")]
@@ -218,7 +220,9 @@ public class PixelMeteorMinigame : PixelScheduledMinigame
     public override bool HasTracker => true;
     public override string TrackerTitle => trackerTitle;
     public override string TrackerDescription => trackerDescription;
-    public override double TrackerCount => chunks;
+    public override double TrackerCount => chunksEarned;
+    public override double SpendableCount => chunks;
+    public override bool TrySpendTracker(double amount) => SpendHeld(amount);
     public override double TrackerGoal => chunkGoal;
     public override string RequirementFormat => requirementFormat;
 
@@ -228,12 +232,12 @@ public class PixelMeteorMinigame : PixelScheduledMinigame
 
     public override void SetTrackerCount(double value)
     {
-        chunks = System.Math.Max(0d, value);
-        thresholdAnnounced = chunks >= chunkGoal;
+        SavedEverEarned = value;
+        thresholdAnnounced = chunksEarned >= chunkGoal;
     }
 
     // A save was loaded: a goal it had already reached is not announced again.
-    protected override void OnProgressLoaded() => thresholdAnnounced = chunks >= chunkGoal;
+    protected override void OnProgressLoaded() => thresholdAnnounced = chunksEarned >= chunkGoal;
 
     protected override void Awake()
     {
@@ -247,7 +251,7 @@ public class PixelMeteorMinigame : PixelScheduledMinigame
         }
 
         StartSchedule();
-        thresholdAnnounced = chunks >= chunkGoal;
+        thresholdAnnounced = chunksEarned >= chunkGoal;
     }
 
     private void Update()
@@ -758,11 +762,11 @@ public class PixelMeteorMinigame : PixelScheduledMinigame
 
     private void CollectChunk(Vector3 point, Camera cam)
     {
-        bool reachedBefore = chunks >= chunkGoal;
-        chunks += chunksPerClick;
+        bool reachedBefore = chunksEarned >= chunkGoal;
+        EarnSpendable(chunksPerClick);
         Report(MinigameEvent.Clicked);
         onChunkCollected?.Invoke();
-        if (!reachedBefore && chunks >= chunkGoal && !thresholdAnnounced)
+        if (!reachedBefore && chunksEarned >= chunkGoal && !thresholdAnnounced)
         {
             thresholdAnnounced = true;
             onThresholdReached?.Invoke();

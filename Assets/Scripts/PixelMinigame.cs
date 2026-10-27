@@ -2,7 +2,9 @@
 // PixelMinigame.cs
 //   NeedsNormalCamera (default = Takeover): true while the minigame needs the camera at its normal pose (the orbit camera glides home, the zoom snaps back); Weak Spots overrides it to false.
 //   Abstract base for minigames (registry PixelMinigame.All/Find(id), Id, Running, Activate/Deactivate, optional goal tracker:
-//   HasTracker, TrackerTitle/Description/Count/Goal, RequirementFormat, GoalReached). Skill XP bonus: every
+//   HasTracker, TrackerTitle/Description/Count/Goal, RequirementFormat, GoalReached). A goal counter that is also a spendable material
+//   (Meteor Chunks, Stardust, Magic Wood) keeps held = SavedCount and ever earned = SavedEverEarned (TrackerCount, never goes down: a reached
+//   goal stays reached when you sell / spend the material; EarnSpendable / SpendHeld), like the Bomb's parts. Skill XP bonus: every
 //   Report(MinigameEvent.Clicked) (each success: ghost caught, meteor click, star collected, bomb defused, Ultra Hole drop, Snake /
 //   Sorting / Breakout win, Dash round) calls GrantSkillXp(), which gives bonus XP to the skill in training (none while Standard is
 //   trained) via PixelSkills.AddXp (so the XP popup shows too); defaults in DefaultSkillXp by id (meteor 1, black hole 1 per swallowed
@@ -301,6 +303,32 @@ public abstract class PixelMinigame : MonoBehaviour
         set { MinigamesState.Entry e = Saved(value != 0d); if (e != null) e.extra = value; }
     }
 
+    /// <summary>For a minigame whose goal counter is also a material you spend (Meteor Chunks, Stardust, Magic Wood): the amount you HOLD is
+    /// SavedCount and the amount EVER earned is this (kept in SavedExtra, never less than the amount held). Its TrackerCount is this, so a goal
+    /// once reached stays reached (shop packs that need it never re-lock) while the held amount is still spent (EarnSpendable / SpendHeld).</summary>
+    protected double SavedEverEarned
+    {
+        get { return System.Math.Max(SavedExtra, SavedCount); }
+        set { SavedExtra = System.Math.Max(0d, value); }
+    }
+
+    /// <summary>Adds to both the held amount and the ever-earned count (see SavedEverEarned).</summary>
+    protected void EarnSpendable(double amount)
+    {
+        double ever = SavedEverEarned + amount;
+        SavedCount += amount;
+        SavedEverEarned = ever;
+    }
+
+    /// <summary>Spends from the held amount only (the ever-earned count stays). False, and nothing spent, if you hold too little.</summary>
+    protected bool SpendHeld(double amount)
+    {
+        if (amount < 0d || SavedCount < amount) return false;
+        SavedEverEarned = SavedEverEarned;   // (pin the ever-earned count before the held amount drops below it)
+        SavedCount -= amount;
+        return true;
+    }
+
     /// <summary>A save was loaded (its counters are in the GameState now): a switched-off minigame stops; a subclass fixes up what follows from its counter (OnProgressLoaded).</summary>
     private void OnGameLoaded()
     {
@@ -451,7 +479,9 @@ public abstract class PixelMinigame : MonoBehaviour
     /// <summary>How much of this minigame's currency (e.g. bomb parts) can be spent right now. By default the goal counter itself.</summary>
     public virtual double SpendableCount => TrackerCount;
 
-    /// <summary>Spends some of the minigame's currency (e.g. bomb parts) as a shop price. Returns false, and spends nothing, if there isn't enough.</summary>
+    /// <summary>Spends some of the minigame's currency (e.g. bomb parts) as a shop price. Returns false, and spends nothing, if there isn't enough.
+    /// The default lowers the goal counter itself; a minigame whose goal gates shop packs keeps an ever-earned count instead and spends the held
+    /// amount (Bomb parts; Meteor / Stardust / Evil Tree via SavedEverEarned + SpendHeld), so spending never re-locks a reached goal.</summary>
     public virtual bool TrySpendTracker(double amount)
     {
         if (!HasTracker || amount < 0d || TrackerCount < amount) return false;

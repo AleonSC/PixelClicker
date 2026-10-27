@@ -5,7 +5,7 @@
 //   after fallDelaySeconds a runtime-built five-pointed star (vertex-coloured mesh, Sprites/Default, trail, point light) falls beside
 //   the cube onto the old-pixel floor (rigidbody, gravityScale), waits starLifetime s (blinks then shrinks away) and is collected by
 //   clicking within clickRadiusPixels of it (+stardustPerStar stardust, rising text). Tracker "Stardust" (saved generically, goal
-//   stardustGoal); the Solar Pixel pack (PixelType.Solar, Pixels tab, needs the Meteor Pixel pack + the stardust MinigameGoal) is
+//   stardustGoal, counted on stardust EVER collected so selling / spending it never re-locks the goal); the Solar Pixel pack (PixelType.Solar, Pixels tab, needs the Meteor Pixel pack + the stardust MinigameGoal) is
 //   gated by it. Tip minigame_stardust, sounds stardust_fall/_collect (code-synthesized while their clip lists are empty:
 //   PixelSynth.StarFall a falling glassy whistle with tinkling sparkles, StarChime a rising three-note chime; + the automatic
 //   stardust_spawn/_click). Magic dust (a world-space PixelFx particle system, gold / lavender sparkles, ~60 per second while the star
@@ -106,7 +106,7 @@ public class PixelStardustMinigame : PixelMinigame
     [Min(1)]
     [Tooltip("Stardust needed in total before the Solar Pixel can be bought. The count keeps going afterwards.")]
     [SerializeField] private double stardustGoal = 10;
-    private double stardust { get => SavedCount; set => SavedCount = value; }   // (progress: the GameState)
+    private double stardust => SavedCount;   // stardust held (spent on prices / sold to vendors; progress: the GameState); the goal counts SavedEverEarned
 
     [Tooltip("Title of this minigame's tracker row in the shop.")]
     [SerializeField] private string trackerTitle = "Stardust";
@@ -180,10 +180,12 @@ public class PixelStardustMinigame : PixelMinigame
     public override bool HasTracker => true;
     public override string TrackerTitle => trackerTitle;
     public override string TrackerDescription => trackerDescription;
-    public override double TrackerCount => stardust;
+    public override double TrackerCount => SavedEverEarned;   // stardust ever collected: never goes down, so the Solar Pixel pack never re-locks
+    public override double SpendableCount => stardust;
+    public override bool TrySpendTracker(double amount) => SpendHeld(amount);
     public override double TrackerGoal => stardustGoal;
     public override string RequirementFormat => requirementFormat;
-    public override void SetTrackerCount(double value) => stardust = System.Math.Max(0d, value);
+    public override void SetTrackerCount(double value) => SavedEverEarned = value;
     public override string MaterialName => "Stardust";
     public override double MaterialAmount => stardust;
     public override Color MaterialColor => new Color(1f, 0.92f, 0.45f, 1f);
@@ -449,7 +451,7 @@ public class PixelStardustMinigame : PixelMinigame
         stars.Remove(star);
         Destroy(star.root);
 
-        stardust += stardustPerStar;
+        EarnSpendable(stardustPerStar);
         Report(MinigameEvent.Clicked);
         PixelAudio.Play("stardust_collect");
         onStarCollected?.Invoke();

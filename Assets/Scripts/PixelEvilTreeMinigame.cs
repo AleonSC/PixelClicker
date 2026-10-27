@@ -4,7 +4,8 @@
 //   maxInterval 300 s, PixelMinigameLimits.AllowAnother) a sapling sprouts on the floor near the cube (PixelBait.FindGround, kept inside the view) and GROWS over growSeconds (14) into a giant tree
 //   (heightInCubes 5 cubes tall) with glowing eyes and a jagged mouth. It FLAILS so it is hard to click: the whole tree leans and jerks to new spots (the click colliders move with it), its arms
 //   whip about, and it flails harder as it grows. It has a HEALTH BAR (health 40, each manual click on it does damagePerClick 1; the auto clicker never hits it): at 0 it topples over and pays
-//   a random minWood..maxWood MAGIC WOOD (the minigame's tracker / material: PixelMinigame.MaterialName, shown in the Inventory's Materials tab and Crafting, saved like any minigame count)
+//   a random minWood..maxWood MAGIC WOOD (the minigame's tracker / material: PixelMinigame.MaterialName, shown in the Inventory's Materials tab and Crafting, saved like any minigame count;
+//   the goal counts magic wood EVER earned - PixelMinigame.SavedEverEarned - so spending / selling it never re-locks the goal)
 //   and Woodcutting XP only (SkillXpTarget = Woodcutting, default 30 XP, whatever skill is in training; needs the Woodcutting skill bought). If it is not felled within stayAfterGrownSeconds (30)
 //   of being fully grown it sinks back into the ground. Everything is built from primitives at run time (no assets). Magic Wood has no use yet (crafting later).
 // ---------------------------------------------------
@@ -24,7 +25,7 @@ public class PixelEvilTreeMinigame : PixelScheduledMinigame
     [Min(1)]
     [Tooltip("The tracker's goal (nothing requires it yet; it only fills the bar in the shop).")]
     [SerializeField] private double woodGoal = 100;
-    private double magicWood { get => SavedCount; set => SavedCount = value; }   // (progress: the GameState)
+    private double magicWood => SavedCount;   // magic wood held (spent / sold; progress: the GameState); the goal counts SavedEverEarned
     [Min(1)]
     [Tooltip("Least magic wood a felled tree pays.")]
     [SerializeField] private int minWood = 6;
@@ -101,13 +102,15 @@ public class PixelEvilTreeMinigame : PixelScheduledMinigame
     public override bool HasTracker => true;
     public override string TrackerTitle => trackerTitle;
     public override string TrackerDescription => trackerDescription;
-    public override double TrackerCount => magicWood;
+    public override double TrackerCount => SavedEverEarned;   // magic wood ever earned: never goes down, so a pack needing the goal never re-locks
+    public override double SpendableCount => magicWood;
+    public override bool TrySpendTracker(double amount) => SpendHeld(amount);
     public override double TrackerGoal => woodGoal;
     public override string RequirementFormat => requirementFormat;
     public override string MaterialName => "Magic Wood";
     public override double MaterialAmount => magicWood;
     public override Color MaterialColor => new Color(0.75f, 0.45f, 1f, 1f);
-    public override void SetTrackerCount(double value) { magicWood = System.Math.Max(0d, value); }
+    public override void SetTrackerCount(double value) { SavedEverEarned = value; }
 
     protected override void OnDespawned()
     {
@@ -341,7 +344,7 @@ public class PixelEvilTreeMinigame : PixelScheduledMinigame
         if (felled)
         {
             int wood = Random.Range(Mathf.Min(minWood, maxWood), Mathf.Max(minWood, maxWood) + 1);
-            magicWood += wood;
+            EarnSpendable(wood);
             Report(MinigameEvent.Clicked);   // a success: Woodcutting XP (SkillXpTarget)
             PixelAudio.Play("purchase");
             PixelHints.Announce(string.Format(felledFormat, wood), string.Format(felledHintFormat, wood));
