@@ -212,7 +212,7 @@ public partial class PixelSkills : MonoBehaviour
         PixelStatics.ResetOnRestart(OnSceneUnloaded);   // restart-reset-not-progress: hazard penalties of the old game (never saved)
     }
 
-    // (Restart reloads the scene but statics survive it: a hazard penalty of the old game must not run on in the new one)
+    // (Restart reloads the scene but statics survive it: a hazard penalty of the old game must not run on in the new one; a loaded save clears them too, OnLoaded)
     private static void OnSceneUnloaded() { penaltyLevels.Clear(); penaltyEnds.Clear(); }
 
     private float bundleCheckTimer;
@@ -932,8 +932,15 @@ public partial class PixelSkills : MonoBehaviour
         return xp;
     }
 
-    // A save was loaded: its skill choices are in the state now - everything that shows the pack in play redraws.
-    private void OnLoaded() => Changed?.Invoke();
+    // A save was loaded: its skill choices are in the state now - everything that shows the pack in play redraws. What belonged to the game
+    // that was running before goes: its hazard XP penalties (never saved) and its perk popups still waiting (ones the load itself queued - a
+    // level-up from offline XP - are kept: they belong to the loaded game's state).
+    private void OnLoaded()
+    {
+        OnSceneUnloaded();
+        DropOtherGamesPerkNotices();
+        Changed?.Invoke();
+    }
 
     /// <summary>The skill that earns the XP right now: the pack in play (Offline Progression is passive since 2026-10-16: it only gets XP from offline progress, AddOfflineXp).</summary>
     public string TrainingId => ActiveId;
@@ -1160,7 +1167,17 @@ public partial class PixelSkills : MonoBehaviour
     }
 
     // ---- Perk popups and level-gated unlocks ----
-    private struct PerkNotice { public string text; public string packId; public bool inWindow; }
+    private struct PerkNotice { public string text; public string packId; public bool inWindow; public object game; }   // game = the GameState it was earned in
+
+    /// <summary>A save was loaded: drops the waiting perk popups earned in another game (their 'seen' mark is in that game's stats).</summary>
+    private void DropOtherGamesPerkNotices()
+    {
+        if (perkNotices.Count == 0) return;
+        object game = PixelGameState.Current;
+        PerkNotice[] waiting = perkNotices.ToArray();
+        perkNotices.Clear();
+        foreach (PerkNotice n in waiting) if (ReferenceEquals(n.game, game)) perkNotices.Enqueue(n);
+    }
     private readonly System.Collections.Generic.Queue<PerkNotice> perkNotices = new System.Collections.Generic.Queue<PerkNotice>();
     private readonly object perkHighlightKey = new object();
 
@@ -1190,7 +1207,7 @@ public partial class PixelSkills : MonoBehaviour
             string key = "perknotice." + pack.id + "." + perk.level;
             if (PixelStats.Total(key) >= 1d) continue;
             PixelStats.Count(key);
-            perkNotices.Enqueue(new PerkNotice { text = perk.noticeText, packId = pack.id, inWindow = perk.noticeInWindow });
+            perkNotices.Enqueue(new PerkNotice { text = perk.noticeText, packId = pack.id, inWindow = perk.noticeInWindow, game = PixelGameState.Current });
         }
     }
 

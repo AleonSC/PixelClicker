@@ -79,6 +79,7 @@ public class PixelStats : MonoBehaviour
     public static void Count(string key, double amount = 1d)
     {
         if (key == null || amount <= 0d) return;
+        if (double.IsNaN(amount) || double.IsInfinity(amount)) { PixelDebug.Info("PixelStats: refused a broken amount (" + amount + ") for '" + key + "'."); return; }   // (NaN slips past '<= 0': it would wipe the counter - a skill's XP)
         S.Set(key, S.Get(key) + amount);
     }
 
