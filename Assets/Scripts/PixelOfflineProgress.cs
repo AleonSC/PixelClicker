@@ -1,9 +1,10 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelOfflineProgress.cs
 //   Offline progress: PixelSaveGame stores savedAtTicks (UTC) on every save and, on the startup load only, calls Grant(lastSaved).
-//   Rare drops (Dragon Cubes) are not averaged but rolled with a Poisson count of pixels x weight / total weight (RollPoisson). If the
+//   Rare drops (Dragon Cubes) are not averaged but rolled with a Poisson count of pixels x their fixed chance per block (PixelClicker.RareChance,
+//   the live game's odds; RollPoisson). If the
 //   auto clicker is running it pays the average earnings for the (capped, scaled) time away - clicks = time x efficiency / interval x
-//   clicks-per-tick, split across unlocked tiers by spawn weight, tough pixels needing several clicks - and shows a "Welcome back"
+//   clicks-per-tick, split across the blocks by the live game's spawn shares (PixelClicker.SpawnShare: only what can spawn now), tough pixels needing several clicks - and shows a "Welcome back"
 //   window (held back until the title screen is gone, Update + pendingGains; any later load - another slot - Dismiss()es it).
 //   Settings: max hours, efficiency, minimum away time.
 //   OFFLINE PROGRESSION XP (2026-10-16): the skill is passive - its ONLY XP is offlineXpPerClick (0.25) x the offline clicks worked out here
@@ -27,7 +28,7 @@ using UnityEngine.UI;
 ///
 /// How the amount is worked out (an average, not a replay):
 ///  - clicks = (time away, capped) x efficiency / auto clicker interval x clicks per tick
-///  - each click is a random unlocked pixel by spawn weight; a tough pixel (Clicks To Collect above 1) needs several
+///  - each click is a block picked as the live game picks it (PixelClicker.SpawnShare); a tough pixel (Clicks To Collect above 1) needs several
 ///    clicks per pixel, so it pays less per click.
 ///
 /// PixelSaveGame calls <see cref="Grant"/> after loading the save at startup (it stores when the game was last saved).
@@ -197,7 +198,9 @@ public class PixelOfflineProgress : MonoBehaviour
 
     /// <summary>
     /// Average amount of each pixel type earned by 'clicks' automatic clicks.
-    /// A tier is picked by spawn weight; a tier with Clicks To Collect N needs N clicks to pay once.
+    /// Each block's chance is the live game's own share (PixelClicker.SpawnShare: only blocks that can spawn now - unlocked, not switched off,
+    /// in the rotation of the skill pack in play - with the filler / hazard shares, Fishing's table, special blocks); a tier with
+    /// Clicks To Collect N needs N clicks to pay once.
     /// </summary>
     private double[] ComputeGains(double clicks)
     {
@@ -208,17 +211,12 @@ public class PixelOfflineProgress : MonoBehaviour
         {
             double total = 0d;
             for (int i = 0; i < tiers.Length; i++)
-                if (tiers[i].unlocked) total += Math.Max(0f, tiers[i].spawnWeight);
-
-            if (total > 0d)
             {
-                for (int i = 0; i < tiers.Length; i++)
-                    if (tiers[i].unlocked) chance[i] = Math.Max(0f, tiers[i].spawnWeight) / total;
+                // Rare drops: their fixed chance per block (only counted here for the clicks per block; their finds are rolled below).
+                chance[i] = tiers[i].rareDrop ? clicker.RareChance(i) : clicker.SpawnShare(i);
+                total += chance[i];
             }
-            else
-            {
-                chance[clicker.FixedTierIndex] = 1d;
-            }
+            if (total <= 0d) chance[clicker.FixedTierIndex] = 1d;
         }
         else
         {
@@ -232,24 +230,14 @@ public class PixelOfflineProgress : MonoBehaviour
 
         double[] gains = new double[tiers.Length];
         for (int i = 0; i < tiers.Length; i++)
-            gains[i] = Math.Floor(pixels * chance[i] * tiers[i].amountPerClick * clicker.PayoutMultiplier(i) * clicker.ClickMultiplier);
+            if (!tiers[i].rareDrop || !clicker.RandomizesSpawnTier)   // (rare drops are rolled below)
+                gains[i] = Math.Floor(pixels * chance[i] * tiers[i].amountPerClick * clicker.PayoutMultiplier(i) * clicker.ClickMultiplier);
 
-        // Rare drops (Dragon Cubes) are rolled with real dice, not averaged: each pixel that would have spawned had its
-        // spawn-weight chance, so the number found is a random (Poisson) count with that expectation.
+        // Rare drops (Dragon Cubes...) are rolled with real dice, not averaged: each block had the rare's fixed chance (PixelClicker.RareChance,
+        // 0 for a held one-of-each cube), so the number found is a random (Poisson) count with that expectation.
         if (clicker.RandomizesSpawnTier)
-        {
-            double normalWeight = 0d, rareWeight = 0d;
             for (int i = 0; i < tiers.Length; i++)
-            {
-                if (tiers[i].rareDrop) rareWeight += Math.Max(0f, tiers[i].spawnWeight);
-                else if (tiers[i].unlocked) normalWeight += Math.Max(0f, tiers[i].spawnWeight);
-            }
-            double total = normalWeight + rareWeight;
-            if (total > 0d)
-                for (int i = 0; i < tiers.Length; i++)
-                    if (tiers[i].rareDrop && tiers[i].spawnWeight > 0f)
-                        gains[i] = RollPoisson(pixels * tiers[i].spawnWeight / total);
-        }
+                if (tiers[i].rareDrop) gains[i] = RollPoisson(pixels * clicker.RareChance(i));
         return gains;
     }
 

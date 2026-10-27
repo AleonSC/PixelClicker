@@ -1257,8 +1257,11 @@ public partial class PixelSkills : MonoBehaviour
     {
         if (pack == null || xp <= 0d) return;
         xp *= PenaltyFactor(pack.id);   // a hazard went off recently in this skill
-        xp *= MinigameXpMultiplier;   // every enabled minigame adds to all XP
-        xp *= PixelBlockRules.HeldXpFactor(pack.id);   // a held hold block (Block Hold) with an XP bonus
+        if (pack.id != StandardId)   // (Standard takes neither: its XP stays flat, also from husks, Shuffle and the Snitch)
+        {
+            xp *= MinigameXpMultiplier;   // every enabled minigame adds to all skill XP
+            xp *= PixelBlockRules.HeldXpFactor(pack.id);   // a held hold block (Block Hold) with an XP bonus
+        }
         xp *= PixelRelics.XpFactor(pack.id);   // a held Relic (the Golden Axe: Woodcutting)
         xp += DrawBonus(pack, xp);   // bonus bank: doubles the gain, the extra comes out of the bank
         AddXpFlat(pack, xp, popup);

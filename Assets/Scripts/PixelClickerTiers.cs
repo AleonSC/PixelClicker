@@ -64,8 +64,8 @@ public partial class PixelClicker
              "a Dragon Cube was about 1 in 1,400 blocks instead of 1 in 70,000.) 7 = the odds the weights were chosen for.")]
     [SerializeField] private float rareReferenceWeight = 7f;
 
-    /// <summary>The fixed chance per block of this rare drop (0 if it is not a rare drop or can't spawn).</summary>
-    private float RareChance(int i) =>
+    /// <summary>The fixed chance per block of this rare drop (0 if it is not a rare drop or can't spawn). Also used by offline progress.</summary>
+    public float RareChance(int i) =>
         IsValidTier(i) && tiers[i].rareDrop && tiers[i].CanSpawn ? SpawnWeightOf(i) / Mathf.Max(0.01f, rareReferenceWeight) : 0f;
 
     /// <summary>The chance per block that SOME rare drop comes up.</summary>
