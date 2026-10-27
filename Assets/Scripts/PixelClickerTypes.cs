@@ -435,7 +435,11 @@ public partial class PixelClicker
         }
 
         /// <summary>Can this pixel spawn right now (unlocked and not switched off)?</summary>
-        public bool CanSpawn => (unlocked || rareDrop || PixelSkills.PreviewForces(type)) && !(spawnDisabled && CanSwitchOff) && !(IsGodCube(type) && count >= 1d);   // (a God Cube you hold never comes again: one of each)
+        public bool CanSpawn => (unlocked || rareDrop || PixelSkills.PreviewForces(type)) && !(spawnDisabled && CanSwitchOff) && !OneOfEachTaken;   // (a God / Prime Cube you ever found never comes again: one of each)
+
+        /// <summary>A one-of-each collectible (God / Prime Cubes, Cubelette, Relics: the RareCollectible tag) that was ever found. It never drops or is added again,
+        /// even after it was spent (the Gauntlet's forge uses the Prime Cubes up), so 'one of each' means one ever, not one held.</summary>
+        public bool OneOfEachTaken => IsGodCube(type) && totalCollected >= 1d;
 
         /// <summary>The tier colour with full opacity, for text and icons (a glass tier's colour is see-through).</summary>
         public Color UIColor => new Color(color.r, color.g, color.b, 1f);

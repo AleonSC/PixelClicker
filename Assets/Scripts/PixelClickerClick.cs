@@ -132,7 +132,7 @@ public partial class PixelClicker
                 PixelCollected?.Invoke(lastReflectTier, lastReflectAmount, automatic);
             }
         }
-        else
+        else if (!tier.rareDrop)   // (a rare drop is never what a Mirror copies: it would duplicate a collectible)
         {
             lastReflectTier = tierIndex;
             lastReflectAmount = amount;
@@ -204,9 +204,11 @@ public partial class PixelClicker
         onPixelClicked?.Invoke();
     }
 
-    /// <summary>CollectInternal step: what this click pays (the block's own payout rules, random payouts, then every multiplier). richBreak = a rich ore vein broke.</summary>
+    /// <summary>CollectInternal step: what this click pays (the block's own payout rules, random payouts, then every multiplier; a rare drop pays just its breaks). richBreak = a rich ore vein broke.</summary>
     private double ClickPayout(PixelTier tier, int tierIndex, int need, int breaks, bool automatic, out bool richBreak)
     {
+        richBreak = false;
+        if (tier.rareDrop) return breaks;   // a rare drop (Dragon / God / Prime Cube, Snitch) is a whole collectible: exactly one per break, no multiplier, boost or bonus
         double basePayout = tier.amountPerClick * breaks;
         if (transistorBoost > 1d) { basePayout *= transistorBoost; transistorBoost = 1d; }   // a Transistor amplified this click
         if (tier.type == PixelType.Transistor) transistorBoost = transistorMultiplier > 0f ? transistorMultiplier : 2f;

@@ -4,7 +4,7 @@
 //   Cubelette. Each set holds everything the game needs to know about the family, and the systems READ it instead of hand-wiring each family:
 //   - members (pixel type, name, colour, glow, Collection Log flavour text), in order (a Dragon Cube's stars = its place + 1);
 //   - logSection (the Collection Log section; the gallery puts each set on its own row, in table order);
-//   - oneOfEach (only one of each member can ever be held; the block cards' RareCollectible tag says the same for the click rules);
+//   - oneOfEach (only one of each member can ever be found - PixelTier.OneOfEachTaken uses the lifetime total, so a spent one never comes back; the block cards' RareCollectible tag says the same for the click rules);
 //   - show (the find show that plays when one is clicked: PixelDragonFind or PixelGodFind);
 //   - rarity (which PixelClicker Inspector knob sets the spawn weight / switches the set off: Dragon or God), neverRolled (weight 0: the
 //     Cubelette is only forged with the Gauntlet) and translucent / renameSaved (a saved scene's tier takes the table's name again);

@@ -37,7 +37,7 @@ public partial class PixelClicker
         if (!IsValidTier(tierIndex) || amount <= 0) return;
         if (IsGodCube(tiers[tierIndex].type))
         {
-            if (tiers[tierIndex].count >= 1d) return;   // one of each God Cube, ever: a second one is never added
+            if (tiers[tierIndex].OneOfEachTaken) return;   // one of each God / Prime Cube, ever (found before = never added again, even once spent)
             amount = 1d;
         }
 
