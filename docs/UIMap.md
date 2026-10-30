@@ -196,3 +196,4 @@ F9 dev tools: tabs and Main-tab widgets
 | D27 | Dev text edit box | popup | at the edited label | dev text-edit on a label (Escape closes) | `PixelDevTextEdit.cs:177 (OpenEditor)` | **D27.1** input box |
 | D28 | Session REC button | button | configurable corner (recButtonAnchor) | session recording (dev) | `PixelSessionRecorder.cs:214 (UpdateRecButton)` | **D28.1** REC toggle |
 | D29 | Title "Record session" button | button | title screen top-left | title screen in dev builds | `PixelTitleScreen.cs:697 (BuildRecordButton)` | **D29.1** RECORD SESSION toggle |
+| D30 | Edit text mode (banner + highlight + edit box) | overlay | banner top centre; box beside the clicked text | Dev Hub Main > Edit text mode tick box | `PixelTextEditMode.cs (Build / OpenBox)` | **D30.1** banner with Done<br>**D30.2** yellow highlight over the text under the pointer<br>**D30.3** edit box: original line, multi-line field, hint, Save / Reset / Cancel |

@@ -1,0 +1,2 @@
+# TEXT EDITS - texts changed in the game with Dev Hub > Edit text mode (see the notes in PixelTextEdits.cs).
+# Each edit is a 'from:' line (the game's exact text) and a 'to:' line (what shows instead). \n = a new line.

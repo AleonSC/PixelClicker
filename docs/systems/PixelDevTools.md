@@ -77,3 +77,5 @@ One Main-tab card 'Resource Tools' (`BuildResourceToolsCard`) holds what used to
 
 ## Time control widget (2026-10-20)
 Main-tab card 'Time control' (id `timecontrol`): buttons Rewind / Pause / Play / Slow / Fast plus a status line (mode, speed, seconds of history). The work is done by `PixelTimeControl` (PixelSystems, Core): see its header comment. Pressing Slow / Fast / Rewind again steps through its presets; while one is on, the plain mouse wheel changes the speed by 0.1x (0.1x - 5x). Rewind only moves the husks back through recorded snapshots (30 s by default).
+
+**Edit text mode** (2026-10-30): a Main-tab tick box widget ('textedit', `textEditModeLabel`; not remembered between runs). While on, `PixelTextEditMode` covers the screen with a see-through layer: the text under the pointer is highlighted, a left click opens an edit box (Save / Reset / Cancel), the banner's Done or Escape ends it; the tick box follows (`PixelTextEditMode.Changed`). Edits are whole-text 'from -> to' pairs in `Assets/Resources/TextEdits.txt` (`PixelTextEdits`), applied wherever that exact text shows.

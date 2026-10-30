@@ -155,3 +155,4 @@ D26 | Dev Hub | Dev error badge | button | top-right below top bar | an error is
 D27 | Dev Hub | Dev text edit box | popup | at the edited label | dev text-edit on a label (Escape closes) | PixelDevTextEdit.cs:177 (OpenEditor) | input box
 D28 | Dev Hub | Session REC button | button | configurable corner (recButtonAnchor) | session recording (dev) | PixelSessionRecorder.cs:214 (UpdateRecButton) | REC toggle
 D29 | Dev Hub | Title "Record session" button | button | title screen top-left | title screen in dev builds | PixelTitleScreen.cs:697 (BuildRecordButton) | RECORD SESSION toggle
+D30 | Dev Hub | Edit text mode (banner + highlight + edit box) | overlay | banner top centre; box beside the clicked text | Dev Hub Main > Edit text mode tick box | PixelTextEditMode.cs (Build / OpenBox) | banner with Done; yellow highlight over the text under the pointer; edit box: original line, multi-line field, hint, Save / Reset / Cancel

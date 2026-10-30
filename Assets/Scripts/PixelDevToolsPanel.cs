@@ -226,6 +226,14 @@ public partial class PixelDevTools
         Widget(content, board, "god", ws, y);
         y += rowHeight + 24f;
         ws = content.childCount;
+
+        // Row: tick box for Edit text mode (click any text in the game to change it: PixelTextEditMode). Not remembered: it is off at every start.
+        textEditToggle = BuildToggleRow(content, textEditModeLabel, y, inner, false, PixelTextEditMode.SetOn, textEditModeTip);
+        PixelTextEditMode.Changed -= OnTextEditModeChanged;
+        PixelTextEditMode.Changed += OnTextEditModeChanged;
+        Widget(content, board, "textedit", ws, y);
+        y += rowHeight + 24f;
+        ws = content.childCount;
         return y;
     }
 
@@ -324,6 +332,7 @@ public partial class PixelDevTools
             case "nodespawn": return "Husk despawns";
             case "nolimit": return "Husk limit";
             case "god": return "God mode";
+            case "textedit": return "Edit text mode";
             case "clicks": return "Click count";
             default: return id;
         }

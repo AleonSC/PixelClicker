@@ -36,6 +36,7 @@ public static class PixelSystems
     {
         new Entry(typeof(PixelTitleScreen), "UI"),
         new Entry(typeof(PixelHints), "UI"),
+        new Entry(typeof(PixelTextEdits), "UI"),
         new Entry(typeof(PixelUITheme), "UI"),
         new Entry(typeof(PixelTipQueue), "UI"),
         new Entry(typeof(PixelDeviceCard), "UI"),

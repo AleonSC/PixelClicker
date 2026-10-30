@@ -128,6 +128,11 @@ public partial class PixelDevTools : MonoBehaviour
     [Tooltip("Tooltip of the god-pixel-mode row (shown while the mouse is over it).")]
     [SerializeField] private string godTipText = "Scroll = pick a pixel, left click = spawn it, right click = destroy husks near the cursor";
 
+    [Tooltip("Label of the tick box that turns on Edit text mode (click any text in the game to change it; saved to Resources/TextEdits.txt).")]
+    [SerializeField] private string textEditModeLabel = "Edit text mode";
+    [Tooltip("Hover tip of the Edit text mode tick box.")]
+    [SerializeField] private string textEditModeTip = "Click any text in the game to change it. Saved to Resources/TextEdits.txt and used everywhere that text shows.";
+
     [Tooltip("Label of the minigame spawn button.")]
     [SerializeField] private string spawnText = "Spawn";
 
@@ -333,7 +338,10 @@ public partial class PixelDevTools : MonoBehaviour
 
     private int clickCount = 1;
     private TMP_InputField clickCountField;
-    private Toggle clearToggle, infiniteToggle, noDespawnToggle, noLimitToggle, godToggle;
+    private Toggle clearToggle, infiniteToggle, noDespawnToggle, noLimitToggle, godToggle, textEditToggle;
+
+    // The Edit text mode tick box follows the mode (its banner's Done button / Escape turn it off too).
+    private void OnTextEditModeChanged(bool on) { if (textEditToggle != null) textEditToggle.SetIsOnWithoutNotify(on); }
 
     /// <summary>A save file with its own settings was loaded: read the dev tool choices again and update the panel.</summary>
     public static void ReloadFromPrefs()
@@ -418,6 +426,7 @@ public partial class PixelDevTools : MonoBehaviour
 
     private void OnDestroy()
     {
+        PixelTextEditMode.Changed -= OnTextEditModeChanged;
         PixelDevHub.OpenChanged -= OnHubOpenChanged;
         PixelDevDocs.Shown -= OnDocsShown;
         PixelTimeControl.Changed -= RefreshTimeStatus;

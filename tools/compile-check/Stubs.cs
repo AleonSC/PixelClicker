@@ -22,6 +22,13 @@ namespace UnityEngine.EventSystems
     public interface IScrollHandler { void OnScroll(PointerEventData eventData); }
     public class UIBehaviour : MonoBehaviour { }
     public class BaseEventData { public GameObject selectedObject; public void Use() { } }
+    public static class ExecuteEvents
+    {
+        public delegate void EventFunction<T1>(T1 handler, BaseEventData eventData);
+        public static EventFunction<IScrollHandler> scrollHandler => null;
+        public static GameObject ExecuteHierarchy<T>(GameObject root, BaseEventData eventData, EventFunction<T> callbackFunction) => null;
+        public static bool Execute<T>(GameObject target, BaseEventData eventData, EventFunction<T> functor) => false;
+    }
     public class PointerEventData : BaseEventData
     {
         public enum InputButton { Left, Right, Middle }
@@ -250,6 +257,8 @@ namespace TMPro
         public void ClearOptions() { } public void AddOptions(List<string> options) { } public void AddOptions(List<OptionData> options) { } public void AddOptions(List<Sprite> options) { } public void SetValueWithoutNotify(int input) { } public void RefreshShownValue() { } public void Show() { } public void Hide() { }
         public virtual void OnPointerClick(PointerEventData e) { }
     }
+    public class FastAction<A> { public void Add(Action<A> rhs) { } public void Remove(Action<A> rhs) { } }
+    public static class TMPro_EventManager { public static readonly FastAction<UnityEngine.Object> TEXT_CHANGED_EVENT = new FastAction<UnityEngine.Object>(); }
     public class TMP_Settings : ScriptableObject { public static TMP_Settings instance; public static TMP_FontAsset defaultFontAsset; }
     public class TMP_Text2 { }
 }

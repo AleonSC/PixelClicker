@@ -153,29 +153,7 @@ public class PixelDevTextEdit : MonoBehaviour
         if (label.rectTransform.rect.height < label.fontSize * 2.4f) PixelUIKit.FitOneLine(label, 10f);
     }
 
-    private TMP_Text LabelUnderPointer()
-    {
-        if (PixelInput.PointerOverUI() == false && false) return null;
-        Vector2 pointer = PixelInput.PointerPosition();
-        TMP_Text best = null;
-        float bestArea = float.MaxValue;
-        foreach (TMP_Text label in canvasRoot.GetComponentsInChildren<TMP_Text>(false))
-        {
-            if (!Editable(label) || string.IsNullOrEmpty(label.text)) continue;
-            RectTransform rt = label.rectTransform;
-            if (!RectTransformUtility.RectangleContainsScreenPoint(rt, pointer, null)) continue;
-            bool visible = true;   // inside scrolling lists the pointer must be in the visible part
-            foreach (ScrollRect sr in label.GetComponentsInParent<ScrollRect>(false))
-            {
-                RectTransform view = sr.viewport != null ? sr.viewport : sr.GetComponent<RectTransform>();
-                if (!RectTransformUtility.RectangleContainsScreenPoint(view, pointer, null)) { visible = false; break; }
-            }
-            if (!visible) continue;
-            float area = rt.rect.width * rt.rect.height * rt.lossyScale.x * rt.lossyScale.y;
-            if (area < bestArea) { bestArea = area; best = label; }
-        }
-        return best;
-    }
+    private TMP_Text LabelUnderPointer() => PixelUIKit.TextUnderPointer(canvasRoot.GetComponentsInChildren<TMP_Text>(false), Editable);   // (the shared picker; Edit text mode uses it too)
 
     // ---------------- the edit box ----------------
 

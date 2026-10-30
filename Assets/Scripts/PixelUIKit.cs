@@ -117,10 +117,45 @@ public static partial class PixelUIKit
         return cam.ViewportToWorldPoint(new Vector3(x, y, v.z));
     }
 
-    /// <summary>Sets a text only when it changed (skips the TMP rebuild for identical strings).</summary>
+    /// <summary>Sets a text only when it changed (skips the TMP rebuild for identical strings). Runs it through the user's text edits (PixelTextEdits).</summary>
     public static void SetText(TMP_Text label, string text)
     {
-        if (label != null && label.text != text) label.text = text;
+        if (label == null) return;
+        text = PixelTextEdits.Apply(text);
+        if (label.text != text) label.text = text;
+    }
+
+    /// <summary>
+    /// The UI text under the pointer among 'labels' that 'ok' accepts: on the top-most canvas first, then the smallest one there (the innermost);
+    /// inside a scrolling list the pointer must be in its visible part. Null = none. (Dev Hub text editing, Edit text mode.)
+    /// </summary>
+    public static TMP_Text TextUnderPointer(System.Collections.Generic.IEnumerable<TMP_Text> labels, System.Func<TMP_Text, bool> ok)
+    {
+        Vector2 pointer = PixelInput.PointerPosition();
+        TMP_Text best = null;
+        int bestOrder = int.MinValue;
+        float bestArea = float.MaxValue;
+        foreach (TMP_Text label in labels)
+        {
+            if (label == null || !label.gameObject.activeInHierarchy || string.IsNullOrEmpty(label.text) || (ok != null && !ok(label))) continue;
+            Canvas canvas = label.canvas;
+            if (canvas == null) continue;   // (a 3D text in the world, not on a canvas)
+            Canvas root = canvas.rootCanvas;
+            Camera cam = root.renderMode == RenderMode.ScreenSpaceOverlay ? null : root.worldCamera;
+            RectTransform rt = label.rectTransform;
+            if (!RectTransformUtility.RectangleContainsScreenPoint(rt, pointer, cam)) continue;
+            bool visible = true;
+            foreach (ScrollRect sr in label.GetComponentsInParent<ScrollRect>(false))
+            {
+                RectTransform view = sr.viewport != null ? sr.viewport : sr.GetComponent<RectTransform>();
+                if (!RectTransformUtility.RectangleContainsScreenPoint(view, pointer, cam)) { visible = false; break; }
+            }
+            if (!visible) continue;
+            int order = root.sortingOrder;
+            float area = rt.rect.width * rt.rect.height * rt.lossyScale.x * rt.lossyScale.y;
+            if (order > bestOrder || (order == bestOrder && area < bestArea)) { best = label; bestOrder = order; bestArea = area; }
+        }
+        return best;
     }
 
     /// <summary>A TextMeshPro UI text that doesn't catch clicks. A null font = the TMP default.</summary>
@@ -131,7 +166,7 @@ public static partial class PixelUIKit
         go.transform.SetParent(parent, false);
 
         TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
-        tmp.text = text;
+        tmp.text = PixelTextEdits.Apply(text);   // (the user's text edits)
         tmp.fontSize = size;
         tmp.fontStyle = style;
         tmp.alignment = alignment;
