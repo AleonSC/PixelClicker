@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Headless test suites (no Unity). Runs against the DLL that tools/compile-check builds. Not part of the game. -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework><LangVersion>9.0</LangVersion>
+    <OutputType>Exe</OutputType>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings><GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <NoWarn>CS8632;CS0436;NU1701;MSB3277</NoWarn>
+    <BaseIntermediateOutputPath>.cache/obj/</BaseIntermediateOutputPath>
+    <OutputPath>.cache/out/</OutputPath>
+    <CheckOut>$(MSBuildThisFileDirectory)../compile-check/.cache/out/net48/</CheckOut>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="all" />
+    <Reference Include="CompileCheck"><HintPath>$(CheckOut)CompileCheck.dll</HintPath></Reference>
+    <Reference Include="$(CheckOut)UnityEngine*.dll" />
+  </ItemGroup>
+</Project>
